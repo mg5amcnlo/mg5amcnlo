@@ -676,7 +676,7 @@ c     We have a qcd line going through the whole event, use single scale
             q2fact(1)=pt2ijcl(nexternal-2)
             q2fact(2)=q2fact(1)
          endif
-      elseif(ickkw.eq.2.or.pdfwgt)then
+      elseif(ickkw.ge.2.or.pdfwgt)then
 c     Use the minimum scale found for fact scale in ME
          if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
@@ -793,7 +793,7 @@ c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
       do i=1,nexternal
          pt2prev(ishft(1,i-1))=0d0
-         if (ickkw.eq.2) then
+         if (ickkw.ge.2) then
             if(pt2min.gt.0)then
                pt2prev(ishft(1,i-1))=
      $              max(pt2min,p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
@@ -835,7 +835,7 @@ c     Set x values for the two sides, for Initial State Sudakovs
       endif
 
 c     Prepare for resetting q2fact based on PDF reweighting
-      if(ickkw.eq.2)then
+      if(ickkw.ge.2)then
          q2fact(1)=0d0
          q2fact(2)=0d0
       endif
@@ -922,18 +922,18 @@ c   Update particle tree map
      $        ipdgcl(1,igraphs(1),nFKSprocess),ipart)
 c     Cycle if we don't need to perform PDF or, if ickkw=2, Sudakov
 c     reweighting
-         if(.not.(ickkw.eq.2.or.pdfwgt)) cycle
+         if(.not.(ickkw.ge.2.or.pdfwgt)) cycle
          isvx=.false.
          do i=1,2               ! loop over daughters
 c     If the daugher i is not charge under QCD: cycle
             if (.not.isqcd(ipdgcl(idacl(n,i),igraphs(1),nFKSprocess)))
      $           cycle
-            if(ickkw.eq.2.and.pt2min.eq.0d0) then
+            if(ickkw.ge.2.and.pt2min.eq.0d0) then
                pt2min=pt2ijcl(n)
                if (btest(mlevel,3)) write(*,*) 'pt2min set to '
      $              ,pt2min
             endif
-            if(ickkw.eq.2.and.pt2prev(idacl(n,i)).eq.0d0)
+            if(ickkw.ge.2.and.pt2prev(idacl(n,i)).eq.0d0)
      $           pt2prev(idacl(n,i))= max(pt2min,
      $           p(0,i)**2-p(1,i)**2-p(2,i)**2-p(3,i)**2)
 c     Initial State:
@@ -945,7 +945,7 @@ c     parton line ends with change of parton id or non-radiation vertex
                   isvx=.true.
                   ibeam(j)=imocl(n)
 c     Perform Sudakov reweighting if ickkw=2
-                  if(ickkw.eq.2.and.
+                  if(ickkw.ge.2.and.
      $                 (ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
      $                  ipdgcl(imocl(n),igraphs(1),nFKSprocess).or.
      $                 .not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
@@ -985,11 +985,11 @@ c Sudakov excluding PDFs:
                         write(*,*)'        -> rewgt: ',rewgt
                         write(*,*)'        -> rewgt_exp: ',rewgt_exp
                      endif
-                  elseif(ickkw.eq.2) then
+                  elseif(ickkw.ge.2) then
                      pt2prev(imocl(n))=pt2prev(idacl(n,i))
                   endif
 c     End Sudakov reweighting when we reach a non-radiation vertex
-                  if(ickkw.eq.2.and..not.
+                  if(ickkw.ge.2.and..not.
      $                 ispartonvx(imocl(n),idacl(n,1),idacl(n,2),
      $                            ipdgcl(1,igraphs(1),nFKSprocess),
      $                            ipart,n.eq.nexternal-2) ) then
@@ -1073,7 +1073,7 @@ c$$$                  endif
                endif
             enddo
 c     Final State sudakov weight
-            if(ickkw.eq.2.and.pt2prev(idacl(n,i)).lt.pt2ijcl(n).and.
+            if(ickkw.ge.2.and.pt2prev(idacl(n,i)).lt.pt2ijcl(n).and.
      $           (isvx.or.ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
      $           ipdgcl(imocl(n),igraphs(1),nFKSprocess).or.
      $           (ipdgcl(idacl(n,i),igraphs(1),nFKSprocess).ne.
@@ -1104,7 +1104,7 @@ c     Final State sudakov weight
             endif 
  10         continue
          enddo
-         if (ickkw.eq.2.and.n.eq.nexternal-2.and.
+         if (ickkw.ge.2.and.n.eq.nexternal-2.and.
      $        isqcd(ipdgcl(imocl(n),igraphs(1),nFKSprocess)).and.
      $        pt2prev(imocl(n)).lt.pt2ijcl(n))then
             tmp=sudwgt(sqrt(pt2min),sqrt(pt2prev(imocl(n))),
@@ -1128,7 +1128,7 @@ c     Final State sudakov weight
          endif
       enddo
 
-      if(ickkw.eq.2.and.lpp(1).eq.0.and.lpp(2).eq.0)then
+      if(ickkw.ge.2.and.lpp(1).eq.0.and.lpp(2).eq.0)then
          q2fact(1)=pt2min
          q2fact(2)=q2fact(1)
       else if (ickkw.eq.1.and.pdfwgt) then

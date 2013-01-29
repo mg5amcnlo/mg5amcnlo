@@ -1137,7 +1137,7 @@ c
       MCcntcalled=.false.
 c
 c FxFx merging
-      ickkw=2
+      ickkw=3
       ktscheme=1
       rewgt_mohdr_calculated=.false.
       rewgt_izero_calculated=.false.
@@ -1239,6 +1239,18 @@ c
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
+      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
+     #      nocntevents ) goto 547
+
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         rewgt_izero_calculated=.true.
+      endif
 
       gfactsf=1.d0
       gfactcl=1.d0
@@ -1255,7 +1267,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
 
       call set_cms_stuff(mohdr)
 c     Compute the scales and sudakov-reweighting for the FxFx merging
-      if (ickkw.eq.2) then
+      if (ickkw.eq.3) then
          if (.not. setclscales(pp)) then
             write (*,*) 'ERROR in setclscales mohdr'
             stop
@@ -1350,12 +1362,12 @@ c in the case of parton-level NLO computations
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #      nocntevents ) goto 547
 c Compute the scales and sudakov-reweighting for the FxFx merging
-      if (ickkw.eq.2) then
+      if (ickkw.eq.3) then
          if (.not. setclscales(p1_cnt(0,1,0))) then
             write (*,*) 'ERROR in setclscales izero'
             stop
          endif
-         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_mohdr)
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
          rewgt_izero_calculated=.true.
       endif
       call set_alphaS(p1_cnt(0,1,0))
@@ -1707,7 +1719,7 @@ c Set the ybst_til_tolab before applying the cuts.
       endif
       if (passcuts(pp,rwgt)) then
 c     Compute the scales and sudakov-reweighting for the FxFx merging
-        if (ickkw.eq.2) then
+        if (ickkw.eq.3) then
            if (.not. setclscales(pp)) then
               write (*,*) 'ERROR in setclscales mohdr'
               stop
