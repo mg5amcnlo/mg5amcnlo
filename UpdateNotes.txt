@@ -7,6 +7,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       command to be able to use the automatic width computation.
                   OM: Fix a bug in model restriction when a width was equals to one.
                       In such case, the width is not fixed to this value anymore.
+                  OM: correct bug #1107603 (problem with condor cluster for submission 
+                      associated to a large number of jobs). Thanks Sanjay 
 
 1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
