@@ -212,13 +212,14 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       include 'reweight0.inc'
+      include 'run.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imurtype
-      parameter (imurtype=-1)
+      parameter (imurtype=1)
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
@@ -234,7 +235,23 @@ c FxFx
      $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imurtype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+c     Note that nFxFx_ren_scales includes the one scale that corresponds
+c     to the real-emission one (and is zero for the n-body conf.). Skip
+c     that scale here.
+         if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
+            tmp=FxFx_ren_scales(0)**
+     &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
+         else
+            tmp=1d0
+         endif
+         do i=2,nFxFx_ren_scales
+            tmp=tmp*FxFx_ren_scales(i)
+         enddo
+         tmp=tmp**(1d0/wgtbpower)
+         temp_scale_id='FxFx merging scale'
+      elseif(imurtype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imurtype.eq.2)then
         do i=nincoming+1,nexternal
@@ -300,22 +317,6 @@ c  particles (e.g. top quarks or Higgs) into account.
             endif
          endif
          temp_scale_id='geometric mean #3'
-      elseif(imurtype.eq.-1)then
-c FxFx merging scale:
-c     Note that nFxFx_ren_scales includes the one scale that corresponds
-c     to the real-emission one (and is zero for the n-body conf.). Skip
-c     that scale here.
-         if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
-            tmp=FxFx_ren_scales(0)**
-     &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
-         else
-            tmp=1d0
-         endif
-         do i=2,nFxFx_ren_scales
-            tmp=tmp*FxFx_ren_scales(i)
-         enddo
-         tmp=tmp**(1d0/wgtbpower)
-         temp_scale_id='FxFx merging scale'
       else
         write(*,*)'Unknown option in muR_ref_dynamic',imurtype
         stop
@@ -383,13 +384,14 @@ c a scale to be used as a reference for factorizations scales
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
       external pt,et,dot,sumdot
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
-      parameter (imuftype=-1)
+      parameter (imuftype=1)
 c FxFx
       integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
@@ -397,7 +399,11 @@ c FxFx
      $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imuftype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+        tmp=sqrt(FxFx_fac_scale(1)*FxFx_fac_scale(2))
+        temp_scale_id='FxFx merging scale'
+      elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imuftype.eq.2)then
         do i=nincoming+1,nexternal
@@ -405,9 +411,6 @@ c
         enddo
         tmp=sqrt(tmp)
         temp_scale_id='Sqrt[sum_i pT(i)**2], i=final state'
-      elseif(imuftype.eq.-1)then
-        tmp=sqrt(FxFx_fac_scale(1)*FxFx_fac_scale(2))
-        temp_scale_id='FxFx merging scale'
       else
         write(*,*)'Unknown option in muF_ref_dynamic',imuftype
         stop

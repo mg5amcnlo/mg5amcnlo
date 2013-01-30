@@ -1848,12 +1848,15 @@ c
       totH_wgt = Hev_wgt+Hxmc_wgt
 
 c Apply the FxFx Sudakov damping on the H events
-      if (totH_wgt.ne.0d0 .and. .not.rewgt_mohdr_calculated) then
+      if (totH_wgt.ne.0d0 .and. ickkw.eq.3..and.
+     $     .not.rewgt_mohdr_calculated) then
          write (*,*) 'Error rewgt_mohdr_calculated',totH_wgt
          stop
       elseif(rewgt_mohdr_calculated) then
          if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
          enhanceH=enhance*rewgt_mohdr
+      else
+         enhanceH=enhance
       endif
 
       totH_wgt = totH_wgt * enhanceH
@@ -1862,12 +1865,14 @@ c Apply the FxFx Sudakov damping on the S events
       if(.not.(Sev_wgt.eq.0d0 .and. Sxmc_wgt.eq.0d0 .and. cnt_wgt.eq.0d0
      $     .and. cnt_swgt.eq.0d0 .and. bsv_wgt.eq.0d0 .and.
      $     born_wgt.eq.0d0 .and. deg_wgt.eq.0d0 .and. deg_swgt.eq.0d0)
-     $     .and. .not.rewgt_izero_calculated) then
+     $     .and. ickkw.eq.3 .and. .not.rewgt_izero_calculated) then
          write (*,*) 'Error rewgt_izero_calculated'
          stop
       elseif(rewgt_izero_calculated) then
          if (rewgt_izero.gt.1d0) rewgt_izero=1d0
          enhanceS=enhance*rewgt_izero
+      else
+         enhanceS=enhance
       endif
 
       Sev_wgt = Sev_wgt * enhanceS

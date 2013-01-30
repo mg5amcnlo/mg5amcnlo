@@ -64,6 +64,85 @@ c factor 2 because we are integrating over q, not q^2
       return
       end
 
+      double precision function gamma_mass(q0)
+c*******************************************************
+c   Calculates the argument of the exponent
+c   o. It takes only terms logarithmic in log(Q/q0) and 
+c      constants into account (up to NLL)
+c   o. Mass effects are ignored
+c   o. Flavor thresholds are ignored
+c******************************************************
+      implicit none
+c Include
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'nFKSconfigs.inc'
+      include 'cluster.inc'
+c Constants
+      double precision ZERO,PI,CA,CF
+      parameter (ZERO=0d0)
+      parameter (PI = 3.14159265358979323846d0)
+      parameter (CA = 3d0)
+      parameter (CF = 4d0/3d0)
+c Argument
+      double precision q0
+c Local
+      logical isgluon
+      double precision alphasq0
+c External
+      double precision alphas
+      external alphas
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+c Data 
+      double precision mass(6)
+      data (mass(i),i=1,6) /0d0,0d0,0d0,1.3d0,4.5d0,173d0/
+c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
+
+      gamma=0.0d0
+c Compute alphaS at the scale of the branching; with a freeze-out at 0.5
+c GeV
+      alphasq0=alphas(max(q0,0.5d0))
+      if (iipdg.eq.21) then
+c Gluon sudakov         
+c     g->gg contribution
+         gamma=CA*alphasq0*log(Q1/q0)/pi   ! A1
+     &        -CA*alphasq0*11d0/(12d0*pi)  ! B1
+     &                          ! A2
+c     g->qqbar contribution
+         do i=1,6
+            if (mass(i).eq.0d0) then         ! massless splitting
+               gamma=gamma+alphasq0/(6d0*pi) ! B1
+     &                          !A2
+            elseif(Q1.gt.2d0*mass(i)) then   ! massive splitting
+               mu=max(mass(i),q0)
+               gamma=gamma+alphasq0*mass(i)**2/q0**2 * log(Q1/mu)/pi +
+     $              alphasq0/(6d0*pi)
+            endif
+         enddo
+      elseif(abs(iipdg).lt.6 .and. Q1.gt.mass(iipdg)) then
+c Quark Sudakov (massless and massive)
+         gamma=CF*alphasq0*log(Q1/q0)/pi ! A1
+     &        -CF*alphasq0*3d0/(4d0*pi) ! B1
+     &                          ! A2
+         if (iipdg.gt.NF) then ! include mass effects
+            mu=max(mass(i),q0)
+            gamma=gamma+
+     &           CF*alphasq0*mass(i)**2/q0**2*log(q0*mu/(Q1*(Q1-mu)))
+         endif
+      elseif(abs(iipdg).lt.6 .and. Q1.le.mass(iipdg)) then
+c Massive quark Sudakov, put emission is not possible
+         gamma=0d0
+         return
+      else
+         write (*,*) 'ERROR in reweight.f: do not know'/
+     $        /' which Sudakov to compute',iipdg
+         stop
+      endif
+c Integration is over dq^2/q^2 = 2*dq/q, so factor 2
+      gamma=gamma*2d0/q0
+      return
+      end
+
       double precision function sud(q0,Q11,ipdg,imode)
 c**************************************************
 c   actually calculates is sudakov weight
@@ -681,8 +760,8 @@ c     Use the minimum scale found for fact scale in ME
          if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
-      FxFx_fac_scale(1)=sqrt(q2fact(1))
-      FxFx_fac_scale(2)=sqrt(q2fact(2))
+      FxFx_fac_scale(1)=sqrt(q2fact(1))/scalefact
+      FxFx_fac_scale(2)=sqrt(q2fact(2))/scalefact
       
 c$$$c     Check that factorization scale is >= 2 GeV
 c$$$      if(lpp(1).ne.0.and.q2fact(1).lt.4d0.or.
