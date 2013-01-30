@@ -621,12 +621,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         part = self.get('particle')
         self.set('particle', self.get('antiparticle'))
         self.set('antiparticle', part)
-
+    
+    # HSS, 30/01/2013
     def is_anticommutating_ghost(self):
-        """ Return True if the particle of this wavefunction is a ghost charged
-        under SU(3)"""
-        return self.get('particle').get('ghost') and self.get('color')!=1
-
+        """ Return True if the particle of this wavefunction is a ghost"""
+        return self.get('particle').get('ghost')
+    #    return self.get('particle').get('ghost') and self.get('color')!=1
+    # HSS
+    
     def is_fermion(self):
         return self.get('spin') % 2 == 0
 

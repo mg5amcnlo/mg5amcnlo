@@ -3448,7 +3448,7 @@ V_UVuxuAEW = CTVertex(name = 'V_UVuxuAEW',
                       particles = [ P.u__tilde__, P.u, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.u, P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVuxuA1EW, (0, 1, 0) : C.c_UVuxuA2EW},
                       type = 'UV')
 
@@ -3484,7 +3484,7 @@ V_UVcxcAEW = CTVertex(name = 'V_UVcxcAEW',
                       particles = [ P.c__tilde__, P.c, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.c, P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVcxcA1EW, (0, 1, 0) : C.c_UVcxcA2EW},
                       type = 'UV')
 
@@ -3520,7 +3520,7 @@ V_UVtxtAEW = CTVertex(name = 'V_UVtxtAEW',
                       particles = [ P.t__tilde__, P.t, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.t,P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVtxtA1EW, (0, 1, 0) : C.c_UVtxtA2EW},
                       type = 'UV')
 
@@ -3529,7 +3529,7 @@ V_UVdxdAEW = CTVertex(name = 'V_UVdxdAEW',
                       particles = [ P.d__tilde__, P.d, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.d,P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVdxdA1EW, (0, 1, 0) : C.c_UVdxdA2EW},
                       type = 'UV')
 
@@ -3565,7 +3565,7 @@ V_UVsxsAEW = CTVertex(name = 'V_UVsxsAEW',
                       particles = [ P.s__tilde__, P.s, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.s,P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVsxsA1EW, (0, 1, 0) : C.c_UVsxsA2EW},
                       type = 'UV')
 
@@ -3601,7 +3601,7 @@ V_UVbxbAEW = CTVertex(name = 'V_UVbxbAEW',
                       particles = [ P.b__tilde__, P.b, P.A ],
                       color = [ 'Identity(1,2)' ],
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
-                      loop_particles = [  ],
+                      loop_particles = [[[P.b,P.A]]],
                       couplings = {(0, 0, 0) : C.c_UVbxbA1EW, (0, 1, 0) : C.c_UVbxbA2EW},
                       type = 'UV')
 

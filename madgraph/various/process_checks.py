@@ -466,10 +466,10 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 mp_file = open(mp_file_path,'w')
                 mp_file.write(mp_new_file_content)
                 mp_file.close()
-    # hahadebug
+    
         # Evaluate the matrix element for the momenta p
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
-                                               export_dir, p,verbose=False)[0][0]
+                                               export_dir, p,verbose=False)[0][1]
 
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:

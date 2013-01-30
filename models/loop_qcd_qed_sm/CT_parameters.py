@@ -404,11 +404,13 @@ AAWcft_UV_EW = CTParameter(name = 'AAWcft_UV_EW',
                                      0:'(ee**2*(9 + 16*Ncol*reglog(MT/MU_R) - 81*reglog(MW/MU_R)))/(216.*cmath.pi**2)'},
                            texname = '\delta Z_{AA}^{EW}')
 
+
 eCoup_UV_EW = CTParameter(name = 'eCoup_UV_EW',
                           type = 'complex',
-                          value = {-1:'-(ee**2*(cw**2*(108*MW**2 + MZ**2*(81 - 16*Ncol)) + 108*MW**2*sw**2))/(864.*cw**2*MZ**2*cmath.pi**2)',
-                                   0:'-(ee**2*(-54*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(9 + 16*Ncol*reglog(MT/MU_R) - 81*reglog(MW/MU_R))))/(432.*cw**2*MZ**2*cmath.pi**2)'},
+                          value = {-1:'(ee**2*(cw**2*(-36*MW**2 + MZ**2*(9 + 20*Ncol)) - 36*MW**2*sw**2))/(288.*cw**2*MZ**2*cmath.pi**2)',
+                                    0:'(ee**2*(162*MW**2*(cw**2 + sw**2)*reglog(MW**2/MU_R**2) + cw**2*MZ**2*(243 + 110*Ncol - 48*Ncol*reglog(MT/MU_R) + 243*reglog(MW/MU_R) + 162*reglog(-(MU_R**2/MZ**2)) + 66*Ncol*reglog(-(MU_R**2/MZ**2)))))/(1296.*cw**2*MZ**2*cmath.pi**2)'},
                           texname = '\delta e')
+
 
 
 SWCoup_UV_EW = CTParameter(name = 'SWCoup_UV_EW',

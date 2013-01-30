@@ -306,7 +306,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i not in [27] :valid_diag=False
+            if i not in [138,140] :valid_diag=False
                 #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False
@@ -319,7 +319,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-            #if 23 in diag.get_pdgs_attached_to_loop(structs):
+            # if 23 in diag.get_pdgs_attached_to_loop(structs)
+            #    valid_diag=False
+            #if set([abs(pdg) for pdg in diag.get_loop_lines_pdgs()]).intersection(set([23,24,250,251,25,9000002,9000003,9000004])):
+            #    valid_diag=False
+            #if set(diag.get_pdgs_attached_to_loop(structs)).intersection(set([23,250,251,25,-251,24,-24,9000002,-9000002,9000003,-9000003,9000004,-9000004])):
             #    valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
