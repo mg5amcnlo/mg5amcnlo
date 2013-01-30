@@ -3595,7 +3595,7 @@ calculator."""
                 logger.info(error)
                 if not self.force:
                     ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
-                             default = 'y', answers=['y','n'])
+                             default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
                 if ans:
