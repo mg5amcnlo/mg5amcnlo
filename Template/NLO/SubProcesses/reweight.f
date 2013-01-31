@@ -226,9 +226,9 @@ c      parameter (NF = 5d0)      ! NF is determined in coupl.inc
       if (Q11.gt.q0) then
          lq=2d0*log(Q11/q0)
          if (ipdg.eq.21) then
-            sud_exp=-0.5d0*a1gg*lq**2+b1gg*lq
+            sud_exp=-0.5d0*a1gg*lq**2-b1gg*lq
          elseif (abs(ipdg).le.NF) then
-            sud_exp=-0.5d0*a1qq*lq**2+b1qq*lq
+            sud_exp=-0.5d0*a1qq*lq**2-b1qq*lq
          else
             write (*,*) 'error in sud_exp',ipdg
          endif
