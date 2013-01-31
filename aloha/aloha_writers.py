@@ -1139,7 +1139,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[FSVT]+)(?P<id>\d+)')
+    p=re.compile('^(?P<type>[RFSVT]+)(?P<id>\d+)')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1178,8 +1178,8 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
                 addon = ''
             else:
                 name = short_name
-        if unknown_propa:
-            addon += '%(propa)s'
+    if unknown_propa:
+        addon += '%(propa)s'
 
     return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  

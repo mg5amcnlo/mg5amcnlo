@@ -3748,6 +3748,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         out += [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
                  wa.find_outgoing_number()) for wa in  self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
+
         return out
     def get_used_couplings(self):
         """Return a list with all couplings used by this

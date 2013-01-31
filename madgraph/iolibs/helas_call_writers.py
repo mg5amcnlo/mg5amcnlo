@@ -1071,13 +1071,12 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
-                                            '%s' % l[0], l[1:], outgoing, flag),
+                                            '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    }
-            
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
@@ -1241,13 +1240,13 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = '%(out)s= %(routine_name)s(%(wf)s%(coup)s%(mass)s)'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
-                                            '%s' % l[0], l[1:], outgoing, flag),
+                                            '%s' % l[0], l[1:], outgoing, flag, True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    }
-            
+
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
