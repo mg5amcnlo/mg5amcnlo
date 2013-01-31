@@ -679,6 +679,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
+                
         
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -720,10 +722,17 @@ class ALOHAWriterForFortran(WriteALOHA):
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom*'    
-                if not aloha.complex_mass:                
-                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
-                      {'i': self.outgoing, 'COUP': coup_name})
+                if not aloha.complex_mass:
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
+                                  {'i': self.outgoing, 'COUP': coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
                 self.declaration.add(('complex','denom'))
@@ -882,6 +891,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
 
 
         OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
@@ -1123,7 +1133,7 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     
     return '%s_%s' % (name, outgoing)
 
-def combine_name(name, other_names, outgoing, tag=None):
+def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
     
 
@@ -1149,6 +1159,8 @@ def combine_name(name, other_names, outgoing, tag=None):
     if routine:
         if tag is not None:
             routine += ''.join(tag)
+        if unknown_propa:
+            routine += '%(propa)s'
         if outgoing is not None:
             return routine +'_%s' % outgoing
         else:
@@ -1166,6 +1178,8 @@ def combine_name(name, other_names, outgoing, tag=None):
                 addon = ''
             else:
                 name = short_name
+        if unknown_propa:
+            addon += '%(propa)s'
 
     return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
  
@@ -1432,10 +1446,12 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            
         
 
         numerator = self.routine.expr
@@ -1454,9 +1470,16 @@ class ALOHAWriterForCPP(WriteALOHA):
             if 'L' not in self.tag:
                 coeff = 'denom'
                 if not aloha.complex_mass:
-                    out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+
                     out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - pow(M%(i)s,2));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 self.declaration.add(('complex','denom'))
@@ -1709,7 +1732,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 return '%ij' % obj.imag
             else:
                 return '%sj' % str(obj.imag)
-        else: 
+        elif obj.imag == 0 and int(obj.real) == obj:
+            return '%i' % obj.real 
+        else:
             return str(obj)
     
     
@@ -1764,9 +1789,16 @@ class ALOHAWriterForPython(WriteALOHA):
             if not 'L' in self.tag:
                 coeff = 'denom'
                 if not aloha.complex_mass:
-                    out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
                           {'i': self.outgoing,'coup':coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                    
                     out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s**2)\n' % 
                           {'i': self.outgoing,'coup':coup_name})                    
             else:

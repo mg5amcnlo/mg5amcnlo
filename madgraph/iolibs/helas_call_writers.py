@@ -151,7 +151,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         try:
             call = self["amplitudes"][amplitude.get_call_key()](amplitude)
             return call
-        except KeyError:
+        except KeyError, error:
             return ""
 
     def add_wavefunction(self, key, function):
@@ -603,10 +603,10 @@ class FortranHelasCallWriter(HelasCallWriter):
 
             if isinstance(argument, helas_objects.HelasWavefunction):
                 # Extra dummy coupling for 4-vector vertices
-                if argument.get('lorentz') == 'WWVV':
+                if argument.get('lorentz') == ['WWVV']:
                     # SM W3W3 vertex
                     call = call + "1D0,"
-                elif argument.get('lorentz') == 'WWWW':
+                elif argument.get('lorentz') == ['WWWW']:
                     # SM WWWW vertex
                     call = call + "0D0,"
                 elif argument.get('spin') == 3 and \
@@ -622,10 +622,10 @@ class FortranHelasCallWriter(HelasCallWriter):
             else:
                 # Extra dummy coupling for 4-particle vertices
                 # Need to replace later with the correct type
-                if argument.get('lorentz') == 'WWVV':
+                if argument.get('lorentz') == ['WWVV']:
                     # SM W3W3 vertex
                     call = call + "1D0,"
-                elif argument.get('lorentz') == 'WWWW':
+                elif argument.get('lorentz') == ['WWWW']:
                     # SM WWWW vertex
                     call = call + "0D0,"
                 elif [wf.get('spin') for wf in argument.get('mothers')] == \
@@ -939,7 +939,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
             call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
-                                        '%s' % l[0], l[1:], outgoing, flag),
+                                    '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("W(1,%%(%d)d)," * len(argument.get('mothers'))) % \
                                      tuple(range(len(argument.get('mothers')))),
                    'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
@@ -1107,7 +1107,7 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
     def format_coupling(call):
         """Format the coupling so any minus signs are put in front"""
 
-        return call.replace('pars->-', '-pars')
+        return call.replace('pars->-', '-pars->')
         
 
 #===============================================================================

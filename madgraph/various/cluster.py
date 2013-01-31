@@ -71,9 +71,9 @@ class Cluster(object):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
         
-        if not hasattr(self, 'temp_dir'):
+        if not hasattr(self, 'temp_dir') or not self.temp_dir:
             return self.submit(prog, argument, cwd, stdout, stderr, log)
-            
+        print self.temp_dir
         if cwd is None:
             cwd = os.getcwd()
         if not os.path.exists(prog):
@@ -88,7 +88,7 @@ class Cluster(object):
         input_files=( %(input_files)s )
         for i in ${input_files[@]}
         do
-            cp -r $i $MYTMP
+            cp -rL $i $MYTMP
         done
         cd $MYTMP
         bash ./%(script)s %(arguments)s
@@ -424,7 +424,11 @@ class PBSCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        text += prog
+        if not os.path.isabs(prog):
+            text += "./%s" % prog
+        else:
+            text+= prog
+        
         if argument:
             text += ' ' + ' '.join(argument)
 
@@ -668,27 +672,24 @@ class LSFCluster(Cluster):
             me_dir = 'a' + me_dir[1:]
         
         text = ""
+        command = ['bsub', '-J', me_dir]
         if cwd is None:
             cwd = os.getcwd()
         else: 
             text = " cd %s;" % cwd
-        if stdout is None:
-            stdout = '/dev/null'
-        if stderr is None:
-            stderr = '/dev/null'
+        if stdout and isinstance(stdout, str):
+            command.extend(['-o', stdout])
+        if stderr and isinstance(stdout, str):
+            command.extend(['-e', stderr])
         elif stderr == -2: # -2 is subprocess.STDOUT
-            stderr = stdout
+            pass
         if log is None:
             log = '/dev/null'
         
         text += prog
         if argument:
             text += ' ' + ' '.join(argument)
-
-        command = ['bsub','-o', stdout,
-                   '-J', me_dir, 
-                   '-e', stderr]
-
+        
         if self.cluster_queue and self.cluster_queue != 'None':
             command.extend(['-q', self.cluster_queue])
 
@@ -772,7 +773,7 @@ class LSFCluster(Cluster):
         
         if not self.submitted_ids:
             return
-        cmd = "bdel %s" % ' '.join(self.submitted_ids)
+        cmd = "bkill %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 class GECluster(Cluster):

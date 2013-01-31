@@ -86,10 +86,31 @@ class ModelReader(base_objects.Model):
                                             and not k.startswith('decay_table')]
             
             if set(key) != set(parameter_dict.keys()):
-                raise MadGraph5Error, '''Invalid restriction card (not same block)
-                %s != %s
-                ''' % (set(key), set(parameter_dict.keys()))
+                fail = True    
+                msg = '''Invalid restriction card (not same block)
+    %s != %s.
+    Missing block: %s
+    Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
+                             ','.join(set(parameter_dict.keys()).difference(set(key))),
+                             ','.join(set(key).difference(set(parameter_dict.keys()))))
+                # FOR MSSM allow for automatic conversion to correct format 
+                try:
+                    param_card = param_card.input_path
+                    param_card = card_reader.convert_to_mg5card(param_card,
+                                                                 writting=False)
+                    key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
+                                            and not k.startswith('decay_table')]
+                    if not set(parameter_dict.keys()).difference(set(key)):
+                        fail = False
+                except Exception:
+                    raise MadGraph5Error, msg
+                
+                if fail:
+                    raise MadGraph5Error, msg
+                
             for block in key:
+                if block not in parameter_dict:
+                    continue
                 for id in parameter_dict[block]:
                     try:
                         value = param_card[block].get(id).value
@@ -133,7 +154,7 @@ class ModelReader(base_objects.Model):
             try:
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
-                msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
+                msg = 'Unable to evaluate %s = %s: raise error: %s' % (param.name,param.expr, error)
                 raise MadGraph5Error, msg
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:

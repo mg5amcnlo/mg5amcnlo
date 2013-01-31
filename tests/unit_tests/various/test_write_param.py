@@ -254,9 +254,9 @@ Block mass
     6 1.720000e+02 # MT 
    15 1.777000e+00 # MTA 
    23 9.118800e+01 # set of param :1*MZ, 1*MH 
-##  Not dependent paramater.
+## Dependent parameters, given by model restrictions.
 ## Those values should be edited following the 
-## analytical expression. MG5 ignore those values 
+## analytical expression. MG5 ignores those values 
 ## but they are important for interfacing the output of MG5
 ## to external program such as Pythia.
   1 0.000000 # d : 0.0 
@@ -294,9 +294,9 @@ Block yukawa
 ###################################
 DECAY  23 2.441404e+00 # set of param :1*WZ, 1*WH 
 DECAY  24 3.000000e+00 # WW 
-##  Not dependent paramater.
+## Dependent parameters, given by model restrictions.
 ## Those values should be edited following the 
-## analytical expression. MG5 ignore those values 
+## analytical expression. MG5 ignores those values 
 ## but they are important for interfacing the output of MG5
 ## to external program such as Pythia.
 DECAY  1 0.000000 # d : 0.0 

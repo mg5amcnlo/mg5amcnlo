@@ -363,7 +363,7 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -378,6 +378,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
+        logger.info("the options --energy allows to change the \sqrt(S)")
 
     def help_generate(self):
 
@@ -567,7 +568,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -702,9 +706,10 @@ This will take effect only in a NEW terminal
                 args.append(self._done_export[0])
                 return
             else:
-                self.help_launch()
-                raise self.InvalidCmd, \
-                       'No default location available, please specify location.'
+                logger.warning('output command missing, run it automatically (with default argument)')
+                self.do_output('')
+                logger.warning('output done: running launch')
+                return self.check_launch(args, options)
         
         if len(args) != 1:
             self.help_launch()
@@ -1258,6 +1263,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1275,10 +1281,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
+            out['particles'] = model_comp
+            out['path to param_card'] = self.path_completion(text)
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
 
         if len(args) > 2:
-            return model_comp
+            out['particles'] = model_comp
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
             
         
     def complete_tutorial(self, text, line, begidx, endidx):
@@ -1934,7 +1945,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))                
+                  (len(self._curr_amps), ndiags))        
+                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -2329,8 +2341,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Check args validity
         param_card = self.check_check(args)
-
+        energy = float(args[-1].split('=')[1])
+        args = args[:-1]
         line = " ".join(args[1:])
+        
         myprocdef = self.extract_process(line)
 
         # Check that we have something    
@@ -2356,19 +2370,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
-                                                        quick = True)
+                                                        quick = True,
+                                                        energy=energy)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
@@ -2377,7 +2394,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             model_name = self._curr_model['name']
-            if gauge == 'unitarity':
+            if gauge == 'unitary':
                 myprocdef_unit = myprocdef
                 self.do_set('gauge Feynman', log=False)
                 self.do_import('model %s' % model_name)
@@ -2388,10 +2405,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.do_import('model %s' % model_name)
                 myprocdef_unit = self.extract_process(line)            
             
+            nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
+            nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
+            
+            if nb_part_feyn == nb_part_unit:
+                logger.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                cmass_scheme = mass_scheme)
+                                                cmass_scheme = mass_scheme,
+                                                energy=energy)
+            
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -3046,7 +3070,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
@@ -3946,7 +3970,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
@@ -3986,7 +4012,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
+                group = False 
 
 
 
@@ -4250,7 +4276,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else: 
                 last_action_2 = 'none'
 
-class MadGraphCmdWeb(CheckValidForCmdWeb,MadGraphCmd):
+class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""
                 
 #===============================================================================

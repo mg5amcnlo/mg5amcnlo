@@ -272,10 +272,18 @@ class CmdExtended(cmd.Cmd):
 
         self.add_error_log_in_html()
         cmd.Cmd.nice_config_error(self, error, line)
+        
+        
+        try:
+            debug_file = open(self.debug_output, 'a')
+            debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+            debug_file.close()
+        except:
+            pass 
+            
 
     def nice_error_handling(self, error, line):
         """If a ME run is currently running add a link in the html output"""
-        
 
         if isinstance(error, ZeroResult):
             self.add_error_log_in_html(error)
@@ -307,7 +315,12 @@ class CmdExtended(cmd.Cmd):
         else:
             self.add_error_log_in_html()            
             cmd.Cmd.nice_error_handling(self, error, line)
-
+            try:
+                debug_file = open(self.debug_output, 'a')
+                debug_file.write(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')))
+                debug_file.close()
+            except:
+                pass
         
         
 #===============================================================================
@@ -885,8 +898,13 @@ class CheckValidForCmd(object):
             The variable mg5_path should not be correctly configure.'''
             
         # Import model
-        model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
+        if not MADEVENT:
+            modelname = self.find_model_name()
+            model = import_ufo.import_model(modelname, decay=True)
+        else:
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            
         if not hasattr(model.get('particles')[0], 'partial_widths'):
             raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
             
@@ -1725,6 +1743,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
             return self.set_configuration(me5_config, final,initdir=self.me_dir)
 
         config_file = open(config_path)
@@ -2097,7 +2117,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 text = '''Survey return zero cross section. 
    Typical reasons are the following:
    1) A massive s-channel particle has a width set to zero.
-   2) The pdf are zero for at least one of the initial state particles.
+   2) The pdf are zero for at least one of the initial state particles
+      or you are using maxjetflavor=4 for initial state b:s.
    3) The cuts are too strong.
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
@@ -2445,7 +2466,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
@@ -2489,7 +2510,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
-        devnull = os.open(os.devnull, os.O_RDWR)  
+        devnull = open(os.devnull, 'w')  
         self.nb_refine += 1
         args = self.split_arg(line)
         # Check argument's validity
@@ -2569,6 +2590,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.results.add_detail('error', error)   
 
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
         
     ############################################################################ 
     def do_combine_events(self, line):
@@ -2623,9 +2645,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                      '%s_%s_banner.txt' % (self.run_name, tag)))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-        
         
         misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
                    str(self.random_orig)],
@@ -2649,16 +2668,17 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-        args = self.split_arg(line)
-        # check the argument and return those in a dictionary format
-        args = self.check_compute_widths(args)
-        
         warning_text = """Be carefull automatic computation of the width is 
 ONLY valid if all three (or more) body decay are negligeable. In doubt use a 
 calculator."""
         
         logger.warning(warning_text)
         logger.info('In a future version of MG5 those mode will also be taken into account')
+      
+        args = self.split_arg(line)
+        # check the argument and return those in a dictionary format
+        args = self.check_compute_widths(args)
+        
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
         elif not args['force']: 
@@ -2710,7 +2730,7 @@ calculator."""
 
         run = self.run_name
         tag = self.run_card['run_tag']
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
 
         if not os.path.exists(pjoin(self.me_dir, 'Events', run)):
             os.mkdir(pjoin(self.me_dir, 'Events', run))
@@ -2773,6 +2793,7 @@ calculator."""
                 misc.call(['gzip', output], stdout=devnull, stderr=devnull, 
                                                                      cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
+        devnull.close()
 
     ############################################################################ 
     def do_create_gridpack(self, line):
@@ -3466,7 +3487,7 @@ calculator."""
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
-                
+
                 #Find the correct PDF input file
                 if self.pdffile:
                     input_files.append(self.pdffile)
@@ -3484,7 +3505,6 @@ calculator."""
                         self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                         input_files.append(self.pdffile) 
                         
-                
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
                 Ire = re
@@ -3495,7 +3515,7 @@ calculator."""
                 text = fsock.read()
                 output_files = Gre.findall(text)
                 if not output_files:
-                    Ire = re.compile("for i in ([\d\s]*) ; do")
+                    Ire = re.compile("for i in ([\d\.\s]*) ; do")
                     data = Ire.findall(text)
                     data = ' '.join(data).split()
                     for nb in data:
@@ -3872,12 +3892,13 @@ calculator."""
             self.update_status('', level=None)
         except Exception, error:         
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = os.open(os.devnull, os.O_RDWR) 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except:
             pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -4632,6 +4653,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -4643,7 +4665,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -4675,9 +4697,7 @@ class GridPackCmd(MadEventCmd):
             pass
         
         bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
-        misc.call([pjoin(bindir, 'combine_runs')], 
-                                          cwd=pjoin(self.me_dir,'SubProcesses'),
-                                          stdout=devnull)
+        combine_runs.CombineRuns(self.me_dir)
         
         #update html output
         cross, error = sum_html.make_all_html_results(self)
@@ -4686,6 +4706,7 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
 
 
 class AskforEditCard(cmd.OneLinePathCompletion):
@@ -4697,7 +4718,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         cmd.OneLinePathCompletion.__init__(self, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        try:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        except check_param_card.InvalidParamCard:
+            logger.error('Current param_card is not valid. We are going to use the default one.')
+            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
+                     pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
     
         self.pname2block = {}
@@ -4736,6 +4763,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.pname2block[var].append((bname, lha_id))
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
+        
                     
         # check for conflict with run_card
         for var in self.pname2block:                
@@ -4765,6 +4793,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block':'all', 'param_card':'default'}
             elif args[1] in self.param_card.keys():
                 allowed = {'block':args[1]}
+            elif args[1] == 'width':
+                allowed = {'block': 'decay'}
             else:
                 allowed = {'value':''}
         else:
@@ -4809,6 +4839,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'block' in allowed.keys():
             if allowed['block'] == 'all':
                 allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
+                allowed_block.append('width')
                 possibilities['Param Card Block' ] = \
                                        self.list_completion(text, allowed_block)
             elif isinstance(allowed['block'], basestring):
@@ -4843,7 +4874,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return
 
         card = '' #store which card need to be modify (for name conflict)
@@ -4857,7 +4888,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command: %s' % line)
                 return
 
         #### RUN CARD
@@ -4887,7 +4918,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
-        elif args[start] in self.param_card and card != 'run_card':
+        elif (args[start] in self.param_card or args[start] == 'width') \
+                                                         and card != 'run_card':
+            if args[start] == 'width':
+                args[start] = 'decay'
+                
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -4908,7 +4943,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    logger.warning('invalid set command')
+                    logger.warning('invalid set command %s' % line)
                     return 
 
             if key in self.param_card[args[start]].param_dict:
@@ -4930,7 +4965,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         return
                     self.setP(args[start], key, value)
             else:
-                logger.warning('invalid set command')
+                logger.warning('invalid set command %s' % line)
                 return                   
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
@@ -4948,7 +4983,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('all listed variables have been modified')
         #INVALID
         else:
-            logger.warning('invalid set command')
+            logger.warning('invalid set command %s' % line)
             return            
     
     def setR(self, name, value):
