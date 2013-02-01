@@ -1907,11 +1907,9 @@ Integrated cross-section
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
-        Hessian method) and returns it in percents.
-        The expected format of the file is:
-        n_scales
-        xsec_scale_central xsec_scale1 ...
-        n_pdf
+        Hessian method (if lhaid<90000) or Gaussian (if lhaid>90000))
+        and returns it in percents.  The expected format of the file
+        is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
         scale_pdf_info={}
         scales=[]
@@ -1965,15 +1963,25 @@ Integrated cross-section
             scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
 
         # get the pdf uncertainty in percent (according to the Hessian method)
+        lhaid=int(self.run_card['lhaid'])
         pdf_upp=0.0
         pdf_low=0.0
-        if numofpdf>1:
-            for i in range(int(numofpdf/2)):
-                pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
-                pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-            scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-            scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
-
+        if lhaid <= 90000:
+            # use Hessian method (CTEQ & MSTW)
+            if numofpdf>1:
+                for i in range(int(numofpdf/2)):
+                    pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
+                    pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
+                scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+                scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+        else:
+            # use Gaussian method (NNPDF)
+            pdf_stdev=0.0
+            for i in range(int(numofpdf-1)):
+                pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
+            pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
+            scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         return scale_pdf_info
 
 
