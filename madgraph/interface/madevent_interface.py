@@ -1874,7 +1874,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if args: #custom output file
             event_path = args[0]
         else:
-            event_path = pjoin(self.me_path, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
         
         #gunzip the file
         if event_path.endswith('.gz'):
