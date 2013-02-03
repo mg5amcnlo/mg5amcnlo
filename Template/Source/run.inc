@@ -45,3 +45,8 @@ c     Common block for systematics variations
       DOUBLE PRECISION s_rwfact
       COMMON/TO_SYST/use_syst,n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
+c
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      COMMON/TO_CINFO/clusinfo

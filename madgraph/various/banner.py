@@ -454,6 +454,7 @@ class RunCard(dict):
         if int(self['ickkw'])>0:
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
+            self.add_line('clusinfo', 'bool', False)
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')

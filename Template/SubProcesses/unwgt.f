@@ -635,7 +635,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 
 c     Write out buffers for clustering info
       nclus=0
-      if(icluster(1,1).ne.0 .and. ickkw.ne.0)then
+      if(icluster(1,1).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
          nclus=nexternal
          write(buffclus(1),'(a)')'<clustering>'
          do i=1,nexternal-2
