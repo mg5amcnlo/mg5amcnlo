@@ -469,7 +469,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     
         # Evaluate the matrix element for the momenta p
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
-                                               export_dir, p,verbose=False)[0][1]
+                                               export_dir, p,verbose=False)[0][0]
 
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:

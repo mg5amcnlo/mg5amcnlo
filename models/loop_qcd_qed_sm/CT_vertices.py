@@ -4652,6 +4652,130 @@ V_UVHbb = CTVertex(name = 'V_UVHbb',
               couplings = {(0,0,0):C.UV_Hbb},
               type = 'UV')
 
+# ============================== #
+# Goldstone UV counter vertices  #
+# ============================== #
+
+V_UV_txbGp = CTVertex(name = 'V_UV_txbGp',
+                      particles = [ P.t__tilde__, P.b, P.G__plus__ ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.FFS1, L.FFS3 ],
+                      loop_particles = [[[P.G,P.b,P.t]]],
+                      couplings = {(0,0,0):C.GC_UV_1015,(0,1,0):C.GC_UV_1021},
+                      type = 'UV')
+
+V_UV_bxtGm = CTVertex(name = 'V_UV_bxtGm',
+                      particles = [ P.b__tilde__, P.t, P.G__minus__ ],
+                      color = [ 'Identity(1,2)' ],
+                      lorentz = [ L.FFS1, L.FFS3 ],
+                      loop_particles = [[[P.G,P.b,P.t]]],
+                      couplings = {(0,0,0):C.GC_UV_1027,(0,1,0):C.GC_UV_1030},
+                      type = 'UV')
+
+V_UV_bxbG0 = CTVertex(name = 'V_UV_bxbG0',
+                     particles = [ P.b__tilde__, P.b, P.G0 ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS2 ],
+                     loop_particles = [[[P.G,P.b]]],
+                     couplings = {(0,0,0):C.GC_UV_1082},
+                     type = 'UV')
+
+V_UV_cxcG0 = CTVertex(name = 'V_UV_cxcG0',
+                     particles = [ P.c__tilde__, P.c, P.G0 ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS2 ],
+                     loop_particles = [[[P.G,P.c]]],
+                     couplings = {(0,0,0):C.GC_UV_1085},
+                     type = 'UV')
+
+V_UV_txtG0 = CTVertex(name = 'V_UV_txtG0',
+                     particles = [ P.t__tilde__, P.t, P.G0 ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS2 ],
+                     loop_particles = [[[P.G,P.t]]],
+                     couplings = {(0,0,0):C.GC_UV_1095},
+                     type = 'UV')
+
+V_UV_cxsGp = CTVertex(name = 'V_UV_cxsGp',
+                     particles = [ P.c__tilde__, P.s, P.G__plus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS3 ],
+                     loop_particles = [[[P.G,P.c,P.s]]],
+                     couplings = {(0,0,0):C.GC_UV_1018},
+                     type = 'UV')
+
+V_UV_txsGp = CTVertex(name = 'V_UV_txsGp',
+                     particles = [ P.t__tilde__, P.s, P.G__plus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS3 ],
+                     loop_particles = [[[P.G,P.t,P.s]]],
+                     couplings = {(0,0,0):C.GC_UV_1019},
+                     type = 'UV')
+
+V_UV_uxbGp = CTVertex(name = 'V_UV_uxbGp',
+                     particles = [ P.u__tilde__, P.b, P.G__plus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.u,P.b]]],
+                     couplings = {(0,0,0):C.GC_UV_1013},
+                     type = 'UV')
+
+V_UV_cxbGp = CTVertex(name = 'V_UV_cxbGp',
+                     particles = [ P.c__tilde__, P.b, P.G__plus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1, L.FFS3 ],
+                     loop_particles = [[[P.G,P.c,P.b]]],
+                     couplings = {(0,0,0):C.GC_UV_1014,(0,1,0):C.GC_UV_1020},
+                     type = 'UV')
+
+V_UV_bxuGm = CTVertex(name = 'V_UV_bxuGm',
+                     particles = [ P.b__tilde__, P.u, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.u,P.b]]],
+                     couplings = {(0,0,0):C.GC_UV_1028},
+                     type = 'UV')
+
+V_UV_dxcGm = CTVertex(name = 'V_UV_dxcGm',
+                     particles = [ P.d__tilde__, P.c, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.c,P.d]]],
+                     couplings = {(0,0,0):C.GC_UV_1022},
+                     type = 'UV')
+
+V_UV_sxcGm = CTVertex(name = 'V_UV_sxcGm',
+                     particles = [ P.s__tilde__, P.c, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.c,P.s]]],
+                     couplings = {(0,0,0):C.GC_UV_1023},
+                     type = 'UV')
+
+V_UV_bxcGm = CTVertex(name = 'V_UV_bxcGm',
+                     particles = [ P.b__tilde__, P.c, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1, L.FFS3 ],
+                     loop_particles = [[[P.G,P.c,P.b]]],
+                     couplings = {(0,0,0):C.GC_UV_1024,(0,1,0):C.GC_UV_1029},
+                     type = 'UV')
+
+V_UV_dxtGm = CTVertex(name = 'V_UV_dxtGm',
+                     particles = [ P.d__tilde__, P.t, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.t,P.d]]],
+                     couplings = {(0,0,0):C.GC_UV_1025},
+                     type = 'UV')
+
+V_UV_sxtGm = CTVertex(name = 'V_UV_sxtGm',
+                     particles = [ P.s__tilde__, P.t, P.G__minus__ ],
+                     color = [ 'Identity(1,2)' ],
+                     lorentz = [ L.FFS1 ],
+                     loop_particles = [[[P.G,P.s,P.t]]],
+                     couplings = {(0,0,0):C.GC_UV_1026},
+                     type = 'UV')
+
 # treat the diagonal of CKM
 # guu~
 V_UVGUUEW = CTVertex(name = 'V_UVGUUEW',

@@ -7016,6 +7016,86 @@ UV_Hbb = Coupling(name = 'UV_Hbb',
                  value = '-((complex(0,1)*yb)/cmath.sqrt(2))*UV_yuk_b',
                  order = {'QED':1,'QCD':2})
 
+# ============================== #
+# Goldstone UV CT couplings      #
+# ============================== #
+
+GC_UV_1015 = Coupling(name = 'GC_UV_1015',
+                      value = 'I133*UV_yuk_b',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1021 = Coupling(name = 'GC_UV_1021',
+                      value = '-I233*UV_yuk_t',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1027 = Coupling(name = 'GC_UV_1027',
+                      value = 'I333*UV_yuk_t',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1030 = Coupling(name = 'GC_UV_1030',
+                      value = '-I433*UV_yuk_b',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1082 = Coupling(name = 'GC_UV_1082',
+                      value = '-(yb/cmath.sqrt(2))*(UV_yuk_b)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1085 = Coupling(name = 'GC_UV_1085',
+                      value = '(yc/cmath.sqrt(2))*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1095 = Coupling(name = 'GC_UV_1095',
+                      value = '(yt/cmath.sqrt(2))*(UV_yuk_t)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1018 = Coupling(name = 'GC_UV_1018',
+                      value = '(-I222)*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1019 = Coupling(name = 'GC_UV_1019',
+                      value = '(-I223)*(UV_yuk_t)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1013 = Coupling(name = 'GC_UV_1013',
+                      value = '(I131)*(UV_yuk_b)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1014 = Coupling(name = 'GC_UV_1014',
+                      value = '(I132)*(UV_yuk_b)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1020 = Coupling(name = 'GC_UV_1020',
+                      value = '(-I232)*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1028 = Coupling(name = 'GC_UV_1028',
+                      value = '(-I413)*(UV_yuk_b)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1022 = Coupling(name = 'GC_UV_1022',
+                      value = '(I321)*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1023 = Coupling(name = 'GC_UV_1023',
+                      value = '(I322)*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1024 = Coupling(name = 'GC_UV_1024',
+                      value = '(I323)*(UV_yuk_c)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1029 = Coupling(name = 'GC_UV_1029',
+                      value = '(-I423)*(UV_yuk_b)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1025 = Coupling(name = 'GC_UV_1025',
+                      value = '(I331)*(UV_yuk_t)',
+                      order = {'QED':1,'QCD':2})
+
+GC_UV_1026 = Coupling(name = 'GC_UV_1026',
+                      value = '(I332)*(UV_yuk_t)',
+                      order = {'QED':1,'QCD':2})
+
 UV_GUULEW = Coupling(name = 'UV_GUULEW',
                      value = 'complex(0,1)/2.*G*(complexconjugate(uWcft_UV_EW_L)+uWcft_UV_EW_L)',
                      order = {'QED':2,'QCD':1})
@@ -7063,6 +7143,7 @@ UV_GTTLEW = Coupling(name = 'UV_GTTLEW',
 UV_GTTREW = Coupling(name = 'UV_GTTREW',
                      value = 'complex(0,1)/2.*G*(complexconjugate(tWcft_UV_EW_R)+tWcft_UV_EW_R)',
                      order = {'QED':2,'QCD':1})
+
 
 
 
