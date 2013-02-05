@@ -272,6 +272,7 @@ c lepton pT
                   taumin_j(iFKS)=taumin_j(iFKS)+emass(i)
                   xm(i)=emass(i)
                endif
+               xw(i)=0d0
             enddo
             stot = 4d0*ebeam(1)*ebeam(2)
             tau_Born_lower_bound=taumin(iFKS)**2/stot
@@ -290,11 +291,21 @@ c d1=nexternal, because we check the Born, so final parton should be
 c skipped. [This is already done above; also for the leptons]
                   xm1=xm(d1)
                   xm2=xm(d2)
+                  xw1=xw(d1)
+                  xw2=xw(d2)
 c On-shell mass of the intermediate resonance
                   xmi=pmass(i,iconfig)
+c Width of the intermediate resonance
+                  xwi=pwidth(i,iconfig)
 c Set the intermediate mass equal to the max of its actual mass and
 c the sum of the masses of the two daugters.
-                  xm(i)=max(xmi,xm1+xm2)
+                  if (xmi.gt.xm1+xm2) then
+                     xm(i)=xmi
+                     xw(i)=xwi
+                  else
+                     xm(i)=xm1+xm2
+                     xw(i)=xw1+xw2 ! just sum the widths
+                  endif
 c Add the new mass to the bound. To avoid double counting, we should
 c subtract the daughters, because they are already included above or in
 c the previous iteration of the loop
@@ -306,60 +317,70 @@ c the previous iteration of the loop
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
-         do i=nincoming+1,nexternal-1
-            mass_min(i)=xm(i)    ! minimal allowed resonance mass (including masses set by cuts)
-         enddo
-         cBW_FKS_level_max(iFKS)=0
-         do i=-1,-(nexternal-3),-1 ! All propagators
-            if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
-            mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
-            if (xm(i).lt.mass_min(i)) then
-               write (*,*)
-     $              'ERROR in the determination of conflicting BW',i
-     $              ,xm(i),mass_min(i)
-               stop
-            endif
-            if (qmass(i).lt.xm(i)) then
-c     Possible conflict in BW
-               if (qmass(i).lt.mass_min(i)) then
-c     Resonance can never go on-shell due to the kinematics of the event
-                  cBW_FKS(iFKS,i)=2
-                  cBW_FKS_level(iFKS,i)=0
-               elseif(qmass(i).lt.xm(i)) then
-c     Conflicting Breit-Wigner
-                  cBW_FKS(iFKS,i)=1
-                  cBW_FKS_level(iFKS,i)=1
-                  cBW_FKS_level_max(iFKS)=max(cBW_FKS_level_max(iFKS)
-     $                 ,cBW_FKS_level(iFKS,i))
+            do i=nincoming+1,nexternal-1
+               mass_min(i)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
+            enddo
+            cBW_FKS_level_max(iFKS)=0
+            do i=-1,-(nexternal-3),-1 ! All propagators
+               cBW_FKS_mass(iFKS,1,i)=0d0
+               cBW_FKS_width(iFKS,1,i)=0d0
+               cBW_FKS_mass(iFKS,-1,i)=0d0
+               cBW_FKS_width(iFKS,-1,i)=0d0
+               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
+               mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
+               if (xm(i).lt.mass_min(i)) then
+                  write (*,*)
+     $                 'ERROR in the determination of conflicting BW',i
+     $                 ,xm(i),mass_min(i)
+                  stop
                endif
-c     set the daughters also as conflicting (recursively)
-               do j=i,-1,-1
-                  if (cBW_FKS(iFKS,j).ne.0) then
-                     if(cBW_FKS(iFKS,itree(j,1)).eq.0 .and.
-     &                    itree(j,1).lt.0) then
-                        cBW_FKS(iFKS,itree(j,1))=1
-                        cBW_FKS_level(iFKS,itree(j,1))=
-     &                       cBW_FKS_level(iFKS,j)+1
-                        cBW_FKS_level_max(iFKS)=
-     $                       max(cBW_FKS_level_max(iFKS)
-     $                       ,cBW_FKS_level(iFKS,itree(j,1)))
-                     endif
-                     if(cBW_FKS(iFKS,itree(j,2)).eq.0 .and.
-     &                    itree(j,2).lt.0) then
-                        cBW_FKS(iFKS,itree(j,2))=1
-                        cBW_FKS_level(iFKS,itree(j,2))=
-     $                       cBW_FKS_level(iFKS,j)+1
-                        cBW_FKS_level_max(iFKS)=
-     &                       max(cBW_FKS_level_max(iFKS)
-     $                       ,cBW_FKS_level(iFKS,itree(j,2)))
-                     endif
+               if (qmass(i).lt.xm(i)) then
+c     Possible conflict in BW
+                  if (qmass(i).lt.mass_min(i)) then
+c     Resonance can never go on-shell due to the kinematics of the event
+                     cBW_FKS(iFKS,i)=2
+                     cBW_FKS_level(iFKS,i)=0
+                  elseif(qmass(i).lt.xm(i)) then
+c     Conflicting Breit-Wigner
+                     cBW_FKS(iFKS,i)=1
+                     cBW_FKS_level(iFKS,i)=1
+                     cBW_FKS_level_max(iFKS)=max(cBW_FKS_level_max(iFKS)
+     $                    ,cBW_FKS_level(iFKS,i))
+c     Set here the mass (and width) of the alternative mass; it's the
+c     sum of daughter masses. (3rd argument is '1', because this
+c     alternative mass is LARGER than the resonance mass).
+                     cBW_FKS_mass(iFKS,i,1)=xm(i)
+                     cBW_FKS_width(iFKS,i,1)=xw(i)
                   endif
-               enddo
-            else
+c     set the daughters also as conflicting (recursively)
+                  do j=i,-1,-1
+                     if (cBW_FKS(iFKS,j).ne.0) then
+                        do k=1,2 ! loop over the 2 daughters
+                           if(cBW_FKS(iFKS,itree(j,k)).eq.0 .and.
+     &                          itree(j,k).lt.0) then
+                              cBW_FKS(iFKS,itree(j,k))=1
+                              cBW_FKS_level(iFKS,itree(j,k))=
+     &                             cBW_FKS_level(iFKS,j)+1
+                              cBW_FKS_level_max(iFKS)=
+     $                             max(cBW_FKS_level_max(iFKS)
+     $                             ,cBW_FKS_level(iFKS,itree(j,k)))
+c     Set here the mass (and width) of the alternative mass; it's the
+c     difference between the mother and the sister masses. (3rd argument
+c     is '-1', because this alternative mass is SMALLER than the
+c     resonance mass).
+                              cBW_FKS_mass(iFKS,itree(j,k),-1)=
+     &                             xm(j)-xm(itree(j,3-k)) ! mass difference
+                              cBW_FKS_width(iFKS,itree(j,k),-1)=
+     &                             xw(j)+xw(itree(j,3-k)) ! sum of widths
+                           endif
+                        enddo
+                     endif
+                  enddo
+               else
 c     Normal Breit-Wigner
-               cBW_FKS(iFKS,i)=0
-            endif
-         enddo
+                  cBW_FKS(iFKS,i)=0
+               endif
+            enddo
 c Conflicting BW's determined. They are saved in cBW_FKS
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
