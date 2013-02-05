@@ -309,6 +309,7 @@ c mass of the BW
          do i=nincoming+1,nexternal-1
             mass_min(i)=xm(i)    ! minimal allowed resonance mass (including masses set by cuts)
          enddo
+         cBW_FKS_level_max(iFKS)=0
          do i=-1,-(nexternal-3),-1 ! All propagators
             if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
             mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
@@ -322,26 +323,44 @@ c mass of the BW
 c     Possible conflict in BW
                if (qmass(i).lt.mass_min(i)) then
 c     Resonance can never go on-shell due to the kinematics of the event
-                  cBW(iFKS,i)=2
+                  cBW_FKS(iFKS,i)=2
+                  cBW_FKS_level(iFKS,i)=0
                elseif(qmass(i).lt.xm(i)) then
 c     Conflicting Breit-Wigner
-                  cBW(,iFKSi)=1
+                  cBW_FKS(iFKS,i)=1
+                  cBW_FKS_level(iFKS,i)=1
+                  cBW_FKS_level_max(iFKS)=max(cBW_FKS_level_max(iFKS)
+     $                 ,cBW_FKS_level(iFKS,i))
                endif
 c     set the daughters also as conflicting (recursively)
                do j=i,-1,-1
-                  if (cBW(iFKS,j).ne.0) then
-                     if(cBW(iFKS,itree(j,1)).eq.0 .and. itree(j,1).lt.0)
-     $                    cBW(iFKS,itree(j,1))=1
-                     if(cBW(iFKS,itree(j,2)).eq.0 .and. itree(j,2).lt.0)
-     $                    cBW(iFKS,itree(j,2))=1
+                  if (cBW_FKS(iFKS,j).ne.0) then
+                     if(cBW_FKS(iFKS,itree(j,1)).eq.0 .and.
+     &                    itree(j,1).lt.0) then
+                        cBW_FKS(iFKS,itree(j,1))=1
+                        cBW_FKS_level(iFKS,itree(j,1))=
+     &                       cBW_FKS_level(iFKS,j)+1
+                        cBW_FKS_level_max(iFKS)=
+     $                       max(cBW_FKS_level_max(iFKS)
+     $                       ,cBW_FKS_level(iFKS,itree(j,1)))
+                     endif
+                     if(cBW_FKS(iFKS,itree(j,2)).eq.0 .and.
+     &                    itree(j,2).lt.0) then
+                        cBW_FKS(iFKS,itree(j,2))=1
+                        cBW_FKS_level(iFKS,itree(j,2))=
+     $                       cBW_FKS_level(iFKS,j)+1
+                        cBW_FKS_level_max(iFKS)=
+     &                       max(cBW_FKS_level_max(iFKS)
+     $                       ,cBW_FKS_level(iFKS,itree(j,2)))
+                     endif
                   endif
                enddo
             else
 c     Normal Breit-Wigner
-               cBW(iFKS,i)=0
+               cBW_FKS(iFKS,i)=0
             endif
          enddo
-c Conflicting BW's determined. They are saved in cBW
+c Conflicting BW's determined. They are saved in cBW_FKS
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c If the lower bound found here is smaller than the hard bound,
