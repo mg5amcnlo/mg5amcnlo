@@ -68,6 +68,25 @@ R2_4G_1423 = Lorentz(name = 'R2_4G_1423',
                 spins = [ 3, 3, 3, 3 ],
                 structure = 'Metric(1,4)*Metric(2,3)')
 
+# From FeynRules
+
+R2RGA_VVVV10 = Lorentz(name = 'R2RGA_VVVV10',
+                       spins = [ 3, 3, 3, 3 ],
+                       structure = 'Metric(1,4)*Metric(2,3) + Metric(1,3)*Metric(2,4)\
+                       + Metric(1,2)*Metric(3,4)')
+
+R2RGA_VVVV2 = Lorentz(name = 'R2RGA_VVVV2',
+                      spins = [ 3, 3, 3, 3 ],
+                      structure = 'Metric(1,4)*Metric(2,3)')
+
+R2RGA_VVVV3 = Lorentz(name = 'R2RGA_VVVV3',
+                      spins = [ 3, 3, 3, 3 ],
+                      structure = 'Metric(1,3)*Metric(2,4)')
+
+R2RGA_VVVV5 = Lorentz(name = 'R2RGA_VVVV5',
+                      spins = [ 3, 3, 3, 3 ],
+                      structure = 'Metric(1,2)*Metric(3,4)')
+
 #=============================================================================================
 
 R2_GGZ = Lorentz(name = 'R2_GGZ',
