@@ -2191,6 +2191,9 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat')]
+
+        if os.path.exists(pjoin(cwd,'nevents.tar')):
+            input_files.append(pjoin(cwd,'nevents.tar'))
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2199,7 +2202,7 @@ Integrated cross-section
             for name in to_add:
                 input_files.append(pjoin(cwd, name))
 
-                to_check = ['HelFilter.dat','LoopFilter.dat', 'nevents.tar']
+                to_check = ['HelFilter.dat','LoopFilter.dat']
             for name in to_check:
                 if os.path.exists(pjoin(cwd, name)):
                     input_files.append(pjoin(cwd, name))
