@@ -241,15 +241,22 @@ c     Note that nFxFx_ren_scales includes the one scale that corresponds
 c     to the real-emission one (and is zero for the n-body conf.). Skip
 c     that scale here.
          if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
+c For processes that have alpha_S to some (non-zero) power at the lowest
+c multiplicity Born, use the transverse mass of that system for those
+c alpha_S
             tmp=FxFx_ren_scales(0)**
      &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
+         elseif(nint(wgtbpower).eq.0) then
+c lowest multiplicity for processes without QCD use the transverse mass
+c of the colorless system (as returned by setclscales)
+            tmp=FxFx_ren_scales(0)
          else
             tmp=1d0
          endif
          do i=2,nFxFx_ren_scales
             tmp=tmp*FxFx_ren_scales(i)
          enddo
-         tmp=tmp**(1d0/wgtbpower)
+         tmp=tmp**(1d0/max(wgtbpower,1d0))
          temp_scale_id='FxFx merging scale'
       elseif(imurtype.eq.1)then
         tmp=scale_global_reference(pp)
