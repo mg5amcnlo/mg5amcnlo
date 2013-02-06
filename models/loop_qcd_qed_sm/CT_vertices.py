@@ -1396,7 +1396,7 @@ V_R2ttA2 = CTVertex(name = 'V_R2ttA2',
               particles = [ P.t__tilde__, P.t, P.A ],
               color = [ 'Identity(1,2)' ],
               lorentz = [ L.FFV2, L.FFV6 ],
-              loop_particles = [[[P.c,P.Z]],[[P.W__plus__,P.d]],[[P.W__plus__,P.s]],[[P.W__plus__,P.b]]],
+              loop_particles = [[[P.t,P.Z]],[[P.W__plus__,P.d]],[[P.W__plus__,P.s]],[[P.W__plus__,P.b]]],
               couplings = {(0,0,0):C.R2_ttA2Cp, (0,0,1):C.R2_ttA2Cp_d, (0,0,2):C.R2_ttA2Cp_s,(0,0,3):C.R2_ttA2Cp_b,
                            (0,1,0):C.R2_ttA2Cm, (0,1,1):C.R2_ttA2Cm_d, (0,1,2):C.R2_ttA2Cm_s,(0,1,3):C.R2_ttA2Cm_b},
               type = 'R2')
