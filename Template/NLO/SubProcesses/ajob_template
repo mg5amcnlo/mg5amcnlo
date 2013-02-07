@@ -1,5 +1,6 @@
 #!/bin/bash
 script=ajob1.$1.$2.$3.$4
+
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
     runnumber=0
@@ -137,6 +138,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         cp -f log.txt log_MINT$3.txt
     fi
     if [[ $1 == '2' && $runnumber != 0 ]]; then
+        sleep 10
         mv events.lhe events_$runnumber.lhe
         mv log.txt log_MINT$3_$runnumber.txt
     fi

@@ -2104,8 +2104,7 @@ Integrated cross-section
                         self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                     else:
                         to_split = self.find_jobs_to_split(Pdir, job, args[1])
-                        for n in to_split:
-                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                        self.run_exe(job, [args + [n] for n in to_split], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                         njob_split += len(to_split)
                     # print some statistics if running serially
         if self.cluster_mode == 2:
@@ -2174,10 +2173,18 @@ Integrated cross-section
 
             #this is for the cluster/multicore run
         elif 'ajob' in exe:
-            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
-            #submitting
-            self.cluster.submit2(exe, args, cwd=cwd, 
-                         input_files=input_files, output_files=output_files)
+            # check if args is a list of string or a list of lists
+            # in the second case, use the multiple submission function
+            if type(args[0]) == str:
+                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                #submitting
+                self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+            else:
+                input_files, output_files, arg = self.getIO_ajob(exe,cwd, args[0])
+                self.cluster.submit_multi(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
 
