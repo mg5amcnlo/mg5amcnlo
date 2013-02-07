@@ -346,12 +346,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
         
-        
-        generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
-                                                self.options)
-        generate_all.run(self.decay_processes,
-                                           self.prod_branches, self.proc_option)
-        
+        if 0:
+            generate_all = madspin.decay_all_events_old(self, self.banner, self.events_file, 
+                                                    self.options)
+            generate_all.run(self.decay_processes,
+                                               self.prod_branches, self.proc_option)
+        else:
+            generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
+                                                    self.options)
+            generate_all.run()
+                        
         self.branching_ratio = generate_all.branching_ratio
         evt_path = self.events_file.name
         misc.call(['gzip %s' % evt_path], shell=True)

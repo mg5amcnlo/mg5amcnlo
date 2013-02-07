@@ -1154,8 +1154,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
-        den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
+        replace_dict['den_factor_line'] = self.get_den_factor_line(matrix_element)
 
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
@@ -1187,8 +1186,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         else:
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
-            
-
+         
         file = file % replace_dict
 
         # Write the file

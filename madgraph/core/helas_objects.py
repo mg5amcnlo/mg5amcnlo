@@ -36,6 +36,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
+import madgraph.various.misc as misc
 
 from madgraph import InvalidCmd, MadGraph5Error
 
@@ -4088,15 +4089,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         initial_legs = filter(lambda leg: leg.get('state') == False, \
                               self.get('processes')[0].get('legs'))
 
-        spin_factor = reduce(lambda x, y: x * y,
-                             [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
-                               for leg in initial_legs ])
-
         color_factor = reduce(lambda x, y: x * y,
                               [ model.get('particle_dict')[leg.get('id')].\
                                     get('color')\
                                 for leg in initial_legs ])
+            
+        spin_factor = reduce(lambda x, y: x * y,
+                             [ len(model.get('particle_dict')[leg.get('id')].\
+                                   get_helicity_states())\
+                               for leg in initial_legs ])
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
