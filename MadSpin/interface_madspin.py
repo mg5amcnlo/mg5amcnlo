@@ -60,8 +60,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.options = {'max_weight': -1, 'BW_effect': 1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
-                        'Nevents_for_max_weigth': 20,
-                        'max_weight_ps_point': 10000,
+                        'Nevents_for_max_weigth': 75,
+                        'max_weight_ps_point': 250,
                         'BW_cut':15}
         
 
@@ -180,13 +180,14 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
-        if not self.model['case_sensitive']:
+        if self.model and not self.model['case_sensitive']:
             decaybranch = decaybranch.lower()
         
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
+        misc.sprint( self.list_branches)
         del decay_process, init_part    
         
     
@@ -323,14 +324,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 particle = particle.lower()
             particle_index+=1
             if self.list_branches.has_key(str(particle)):
-                counter+=1
-                self.decay_processes[counter]=self.list_branches[str(particle)][0]
-                # if there are several decay branches initiated by the same particle:
-                #  use each of them in turn:
-                if len(self.list_branches[str(particle)])>1: 
-                    del self.list_branches[str(particle)][0] 
-                    
-        if not self.decay_processes:
+                break                    
+        else:
             logger.info("Nothing to decay ...")
             return
 
@@ -346,15 +341,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
         
-        if 0:
-            generate_all = madspin.decay_all_events_old(self, self.banner, self.events_file, 
+
+        generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
                                                     self.options)
-            generate_all.run(self.decay_processes,
-                                               self.prod_branches, self.proc_option)
-        else:
-            generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
-                                                    self.options)
-            generate_all.run()
+        generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio
         evt_path = self.events_file.name
