@@ -2,9 +2,9 @@
 c*******************************************************
 c   Calculates the argument of the exponent
 c   o. It takes only terms logarithmic in log(Q/q0) and 
-c      constants into account (up to NLL)
-c   o. Mass effects are ignored
-c   o. Flavor thresholds are ignored
+c      constants into account (up to NLL) (iimode=2).
+c   o. For iimode=1, only the O(alphaS) expansion is
+c      included, with the alphaS stripped off.
 c******************************************************
       implicit none
 c Include
@@ -13,82 +13,18 @@ c Include
       include 'nFKSconfigs.inc'
       include 'cluster.inc'
 c Constants
-      double precision ZERO,PI,CA,CF,kappa,beta0,a1qq,a2qq,b1qq,b2qq
-     $     ,a1gg,a2gg,b1gg,b2gg
+      double precision ZERO,PI,CA,CF,kappa
       parameter (ZERO=0d0)
       parameter (PI = 3.14159265358979323846d0)
       parameter (CA = 3d0)
       parameter (CF = 4d0/3d0)
-c      parameter (NF = 5d0)      ! NF is determined in coupl.inc
-      parameter (beta0 = (11d0*CA - 2d0*NF)/(12d0*pi))
       parameter (kappa = CA*(67d0/18d0 - pi**2/6d0) - NF*5d0/9d0)
-      parameter (a1gg=CA/(2d0*Pi))
-      parameter (a2gg=CA/(4d0*Pi**2)*kappa)
-      parameter (b1gg=-beta0)
-      parameter (b2gg=0d0)
-      parameter (a1qq=CF/(2d0*Pi))
-      parameter (a2qq=CF/(4d0*Pi**2)*kappa)
-      parameter (b1qq=CF*(-3d0/(4d0*pi)))
-      parameter (b2qq=0d0)
 c Argument
       double precision q0
 c Local
       logical isgluon
-      double precision alphasq0
-c External
-      double precision alphas
-      external alphas
-
-      gamma=0.0d0
-      if (abs(iipdg).le.NF) then
-c Quark Sudakov
-         isgluon=.false.
-      elseif (iipdg.eq.21) then
-c Gluon Sudakov
-         isgluon=.true.
-      else
-         write (*,*) 'ERROR in reweight.f: do not know'/
-     $        /' which Sudakov to compute',iipdg
-         stop
-      endif
-      alphasq0=alphas(q0)
-c factor 2 because we are integrating over q, not q^2      
-      if (isgluon) then
-         gamma=2d0*((a1gg*alphasq0 + a2gg*alphasq0**2)*2d0*log(Q1/q0) + 
-     &              (b1gg*alphasq0 + b2gg*alphasq0**2) ) /q0
-      else
-         gamma=2d0*((a1qq*alphasq0 + a2qq*alphasq0**2)*2d0*log(Q1/q0) + 
-     &              (b1qq*alphasq0 + b2qq*alphasq0**2) ) /q0
-      endif
-
-      return
-      end
-
-      double precision function gamma_mass(q0)
-c*******************************************************
-c   Calculates the argument of the exponent
-c   o. It takes only terms logarithmic in log(Q/q0) and 
-c      constants into account (up to NLL)
-c   o. Mass effects are ignored
-c   o. Flavor thresholds are ignored
-c******************************************************
-      implicit none
-c Include
-      include 'nexternal.inc'
-      include 'coupl.inc'
-      include 'nFKSconfigs.inc'
-      include 'cluster.inc'
-c Constants
-      double precision ZERO,PI,CA,CF
-      parameter (ZERO=0d0)
-      parameter (PI = 3.14159265358979323846d0)
-      parameter (CA = 3d0)
-      parameter (CF = 4d0/3d0)
-c Argument
-      double precision q0
-c Local
-      logical isgluon
-      double precision alphasq0
+      integer i
+      double precision alphasq0,mu,qom,moq2
 c External
       double precision alphas
       external alphas
@@ -99,49 +35,62 @@ c Data
 c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 
       gamma=0.0d0
+      if (q0.ge.Q1) then
+         return
+      endif
+
 c Compute alphaS at the scale of the branching; with a freeze-out at 0.5
 c GeV
-      alphasq0=alphas(max(q0,0.5d0))
+      if (iimode.eq.2) then
+         alphasq0=alphas(max(q0,0.5d0))
+      elseif(iimode.eq.1) then
+         alphasq0=1d0
+      else
+         write (*,*) 'Unknown imode for Sudakov',iimode
+         stop
+      endif
+
       if (iipdg.eq.21) then
 c Gluon sudakov         
 c     g->gg contribution
-         gamma=CA*alphasq0*log(Q1/q0)/pi   ! A1
-     &        -CA*alphasq0*11d0/(12d0*pi)  ! B1
-     &                          ! A2
+         gamma=CA*alphasq0*log(Q1/q0)/pi                     ! A1
+     &        -CA*alphasq0*11d0/(12d0*pi)                    ! B1
+         if (iimode.eq.2) then
+             gamma=gamma+CA*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2)   ! A2
+          endif
 c     g->qqbar contribution
          do i=1,6
-            if (mass(i).eq.0d0) then         ! massless splitting
-               gamma=gamma+alphasq0/(6d0*pi) ! B1
-     &                          !A2
-            elseif(Q1.gt.2d0*mass(i)) then   ! massive splitting
-               mu=max(mass(i),q0)
-               gamma=gamma+alphasq0*mass(i)**2/q0**2 * log(Q1/mu)/pi +
-     $              alphasq0/(6d0*pi)
+            if (i.le.NF) then   ! massless splitting
+               gamma=gamma+alphasq0/(6d0*pi)   ! B1
+            else                ! massive splitting
+               moq2=(mass(i)/q0)**2
+               gamma=gamma+alphasq0/(4d0*pi)/(1d0+moq2)*
+     &              (1d0 - 1d0/(3d0*(1+moq2)))  ! B1
             endif
          enddo
-      elseif(abs(iipdg).lt.6 .and. Q1.gt.mass(iipdg)) then
-c Quark Sudakov (massless and massive)
-         gamma=CF*alphasq0*log(Q1/q0)/pi ! A1
-     &        -CF*alphasq0*3d0/(4d0*pi) ! B1
-     &                          ! A2
-         if (iipdg.gt.NF) then ! include mass effects
-            mu=max(mass(i),q0)
-            gamma=gamma+
-     &           CF*alphasq0*mass(i)**2/q0**2*log(q0*mu/(Q1*(Q1-mu)))
+      elseif(abs(iipdg).le.6) then
+c Quark Sudakov
+         gamma=CF*alphasq0*log(Q1/q0)/pi                   ! A1
+     &        -CF*alphasq0*3d0/(4d0*pi)                    ! B1
+         if (iimode.eq.2) then
+            gamma=gamma+CF*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2) ! A2
          endif
-      elseif(abs(iipdg).lt.6 .and. Q1.le.mass(iipdg)) then
-c Massive quark Sudakov, put emission is not possible
-         gamma=0d0
-         return
+         if (iipdg.gt.NF) then ! include mass effects
+            qom=q0/mass(iipdg)
+            gamma=gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
+     $           (1d0-0.5d0*qom**2)*log(1d0+qom**2) )
+         endif
       else
          write (*,*) 'ERROR in reweight.f: do not know'/
      $        /' which Sudakov to compute',iipdg
          stop
       endif
-c Integration is over dq^2/q^2 = 2*dq/q, so factor 2
-      gamma=gamma*2d0/q0
+c Integration is over dq^2/q^2 = 2*dq/q, so factor 2. Also, include
+c already the minus sign here
+      gamma=-gamma*2d0/q0
       return
       end
+
 
       double precision function sud(q0,Q11,ipdg,imode)
 c**************************************************
@@ -165,7 +114,7 @@ c**************************************************
       iipdg=iabs(ipdg)
       iimode=imode
 
-      sud=exp(-DGAUSS(gamma,q0,Q1,eps))
+      sud=exp(DGAUSS(gamma,q0,Q1,eps))
 
       if (btest(mlevel,6)) then
         write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
@@ -194,7 +143,7 @@ c**************************************************
          return
       endif
 
-      sudwgt=sud(q0,q2,ipdg,imode)/sud(q0,q1,ipdg,imode)
+      sudwgt=sud(q0,q2,ipdg,2)/sud(q0,q1,ipdg,2)
 
       if (btest(mlevel,5)) then
         write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
@@ -204,35 +153,22 @@ c**************************************************
       return
       end
 
-      
       double precision function sud_exp(q0,Q11,ipdg,imode)
       implicit none
-      include 'coupl.inc'
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+      include 'cluster.inc'      
       integer ipdg,imode
-      double precision lq,q0,Q11
-      double precision ZERO,PI,CA,CF,kappa,beta0,a1qq,a2qq,b1qq,b2qq
-     $     ,a1gg,a2gg,b1gg,b2gg
-      parameter (ZERO=0d0)
-      parameter (PI = 3.14159265358979323846d0)
-      parameter (CA = 3d0)
-      parameter (CF = 4d0/3d0)
-c      parameter (NF = 5d0)      ! NF is determined in coupl.inc
-      parameter (beta0 = (11d0*CA - 2d0*NF)/(12d0*pi))
-      parameter (a1gg=CA/(2d0*Pi))
-      parameter (b1gg=-beta0)
-      parameter (a1qq=CF/(2d0*Pi))
-      parameter (b1qq=CF*(-3d0/(4d0*pi)))
-      sud_exp=0d0
-      if (Q11.gt.q0) then
-         lq=2d0*log(Q11/q0)
-         if (ipdg.eq.21) then
-            sud_exp=-0.5d0*a1gg*lq**2-b1gg*lq
-         elseif (abs(ipdg).le.NF) then
-            sud_exp=-0.5d0*a1qq*lq**2-b1qq*lq
-         else
-            write (*,*) 'error in sud_exp',ipdg
-         endif
-      endif
+      double precision q0, Q11
+      double precision gamma,DGAUSS
+      external gamma,DGAUSS
+      double precision eps
+      parameter (eps=1d-5)
+      sud_exp=0.0d0
+      Q1=Q11
+      iipdg=iabs(ipdg)
+      iimode=imode
+      sud_exp=DGAUSS(gamma,q0,Q1,eps)
       return
       end
 
