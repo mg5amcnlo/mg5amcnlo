@@ -1842,9 +1842,6 @@ class production_topo(dict):
                 #print self["get_mass2"][id1]
                 m1=math.sqrt(self["get_mass2"][id1])
             else:
-                 #print "WARNING: m1^2 is negative for t-branching "+str(iter)
-                 #print self["get_mass2"][id1]
-                 #print "throw away the point"
                 return 0
             m2=branch["m2"]
             t=self["get_mass2"][res]
@@ -1863,7 +1860,6 @@ class production_topo(dict):
             if Esum>0 :
                 Esum=math.sqrt(Esum)
             else:
-                 #print "WARNING: (pa+pb)^2 is negative for t-branching "
                 return 0
             md2=(m1+m2)*(m1-m2)
             ed=md2/Esum
@@ -1874,12 +1870,6 @@ class production_topo(dict):
                 if pp>0 :
                     pp=0.5*math.sqrt(pp)
                 else:
-                        #print "WARNING: cannot get the momentum of p1 in t-branching    "+str(iter)
-                        #print "pp is negative : "+ str(pp)
-                        #print "m1: "+ str(m1)
-                        #print "m2: "+ str(m2)
-                        #print "id1: "+ str(id1)
-                        #print "throw away the point"
                     return 0
 
 #                Now evaluate p1
@@ -1910,16 +1900,6 @@ class production_topo(dict):
                     if (diff_t>2.0): 
                         logger.warning('t invariant was changed by '+str(diff_t)+' percents')
                 else:
-                     #print "WARNING: |p|^2 is smaller than p1z^2 in t-branching "+str(iter)
-                     #print "|p| : "+str(pp) 
-                     #print "pz : "+str(p1z) 
-                 #print "throw away the point"
-                 #print "Set pz^2=|p|^2 and recompute t"
-                 #print "previous t:"+str(-math.sqrt(abs(t)))+"^2"
-#                 p1z=pp
-#                 pt=0.0
-#                 t=m1*m1+ma2-2.0*p1E*E_acms+2.0*p_acms*p1z
-                 #print "new t:"+str(-math.sqrt(abs(t)))+"^2"
                     return 0
             else:
                 pt=math.sqrt(pp*pp-p1z*p1z)
@@ -2188,7 +2168,7 @@ class AllMatrixElement(dict):
             
         all_legs = me.get_legs_with_decays()
         ids = [l.get('id') for l in all_legs]
-        decay_tags = [d.nice_string() for d in me['decay_chains']]
+        decay_tags = [d.shell_string() for d in me['decay_chains']]
         out = {'path': me_path, 'matrix_element': me, 'br': br,
                'finals': finals, 'base_order': ids,
                'decay_struct':self.get_full_process_structure(matrix_element.get('processes')),
@@ -4117,7 +4097,7 @@ class decay_all_events:
         #Next step: we need to determine which matrix elements are really necessary
         #==========================================================================
         # Need to change the way this is done !
-        #self.remove_identical_decay()
+        decay_mapping = self.get_identical_decay()
         
         # Estimation of the maximum weight
         #=================================
@@ -4127,7 +4107,7 @@ class decay_all_events:
                     mode['max_weight'] = max_weight_arg
         else:
             #self.get_max_weight_from_1toN()
-            self.get_max_weight_from_event()  
+            self.get_max_weight_from_event(decay_mapping)  
         
         # add probability of not writting events (for multi production with 
         # different decay
@@ -4279,6 +4259,117 @@ class decay_all_events:
         
         return  event_nb/(event_nb+nb_skip)       
         
+    def get_identical_decay(self):
+        """identify the various decay which are identical to each other"""
+        
+        logger.info('detect independant decays')
+        start = time.time()
+        if len(self.all_decay) == 1:
+            tag = self.all_decay.values()[0]['tag'][2:]
+            return {(tag,): set([((tag,),1)])}
+        
+        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0        
+        #class the decay by class (nbody/pid)
+        nbody_to_decay = collections.defaultdict(list)
+        for decay in self.all_decay.values():
+            id = decay['dc_branch']['tree'][-1]['label']
+            id_final = decay['processes'][0].get_final_ids_after_decay()
+            cut = self.options['zeromass_for_max_weight']
+            mass_final = tuple([m if m> cut else 0 for m in map(self.pid2mass, id_final)])
+            
+            nbody_to_decay[(decay['nbody'], abs(id), mass_final)].append(decay)
+        
+        relation = {}     
+        for ((nbody, pid, finals),decays) in nbody_to_decay.items():  
+            if len(decays) == 1:
+                continue  
+            mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
+            
+            # create an object for the validation
+            valid = dict([ ((i, j), True) for j in range(len(decays)) 
+                                          for i in range(len(decays)) 
+                                          if i != j])
+                
+            for nb in range(25):
+                tree, jac = decays[0]['dc_branch'].generate_momenta(mom_init,\
+                                        True, self.pid2width, self.pid2mass, BW_cut)
+
+                p_str = '%s\n%s\n'% (tree[-1]['momentum'],
+                    '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
+                                                                  if i in tree))
+                
+                
+                values = {}                
+                for i in range(len(decays)):
+                    if any([valid[(i,j)] for j in range(len(decays)) if i !=j]):
+                        values[i] = self.calculate_matrix_element('decay', 
+                                                       decays[i]['path'], p_str)
+                    else:
+                        values[i] = 0
+                
+                for i in range(len(decays)):
+                    for j in range(i+1, len(decays)):
+                        if values[i] == 0 or values[j] == 0 or valid[(i,j)] == 0:
+                            continue # already not valid
+                        elif valid[(i,j)] is True:
+                            valid[(i,j)] = values[j]/values[i]
+                            valid[(j,i)] = valid[(i,j)]
+                        elif (valid[(i,j)] - values[j]/values[i]) < 1e-5 * (valid[(i,j)] + values[j]/values[i]):
+                            pass
+                        else:
+                            valid[(i, j)] = 0
+                            valid[(j, i)] = 0
+    
+            for i in range(len(decays)):
+                tag_i = decays[i]['tag'][2:]
+                for j in range(i+1, len(decays)): 
+                    tag_j = decays[j]['tag'][2:]     
+                    if valid[(i,j)] and tag_j not in relation:
+                        relation[tag_j] = (tag_i, valid[(i,j)])
+
+        for decay in self.all_decay.values():
+            tags = [m.shell_string()[2:] for m in decay['processes']]
+            init_tag = tags[0]
+            if init_tag not in relation:
+                out = (init_tag, 1)
+            else:
+                out = relation[init_tag]
+            for tag in tags[1:]:
+                relation[tag] = out
+        
+        print relation
+
+        decay_mapping = {} # final output
+        tag2real = {}    # return basic representation
+        for prod in self.all_ME.values():
+            for decay in prod['decays']:
+                tag = decay['decay_tag']
+                basic_tag = []
+                br = 1
+                for t in tag:
+                    if  t in relation:
+                        basic_tag.append(relation[t][0])
+                        br *= relation[t][1]
+                    else:
+                        basic_tag.append(t)
+                basic_tag = tuple(basic_tag)
+                if len(set(tag)) != len(tag):
+                    for t in set(tag):
+                        br /= math.factorial(tag.count(t))
+                 
+                if basic_tag not in tag2real:
+                    tag2real[basic_tag] = (tag, br)
+                    decay_mapping[tag] = set([(tag, 1)])
+                else:
+                    real_tag, br2 = tag2real[basic_tag]
+                    
+                    decay_mapping[real_tag].add((tag,br/br2))
+
+        print decay_mapping
+        
+
+        logger.info('Done in %ss' % (time.time()-start))
+        return decay_mapping
     
 
     @misc.mute_logger()
@@ -4403,8 +4494,6 @@ class decay_all_events:
         commandline = 'output standalone_ms %s' % pjoin(path_me,'full_me')
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))
-        #branching_per_channel=width_estimator.get_BR_for_each_decay(self.decay_processes, mgcmd._multiparticles)
-        #misc.sprint( branching_per_channel)
 
         # 5. add the decay information to the all_topology object --------------                        
         for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
@@ -4412,41 +4501,42 @@ class decay_all_events:
                        "P%s" % matrix_element.get('processes')[0].shell_string())
             self.all_ME.add_decay(matrix_element, me_path)
 
-        # 6. generate decay only part
-        #logger.info('generate matrix element for decay only (1 - > N).')
-        #start = time.time()
-        #commandline = ''
-        #for processes in self.list_branches.values():
-        #    for proc in processes:
-        #        commandline+="add process %s;" % (proc)        
-        #commandline = commandline.replace('add process', 'generate',1)
-        #misc.sprint(commandline)
-        #mgcmd.exec_cmd(commandline, precmd=True)
-        ## remove decay with 0 branching ratio.
-        #gcmd.remove_pointless_decay(self.banner.param_card)
+        # 6. generate decay only part ------------------------------------------
+        logger.info('generate matrix element for decay only (1 - > N).')
+        start = time.time()
+        commandline = ''
+        for processes in self.list_branches.values():
+            for proc in processes:
+                commandline+="add process %s;" % (proc)        
+        commandline = commandline.replace('add process', 'generate',1)
+        misc.sprint(commandline)
+        mgcmd.exec_cmd(commandline, precmd=True)
+        # remove decay with 0 branching ratio.
+        mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        #commandline = 'output standalone_ms %s' % pjoin(path_me,'decay_me')
-        #mgcmd.exec_cmd(commandline, precmd=True)
-        #logger.info('Done %.4g' % (time.time()-start))        
+        commandline = 'output standalone_ms %s' % pjoin(path_me,'decay_me')
+        mgcmd.exec_cmd(commandline, precmd=True)
+        logger.info('Done %.4g' % (time.time()-start))        
         #
-        #self.all_decay = {}
-        #for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
-        #    me = matrix_element.get('processes')[0]
-        #    me_string = me.shell_string()
-        #    dirpath = pjoin(path_me,'decay_me', 'SubProcesses', "P%s" % me_string)
+        self.all_decay = {}
+        for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
+            me = matrix_element.get('processes')[0]
+            me_string = me.shell_string()
+            dirpath = pjoin(path_me,'decay_me', 'SubProcesses', "P%s" % me_string)
         #    
-        #    self.all_decay[me_string] = {'path': dirpath, 
-        #                                 'dc_branch':dc_branch_from_me(me)}
+            self.all_decay[me_string] = {'path': dirpath, 
+                                         'dc_branch':dc_branch_from_me(me),
+                                         'nbody': len(me.get_final_ids_after_decay()),
+                                         'processes': matrix_element.get('processes'),
+                                         'tag': me_string}
         #
-        #if __debug__:
-        #    #check that all decay matrix element correspond to a decay only
-        #    for prod in self.all_ME.values():
-        #        for full in prod['decays']:
-        #            for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
-        #                assert decay.shell_string() in self.all_decay
+        if __debug__:
+            #check that all decay matrix element correspond to a decay only
+            for prod in self.all_ME.values():
+                for decay in prod['matrix_element']['base_amplitude']['process']['decay_chains']:
+                    assert decay.shell_string() in self.all_decay
             
-            
-
+        
     def get_branching_ratio(self):
         """compute the branching ratio of all the decaying particles"""
     
@@ -4471,7 +4561,7 @@ class decay_all_events:
         logger.info('Compiling code')
         self.compile_fortran(self.path_me, mode="production_me")
         self.compile_fortran(self.path_me, mode="full_me")
-        #self.compile_fortran(self.path_me, mode="decay_me")
+        self.compile_fortran(self.path_me, mode="decay_me")
 
     def compile_fortran(self, path_me, mode='production_me'):
         """ Compile the fortran executables associated with the evalutation of the 
@@ -4612,7 +4702,7 @@ class decay_all_events:
             
 
 
-    def get_max_weight_from_event(self):
+    def get_max_weight_from_event(self, decay_mapping):
         """ """
         decay_tools = decay_misc()
         
@@ -4633,7 +4723,7 @@ class decay_all_events:
             logger.info('     For %s decaying particle type in the final states' % len(decay_set))
         logger.info('  ')
         
-        probe_weight=[]
+        probe_weight = []
         
 
         starttime = time.time()
@@ -4676,19 +4766,19 @@ class decay_all_events:
                     BW_weight_prod = 1
                 #BW_weight_prod = 1
                 topology.topo2event(self.curr_event)
+                
                 for decay in topology.production['decays']:
-                    name =  ','.join([m.nice_string() for m  in decay['matrix_element'].get('decay_chains')])
+                    tag = decay['decay_tag']
+                    if not tag in decay_mapping:
+                        continue
                     BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
 
-                    
                     decayed_event, BW_weight_decay = self.decay_one_event(\
                                         self.curr_event, 
                                         decay['decay_struct'],
                                         event_map,
                                         BW_cut)
                                         
-
-        
                     if decayed_event==0:
                         logger.warning('failed to decay event properly')
                         continue
@@ -4700,10 +4790,10 @@ class decay_all_events:
                                                       decay['path'], p_full_str)
                     #print dec, mg5_me_full, mg5_me_prod, BW_weight_prod,BW_weight_decay,
                     weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
-                    if name in max_decay:
-                        max_decay[name] = max([max_decay[name], weight])
+                    if tag in max_decay:
+                        max_decay[tag] = max([max_decay[tag], weight])
                     else:
-                        max_decay[name] = weight
+                        max_decay[tag] = weight
                     #print weight, max_decay[name]
                     #raise Exception   
             probe_weight[decaying].append(max_decay)
@@ -4714,7 +4804,7 @@ class decay_all_events:
             info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
             for  index,tag_decay in enumerate(max_decay):
                 info_text += '            decay_config %s [%s] : %s\n' % \
-                   (index+1, tag_decay.replace('\n',' '), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
+                   (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
             logger.info(info_text[:-1])
         
         
@@ -4732,23 +4822,31 @@ class decay_all_events:
                 if not weights:
                     logger.warning( 'no events for %s' % decay_tag)
                     continue
+                weights.sort()
+                weights[len(weights)//2:]
                 ave_weight, std_weight=decay_tools.get_mean_sd(weights)
                 std_weight=math.sqrt(std_weight)
-                logger.info(' ')
-                max_weight = ave_weight+4.0*std_weight
+                base_max_weight = 1.05 * (ave_weight+4.5*std_weight)
                 logger.info('Decay channel %s :Using maximum weight %s [%s]' % \
-                            (decay_tag.replace('\n',' '), max_weight, max(weights)))
-                #assign the value to the associated decays
-                for m in me_linked:        
-                    for mi in m['decays']:
-                        if ','.join(mi['decay_tag']) == decay_tag:
-                            mi['max_weight'] = max_weight
-
+                           (','.join(decay_tag), base_max_weight, max(weights)))                
+                for associated_decay, ratio in decay_mapping[decay_tag]:
+                    max_weight= ratio * base_max_weight
+                    if ratio != 1:
+                        max_weight *= 1.1 #security
+                        logger.info('Decay channel %s :Using maximum weight %s' % \
+                                (','.join(associated_decay), max_weight))
+                                                
+                    #assign the value to the associated decays
+                    for m in me_linked:
+                        for mi in m['decays']:
+                            if mi['decay_tag'] == associated_decay:
+                                mi['max_weight'] = max_weight
+ 
         # sanity check that all decay have a max_weight
         if __debug__:
-            for m in self.all_ME.values():
-                for mi in m['decays']:
-                    assert mi['max_weight']
+            for prod in self.all_ME.values():
+                for dec in m['decays']:
+                    assert 'max_weight' in dec and dec['max_weight'], 'fail for %s' % dec['decay_tag']
 
             
         self.evtfile.seek(0)
@@ -4825,8 +4923,6 @@ class decay_all_events:
             info = 1
             nb_output = 1
          
-
-   
         prod_values = ' '.join([external.stdout.readline() for i in range(nb_output)])
         if info < 0:
             print 'ZERO DETECTED'

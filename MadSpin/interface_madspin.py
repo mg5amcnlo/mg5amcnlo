@@ -61,8 +61,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.options = {'max_weight': -1, 'BW_effect': 1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
                         'Nevents_for_max_weigth': 75,
-                        'max_weight_ps_point': 250,
-                        'BW_cut':15}
+                        'max_weight_ps_point': 300,
+                        'BW_cut':15,
+                        'zeromass_for_max_weight':5}
         
 
         
