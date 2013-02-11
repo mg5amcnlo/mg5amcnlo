@@ -2771,7 +2771,7 @@ V_UVWmWpMassEW = CTVertex(name = 'V_UVWmWpMassEW',
                           particles = [ P.W__plus__, P.W__minus__ ],
                           color = [ '1' ],
                           lorentz = [ L.l_WmWpMass1, L.l_WmWpMass2, L.l_WmWpMass3 ],
-                          loop_particles = [[[P.A]]],
+                          loop_particles = [[[P.A,P.W__plus__]]],
                           couplings = {(0, 0, 0) : C.c_UVWmWpMass1EW, (0, 1, 0) : C.c_UVWmWpMass2EW, (0, 2, 0) : C.c_UVWmWpMass3EW},
                           type = 'UVmass')
 
