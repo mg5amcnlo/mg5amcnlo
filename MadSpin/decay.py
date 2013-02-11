@@ -2408,12 +2408,14 @@ class width_estimate(object):
         to_decay = set(decay_processes.keys())
         for decays in decay_processes.values():
             for decay in decays:
+                print decay, to_decay
                 if ',' in decay:
                     to_decay.update(set([l.split('>')[0].strip() 
                                                     for l in decay.split(',')]))
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
+        misc.sprint(to_decay)
         to_decay = [p for p in to_decay if not p in self.br]
 
         misc.sprint(to_decay)
@@ -4265,8 +4267,12 @@ class decay_all_events:
         logger.info('detect independant decays')
         start = time.time()
         if len(self.all_decay) == 1:
-            tag = self.all_decay.values()[0]['tag'][2:]
-            return {(tag,): set([((tag,),1)])}
+            decay_mapping = {}
+            for prod in self.all_ME.values():
+                for decay in prod['decays']:
+                    tag = decay['decay_tag']
+                    decay_mapping[tag] = set([(tag, 1)]) 
+            return decay_mapping
         
         BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0        
         #class the decay by class (nbody/pid)
@@ -4704,6 +4710,8 @@ class decay_all_events:
 
     def get_max_weight_from_event(self, decay_mapping):
         """ """
+
+        misc.sprint(decay_mapping)
         decay_tools = decay_misc()
         
         # check all set of decay that need to be done:
@@ -4769,7 +4777,7 @@ class decay_all_events:
                 
                 for decay in topology.production['decays']:
                     tag = decay['decay_tag']
-                    if not tag in decay_mapping:
+                    if decay_mapping and not tag in decay_mapping:
                         continue
                     BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
 
@@ -4845,7 +4853,7 @@ class decay_all_events:
         # sanity check that all decay have a max_weight
         if __debug__:
             for prod in self.all_ME.values():
-                for dec in m['decays']:
+                for dec in prod['decays']:
                     assert 'max_weight' in dec and dec['max_weight'], 'fail for %s' % dec['decay_tag']
 
             
