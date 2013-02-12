@@ -4740,7 +4740,7 @@ class decay_all_events:
         nb_decay = dict( (key,0) for key in decay_set)
         probe_weight = dict( (key,[]) for key in decay_set)
         
-        while ev+1 <= len(decay_set) * numberev: 
+        while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
                 logger.info('Not enough events for at least one production mode.')

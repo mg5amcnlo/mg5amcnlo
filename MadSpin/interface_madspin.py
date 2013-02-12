@@ -16,7 +16,9 @@
 
 import logging
 import os
+import re
 import shutil
+
 
 pjoin = os.path.join
 if '__main__' == __name__:
@@ -135,7 +137,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.final_state_compact, self.prod_branches=\
                  self.decay.get_final_state_compact(self.final_state_full)
                 
-        # Load the model     
+        # Load the model
+        complex_mass = False   
+        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+        for line in self.banner.proc_card:
+            if line.startswith('set'):
+                self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                if has_cms.search(line):
+                    complex_mass = True
+        
+          
         info = self.banner.get('proc_card', 'full_model_line')
         if '-modelname' in info:
             mg_names = False
@@ -143,7 +154,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
         if model_name:
-            self.load_model(model_name, mg_names)
+            self.load_model(model_name, mg_names, complex_mass)
         else:
             raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')
         
@@ -160,6 +171,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif line.startswith('set'):
                 misc.sprint(line)
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                    
+            
+                
 
     @extended_cmd.debug()
     def complete_import(self, text, line, begidx, endidx):
@@ -360,7 +374,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
     
     
-    def load_model(self, name, use_mg_default):
+    def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
         
         loop = False
@@ -384,6 +398,8 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
+        if complex_mass:
+            base_model.change_mass_to_complex_scheme()
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model
