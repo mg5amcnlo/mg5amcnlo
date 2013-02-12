@@ -1405,7 +1405,7 @@ class Model(PhysicsObject):
                 if particle.get('pdg_code') == 24:
                     if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
                         # Make MW an external parameter
-                        MW = ParamCardVariable(mass.name, mass.value, 'mass', [24])
+                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
                         self.get('parameters')[('external',)].append(MW)
                         self.get('parameters')[mass.depend].remove(mass)
                         # Make Gf an internal parameter
