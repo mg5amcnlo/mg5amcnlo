@@ -1030,14 +1030,3 @@ def create_proc_list_2_3(init_part_list1,
 
     return res_list
 
-
-
-
-
-
-
-
-
-
-
-
