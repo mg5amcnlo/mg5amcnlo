@@ -688,23 +688,30 @@ class CondorCluster(Cluster):
         if not self.submitted_ids:
             return 0, 0, 0, 0
         
-        cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
-                                                         stderr=subprocess.PIPE)
-        error = status.stderr.read()
-        if status.returncode or error:
-            raise ClusterManagmentError, 'condor_q returns error: %s' % error
+        packet = 15000
+        for i in range(1+(len(self.submitted_ids)-1)//packet):
+            start = i * packet
+            stop = (i+1) * packet
+            cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
             
+                
             
-        idle, run, fail = 0, 0, 0
-        for line in status.stdout:
-            status = line.strip()
-            if status in ['I','U']:
-                idle += 1
-            elif status == 'R':
-                run += 1
-            elif status != 'C':
-                fail += 1
+            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+                                                             stderr=subprocess.PIPE)
+            error = status.stderr.read()
+            if status.returncode or error:
+                raise ClusterManagmentError, 'condor_q returns error: %s' % error
+                
+                
+            idle, run, fail = 0, 0, 0
+            for line in status.stdout:
+                status = line.strip()
+                if status in ['I','U']:
+                    idle += 1
+                elif status == 'R':
+                    run += 1
+                elif status != 'C':
+                    fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
     

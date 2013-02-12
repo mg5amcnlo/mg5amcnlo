@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta3(13/01/13) OM: Merge with 1.5.7 (See information below)
+2.0.0.beta3(13/01/13) OM: Merge with 1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
                           friendly way.
 
@@ -20,7 +20,20 @@ Update notes for MadGraph 5 (in reverse time order)
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
 
-1.5.7 (14/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
+1.5.8 (xx/xx/13)  OM: Add one command in MadEvent interface: add_time_of_flight
+                      This command modify the lhe events file by adding the time of 
+                      flight information in the lhe events.
+                  OM: Fix bug in pythia8 output for process using decay chains syntax.
+                      See bug #1099790.
+                  CDe+OM: Update Dim6 model
+                  OM: Fix a bug preventing model customized via the "customize_model"
+                      command to be able to use the automatic width computation.
+                  OM: Fix a bug in model restriction when a width was equals to one.
+                      In such case, the width is not fixed to this value anymore.
+                  OM: correct bug #1107603 (problem with condor cluster for submission 
+                      associated to a large number of jobs). Thanks Sanjay 
+
+1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
                   OM: Fix a bug affecting 2>1 process when the final states particles is 
                       (outcoming fermion) introduced in version 1.5.0. (Thanks to 
