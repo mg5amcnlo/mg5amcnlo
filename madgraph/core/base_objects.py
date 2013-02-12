@@ -1400,7 +1400,6 @@ class Model(PhysicsObject):
             if not isinstance(width, ParamCardVariable):
                 width.expr = 're(%s)' % width.expr
             if particle.get('mass') != 'ZERO':
-                
                 mass = self.get_parameter(particle.get('mass'))
                 # special SM treatment to change the gauge scheme automatically.
                 if particle.get('pdg_code') == 24:
@@ -1418,7 +1417,6 @@ class Model(PhysicsObject):
                         self.add_param(new_param, ['aEW'])
                         # Use the new mass for the future modification
                         mass = MW
-                
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))

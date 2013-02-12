@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0.beta3(13/01/13) OM: Merge with 1.5.7 (See information below)
+                      OM: Allow the customize_model to be scriptable in a 
+                          friendly way.
 
 2.0.0.beta2(23/12/12) MG5 Team: Include 1.5.4+1.5.5+1.5.6 modifications
                       MadSpin Team: Include MadSpin
@@ -16,6 +19,25 @@ Update notes for MadGraph 5 (in reverse time order)
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
+
+1.5.7 (14/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
+                      zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
+                  OM: Fix a bug affecting 2>1 process when the final states particles is 
+                      (outcoming fermion) introduced in version 1.5.0. (Thanks to 
+                      B. Fuks) 
+                  OM: Fix a problem of fermion flow for v4 model (thanks to A. Abrahantes) 
+                  OM+DBF: Change the automatically the electroweak-scheme when passing to 
+                      complex-mass scheme: the mass of the W is the an external parameter
+                      and Gf is an internal parameter fixed by LO gauge relation. 
+                  OM+DBF: Remove the model sm_mw of the model database. 
+                  OM: Fix problem in the ./bin/mg5 file command when some question are 
+                      present in the file.
+                  OM: Extend support for ~ and ${vars} in path.
+                  OM: Fix a crash in multi_run for more than 300 successive runs.
+                      (Thanks to Diptimoy)
+                  OM: Allow to choose the center of mass energy for the check command.
+                  OM: small change in the pbs cluster submission (see question #218824)
+                  OM: Adding possibility to check gauge/lorentz/...for  2>1 processes.                    
 
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 

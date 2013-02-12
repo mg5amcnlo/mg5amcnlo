@@ -1392,29 +1392,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
+
     
     
     ############################################################################
@@ -3103,16 +3081,13 @@ calculator."""
             self.update_status('', level=None)
         except Exception, error:        
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except Exception:
             pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -3507,6 +3482,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = os.open(os.devnull, os.O_RDWR)
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -3518,7 +3494,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -3559,10 +3535,10 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
+
 
 
 AskforEditCard = common_run.AskforEditCard
-    
-    
 
 

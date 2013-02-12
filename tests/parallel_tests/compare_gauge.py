@@ -157,7 +157,7 @@ class GaugeComparator(unittest.TestCase):
                              orders = {'QED':99, 'QCD':99},
                              model = "sm",
                              energy = 90,
-                             filename = "sm_gauge_4_e90.log",
+                             filename = "sm_gauge_short_e90.log",
                              tolerance = 1e-3)
         
     ############################################################################    

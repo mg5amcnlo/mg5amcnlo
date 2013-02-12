@@ -126,7 +126,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         matrix_elements = FKSHelasProcessList()
 
         for proc in fksprocs:
-            logger.info("Generating Helas calls for FKS process %s" % \
+            logger.info("Generating Helas calls for FKS %s" % \
               proc.born_amp.get('process').nice_string(print_weighted = False).\
                                                   replace('Process', 'process'))
             matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],

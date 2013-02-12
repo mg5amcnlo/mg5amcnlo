@@ -82,7 +82,7 @@ class ProcessExporterFortran(object):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
-        
+
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(self.dir_path):
             assert self.mgme_dir, \
@@ -898,7 +898,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         #First copy the full template tree if dir_path doesn't exit
         if os.path.isdir(self.dir_path):
             return
-        
+       
         logger.info('initialize a new standalone directory: %s' % \
                         os.path.basename(self.dir_path))
         temp_dir = pjoin(self.mgme_dir, 'Template/LO')
@@ -1270,7 +1270,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         except OSError as error:
             pass
         model_path = model.get('modelpath')
-        # This is not safe if there is a '##' or '-' in the path.
         shutil.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
@@ -3818,12 +3817,11 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'fortran_compiler':cmd.options['fortran_compiler']}
         if not cmd.options['loop_optimized_output']:
-            logger.info("Writing out the aMC@NLO code, starting from born process")
+            logger.info("Writing out the aMC@NLO code")
             ExporterClass = export_fks.ProcessExporterFortranFKS
             options['export_format']='FKS5_default'
         else:
-            logger.info("Writing out the aMC@NLO code, starting from "+\
-                                           "born process using optimized Loops")
+            logger.info("Writing out the aMC@NLO code, using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
             options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
