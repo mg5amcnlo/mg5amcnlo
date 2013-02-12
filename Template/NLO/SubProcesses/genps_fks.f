@@ -1794,10 +1794,10 @@ c Normal Breit-Wigner
          x0=x
          smax=stot
          smin=tau_Born_lower_bound*stot
-c$$$      else
-c$$$         write (*,*) 'Error in generate_tau_BW #2',cBW
-c$$$         stop
-c$$$      endif
+      else
+         write (*,*) 'Error in generate_tau_BW #2',cBW
+         stop
+      endif
       xm02=m**2
       bwmdpl=smax-xm02
       bwmdmn=xm02-smin
