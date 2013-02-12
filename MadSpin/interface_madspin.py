@@ -134,7 +134,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.final_state_full = process[process.find(">")+1:]
         self.final_state_compact, self.prod_branches=\
                  self.decay.get_final_state_compact(self.final_state_full)
-            
+                
         # Load the model     
         info = self.banner.get('proc_card', 'full_model_line')
         if '-modelname' in info:
@@ -150,13 +150,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         # check particle which can be decayed:
         self.final_state = set()
         for line in self.banner.proc_card:
+            
             if line.startswith('generate'):
                 self.final_state.update(self.mg5cmd.get_final_part(line[8:]))
             elif line.startswith('add process'):
                 self.final_state.update(self.mg5cmd.get_final_part(line[11:]))
             elif line.startswith('define'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)            
-            
+            elif line.startswith('set'):
+                misc.sprint(line)
+                self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
 
     @extended_cmd.debug()
     def complete_import(self, text, line, begidx, endidx):

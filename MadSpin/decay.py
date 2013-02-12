@@ -3768,37 +3768,37 @@ class decay_misc:
         #print good_topo
         return good_topo, cumul
 
-    def find_resonances(self,proc, branches):
-        """ restore the resonances in a production process 
-            the expected decay chains (variable branches)
-            were extracted from the banner
-        """
-
-        pos1=proc.find(">")
-        list_finalstate=proc[pos1+1:].split()
-
-        for res in branches.keys():
-            resFS=[ item for item in branches[res]["finalstate"]]
-            for index in range(len(list_finalstate)-1,-1,-1):
-                if list_finalstate[index] in resFS: 
-                    pos2 = resFS.index(list_finalstate[index])
-                    del resFS[pos2]
-                    del list_finalstate[index]
-            if resFS!=[]:
-                logger.warning('CANNOT RECOGNIZE THE EXPECTED DECAY \
-                CHAIN STRUCTURE IN PRODUCTION EVENT')
-                return proc
-            else:
-                list_finalstate.append(res)
-
-        initstate=proc[:pos1]
-        finalstate=""
-        for part in list_finalstate:
-            finalstate+=" "+part
-        for res in branches.keys():
-            finalstate+=" , "+branches[res]["branch"]
-        newproc=initstate+" > "+finalstate+" "
-        return newproc
+#    def find_resonances_old(self,proc, branches):
+#        """ restore the resonances in a production process 
+#            the expected decay chains (variable branches)
+#            were extracted from the banner
+#        """
+#
+#        pos1=proc.find(">")
+#        list_finalstate=proc[pos1+1:].split()
+#
+#        for res in branches.keys():
+#            resFS=[ item for item in branches[res]["finalstate"]]
+#            for index in range(len(list_finalstate)-1,-1,-1):
+#                if list_finalstate[index] in resFS: 
+#                    pos2 = resFS.index(list_finalstate[index])
+#                    del resFS[pos2]
+#                    del list_finalstate[index]
+#            if resFS!=[]:
+#                logger.warning('CANNOT RECOGNIZE THE EXPECTED DECAY \
+#                CHAIN STRUCTURE IN PRODUCTION EVENT')
+#                return proc
+#            else:
+#                list_finalstate.append(res)
+#
+#        initstate=proc[:pos1]
+#        finalstate=""
+#        for part in list_finalstate:
+#            finalstate+=" "+part
+#        for res in branches.keys():
+#            finalstate+=" , "+branches[res]["branch"]
+#        newproc=initstate+" > "+finalstate+" "
+#        return newproc
 
 
 
@@ -4435,7 +4435,8 @@ class decay_all_events:
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
 
-        commandline.replace('add process', 'generate',1)
+        commandline = commandline.replace('add process', 'generate',1)
+        misc.sprint(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
                 
         commandline = 'output standalone_ms %s' % pjoin(path_me,'production_me')
@@ -4739,7 +4740,7 @@ class decay_all_events:
         nb_decay = dict( (key,0) for key in decay_set)
         probe_weight = dict( (key,[]) for key in decay_set)
         
-        while ev+1 != len(decay_set) * numberev: 
+        while ev+1 <= len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
                 logger.info('Not enough events for at least one production mode.')
@@ -4751,7 +4752,7 @@ class decay_all_events:
             if nb_decay[decaying] >=  numberev:
                 continue 
             ev += 1
-            nb_decay[decaying] += 1
+            nb_decay[decaying] += 1 
             mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
             tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
             topology = self.all_ME[production_tag][tag_topo]
@@ -4774,11 +4775,12 @@ class decay_all_events:
                     BW_weight_prod = 1
                 #BW_weight_prod = 1
                 topology.topo2event(self.curr_event)
-                
+                atleastonedecay = False
                 for decay in topology.production['decays']:
                     tag = decay['decay_tag']
                     if decay_mapping and not tag in decay_mapping:
                         continue
+                    atleastonedecay = True
                     BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
 
                     decayed_event, BW_weight_decay = self.decay_one_event(\
@@ -4804,6 +4806,12 @@ class decay_all_events:
                         max_decay[tag] = weight
                     #print weight, max_decay[name]
                     #raise Exception   
+                if not atleastonedecay:
+                    # NO decay [one possibility is all decay are identical to their particle]
+                    logger.info('No independant decay for one type of final states -> skip those events')
+                    nb_decay[decaying] = numberev
+                    ev += numberev -1
+                    break
             probe_weight[decaying].append(max_decay)
 
                     
@@ -4845,7 +4853,7 @@ class decay_all_events:
                                 (','.join(associated_decay), max_weight))
                                                 
                     #assign the value to the associated decays
-                    for m in me_linked:
+                    for m in self.all_ME.values():
                         for mi in m['decays']:
                             if mi['decay_tag'] == associated_decay:
                                 mi['max_weight'] = max_weight
@@ -4854,7 +4862,7 @@ class decay_all_events:
         if __debug__:
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
-                    assert 'max_weight' in dec and dec['max_weight'], 'fail for %s' % dec['decay_tag']
+                    assert 'max_weight' in dec and dec['max_weight'], 'fail for %s' % (dec['decay_tag'])
 
             
         self.evtfile.seek(0)

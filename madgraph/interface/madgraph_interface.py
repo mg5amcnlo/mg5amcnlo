@@ -3264,7 +3264,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
         """
-                
+
         if not self._curr_model['case_sensitive']:
             procline = procline.lower()
         pids = self._curr_model.get('name2pdg')
