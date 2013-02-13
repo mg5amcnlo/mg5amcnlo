@@ -437,7 +437,6 @@ class MatrixElementEvaluator(object):
             ids = [l.get('id') for l in sorted_legs]
             import MadSpin.decay as madspin
             if not hasattr(self, 'event_file'):
-                print 'reset file'
                 fsock = open(events)
                 self.event_file = madspin.Event(fsock)
 
@@ -457,7 +456,6 @@ class MatrixElementEvaluator(object):
                 m = part['momentum']
                 p.append([m.E, m.px, m.py, m.pz])
             return p, 1
-        raise Exception, 'NO'
 
         nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])
         nfinal = len(sorted_legs) - nincoming
@@ -3090,7 +3088,6 @@ def check_lorentz_process(process, evaluator,options=None):
 
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process, options)
-    print p
 
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
