@@ -1008,7 +1008,7 @@ c
 c THIS CAN BE OPTIMIZED
          call setcuts
          call setfksfactor(iconfig)
-         wgt=1d0
+         wgt=1d0/vol2
          call generate_momenta(ndim,iconfig,wgt,x,p)
          call dsigF(p,wgt,w,dsigS,dsigH)
          result(0,1)= w*dsigS
@@ -1055,14 +1055,13 @@ c much. Do this by overwrite the 'wgt' variable
                endif
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*vol2*w
+               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
                f(2) = f(2)+result(nFKSprocess,2)
             enddo
             call fill_MC_integer(1,proc_map(0,1),sigintR)
-            call fill_MC_integer(2,xBW,sigintR)
          endif
          sigintF=f(1)+f(2)
          unwgt=.false.
@@ -1081,6 +1080,7 @@ c much. Do this by overwrite the 'wgt' variable
             endif
          endif
          if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
+         call fill_MC_integer(2,xBW,f_abs*vol2)
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop

@@ -1735,13 +1735,18 @@ c Jacobian due to delta() of tau_born
       implicit none
       real*8 pi
       parameter (pi=3.1415926535897932d0)
+      integer nsamp
+      parameter (nsamp=1)
       include 'run.inc'
       include 'genps.inc'
-      integer cBW
+      integer cBW,icount
+      data icount /0/
       double precision stot,x,tau,jac,mass,width,BWmass,BWwidth,m,w,a,b
       double precision smax,smin,xm02,stemp,bwmdpl,bwmdmn,bwfmpl,bwfmmn
       double precision bwdelf,xbwmass3,bwfunc,x0
       external xmwmass3,bwfunc
+      double precision tau_Born_lower_bound_save
+     $     ,tau_lower_bound_resonance_save,tau_lower_bound_save
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
@@ -1769,23 +1774,40 @@ c the resonace BW
             smax=b**2
             smin=tau_Born_lower_bound*stot
          elseif(xBW.eq.2) then
-c the alternative BW
-
-!!!!!!!!
-!     SHOULD NOT USE BW HERE. IT'S A RATHER FLAT DISTRIBUTION
-
-            m=BWmass
-            w=BWwidth
-            x0=x
-            smax=stot
-            smin=b**2
+c the alternative "BW". It's a rather flat distribution peaked above
+c BWmass, so use the normal generate_tau with the
+c 'tau_lower_bound_resonance' equal to the BW mass, and
+c 'tau_lower_bound' equal to the parameter 'b' (with the correct
+c normalization)
+c     save default tau's
+            tau_lower_bound_resonance_save=tau_lower_bound_resonance
+            tau_Born_lower_bound_save=tau_Born_lower_bound
+            tau_lower_bound_save=tau_lower_bound
+c     overwrite the tau's
+            tau_Born_lower_bound=b**2/stot
+            tau_lower_bound=tau_Born_lower_bound
+            tau_lower_bound_resonance=BWmass**2/stot
+c     Generate tau
+            call generate_tau(x,tau,jac)
+c     restore default tau's
+            tau_lower_bound_resonance=tau_lower_bound_resonance_save
+            tau_Born_lower_bound=tau_Born_lower_bound_save
+            tau_lower_bound=tau_lower_bound_save
+            return
          else
+c Should never enter here during normal integration, except when running
+c the tests of gensym or similar. If called too many times, stop the
+c run, because that means there is a mistake
             m=mass
             w=width
             x0=x
             smax=stot
             smin=tau_Born_lower_bound*stot
-            write(*,*) 'error in generate_tau_BW #3',xBW
+            icount=icount+1
+            if (icount.gt.10000) then
+               write (*,*) 'ERROR in generate_tau_BW #4',icount,xBW
+               stop
+            endif
          endif
       elseif (cBW.eq.0) then
 c Normal Breit-Wigner
