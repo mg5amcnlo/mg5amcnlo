@@ -250,7 +250,7 @@ c Give a nice printout of the grids after the current iteration
             ib=1+int(grid(i,this_dim)*100)
             write (buff(ib:ib),'(i1)') mod(i,10)
          enddo
-         write (*,*) 'nFKSprocess ',buff
+         write (*,'(i3,a,a)') this_dim,':  ',buff
       enddo
 c
 c Reset the accumulated results because we start new iteration.
