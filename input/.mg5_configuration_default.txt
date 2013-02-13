@@ -94,6 +94,12 @@
 
 #cluster_temp_path = None
 
+# Cluster waiting time for status update 
+#First numcer is when the number of waiting job is higher than the number 
+#of running one (time in second). The second number is in the second case.
+
+#cluster_status_update = 600 30
+
 # Nb_core to use (None = all) This is use only for multicore run
 
 #nb_core = None

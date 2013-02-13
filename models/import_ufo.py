@@ -67,7 +67,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False):
+def import_model(model_name, decay=False, restrict=True):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -89,7 +89,7 @@ def import_model(model_name, decay=False):
     else:
         # Check if by default we need some restrictions
         restrict_name = ""
-        if os.path.exists(os.path.join(model_path,'restrict_default.dat')):
+        if restrict and os.path.exists(os.path.join(model_path,'restrict_default.dat')):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
@@ -185,7 +185,7 @@ def import_full_model(model_path, decay=False):
         for ufo_part in ufo_model.all_particles:
             name =  ufo_part.name
             if not model['case_sensitive']:
-               name = name.lower() 
+                name = name.lower() 
             p = model['particles'].find_name(name)
             if hasattr(ufo_part, 'partial_widths'):
                 p.partial_widths = ufo_part.partial_widths

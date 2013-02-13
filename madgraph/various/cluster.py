@@ -55,14 +55,18 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None, temp_dir=None):
+    def __init__(self, cluster_queue=None, cluster_temp_path=None, **opts):
         """Init the cluster"""
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
         self.cluster_queue = cluster_queue
-        self.temp_dir = temp_dir
-    
+        self.temp_dir = cluster_temp_path
+        self.options = {'cluster_status_update': (600, 30)}
+        for key,value in opts.items():
+            self.options[key] = value
+        
+
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """how to make one submission. return status id on the cluster."""
         raise notimplemented, 'no implementation of how to submit a job to cluster \'%s\'' % self.name
@@ -165,7 +169,10 @@ class Cluster(object):
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            time.sleep(30)
+            if idle < run:
+                time.sleep(self.options['cluster_status_update'][1])
+            else:
+                time.sleep(self.options['cluster_status_update'][0])
         self.submitted = 0
         self.submitted_ids = []
 
@@ -185,7 +192,7 @@ class Cluster(object):
             if not status in ['R','I']:
                 time.sleep(30) #security to ensure that the file are really written on the disk
                 break
-            time.sleep(30)
+            time.sleep(self.options['cluster_status_update'][1])
         
         if special_output:
             # combine the stdout and the stderr
@@ -837,7 +844,11 @@ class PBSCluster(Cluster):
         if log is None:
             log = '/dev/null'
         
-        text += prog
+        if not os.path.isabs(prog):
+            text += "./%s" % prog
+        else:
+            text+= prog
+        
         if argument:
             text += ' ' + ' '.join(argument)
 

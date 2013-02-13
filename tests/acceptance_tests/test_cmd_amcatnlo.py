@@ -125,6 +125,8 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
+        # to check that the cleaning of files work well
+        os.system('touch /tmp/MGPROCESS/SubProcesses/P0_udx_epve/GF1')
         self.do('quit')
         misc.call([pjoin('.','bin','generate_events'), '-f'], cwd='/tmp/MGPROCESS',
                 stdout = open(os.devnull, 'w'))

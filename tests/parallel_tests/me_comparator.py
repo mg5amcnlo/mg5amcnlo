@@ -450,7 +450,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = 'import model sm_mw \n'
+        v5_string = 'import model sm \n'
         v5_string += "set automatic_html_opening False\n"
         v5_string += 'set complex_mass_scheme %s \n' % self.cms
         v5_string += 'set gauge %s \n' % self.gauge
@@ -1029,15 +1029,4 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-
-
-
-
-
-
-
-
-
-
-
 

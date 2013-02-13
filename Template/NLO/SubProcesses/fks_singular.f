@@ -3621,7 +3621,7 @@ c
       endif
 c
       i=1
-      dowhile(ckc(i).gt.0.1d0)
+      do while(ckc(i).gt.0.1d0 .and. xseclvc.ne.0d0)
         i=i+1
       enddo
       imin=i
@@ -3634,7 +3634,7 @@ c
       enddo
       icount=0
       i=imin
-      dowhile(icount.lt.ithrs.and.i.lt.imax)
+      do while(icount.lt.ithrs.and.i.lt.imax)
         if(rckc(i).gt.rat)then
           icount=icount+1
         else
