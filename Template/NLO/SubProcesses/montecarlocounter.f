@@ -3415,7 +3415,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vca=3.d0)
 
       integer mstj50,mstp67
-      double precision en_fks,en_mother,theta2,theta2_cc,pt2father
+      double precision en_fks,en_mother,theta2,theta2_cc
       double precision upper_scale
       common/cupscale/upper_scale
 
@@ -3556,15 +3556,7 @@ c xmcsubt note
          xjac(npartner)=xjactmp
 c
 c Compute deadzones:
-          lzone(npartner)=.true.
-          if(ileg.ge.3)then
-             pt2father=p_born(1,fksfather)**2+p_born(2,fksfather)**2
-             if(xi(npartner).ge.pt2father)lzone(npartner)=.false.
-c check!!
-c compute an effective xi variable for the father and impose
-c the constraint there?
-          endif
-
+         lzone(npartner)=.true.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -6001,16 +5993,15 @@ c outgoing parton #3 (massive)
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+         w1=-xq1q+xq2q-xtk
+         w2=-xq2q+xq1q-xuk
          if(1-x.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)/2
          elseif(1-yj.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)*(s*x-xm12)**2/(2*(s-xm12)**2)
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
             z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-            xt=2*en_fks*en_fks_sister*(1-yj)
-            xiPY8=z*(1-z)*xt
+            xiPY8=z*(1-z)*w2
          endif
       endif
 
