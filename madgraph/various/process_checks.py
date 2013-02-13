@@ -436,7 +436,6 @@ class MatrixElementEvaluator(object):
             while event_file.get_next_event() != 'no_event':
                 event = event_file.particle
                 #check if the event is compatible
-                #print event
                 event_ids = [p['pid'] for p in event.values()]
                 if event_ids == ids:
                     skip += 1

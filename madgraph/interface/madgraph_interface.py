@@ -2742,7 +2742,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check args validity
         param_card = self.check_check(args)
         options= {'events':None} # If the momentum needs to be picked from a event file
-
         if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
             logger.info("Will use the param_card contained in the banner and  the events associated")
             import madgraph.various.banner as banner
@@ -2797,9 +2796,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('cmdprint'),
                    logging.getLogger('madgraph.model'),
                    logging.getLogger('madgraph.base_objects')]
-        old_levels = [logger.level for logger in loggers]
-        for logger in loggers:
-            logger.setLevel(logging.WARNING)
+        old_levels = [log.level for log in loggers]
+        for log in loggers:
+            log.setLevel(logging.WARNING)
         
         # run the check
         cpu_time1 = time.time()
@@ -2967,8 +2966,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             pydoc.pager(text)
             
         # Restore diagram logger
-        for i, logger in enumerate(loggers):
-            logger.setLevel(old_levels[i])
+        for i, log in enumerate(loggers):
+            log.setLevel(old_levels[i])
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
@@ -3537,7 +3536,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          self._curr_model.get('perturbation_couplings') not in \
                                                                    [[],['QCD']]:
                         if 1 not in self._curr_model.get('gauge') :
-                            logger.warning('This model does not allow Feynman '+\
+                            logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
                                                 'QCD loop cmputations with it.')
                         else:
@@ -3547,13 +3546,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             self.do_set('gauge Feynman', log=False)
                             return
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to Feynman since '+\
+                        logger_stderr.warning('Change the gauge to Feynman since '+\
                                        'the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the'+\
+                        logger_stderr.warning('Change the gauge to unitary since the'+\
                           ' model does not allow Feynman gauge.'+\
                                                   ' Please re-import the model')
                         self._curr_model = None

@@ -533,9 +533,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
-        if '<mgversion>' in text:
+        if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
