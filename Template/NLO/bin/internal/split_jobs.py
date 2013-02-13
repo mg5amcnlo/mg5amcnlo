@@ -87,6 +87,9 @@ for dir in dirs:
 
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
+    if job['nevts'] == 0:
+        splitted_lines.append('%s     %d     %9e' % (os.path.join(dir,'events_1.lhe').ljust(40), job['nevts'], job['xsec']))
+        continue
     job_events = 0
     for i in range(job['nsplit']):
         filename = os.path.join(dir,'events_%d.lhe' % (i+1))
