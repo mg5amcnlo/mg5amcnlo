@@ -253,8 +253,14 @@ class MatrixElementEvaluator(object):
     
         # Read a param_card and calculate couplings
         self.full_model = model_reader.ModelReader(model)
-        self.full_model.set_parameters_and_couplings(param_card)
-
+        try:
+            self.full_model.set_parameters_and_couplings(param_card)
+        except MadGraph5Error:
+            if isinstance(param_card, (str,file)):
+                raise
+            logger.warning('param_card present in the event file not compatible. We will use the default one.')
+            self.full_model.set_parameters_and_couplings()
+            
         self.auth_skipping = auth_skipping
         self.reuse = reuse
         self.cmass_scheme = cmd.options['complex_mass_scheme']
@@ -430,11 +436,14 @@ class MatrixElementEvaluator(object):
         if events:
             ids = [l.get('id') for l in sorted_legs]
             import MadSpin.decay as madspin
-            fsock = open(events)
-            event_file = madspin.Event(fsock)
+            if not hasattr(self, 'event_file'):
+                print 'reset file'
+                fsock = open(events)
+                self.event_file = madspin.Event(fsock)
+
             skip = 0
-            while event_file.get_next_event() != 'no_event':
-                event = event_file.particle
+            while self.event_file.get_next_event() != 'no_event':
+                event = self.event_file.particle
                 #check if the event is compatible
                 event_ids = [p['pid'] for p in event.values()]
                 if event_ids == ids:
@@ -448,9 +457,7 @@ class MatrixElementEvaluator(object):
                 m = part['momentum']
                 p.append([m.E, m.px, m.py, m.pz])
             return p, 1
-            
-
-
+        raise Exception, 'NO'
 
         nincoming = len([leg for leg in sorted_legs if leg.get('state') == False])
         nfinal = len(sorted_legs) - nincoming
@@ -1167,9 +1174,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         # Copy the parameter card if provided
         if param_card != None:
-            cp(os.path.join(param_card),\
+            if isinstance(param_card, str):
+                cp(os.path.join(param_card),\
                               os.path.join(export_dir,'Cards','param_card.dat'))
-        
+            else:
+                param_card.write(os.path.join(export_dir,'Cards','param_card.dat'))
+                
         # First Initialize filters (in later versions where this will be done
         # at generation time, it can be skipped)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
@@ -1332,13 +1342,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 # Global helper function run_multiprocs
 #===============================================================================
 
-    def check_matrix_element_stability(self, matrix_element, nPoints,
-         infos = None, reusing = False, param_card = None, keep_folder = False):
+    def check_matrix_element_stability(self, matrix_element, options=None,
+                          infos = None, param_card = None, keep_folder = False):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
         reused from a previous run and the content of infos.
         """
+        
+        if not options:
+            reusing = False
+            nPoints = 100
+        else:
+            reusing = options['reuse']
+            nPoints = options['npoints']  
         
         assert ((not reusing and isinstance(matrix_element, \
                  helas_objects.HelasMatrixElement)) or (reusing and 
@@ -1477,7 +1494,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             
             return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in p_out])
   
-        def pick_PS_point(proc):
+        def pick_PS_point(proc, options):
             """ Randomly generate a PS point and make sure it is eligible. Then
             return it. Users can edit the cuts here if they want."""
             def Pt(pmom):
@@ -1510,9 +1527,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                         if DeltaR(pmom,pmom2)<0.5:
                             return False
                 return True
-            p, w_rambo = self.get_momenta(proc)
+            p, w_rambo = self.get_momenta(proc, options)
             while not pass_cuts(p):
-                p, w_rambo = self.get_momenta(proc)
+                p, w_rambo = self.get_momenta(proc, options)
             return p                
 
         # First create the stability check fortran driver executable if not 
@@ -1557,7 +1574,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             EPS = None
             # Pick an eligible PS point with rambo, if not already done
             if retry==0:
-                p = pick_PS_point(process)
+                p = pick_PS_point(process, options)
 #           print "I use P_%i="%i,p
             try:
                 if progress_bar!=None:
@@ -1902,16 +1919,16 @@ def generate_loop_matrix_element(process_definition, reuse,
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, param_card = None,cuttools="",
-                             nPoints=100, reuse = False, cmd = FakeInterface()):
+                            options = None, cmd = FakeInterface()):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
-    keep_folder = reuse
+    keep_folder = options['reuse']
 
     model=process_definition.get('model')
 
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
-                                                                  reuse,cmd=cmd)
+                                                             keep_folder,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
@@ -1925,8 +1942,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
     # The timing info is made of the merged two dictionaries
     timing = dict(timing1.items()+timing2.items())
 
-    stability = myProfiler.check_matrix_element_stability(matrix_element, 
-           nPoints=nPoints, infos=timing, reusing=reusing,param_card=param_card,
+    stability = myProfiler.check_matrix_element_stability(matrix_element,                                            
+                            options=options, infos=timing,param_card=param_card,
                                                       keep_folder = keep_folder)
     if stability == None:
         return None, None
@@ -1938,10 +1955,11 @@ def check_profile(process_definition, param_card = None,cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_stability(process_definition, param_card = None,cuttools="",
-                               nPoints=100, reuse=False, cmd = FakeInterface()):
+def check_stability(process_definition, param_card = None,cuttools="", 
+                               options=None,nPoints=100, reuse=False, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
+    
     
     keep_folder = reuse
     model=process_definition.get('model')
@@ -1954,7 +1972,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myStabilityChecker.loop_optimized_output=False
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
-                        nPoints=nPoints,reusing=reusing,param_card=param_card, 
+                        options=options,param_card=param_card, 
                                                         keep_folder=keep_folder)
     
     if stability == None:
@@ -1967,14 +1985,14 @@ def check_stability(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_timing(process_definition, param_card= None, cuttools="",
-                                          reuse = False, cmd = FakeInterface()):
+                                          options=None, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
-    keep_folder = reuse
+    keep_folder = options['reuse']
     model=process_definition.get('model')
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
-                                                                 reuse, cmd=cmd)
+                                                           keep_folder, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
@@ -3072,6 +3090,7 @@ def check_lorentz_process(process, evaluator,options=None):
 
     # Generate phase space point to use
     p, w_rambo = evaluator.get_momenta(process, options)
+    print p
 
     # Generate the HelasMatrixElement for the process
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):

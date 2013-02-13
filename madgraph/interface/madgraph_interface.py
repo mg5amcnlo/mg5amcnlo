@@ -2753,12 +2753,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        reuse = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"       
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
         if args[0] in ['stability', 'profile']:
-            stab_statistics = int(args[1])
+            options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
 
         options['energy'] = float(args[-1].split('=')[1])
@@ -2831,15 +2831,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  reuse = reuse,
-                                                  cmd = self)        
+                                                  options = options,
+                                                  cmd = self,
+                                                  )        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -2848,8 +2848,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -2876,7 +2875,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
-                                                reuse = reuse,
+                                                reuse = options['reuse'],
                                                 cmd = self)
             
             # restore previous settings
@@ -2889,7 +2888,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
-                                            reuse = reuse,
+                                            reuse = options['reuse'],
                                             cmd = self,
                                             options=options)
             nb_processes += len(comparisons[0])
@@ -2899,7 +2898,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
                                           options=options)
             nb_processes += len(lorentz_result)
@@ -2908,7 +2907,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
                                           options=options)
             nb_processes += len(gauge_result)     
@@ -2945,7 +2944,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,reuse) + '\n'
+                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
@@ -2962,7 +2961,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if len(text.split('\n'))>20 and not reuse and text!='':
+        if len(text.split('\n'))>20 and not options['reuse'] and text!='':
             pydoc.pager(text)
             
         # Restore diagram logger
@@ -2971,7 +2970,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if len(text.split('\n'))<=20 or reuse:
+        if len(text.split('\n'))<=20 or options['reuse']:
             # Useful to really specify what logger is used for ML acceptance tests
             logging.getLogger('madgraph.check_cmd').info(text)
         else:
@@ -2979,7 +2978,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
-        if not reuse:
+        if not options['reuse']:
             process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
