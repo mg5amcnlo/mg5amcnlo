@@ -218,7 +218,7 @@ def compile(arg=[], cwd=None, mode='fortran', **opt):
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
-                error_text += "Xcode3 contains those require program"
+                error_text += "Xcode3 contains those required programs"
             raise MadGraph5Error, error_text
 
     if p.returncode:

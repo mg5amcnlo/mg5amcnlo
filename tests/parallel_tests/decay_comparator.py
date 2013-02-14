@@ -38,6 +38,7 @@ import madgraph.iolibs.files as files
 import madgraph.interface.master_interface as cmd_interface
 import madgraph.interface.madevent_interface as me_interface
 import models.check_param_card as card_reader
+import models.import_ufo as import_ufo
 
 import madgraph.various.misc as misc
 import madgraph.various.misc as misc
@@ -52,6 +53,7 @@ class DecayComparator(object):
         self.model = model
         self.cmd = cmd_interface.MasterCmd()
         self.cmd.exec_cmd('import model %s --modelname' % model)
+        self.cmd._curr_model = import_ufo.import_model(model, decay=True)
         
         self.particles_id = dict([(p.get('name'), p.get('pdg_code'))
                                 for p in self.cmd._curr_model.get('particles')])
@@ -103,12 +105,17 @@ class DecayComparator(object):
             lha_code = list(partial_width.lhacode)
             lha_code.sort()
             lha_code = tuple(lha_code)
-            value1 = info_partial1[lha_code]
+            try:
+                value1 = info_partial1[lha_code]
+            except:
+                value1 = 0
             value2 = partial_width.value
             if value1 == value2 == 0:
                 continue
+            elif value1 == 0 and value2/width2 < 1e-6:
+                continue
             elif (value1 - value2) / (value1 + value2) > 1e-3 and \
-                value1 / width1 > 1e-5:
+                value2 / width2 > 1e-5:
                 text = error_text(card1, card2, pid)
                 return text + '\n%s has not the same partial width for %s: ratio of %s' % \
                 (pid, lha_code, (value1 - value2) / (value1 + value2))
@@ -116,7 +123,7 @@ class DecayComparator(object):
 
         
      
-    def has_same_decay(self, particle):
+    def has_same_decay(self, particle, run_fr=True):
         """create mg5 directory and then use fr to compare. Returns the ratio of
         the decay or None if this ratio is not constant for all channel.
         """
@@ -134,7 +141,7 @@ class DecayComparator(object):
         start1= time.time()
         self.cmd.exec_cmd('set automatic_html_opening False')
         try:
-            self.cmd.exec_cmd('generate %s > all all' % particle)
+            self.cmd.exec_cmd('generate %s > all all --optimize' % particle)
         except InvalidCmd:
             return 'True'
         if self.cmd._curr_amps: 
@@ -159,35 +166,38 @@ class DecayComparator(object):
                      '%s_dec/Cards/run_card.dat' % dir_name, log=True)
             self.cmd.exec_cmd('launch -f')
         stop_mg5 = time.time()
+        print 'DECAY Running time: %s s ' % (stop_mg5 -start4)
         
         #
         # RUN FR DECAY
         #
+        if run_fr:    
+            me_cmd = me_interface.MadEventCmd(dir_name)
+            start3 = time.time()
+            me_cmd.model_name = self.model
+            me_cmd.do_compute_widths(' %s -f --nbody=2' % particle)
+            stop_fr = time.time()
+            print 'FR Running time: %s s ' % (stop_fr -start3)
+            out1 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
+                         pjoin(dir_name,'Events','run_01','param_card.dat'), 
+                         pid, 'FR', 'MG5')         
+            out2 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
+                         pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
+                         pid, 'FR', 'DECAY')
+              
+    
+            if out1 == out2 == 'True':
+                os.system('rm -rf %s >/dev/null' % dir_name)
+                os.system('rm -rf %s_dec >/dev/null' % dir_name)
                 
-        me_cmd = me_interface.MadEventCmd(dir_name)
-        start3 = time.time()
-        me_cmd.exec_cmd('compute_widths %s -f --nbody=2' % particle)
-        stop_fr = time.time()
-        print 'FR Running time: %s s ' % (stop_fr -start3)
-        
-        
-        print 'DECAY Running time: %s s ' % (stop_mg5 -start4)
-
-        out1 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
-                     pjoin(dir_name,'Events','run_01','param_card.dat'), 
-                     pid, 'FR', 'MG5')         
-        out2 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
-                     pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
-                     pid, 'FR', 'DECAY')
-          
-
-        if out1 == out2 == 'True':
-            os.system('rm -rf %s >/dev/null' % dir_name)
-            os.system('rm -rf %s_dec >/dev/null' % dir_name)
-            
-            return 'True'
+                return 'True'
+            else:
+                return out1 + out2
         else:
-            return out1 + out2
+            return self.compare(
+                         pjoin(dir_name,'Events','run_01','param_card.dat'), 
+                         pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
+                         pid, 'MG5', 'DECAY') 
         
         
         
@@ -198,10 +208,10 @@ class TestFRDecay(unittest.TestCase):
     def test_decay_mssm(self):
         decay_framework = DecayComparator('mssm')
         
-        for name in decay_framework.particles_id.keys():
+        for i, name in enumerate(decay_framework.particles_id.keys()):
             import time
             start = time.time()
-            print 'comparing decay for %s' % name
+            print 'comparing decay for %s %s' % (i, name)
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)
         
@@ -212,7 +222,7 @@ class TestFRDecay(unittest.TestCase):
             import time
             start = time.time()
             print 'comparing decay for %s' % name
-            self.assertEqual('True', decay_framework.has_same_decay(name))
+            self.assertEqual('True', decay_framework.has_same_decay(name, False))
             print 'done in %s s' % (time.time() - start)
     
     def test_decay_nmssm2(self):
@@ -222,7 +232,7 @@ class TestFRDecay(unittest.TestCase):
             import time
             start = time.time()
             print 'comparing decay for %s' % name
-            self.assertEqual('True', decay_framework.has_same_decay(name))
+            self.assertEqual('True', decay_framework.has_same_decay(name, False))
             print 'done in %s s' % (time.time() - start)
     
     def test_decay_nmssm3(self):
@@ -232,26 +242,26 @@ class TestFRDecay(unittest.TestCase):
             import time
             start = time.time()
             print 'comparing decay for %s' % name
-            self.assertEqual('True', decay_framework.has_same_decay(name))
+            self.assertEqual('True', decay_framework.has_same_decay(name, False))
             print 'done in %s s' % (time.time() - start)
         
     def test_decay_heft(self):
-        decay_framework = DecayComparator('Higgs_Effective_Couplings_UFO')
+        decay_framework = DecayComparator('heft')
 
         for name in decay_framework.particles_id.keys():
             import time
             start = time.time()
             print 'comparing decay for %s' % name
-            self.assertEqual('True', decay_framework.has_same_decay(name))
+            self.assertEqual('True', decay_framework.has_same_decay(name, run_fr=False))
             print 'done in %s s' % (time.time() - start)        
         
     def test_decay_triplet_diquarks(self):
         decay_framework = DecayComparator('triplet_diquarks')
 
-        for name in decay_framework.particles_id.keys():
+        for i, name in enumerate(decay_framework.particles_id.keys()):
             import time
             start = time.time()
-            print 'comparing decay for %s' % name
+            print 'comparing decay for %s %s' % (i, name)
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)         
         

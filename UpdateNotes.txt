@@ -1,5 +1,64 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+BRANCH ADD-ON:
+                  CS+JA+OM: Changing the "auto" width mode.  Adding a fast 
+                      estimation of the 1->3 decay. If relevant, the 1->3 ME
+                      will be computed and a precise computation of the 1->3 
+                      partial width will be done. 
+                  OM: For 1->N process the command "generate"/"add process" allows one 
+                      additional argument --optimize[=PARAM_CARD] in that case all
+                      matrix element such that the mass of the final state is higher
+                      than the one of the initial state will be discarded.
+                      
+1.5.8 (xx/xx/13)  OM: Add one command in MadEvent interface: add_time_of_flight
+                      This command modify the lhe events file by adding the time of 
+                      flight information in the lhe events.
+                  OM: Fix bug in pythia8 output for process using decay chains syntax.
+                      See bug #1099790.
+                  CDe+OM: Update Dim6 model
+                  OM: Fix a bug preventing model customized via the "customize_model"
+                      command to be able to use the automatic width computation.
+                  OM: Fix a bug in model restriction when a width was equals to one.
+                      In such case, the width is not fixed to this value anymore.
+                  OM: correct bug #1107603 (problem with condor cluster for submission 
+                      associated to a large number of jobs). Thanks Sanjay 
+
+1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
+                      zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
+                  OM: Fix a bug affecting 2>1 process when the final states particles is 
+                      (outcoming fermion) introduced in version 1.5.0. (Thanks to 
+                      B. Fuks) 
+                  OM: Fix a problem of fermion flow for v4 model (thanks to A. Abrahantes) 
+                  OM+DBF: Change the automatically the electroweak-scheme when passing to 
+                      complex-mass scheme: the mass of the W is the an external parameter
+                      and Gf is an internal parameter fixed by LO gauge relation. 
+                  OM+DBF: Remove the model sm_mw of the model database. 
+                  OM: Fix problem in the ./bin/mg5 file command when some question are 
+                      present in the file.
+                  OM: Extend support for ~ and ${vars} in path.
+                  OM: Fix a crash in multi_run for more than 300 successive runs.
+                      (Thanks to Diptimoy)
+                  OM: Allow to choose the center of mass energy for the check command.
+                  OM: small change in the pbs cluster submission (see question #218824)
+                  OM: Adding possibility to check gauge/lorentz/...for  2>1 processes.                    
+
+1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
+                      without corresponding core processes final state (see 
+                      Question #216037). If you get this warning, please check
+                      carefully the process list and diagrams to make sure you
+                      have the processes you were expecting.
+                  JA: Included option to set the highest flavor for alpha_s reweighting
+                      (useful for 4-flavor matching with massive b:s). Note that
+                      this does not affect the choice of factorization scale.
+                  JA: Fixed Bug #1089199, where decay processes with symmetric 
+                      diagrams were missing a symmetry factor. 
+                      Note that this only affects decay processes (A > B C ..) 
+                      with multiple identical particles in the final state and 
+                      some propagators not able to go on the mass shell.
+                  JA: Updated the restriction cards for the sm model to set 
+                      Yukawa couplings equal to the corresponding masses
+                      (in order to avoid stupid gauge check failures).
+
 1.5.5 (18/11/12)  JA: Fixed Bug #1078168, giving asymmetries in X+gamma generation
                       (e.g. Z+gamma) when ickkw=1 and pdfwgt=T. Thanks Irakli!
                   JA: Ensure that t-channel single top gives non-zero cross section

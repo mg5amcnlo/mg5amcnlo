@@ -154,7 +154,7 @@ class ModelReader(base_objects.Model):
             try:
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
-                msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
+                msg = 'Unable to evaluate %s = %s: raise error: %s' % (param.name,param.expr, error)
                 raise MadGraph5Error, msg
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:
@@ -219,7 +219,6 @@ class Alphas_Runner(object):
         assert cmass > 0
         assert bmass > 0
         assert nloop > -1
-    
         t = 2 * math.log(bmass/zmass)
         self.amb = self.newton1(t, asmz, 5)
         t = 2 * math.log(cmass/bmass)
@@ -258,7 +257,6 @@ class Alphas_Runner(object):
         input scale and output scale t.
         Evolution is performed using Newton's method,
         with a precision given by tol."""        
-        
         nloop = self.nloop
         tol = 5e-4
         arg = nf-3

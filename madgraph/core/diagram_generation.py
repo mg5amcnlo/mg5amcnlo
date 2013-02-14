@@ -29,7 +29,6 @@ import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
-debug_statement = True
 #===============================================================================
 # DiagramTag mother class
 #===============================================================================
@@ -410,7 +409,7 @@ class Amplitude(base_objects.PhysicsObject):
         if len(filter(lambda leg: model.get('particle_dict')[\
                         leg.get('id')].is_fermion(), legs)) % 2 == 1:
             self['diagrams'] = res
-            raise InvalidCmd, 'The number of fermion is odd' 
+            raise InvalidCmd, 'The number of fermions is odd' 
             return res
 
         # Then check same number of incoming and outgoing fermions (if
@@ -441,25 +440,7 @@ class Amplitude(base_objects.PhysicsObject):
             if abs(total) > 1e-10:
                 self['diagrams'] = res
                 raise InvalidCmd, 'No %s conservation for this process ' % charge
-                return res
-        
-        optimize = True
-        if optimize:
-            global debug_statement
-            if debug_statement:
-                debug_statement = False
-                print 'WARNING: DIAGRAM GENERATION IN OPTIMIZE MODE!!!!! This need to be fixed'
-            # check that final state has lower mass than initial state
-            initial_mass = model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')]
-            if initial_mass == 0:
-                 raise InvalidCmd, 'massless particles can\'t decay'
-            for leg in legs[1:]:
-                m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
-                initial_mass -= m
-            if initial_mass.real < 0:
-                 raise InvalidCmd, 'Final state more massive than initial state.'
-            
-            
+                return res    
         
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
@@ -1057,9 +1038,20 @@ class DecayChainAmplitude(Amplitude):
                         decay_ids.remove(l.get('id'))
             
             if decay_ids:
-                raise InvalidCmd, \
-                 "Decay without corresponding particle in core process. " + \
-                 "Please check your process definition."
+                logger.warning("Warning: " + \
+                 "Decay without corresponding particle in core process found. " + \
+                 "Please check your process definition carefully.")
+
+                # Remove unused decays from the process list
+                for dc in reversed(self['decay_chains']):
+                    for a in reversed(dc.get('amplitudes')):
+                        # Remove the amplitudes from this decay chain
+                        if a.get('process').get('legs')[0].get('id') in decay_ids:
+                            dc.get('amplitudes').remove(a)
+                    if not dc.get('amplitudes'):
+                        # If no amplitudes left, remove the decay chain
+                        self['decay_chains'].remove(dc)
+                    
 
         elif argument != None:
             # call the mother routine
@@ -1186,11 +1178,15 @@ class MultiProcess(base_objects.PhysicsObject):
         # List of quark flavors where we ignore processes with at
         # least 6 quarks (three quark lines)
         self['ignore_six_quark_processes'] = []
-
+        # Allow to use the model parameter numerical value for optimization.
+        #This is currently use for 1->N generation(check mass).
+        self['use_numerical'] = False
+        
     def __init__(self, argument=None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = []):
+                 ignore_six_quark_processes = [], optimize=False):
         """Allow initialization with ProcessDefinition or
-        ProcessDefinitionList"""
+        ProcessDefinitionList
+        optimize allows to use param_card information. (usefull for 1-.N)"""
 
         if isinstance(argument, base_objects.ProcessDefinition):
             super(MultiProcess, self).__init__()
@@ -1207,6 +1203,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
         self['collect_mirror_procs'] = collect_mirror_procs
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
+        self['use_numerical'] = optimize
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1255,7 +1252,8 @@ class MultiProcess(base_objects.PhysicsObject):
                     self['amplitudes'].extend(\
                        MultiProcess.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
-                                       self.get('ignore_six_quark_processes')))
+                                       self.get('ignore_six_quark_processes'),
+                                       self['use_numerical']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1267,7 +1265,8 @@ class MultiProcess(base_objects.PhysicsObject):
     @staticmethod
     def generate_multi_amplitudes(process_definition,
                                   collect_mirror_procs = False,
-                                  ignore_six_quark_processes = []):
+                                  ignore_six_quark_processes = [],
+                                  use_numerical=False):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1307,7 +1306,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Generate all combinations for the initial state
         
-        for prod in apply(itertools.product, isids):
+        for prod in itertools.product(*isids):
             islegs = [\
                     base_objects.Leg({'id':id, 'state': False}) \
                     for id in prod]
@@ -1317,7 +1316,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
             red_fsidlist = []
 
-            for prod in apply(itertools.product, fsids):
+            for prod in itertools.product(*fsids):
 
                 # Remove double counting between final states
                 if tuple(sorted(prod)) in red_fsidlist:
@@ -1350,6 +1349,18 @@ class MultiProcess(base_objects.PhysicsObject):
                 # in that case don't check process
                 if sorted_legs in failed_procs:
                     continue
+
+                # If allowed check mass validity [assume 1->N]
+                if use_numerical:
+                    # check that final state has lower mass than initial state
+                    initial_mass = model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')]
+                    if initial_mass == 0:
+                         continue
+                    for leg in legs[1:]:
+                        m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
+                        initial_mass -= m
+                    if initial_mass.real < 0:
+                        continue
 
                 # Setup process
                 process = base_objects.Process({\

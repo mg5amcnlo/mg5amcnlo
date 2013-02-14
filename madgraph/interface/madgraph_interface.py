@@ -75,6 +75,7 @@ import models as ufomodels
 import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
+import models.model_reader as model_reader
 
 import aloha.aloha_fct as aloha_fct
 import aloha.create_aloha as create_aloha
@@ -365,7 +366,7 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -380,6 +381,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
+        logger.info("the options --energy allows to change the \sqrt(S)")
 
     def help_generate(self):
 
@@ -486,8 +488,25 @@ class CheckValidForCmd(cmd.CheckCmd):
         if not self._curr_model:
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
-    
-        self.check_process_format(' '.join(args[1:]))
+        
+
+        if args[-1].startswith('--optimize'):
+            if args[2] != '>':
+                raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
+            if '=' in args[-1]:
+                path = args[-1].split('=',1)[1]
+                if not os.path.exists(path) or \
+                                self.detect_file_type(path) != 'param_card':
+                    raise self.InvalidCmd('%s is not a valid param_card')
+            else:
+                path=None
+            # Update the default value of the model here.
+            if not isinstance(self._curr_model, model_reader.ModelReader):
+                self._curr_model = model_reader.ModelReader(self._curr_model)
+            self._curr_model.set_parameters_and_couplings(path)
+            self.check_process_format(' '.join(args[1:-1]))
+        else:
+            self.check_process_format(' '.join(args[1:]))
 
     def check_define(self, args):
         """check the validity of line
@@ -579,7 +598,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -1337,6 +1359,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1354,10 +1377,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
+            out['particles'] = model_comp
+            out['path to param_card'] = self.path_completion(text)
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
 
         if len(args) > 2:
-            return model_comp
+            out['particles'] = model_comp
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
             
         
     def complete_tutorial(self, text, line, begidx, endidx):
@@ -1948,6 +1976,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         # Check the validity of the arguments
         self.check_add(args)
+        
+        # special option for 1->N to avoid generation of kinematically forbidden
+        #decay.
+        if args[-1].startswith('--optimize'):
+            optimize = True
+            args.pop()
+        else:
+            optimize = False
 
         if args[0] == 'process':            
             # Rejoin line
@@ -1993,7 +2029,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           collect_mirror_procs =\
                                           collect_mirror_procs,
                                           ignore_six_quark_processes = \
-                                          ignore_six_quark_processes)
+                                          ignore_six_quark_processes,
+                                          optimize=optimize)
 
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
@@ -2016,7 +2053,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))                
+                  (len(self._curr_amps), ndiags))        
+                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -2411,8 +2449,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Check args validity
         param_card = self.check_check(args)
-
+        energy = float(args[-1].split('=')[1])
+        args = args[:-1]
         line = " ".join(args[1:])
+        
         myprocdef = self.extract_process(line)
 
         # Check that we have something    
@@ -2438,19 +2478,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
-                                                        quick = True)
+                                                        quick = True,
+                                                        energy=energy)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
@@ -2478,7 +2521,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                cmass_scheme = mass_scheme)
+                                                cmass_scheme = mass_scheme,
+                                                energy=energy)
             
             
             # restore previous settings
@@ -3134,7 +3178,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
@@ -4034,7 +4078,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
@@ -4074,7 +4120,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
+                group = False 
 
 
 

@@ -1291,12 +1291,24 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             final_id_list = []
             final_mirror_id_list = []
             for (i, me) in beam_processes:
-                final_id_list.extend([tuple([l.get('id') for l in \
-                                             proc.get('legs') if l.get('state')]) \
-                                      for proc in me.get('processes') \
+                valid_proc = [proc for proc in me.get('processes') \
                                       if beam_parts == \
                                       (proc.get('legs')[0].get('id'),
-                                       proc.get('legs')[1].get('id'))])
+                                       proc.get('legs')[1].get('id'))]
+                for proc in valid_proc:
+                    # decaying id
+                    decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
+                    curr_final_id = [l.get('id') for l in \
+                                 proc.get('legs') if l.get('state')]
+                    for id in decay_id:
+                        curr_final_id.remove(id)
+                    # extend with the decay final state
+                    curr_final_id += [l.get('id') for dec in \
+                                     proc.get('decay_chains') for l in \
+                                     dec.get('legs')   if l.get('state')]
+                    final_id_list.append(tuple(curr_final_id))
+
+
             for (i, me) in beam_mirror_processes:
                 final_mirror_id_list.extend([tuple([l.get('id') for l in \
                                              proc.get('legs') if l.get('state')]) \
@@ -1390,12 +1402,27 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                                                  
 
         for ime, me in enumerate(self.matrix_elements):
-
+            id_list = []
+            for proc in me.get('processes'):
+                # decaying id
+                decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
+                curr_id = [l.get('id') for l in \
+                             proc.get('legs') if l.get('state')]
+                for id in decay_id:
+                    curr_id.remove(id)
+                # extend with the decay final state
+                curr_id += [l.get('id') for dec in \
+                                 proc.get('decay_chains') for l in \
+                                 dec.get('legs')   if l.get('state')]
+                curr_id = [l.get('id') for l in \
+                             proc.get('legs') if not l.get('state')] + curr_id
+                id_list.append(tuple(curr_id))
+                
             res_lines.append("if(%s){" % \
                                  "||".join(["&&".join(["id%d == %d" % \
-                                            (i+1, l.get('id')) for (i, l) in \
-                                            enumerate(p.get('legs'))])\
-                                           for p in me.get('processes')]))
+                                            (i+1, id) for (i, id) in \
+                                            enumerate(p)])\
+                                           for p in id_list]))
             if ime > 0:
                 res_lines[-1] = "else " + res_lines[-1]
 

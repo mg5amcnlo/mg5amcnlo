@@ -311,6 +311,20 @@ class TestCmdShell2(unittest.TestCase,
         self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
+    def test_check_generate_optimize(self):
+        """Test that errors are raised appropriately for output"""
+
+        # Invalid since forbiddent by the optimize option
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate a > e+ e- --optimize')
+
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate b > t w- --optimize')
+
+        # Invalid since optimize is not allowed for cross-section
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate  p p > e+ e- --optimize')        
+
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
         os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
@@ -545,7 +559,7 @@ class TestCmdShell2(unittest.TestCase,
         self.do('define p = u c~ g d s b~ b h')
         self.assertEqual(self.cmd._multiparticles['p'],
                          [21, 2, 1, 3, 5, -4, -5, 25])
-        
+
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -630,7 +644,7 @@ class TestCmdShell2(unittest.TestCase,
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
                 value = eval(value)
-                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                self.assertAlmostEqual(value, 0.019538610404713896)
 
     def test_load_feynman(self):
         """ Test that feynman gauge assignment works """
