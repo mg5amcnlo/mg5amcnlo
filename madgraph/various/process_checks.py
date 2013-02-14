@@ -617,7 +617,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
             
-            options = {'clean': True, 
+            MLoptions = {'clean': True, 
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
@@ -626,7 +626,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                        'fortran_compiler': self.cmd.options['fortran_compiler']}
                         
             FortranExporter = exporter_class(\
-                self.mg_root, export_dir, options)
+                self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
@@ -1148,7 +1148,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             else:
                 exporter_class=loop_exporters.LoopProcessExporterFortranSA
     
-            options = {'clean': True, 
+            MLoptions = {'clean': True, 
                        'complex_mass': self.cmass_scheme,
                        'export_format':'madloop', 
                        'mp':True,
@@ -1157,7 +1157,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'fortran_compiler':self.cmd.options['fortran_compiler']}
     
             start=time.time()
-            FortranExporter = exporter_class(self.mg_root, export_dir, options)
+            FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
             FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
@@ -3115,26 +3115,21 @@ def check_lorentz_process(process, evaluator,options=None):
             results = [('Original evaluation',data)]
     else:
         return  {'process':process, 'results':'pass'}
-    
-    # The boosts are not precise enough for the loop evaluations and one need the
-    # fortran improve_ps function of MadLoop to work. So we only consider the 
-    # boosts along the z directions for loops or simple rotations.
+
     if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):     
         for boost in range(1,4):
             boost_p = boost_momenta(p, boost)
             results.append(evaluator.evaluate_matrix_element(matrix_element,
                                                     p=boost_p,output='jamp'))
     else:
-        # The boosts are not precise enough for the loop evaluations and one
-        # need the fortran improve_ps function of MadLoop to work. So we only
-        # consider the boosts along the z directions for loops or simple rotations.
         boost_p = boost_momenta(p, 3)
         results.append(('Z-axis boost',
                        evaluator.evaluate_matrix_element(matrix_element,
             p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
         # We add here also the boost along x and y for reference. In the output
         # of the check, it is now clearly stated that MadLoop improve_ps script
-        # will not work for them.
+        # will not work for them. The momenta read from event file are not
+        # precise enough so these checks are omitted.
         if not options['event']:
             boost_p = boost_momenta(p, 1)
             results.append(('X-axis boost',

@@ -1779,7 +1779,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not output:
             output = initial
-
+        
         param_card_file = open(initial)
         param_card = param_card_file.read().split('\n')
         param_card_file.close()
@@ -2223,21 +2223,14 @@ calculator."""
         
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
-        elif not args['force'] and not self.force: 
+        elif not args['force']: 
             self.ask_edit_cards(['param_card.dat'], plot=False)
-            args['input'] = pjoin(self.me_dir,'Cards','param_card.dat')
-        else:
-            args['input'] = pjoin(self.me_dir,'Cards','param_card.dat')
         
         model = args['model']
         self.compute_widths(model, args)
     
     @staticmethod
     def compute_widths(model, args):
-        
-        assert 'input' in args
-        assert 'model' in args
-        assert 'output' in args
         
         data = model.set_parameters_and_couplings(args['input'])
         
