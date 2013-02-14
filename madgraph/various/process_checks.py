@@ -3135,14 +3135,15 @@ def check_lorentz_process(process, evaluator,options=None):
         # We add here also the boost along x and y for reference. In the output
         # of the check, it is now clearly stated that MadLoop improve_ps script
         # will not work for them.
-        boost_p = boost_momenta(p, 1)
-        results.append(('X-axis boost',
-                       evaluator.evaluate_matrix_element(matrix_element,
-            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
-        boost_p = boost_momenta(p, 2)
-        results.append(('Y-axis boost',
-                       evaluator.evaluate_matrix_element(matrix_element,
-            p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
+        if not options['event']:
+            boost_p = boost_momenta(p, 1)
+            results.append(('X-axis boost',
+                           evaluator.evaluate_matrix_element(matrix_element,
+                p=boost_p, PS_name='xBoost', output='jamp',MLOptions = MLOptions)))
+            boost_p = boost_momenta(p, 2)
+            results.append(('Y-axis boost',
+                           evaluator.evaluate_matrix_element(matrix_element,
+                p=boost_p, PS_name='yBoost', output='jamp',MLOptions = MLOptions)))
         # We only consider the rotations around the z axis so to have the 
         # improve_ps fortran routine work.
         rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
