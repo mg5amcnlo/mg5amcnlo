@@ -1359,7 +1359,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     for leg in legs[1:]:
                         m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
                         initial_mass -= m
-                    if initial_mass.real < 0:
+                    if initial_mass.real <= 0:
                         continue
 
                 # Setup process

@@ -323,7 +323,13 @@ class TestCmdShell2(unittest.TestCase,
 
         # Invalid since optimize is not allowed for cross-section
         self.assertRaises(InvalidCmd,
-                          self.do, 'generate  p p > e+ e- --optimize')        
+                          self.do, 'generate  p p > e+ e- --optimize') 
+        
+        # check that --optimize filter correctly
+        self.do('generate t > all all --optimize')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+              
+               
 
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
