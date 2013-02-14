@@ -1526,6 +1526,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             return False
                 return True
             p, w_rambo = self.get_momenta(proc, options)
+            if options['events']:
+                return p
             while not pass_cuts(p):
                 p, w_rambo = self.get_momenta(proc, options)
             return p                
