@@ -25,10 +25,11 @@ import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
-
+import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
+debug_statement = True
 #===============================================================================
 # DiagramTag mother class
 #===============================================================================
@@ -441,7 +442,25 @@ class Amplitude(base_objects.PhysicsObject):
                 self['diagrams'] = res
                 raise InvalidCmd, 'No %s conservation for this process ' % charge
                 return res
-                    
+        
+        optimize = True
+        if optimize:
+            global debug_statement
+            if debug_statement:
+                debug_statement = False
+                print 'WARNING: DIAGRAM GENERATION IN OPTIMIZE MODE!!!!! This need to be fixed'
+            # check that final state has lower mass than initial state
+            initial_mass = model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')]
+            if initial_mass == 0:
+                 raise InvalidCmd, 'massless particles can\'t decay'
+            for leg in legs[1:]:
+                m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
+                initial_mass -= m
+            if initial_mass.real < 0:
+                 raise InvalidCmd, 'Final state more massive than initial state.'
+            
+            
+        
         logger.info("Trying %s " % process.nice_string().replace('Process', 'process'))
 
         # Give numbers to legs in process

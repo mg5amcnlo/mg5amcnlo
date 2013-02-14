@@ -1046,6 +1046,8 @@ This will take effect only in a NEW terminal
             if not p:
                 raise self.InvalidCmd('Model doesn\'t have pid %s for a particle' % args[0])
             args[0] = int(args[0])
+        elif args[0] in self._multiparticles:
+            args[0] = set(abs(id) for id in self._multiparticles[args[0]])
         else:
             for p in self._curr_model['particles']:
                 if p['name'] == args[0] or p['antiname'] == args[0]:
@@ -1984,6 +1986,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                            self.options['ignore_six_quark_processes'] if \
                            "ignore_six_quark_processes" in self.options \
                            else []
+
+            
 
             myproc = diagram_generation.MultiProcess(myprocdef,
                                           collect_mirror_procs =\
@@ -4366,7 +4370,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #check the validity of the arguments
         self.check_calculate_width(args)
         #print args
-        pid = args[0]
+        pids = args[0]
         level = args[1]
         param_card_path = args[2]
             
@@ -4392,21 +4396,29 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_decaymodel.read_param_card(param_card_path)
         else:
             self._curr_decaymodel = model
-            
-        part = self._curr_decaymodel.get_particle(pid)
-
-        # Find channels as requested
-        if level //1 == level and level >1:
-            level = int(level)
-            self._curr_decaymodel.find_channels(part, level)
-            logger.info("find decay of %s to %d-body decays" % (part.get('name'),level))
-            
-            if not skip_2body:
-                self._curr_amps = part.get_amplitudes(2)
+        
+        if  isinstance(pids, int):
+            pids = [pids]
+        
+        for pid in pids:      
+            part = self._curr_decaymodel.get_particle(pid)
+    
+            # Find channels as requested
+            if level //1 == level and level >1:
+                level = int(level)
+                self._curr_decaymodel.find_channels(part, level)
+                logger.info("find decay of %s to %d-body decays" % (part.get('name'),level))
                 
-            for l in range(3, level+1):
-                self._curr_amps.extend(part.get_amplitudes(l))
-            #logger.info(self._curr_amps.nice_string())
+                if not skip_2body:
+                    amp = part.get_amplitudes(2)
+                    if amp:
+                        self._curr_amps.extend(amp)
+                    
+                for l in range(3, level+1):
+                    amp = part.get_amplitudes(l)
+                    if amp:
+                        self._curr_amps.extend(amp)
+                #logger.info(self._curr_amps.nice_string())
 
         # Set _generate_info
         if len(self._curr_amps) > 0:

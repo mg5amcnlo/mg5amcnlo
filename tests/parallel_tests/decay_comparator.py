@@ -41,7 +41,7 @@ import models.check_param_card as card_reader
 
 import madgraph.various.misc as misc
 import madgraph.various.misc as misc
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 
 
 class DecayComparator(object):
@@ -55,48 +55,110 @@ class DecayComparator(object):
         
         self.particles_id = dict([(p.get('name'), p.get('pdg_code'))
                                 for p in self.cmd._curr_model.get('particles')])
+
+    def compare(self, card1, card2, pid, name1, name2):
         
+        def error_text(mg5_info, fr_info, pid):
+            """get error text"""
+            text = "%s INFORMATION:\n" % name2
+            text += 'total: %s \n' % mg5_info['decay'].get((pid,)).value 
+            if mg5_info['decay'].decay_table.has_key(pid):
+                text += str(mg5_info['decay'].decay_table[pid])+'\n'
+            text += "%s INFORMATION\n" % name1
+            text += 'total: %s \n' % fr_info['decay'].get((pid,)).value 
+            if fr_info['decay'].decay_table.has_key(pid):
+                text += str(fr_info['decay'].decay_table[pid])+'\n'
+            print text
+            return text
+        
+        if os.path.exists(card1):
+            card1 = card_reader.ParamCard(card1)
+            width1 = card1['decay'].get((pid,)).value
+        else:
+            width1 = 0
+
+        if os.path.exists(card2):             
+            card2 = card_reader.ParamCard(card2)
+            width2 = card2['decay'].get((pid,)).value
+        else:
+            width2 = 0
+        print width1, width2
+        
+        
+        if width1 == width2 == 0:
+            return 'True'
+        if (width1 - width2) / (width1 + width2) > 1e-4:
+            text = error_text(card1, card2, pid)
+            return text + '\n%s has not the same total width: ratio of %s' % \
+                (pid, (width1 - width2) / (width1 + width2))
+        
+        info_partial1 = {}
+        for partial_width in card1['decay'].decay_table[pid]:
+            lha_code = list(partial_width.lhacode)
+            lha_code.sort()
+            lha_code = tuple(lha_code)
+            info_partial1[lha_code] = partial_width.value
+            
+        for partial_width in card2['decay'].decay_table[pid]:
+            lha_code = list(partial_width.lhacode)
+            lha_code.sort()
+            lha_code = tuple(lha_code)
+            value1 = info_partial1[lha_code]
+            value2 = partial_width.value
+            if value1 == value2 == 0:
+                continue
+            elif (value1 - value2) / (value1 + value2) > 1e-3 and \
+                value1 / width1 > 1e-5:
+                text = error_text(card1, card2, pid)
+                return text + '\n%s has not the same partial width for %s: ratio of %s' % \
+                (pid, lha_code, (value1 - value2) / (value1 + value2))
+        return 'True'
+
+        
+     
     def has_same_decay(self, particle):
         """create mg5 directory and then use fr to compare. Returns the ratio of
         the decay or None if this ratio is not constant for all channel.
         """
         enter_time = time.time()
-        def error_text(mg5_info, fr_info, pid):
-            """get error text"""
-            text = "MG5 INFORMATION:\n"
-            text += 'total: %s ' % mg5_info['decay'].get((pid,)).value 
-            if mg5_info['decay'].decay_table.has_key(pid):
-                text += str(mg5_info['decay'].decay_table[pid])+'\n'
-            text += "FR INFORMATION\n"
-            text += 'total: %s ' % fr_info['decay'].get((pid,)).value 
-            if fr_info['decay'].decay_table.has_key(pid):
-                text += str(fr_info['decay'].decay_table[pid])+'\n'
-            print text
-            return text
         
         dir_name = 'TEST_DECAY_%s_%s' % (self.model,particle)       
         pid = self.particles_id[particle]
         
         # clean previous run
         os.system('rm -rf %s >/dev/null' % dir_name)
-        
+        os.system('rm -rf %s_dec >/dev/null' % dir_name)        
         #
         # RUN MG5
         #
         start1= time.time()
         self.cmd.exec_cmd('set automatic_html_opening False')
-        self.cmd.exec_cmd('generate %s > all all' % particle)
-
-        self.cmd.exec_cmd('output %s -f' % dir_name)
-        
-        
-        files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
-                 '%s/Cards/run_card.dat' % dir_name, log=True)
-        
-        self.cmd.exec_cmd('launch -f')
+        try:
+            self.cmd.exec_cmd('generate %s > all all' % particle)
+        except InvalidCmd:
+            return 'True'
+        if self.cmd._curr_amps: 
+            self.cmd.exec_cmd('output %s -f' % dir_name)
+            
+            
+            files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
+                     '%s/Cards/run_card.dat' % dir_name, log=True)
+            
+            self.cmd.exec_cmd('launch -f')
         stop_mg5 = time.time()
         print 'MG5 Running time: %s s ' % (stop_mg5 -start1)
-        mg5_info = card_reader.ParamCard(pjoin(dir_name,'Events','run_01','param_card.dat'))
+                
+        #
+        # Run MG Decay module
+        #
+        start4= time.time()
+        self.cmd.exec_cmd('calculate_width %s 2' % particle)
+        if self.cmd._curr_amps:  
+            self.cmd.exec_cmd('output %s_dec -f' % dir_name)
+            files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
+                     '%s_dec/Cards/run_card.dat' % dir_name, log=True)
+            self.cmd.exec_cmd('launch -f')
+        stop_mg5 = time.time()
         
         #
         # RUN FR DECAY
@@ -104,48 +166,29 @@ class DecayComparator(object):
                 
         me_cmd = me_interface.MadEventCmd(dir_name)
         start3 = time.time()
-        me_cmd.exec_cmd('compute_widths %s -f' % particle)
+        me_cmd.exec_cmd('compute_widths %s -f --nbody=2' % particle)
         stop_fr = time.time()
-        fr_info = card_reader.ParamCard(pjoin(dir_name, 'Cards', 'param_card.dat'))
         print 'FR Running time: %s s ' % (stop_fr -start3)
         
         
-        # check the total width
-        mg5_width = mg5_info['decay'].get((pid,)).value
-        fr_width = fr_info['decay'].get((pid,)).value
-        print mg5_width, fr_width
-        
-        if mg5_width == fr_width == 0:
+        print 'DECAY Running time: %s s ' % (stop_mg5 -start4)
+
+        out1 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
+                     pjoin(dir_name,'Events','run_01','param_card.dat'), 
+                     pid, 'FR', 'MG5')         
+        out2 = self.compare(pjoin(dir_name, 'Cards', 'param_card.dat'),
+                     pjoin('%s_dec' % dir_name, 'Events','run_01','param_card.dat'), 
+                     pid, 'FR', 'DECAY')
+          
+
+        if out1 == out2 == 'True':
+            os.system('rm -rf %s >/dev/null' % dir_name)
+            os.system('rm -rf %s_dec >/dev/null' % dir_name)
+            
             return 'True'
-        elif (mg5_width - fr_width) / (mg5_width + fr_width) > 1e-4:
-            text = error_text(mg5_info, fr_info, pid)
-            return text + '\n%s has not the same total width: ratio of %s' % \
-                (particle, (mg5_width - fr_width) / (mg5_width + fr_width))
+        else:
+            return out1 + out2
         
-        mg5_info_partial = {}
-        for partial_width in mg5_info['decay'].decay_table[pid]:
-            lha_code = list(partial_width.lhacode)
-            lha_code.sort()
-            lha_code = tuple(lha_code)
-            mg5_info_partial[lha_code] = partial_width.value
-            
-        for partial_width in fr_info['decay'].decay_table[pid]:
-            lha_code = list(partial_width.lhacode)
-            lha_code.sort()
-            lha_code = tuple(lha_code)
-            mg5_value = mg5_info_partial[lha_code]
-            fr_value = partial_width.value
-            if mg5_value == fr_value == 0:
-                continue
-            elif (mg5_value - fr_value) / (mg5_value + fr_value) > 1e-3 and \
-                mg5_value / mg5_width > 1e-5:
-                text = error_text(mg5_info, fr_info, pid)
-                return text + '\n%s has not the same partial width for %s: ratio of %s' % \
-                (particle, lha_code, (mg5_value - fr_value) / (mg5_value + fr_value))
-                return False            
-            
-        os.system('rm -rf %s >/dev/null' % dir_name)
-        return 'True'
         
         
         
@@ -212,3 +255,12 @@ class TestFRDecay(unittest.TestCase):
             self.assertEqual('True', decay_framework.has_same_decay(name))
             print 'done in %s s' % (time.time() - start)         
         
+    def test_decay_sm(self):
+        decay_framework = DecayComparator('sm')
+
+        for name in decay_framework.particles_id.keys():
+            import time
+            start = time.time()
+            print 'comparing decay for %s' % name
+            self.assertEqual('True', decay_framework.has_same_decay(name))
+            print 'done in %s s' % (time.time() - start) 

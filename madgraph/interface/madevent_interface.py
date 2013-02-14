@@ -880,7 +880,7 @@ class CheckValidForCmd(object):
     
     def check_compute_widths(self, args):
         """check that the model is loadable and check that the format is of the
-        type: PART PATH --output=PATH -f
+        type: PART PATH --output=PATH -f --nbody=N
         return the model.
         """
         
@@ -896,10 +896,12 @@ class CheckValidForCmd(object):
         except:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
-            
+        
+        print 'MADEVENT', MADEVENT
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
+            print modelname
             model = import_ufo.import_model(modelname, decay=True)
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
@@ -916,7 +918,7 @@ class CheckValidForCmd(object):
                                                for p in model.get('particles')])
         
         output = {'model': model, 'model':model, 'force': False, 'output': None, 
-                  'input':None, 'particles': set()}
+                  'input':None, 'particles': set(), 'nbody':False}
         for arg in args:
             if arg.startswith('--output='):
                 output_path = arg.split('=',1)[1]
@@ -925,6 +927,11 @@ class CheckValidForCmd(object):
                 if not os.path.isfile(output_path):
                     output_path = pjoin(output_path, 'param_card.dat')
                 output['output'] = output_path
+            elif arg.startswith('--nbody='):
+                nbody = arg.split('=',1)[1]
+                if not nbody.isdigit():
+                    raise self.InvalidCmd, '--nbody requires integer'
+                output['nbody'] = int(nbody)         
             elif arg == '-f':
                 output['force'] = True
             elif os.path.isfile(arg):
@@ -1620,7 +1627,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
             fsock.write(`pid`)
             fsock.close()
-            misc.Popen([pjoin(self.dirbin, 'gen_cardhtml-pl')], cwd=me_dir)
+            misc.Popen([pjoin('bin', 'internal', 'gen_cardhtml-pl')], cwd=me_dir)
       
         self.to_store = []
         self.run_name = None
@@ -2724,6 +2731,8 @@ calculator."""
         #
         # add info from decay module
         #
+        if args['nbody'] == 2:
+            return
         import mg5decay.decay_objects as decay_objects
         new_model = decay_objects.DecayModel(model)
         new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
@@ -2764,7 +2773,8 @@ calculator."""
                                                           skip_2body=skip_2body)
             decay_dir = pjoin(self.me_dir, 'decay_width_%s' % particle)
             cmd.exec_cmd('output %s -f' % decay_dir)
-            files.cp(card, pjoin(decay_dir, 'Cards', 'param_card.dat'))
+            if card:
+                files.cp(card, pjoin(decay_dir, 'Cards', 'param_card.dat'))
             files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
             # Need to write the correct param_card in the correct place !!!
             cmd.exec_cmd('launch -n decay -f')

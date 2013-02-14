@@ -81,7 +81,7 @@ def mute_logger(names=['madgraph','aloha','cmdprint','madevent'], levels=[50,50,
             for name, level in zip(names, levels):
                 log_module = logging.getLogger(name)
                 old_levels.append(level)
-                log_model.setLevel(level)
+                log_module.setLevel(level)
             try:
                 out = f(self, *args, **opt)
                 restore_old_levels(names, old_levels)
