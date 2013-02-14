@@ -5180,8 +5180,8 @@ c_UVG0Mass1EW = Coupling(name = 'c_UVG0Mass1EW',
 
 
 c_UVG0Mass2EW = Coupling(name = 'c_UVG0Mass2EW',
-                         value = '0',
-                         order = {'QED' : 0})
+                         value = '(HiggsTadpole_UV_EW*ee*complex(0,0.5))/(MW*sw)',
+                         order = {'QED' : 2})
 
 
 c_UVGmGpMass1EW = Coupling(name = 'c_UVGmGpMass1EW',
@@ -5695,47 +5695,41 @@ c_UVZWpWm1EW = Coupling(name = 'c_UVZWpWm1EW',
 
 
 c_UVHHHH1EW = Coupling(name = 'c_UVHHHH1EW',
-                       value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.75))/(MW**2*sw**2)',
+                       value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW - 4*SWCoup_UV_EW*MH**2*MW**2 + 2*(-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + 2*(eCoup_UV_EW + HWcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.375))/(MW**4*sw**3)',
                        order = {'QED' : 4})
 
-
 c_UVHHG0G01EW = Coupling(name = 'c_UVHHG0G01EW',
-                         value = '(ee**2*MH**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                         value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW + 2*(-2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + HWcft_UV_EW)*MH**2)*MW**2)*sw))*complex(0,-0.125))/(MW**4*sw**3)',
                          order = {'QED' : 4})
 
-
 c_UVHHGmGp1EW = Coupling(name = 'c_UVHHGmGp1EW',
-                         value = '(ee**2*MH**2*(2*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                         value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW + 2*(-2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + (2*eCoup_UV_EW + GpWcft_UV_EW + HWcft_UV_EW)*MH**2)*MW**2)*sw))*complex(0,-0.125))/(MW**4*sw**3)',
                          order = {'QED' : 4})
 
 
 c_UVG0G0G0G01EW = Coupling(name = 'c_UVG0G0G0G01EW',
-                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*G0Wcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.75))/(MW**2*sw**2)',
+                           value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW - 4*SWCoup_UV_EW*MH**2*MW**2 + 2*(-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + 2*(eCoup_UV_EW + G0Wcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.375))/(MW**4*sw**3)',
                            order = {'QED' : 4})
 
 
 c_UVG0G0GmGp1EW = Coupling(name = 'c_UVG0G0GmGp1EW',
-                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.25))/(MW**2*sw**2)',
+                           value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW + 2*(-2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + (2*eCoup_UV_EW + G0Wcft_UV_EW + GpWcft_UV_EW)*MH**2)*MW**2)*sw))*complex(0,-0.125))/(MW**4*sw**3)',
                            order = {'QED' : 4})
-
 
 c_UVGmGmGpGp1EW = Coupling(name = 'c_UVGmGmGpGp1EW',
-                           value = '(ee**2*MH**2*(2*eCoup_UV_EW + 2*GpWcft_UV_EW + HMass2_UV_EW/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)*complex(0,-0.5))/(MW**2*sw**2)',
+                           value = '(ee**2*(HiggsTadpole_UV_EW*ee*MW - 4*SWCoup_UV_EW*MH**2*MW**2 + 2*(-(WMass2_UV_EW*MH**2) + (HMass2_UV_EW + 2*(eCoup_UV_EW + GpWcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.25))/(MW**4*sw**3)',
                            order = {'QED' : 4})
 
-
 c_UVHHH1EW = Coupling(name = 'c_UVHHH1EW',
-                      value = '(ee*MH**2*(eCoup_UV_EW + (3*HWcft_UV_EW)/2. + HMass2_UV_EW/MH**2 - WMass2_UV_EW/(2.*MW**2) - SWCoup_UV_EW/sw)*complex(0,-1.5))/(MW*sw)',
+                      value = '(ee*(HiggsTadpole_UV_EW*ee*MW - 2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (2*HMass2_UV_EW + (2*eCoup_UV_EW + 3*HWcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.75))/(MW**3*sw**2)',
                       order = {'QED' : 3})
 
-
 c_UVHG0G01EW = Coupling(name = 'c_UVHG0G01EW',
-                        value = '(ee*MH**2*(eCoup_UV_EW + G0Wcft_UV_EW + (HWcft_UV_EW + (2*HMass2_UV_EW)/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)/2.)*complex(0,-0.5))/(MW*sw)',
+                        value = '(ee*(HiggsTadpole_UV_EW*ee*MW - 2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (2*HMass2_UV_EW + (2*eCoup_UV_EW + 2*G0Wcft_UV_EW + HWcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.25))/(MW**3*sw**2)',
                         order = {'QED' : 3})
 
-
 c_UVGmHGp1EW = Coupling(name = 'c_UVGmHGp1EW',
-                        value = '(ee*MH**2*(eCoup_UV_EW + GpWcft_UV_EW + (HWcft_UV_EW + (2*HMass2_UV_EW)/MH**2 - WMass2_UV_EW/MW**2 - (2*SWCoup_UV_EW)/sw)/2.)*complex(0,-0.5))/(MW*sw)',
+                        value = '(ee*(HiggsTadpole_UV_EW*ee*MW - 2*SWCoup_UV_EW*MH**2*MW**2 + (-(WMass2_UV_EW*MH**2) + (2*HMass2_UV_EW + (2*eCoup_UV_EW + 2*GpWcft_UV_EW + HWcft_UV_EW)*MH**2)*MW**2)*sw)*complex(0,-0.25))/(MW**3*sw**2)',
                         order = {'QED' : 3})
 
 

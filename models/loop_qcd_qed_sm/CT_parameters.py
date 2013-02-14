@@ -167,6 +167,12 @@ tMass_UV = CTParameter(name = 'tMass_UV',
 # Generate automatically by WriteUFO #
 # ================================== #
 
+HiggsTadpole_UV_EW = CTParameter(name = 'HiggsTadpole_UV_EW',
+                                type = 'complex',
+                                value = {-1:'-(ee*(8*MW**2*MZ**2 - 2*cw*MW*MZ**3 + cw**2*(3*MH**4 + 12*MW**4 + MH**2*(2*MW**2 + MZ**2) - 8*MT**4*Ncol)))/(64.*cw**2*MW*cmath.pi**2*sw)',
+                                        0:'(ee*(-3*cw**2*MH**4 - 2*cw**2*MH**2*MW**2 - 4*cw**2*MW**4 - cw**2*MH**2*MZ**2 - 4*MW**2*MZ**2 + 2*cw*MW*MZ**3 + 8*cw**2*MT**4*Ncol + 3*cw**2*MH**4*reglog(cmath.pi) + 2*cw**2*MH**2*MW**2*reglog(cmath.pi) + 12*cw**2*MW**4*reglog(cmath.pi) + cw**2*MH**2*MZ**2*reglog(cmath.pi) + 8*MW**2*MZ**2*reglog(cmath.pi) - 2*cw*MW*MZ**3*reglog(cmath.pi) - 8*cw**2*MT**4*Ncol*reglog(cmath.pi) + (8*MW**2*MZ**2 - 2*cw*MW*MZ**3 + cw**2*(3*MH**4 + 12*MW**4 + MH**2*(2*MW**2 + MZ**2) - 8*MT**4*Ncol))*reglog(4*cmath.pi) - 3*cw**2*MH**4*reglog(MU_R**2/MH**2) + 8*cw**2*MT**4*Ncol*reglog(MU_R**2/MT**2) - 2*cw**2*MH**2*MW**2*reglog(MU_R**2/MW**2) - 12*cw**2*MW**4*reglog(MU_R**2/MW**2) - cw**2*MH**2*MZ**2*reglog(MU_R**2/MZ**2) - 8*MW**2*MZ**2*reglog(MU_R**2/MZ**2) + 2*cw*MW*MZ**3*reglog(MU_R**2/MZ**2)))/(64.*cw**2*MW*cmath.pi**2*sw)'},
+                                texname = '\delta ht^{EW}')
+
 
 tMass_UV_EW = CTParameter(name = 'tMass_UV_EW',
                           type = 'complex',
