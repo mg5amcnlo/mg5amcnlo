@@ -3129,8 +3129,8 @@ def check_lorentz_process(process, evaluator,options=None):
         # We add here also the boost along x and y for reference. In the output
         # of the check, it is now clearly stated that MadLoop improve_ps script
         # will not work for them. The momenta read from event file are not
-        # precise enough so these checks are omitted.
-        if not options['event']:
+        # precise enough so these x/yBoost checks are omitted.
+        if not options['events']:
             boost_p = boost_momenta(p, 1)
             results.append(('X-axis boost',
                            evaluator.evaluate_matrix_element(matrix_element,
