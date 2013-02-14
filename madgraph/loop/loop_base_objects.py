@@ -310,7 +310,11 @@ class LoopDiagram(base_objects.Diagram):
         if len(tag)==1:
             return tag
         elif len(tag)==2:
-            if tag[0][0]['id']>tag[1][0]['id']:
+            # HSS, 14/02/2013
+            # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
+            #if tag[0][0]['id']>tag[1][0]['id']:
+            if abs(tag[0][0]['id'])>abs(tag[1][0]['id']):
+            # HSS
                 return rev_tag
             else:
                 return tag
@@ -348,9 +352,13 @@ class LoopDiagram(base_objects.Diagram):
         # of the same particle. If these bubbles are not made of the same
         # two particle, the tag chosen is the one starting from the biggest 
         # particle id.
-        if((len(tag)==2 and canonical_mirrored_tag[0][0]['id']>\
-          canonical_tag[0][0]['id']) or (len(tag)>2 and \
+        # HSS, 14/02/2013
+        # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
+        # add abs when it is a bubble,i.e. len(tag)==2
+        if((len(tag)==2 and abs(canonical_mirrored_tag[0][0]['id'])>\
+         abs(canonical_tag[0][0]['id'])) or (len(tag)>2 and \
           canonical_mirrored_tag[1][1]<canonical_tag[1][1])):
+        # HSS
             canonical_tag=canonical_mirrored_tag
         return canonical_tag        
 
