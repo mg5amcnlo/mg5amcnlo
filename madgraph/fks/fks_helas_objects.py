@@ -68,6 +68,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti, 
                                 gen_color, decay_ids)
+        self['initial_states']=[]
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
