@@ -697,7 +697,7 @@ c From dsample_fks
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
-      double precision vol1,vol2,sigintR,res,f_tot,rfract
+      double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
@@ -976,7 +976,6 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c     
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-         call get_MC_integer(2,2,xBW,vol2)
          nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
                                                ! because it only matters
                                                ! which parton is j_fks
@@ -1008,7 +1007,7 @@ c
 c THIS CAN BE OPTIMIZED
          call setcuts
          call setfksfactor(iconfig)
-         wgt=1d0/vol2
+         wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          call dsigF(p,wgt,w,dsigS,dsigH)
          result(0,1)= w*dsigS
@@ -1036,7 +1035,7 @@ c
 c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
-               wgt=1d0/vol1/vol2
+               wgt=1d0/vol1
 c When sum=3, we can compute the nFKSprocesses without soft
 c singularities fewer number of PS points, because their contribution is
 c small. This should save some time, without degrading the uncertainty
@@ -1080,7 +1079,6 @@ c much. Do this by overwrite the 'wgt' variable
             endif
          endif
          if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
-         call fill_MC_integer(2,xBW,f_abs*vol2)
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
