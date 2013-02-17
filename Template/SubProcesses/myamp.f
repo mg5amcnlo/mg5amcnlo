@@ -466,7 +466,9 @@ c----
                      spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                      swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
                   endif
-               else if(iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
+               else if((prmass(i,iconfig)+5d0*prwidth(i,iconfig)).ge.xm(i)
+     $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
+c              JA 02/13 Only allow BW if xm below M+5*Gamma
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
                   spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                   swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot
