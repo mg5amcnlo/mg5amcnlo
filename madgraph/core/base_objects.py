@@ -1126,9 +1126,9 @@ class Model(PhysicsObject):
         """create a dictionary name 2 part"""
         
         self.name2part = {}
-        for part in self.get("particle_dict"):
+        for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-            
+        
             
 
     def get_lorentz(self, name):

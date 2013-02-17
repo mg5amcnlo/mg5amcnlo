@@ -161,7 +161,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # check particle which can be decayed:
         self.final_state = set()
         for line in self.banner.proc_card:
-            
+            line = ' '.join(line.strip().split())
             if line.startswith('generate'):
                 self.final_state.update(self.mg5cmd.get_final_part(line[8:]))
             elif line.startswith('add process'):
@@ -169,7 +169,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif line.startswith('define'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)            
             elif line.startswith('set'):
-                misc.sprint(line)
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                     
             
@@ -205,7 +204,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
-        misc.sprint( self.list_branches)
         del decay_process, init_part    
         
     
@@ -327,25 +325,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_launch(args)
         for part in self.list_branches.keys():
+            if part in self.mg5cmd._multiparticles:
+                if any(pid in self.final_state for pid in self.mg5cmd._multiparticles[part]):
+                    break
             pid = self.mg5cmd._curr_model.get('name2pdg')[part]
             if pid in self.final_state:
                 break
         else:
-            logger.info("Nothing to decay ...")
+            logger.info("Nothing to decay1 ...")
             return
         
-        # Ask the user which particle should be decayed        
-        particle_index=2
-        counter=-1
-        for particle in self.final_state_compact.split():
-            if not self.model['case_sensitive']:
-                particle = particle.lower()
-            particle_index+=1
-            if self.list_branches.has_key(str(particle)):
-                break                    
-        else:
-            logger.info("Nothing to decay ...")
-            return
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
