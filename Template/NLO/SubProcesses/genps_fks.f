@@ -1972,7 +1972,7 @@ c For e+e- collisions, set tau to one and y to zero
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
       double precision cBW_mass(-nexternal:-1,-1:1),
      &     cBW_width(-nexternal:-1,-1:1)
-      double precision a(-1:1),b(-1:1),x0
+      double precision b(-1:1),x0
       pass=.true.
       totalmass=totmass
       do i = -1,-ns_channel,-1
@@ -1990,11 +1990,10 @@ c Breit Wigner
             if (cBW_width(i,1).gt.0d0.and.cBW_width(i,-1).gt.0d0) then
 c     conflicting BW on both sides
                do j=-1,1,2
-                  a(j)=min(1d0-qwidth(i)/(qwidth(i)+cBW_width(i,j))
-     $                 ,0.95d0)
                   b(j)=(cBW_mass(i,j)-qmass(i))/
-     &                 (qwidth(i)*(1-a(j))+cBW_width(i,j)*a(j))
-                  b(j)=qmass(i)+b(j)*qwidth(i)*(1-a(j))
+     &                 (qwidth(i)+cBW_width(i,j))
+                  b(j)=qmass(i)+b(j)*qwidth(i)
+                  b(j)=b(j)**2
                enddo
                if (x(-i).lt.1d0/3d0) then
                   x0=3d0*x(-i)
@@ -2018,11 +2017,10 @@ c     conflicting BW on both sides
                endif
             elseif (cBW_width(i,1).gt.0d0) then
 c     conflicting BW with alternative mass larger
-               a(1)=min(1d0-qwidth(i)/(qwidth(i)+cBW_width(i,1))
-     $              ,0.95d0)
                b(1)=(cBW_mass(i,1)-qmass(i))/
-     &              (qwidth(i)*(1-a(1))+cBW_width(i,1)*a(1))
-               b(1)=qmass(i)+b(1)*qwidth(i)*(1-a(1))
+     &              (qwidth(i)+cBW_width(i,1))
+               b(1)=qmass(i)+b(1)*qwidth(i)
+               b(1)=b(1)**2
                if (x(-i).lt.0.5d0) then
                   x0=2d0*x(-i)
                   xm02=qmass(i)**2
@@ -2041,11 +2039,10 @@ c     conflicting BW with alternative mass larger
                endif
             elseif (cBW_width(i,-1).gt.0d0) then
 c     conflicting BW with alternative mass smaller
-               a(-1)=min(1d0-qwidth(i)/(qwidth(i)+cBW_width(i,-1))
-     $              ,0.95d0)
                b(-1)=(cBW_mass(i,-1)-qmass(i))/
-     &              (qwidth(i)*(1-a(-1))+cBW_width(i,-1)*a(-1))
-               b(-1)=qmass(i)+b(-1)*qwidth(i)*(1-a(-1))
+     &              (qwidth(i)+cBW_width(i,-1)) ! b(-1) is negative here
+               b(-1)=qmass(i)+b(-1)*qwidth(i)
+               b(-1)=b(-1)**2
                if (x(-i).lt.0.5d0) then
                   x0=2d0*x(-i)
                   s(i)=(b(-1)-smin)*x0+smin
@@ -2079,6 +2076,7 @@ c not a Breit Wigner
             s(i) = (smax-smin)*x(-i)+smin
             xjac0 = xjac0*(smax-smin)
          endif
+
 c If numerical inaccuracy, quit loop
          if (xjac0 .lt. 0d0) then
             xjac0 = -6
