@@ -174,8 +174,8 @@ c at the NLO)
       unwgt=.false.
 
 c Plots
-      plotEv=.true.
-      plotKin=.true.
+      plotEv=.false.
+      plotKin=.false.
 
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
