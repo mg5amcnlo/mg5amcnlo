@@ -1182,8 +1182,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
+            event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents)
+            self.reweight_and_collect_events(options, mode, nevents, event_norm)
             return
 
         devnull = os.open(os.devnull, os.O_RDWR) 
@@ -1316,7 +1317,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     level='parton')
             time.sleep(10)
 
-        return self.reweight_and_collect_events(options, mode, nevents)
+        event_norm=self.run_card['event_norm']
+        return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
@@ -1528,7 +1530,7 @@ Integrated cross-section
 
 
 
-    def reweight_and_collect_events(self, options, mode, nevents):
+    def reweight_and_collect_events(self, options, mode, nevents, event_norm):
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
@@ -1542,7 +1544,10 @@ Integrated cross-section
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
-        p.communicate(input = '1\n')
+        if event_norm == 'sum':
+            p.communicate(input = '1\n')
+        else:
+            p.communicate(input = '2\n')
 
         #get filename from collect events
         filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]

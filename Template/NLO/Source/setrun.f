@@ -64,7 +64,6 @@ c
       integer          iseed
       common /to_seed/ iseed
       integer nevents
-
 c
 c----------
 c     start
