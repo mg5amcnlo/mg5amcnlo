@@ -2500,17 +2500,29 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self, schannel=True, forbid=True, main=True):
+    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
-        intermediate s-channels and forbidden particles"""
+        intermediate s-channels and forbidden particles,
+        pdg_order allow to order to leg order by pid."""
 
         mystr = ""
         if not self.get('is_decay_chain'):
             mystr += "%d_" % self['id']
         
         prevleg = None
-        for leg in self['legs']:
+        if pdg_order:
+            legs = [l for l in self['legs']]
+            def order_leg(l1,l2):
+                id1 = l1.get('id')
+                id2 = l2.get('id')
+                return id2-id1
+            legs.sort(cmp=order_leg)
+        else:
+            legs = self['legs']
+        
+        
+        for leg in legs:
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
@@ -2547,14 +2559,15 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False)
+            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False,
+                                                     pdg_order=pdg_order)
 
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False)+ '_%s' % self['uid']
+                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
             elif schannel:
-                return self.shell_string(False, False, False)+'_%s' % self['uid']
+                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
             else:
                 return mystr[:64]+'_%s' % self['uid']
             
