@@ -1848,6 +1848,7 @@ Integrated cross-section
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
+        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
