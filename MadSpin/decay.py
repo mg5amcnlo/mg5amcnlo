@@ -2308,7 +2308,6 @@ class decay_all_events:
         self.path_me = os.path.realpath(options['curr_dir']) 
         self.mgcmd = ms_interface.mg5cmd
         self.mscmd = ms_interface
-        misc.sprint(self.mscmd.list_branches)
         self.model = ms_interface.model
         self.banner = banner
         self.evtfile = inputfile
@@ -2548,6 +2547,7 @@ class decay_all_events:
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         
         return  event_nb/(event_nb+nb_skip)       
+
         
     def get_identical_decay(self):
         """identify the various decay which are identical to each other"""
@@ -2555,11 +2555,20 @@ class decay_all_events:
         logger.info('detect independant decays')
         start = time.time()
         if len(self.all_decay) == 1:
-            decay_mapping = {}
+            relation = {}
+            base_tag = None
             for prod in self.all_ME.values():
                 for decay in prod['decays']:
-                    tag = decay['decay_tag']
-                    decay_mapping[tag] = set([(tag, 1)]) 
+                    tags = decay['decay_tag']
+                    for tag in tags:
+                        if not base_tag:
+                            relation[tag] = (tag, 1)
+                            base_tag = tag
+                        elif (tag,1) not in relation[base_tag]:
+                            relation[tag] = (base_tag,1)
+            print relation
+            decay_mapping = self.get_process_identical_ratio(relation)
+            misc.sprint(decay_mapping) 
             return decay_mapping
         
         BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0        
@@ -2638,7 +2647,6 @@ class decay_all_events:
                     tag_j = decays[j]['tag'][2:]     
                     if valid[(i,j)] and tag_j not in relation:
                         relation[tag_j] = (tag_i, valid[(i,j)])
-            print relation
 
         # fullfill the object with the already identify to one decay.
         #and add those who doesn't have any relations.
@@ -2651,19 +2659,24 @@ class decay_all_events:
                 out = relation[init_tag]
             for tag in tags[1:]:
                 relation[tag] = out
-        print relation
+
+        decay_mapping = self.get_process_identical_ratio(relation)
+        logger.info('Done in %ss' % (time.time()-start))
+        misc.sprint(decay_mapping)
+        return decay_mapping
+
+
+    def get_process_identical_ratio(self, relation):
         # Now that we have ratio relation between each tag, we need to say 
         #what is the relation between the decay of the production process.
         #This is not only the product since some decay can be equivalent.
         
-
         decay_mapping = {} # final output: {first_process: [(equiv_proc, ratio), ...]
         tag2real = {}    # basic tag [the one related via relation] -> first process
         # basic tag ratio doesn't have any identical factor (this simplify calculation)
         for prod in self.all_ME.values():
             for decay in prod['decays']:
                 tag = decay['decay_tag']
-                misc.sprint(tag)
                 # build the basic tag (all equiv process are related to this tag)
                 basic_tag = []
                 ratio = 1
@@ -2691,8 +2704,6 @@ class decay_all_events:
                     if real_tag != tag:
                         decay_mapping[real_tag].add((tag, ratio/ratio2))
 
-        logger.info('Done in %ss' % (time.time()-start))
-        misc.sprint(decay_mapping)
         return decay_mapping
     
 
@@ -3184,8 +3195,7 @@ class decay_all_events:
                                 br = mi['br']
                                 nb_finals = len(mi['finals'])
 
-         
-                    if ratio == 1:                
+                    if decay_tag == associated_decay:                
                         logger.info('Decay channel %s :Using maximum weight %s [%s] (BR: %s)' % \
                                (','.join(decay_tag), base_max_weight, max(weights), br/nb_finals))
                     else:  

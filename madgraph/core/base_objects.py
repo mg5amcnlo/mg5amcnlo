@@ -2512,8 +2512,6 @@ class Process(PhysicsObject):
         
         prevleg = None
         if pdg_order:
-            import madgraph.various.misc as misc
-            misc.sprint(self.shell_string(schannel, forbid, main, False))
             legs = [l for l in self['legs'][1:]]
             def order_leg(l1,l2):
                 id1 = l1.get('id')
@@ -2573,10 +2571,6 @@ class Process(PhysicsObject):
                 return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
             else:
                 return mystr[:64]+'_%s' % self['uid']
-            
-            
-        if pdg_order:
-            misc.sprint(mystr)
 
         return mystr
 
