@@ -2369,7 +2369,6 @@ class decay_all_events:
         self.all_decay = {}
         
         # generate BR and all the square matrix element based on the banner.
-        misc.sprint(self.mscmd.list_branches)
         self.generate_all_matrix_element()
         self.compile()
         
@@ -2662,7 +2661,6 @@ class decay_all_events:
 
         decay_mapping = self.get_process_identical_ratio(relation)
         logger.info('Done in %ss' % (time.time()-start))
-        misc.sprint(decay_mapping)
         return decay_mapping
 
 
@@ -2736,8 +2734,6 @@ class decay_all_events:
         
         # 1. compute the partial width------------------------------------------
         self.get_branching_ratio()
-        misc.sprint(self.mscmd.list_branches)
-
         
         # 2. compute the production matrix element -----------------------------
         processes = [line[9:].strip() for line in self.banner.proc_card
@@ -2766,14 +2762,13 @@ class decay_all_events:
                         raise Exception('Madspin not implemented NLO corrections.')
 
         commandline = commandline.replace('add process', 'generate',1)
-        misc.sprint(commandline)
+        logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
                 
         commandline = 'output standalone_ms %s' % pjoin(path_me,'production_me')
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
 
-        misc.sprint(self.mscmd.list_branches)        
         # 3. Create all_ME + topology objects ----------------------------------
         
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
@@ -2790,7 +2785,6 @@ class decay_all_events:
                 if self.all_ME.has_particles_ambiguity:
                     final_states.add(self.pid2label[-1*self.pid2label[label]])
                 final_states.add(label)
-        misc.sprint(self.mscmd.list_branches, id(self.mscmd.list_branches), id(self.list_branches))
         for key in self.list_branches.keys():
             if key not in final_states and key not in self.mgcmd._multiparticles:
                 del self.list_branches[key]
@@ -2800,7 +2794,6 @@ class decay_all_events:
         start = time.time()
         to_decay = self.mscmd.list_branches.keys()
         decay_text = []
-        misc.sprint( self.mscmd.list_branches)
         for decays in self.mscmd.list_branches.values():
             for decay in  decays:
                 if ',' in decay:
@@ -2830,6 +2823,7 @@ class decay_all_events:
         
         
         commandline = commandline.replace('add process', 'generate',1)
+        logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.
         mgcmd.remove_pointless_decay(self.banner.param_card)
@@ -2857,6 +2851,7 @@ class decay_all_events:
         mgcmd.remove_pointless_decay(self.banner.param_card)
         #
         commandline = 'output standalone_ms %s' % pjoin(path_me,'decay_me')
+        logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))        
         #
@@ -2870,7 +2865,7 @@ class decay_all_events:
                                          'dc_branch':dc_branch_from_me(me),
                                          'nbody': len(me.get_final_ids_after_decay()),
                                          'processes': matrix_element.get('processes'),
-                                         'tag': me_string}
+                                         'tag': me.shell_string(pdg_order=True)}
         #
         if __debug__:
             #check that all decay matrix element correspond to a decay only
