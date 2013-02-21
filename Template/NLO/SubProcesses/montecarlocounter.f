@@ -1814,6 +1814,7 @@ c      include "fks.inc"
 
       integer i,j,npartner,cflows,ileg,N_p
       common/cileg/ileg
+      common/cxm12/xm12
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),xifake(nexternal),zPY6Q,xiPY6Q,xjacPY6Q_xiztoxy,
@@ -1956,6 +1957,11 @@ c variable, not yet defined) will not be needed in the computation of probne
         scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(ileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xm12))
+           scalemax=max(scalemin,scalemax)
+        endif
+
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2085,7 +2091,10 @@ c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(ileg.eq.3)then
+               xifake(npartner)=xi(npartner)+xm12
+               upper_scale=max(upper_scale,sqrt(xm12))
+            endif
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
 c z limits for the 'constrained' definition, following
@@ -6293,6 +6302,10 @@ c entering this function
         if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.eetot)scalemax=eetot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(MonteCarlo(1:7).eq.'PYTHIA6'.and.iileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xxm12))
+           scalemax=max(scalemin,scalemax)
+        endif
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -6331,8 +6344,10 @@ c entering this function
       include "madfks_mcatnlo.inc"
       include "run.inc"
 
-      integer i
-      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot
+      integer i,ileg
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot,xm12
+      common/cileg/ileg
+      common/cxm12/xm12
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -6344,6 +6359,18 @@ c
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
       if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)
       if(xxscalemax.ge.eetot)xxscalemax=eetot
+      if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
+c
+      if((ileg.ne.3.and.xm12.ne.0d0).or.
+     &   (ileg.eq.3.and.xm12.eq.0d0))then
+         write(*,*)'Wrong ileg or xm12 in assign_scalemax',ileg,xm12
+         stop
+      endif
+c
+      if(MonteCarlo(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+         xxscalemin=max(xxscalemin,sqrt(xm12))
+         xxscalemax=max(xxscalemin,xxscalemax)
+      endif
 
       return
       end
