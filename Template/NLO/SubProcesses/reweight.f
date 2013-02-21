@@ -31,7 +31,7 @@ c External
 c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 c Data 
       double precision mass(6)
-      data (mass(i),i=1,6) /0d0,0d0,0d0,1.3d0,4.5d0,173d0/
+      data (mass(i),i=1,6) /0d0,0d0,0d0,0d0,4.5d0,173d0/
 c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 
       gamma=0.0d0
@@ -78,7 +78,7 @@ c Quark Sudakov
          if (iipdg.gt.NF) then ! include mass effects
             qom=q0/mass(iipdg)
             gamma=gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
-     $           (1d0-0.5d0*qom**2)*log(1d0+qom**2) )
+     $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
          endif
       else
          write (*,*) 'ERROR in reweight.f: do not know'/
@@ -149,6 +149,8 @@ c**************************************************
         write(*,*)'       \\Delta^',imode,'_{',ipdg,'}(',
      &     q0,',',q1,',',q2,') -> ',sudwgt
       endif
+
+      if (sudwgt.lt.1d-8) stop
 
       return
       end
