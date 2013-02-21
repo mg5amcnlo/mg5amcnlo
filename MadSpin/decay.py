@@ -612,9 +612,9 @@ class dc_branch_from_me(dict):
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-
-        zmin = math.atan(-BW_cut)/width
-        zmax = math.atan(BW_cut)/width
+        
+        zmin = math.atan(-2*BW_cut)/width
+        zmax = math.atan(2*BW_cut)/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -945,7 +945,7 @@ class production_topo(dict):
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
 
-        gap = float(self.options['BW_cut'])
+        gap = 2 * float(self.options['BW_cut'])
 
         zmin = math.atan(-gap)/width
         zmax = math.atan(gap)/width
@@ -2589,7 +2589,7 @@ class decay_all_events:
                                           if i != j])
                 
             for nb in range(25):
-                tree, jac = decays[0]['dc_branch'].generate_momenta(mom_init,\
+                tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut)
 
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
@@ -2638,6 +2638,7 @@ class decay_all_events:
                     tag_j = decays[j]['tag'][2:]     
                     if valid[(i,j)] and tag_j not in relation:
                         relation[tag_j] = (tag_i, valid[(i,j)])
+            print relation
 
         # fullfill the object with the already identify to one decay.
         #and add those who doesn't have any relations.
@@ -2650,7 +2651,7 @@ class decay_all_events:
                 out = relation[init_tag]
             for tag in tags[1:]:
                 relation[tag] = out
-        
+        print relation
         # Now that we have ratio relation between each tag, we need to say 
         #what is the relation between the decay of the production process.
         #This is not only the product since some decay can be equivalent.
@@ -2662,6 +2663,7 @@ class decay_all_events:
         for prod in self.all_ME.values():
             for decay in prod['decays']:
                 tag = decay['decay_tag']
+                misc.sprint(tag)
                 # build the basic tag (all equiv process are related to this tag)
                 basic_tag = []
                 ratio = 1
@@ -2690,6 +2692,7 @@ class decay_all_events:
                         decay_mapping[real_tag].add((tag, ratio/ratio2))
 
         logger.info('Done in %ss' % (time.time()-start))
+        misc.sprint(decay_mapping)
         return decay_mapping
     
 
