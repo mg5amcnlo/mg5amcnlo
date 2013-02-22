@@ -2242,7 +2242,7 @@ R2_txbW2Cp = Coupling(name= 'R2_txbW2Cp',
                       order = {'QED':3})
 
 R2_vlW = Coupling(name = 'R2_vlW',
-                  value = '-1./(16*cmath.sqrt(2)*sw)*(1+lhv)*(Ql*I3v/cw**2 -1/sw**2 +1/(4*sw**2*cw**2))',
+                  value = '-1./(16*cmath.sqrt(2)*sw)*(1+lhv)*(Ql*I3v/cw**2 -1/sw**2 +1/(4*sw**2*cw**2))*(-complex(0,1)*R2SFF)',
                   order = {'QED':3})
 
 # R2 for SSS
