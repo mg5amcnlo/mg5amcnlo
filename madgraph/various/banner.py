@@ -646,6 +646,7 @@ class RunCardNLO(RunCard):
         self.add_line('iseed', 'int', 0)
         self.add_line('parton_shower', 'str', 'HERWIG6', fortran_name='shower_mc')
         self.add_line('nevents', 'int', 10000)
+        self.add_line('event_norm', 'str', 'average', fortran_name='event_norm')
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
         self.add_line('fixed_fac_scale', 'bool', True)
