@@ -4,11 +4,12 @@ C It basically concatenates the files (no randomization in the events)
 C updating the weight of each event, reflecting the relative number of
 C events requested in the splits.
       implicit none
+      include 'max_split.inc'
       character*140 buff
-      character*9 filename
-      character*13 filename2
-      integer i,j,tot_evts,nevts(99),idummy,njobs
-      double precision Xsect,wgt_fact(99)
+      character*10 filename
+      character*14 filename2
+      integer i,j,tot_evts,nevts(max_split),idummy,njobs
+      double precision Xsect,wgt_fact(max_split)
       character*10 MonteCarlo
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -35,9 +36,11 @@ c$$$      close(1)
          i=i+1
          filename(1:7)='nevts__'
          if (i.le.9) then
-            write (filename(8:9),'(i1,a)') i,' '
+            write (filename(8:10),'(i1,a)') i,'  '
          elseif (i.le.99) then
-            write (filename(8:9),'(i2)') i
+            write (filename(8:10),'(i2,a)') i,' '
+         elseif (i.le.999) then
+            write (filename(8:10),'(i3)') i
          else
 c cycle when i is 100 here (could also change the do-loop to i.lt.99,
 c but then the 'njobs=i-1' below is not correct).
@@ -58,9 +61,11 @@ c but then the 'njobs=i-1' below is not correct).
       do i=1,njobs
          filename2(1:7)='events_'
          if (i.le.9) then
-            write (filename2(8:13),'(i1,a)') i,'.lhe '
+            write (filename2(8:14),'(i1,a)') i,'.lhe  '
          elseif (i.le.99) then
-            write (filename2(8:13),'(i2,a)') i,'.lhe'
+            write (filename2(8:14),'(i2,a)') i,'.lhe '
+         elseif (i.le.999) then
+            write (filename2(8:14),'(i3,a)') i,'.lhe'
          endif
          open (unit=2,file=filename2,status='old')
          call read_lhef_header(2,idummy,MonteCarlo)

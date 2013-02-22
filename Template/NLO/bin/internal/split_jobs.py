@@ -85,6 +85,14 @@ tar_dict = {}
 for dir in dirs:
     tar_dict[dir] = tarfile.open(os.path.join(dir, 'nevents.tar'),'w')
 
+# write the max_split.inc file
+max_split = max([job['nsplit'] for job in jobs])
+open('max_split.inc', 'w').write(\
+        """
+        integer max_split
+        parameter (max_split=%d)
+        """ % max_split)
+
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
     if job['nevts'] == 0:
@@ -116,7 +124,7 @@ for job in jobs:
 
 
 new_nevents_file = open('nevents_unweighted_splitted', 'w')
-new_nevents_file.write('\n'.join(splitted_lines))
+new_nevents_file.write('\n'.join(splitted_lines) + '\n')
 new_nevents_file.close()
 
 for dir in dirs:

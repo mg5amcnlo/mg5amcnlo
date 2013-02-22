@@ -1303,14 +1303,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                 for l in nevents_unweighted if l])
 
                     if split:
-                        # safety check in order not to have too many splittings
-                        if any([int(l.split()[1]) / int(self.run_card['nevt_job']) > 50 \
-                                for l in nevents_unweighted if l]):
-                            nevt_job = int(max([int(l.split()[1]) \
-                                        for l in nevents_unweighted if l]) / 50)
-                            logger.info('nevt_job too small in the run_card.\n' + \
-                                'Setting it to %d' % nevt_job)
-                            self.run_card['nevt_job'] = str(nevt_job)
+
                         # split the event generation
                         misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
                                    [self.run_card['nevt_job']],
