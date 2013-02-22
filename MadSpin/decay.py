@@ -1398,44 +1398,97 @@ class AllMatrixElement(dict):
         return br
 
             
-    def add_decay(self, matrix_element, me_path):
+    def add_decay(self, matrix_element, me_path, proc_list=None):
         """ adding a decay to the possibility
             me_path is the path of the fortran directory
             br is the associate branching ratio
             finals is the list of final states equivalent to this ME
             matrix_element is the MG5 matrix element
         """
-
-        proc =  matrix_element.get('base_amplitude').get('process')
-        tag = proc.get_initial_final_ids()
+        
+        # Usefull debug code 
+        #text = ''
+        #data = []
+        #for key, prod in self.items():
+        #    if prod in data:
+        #        continue
+        #    data.append(prod)
+        #    br = prod['total_br']
+        #    if br:
+        #        text += '%s %s %s\n' %(key, os.path.basename(prod['path']), br)
+        #misc.sprint(text)
+        
+        
+        if not proc_list:
+            proc_list = matrix_element.get('processes')
             
+        tag = proc_list[0].get_initial_final_ids()
+        to_postpose = []
+        new = False
         finals = []
-        for proc in matrix_element.get('processes'):
+        for proc in proc_list:
+            new_tag = tag
+            succeed = True
             tmp = []
             for dproc in proc.get('decay_chains'):
-                id = dproc.get('legs')[0].get('id')
-                tmp.append((id,dproc.get_final_ids_after_decay()))
-            if tmp not in finals:
-                finals.append(tmp)           
-        # get BR
-        br = len(finals) * self.get_br(proc) #update intermediate_id as well        
+                curr_tag = proc.get_initial_final_ids()
+                pid = dproc.get('legs')[0].get('id')
+                # check that the pid correspond -> if not postpone the process
+                # to be added in a second step (happen due to symmetry)
+                if pid not in tag[1]:
+                    to_postpose.append(proc)
+                    succeed= False
+                    break
+                tmp.append((pid,dproc.get_final_ids_after_decay()))
+            if succeed and tmp not in finals:
+                finals.append(tmp)
+                
+        if to_postpose:
+            self.add_decay(matrix_element, me_path, to_postpose)
+
+        # select the correct process
+        for i in range(len(matrix_element.get('processes'))):
+            me = matrix_element.get('processes')[i]
+            if tag == me.get_initial_final_ids():
+                break
+        else:
+            raise Exception, 'Wrong matrix Element'
+        me = proc_list[0]
+        # all the other are symmetric -> no need to keep those        
+        decay_tags = [d.shell_string(pdg_order=True) for d in me['decay_chains']]
         
-        me = matrix_element.get('processes')[0]
-        # all the other are symmetric -> no need to keep those
+        #avoid duplicate
+        if  any(tuple(decay_tags)==t['decay_tag'] for t in self[tag]['decays']):   
+            return   
+        
+        
+        # get BR
+        br = len(finals) * self.get_br(proc) #update intermediate_id as well
+        
+
             
         all_legs = me.get_legs_with_decays()
         ids = [l.get('id') for l in all_legs]
-        decay_tags = [d.shell_string(pdg_order=True) for d in me['decay_chains']]
+
+        
         out = {'path': me_path, 'matrix_element': me, 'br': br,
                'finals': finals, 'base_order': ids,
                'decay_struct':self.get_full_process_structure(matrix_element.get('processes')),
                'decay_tag': tuple(decay_tags)}
         self[tag]['decays'].append(out)
         self[tag]['total_br'] += br
+        if self[tag]['total_br'] > 1:
+            for t in self:
+                if id(self[t]) == id(self[tag]):
+                    print 'identical to ', t
+            print [t['decay_tag'] for t in self[tag]['decays']], decay_tags
+        
         assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
         # decaying
         decaying = [m.get('legs')[0].get('id') for m in matrix_element.get('processes')[0].get('decay_chains')]
         self[tag]['decaying'].update(decaying)
+        
+
         
              
     
@@ -1744,7 +1797,12 @@ class width_estimate(object):
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
         to_decay = [p for p in to_decay if not p in self.br]
-
+        for part in to_decay[:]:
+            if part in mgcmd._multiparticles:
+                to_decay += [self.pid2label[id] for id in mgcmd._multiparticles[part]]
+                to_decay.remove(part)
+        to_decay = list(set(to_decay))
+        
         if to_decay:
             logger.info('We need to recalculate the branching fractions')
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
@@ -2082,8 +2140,18 @@ class decay_misc:
                     if search in final_process:
                         found.update(data)
                         del alias[search]
+                        
+        # treat multiparticles
+        finalfound = set()
+        for name in found:
+            if name in mgcmd._multiparticles:
+                finalfound.update([model.get_particle(id).get('name') 
+                                   for id in mgcmd._multiparticles[name]])
+                finalfound.discard(name)
+            else:
+                finalfound.add(name)
 
-        return found
+        return finalfound
    
 
     def get_resonances(self,decay_processes):
