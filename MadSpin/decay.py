@@ -59,9 +59,12 @@ logger_stderr = logging.getLogger('decay.stderr') # ->stderr
 
 import random 
 import math
-from madgraph import MG5DIR
+from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
+
+class MadSpinError(MadGraph5Error):
+    pass
 
 class Event:
     """ class to read an event, record the information, write down the event in the lhe format.
@@ -1398,7 +1401,7 @@ class AllMatrixElement(dict):
         return br
 
             
-    def add_decay(self, matrix_element, me_path, proc_list=None):
+    def add_decay(self, proc_list, me_path):
         """ adding a decay to the possibility
             me_path is the path of the fortran directory
             br is the associate branching ratio
@@ -1406,7 +1409,7 @@ class AllMatrixElement(dict):
             matrix_element is the MG5 matrix element
         """
         
-        # Usefull debug code 
+        # Usefull debug code tell the status of the various imported decay
         #text = ''
         #data = []
         #for key, prod in self.items():
@@ -1419,19 +1422,18 @@ class AllMatrixElement(dict):
         #misc.sprint(text)
         
         
-        if not proc_list:
-            proc_list = matrix_element.get('processes')
+        if  not isinstance(proc_list, list):
+            proc_list = proc_list.get('processes')
             
         tag = proc_list[0].get_initial_final_ids()
-        to_postpose = []
-        new = False
+        to_postpose = [] # process with decay not compatible with tag 
+                         #[process under consideration]
         finals = []
         for proc in proc_list:
-            new_tag = tag
-            succeed = True
+            succeed = True # check if the decay is compatible with the process
+                           #under consideration.
             tmp = []
             for dproc in proc.get('decay_chains'):
-                curr_tag = proc.get_initial_final_ids()
                 pid = dproc.get('legs')[0].get('id')
                 # check that the pid correspond -> if not postpone the process
                 # to be added in a second step (happen due to symmetry)
@@ -1442,52 +1444,40 @@ class AllMatrixElement(dict):
                 tmp.append((pid,dproc.get_final_ids_after_decay()))
             if succeed and tmp not in finals:
                 finals.append(tmp)
-                
+        
+        # Treat Not compatible decay.        
         if to_postpose:
-            self.add_decay(matrix_element, me_path, to_postpose)
-
-        # select the correct process
-        for i in range(len(matrix_element.get('processes'))):
-            me = matrix_element.get('processes')[i]
-            if tag == me.get_initial_final_ids():
-                break
-        else:
-            raise Exception, 'Wrong matrix Element'
-        me = proc_list[0]
-        # all the other are symmetric -> no need to keep those        
+            self.add_decay(to_postpose, me_path)
+        
+        # 
+        # Now that the various final states are computed, we can add the 
+        # associated decay. First computing the branching ratio and then
+        # decaying topology
+        me = proc_list[0] # all the other are symmetric -> no need to keep those        
         decay_tags = [d.shell_string(pdg_order=True) for d in me['decay_chains']]
         
         #avoid duplicate
-        if  any(tuple(decay_tags)==t['decay_tag'] for t in self[tag]['decays']):   
+        if  any(tuple(decay_tags)==t['decay_tag'] for t in self[tag]['decays']):  
             return   
         
-        
-        # get BR
-        br = len(finals) * self.get_br(proc) #update intermediate_id as well
-        
-
-            
-        all_legs = me.get_legs_with_decays()
-        ids = [l.get('id') for l in all_legs]
-
-        
-        out = {'path': me_path, 'matrix_element': me, 'br': br,
-               'finals': finals, 'base_order': ids,
-               'decay_struct':self.get_full_process_structure(matrix_element.get('processes')),
+        # the decay:
+        out = {'path': me_path, 
+               'matrix_element': me, 
+               'br': len(finals) * self.get_br(proc),
+               'finals': finals, 
+               'base_order':[l.get('id') for l in me.get_legs_with_decays()] ,
+               'decay_struct':self.get_full_process_structure(proc_list),
                'decay_tag': tuple(decay_tags)}
+        # adding it to the current object
         self[tag]['decays'].append(out)
-        self[tag]['total_br'] += br
-        if self[tag]['total_br'] > 1:
-            for t in self:
-                if id(self[t]) == id(self[tag]):
-                    print 'identical to ', t
-            print [t['decay_tag'] for t in self[tag]['decays']], decay_tags
-        
-        assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
-        # decaying
-        decaying = [m.get('legs')[0].get('id') for m in matrix_element.get('processes')[0].get('decay_chains')]
+        self[tag]['total_br'] += out['br']
+        # update the particle decaying in the process
+        decaying = [m.get('legs')[0].get('id') for m in me.get('decay_chains')]
         self[tag]['decaying'].update(decaying)
-        
+                
+        # sanity check
+        assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
+
 
         
              
@@ -1516,11 +1506,7 @@ class AllMatrixElement(dict):
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
                 decay_struct[nb].add_decay_ids(identical)
-
-#        for me in me_list:
-#            print me.nice_string()                
-#        misc.sprint( decay_struct)
-#        raise Exception                
+              
         return decay_struct
 
     def get_topologies(self, matrix_element):
@@ -2503,6 +2489,9 @@ class decay_all_events:
         """perform the decay of each events"""
 
         decay_tools = decay_misc()
+        # tools for checking if max_weight is too often broken.
+        report = collections.defaultdict(int,{'over_weight': 0}) 
+
 
         logger.info(' ' )
         logger.info('Decaying the events... ')
@@ -2520,6 +2509,7 @@ class decay_all_events:
             if production_tag == 0 == event_map: #end of file
                 break
 
+            
             # Here we need to select a decay configuration on a random basis:
             decay = self.all_ME.get_random_decay(production_tag)
             if not decay['decay_tag']:
@@ -2528,6 +2518,7 @@ class decay_all_events:
                 continue 
             else:
                 event_nb+=1
+                report[decay['decay_tag']] += 1 
                 if (event_nb % max(int(10**int(math.log10(float(event_nb)))),10)==0): 
                     running_time = misc.format_timer(time.time()-starttime)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
@@ -2572,11 +2563,41 @@ class decay_all_events:
                 #print dec, mg5_me_full, mg5_me_prod, BW_weight_prod,BW_weight_decay,
                 weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
 
-                if weight > decay['max_weight']: 
-                    logger.info('warning: got a larger weight than max_weight estimate')
-                    logger.info('the ratio with the max_weight estimate is %s' % (weight/decay['max_weight']))
-                    logger.info('decay channel ')
-                    logger.info(decay['decay_tag'])
+                # Treat the case that we ge too many overweight.
+                if weight > decay['max_weight']:
+                    report['over_weight'] += 1
+                    report['%s_f' % decay['decay_tag']] +=1
+                    if __debug__:
+                        logger.debug('fail')
+                        misc.sprint('over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%' %\
+                                  (weight/decay['max_weight'], decay['decay_tag'], 
+                                   100 * report['over_weight']/event_nb,
+                                   100 * report['%s_f' % decay['decay_tag']] / report[decay['decay_tag']]))
+                     
+                    if weight > 1.15 * decay['max_weight']:
+                        error = """Found a weight larger than the computed max_weight (ratio: %s). 
+    Please relaunch MS with more events/PS point by event in the
+    computation of the maximum_weight. This is for channel %s.
+                        """ % (weight/decay['max_weight'], decay['decay_tag'])  
+                        raise MadSpinError, error
+                    elif event_nb > 500 and report['over_weight'] > 0.001 * event_nb:
+                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
+    Please relaunch MS with more events/PS point by event in the
+    computation of the maximum_weight.
+                        """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
+                        raise MadSpinError, error
+                        
+                        error = True
+                    elif report[decay['decay_tag']] > 100 and \
+                        report['%s_f' % decay['decay_tag']] > 0.005 * report[decay['decay_tag']]:
+                        error = """Found too weight larger than the computed max_weight (%s/%s = %s%%),
+    for channel %s. Please relaunch MS with more events/PS point by event in the
+    computation of the maximum_weight.
+                        """ % (report['%s_f' % decay['decay_tag']],\
+                               report['%s' % decay['decay_tag']],\
+                               100 * report['%s_f' % decay['decay_tag']] / report[ decay['decay_tag']] ,\
+                               decay['decay_tag'])  
+                        raise MadSpinError, error
                     
                 if (weight/decay['max_weight'] > random.random()):
                     # Here we need to restore the masses of the light partons 
@@ -2608,10 +2629,21 @@ class decay_all_events:
         self.evtfile.close()
         self.outputfile.close()
 
+        if report['over_weight'] > 0.001 * event_nb:
+            error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
+    Please relaunch MS with more events/PS point by event in the
+    computation of the maximum_weight.
+            """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
+            raise MadSpinError, error
+
         logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
+        logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
+        
+        
+        
         
         return  event_nb/(event_nb+nb_skip)       
 
@@ -2633,9 +2665,7 @@ class decay_all_events:
                             base_tag = tag
                         elif (tag,1) not in relation[base_tag]:
                             relation[tag] = (base_tag,1)
-            print relation
             decay_mapping = self.get_process_identical_ratio(relation)
-            misc.sprint(decay_mapping) 
             return decay_mapping
         
         BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0        
@@ -3265,7 +3295,7 @@ class decay_all_events:
                         logger.info('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
  
-        # sanity check that all decay have a max_weight
+         # sanity check that all decay have a max_weight
         if __debug__:
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
