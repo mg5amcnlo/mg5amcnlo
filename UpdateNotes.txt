@@ -18,6 +18,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       to make sure such channels find events even for narrow
                       invariant mass cut ranges. Please note the discussion in 
                       that bug report for other types of channels however.
+                  OM: Support lhapdf set which contains photon (See bug #1131995)
 
 1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
