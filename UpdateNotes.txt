@@ -3,7 +3,8 @@ Update notes for MadGraph 5 (in reverse time order)
 1.5.8 (xx/xx/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
                       (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
-                      have such type of expression. (Thanks Gezim)		
+                      have such type of expression. More information in bug report #1132996
+                      (Thanks Gezim) 		
                   OM: Add one command in MadEvent interface: add_time_of_flight
                       This command modify the lhe events file by adding the time of 
                       flight information in the lhe events.
