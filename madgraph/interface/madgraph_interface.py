@@ -3160,6 +3160,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.platform == "darwin":
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
+            
+            if args[0] == 'Delphes':
+                data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+                data = data.replace('data/', pjoin(pjoin(MG5DIR, 'Delphes','data','')))
+                out = open(pjoin('Template', 'Cards', 'delphes_card_default.dat'), 'w')
+                out.write(data)
+                
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
