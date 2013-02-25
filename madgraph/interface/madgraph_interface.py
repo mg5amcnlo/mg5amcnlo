@@ -3163,7 +3163,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             if args[0] == 'Delphes':
                 data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
-                data = data.replace('data/', pjoin(pjoin(MG5DIR, 'Delphes','data','')))
+                data = data.replace('data/', 'DELPHESDIR/data/')
                 out = open(pjoin('Template', 'Cards', 'delphes_card_default.dat'), 'w')
                 out.write(data)
                 
