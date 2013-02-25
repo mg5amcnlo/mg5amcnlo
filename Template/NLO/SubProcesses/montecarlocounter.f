@@ -6348,6 +6348,8 @@ c entering this function
       double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot,xm12
       common/cileg/ileg
       common/cxm12/xm12
+      character*4 abrv
+      common /to_abrv/ abrv
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -6361,13 +6363,12 @@ c
       if(xxscalemax.ge.eetot)xxscalemax=eetot
       if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
 c
-      if((ileg.ne.3.and.xm12.ne.0d0).or.
-     &   (ileg.eq.3.and.xm12.eq.0d0))then
-         write(*,*)'Wrong ileg or xm12 in assign_scalemax',ileg,xm12
-         stop
-      endif
-c
-      if(MonteCarlo(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+      if(abrv.ne.'born'.and.MonteCarlo(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+         if((ileg.ne.3.and.xm12.ne.0d0).or.
+     &      (ileg.eq.3.and.xm12.eq.0d0))then
+            write(*,*)'Wrong ileg or xm12 in assign_scalemax',ileg,xm12
+            stop
+         endif
          xxscalemin=max(xxscalemin,sqrt(xm12))
          xxscalemax=max(xxscalemin,xxscalemax)
       endif
