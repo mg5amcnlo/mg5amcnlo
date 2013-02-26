@@ -111,6 +111,12 @@ C
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM
+C
+C     Keep track of whether cuts already calculated for this event
+C
+      LOGICAL cutsdone,cutspassed
+      COMMON/TO_CUTSDONE/cutsdone,cutspassed
+      DATA cutsdone,cutspassed/.FALSE.,.FALSE./
 
 C $B$ MW_NEW_DEF $E$ !this is a tag for MadWeight
 
@@ -221,7 +227,15 @@ c     Put momenta in the common block to zero to start
             enddo
          enddo
          
-      ENDIF
+      ENDIF ! IF FIRSTTIME
+
+      if (cutsdone) then
+         passcuts=cutspassed
+         return
+      endif
+      cutsdone=.TRUE.
+      cutspassed=.FALSE.
+
 c
 c     Make sure have reasonable 4-momenta
 c
@@ -239,6 +253,7 @@ c     Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+      
 c
 c     Limit S_hat
 c
@@ -784,6 +799,7 @@ c     Set couplings in model files
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '
       if(debug) write (*,*) '============================='
 
+      cutspassed=.TRUE.
 
       RETURN
       END
