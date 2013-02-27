@@ -3451,6 +3451,9 @@ calculator."""
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
  
+        
+ 
+ 
         args = self.split_arg(line)
         # Check argument's validity
         if '--no_default' in args:
@@ -3460,6 +3463,15 @@ calculator."""
             no_default = False
         self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
+        
+        delphes_dir = self.options['delphes_path']
+        if os.path.exists(pjoin(delphes_dir, 'data')):
+            delphes3 = False
+            prog = '../bin/internal/run_delphes'
+        else:
+            delphes3 = True
+            prog =  '../bin/internal/run_delphes3'
+        
                 
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
@@ -3471,36 +3483,38 @@ calculator."""
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+        if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or self.force):
-            self.ask_edit_cards(['delphes', 'trigger'], args)
-            
+            if delphes3:
+                self.ask_edit_cards(['delphes'], args)
+            else:
+                self.ask_edit_cards(['delphes', 'trigger'], args)
+                
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
         if hasattr(self, 'control_thread') and self.control_thread[0]:
             self.monitor(mode=2)        
 
 
- 
-        delphes_dir = self.options['delphes_path']
         tag = self.run_tag
         self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+        if not delphes3:
+            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     
         if self.cluster_mode == 1:
             delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+            self.cluster.launch_and_wait(prog, 
                         argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            misc.call(['../bin/internal/run_delphes', delphes_dir, 
+            misc.call([prog, delphes_dir, 
                                 self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
@@ -4260,7 +4274,13 @@ calculator."""
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
             self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                self.add_card_to_run('trigger')
+                print 'IN DLEPHES2'
+            else:
+                print 'NOT IN DELPHES2'
             cards.append('delphes_card.dat')
 
         if self.force:
@@ -4284,11 +4304,12 @@ calculator."""
                 possible_answer.append('pgs')            
             elif mode == 'delphes':
                 question += '  5 / delphes : delphes_card.dat\n'
-                question += '  6 / trigger : delphes_trigger.dat\n'
                 possible_answer.append(5)
                 possible_answer.append('delphes')
-                possible_answer.append(6)
-                possible_answer.append('trigger')
+                if not delphes3:
+                    question += '  6 / trigger : delphes_trigger.dat\n'
+                    possible_answer.append(6)
+                    possible_answer.append('trigger')
             if self.options['madanalysis_path']:
                 question += '  9 / plot    : plot_card.dat\n'
                 possible_answer.append(9)
@@ -4362,7 +4383,7 @@ calculator."""
     1 / pythia  : Pythia 
     2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
-            question += """  3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia + Delphes.\n"""
 
         if not self.force:
             if not mode:
@@ -4394,7 +4415,11 @@ calculator."""
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                self.add_card_to_run('trigger')
+
             cards.append('delphes_card.dat')
         
         if self.force:
@@ -4413,13 +4438,15 @@ calculator."""
             card[2] = 'pgs'           
         if mode == 'delphes':
             question += '  2 / delphes : delphes_card.dat\n'
-            question += '  3 / trigger : delphes_trigger.dat\n'
             possible_answer.append(2)
             possible_answer.append('delphes')
-            possible_answer.append(3)
-            possible_answer.append('trigger')
             card[2] = 'delphes'
-            card[3] = 'trigger'
+            if not delphes3:
+                question += '  3 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(3)
+                possible_answer.append('trigger')
+                card[3] = 'trigger'
+
         if self.options['madanalysis_path']:
             question += '  9 / plot : plot_card.dat\n'
             possible_answer.append(9)
