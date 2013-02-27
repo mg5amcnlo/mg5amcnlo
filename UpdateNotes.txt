@@ -5,6 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
                       have such type of expression. More information in bug report #1132996
                       (Thanks Gezim) 		
+                  OM+JA: install Delphes install now Delphes3 [install Delphes2 is available]
                   OM: Add one command in MadEvent interface: add_time_of_flight
                       This command modify the lhe events file by adding the time of 
                       flight information in the lhe events.
