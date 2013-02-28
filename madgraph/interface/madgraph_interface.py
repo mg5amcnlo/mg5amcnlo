@@ -17,6 +17,7 @@
 """
 
 import atexit
+import collections
 import logging
 import optparse
 import os
@@ -4780,7 +4781,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name)
+        self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -4792,13 +4793,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = ""):
+    def export(self, nojpeg = False, main_file_name = "", args=[]):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            if self._export_format == 'standalone_ms':
+                to_distinguish = []
+                for part in self._curr_model.get('particles'):
+                    if part.get('name') in args and part.get('antiname') in args and\
+                       part.get('name') != part.get('antiname'):
+                        to_distinguish.append(abs(part.get('pdg_code'))) 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
@@ -4849,14 +4856,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
+                    combine = True
+                    #if self._export_format == 'standalone_ms':
+                    #    combine = False
                     self._curr_matrix_elements = \
-                        helas_objects.HelasMultiProcess(self._curr_amps)
+                       helas_objects.HelasMultiProcess(self._curr_amps, combine)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
-                                  get_matrix_elements()])
+                                  get_matrix_elements()])                    
                     # assign a unique id number to all process
                     uid = 0 
-                    for me in self._curr_matrix_elements.get_matrix_elements():
+                    for me in self._curr_matrix_elements.get_matrix_elements()[:]:
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
 
@@ -4948,7 +4958,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if not new_calls:
                     matrix_elements.remove(me)
                 calls = calls + new_calls
-                
+
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:

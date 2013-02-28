@@ -1359,7 +1359,7 @@ class AllMatrixElement(dict):
         
     def add(self, topologies, keys):
         """Adding one element to the list of production_topo"""
-
+        
         for key in keys:
             self[key] = topologies
 
@@ -1425,9 +1425,12 @@ class AllMatrixElement(dict):
         if  not isinstance(proc_list, list):
             proc_list = proc_list.get('processes')
             
-        tag = proc_list[0].get_initial_final_ids()
-        to_postpose = [] # process with decay not compatible with tag 
-                         #[process under consideration]
+        tag = proc_list[0].get_initial_final_ids()        
+        # process with decay not compatible with tag [process under consideration]
+        # or with process splitting different for process and decay.
+        to_postpose = [proc for proc in proc_list 
+                     if id(self[tag]) != id(self[proc.get_initial_final_ids()])]
+                         
         finals = []
         for proc in proc_list:
             succeed = True # check if the decay is compatible with the process
@@ -1641,9 +1644,9 @@ class AllMatrixElement(dict):
     def adding_me(self, matrix_elements, path):
         """Adding one element to the list based on the matrix element"""
         
-        skip = [] # due to particles/anti-particles some me need to be add
-                  # as a separate matrix element in the instance.
         for me in matrix_elements:
+            skip = [] # due to particles/anti-particles some me need to be add
+                  # as a separate matrix element in the instance.
             topo = self.get_topologies(me)
             # get the orignal order:
             initial = []
@@ -1655,6 +1658,7 @@ class AllMatrixElement(dict):
             topo['matrix_element'] = me
             tags = []
             topo['tag2order'] = {}
+             
             for proc in me.get('processes'):
                 initial = []
                 final = [l.get('id') for l in proc.get('legs')\
@@ -1675,14 +1679,14 @@ class AllMatrixElement(dict):
             topo['decays'] = []
             topo['total_br'] = 0 
         
-        if skip:
-            self.add_me_symmetric(skip, topo)
+            if skip:
+                self.add_me_symmetric(skip, topo)
     
             
     def add_me_symmetric(self, process_list, topo):
         """ """
         self.has_particles_ambiguity = True
-        skip = [] # due to particles/anti-particles some me need to be add
+        skip = [] # due to particles/anti-particles some may need to be add
                   # as a separate matrix element in the instance.
         
         old_topo = topo
@@ -1722,7 +1726,6 @@ class AllMatrixElement(dict):
                     topo[key].production = self[tags[0]]   
         if skip:
             self.add_me_symmetric(skip, topo)
-        
         
                 
 
@@ -2535,6 +2538,12 @@ class decay_all_events:
             trial_nb=0
             while 1: # loop untill find a valid decay
                 trial_nb += 1
+                if trial_nb > 1000:
+                    logger.warning('fail to find valid decay -> remove events')
+                    nb_skip += 1
+                    event_nb -= 1
+                    break
+                    
                 if self.options['BW_effect']:
                     BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
                                                         event_map, prod_values)
@@ -2567,12 +2576,27 @@ class decay_all_events:
                 if weight > decay['max_weight']:
                     report['over_weight'] += 1
                     report['%s_f' % decay['decay_tag']] +=1
-                    if __debug__:
-                        logger.debug('fail')
-                        misc.sprint('over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%' %\
-                                  (weight/decay['max_weight'], decay['decay_tag'], 
-                                   100 * report['over_weight']/event_nb,
-                                   100 * report['%s_f' % decay['decay_tag']] / report[decay['decay_tag']]))
+                    if __debug__:                
+                        for key, obj in self.all_ME.items():
+                            if id(obj) == id(self.all_ME[production_tag]):
+                                print key
+                        print p_full_str
+                        print '*****'
+                        p, p_str=self.curr_event.give_momenta(event_map)
+
+                        print p_str
+                        print '******'        
+                        misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
+                        production_tag:%s [%s], decay:%s [%s]
+                        ''' %\
+                        (weight/decay['max_weight'], decay['decay_tag'], 
+                        100 * report['over_weight']/event_nb,
+                        100 * report['%s_f' % decay['decay_tag']] / report[decay['decay_tag']],
+                        os.path.basename(self.all_ME[production_tag]['path']),
+                        production_tag,
+                        os.path.basename(decay['path']),
+                        decay['decay_tag']))
+                        
                      
                     if weight > 1.15 * decay['max_weight']:
                         error = """Found a weight larger than the computed max_weight (ratio: %s). 
@@ -2863,15 +2887,17 @@ class decay_all_events:
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
                 
-        commandline = 'output standalone_ms %s' % pjoin(path_me,'production_me')
+        commandline = 'output standalone_ms %s %s' % \
+            (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
 
         # 3. Create all_ME + topology objects ----------------------------------
         
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+        
         self.all_ME.adding_me(matrix_elements, pjoin(path_me,'production_me'))
-
+        
         # 3b. simplify list_branches -------------------------------------------
         # remove decay which are not present in any production ME.
         final_states = set()        
@@ -2926,7 +2952,8 @@ class decay_all_events:
         # remove decay with 0 branching ratio.
         mgcmd.remove_pointless_decay(self.banner.param_card)
 
-        commandline = 'output standalone_ms %s' % pjoin(path_me,'full_me')
+        commandline = 'output standalone_ms %s %s' % (pjoin(path_me,'full_me'),
+                                                      ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))
 
@@ -3146,8 +3173,11 @@ class decay_all_events:
         # check all set of decay that need to be done:
         decay_set = set()
         for production in self.all_ME.values():
+            if not production['decaying']:
+                misc.sprint(production['path'], production['base_order'], production['decaying'], production['total_br'])
+            
             decay_set.add(frozenset(production['decaying']))
-        
+
         numberev = self.options['Nevents_for_max_weigth'] # number of events
         numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
         
@@ -3159,6 +3189,7 @@ class decay_all_events:
         if len(decay_set) > 1: 
             logger.info('     For %s decaying particle type in the final states' % len(decay_set))
         logger.info('  ')
+
         
         probe_weight = []
         
@@ -3279,12 +3310,11 @@ class decay_all_events:
 
                     br = 0                   
                     #assign the value to the associated decays
-                    for m in self.all_ME.values():
+                    for k,m in self.all_ME.items():
                         for mi in m['decays']:
+
                             if mi['decay_tag'] == associated_decay:
                                 mi['max_weight'] = max_weight
-                                if br:
-                                    assert br == mi['br']
                                 br = mi['br']
                                 nb_finals = len(mi['finals'])
 
@@ -3295,7 +3325,7 @@ class decay_all_events:
                         logger.info('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
  
-         # sanity check that all decay have a max_weight
+        # sanity check that all decay have a max_weight
         if __debug__:
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
