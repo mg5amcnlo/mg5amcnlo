@@ -608,7 +608,7 @@ class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "-- execute the aMC@NLO output present in DIRPATH\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
                 "     computation of the total cross-section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
