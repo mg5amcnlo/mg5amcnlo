@@ -4856,11 +4856,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
-                    combine = True
-                    #if self._export_format == 'standalone_ms':
-                    #    combine = False
+                    mode = {}
+                    if self._export_format == 'standalone_ms':
+                        mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
-                       helas_objects.HelasMultiProcess(self._curr_amps, combine)
+                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])                    

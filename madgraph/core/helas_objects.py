@@ -4669,7 +4669,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     # processes for that matrix element
                     other_processes = matrix_elements[\
                     me_tags.index(me_tag)].get('processes')
-                    logger.info("4649Combining process with %s" % \
+                    logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
                 except ValueError:
@@ -4853,6 +4853,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % type(amplitudes)
 
+        combine = combine_matrix_elements
+        if 'mode' in matrix_element_opts and matrix_element_opts['mode']=='MadSpin':
+            combine = False
+            del matrix_element_opts['mode']
+
         # Keep track of already generated color objects, to reuse as
         # much as possible
         list_colorize = []
@@ -4940,8 +4945,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     continue
                 
                 # Check if identical matrix element already present
+
                 
-                if 0 and combine_matrix_elements and matrix_element in matrix_elements:
+                if combine and matrix_element in matrix_elements:
                     me = matrix_elements[matrix_elements.index(matrix_element)]
                     me_procs = me.get('processes')
                     procs = matrix_element.get('processes')
