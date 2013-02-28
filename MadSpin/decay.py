@@ -2580,12 +2580,12 @@ class decay_all_events:
                         for key, obj in self.all_ME.items():
                             if id(obj) == id(self.all_ME[production_tag]):
                                 print key
-                        print p_full_str
-                        print '*****'
-                        p, p_str=self.curr_event.give_momenta(event_map)
-
-                        print p_str
-                        print '******'        
+                        #print p_full_str
+                        #print '*****'
+                        #p, p_str=self.curr_event.give_momenta(event_map)
+                        #
+                        #print p_str
+                        #print '******'        
                         misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
                         production_tag:%s [%s], decay:%s [%s]
                         ''' %\
@@ -3349,6 +3349,11 @@ class decay_all_events:
         for i, id in enumerate(P_order[0] + P_order[1]):
             in_event = [pos for pos, label in enumerate(evt_order) \
                                if label == id]
+            if i < len(order[0]):
+                in_event = [pos for pos in in_event if pos < len(order[0])]
+            else:
+                in_event = [pos for pos in in_event if pos >= len(order[0])]
+                
             if len(in_event) == 1:
                 in_event = in_event[0]
             else:
@@ -3356,7 +3361,10 @@ class decay_all_events:
                 in_event = in_event[config]            
             evt_order[in_event] = 0
             event_map[i] = in_event
-                    
+        
+        if __debug__ and len(order[0]) == 2:   
+            assert event_map[0] in [0,1], 'wrong event mapping %s' % event_map
+            assert event_map[1] in [0,1], 'wrong event mapping %s' % event_map
         assert production_tag in self.all_ME
         
         return production_tag, event_map
