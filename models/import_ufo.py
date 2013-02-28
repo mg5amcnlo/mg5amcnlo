@@ -929,7 +929,7 @@ class RestrictModel(model_reader.ModelReader):
 
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
-        # associte to each couplings the associated vertex: def self.coupling_pos
+        # associate to each couplings the associated vertex: def self.coupling_pos
         self.locate_coupling()
         # deal with couplings
         zero_couplings, iden_couplings = self.detect_identical_couplings()
@@ -949,12 +949,11 @@ class RestrictModel(model_reader.ModelReader):
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
                                                     keep_external=keep_external)
-        
+
         # deal with identical parameters
-        if not keep_external:
-            iden_parameters = self.detect_identical_parameters()
-            for iden_param in iden_parameters:
-                self.merge_iden_parameters(iden_param)
+        iden_parameters = self.detect_identical_parameters()
+        for iden_param in iden_parameters:
+            self.merge_iden_parameters(iden_param, keep_external)
             
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
@@ -1082,11 +1081,12 @@ class RestrictModel(model_reader.ModelReader):
                         vertex['couplings'][key] = main
 
          
-    def merge_iden_parameters(self, parameters):
-        """ merge the identical parameters given in argument """
+    def merge_iden_parameters(self, parameters, keep_external=False):
+        """ merge the identical parameters given in argument.
+        keep external force to keep the param_card untouched (up to comment)"""
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                        ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
+                 ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
@@ -1104,10 +1104,17 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 self.rule_card.add_opposite(obj.lhablock.lower(), obj.lhacode, 
                                                          parameters[0][0].lhacode )
-            # delete the old parameters                
-            external_parameters.remove(obj)    
+            obj_name = obj.name
+            # delete the old parameters
+            if not keep_external:                
+                external_parameters.remove(obj)
+            elif obj.lhablock in ['MASS','DECAY']:
+                external_parameters.remove(obj)
+            else:
+                obj.name = ''
+                obj.info = 'MG5 will not use this value use instead %s*%s' %(factor,expr)    
             # replace by the new one pointing of the first obj of the class
-            new_param = base_objects.ModelVariable(obj.name, '%s*%s' %(factor, expr), 'real')
+            new_param = base_objects.ModelVariable(obj_name, '%s*%s' %(factor, expr), 'real')
             self['parameters'][()].insert(0, new_param)
         
         # For Mass-Width, we need also to replace the mass-width in the particles

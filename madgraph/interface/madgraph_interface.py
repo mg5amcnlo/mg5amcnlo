@@ -3661,7 +3661,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]

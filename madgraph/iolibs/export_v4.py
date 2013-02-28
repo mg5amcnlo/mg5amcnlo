@@ -2853,6 +2853,8 @@ class UFO_model_to_mg4(object):
         for key in keys:
             for param in self.model['parameters'][key]:
                 lower_name = param.name.lower()
+                if not lower_name:
+                    continue
                 try:
                     lower_dict[lower_name].append(param)
                 except KeyError:
@@ -2904,18 +2906,20 @@ class UFO_model_to_mg4(object):
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
         for key in keys:
+            to_add = [o for o in self.model['parameters'][key] if o.name]
+
             if key == ('external',):
-                self.params_ext += self.model['parameters'][key]
+                self.params_ext += to_add
             elif 'aS' in key:
-                self.params_dep += self.model['parameters'][key]
+                self.params_dep += to_add
             else:
-                self.params_indep += self.model['parameters'][key]
+                self.params_indep += to_add
         # same for couplings
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += [c for c in coup_list if
+                self.coups_dep += [c for c in coup_list if 
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
             else:
@@ -3298,6 +3302,8 @@ class UFO_model_to_mg4(object):
             colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
+            if not parameter.name:
+                return ''
             return ' '.join(colum)+'\n'
     
         fsock = self.open('ident_card.dat')

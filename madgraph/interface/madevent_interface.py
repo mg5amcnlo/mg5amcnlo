@@ -4584,10 +4584,12 @@ calculator."""
         """
         
         text = open(path).read()
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
+        text = re.findall('(<MGVersion>|CEN_max_tracker|ParticlePropagator|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text:
             return 'banner'
+        elif 'particlepropagator' in text:
+            return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#trigger card' in text:
