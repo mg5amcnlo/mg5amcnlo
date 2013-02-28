@@ -384,9 +384,9 @@ class HelpToCmd(object):
 
     
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_secondary_vertex [run_name|path_to_file]")
-        logger.info('-- Add in the unweighted_events.lhe the information')
-        logger.info('   related to secondary vertex.')
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
 
     def help_calculate_decay_widths(self):
         
