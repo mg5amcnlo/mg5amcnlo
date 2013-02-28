@@ -57,6 +57,9 @@ C     MINCFIG has this config number
       common/to_configs/mincfig, maxcfig
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL cutsdone,cutspassed
+      COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -68,7 +71,7 @@ C ----------
 C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
-
+      %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()

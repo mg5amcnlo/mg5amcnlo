@@ -1763,7 +1763,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'update']
+                     'update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -3053,9 +3053,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             split = line.split()   
             path[split[0]] = split[1]
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+        
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes3':'Delphes',
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis'}
+                'MadAnalysis':'MadAnalysis', 'Delphes2': 'Delphes'}
         name = name[args[0]]
         
         try:
@@ -3074,6 +3077,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -3161,12 +3165,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
             
-            if args[0] == 'Delphes':
-                data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
-                data = data.replace('data/', 'DELPHESDIR/data/')
-                out = open(pjoin('Template', 'Cards', 'delphes_card_default.dat'), 'w')
-                out.write(data)
-                
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Cards', 'delphes_card_default.dat'))  
+        
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
