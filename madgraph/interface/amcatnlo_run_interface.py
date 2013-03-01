@@ -1111,7 +1111,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         If this is 0, update the number according to a fresh one"""
         iseed = int(self.run_card['iseed'])
         if iseed != 0:
-            misc.call(['echo "r=%d > %s"' \
+            misc.call(['echo "r=%d" > %s' \
                     % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
                     cwd=self.me_dir, shell=True)
         else:
