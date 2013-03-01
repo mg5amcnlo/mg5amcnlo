@@ -3883,7 +3883,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     
             if args[0] == 'MCatNLO-utilities':
                 self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
-
+            
+            if args[0] == 'Delphes':
+                data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+                data = data.replace('data/', 'DELPHESDIR/data/')
+                out = open(pjoin('Template', 'Common', 'Cards', 'delphes_card_default.dat'), 'w')
+                out.write(data)
+                
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """

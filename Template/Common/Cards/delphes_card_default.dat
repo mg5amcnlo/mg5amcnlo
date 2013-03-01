@@ -1,47 +1,54 @@
-DETECTOR CARD      # DO NOT REMOVE THIS IS A TAG!
+DETECTOR CARD      // DO NOT REMOVE THIS IS A TAG!
+# any line containing a dash symbol (#) will be completely ignored, whatever the position of this symbol
 
 # Detector extension, in pseudorapidity units
-CEN_max_tracker    2.5                // Maximum tracker coverage          
-CEN_max_calo_cen   3.0                // central calorimeter coverage
-CEN_max_calo_fwd   5.0                // forward calorimeter pseudorapidity coverage
-CEN_max_mu         2.4                // muon chambers pseudorapidity coverage
+CEN_max_tracker    2.5              // Maximum tracker coverage          
+CEN_max_calo_cen   1.7              // central calorimeter coverage
+CEN_max_calo_ec    3.0              // calorimeter endcap coverage
+CEN_max_calo_fwd   5.0              // forward calorimeter pseudorapidity coverage
+CEN_max_mu         2.4              // muon chambers pseudorapidity coverage
   
-# Energy resolution for electron/photon
+# Energy resolution for electron/photon in central/endcap/fwd/zdc calos
 # \sigma/E = C + N/E + S/\sqrt{E}, E in GeV
 ELG_Scen          0.05              // S term for central ECAL
-ELG_Ncen          0.25              // N term for central ECAL
-ELG_Ccen          0.005             // C term for central ECAL
+ELG_Ncen          0.25              // N term 
+ELG_Ccen          0.005             // C term 
+ELG_Sec           0.05              // S term for ECAL endcap
+ELG_Nec           0.25              // N term
+ELG_Cec           0.005             // C term
 ELG_Sfwd          2.084             // S term for FCAL
-ELG_Nfwd          0.0               // N term for FCAL
-ELG_Cfwd          0.107             // C term for FCAL
+ELG_Nfwd          0.0               // N term 
+ELG_Cfwd          0.107             // C term 
 ELG_Szdc          0.70              // S term for ZDC
-ELG_Nzdc          0.0               // N term for ZDC
-ELG_Czdc          0.08              // C term for ZDC
+ELG_Nzdc          0.0               // N term
+ELG_Czdc          0.08              // C term
 
-
-# Energy resolution for hadrons in ecal/hcal/hf
+# Energy resolution for hadrons in central/endcap/fwd/zdc calos
 # \sigma/E = C + N/E + S/\sqrt{E}, E in GeV
-HAD_Shcal         1.5               // S term for central HCAL 
-HAD_Nhcal         0.                // N term for central HCAL
-HAD_Chcal         0.05              // C term for central HCAL
-HAD_Shf           2.7               // S term for FCAL
-HAD_Nhf           0.                // N term for FCAL
-HAD_Chf           0.13              // C term for FCAL
+HAD_Scen          1.5               // S term for central HCAL 
+HAD_Ncen          0.                // N term
+HAD_Ccen          0.05              // C term
+HAD_Sec           1.5               // S term for HCAL endcap
+HAD_Nec           0.                // N term
+HAD_Cec           0.05              // C term
+HAD_Sfwd          2.7               // S term for FCAL
+HAD_Nfwd          0.                // N term
+HAD_Cfwd          0.13              // C term
 HAD_Szdc          1.38              // S term for ZDC
-HAD_Nzdc          0.                // N term for ZDC
-HAD_Czdc          0.13              // C term for ZDC
+HAD_Nzdc          0.                // N term
+HAD_Czdc          0.13              // C term
 
 # Time resolution for ZDC/RP220/RP420
-ZDC_T_resolution   0                // in s
-RP220_T_resolution 0                // in s
-RP420_T_resolution 0                // in s
+ZDC_T_resolution   0		    // in s
+RP220_T_resolution 0		    // in s
+RP420_T_resolution 0		    // in s
 
 # Muon smearing
 MU_SmearPt        0.01		    // transverse momentum Pt in GeV
 
 # Tracking efficiencies
-TRACK_ptmin       0.9               // minimal pt needed to reach the calorimeter in GeV
-TRACK_eff          90               // efficiency associated to the tracking (%)
+TRACK_ptmin       0.0               // minimal pt needed to reach the calorimeter in GeV
+TRACK_eff         100               // efficiency associated to the tracking (%)
 
 # Calorimetric towers
 TOWER_number         40
@@ -58,7 +65,7 @@ TOWER_dphi 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 10 10 10 10 10 10 10 10 10 10 1
 ##
 #
 
-# Thresholds for reconstructed objetcs, Pt in GeV
+# Thresholds for reconstructed objects, Pt in GeV
 PTCUT_elec       10.0
 PTCUT_muon       10.0
 PTCUT_jet        20.0
@@ -70,34 +77,43 @@ ZDC_gamma_E      20
 ZDC_n_E          50
 
 # Charged lepton isolation. Pt and Et in GeV
-ISOL_PT          2.0      //minimal pt of tracks for isolation criteria
-ISOL_Cone        0.5      //Cone  for isolation criteria
-ISOL_Calo_ET     1E99     //minimal tower transverse energy for isolation criteria. 1E99 means "off"
-ISOL_Calo_Cone   0.4      //Cone for calorimetric isolation
-ISOL_Calo_Grid   3        //Grid size (N x N) for calorimetric isolation
+ISOL_trk_PT      2.0      //minimal pt of tracks for isolation criteria
+ISOL_trk_Cone    0.5      //Cone  for isolation criteria
+ISOL_calo_Cone   0.5      //Cone  for isolation criteria
+ISOL_calo_ET     0        //minimal tower transverse energy for isolation criteria.
+ISOL_calo_Grid   3        //Grid size (N x N) for calorimetric isolation
 
 # General jet variable
 JET_coneradius   0.7            // generic jet radius ; not for tau's !!!
-JET_jetalgo      1              // 1 for Cone algorithm, 2 for MidPoint algorithm, 3 for SIScone algorithm, 4 for kt algorithm
+JET_jetalgo      2              // Jet algorithms: 1 CDFJetClu, 2 MidPoint, 3 SIScone, 4 kt, 5 Cambridge/Aachen, 6 antikt
 JET_seed         1.0            // minimum seed to start jet reconstruction, in GeV
 JET_Eflow        0              // Perfect energy assumed in the tracker coverage
 
-# Tagging definition
-BTAG_b           40		// b-tag efficiency (%)
-BTAG_mistag_c    10		// mistagging (%)
-BTAG_mistag_l    1		// mistagging (%)
+# b-(mis)tagging efficiencies 
+# pt dependence for b-tagging and mistag
+# see http://root.cern.ch/root/html/TFormula.html for syntax
+# e.g. BTAG_func_b     0.4*(1-exp(-x))
+# in case of no explicit dependence, on x (=PT) or y (=eta), you MUST add "+0*x" and/or "+0*y"
+# e.g. BTAG_func_g     0.01 + 0*x + 0*y
+# put 'x' for pt ; range: [0, 9E6 GeV/c]
+# put 'y' for eta ; range [-CEN_max_tracker ; CEN_max_tracker ]
+# e.g. (x<300)?(0.2+0*x+0*y):(0.6+0*x+y*0)
+BTAG_func_b	 0.4+0*x+0*y	        // formula for Pt dependence of the b-tag efficiency (b-jets)
+BTAG_func_c      0.1+0*x+0*y            // formula for Pt dependence of the mistag efficiency (c-jets)
+BTAG_func_g      0.01+0*x+0*y           // (gluon-jets)
+BTAG_func_l      0.01+0*x+0*y		// (light-jets)
 
 # FLAGS
 FLAG_bfield      1                       //1 to run the bfield propagation else 0
 FLAG_vfd         1                       //1 to run the very forward detectors else 0
 FLAG_RP          1                       //1 to run the very forward detectors else 0
 FLAG_trigger     1                       //1 to run the trigger selection else 0
-FLAG_frog        0                       //1 to run the FROG event display
+FLAG_frog        1                       //1 to run the FROG event display
 FLAG_lhco        0                       //1 to run the LHCO
 
 # In case BField propagation allowed
 TRACK_radius      129                   //radius of the BField coverage, in cm
-TRACK_length      300                   //length of the BField coverage, in cm
+TRACK_length      300                   //half-length of the BField coverage, in cm
 TRACK_bfield_x    0                     //X component of the BField, in T
 TRACK_bfield_y    0                     //Y component of the BField, in T
 TRACK_bfield_z    3.8                   //Z component of the BField, in T
@@ -109,26 +125,26 @@ VFD_max_calo_vfd  6.6
 VFD_min_zdc       8.3			// zero-degree neutral calorimeter
 VFD_s_zdc         140                   // distance of the Zero Degree Calorimeter, from the IP, in [m]
 
+#Hector parameters
 RP_220_s          220                   // distance of the RP to the IP, in meters
 RP_220_x          0.002                 // distance of the RP to the beam, in meters
 RP_420_s          420                   // distance of the RP to the IP, in meters
 RP_420_x          0.004                 // distance of the RP to the beam, in meters
-RP_beam1Card      DELPHESDIR/data/LHCB1IR5_v6.500.tfs
-RP_beam2Card      DELPHESDIR/data/LHCB2IR5_v6.500.tfs
-RP_IP_name        IP5
-RP_offsetEl_x     0.097                 // horizontal separation between both beam, in meters
+RP_beam1Card      DELPHESDIR/data/LHCB1IR5_v6.500.tfs // beam optics file, beam 1
+RP_beam2Card      DELPHESDIR/data/LHCB2IR5_v6.500.tfs // beam optics file, beam 2
+RP_IP_name        IP5			// tag for IP in Hector ; 'IP1' for ATLAS
+RP_offsetEl_x     0.097			// horizontal separation between both beam, in meters 
 RP_offsetEl_y     0                     // vertical separation between both beam, in meters
-RP_offsetEl_s     120                   // distance of beam separation point, from IP
-RP_cross_x        -500                  // IP offset in horizontal plane, in micrometers
-RP_cross_y        0                     // IP offset in vertical plane, in micrometers
-RP_cross_ang_x    142.5                 // half-crossing angle in horizontal plane, in microrad
-RP_cross_ang_y    0                     // half-crossing angle in vertical plane, in microrad
-
+RP_offsetEl_s     120			// distance of beam separation point, from IP
+RP_cross_x	  -500			// IP offset in horizontal plane, in micrometers
+RP_cross_y	  0			// IP offset in vertical plane, in micrometers
+RP_cross_ang_x    142.5			// half-crossing angle in horizontal plane, in microrad
+RP_cross_ang_y    0			// half-crossing angle in vertical plane, in microrad
 
 # In case FROG event display allowed
 NEvents_Frog      100
-# Number of events to process
-NEvents           -1                    // -1 means 'all'
+# Number of events to process 
+NEvents           -1                   // -1 means 'all'
 
 # input PDG tables
 PdgTableFilename  DELPHESDIR/data/particle.tbl     // table with particle pid,mass,charge,...

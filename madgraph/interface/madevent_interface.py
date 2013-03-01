@@ -349,6 +349,12 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
+    
+    def help_add_time_of_flight(self):
+        logger.info("syntax: add_secondary_vertex [run_name|path_to_file]")
+        logger.info('-- Add in the unweighted_events.lhe the information')
+        logger.info('   related to secondary vertex.')
+
     def help_calculate_decay_widths(self):
         
         if self.ninitial != 1:
@@ -616,6 +622,24 @@ class CheckValidForCmd(object):
                     
         return run
 
+    def check_add_time_of_flight(self, args):
+        """check that the argument are correct"""
+        
+        if len(args) >1:
+            self.help_add_secondary_vertex()
+            raise self.InvalidCmd('Too many arguments')
+        
+        if len(args) == 1: 
+            if os.path.exists(args[0]):
+                return
+            elif self.run_name == args[0]:
+                args.pop(0)
+            else:
+                self.set_run_name(args.pop(0))
+        elif not self.run_name:            
+            self.help_add_secondary_vertex()
+            raise self.InvalidCmd('Need a run_name to process')
+        
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -721,11 +745,18 @@ class CheckValidForCmd(object):
         except ImportError:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
-            
+        
+        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            model = import_ufo.import_model(modelname, decay=True)
+            restrict_file = None
+            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            model = import_ufo.import_model(modelname, decay=True, 
+                        restrict_file=restrict_file)
+            
+            
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
@@ -1086,6 +1117,18 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
+    
+    def complete_add_time_of_flight(self, text, line, begidx, endidx):
+        "Complete command"
+       
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data)
+    
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
        try:
@@ -1392,8 +1435,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-
-    
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -1438,6 +1479,61 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else: 
             return False
             
+    ############################################################################
+    def do_add_time_of_flight(self, line):
+
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_add_time_of_flight(args)
+        
+        if args: #custom output file
+            event_path = args[0]
+        else:
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+        
+        #gunzip the file
+        if event_path.endswith('.gz'):
+            need_zip = True
+            subprocess.call(['gunzip', event_path])
+            event_path = event_path[:-3]
+        else:
+            need_zip = False
+            
+        import random
+        try:
+            import madgraph.various.lhe_parser as lhe_parser
+        except:
+            import internal.lhe_parser as lhe_parser
+    
+        lhe = lhe_parser.EventFile(event_path)
+        output = open('%s_2vertex.lhe' % event_path, 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+
+        # get the associate param_card
+        begin_param = lhe.banner.find('<slha>')
+        end_param = lhe.banner.find('</slha>')
+        param_card = lhe.banner[begin_param+6:end_param].split('\n')
+        param_card = check_param_card.ParamCard(param_card)
+
+        cst = 6.58211915e-25
+        # Loop over all events
+        for event in lhe:
+            for particle in event:
+                id = particle.pid
+                width = param_card['decay'].get((abs(id),)).value
+                if width:
+                    particle.vtim = random.expovariate(width/cst)
+            #write this modify event
+            output.write(str(event))
+        output.write('</LesHouchesEvents>\n')
+        output.close()
+        
+        files.mv('%s_2vertex.lhe' % event_path, event_path)
+        
+        if need_zip:
+            subprocess.call(['gzip', event_path])
+        
     ############################################################################
     def do_banner_run(self, line): 
         """Make a run from the banner file"""
@@ -2810,7 +2906,7 @@ calculator."""
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Error detected. Do you want to clean the queue?',
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
@@ -3248,6 +3344,7 @@ calculator."""
         
         self.keep_cards(cards)
         if self.force:
+            self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
         if auto:
             self.ask_edit_cards(cards, mode='auto')

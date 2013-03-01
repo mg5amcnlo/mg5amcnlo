@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules 1.7.9
-# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Fri 18 May 2012 14:33:51
+# This file was automatically created by FeynRules 1.7.127
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
+# Date: Tue 22 Jan 2013 16:06:42
 
 
 # 
@@ -35,14 +35,18 @@
 # Parameter definitions
 #
 
-   * All parameters are ok.
+   * Parameter CWWWL2 has no value. Default value 1 assigned.
+   * Parameter CWL2 has no value. Default value 1 assigned.
+   * Parameter CBL2 has no value. Default value 1 assigned.
+   * Parameter CPWWWL2 has no value. Default value 1 assigned.
+   * Parameter CPWL2 has no value. Default value 1 assigned.
 
 
 # Vertices
    * Calling FeynmanRules for 1 Lagrangians.
    * Number of classes vertices: 58
-   * Number of flavored vertices: 102
-   * Saved vertices in InterfaceRun[ 2 ].
+   * Number of flavored vertices: 96
+   * Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
       - Quantum number GhostNumber conserved in all vertices.
       - Quantum number LeptonNumber conserved in all vertices.
@@ -53,19 +57,19 @@
 # Vertex definitions
 #
 
-   * 102 vertices written.
+   * 96 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 78 lorentz structures written.
+   * 81 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 146 couplings written.
+   * 140 couplings written.
    * couplings.py written.
 #
 # Coupling order definitions
@@ -77,5 +81,11 @@
 # Decay definitions
 #
 
-   * 0 decays written.
+   * 6 decays written.
    * decay.py not written
+#
+# CTCoupling definitions
+#
+
+   * 0 CTcouplings written.
+   * CT_couplings.py written.

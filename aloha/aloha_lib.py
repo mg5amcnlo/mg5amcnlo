@@ -126,6 +126,7 @@ class Computation(dict):
         tag = 'FCT%s' % len(self.fct_expr)
         argument = []
         for expression in args:
+            print type(expression)
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
                 expr = expression.expand().get_rep([0])
                 new = expr.simplify()
@@ -136,6 +137,10 @@ class Computation(dict):
         if str(fct_tag)+str(argument) in self.inverted_fct:
             return self.inverted_fct[str(fct_tag)+str(argument)]
         else:
+            #if fct_tag == 'pow':
+            #    expr = args[0]**args[1]
+            #    argument = [expr]
+            #    fct_tag = ''
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))

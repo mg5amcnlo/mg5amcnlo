@@ -93,6 +93,13 @@ def import_model(model_name, decay=False, restrict=True):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
+        if isinstance(restrict, str):
+            if os.path.exists(os.path.join(model_path, restrict)):
+                restrict_file = os.path.join(model_path, restrict)
+            elif os.path.exists(restrict):
+                restrict_file = restrict
+            else:
+                raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
     model = import_full_model(model_path, decay) 
@@ -1361,6 +1368,23 @@ class RestrictModel(model_reader.ModelReader):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
+
+        # treat specific cases for masses and width
+        for particle in self['particles']:
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+            if particle['width'] in one_parameters:
+                one_parameters.remove(particle['width'])                
+                
+        for pdg, particle in self['particle_dict'].items():
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+
+
         # Add a rule for zero/one parameter
         external_parameters = self['parameters'][('external',)]
         for param in external_parameters[:]:
@@ -1373,17 +1397,7 @@ class RestrictModel(model_reader.ModelReader):
 
         special_parameters = zero_parameters + one_parameters
         
-        # treat specific cases for masses and width
-        for particle in self['particles']:
-            if particle['mass'] in zero_parameters:
-                particle['mass'] = 'ZERO'
-            if particle['width'] in zero_parameters:
-                particle['width'] = 'ZERO'
-        for pdg, particle in self['particle_dict'].items():
-            if particle['mass'] in zero_parameters:
-                particle['mass'] = 'ZERO'
-            if particle['width'] in zero_parameters:
-                particle['width'] = 'ZERO'            
+            
 
         if simplify:
             # check if the parameters is still usefull:
@@ -1442,12 +1456,9 @@ class RestrictModel(model_reader.ModelReader):
                   (keep_external and param_info[param]['dep'] == ('external',)):
                 logger_mod.debug('fix parameter value: %s' % param)
                 continue 
-            logger_mod.debug('remove parameters: %s' % param)
+            logger_mod.debug('remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
-        
- 
-        
 
                 
                 
