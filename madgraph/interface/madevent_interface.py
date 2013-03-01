@@ -4278,9 +4278,6 @@ calculator."""
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 self.add_card_to_run('trigger')
-                print 'IN DLEPHES2'
-            else:
-                print 'NOT IN DELPHES2'
             cards.append('delphes_card.dat')
 
         if self.force:
