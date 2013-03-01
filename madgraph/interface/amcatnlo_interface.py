@@ -141,6 +141,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
                 args.append('auto')
             else:
+                self.help_launch()
                 raise self.InvalidCmd, '%s is not a valid process directory nor run mode' % args[0]
 
         mode = args[1]
