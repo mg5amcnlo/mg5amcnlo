@@ -24,9 +24,10 @@ Update notes for MadGraph 5 (in reverse time order)
                       to make sure such channels find events even for narrow
                       invariant mass cut ranges. Please note the discussion in 
                       that bug report for other types of channels however.
-                  JA: Fixed bug #??????, that matrix elements for decay chain 
+                  JA: Fixed bug #1139303: matrix elements for decay chain 
                       processes with different order final state (such as 
-                      p p > w+, w+ > e+ ve, w+ > vm mu+) were combined.
+                      p p > w+, w+ > e+ ve and p p > w-,  w- > vm~ mu-) 
+                      were combined.
                   OM: Support lhapdf set which contains photon (See bug #1131995)
                   RF+JA: Reuse last two PDF calls also for LHAPDF PDFs, clarify code
                       for reuse of PDFs in pdg2pdf.f and pdg2pdf_lhapdf.f

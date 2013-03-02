@@ -208,9 +208,9 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 #===============================================================================
 
 class IdentifyMETagPerm(IdentifyMETag):
-    """Exactly as IdentifyMETag, but require also identical permutation.
-       This is necessary when we have decay chains, since too complicated to
-       ensure that permutation works when we have multiple decay processes."""
+    """Exactly as IdentifyMETag, but require also identical permutation of
+       external numbers. This is necessary when we have decay chains, since 
+       too complicated to fix final state order in decay processes."""
 
     # dec_number is used to separate between decay chains.
     # This is needed since we don't want to merge different decays,
@@ -226,7 +226,7 @@ class IdentifyMETagPerm(IdentifyMETag):
         dc = 0
         if process.get('is_decay_chain'):
             dc = IdentifyMETagPerm.dec_number
-            IdentifyMETag.dec_number += 1
+            IdentifyMETagPerm.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
         sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
@@ -244,6 +244,7 @@ class IdentifyMETagPerm(IdentifyMETag):
         else:
             perms = []
 
+        # Add permutation of external numbers (not included in IdentifyMETag)
         return [amplitude.get('has_mirror_process'),
                 process.get('id'),
                 process.get('is_decay_chain'),
