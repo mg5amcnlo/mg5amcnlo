@@ -202,6 +202,58 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         # We should not get here
         assert(False)
         
+
+#===============================================================================
+# DiagramTag class to identify matrix elements requiring identical permutation
+#===============================================================================
+
+class IdentifyMETagPerm(IdentifyMETag):
+    """Exactly as IdentifyMETag, but require also identical permutation.
+       This is necessary when we have decay chains, since too complicated to
+       ensure that permutation works when we have multiple decay processes."""
+
+    # dec_number is used to separate between decay chains.
+    # This is needed since we don't want to merge different decays,
+    # in order to get the right factor for identical/non-identical particles
+    dec_number = 1
+    
+    @staticmethod
+    def create_tag(amplitude, identical_particle_factor = 0):
+        """Create a tag which identifies identical matrix elements"""
+        process = amplitude.get('process')
+        ninitial = process.get_ninitial()
+        model = process.get('model')
+        dc = 0
+        if process.get('is_decay_chain'):
+            dc = IdentifyMETagPerm.dec_number
+            IdentifyMETag.dec_number += 1
+        if not identical_particle_factor:
+            identical_particle_factor = process.identical_particle_factor()
+        sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+                                  amplitude.get('diagrams')])
+        if sorted_tags:
+            # Need to keep track of relative permutations for all diagrams,
+            # to make sure we indeed have different matrix elements,
+            # and not just identical diagrams disregarding particle order.
+            # However, identical particles should be treated symmetrically.
+            comp_dict = IdentifyMETag.prepare_comp_dict(process,
+                                         sorted_tags[0].get_external_numbers())
+            perms = [array.array('H',
+                     sum([comp_dict[n] for n in p.get_external_numbers()], []))
+                     for p in sorted_tags[1:]]
+        else:
+            perms = []
+
+        return [amplitude.get('has_mirror_process'),
+                process.get('id'),
+                process.get('is_decay_chain'),
+                identical_particle_factor,
+                dc,
+                perms,
+                sorted_tags,
+                sorted_tags[0].get_external_numbers()]
+
+
 #===============================================================================
 # HelasWavefunction
 #===============================================================================
@@ -4366,9 +4418,50 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
-                matrix_element_list = HelasDecayChainProcess(amplitude).\
-                                      combine_decay_chain_processes()
-            else:
+                tmp_matrix_element_list = HelasDecayChainProcess(amplitude).\
+                                          combine_decay_chain_processes()
+                # Use IdentifyMETagPerm to check if matrix elements present
+                matrix_element_list = []
+                for matrix_element in tmp_matrix_element_list:
+                    assert isinstance(matrix_element, HelasMatrixElement), \
+                              "Not a HelasMatrixElement: %s" % matrix_element
+
+                    # If the matrix element has no diagrams,
+                    # remove this matrix element.
+                    if not matrix_element.get('processes') or \
+                           not matrix_element.get('diagrams'):
+                        continue
+
+                    # Create IdentifyMETagPerm
+                    # Note that for decay chains, we don't allow combining
+                    # processes with different ordering of final-state legs
+                    # since it's too non-trivial to make sure we get the
+                    # corresponding ordering in the process decay chains
+                    amplitude_tag = IdentifyMETagPerm.create_tag(\
+                                    matrix_element.get_base_amplitude())
+                    try:
+                        me_index = amplitude_tags.index(amplitude_tag)
+                    except ValueError:
+                        # Create matrix element for this amplitude
+                        matrix_element_list.append(matrix_element)
+                        if combine_matrix_elements:
+                            amplitude_tags.append(amplitude_tag)
+                            identified_matrix_elements.append(matrix_element)
+                            permutations.append(amplitude_tag[-1])
+                    else: # try
+                        # Identical matrix element found
+                        other_processes = identified_matrix_elements[me_index].\
+                                          get('processes')
+                        other_processes.extend(matrix_element.get('processes'))
+                        logger.info("Combined %s with %s" % \
+                                    (matrix_element.get('processes')[0].\
+                                     nice_string().\
+                                     replace('Process: ', 'process '),
+                                     other_processes[0].nice_string().\
+                                     replace('Process: ', 'process ')))
+                        # Go on to next matrix element
+                        continue
+            else: # not DecayChainAmplitude
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,
                 # they have the same matrix element
@@ -4391,6 +4484,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                             identified_matrix_elements.append(me)
                             permutations.append(amplitude_tag[-1][0].\
                                                 get_external_numbers())
+                    else:
+                        matrix_element_list = []
                 else:
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
@@ -4411,39 +4506,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
-
-                # If the matrix element has no diagrams,
-                # remove this matrix element.
-                if not matrix_element.get('processes') or \
-                       not matrix_element.get('diagrams'):
-                    continue
-
-                # Check if identical matrix element already present
-                if matrix_element in matrix_elements:
-                    me = matrix_elements[matrix_elements.index(matrix_element)]
-                    me_procs = me.get('processes')
-                    procs = matrix_element.get('processes')
-                    if me_procs[0].get_ninitial() > 1 or \
-                            procs[0].get_initial_ids() == \
-                            me_procs[0].get_initial_ids():
-                        logger.info("Combining process %s with %s" % \
-                                (procs[0].nice_string().\
-                                     replace('Process: ', ''),
-                                 me_procs[0].nice_string().\
-                                     replace('Process: ', '')))
-                        for proc in procs:
-                            if proc not in me_procs:
-                                me_procs.append(proc)
-                            else:
-                                raise InvalidCmd,("Duplicate process %s found."\
-                                           +" Please check your processes.") % \
-                                    proc.nice_string().replace('Process: ', '')
-                        # Remove this matrix element from the lists
-                        if combine_matrix_elements and amplitude_tags:
-                            amplitude_tags.pop(-1)
-                            identified_matrix_elements.pop(-1)
-                            permutations.pop(-1)
-                        continue
 
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
