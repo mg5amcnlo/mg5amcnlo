@@ -3496,6 +3496,7 @@ class HelasMultiProcessTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                            'state':True,
                                            'number': 10}))
+        
         self.assertEqual(myleglist, matrix_elements[0].get('processes')[0].\
                          get_legs_with_decays())
 
@@ -4010,11 +4011,8 @@ class HelasMultiProcessTest(unittest.TestCase):
         
         self.assertEqual(len(matrix_elements), 4)
 
-    def test_decay_chain_different_order(self):
-        """Test decay chain with identical particles with different FS order
-        With the new IdentifyMETagPerm, processes with identical s-channel PDG
-        but different FS order are not combined.
-        """
+    def get_w_model(self):
+        """Prepare a model with W, quarks, and leptons"""
 
         mypartlist = base_objects.ParticleList()
         myinterlist = base_objects.InteractionList()
@@ -4303,11 +4301,19 @@ class HelasMultiProcessTest(unittest.TestCase):
         mymodel.set('particles', mypartlist)
         mymodel.set('interactions', myinterlist)
 
+        return mymodel
+
+    def test_decay_chain_different_order1(self):
+        """Test one decay chain with identical particles with different FS order
+        """
+
+        mymodel = self.get_w_model()
+
         myleglist = base_objects.MultiLegList()
 
-        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4,-1,-3,-2,-4],
+        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4],
                                          'state':False}))
-        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4,-1,-3,-2,-4],
+        myleglist.append(base_objects.MultiLeg({'ids':[-1,-3,-2,-4],
                                          'state':False}))
         myleglist.append(base_objects.MultiLeg({'ids':[24]}))
 
@@ -4348,8 +4354,165 @@ class HelasMultiProcessTest(unittest.TestCase):
 
         my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
         
+        self.assertEqual(len(my_multiprocess.get('matrix_elements')), 1)
+
+        goal_string = ["u d~ > e+ ve",
+                       "c s~ > e+ ve",
+                       "u d~ > mu+ vm",
+                       "c s~ > mu+ vm"]
+
+        for i, p in enumerate(\
+            my_multiprocess.get('matrix_elements')[0].get('processes')):
+            self.assertEqual(p.base_string(),goal_string[i])
+
+    def test_decay_chain_different_order2(self):
+        """Test two decay chains with particles with different FS order
+        """
+
+        mymodel = self.get_w_model()
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-1,-3,-2,-4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[24]}))
+
+        mycoreproc1 = base_objects.ProcessDefinition({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[24],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-11],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[12],
+                                         'state':True}))
+
+        mydecay1 = base_objects.ProcessDefinition({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-1,-3,-2,-4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-24]}))
+
+        mycoreproc2 = base_objects.ProcessDefinition({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[-24],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-14],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[13],
+                                         'state':True}))
+
+
+        mydecay2 = base_objects.ProcessDefinition({'legs':myleglist,
+                                                   'model':mymodel})
+
+        mycoreproc1.set('decay_chains', base_objects.ProcessDefinitionList([\
+            mydecay1]))
+
+        mycoreproc2.set('decay_chains', base_objects.ProcessDefinitionList([\
+            mydecay2]))
+
+        myprocs = base_objects.ProcessDefinitionList([mycoreproc1,
+                                                      mycoreproc2])
+
+        myamplitudes = diagram_generation.MultiProcess(myprocs)
+
+        self.assertEqual(len(myamplitudes.get('amplitudes')), 2)
+
+        my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
+        
         self.assertEqual(len(my_multiprocess.get('matrix_elements')), 2)
 
+    def test_decay_chain_different_order3(self):
+        """Test two decay chains with particles with different FS order (3)
+        """
+
+        mymodel = self.get_w_model()
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-1,-3,-2,-4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[24]}))
+
+        mycoreproc1 = base_objects.ProcessDefinition({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[24],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-11],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[12],
+                                         'state':True}))
+
+        mydecay1 = base_objects.ProcessDefinition({'legs':myleglist,
+                                         'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[1,3,2,4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-1,-3,-2,-4],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[24]}))
+
+        mycoreproc2 = base_objects.ProcessDefinition({'legs':myleglist,
+                                       'model':mymodel})
+
+        myleglist = base_objects.MultiLegList()
+
+        myleglist.append(base_objects.MultiLeg({'ids':[24],
+                                         'state':False}))
+        myleglist.append(base_objects.MultiLeg({'ids':[14],
+                                         'state':True}))
+        myleglist.append(base_objects.MultiLeg({'ids':[-13],
+                                         'state':True}))
+
+
+        mydecay2 = base_objects.ProcessDefinition({'legs':myleglist,
+                                                   'model':mymodel})
+
+        mycoreproc1.set('decay_chains', base_objects.ProcessDefinitionList([\
+            mydecay1]))
+
+        mycoreproc2.set('decay_chains', base_objects.ProcessDefinitionList([\
+            mydecay2]))
+
+        myprocs = base_objects.ProcessDefinitionList([mycoreproc1,
+                                                      mycoreproc2])
+
+        myamplitudes = diagram_generation.MultiProcess(myprocs)
+
+        self.assertEqual(len(myamplitudes.get('amplitudes')), 2)
+
+        my_multiprocess = helas_objects.HelasMultiProcess(myamplitudes)
+        
+        self.assertEqual(len(my_multiprocess.get('matrix_elements')), 1)
+
+        goal_string = ["u d~ > e+ ve",
+                       "c s~ > e+ ve",
+                       "u d~ > mu+ vm",
+                       "c s~ > mu+ vm"]
+
+        for i, p in enumerate(\
+            my_multiprocess.get('matrix_elements')[0].get('processes')):
+            self.assertEqual(p.base_string(),goal_string[i])
 
     def test_equal_decay_chains(self):
         """Test the functions for checking equal decay chains
