@@ -4393,10 +4393,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         continue
 
                     # Create IdentifyMETag
-                    # Note that for decay chains, we don't allow combining
-                    # processes with different ordering of final-state legs
-                    # since it's too non-trivial to make sure we get the
-                    # corresponding ordering in the process decay chains
                     amplitude_tag = IdentifyMETag.create_tag(\
                                     matrix_element.get_base_amplitude())
                     try:
@@ -4413,6 +4409,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                         # Identical matrix element found
                         other_processes = identified_matrix_elements[me_index].\
                                           get('processes')
+                        # Reorder each of the processes
+                        # Since decay chain, only reorder legs_with_decays
                         for proc in matrix_element.get('processes'):
                             other_processes.append(cls.reorder_process(\
                                     proc,
