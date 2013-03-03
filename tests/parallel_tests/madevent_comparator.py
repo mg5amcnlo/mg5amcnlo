@@ -103,7 +103,7 @@ class MadEventComparator(me_comparator.MEComparator):
                 return 'str'
 
 
-        prop_col_size = 17
+        proc_col_size = 17
         for proc in self.results[0]:
             if len(proc) + 1 > prop_col_size:
                 proc_col_size = len(proc) + 1
@@ -518,8 +518,8 @@ class MG5Runner(MadEventRunner):
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
             for line in file(filepath):
                 splitline=line.split()
-                if len(splitline)==8:
-                     output['cross_'+name]=splitline[0]
+                #if len(splitline)==8:
+                output['cross_'+name]=splitline[0]
         return output
 
 class MG5OldRunner(MG5Runner):
