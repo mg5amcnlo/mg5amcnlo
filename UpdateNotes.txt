@@ -32,7 +32,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       card when running "install Delphes".
                   JA: Make sure cuts are only checked once per event - this can save
                       a lot of time for multiparton events.
-
+                  OM: Fix Bug #1142042 (crash in gridpack)
 
 1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 

@@ -4111,11 +4111,12 @@ calculator."""
                      pjoin(self.me_dir,'Events','xsecs.tree'))
                 
             # Generate the matching plots
+            devnull = open(os.devnull, 'w')
             misc.call([self.dirbin+'/create_matching_plots.sh', 
                        self.run_name, tag, madir],
-                            stdout = os.open(os.devnull, os.O_RDWR),
+                            stdout = devnull,
                             cwd=pjoin(self.me_dir,'Events'))
-
+            devnull.close()
             #Clean output
             misc.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
@@ -4778,7 +4779,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
