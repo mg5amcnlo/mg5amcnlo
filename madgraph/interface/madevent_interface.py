@@ -351,9 +351,9 @@ class HelpToCmd(object):
 
     
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_secondary_vertex [run_name|path_to_file]")
-        logger.info('-- Add in the unweighted_events.lhe the information')
-        logger.info('   related to secondary vertex.')
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
 
     def help_calculate_decay_widths(self):
         
@@ -3340,19 +3340,21 @@ calculator."""
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
             cards.append('delphes_card.dat')
-            cards.append('delphes_trigger.dat')
-        
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
         self.keep_cards(cards)
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
+
         if auto:
             self.ask_edit_cards(cards, mode='auto')
         else:
             self.ask_edit_cards(cards)
-        
         return
-
+    
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
         """Ask the question when launching pythia"""
@@ -3367,7 +3369,7 @@ calculator."""
     1 / pythia  : Pythia 
     2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
-            question += """  3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia + Delphes.\n"""
 
         if not self.force:
             if not mode:
@@ -3396,7 +3398,10 @@ calculator."""
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             cards.append('delphes_card.dat')
-            cards.append('delphes_trigger.dat')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
         self.keep_cards(cards)
         
         if self.force:
@@ -3408,7 +3413,9 @@ calculator."""
             self.ask_edit_cards(cards)
         
         return mode
-
+                
+  
+            
     def check_param_card(self, path):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""

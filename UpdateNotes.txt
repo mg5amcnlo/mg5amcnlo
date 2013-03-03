@@ -33,6 +33,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
                       have such type of expression. More information in bug report #1132996
                       (Thanks Gezim) 		
+                  OM+JA: install Delphes install now Delphes3 [install Delphes2 is available]
                   OM: Add one command in MadEvent interface: add_time_of_flight
                       This command modify the lhe events file by adding the time of 
                       flight information in the lhe events.
@@ -52,9 +53,14 @@ Update notes for MadGraph 5 (in reverse time order)
                       invariant mass cut ranges. Please note the discussion in 
                       that bug report for other types of channels however.
                   OM: Support lhapdf set which contains photon (See bug #1131995)
+                  RF+JA: Reuse last two PDF calls also for LHAPDF PDFs, clarify code
+                      for reuse of PDFs in pdg2pdf.f and pdg2pdf_lhapdf.f
                   OM: Update the default delphes card to the latest version. This 
                       default card is automatically overwritten by the default Delphes
                       card when running "install Delphes".
+                  JA: Make sure cuts are only checked once per event - this can save
+                      a lot of time for multiparton events.
+
 
 1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
                       zzww interactions. (See bug #1095603. Thanks to Tim Lu) 

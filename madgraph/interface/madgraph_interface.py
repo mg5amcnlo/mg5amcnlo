@@ -2099,7 +2099,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
+                     'MCatNLO-utilities','update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -3743,10 +3744,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
+
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
-                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes', 
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis', 
+                'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
 
         try:
@@ -3776,6 +3781,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -3884,12 +3890,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if args[0] == 'MCatNLO-utilities':
                 self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
             
-            if args[0] == 'Delphes':
-                data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
-                data = data.replace('data/', 'DELPHESDIR/data/')
-                out = open(pjoin('Template', 'Common', 'Cards', 'delphes_card_default.dat'), 'w')
-                out.write(data)
-                
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))  
+        
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
@@ -4356,7 +4365,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]
