@@ -1679,6 +1679,7 @@ Integrated cross-section
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
             if not topfiles:
+                misc.call(['gzip %s' % evt_file], shell=True)
                 logger.warning('No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir)
 
