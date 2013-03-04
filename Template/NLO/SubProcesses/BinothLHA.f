@@ -21,6 +21,7 @@ c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
+      include 'born_nhel.inc'
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
@@ -35,9 +36,6 @@ c
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
-      integer           isum_hel
-      logical                   multi_channel
-      common/to_matrix/isum_hel, multi_channel
       double precision qes2
       common /coupl_es/ qes2
       integer nvtozero
@@ -60,35 +58,87 @@ c statistics for MadLoop
       common/ups_stats/nunst, ntot
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      integer goodhel(max_bhel),hel(0:max_bhel)
+      save hel,goodhel
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel
       logical unstable_point
       include 'pmass.inc'
       data nbad / 0 /
-      if (isum_hel.ne.0) then
-         write (*,*) 'Can only do explicit helicity sum'//
-     &        ' for Virtual corrections',
-     &        isum_hel
-      endif
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
       call update_as_param()
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
+      virt_wgt= 0d0
+      single  = 0d0
+      double  = 0d0
       if (firsttime) then
           write(*,*) "alpha_s value used for the virtuals"/
      &     /" is (for the first PS point): ", alpha_S
           tolerance=1d-5
           call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found)
+          virt_wgt= virt_wgts(1)/dble(ngluons)
+          single  = virt_wgts(2)/dble(ngluons)
+          double  = virt_wgts(3)/dble(ngluons)
+          if (mc_hel.ne.0) then
+c Do MC over helicities
+             open (unit=67,file='HelFilter.dat',err=201)
+             hel(0)=0
+             j=0
+             do i=1,max_bhel
+                read(67,*,err=201) goodhel(i)
+                if (goodhel(i).gt.0) then
+                   j=j+1
+                   goodhel(j)=goodhel(i)
+                   hel(0)=hel(0)+1
+                   hel(j)=i
+                endif
+             enddo
+             close(67)
+             goto 202
+ 201         write (*,*) 'Cannot do MC over hel:'/
+     &            /' "HelFilter.dat" does not exist'/
+     &            /' or does not have the correct format'
+             mc_hel=0
+ 202         continue
+          endif
       else
           tolerance=run_tolerance
 c         Just set the accuracy found to a positive value as it is not
 c         specified once the initial pole check is performed.
           acc_found=1.0d0
-          call sloopmatrix(p, virt_wgts)
+          if (mc_hel.eq.0) then
+             call sloopmatrix(p, virt_wgts)
+             virt_wgt= virt_wgts(1)/dble(ngluons)
+             single  = virt_wgts(2)/dble(ngluons)
+             double  = virt_wgts(3)/dble(ngluons)
+          else
+c Get random integer from importance sampling (the return value is
+c filled in driver_mintMC.f)
+             call get_MC_integer(2,hel(0),ihel,volh)
+             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
+                call sloopmatrixhel(p,hel(i),virt_wgts)
+                virt_wgt= virt_wgt +
+     &               virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
+                single  = single   +
+     &               virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
+                double  = double   +
+     &               virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+             enddo
+c Average over initial state helicities
+             if (nincoming.ne.2) then
+                write (*,*)
+     &               'Cannot do MC over helicities for 1->N processes'
+                stop
+             endif
+             virt_wgt=virt_wgt/4d0/dble(ngluons)
+             single  = single/4d0/dble(ngluons)
+             double  = double/4d0/dble(ngluons)
+          endif
       endif
-      virt_wgt= virt_wgts(1)/dble(ngluons)
-      single  = virt_wgts(2)/dble(ngluons)
-      double  = virt_wgts(3)/dble(ngluons)
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -128,6 +178,9 @@ c and it will use the next one for that purpose
               write(78,*) '===== UPS #',nunst,' ====='
               write(78,*) 'mu_r    =',mu_r           
               write(78,*) 'alpha_S =',alpha_S
+              if (mc_hel.ne.0) then
+                 write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
+              endif
               write(78,*) '1/eps**2 expected from MadFKS=',madfks_double
               write(78,*) '1/eps**2 obtained in MadLoop =',double
               write(78,*) '1/eps    expected from MadFKS=',madfks_single

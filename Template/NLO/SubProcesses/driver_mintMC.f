@@ -459,6 +459,9 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel
       integer           use_cut
       common /to_weight/use_cut
 
@@ -557,12 +560,13 @@ c These should be ignored (but kept for 'historical reasons')
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel= 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
+      isum_hel = 0
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
@@ -711,6 +715,9 @@ c From dsample_fks
       common/c_unwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save,proc_map
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -1010,6 +1017,12 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f(1) = f(1)+result(0,1)
          f(2) = f(2)+result(0,2)
+
+         if (mc_hel.ne.0) then
+c Fill the importance sampling array
+            call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
+         endif
+
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination

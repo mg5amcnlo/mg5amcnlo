@@ -40,7 +40,7 @@ BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
 	write_event.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o check_poles.o BinothLHA.o
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o MC_integer.o
 
 # Files for tests
 TEST= $(FILES) BinothLHADummy.o cuts.o
