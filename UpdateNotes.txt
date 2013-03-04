@@ -39,7 +39,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Support lhapdf set which contains photon (See bug #1131995).
                   RF+JA: Reuse last two PDF calls also for LHAPDF PDFs, clarify code
                       for reuse of PDFs in pdg2pdf.f and pdg2pdf_lhapdf.f
-                  OM: Update the default delphes card to Delphes 2 version. This 
+                  OM: Update the default delphes card to latest Delphes version. This 
                       default card is automatically overwritten by the default Delphes
                       card when running "install Delphes".
                   JA: Make sure cuts are only checked once per event - this can save
