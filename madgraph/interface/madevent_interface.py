@@ -384,9 +384,11 @@ class HelpToCmd(object):
 
     
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_time_of_flight [run_name|path_to_file]")
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
         logger.info('-- Add in the lhe files the information')
         logger.info('   of how long it takes to a particle to decay.')
+        logger.info('   threshold option allows to change the minimal value required to')
+        logger.info('   a non zero value for the particle (default:1e-12s)')
 
     def help_calculate_decay_widths(self):
         
@@ -800,21 +802,40 @@ class CheckValidForCmd(object):
     def check_add_time_of_flight(self, args):
         """check that the argument are correct"""
         
-        if len(args) >1:
-            self.help_add_secondary_vertex()
+        
+        if len(args) >2:
+            self.help_time_of_flight()
             raise self.InvalidCmd('Too many arguments')
         
-        if len(args) == 1: 
-            if os.path.exists(args[0]):
-                return
-            elif self.run_name == args[0]:
-                args.pop(0)
-            else:
+        # check if the threshold is define. and keep it's value
+        if args and args[-1].startswith('--threshold='):
+            try:
+                threshold = float(args[-1].split('=')[1])
+            except ValueError:
+                raise self.InvalidCmd('threshold options require a number.')
+            args.remove(args[-1])
+        else:
+            threshold = 1e-12
+            
+        if len(args) == 1 and  os.path.exists(args[0]): 
+                event_path = args[0]
+        else:
+            if len(args) and self.run_name != args[0]:
                 self.set_run_name(args.pop(0))
-        elif not self.run_name:            
-            self.help_add_secondary_vertex()
-            raise self.InvalidCmd('Need a run_name to process')
+            elif not self.run_name:            
+                self.help_add_secondary_vertex()
+                raise self.InvalidCmd('Need a run_name to process')            
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            if not os.path.exists(event_path):
+                event_path = event_path[:-3]
+                if not os.path.exists(event_path):    
+                    raise self.InvalidCmd('No unweighted events associate to this run.')
+
+
         
+        #reformat the data
+        args[:] = [event_path, threshold]
+
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -1297,7 +1318,13 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
             data = [n.rsplit('/',2)[1] for n in data]
-            return  self.list_completion(text, data)
+            return  self.list_completion(text, data + ['--threshold='], line)
+        elif args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        else:
+            return self.list_completion(text, ['--threshold='], line)
     
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
@@ -1868,14 +1895,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_add_time_of_flight(self, line):
 
         args = self.split_arg(line)
-        #check the validity of the arguments
+        #check the validity of the arguments and reformat args
         self.check_add_time_of_flight(args)
         
-        if args: #custom output file
-            event_path = args[0]
-        else:
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
-        
+        event_path, threshold = args
         #gunzip the file
         if event_path.endswith('.gz'):
             need_zip = True
@@ -1908,7 +1931,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 id = particle.pid
                 width = param_card['decay'].get((abs(id),)).value
                 if width:
-                    particle.vtim = random.expovariate(width/cst)
+                    vtim = random.expovariate(width/cst)
+                    if vtim > threshold:
+                        particle.vtim = vtim
             #write this modify event
             output.write(str(event))
         output.write('</LesHouchesEvents>\n')

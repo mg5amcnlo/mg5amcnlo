@@ -8,14 +8,20 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM+JA: install Delphes install now Delphes3 [install Delphes2 is available]
                   OM: Add one command in MadEvent interface: add_time_of_flight
                       This command modify the lhe events file by adding the time of 
-                      flight information in the lhe events.
+                      flight information in the lhe events. To run this you need to do
+                      $> ./bin/madevent
+                      MGME> generate_events -f 
+                      MGME> add_time_of_flight
+		      MGME> pythia    [if needed]
                   OM: Fix bug in pythia8 output for process using decay chains syntax.
                       See bug #1099790.
                   CDe+OM: Update Dim6 model
                   OM: Fix a bug preventing model customized via the "customize_model"
                       command to be able to use the automatic width computation.
-                  OM: Fix a bug in model restriction when a width was equals to one.
-                      In such case, the width is not fixed to this value anymore.
+                  OM: Change model restriction behavior: a value of one for a width is 
+                      not treated as a restriction rule.
+                  OM: Fix incomplete restriction of the MSSM model leading to uneficient
+                      merging (and compilation problem) for the MSSM.
                   OM: correct bug #1107603 (problem with condor cluster for submission 
                       associated to a large number of jobs). Thanks Sanjay 
                   JA: Fix one part of the problem in bug #1123974: take into 
