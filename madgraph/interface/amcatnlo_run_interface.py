@@ -124,7 +124,7 @@ def compile_dir(arguments):
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and not options['noreweight']:
+    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and not options['noreweight']:
         misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
             raise aMCatNLOError('reweight_xsec_events compilation failed')
@@ -672,7 +672,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
             #return mode
-            return self.list_completion(text,['LO','NLO','aMC@NLO', 'aMC@LO'],line)
+            return self.list_completion(text,['LO','NLO','aMC@NLO','aMC@LO'],line)
         elif len(args) == 2 and line[begidx-1] == '@':
             return self.list_completion(text,['LO','NLO'],line)
         else:
@@ -1005,8 +1005,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
-        if options['parton']:
+        if options['parton'] and mode == 'aMC@NLO':
             mode = 'noshower'
+        elif options['parton'] and mode == 'aMC@LO':
+            mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
@@ -1057,7 +1059,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
-        if not mode in ['LO', 'NLO', 'noshower'] and self.check_mcatnlo_dir() \
+        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] and self.check_mcatnlo_dir() \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file)
         elif mode == 'noshower':
@@ -1159,6 +1161,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
                     'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
+        folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
                     if file.startswith('P') and \
@@ -1261,7 +1264,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             return
 
-        elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
+        elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
             shower = self.run_card['parton_shower']
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
@@ -1273,7 +1276,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
             if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
-            elif mode == 'noshower':
+            elif mode in ['noshower','noshowerLO']:
                 logger.info('Generating events without running the shower.')
             elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
@@ -1293,7 +1296,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
                         self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
                         
-                    elif mode == 'aMC@LO':
+                    elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
@@ -1335,7 +1338,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         for NLO/LO
         The cross_sect_dict is returned"""
         res = {}
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
@@ -1357,7 +1360,7 @@ Integrated cross-section
             raise aMCatNLOError('An error occurred during the collection of results')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
@@ -1386,7 +1389,7 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','GV*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
@@ -1431,7 +1434,7 @@ Integrated cross-section
                 stats['Errors'].append((str(log),nErrors))
             
         
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']:
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
                       'Summary:']
@@ -1483,7 +1486,7 @@ Integrated cross-section
                              self.cross_sect_dict
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
-           (mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and step!=2):
+           (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
             logger.info(message+'\n')
             return
 
@@ -2246,7 +2249,7 @@ Integrated cross-section
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
-        elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
+        elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
 
@@ -2459,8 +2462,8 @@ Integrated cross-section
         if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower' 
                 
-        available_mode = ['0', '1', '2', '3']
-        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower'}
+        available_mode = ['0', '1', '2', '3', '4', '5', '6']
+        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower', '4': 'LO', '5':'aMC@LO', '6':'noshowerLO'}
         answers = []
         for opt in available_mode:
             value = int(opt)
@@ -2471,11 +2474,14 @@ Integrated cross-section
                 answers.append('%s+madspin' % tag)
             
         question = """Which programs do you want to run?
-  0 / auto     : All for which cards exist.
-  1 / NLO      : Fixed order NLO calculation (no event generation).
-  2 / aMC@NLO  : Event generation (include running the shower).
-  3 / noshower : Event generation (without running the shower).
-+10 / +madspin : Add decays with MadSpin (before the shower).\n"""
+  0 / auto       : NLO event generation and -if cards exist- shower and madspin.
+  1 / NLO        : Fixed order NLO calculation (no event generation).
+  2 / aMC@NLO    : NLO event generation (include running the shower).
+  3 / noshower   : NLO event generation (without running the shower).
+  4 / LO         : Fixed order LO calculation (no event generation).
+  5 / aMC@LO     : LO event generation (include running the shower).
+  6 / noshowerLO : LO event generation (without running the shower).
++10 / +madspin   : Add decays with MadSpin (before the shower).\n"""
 
         if not self.force:
             if not mode:
@@ -2502,7 +2508,7 @@ Integrated cross-section
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
                 mode += '+madspin'         
         logger.info('Will run in mode %s' % mode)
-        if 'noshower' in mode:
+        if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
         
@@ -2525,12 +2531,18 @@ Please, shower the Les Houches events before using them for physics analyses."""
             cards = ['shower_card.dat']
         
         if not options['force'] and not  self.force:
-            self.ask_edit_cards(cards)   
+            self.ask_edit_cards(cards)
+            
+
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
+        #add a tag in the run_name for distinguish run_type
+        if self.run_name.startswith('run_'):
+            if mode in ['LO','aMC@LO','noshowerLO']:
+                self.run_name += '_LO' 
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         if 'aMC@' in mode or mode == 'onlyshower':
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
@@ -2597,7 +2609,7 @@ _compile_parser.add_option("-R", "--noreweight", default=False, action='store_tr
 
 _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
                 "     computation of the total cross-section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
