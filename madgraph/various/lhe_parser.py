@@ -88,6 +88,27 @@ class Particle(object):
                self.vtim,
                self.helicity)
             
+    def __eq__(self, other):
+        
+        if self.pid == other.pid and \
+           self.status == other.status and \
+           self.mother1 == other.mother1 and \
+           self.mother2 == other.mother2 and \
+           self.color1 == other.color1 and \
+           self.color2 == other.color2 and \
+           self.px == other.px and \
+           self.py == other.py and \
+           self.pz == other.pz and \
+           self.E == other.E and \
+           self.mass == other.mass and \
+           self.vtim == other.vtim and \
+           self.helicity == other.helicity:
+            return True
+        return False
+        
+        
+        
+            
     def __repr__(self):
         return 'Particle("%s", event=%s)' % (str(self), self.event)
         
@@ -189,7 +210,8 @@ class Event(list):
         out="""<event>
 %(scale)s
 %(particles)s
-%(reweight)s%(comments)s</event>
+%(comments)s
+%(reweight)s</event>
 """ 
 
         scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
