@@ -2298,9 +2298,9 @@ c           This is dummy particle used in multiparticle vertices
             if me.get('has_mirror_process'):
                 mirror_procs = [copy.copy(p) for p in me.get('processes')]
                 for proc in mirror_procs:
-                    legs = copy.copy(proc.get('legs'))
+                    legs = copy.copy(proc.get('legs_with_decays'))
                     legs.insert(0, legs.pop(1))
-                    proc.set("legs", legs)
+                    proc.set("legs_with_decays", legs)
                 lines.append("mirror  %s" % ",".join(p.base_string() for p in \
                                                      mirror_procs))
             else:
