@@ -173,7 +173,7 @@ class Event(list):
             if not line: 
                 continue
             if line.startswith('#'):
-                self.comment += line
+                self.comment += '%s\n' % line
                 continue
             if 'first' == status:
                 self.assign_scale_line(line)
@@ -186,7 +186,7 @@ class Event(list):
             if 'part' == status:
                 self.append(Particle(line, event=self))
             else:
-                self.rwgt += line
+                self.rwgt += '%s\n' % line
             
     def assign_scale_line(self, line):
         """read the line corresponding to global event line
