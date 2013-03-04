@@ -210,8 +210,7 @@ class Event(list):
         out="""<event>
 %(scale)s
 %(particles)s
-%(comments)s
-%(reweight)s</event>
+%(comments)s%(reweight)s</event>
 """ 
 
         scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
