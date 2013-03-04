@@ -2575,7 +2575,7 @@ class decay_all_events:
                 # Treat the case that we ge too many overweight.
                 if weight > decay['max_weight']:
                     report['over_weight'] += 1
-                    report['%s_f' % decay['decay_tag']] +=1
+                    report['%s_f' % (decay['decay_tag'],)] +=1
                     if __debug__:                
                         for key, obj in self.all_ME.items():
                             if id(obj) == id(self.all_ME[production_tag]):
@@ -2591,20 +2591,20 @@ class decay_all_events:
                         ''' %\
                         (weight/decay['max_weight'], decay['decay_tag'], 
                         100 * report['over_weight']/event_nb,
-                        100 * report['%s_f' % decay['decay_tag']] / report[decay['decay_tag']],
+                        100 * report['%s_f' % (decay['decay_tag'],)] / report[decay['decay_tag']],
                         os.path.basename(self.all_ME[production_tag]['path']),
                         production_tag,
                         os.path.basename(decay['path']),
                         decay['decay_tag']))
                         
                      
-                    if weight > 1.15 * decay['max_weight']:
+                    if weight > 1.4 * decay['max_weight']:
                         error = """Found a weight larger than the computed max_weight (ratio: %s). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight. This is for channel %s.
                         """ % (weight/decay['max_weight'], decay['decay_tag'])  
                         raise MadSpinError, error
-                    elif event_nb > 500 and report['over_weight'] > 0.001 * event_nb:
+                    elif event_nb > 2000 and report['over_weight'] > 0.001 * event_nb:
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2612,14 +2612,14 @@ class decay_all_events:
                         raise MadSpinError, error
                         
                         error = True
-                    elif report[decay['decay_tag']] > 100 and \
-                        report['%s_f' % decay['decay_tag']] > 0.005 * report[decay['decay_tag']]:
+                    elif report[decay['decay_tag']] > 500 and \
+                        report['%s_f' % (decay['decay_tag'],)] > 0.001 * report[decay['decay_tag']]:
                         error = """Found too weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
-                        """ % (report['%s_f' % decay['decay_tag']],\
-                               report['%s' % decay['decay_tag']],\
-                               100 * report['%s_f' % decay['decay_tag']] / report[ decay['decay_tag']] ,\
+                        """ % (report['%s_f' % (decay['decay_tag'],)],\
+                               report['%s' % (decay['decay_tag'],)],\
+                               100 * report['%s_f' % (decay['decay_tag'],)] / report[ decay['decay_tag']] ,\
                                decay['decay_tag'])  
                         raise MadSpinError, error
                     
@@ -2677,6 +2677,7 @@ class decay_all_events:
         
         logger.info('detect independant decays')
         start = time.time()
+        # Possbilitiy to Bypass this step 
         if len(self.all_decay) == 1:
             relation = {}
             base_tag = None
@@ -2708,6 +2709,7 @@ class decay_all_events:
         # Loop over the class and create the relation information about the 1     
         for ((nbody, pid, finals),decays) in nbody_to_decay.items():  
             if len(decays) == 1:
+                misc.sprint((nbody, pid, finals),decays[0]['path'])
                 continue  
             mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
             
@@ -3331,7 +3333,8 @@ class decay_all_events:
                 for dec in prod['decays']:
                     if dec['decay_tag']:
                         assert 'max_weight' in dec and dec['max_weight'] ,\
-                                           'fail for %s' % str(dec['decay_tag'])
+                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
+                                                  os.path.basename(prod['path']))
             
         self.evtfile.seek(0)
         return
