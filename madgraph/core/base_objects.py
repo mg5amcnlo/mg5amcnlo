@@ -2173,6 +2173,8 @@ class Process(PhysicsObject):
         self['overall_orders'] = {}
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
+        # Legs with decay chains substituted in
+        self['legs_with_decays'] = LegList()
         # Loop particles if the process is to be computed at NLO
         self['perturbation_couplings']=[]        
         # These orders restrict the order of the squared amplitude.
@@ -2188,7 +2190,7 @@ class Process(PhysicsObject):
     def filter(self, name, value):
         """Filter for valid process property values."""
 
-        if name == 'legs':
+        if name in ['legs', 'legs_with_decays'] :
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
@@ -2298,6 +2300,14 @@ class Process(PhysicsObject):
 
         return super(Process, self).set(name, value) # call the mother routine
 
+    def get(self, name):
+        """Special get for legs_with_decays"""
+        
+        if name == 'legs_with_decays':
+            self.get_legs_with_decays()
+
+        return super(Process, self).get(name) # call the mother routine
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
@@ -2305,6 +2315,7 @@ class Process(PhysicsObject):
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
+                'legs_with_decays',
                 'perturbation_couplings', 'has_born', 'NLO_mode']
 
     def nice_string(self, indent=0, print_weighted = True):
@@ -2319,7 +2330,7 @@ class Process(PhysicsObject):
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
-                # Separate initial and final legs by ">"
+                # Separate initial and final legs by >
                 mystr = mystr + '> '
                 # Add required s-channels
                 if self['required_s_channels'] and \
@@ -2632,9 +2643,10 @@ class Process(PhysicsObject):
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""
 
+        if self['legs_with_decays']:
+            return self['legs_with_decays']
+
         legs = copy.deepcopy(self.get('legs'))
-        if self.get('is_decay_chain'):
-            legs.pop(0)
         org_decay_chains = copy.copy(self.get('decay_chains'))
         sorted_decay_chains = []
         # Sort decay chains according to leg order
@@ -2652,13 +2664,18 @@ class Process(PhysicsObject):
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1
             decay_legs = decay.get_legs_with_decays()
-            legs = legs[:ileg] + decay_legs + legs[ileg+1:]
-            ileg = ileg + len(decay_legs)
+            legs = legs[:ileg] + decay_legs[1:] + legs[ileg+1:]
+            ileg = ileg + len(decay_legs) - 1
+
+        # Replace legs with copies
+        legs = [copy.copy(l) for l in legs]
 
         for ileg, leg in enumerate(legs):
             leg.set('number', ileg + 1)
             
-        return LegList(legs)
+        self['legs_with_decays'] = LegList(legs)
+
+        return self['legs_with_decays']
 
     def list_for_sort(self):
         """Output a list that can be compared to other processes as:
@@ -2770,6 +2787,7 @@ class ProcessDefinition(Process):
         self['legs'] = MultiLegList()
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessDefinitionList()
+        if 'legs_with_decays' in self: del self['legs_with_decays']
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2801,7 +2819,10 @@ class ProcessDefinition(Process):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return super(ProcessDefinition, self).get_sorted_keys()
+        keys = super(ProcessDefinition, self).get_sorted_keys()
+        keys.remove('legs_with_decays')                                  
+
+        return keys
 
     def get_minimum_WEIGHTED(self):
         """Retrieve the minimum starting guess for WEIGHTED order, to
