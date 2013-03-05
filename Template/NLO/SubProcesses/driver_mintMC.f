@@ -459,9 +459,10 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
+      logical fillh
       integer mc_hel,ihel
       double precision volh
-      common/mc_int2/volh,mc_hel,ihel
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           use_cut
       common /to_weight/use_cut
 
@@ -715,9 +716,10 @@ c From dsample_fks
       common/c_unwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save,proc_map
+      logical fillh
       integer mc_hel,ihel
       double precision volh
-      common/mc_int2/volh,mc_hel,ihel
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -1003,6 +1005,7 @@ c
             nFKSprocess=nFKSprocessBorn(2)
          endif
          nbody=.true.
+         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
          nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
@@ -1017,8 +1020,7 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f(1) = f(1)+result(0,1)
          f(2) = f(2)+result(0,2)
-
-         if (mc_hel.ne.0) then
+         if (mc_hel.ne.0 .and. fillh) then
 c Fill the importance sampling array
             call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
          endif

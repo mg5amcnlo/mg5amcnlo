@@ -306,6 +306,10 @@ c From dsample_fks
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer itotalpoints
       common/ctotalpoints/itotalpoints
 c
@@ -378,6 +382,7 @@ c
          nFKSprocess=nFKSprocessBorn(2)
       endif
       nbody=.true.
+      fillh=.false.  ! this is set to true in BinothLHA if doing MC over helicities
       nFKSprocess_used=nFKSprocess
       nFKSprocess_used_Born=nFKSprocess
       call fks_inc_chooser()
@@ -388,6 +393,11 @@ c
 
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
+
+      if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+         call fill_MC_integer(2,ihel,abs(sigint*peso*volh))
+      endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -453,6 +463,10 @@ c
 c
 c     Global
 c
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -530,12 +544,13 @@ c-----
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel = 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
+      isum_hel=0
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig

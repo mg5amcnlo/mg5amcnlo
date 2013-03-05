@@ -2189,7 +2189,7 @@ Integrated cross-section
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
-0          ! Exact helicity sum (0 yes, n = number/event)?
+1          ! Exact helicity sum (0 yes, n = number/event)?
 1          ! Enter Configuration Number:
 %1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
 1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
@@ -2214,7 +2214,7 @@ Integrated cross-section
 0 ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
-0 ! 0 for exact hel sum
+1 ! 0 for exact hel sum
 1 ! hel configuration numb
 'test'
 1 ! 1 to save grids

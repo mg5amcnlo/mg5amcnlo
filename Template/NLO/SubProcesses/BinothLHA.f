@@ -60,9 +60,10 @@ c statistics for MadLoop
       double precision pmass(nexternal)
       integer goodhel(max_bhel),hel(0:max_bhel)
       save hel,goodhel
+      logical fillh
       integer mc_hel,ihel
       double precision volh
-      common/mc_int2/volh,mc_hel,ihel
+      common/mc_int2/volh,mc_hel,ihel,fillh
       logical unstable_point
       include 'pmass.inc'
       data nbad / 0 /
@@ -98,6 +99,14 @@ c which should be the case after the check_poles.f has been executed.
                   hel(j)=i
                endif
             enddo
+c Only do MC over helicities if there are 5 or more non-zero
+c (independent) helicities
+            if (hel(0).lt.5) then
+               write (*,'(a,i3,a)') 'Only ',hel(0)
+     $              ,' independent helicities:'/
+     $              /' switching to explicitly summing over them'
+               mc_hel=0
+            endif
             close(67)
          endif
       else
@@ -115,6 +124,7 @@ c Get random integer from importance sampling (the return value is
 c filled in driver_mintMC.f; we cannot do it here, because we need to
 c include the phase-space jacobians and all that)
             call get_MC_integer(2,hel(0),ihel,volh)
+            fillh=.true.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
                call sloopmatrixhel(p,hel(i),virt_wgts)
                virt_wgt= virt_wgt +
