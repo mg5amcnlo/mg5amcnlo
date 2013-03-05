@@ -76,68 +76,65 @@ c Ellis-Sexton scale)
       single  = 0d0
       double  = 0d0
       if (firsttime) then
-          write(*,*) "alpha_s value used for the virtuals"/
-     &     /" is (for the first PS point): ", alpha_S
-          tolerance=1d-5
-          call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found)
-          virt_wgt= virt_wgts(1)/dble(ngluons)
-          single  = virt_wgts(2)/dble(ngluons)
-          double  = virt_wgts(3)/dble(ngluons)
-          if (mc_hel.ne.0) then
-c Do MC over helicities
-             open (unit=67,file='HelFilter.dat',err=201)
-             hel(0)=0
-             j=0
-             do i=1,max_bhel
-                read(67,*,err=201) goodhel(i)
-                if (goodhel(i).gt.0) then
-                   j=j+1
-                   goodhel(j)=goodhel(i)
-                   hel(0)=hel(0)+1
-                   hel(j)=i
-                endif
-             enddo
-             close(67)
-             goto 202
- 201         write (*,*) 'Cannot do MC over hel:'/
-     &            /' "HelFilter.dat" does not exist'/
-     &            /' or does not have the correct format'
-             mc_hel=0
- 202         continue
-          endif
+         write(*,*) "alpha_s value used for the virtuals"/
+     &        /" is (for the first PS point): ", alpha_S
+         tolerance=1d-5
+         call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found)
+         virt_wgt= virt_wgts(1)/dble(ngluons)
+         single  = virt_wgts(2)/dble(ngluons)
+         double  = virt_wgts(3)/dble(ngluons)
+         if (mc_hel.ne.0) then
+c Do MC over helicities. This assumes that the 'HelFilter.dat' exists,
+c which should be the case after the check_poles.f has been executed.
+            open (unit=67,file='HelFilter.dat',status='old',err=201)
+            hel(0)=0
+            j=0
+            do i=1,max_bhel
+               read(67,*,err=201) goodhel(i)
+               if (goodhel(i).gt.0) then
+                  j=j+1
+                  goodhel(j)=goodhel(i)
+                  hel(0)=hel(0)+1
+                  hel(j)=i
+               endif
+            enddo
+            close(67)
+         endif
       else
-          tolerance=run_tolerance
-c         Just set the accuracy found to a positive value as it is not
-c         specified once the initial pole check is performed.
-          acc_found=1.0d0
-          if (mc_hel.eq.0) then
-             call sloopmatrix(p, virt_wgts)
-             virt_wgt= virt_wgts(1)/dble(ngluons)
-             single  = virt_wgts(2)/dble(ngluons)
-             double  = virt_wgts(3)/dble(ngluons)
-          else
+         tolerance=run_tolerance
+c Just set the accuracy found to a positive value as it is not specified
+c once the initial pole check is performed.
+         acc_found=1.0d0
+         if (mc_hel.eq.0) then
+            call sloopmatrix(p, virt_wgts)
+            virt_wgt= virt_wgts(1)/dble(ngluons)
+            single  = virt_wgts(2)/dble(ngluons)
+            double  = virt_wgts(3)/dble(ngluons)
+         else
 c Get random integer from importance sampling (the return value is
-c filled in driver_mintMC.f)
-             call get_MC_integer(2,hel(0),ihel,volh)
-             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
-                call sloopmatrixhel(p,hel(i),virt_wgts)
-                virt_wgt= virt_wgt +
-     &               virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
-                single  = single   +
-     &               virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
-                double  = double   +
-     &               virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
-             enddo
-c Average over initial state helicities
-             if (nincoming.ne.2) then
-                write (*,*)
-     &               'Cannot do MC over helicities for 1->N processes'
-                stop
-             endif
-             virt_wgt=virt_wgt/4d0/dble(ngluons)
-             single  = single/4d0/dble(ngluons)
-             double  = double/4d0/dble(ngluons)
-          endif
+c filled in driver_mintMC.f; we cannot do it here, because we need to
+c include the phase-space jacobians and all that)
+            call get_MC_integer(2,hel(0),ihel,volh)
+            do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
+               call sloopmatrixhel(p,hel(i),virt_wgts)
+               virt_wgt= virt_wgt +
+     &              virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
+               single  = single   +
+     &              virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
+               double  = double   +
+     &              virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+            enddo
+c Average over initial state helicities (and take the ngluon factor into
+c account)
+            if (nincoming.ne.2) then
+               write (*,*)
+     &              'Cannot do MC over helicities for 1->N processes'
+               stop
+            endif
+            virt_wgt=virt_wgt/4d0/dble(ngluons)
+            single  = single/4d0/dble(ngluons)
+            double  = double/4d0/dble(ngluons)
+         endif
       endif
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
@@ -160,80 +157,84 @@ c and it will use the next one for that purpose
       PoleDiff(1)=dabs(single - madfks_single)
       PoleDiff(2)=dabs(double - madfks_double)
       if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
-           unstable_point = .not.
-     1        (((PoleDiff(1)+PoleDiff(2))/
-     1        (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))).lt.tolerance)
+         unstable_point = .not.
+     &        (((PoleDiff(1)+PoleDiff(2))/
+     &        (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))).lt.tolerance)
       else
-           unstable_point = .not.
-     1        ((PoleDiff(1)+PoleDiff(2)).lt.tolerance)
+         unstable_point = .not.
+     &        ((PoleDiff(1)+PoleDiff(2)).lt.tolerance)
       endif
       if (unstable_point) then
-          nunst = nunst+1
-          if (nunst.lt.10) then
-              if (nunst.eq.1) then
-                open(unit=78, file='UPS.log')
-              else
-                open(unit=78, file='UPS.log', access='append')
-              endif
-              write(78,*) '===== UPS #',nunst,' ====='
-              write(78,*) 'mu_r    =',mu_r           
-              write(78,*) 'alpha_S =',alpha_S
-              if (mc_hel.ne.0) then
-                 write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
-              endif
-              write(78,*) '1/eps**2 expected from MadFKS=',madfks_double
-              write(78,*) '1/eps**2 obtained in MadLoop =',double
-              write(78,*) '1/eps    expected from MadFKS=',madfks_single
-              write(78,*) '1/eps    obtained in MadLoop =',single
-              write(78,*) 'finite   obtained in MadLoop =',virt_wgt
-              do i = 1, nexternal-1
-                write(78,'(i2,1x,5e25.15)') 
-     1 i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-              enddo
-              close(78)
-          endif
+         nunst = nunst+1
+         if (nunst.lt.10) then
+            if (nunst.eq.1) then
+               open(unit=78, file='UPS.log')
+            else
+               open(unit=78, file='UPS.log', access='append')
+            endif
+            write(78,*) '===== UPS #',nunst,' ====='
+            write(78,*) 'mu_r    =',mu_r           
+            write(78,*) 'alpha_S =',alpha_S
+            if (mc_hel.ne.0) then
+               write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
+            endif
+            write(78,*) '1/eps**2 expected from MadFKS=',madfks_double
+            write(78,*) '1/eps**2 obtained in MadLoop =',double
+            write(78,*) '1/eps    expected from MadFKS=',madfks_single
+            write(78,*) '1/eps    obtained in MadLoop =',single
+            write(78,*) 'finite   obtained in MadLoop =',virt_wgt
+            do i = 1, nexternal-1
+               write(78,'(i2,1x,5e25.15)') 
+     &              i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+            enddo
+            close(78)
+         endif
       endif
 
 
       if (firsttime) then
-          if (.not. unstable_point) then
-              write(*,*) "---- POLES CANCELLED ----"
-              firsttime = .false.
-          else
-              write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     1         tolerance
-              write(*,*) " COEFFICIENT DOUBLE POLE:"
-              write(*,*) "       MadFKS: ", madfks_double,
-     1                   "          OLP: ", double
-              write(*,*) " COEFFICIENT SINGLE POLE:"
-              write(*,*) "       MadFKS: ",madfks_single,
-     1                   "          OLP: ",single
-              write(*,*) " FINITE:"
-              write(*,*) "          OLP: ",virt_wgt
-              write(*,*) 
-              write(*,*) " MOMENTA (Exyzm): "
-              do i = 1, nexternal-1
-                write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-              enddo
-              write(*,*) 
-              write(*,*) " SCALE**2: ", QES2
-              
-              if (nbad .lt. nbadmax) then
-                  nbad = nbad + 1
-                  write(*,*) " Trying another PS point"
-              else
-                  write(*,*) " TOO MANY FAILURES, QUITTING"
-                  stop
-              endif
-          endif
+         if (.not. unstable_point) then
+            write(*,*) "---- POLES CANCELLED ----"
+            firsttime = .false.
+         else
+            write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
+     &           tolerance
+            write(*,*) " COEFFICIENT DOUBLE POLE:"
+            write(*,*) "       MadFKS: ", madfks_double,
+     &           "          OLP: ", double
+            write(*,*) " COEFFICIENT SINGLE POLE:"
+            write(*,*) "       MadFKS: ",madfks_single,
+     &           "          OLP: ",single
+            write(*,*) " FINITE:"
+            write(*,*) "          OLP: ",virt_wgt
+            write(*,*) 
+            write(*,*) " MOMENTA (Exyzm): "
+            do i = 1, nexternal-1
+               write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+            enddo
+            write(*,*) 
+            write(*,*) " SCALE**2: ", QES2
+            
+            if (nbad .lt. nbadmax) then
+               nbad = nbad + 1
+               write(*,*) " Trying another PS point"
+            else
+               write(*,*) " TOO MANY FAILURES, QUITTING"
+               stop
+            endif
+         endif
       endif
       if(doVirtTest.and.born_wgt.ne.0d0)then
          virtmax=max(virtmax,virt_wgt/born_wgt/ao2pi)
          virtmin=min(virtmin,virt_wgt/born_wgt/ao2pi)
          virtsum=virtsum+virt_wgt/born_wgt/ao2pi
       endif
-111   continue
+ 111  continue
       return
+ 201  write (*,*) 'Cannot do MC over hel:'/
+     &     /' "HelFilter.dat" does not exist'/
+     &     /' or does not have the correct format'
+      stop
       end
 
       subroutine BinothLHAInit(filename)
