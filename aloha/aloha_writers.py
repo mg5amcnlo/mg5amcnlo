@@ -446,6 +446,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   '':'(%s)'
                    }
             
         if fct in self.fct_format:

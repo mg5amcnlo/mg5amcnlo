@@ -1509,6 +1509,7 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'legs_with_decays': self.myleglist,
                        'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
@@ -1589,7 +1590,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'legs_with_decays\': %s\n}" % repr(self.myleglist)
 
         self.assertEqual(goal, str(self.myprocess))
 
