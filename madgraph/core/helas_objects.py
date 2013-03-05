@@ -4683,7 +4683,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     if matrix_element.get('processes') and \
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
-                        me_tags.append(me_tag)
+                        if combine:
+                            me_tags.append(me_tag)
 
 
 
