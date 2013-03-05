@@ -4505,7 +4505,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 decay_chain))
             
 
-    def combine_decay_chain_processes(self):
+    def combine_decay_chain_processes(self, combine=True):
         """Recursive function to generate complete
         HelasMatrixElements, combining the core process with the decay
         chains.
@@ -4516,6 +4516,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         * If the number of decay chains and decaying final state particles
         don't correspond, all decays applying to a given particle type are
         combined (without double counting).
+        * combine allow to merge identical ME
         """
 
         # End recursion when there are no more decay chains
@@ -4529,7 +4530,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
         for decay_chain in self['decay_chains']:
             # This is where recursion happens
-            decay_elements.append(decay_chain.combine_decay_chain_processes())
+            decay_elements.append(decay_chain.combine_decay_chain_processes(combine))
 
         # Store the result in matrix_elements
         matrix_elements = HelasMatrixElementList()
@@ -4656,19 +4657,23 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                              ", ".join([d.get('processes')[0].nice_string().\
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
-
+                    
                 matrix_element.insert_decay_chains(decay_dict)    
                 
-                me_tag = IdentifyMETag.create_tag(\
+                if combine:
+                    me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
                             matrix_element.get('identical_particle_factor'))
-
                 try:
+                    if not combine:
+                        raise ValueError
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
                     other_processes = matrix_elements[\
                     me_tags.index(me_tag)].get('processes')
+                      
+                    
                     logger.info("Combining process with %s" % \
                       other_processes[0].nice_string().replace('Process: ', ''))
                     other_processes.extend(matrix_element.get('processes'))
@@ -4890,7 +4895,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
                 matrix_element_list = HelasDecayChainProcess(amplitude).\
-                                      combine_decay_chain_processes()
+                                      combine_decay_chain_processes(combine)
             else:
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,

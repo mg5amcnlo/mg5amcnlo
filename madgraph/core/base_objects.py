@@ -2667,6 +2667,7 @@ class Process(PhysicsObject):
         """Gives the pdg codes for final state particles"""
 
         return [l.get('id') for l in self.get_final_legs()]
+    
                 
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""

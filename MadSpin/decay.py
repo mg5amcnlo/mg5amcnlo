@@ -1410,16 +1410,16 @@ class AllMatrixElement(dict):
         """
         
         # Usefull debug code tell the status of the various imported decay
-        #text = ''
-        #data = []
-        #for key, prod in self.items():
-        #    if prod in data:
-        #        continue
-        #    data.append(prod)
-        #    br = prod['total_br']
-        #    if br:
-        #        text += '%s %s %s\n' %(key, os.path.basename(prod['path']), br)
-        #misc.sprint(text)
+        text = ''
+        data = []
+        for key, prod in self.items():
+            if prod in data:
+                continue
+            data.append(prod)
+            br = prod['total_br']
+            if br:
+                text += '%s %s %s\n' %(key, os.path.basename(prod['path']), br)
+
         
         
         if  not isinstance(proc_list, list):
@@ -2577,9 +2577,9 @@ class decay_all_events:
                     report['over_weight'] += 1
                     report['%s_f' % (decay['decay_tag'],)] +=1
                     if __debug__:                
-                        for key, obj in self.all_ME.items():
-                            if id(obj) == id(self.all_ME[production_tag]):
-                                print key
+                        #for key, obj in self.all_ME.items():
+                        #    if id(obj) == id(self.all_ME[production_tag]):
+                        #        print key
                         #print p_full_str
                         #print '*****'
                         #p, p_str=self.curr_event.give_momenta(event_map)
@@ -2770,7 +2770,7 @@ class decay_all_events:
                     tag_j = decays[j]['tag'][2:]     
                     if valid[(i,j)] and tag_j not in relation:
                         relation[tag_j] = (tag_i, valid[(i,j)])
-
+                        
         # fullfill the object with the already identify to one decay.
         #and add those who doesn't have any relations.
         for decay in self.all_decay.values():
@@ -2783,7 +2783,9 @@ class decay_all_events:
             for tag in tags[1:]:
                 relation[tag] = out
 
+        
         decay_mapping = self.get_process_identical_ratio(relation)
+        
         logger.info('Done in %ss' % (time.time()-start))
         return decay_mapping
 
@@ -2969,9 +2971,11 @@ class decay_all_events:
         logger.info('generate matrix element for decay only (1 - > N).')
         start = time.time()
         commandline = ''
+        i=0
         for processes in self.list_branches.values():
             for proc in processes:
-                commandline+="add process %s --no_warning=duplicate;" % (proc)        
+                commandline+="add process %s @%i --no_warning=duplicate;" % (proc,i)
+                i+=1        
         commandline = commandline.replace('add process', 'generate',1)
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.
@@ -3331,7 +3335,7 @@ class decay_all_events:
         if __debug__:
             for prod in self.all_ME.values():
                 for dec in prod['decays']:
-                    if dec['decay_tag']:
+                    if dec['decay_tag']:                        
                         assert 'max_weight' in dec and dec['max_weight'] ,\
                                   'fail for %s (%s)' % (str(dec['decay_tag']), \
                                                   os.path.basename(prod['path']))
