@@ -2460,11 +2460,8 @@ class decay_all_events:
         
         # launch the decay and reweighting
         efficiency = self.decaying_events()
-        misc.sprint(efficiency)
         if  efficiency != 1:
             # need to change the banner information [nb_event/cross section]
-            print self.outputfile
-            print self.outputfile.name
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
             self.outputfile = open(self.outputfile.name, 'w')
             self.write_banner_information(efficiency)
@@ -2576,18 +2573,9 @@ class decay_all_events:
                 if weight > decay['max_weight']:
                     report['over_weight'] += 1
                     report['%s_f' % (decay['decay_tag'],)] +=1
-                    if __debug__:                
-                        #for key, obj in self.all_ME.items():
-                        #    if id(obj) == id(self.all_ME[production_tag]):
-                        #        print key
-                        #print p_full_str
-                        #print '*****'
-                        #p, p_str=self.curr_event.give_momenta(event_map)
-                        #
-                        #print p_str
-                        #print '******'        
-                        misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
-                        production_tag:%s [%s], decay:%s [%s]
+                    if __debug__:                     
+                        logger.debug('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
+                        production_tag:%s [%s], decay:%s [%s]\n %s
                         ''' %\
                         (weight/decay['max_weight'], decay['decay_tag'], 
                         100 * report['over_weight']/event_nb,
@@ -2595,13 +2583,13 @@ class decay_all_events:
                         os.path.basename(self.all_ME[production_tag]['path']),
                         production_tag,
                         os.path.basename(decay['path']),
-                        decay['decay_tag']))
+                        decay['decay_tag'], p_full_str))
                         
                      
-                    if weight > 1.4 * decay['max_weight']:
+                    if weight > 10 * decay['max_weight']:
                         error = """Found a weight larger than the computed max_weight (ratio: %s). 
-    Please relaunch MS with more events/PS point by event in the
-    computation of the maximum_weight. This is for channel %s.
+    Please relaunch MS with more events/PS point by event (or smaller BW_cut) in the
+    computation of the maximum_weight. This error occur for channel %s.
                         """ % (weight/decay['max_weight'], decay['decay_tag'])  
                         raise MadSpinError, error
                     elif event_nb > 2000 and report['over_weight'] > 0.001 * event_nb:
@@ -2613,7 +2601,7 @@ class decay_all_events:
                         
                         error = True
                     elif report[decay['decay_tag']] > 500 and \
-                        report['%s_f' % (decay['decay_tag'],)] > 0.001 * report[decay['decay_tag']]:
+                        report['%s_f' % (decay['decay_tag'],)] > 0.005 * report[decay['decay_tag']]:
                         error = """Found too weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2663,6 +2651,7 @@ class decay_all_events:
         logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
         logger.info('Average number of trial points per production event: '\
             +str(float(trial_nb_all_events)/float(event_nb)))
+        logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         
@@ -2709,7 +2698,6 @@ class decay_all_events:
         # Loop over the class and create the relation information about the 1     
         for ((nbody, pid, finals),decays) in nbody_to_decay.items():  
             if len(decays) == 1:
-                misc.sprint((nbody, pid, finals),decays[0]['path'])
                 continue  
             mom_init = momentum(self.pid2mass(pid), 0, 0, 0)
             
@@ -3292,7 +3280,7 @@ class decay_all_events:
         
         # Computation of the maximum weight used in the unweighting procedure
         for decaying in probe_weight:
-            me_linked = [me for me in self.all_ME.values() if me['decaying'] == decaying]
+            #me_linked = [me for me in self.all_ME.values() if me['decaying'] == decaying]
             for decay_tag in probe_weight[decaying][0].keys():
                 weights=[]
                 for ev in range(numberev):
@@ -3303,11 +3291,17 @@ class decay_all_events:
                 if not weights:
                     logger.warning( 'no events for %s' % decay_tag)
                     continue
-                weights.sort()
-                weights[len(weights)//2:]
+                weights.sort(reverse=True)
+                assert weights[0] >= weights[1]
+                if len(weights) > 30:
+                    to_keep = min(len(weights)//2, 50)
+                weights[to_keep:]
+                
                 ave_weight, std_weight=decay_tools.get_mean_sd(weights)
                 std_weight=math.sqrt(std_weight)
                 base_max_weight = 1.05 * (ave_weight+4.5*std_weight)
+                if weights[0] > base_max_weight:
+                    base_max_weight = 1.05 * weights[0]
               
                 for associated_decay, ratio in decay_mapping[decay_tag]:
                     max_weight= ratio * base_max_weight
@@ -3733,8 +3727,14 @@ class decay_all_events:
         
         first = True
         max_br = max([m['total_br'] for m in self.all_ME.values()])
+        if max_br >= 1:
+            if max_br > 1.0001:
+                raise MadSpinError, 'BR is larger than one.'
+            max_br = 1
         for production in self.all_ME.values():
             if production['total_br'] < max_br:
+                if production['total_br'] > 0.9999:
+                    continue
                 if first:
                     first = False
                     min_br = min([m['total_br'] for m in self.all_ME.values()])
@@ -3769,7 +3769,7 @@ class decay_all_events:
         
         if __debug__:
             for production in self.all_ME.values():
-                assert production['total_br'] == min(total_br)
+                assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = min(total_br) * eff
         

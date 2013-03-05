@@ -13,8 +13,9 @@
 #
 ################################################################################
 """ Command interface for MadSpin """
-
+from __future__ import division
 import logging
+import math
 import os
 import re
 import shutil
@@ -62,7 +63,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         self.options = {'max_weight': -1, 'BW_effect': 1, 
                         'curr_dir': os.path.realpath(os.getcwd()),
-                        'Nevents_for_max_weigth': 75,
+                        'Nevents_for_max_weigth': 0,
                         'max_weight_ps_point': 400,
                         'BW_cut':15,
                         'zeromass_for_max_weight':5}
@@ -117,6 +118,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif 'mg5proccard' not in self.banner:
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain generation information')
+        elif 'mgruncard' not in self.banner and not self.options['Nevents_for_max_weigth']:
+            self.options['Nevents_for_max_weigth'] = 75
+        
+        if 'mgruncard' in self.banner and not self.options['Nevents_for_max_weigth']:
+            nevents = int(self.banner.get_detail('run_card', 'nevents'))
+            N_weight = max([75, int(0.75*nevents**(1/3))])
+            self.options['Nevents_for_max_weigth'] = N_weight  
+            
         
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
