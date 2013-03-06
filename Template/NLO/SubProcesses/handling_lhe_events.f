@@ -33,41 +33,6 @@ c
       end
 
 
-
-      subroutine write_lhef_header_string(ifile,string,MonteCarlo)
-      implicit none 
-      integer ifile
-      character*10 MonteCarlo,string
-c
-      write(ifile,'(a)')
-     #     '<LesHouchesEvents version="1.0">'
-      write(ifile,'(a)')
-     #     '  <!--'
-      write(ifile,'(a)')
-     #     MonteCarlo
-      write(ifile,'(a)')
-     #     '  -->'
-      write(ifile,'(a)')
-     #     '  <header>'
-      write(ifile,'(a)')string
-      write(ifile,'(a)')
-     #     '  </header>'
-      return
-      end
-
-      subroutine fill_MC_mshell_wrap(MC,masses)
-      double precision mcmass(-5:21),masses(-5:21)
-      common/cmcmass/mcmass
-      character*10 MonteCarlo,MC
-      common/cMonteCarloType/MonteCarlo
-      MonteCarlo=MC
-      call fill_MC_mshell()
-      do i=-5,21
-         masses(i)=mcmass(i)
-      enddo
-      return
-      end
-
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
       integer ifile,nevents,iseed,i
@@ -143,12 +108,13 @@ c Replace the random number seed with the one used...
       end
 
 
-
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
-      integer ifile,nevents
+      integer ifile,nevents,i,ii,iistr
       character*10 MonteCarlo
       character*80 string,string0
+      character*3 event_norm
+      common/cevtnorm/event_norm
       nevents = -1
       MonteCarlo = ''
 c
@@ -157,6 +123,16 @@ c
         string0=string
         if (index(string,'</header>').ne.0) return
         read(ifile,'(a)')string
+        if(index(string,'= nevents').ne.0)
+     #    read(string,*)nevents,string0
+        if(index(string,'parton_shower').ne.0)then
+           ii=iistr(string)
+           MonteCarlo=string(ii:ii+10)
+        endif
+        if(index(string,'event_norm').ne.0)then
+           ii=iistr(string)
+           event_norm=string(ii:ii+3)
+        endif
       enddo
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
@@ -751,5 +727,63 @@ c
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
 c
+      return
+      end
+
+
+
+      subroutine copy_header(infile,outfile,nevts)
+      implicit none
+      character*74 buff2
+      integer nevts,infile,outfile
+c
+      buff2=' '
+      do while(.true.)
+         read(infile,'(a)')buff2
+         if(index(buff2,'= nevents').eq.0)write(outfile,*)buff2
+         if(index(buff2,'= nevents').ne.0)exit
+      enddo
+      write(outfile,*)
+     &nevts,' = nevents    ! Number of unweighted events requested'
+      do while(index(buff2,'</header>').eq.0)
+         read(infile,'(a)')buff2
+         write(outfile,*)buff2
+      enddo
+c
+      return
+      end
+
+
+      subroutine fill_MC_mshell_wrap(MC,masses)
+      double precision mcmass(-5:21),masses(-5:21)
+      common/cmcmass/mcmass
+      character*10 MonteCarlo,MC
+      common/cMonteCarloType/MonteCarlo
+      MonteCarlo=MC
+      call fill_MC_mshell()
+      do i=-5,21
+         masses(i)=mcmass(i)
+      enddo
+      return
+      end
+
+
+      function iistr(string)
+c returns the position of the first non-blank character in string
+c 
+      implicit none
+      logical is_i
+      character*(*) string
+      integer i,iistr
+c
+      is_i=.false.
+      iistr=0
+      do i=1,len(string)
+         if(string(i:i).ne.' '.and..not.is_i)then
+            is_i=.true.
+            iistr=i
+         endif
+      enddo
+
       return
       end
