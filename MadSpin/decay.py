@@ -2574,7 +2574,7 @@ class decay_all_events:
                     report['over_weight'] += 1
                     report['%s_f' % (decay['decay_tag'],)] +=1
                     if __debug__:                     
-                        logger.debug('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
+                        misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
                         production_tag:%s [%s], decay:%s [%s]\n %s
                         ''' %\
                         (weight/decay['max_weight'], decay['decay_tag'], 
@@ -2592,7 +2592,7 @@ class decay_all_events:
     computation of the maximum_weight. This error occur for channel %s.
                         """ % (weight/decay['max_weight'], decay['decay_tag'])  
                         raise MadSpinError, error
-                    elif event_nb > 2000 and report['over_weight'] > 0.001 * event_nb:
+                    elif report['over_weight'] > max(0.06*math.sqrt(event_nb),1):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2600,9 +2600,8 @@ class decay_all_events:
                         raise MadSpinError, error
                         
                         error = True
-                    elif report[decay['decay_tag']] > 500 and \
-                        report['%s_f' % (decay['decay_tag'],)] > 0.005 * report[decay['decay_tag']]:
-                        error = """Found too weight larger than the computed max_weight (%s/%s = %s%%),
+                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.1*report[decay['decay_tag']],1):
+                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
                         """ % (report['%s_f' % (decay['decay_tag'],)],\
@@ -2641,12 +2640,24 @@ class decay_all_events:
         self.evtfile.close()
         self.outputfile.close()
 
-        if report['over_weight'] > 0.001 * event_nb:
+        if report['over_weight'] > max(0.04*math.sqrt(event_nb),1):
             error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
             """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
             raise MadSpinError, error
+        for decay_tag in self.all_decay.keys():
+            if report['%s_f' % (decay_tag,)] > max(0.06*report[decay_tag],1):
+                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
+    for channel %s. Please relaunch MS with more events/PS point by event in the
+    computation of the maximum_weight.
+                        """ % (report['%s_f' % (decay_tag,)],\
+                               report['%s' % (decay_tag,)],\
+                               100 * report['%s_f' % (decay_tag,)] / report[decay_tag] ,\
+                               decay_tag)  
+                        raise MadSpinError, error
+        
+        
 
         logger.info('Total number of events written: %s/%s ' % (event_nb, event_nb+nb_skip))
         logger.info('Average number of trial points per production event: '\
@@ -3179,7 +3190,7 @@ class decay_all_events:
         logger.info('   Estimating the maximum weight    ')
         logger.info('   *****************************    ')
         logger.info('     Probing the first '+str(numberev)+' events')
-        logger.info('     at '+str(numberps)+' phase space points')
+        logger.info('     with '+str(numberps)+' phase space points')
         if len(decay_set) > 1: 
             logger.info('     For %s decaying particle type in the final states' % len(decay_set))
         logger.info('  ')
@@ -3299,7 +3310,7 @@ class decay_all_events:
                 
                 ave_weight, std_weight=decay_tools.get_mean_sd(weights)
                 std_weight=math.sqrt(std_weight)
-                base_max_weight = 1.05 * (ave_weight+4.5*std_weight)
+                base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
                 if weights[0] > base_max_weight:
                     base_max_weight = 1.05 * weights[0]
               
@@ -3771,7 +3782,7 @@ class decay_all_events:
             for production in self.all_ME.values():
                 assert production['total_br'] - min(total_br) < 1e-4
         
-        self.branching_ratio = min(total_br) * eff
+        self.branching_ratio = max(total_br) * eff
         
         
         self.banner['madspin'] += ms_banner

@@ -66,7 +66,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'Nevents_for_max_weigth': 0,
                         'max_weight_ps_point': 400,
                         'BW_cut':15,
-                        'zeromass_for_max_weight':5}
+                        'zeromass_for_max_weight':5,
+                        'nb_sigma':0}
         
 
         
@@ -120,12 +121,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd('Event file does not contain generation information')
         elif 'mgruncard' not in self.banner and not self.options['Nevents_for_max_weigth']:
             self.options['Nevents_for_max_weigth'] = 75
+            self.options['nb_sigma'] = 4.5
         
         if 'mgruncard' in self.banner and not self.options['Nevents_for_max_weigth']:
             nevents = int(self.banner.get_detail('run_card', 'nevents'))
-            N_weight = max([75, int(0.75*nevents**(1/3))])
-            self.options['Nevents_for_max_weigth'] = N_weight  
-            
+            N_weight = max([75, int(3*nevents**(1/3))])
+            self.options['Nevents_for_max_weigth'] = N_weight
+            N_sigma = max(4.5, math.log(nevents,7.7))
+            self.options['nb_sigma'] = N_sigma
         
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
