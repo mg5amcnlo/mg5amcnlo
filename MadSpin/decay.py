@@ -1979,7 +1979,19 @@ class width_estimate(object):
         ff.write(self.banner['slha'])
         ff.close()
         
-        cmd.run_cmd('launch -f')
+        lhapdf = False
+        if os.environ.has_key('lhapdf'):
+            lhapdf = os.environ['lhapdf']
+            del os.environ['lhapdf']
+        
+        # run but remove the pdf dependencies
+        cmd.import_command_file(['launch',
+                                 'set lpp1 0', 
+                                 'set lpp2 0', 
+                                 'done'])
+
+        if lhapdf:
+            os.environ['lhapdf'] = lhapdf
                 
         #me_cmd = me_interface.MadEventCmd(pjoin(path_me,'width_calculator'))
         #me_cmd.exec_cmd('set automatic_html_opening False --no_save')
