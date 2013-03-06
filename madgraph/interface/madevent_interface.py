@@ -648,7 +648,7 @@ class CheckValidForCmd(object):
             if len(args) and self.run_name != args[0]:
                 self.set_run_name(args.pop(0))
             elif not self.run_name:            
-                self.help_add_secondary_vertex()
+                self.help_add_time_of_flight()
                 raise self.InvalidCmd('Need a run_name to process')            
             event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
             if not os.path.exists(event_path):
@@ -1527,7 +1527,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             import madgraph.various.lhe_parser as lhe_parser
         except:
             import internal.lhe_parser as lhe_parser
-    
+            
+        logger.info('Add time of flight information on file %s' % event_path)
         lhe = lhe_parser.EventFile(event_path)
         output = open('%s_2vertex.lhe' % event_path, 'w')
         #write the banner to the output file
