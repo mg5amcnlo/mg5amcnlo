@@ -457,6 +457,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Comments",'$MG:color:GREEN')         
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
+        logger.info("   If that file is an (LHE) event file. The param_card of the banner")
+        logger.info("   is used and the first event compatible with the requested process")
+        logger.info("   is used for the computation of the square matrix elements")
         logger.info(" > \"--energy=\" allows to change the default value of sqrt(S).")
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
@@ -2735,22 +2738,31 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-        args = self.split_arg(line)
+        
+        args = self.split_arg(line)        
         # Check args validity
         param_card = self.check_check(args)
-        
+        options= {'events':None} # If the momentum needs to be picked from a event file
+        if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
+            logger.info("Will use the param_card contained in the banner and  the events associated")
+            import madgraph.various.banner as banner
+            options['events'] = param_card
+            mybanner = banner.Banner(param_card)
+            param_card = mybanner.charge_card('param_card')
+ 
+
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        reuse = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"       
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
         if args[0] in ['stability', 'profile']:
-            stab_statistics = int(args[1])
+            options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
 
-        energy = float(args[-1].split('=')[1])
+        options['energy'] = float(args[-1].split('=')[1])
         args = args[:-1]        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
@@ -2785,9 +2797,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('cmdprint'),
                    logging.getLogger('madgraph.model'),
                    logging.getLogger('madgraph.base_objects')]
-        old_levels = [logger.level for logger in loggers]
-        for logger in loggers:
-            logger.setLevel(logging.WARNING)
+        old_levels = [log.level for log in loggers]
+        for log in loggers:
+            log.setLevel(logging.WARNING)
         
         # run the check
         cpu_time1 = time.time()
@@ -2820,15 +2832,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  reuse = reuse,
-                                                  cmd = self)        
+                                                  options = options,
+                                                  cmd = self,
+                                                  )        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -2837,8 +2849,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -2863,9 +2874,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                energy=energy,
+                                                options=options,
                                                 cuttools=CT_dir,
-                                                reuse = reuse,
+                                                reuse = options['reuse'],
                                                 cmd = self)
             
             # restore previous settings
@@ -2878,9 +2889,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
-                                            reuse = reuse,
+                                            reuse = options['reuse'],
                                             cmd = self,
-                                            energy=energy)
+                                            options=options)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2888,18 +2899,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(lorentz_result)
         
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
@@ -2934,7 +2945,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,reuse) + '\n'
+                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
@@ -2951,16 +2962,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if len(text.split('\n'))>20 and not reuse and text!='':
+        if len(text.split('\n'))>20 and not options['reuse'] and text!='':
             pydoc.pager(text)
             
         # Restore diagram logger
-        for i, logger in enumerate(loggers):
-            logger.setLevel(old_levels[i])
+        for i, log in enumerate(loggers):
+            log.setLevel(old_levels[i])
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if len(text.split('\n'))<=20 or reuse:
+        if len(text.split('\n'))<=20 or options['reuse']:
             # Useful to really specify what logger is used for ML acceptance tests
             logging.getLogger('madgraph.check_cmd').info(text)
         else:
@@ -2968,7 +2979,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
-        if not reuse:
+        if not options['reuse']:
             process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
@@ -3525,7 +3536,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          self._curr_model.get('perturbation_couplings') not in \
                                                                    [[],['QCD']]:
                         if 1 not in self._curr_model.get('gauge') :
-                            logger.warning('This model does not allow Feynman '+\
+                            logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
                                                 'QCD loop cmputations with it.')
                         else:
@@ -3535,13 +3546,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             self.do_set('gauge Feynman', log=False)
                             return
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to Feynman since '+\
+                        logger_stderr.warning('Change the gauge to Feynman since '+\
                                        'the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the'+\
+                        logger_stderr.warning('Change the gauge to unitary since the'+\
                           ' model does not allow Feynman gauge.'+\
                                                   ' Please re-import the model')
                         self._curr_model = None
