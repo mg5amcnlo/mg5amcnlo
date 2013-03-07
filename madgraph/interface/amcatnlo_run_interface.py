@@ -2284,6 +2284,7 @@ Integrated cross-section
 
         # make Source
         self.update_status('Compiling source...', level=None)
+        misc.compile(['cleanlibs'], cwd = sourcedir)
         misc.compile(cwd = sourcedir)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \

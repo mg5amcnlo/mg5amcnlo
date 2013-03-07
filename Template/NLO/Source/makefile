@@ -71,6 +71,12 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+cleanlibs:
+	rm -f *.o
+	cd MODEL; make clean
+	cd PDF; make clean
+	cd DHELAS; make clean
+
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
