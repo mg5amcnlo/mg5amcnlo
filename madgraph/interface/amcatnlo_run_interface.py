@@ -1272,10 +1272,16 @@ Please, shower the Les Houches events before using them for physics analyses."""
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
+
+# check that PYTHIA6PT is not used for processes with FSR
+            if shower == 'PYTHIA6PT' and \
+                os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'has_fsr.dat')):
+                raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])

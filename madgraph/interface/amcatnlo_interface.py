@@ -541,6 +541,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
+            if self._curr_matrix_elements['has_isr']:
+                open(pjoin(path, 'has_isr.dat'),'w').write('')
+            if self._curr_matrix_elements['has_fsr']:
+                open(pjoin(path, 'has_fsr.dat'),'w').write('')
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
