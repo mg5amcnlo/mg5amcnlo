@@ -471,7 +471,8 @@ class CheckValidForCmd(object):
             self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
-                              
+                
+        lock = None              
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
             filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
@@ -487,6 +488,8 @@ class CheckValidForCmd(object):
             if tag: 
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
+        
+        return lock
             
 
     def check_delphes(self, arg):
