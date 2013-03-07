@@ -93,6 +93,13 @@ def import_model(model_name, decay=False, restrict=True):
             restrict_file = os.path.join(model_path,'restrict_default.dat')
         else:
             restrict_file = None
+        if isinstance(restrict, str):
+            if os.path.exists(os.path.join(model_path, restrict)):
+                restrict_file = os.path.join(model_path, restrict)
+            elif os.path.exists(restrict):
+                restrict_file = restrict
+            else:
+                raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
     model = import_full_model(model_path, decay) 
@@ -1066,7 +1073,7 @@ class RestrictModel(model_reader.ModelReader):
 
         # compute the value of all parameters
         self.set_parameters_and_couplings(param_card)
-        # associte to each couplings the associated vertex: def self.coupling_pos
+        # associate to each couplings the associated vertex: def self.coupling_pos
         self.locate_coupling()
         # deal with couplings
         zero_couplings, iden_couplings = self.detect_identical_couplings()
@@ -1086,12 +1093,11 @@ class RestrictModel(model_reader.ModelReader):
         parameters = self.detect_special_parameters()
         self.fix_parameter_values(*parameters, simplify=rm_parameter, 
                                                     keep_external=keep_external)
-        
+
         # deal with identical parameters
-        if not keep_external:
-            iden_parameters = self.detect_identical_parameters()
-            for iden_param in iden_parameters:
-                self.merge_iden_parameters(iden_param)
+        iden_parameters = self.detect_identical_parameters()
+        for iden_param in iden_parameters:
+            self.merge_iden_parameters(iden_param, keep_external)
             
         # change value of default parameter if they have special value:
         # 9.999999e-1 -> 1.0
@@ -1238,11 +1244,12 @@ class RestrictModel(model_reader.ModelReader):
                         pct[0]['counterterm'][pct[1]][key] = main
 
          
-    def merge_iden_parameters(self, parameters):
-        """ merge the identical parameters given in argument """
+    def merge_iden_parameters(self, parameters, keep_external=False):
+        """ merge the identical parameters given in argument.
+        keep external force to keep the param_card untouched (up to comment)"""
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                        ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
+                 ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
@@ -1260,10 +1267,17 @@ class RestrictModel(model_reader.ModelReader):
             else:
                 self.rule_card.add_opposite(obj.lhablock.lower(), obj.lhacode, 
                                                          parameters[0][0].lhacode )
-            # delete the old parameters                
-            external_parameters.remove(obj)    
+            obj_name = obj.name
+            # delete the old parameters
+            if not keep_external:                
+                external_parameters.remove(obj)
+            elif obj.lhablock in ['MASS','DECAY']:
+                external_parameters.remove(obj)
+            else:
+                obj.name = ''
+                obj.info = 'MG5 will not use this value use instead %s*%s' %(factor,expr)    
             # replace by the new one pointing of the first obj of the class
-            new_param = base_objects.ModelVariable(obj.name, '%s*%s' %(factor, expr), 'real')
+            new_param = base_objects.ModelVariable(obj_name, '%s*%s' %(factor, expr), 'real')
             self['parameters'][()].insert(0, new_param)
         
         # For Mass-Width, we need also to replace the mass-width in the particles
@@ -1361,6 +1375,23 @@ class RestrictModel(model_reader.ModelReader):
         """ Remove all instance of the parameters in the model and replace it by 
         zero when needed."""
 
+
+        # treat specific cases for masses and width
+        for particle in self['particles']:
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+            if particle['width'] in one_parameters:
+                one_parameters.remove(particle['width'])                
+                
+        for pdg, particle in self['particle_dict'].items():
+            if particle['mass'] in zero_parameters:
+                particle['mass'] = 'ZERO'
+            if particle['width'] in zero_parameters:
+                particle['width'] = 'ZERO'
+
+
         # Add a rule for zero/one parameter
         external_parameters = self['parameters'][('external',)]
         for param in external_parameters[:]:
@@ -1373,17 +1404,7 @@ class RestrictModel(model_reader.ModelReader):
 
         special_parameters = zero_parameters + one_parameters
         
-        # treat specific cases for masses and width
-        for particle in self['particles']:
-            if particle['mass'] in zero_parameters:
-                particle['mass'] = 'ZERO'
-            if particle['width'] in zero_parameters:
-                particle['width'] = 'ZERO'
-        for pdg, particle in self['particle_dict'].items():
-            if particle['mass'] in zero_parameters:
-                particle['mass'] = 'ZERO'
-            if particle['width'] in zero_parameters:
-                particle['width'] = 'ZERO'            
+            
 
         if simplify:
             # check if the parameters is still usefull:
@@ -1442,12 +1463,9 @@ class RestrictModel(model_reader.ModelReader):
                   (keep_external and param_info[param]['dep'] == ('external',)):
                 logger_mod.debug('fix parameter value: %s' % param)
                 continue 
-            logger_mod.debug('remove parameters: %s' % param)
+            logger_mod.debug('remove parameters: %s' % (param))
             data = self['parameters'][param_info[param]['dep']]
             data.remove(param_info[param]['obj'])
-        
- 
-        
 
                 
                 

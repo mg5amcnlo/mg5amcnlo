@@ -147,6 +147,8 @@ class Banner(dict):
                 continue
             if not proc_card and tag in ['mg5proccard','mgproccard']:
                 continue
+            if not self.tag_to_file[tag]:
+                continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
             ff.close()

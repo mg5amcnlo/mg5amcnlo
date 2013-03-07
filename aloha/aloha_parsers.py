@@ -207,7 +207,11 @@ class ALOHAExpressionParser(UFOExpressionParser):
     def p_expression_power(self, p):
         'expression : expression POWER expression'
         
-        if p[1] in self.aloha_object:
+        obj = p[1]
+        if '(' in p[1]:
+            obj = p[1].split('(',1)[0]
+        
+        if obj in self.aloha_object:
             p[0] = ''.join(p[1:])
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))

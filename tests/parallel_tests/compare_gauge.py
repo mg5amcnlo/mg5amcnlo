@@ -258,15 +258,16 @@ class GaugeComparator(unittest.TestCase):
     def test_gauge_6_e500(self):
         """Test a semi-complete list of sm 2->4 processes"""
         # Create a list of processes to check automatically       
-        my_proc_list = ['g g > b b~ u u~ d d~','u u~ > b b~ e+ ve mu- vm~',
-              'u u~ > g g u d~ mu- vm~']
+#        my_proc_list = ['g g > b b~ u u~ d d~','u u~ > b b~ e+ ve mu- vm~',
+#              'u u~ > g g u d~ mu- vm~']
+        my_proc_list = ['u u~ > b b~ e+ ve mu- vm~']
 
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
-                             orders = {'QED':99, 'QCD':99},
+                             orders = {'QED':99, 'QCD':0},
                              model = "sm",
                              energy = 500,
-                             filename = "sm_gauge_6_e500.log",
+                             filename = "sm_gauge_6_e500_2.log",
                              tolerance = 1e-3)          
 
 class GaugeComparatorLoop(unittest.TestCase):
@@ -341,32 +342,57 @@ class GaugeComparatorLoop(unittest.TestCase):
     #  EXTENSIVE GAUGE TEST FOR THE SM
     ############################################################################ 
 
-    def test_gauge_loop(self):
+    def test_gauge_loop_p1(self):
         """Test a semi-complete list of sm 2->2 processes"""
         # Create a list of processes to check automatically
         my_proc_list = []
         my_proc_list.append(('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
         my_proc_list.append(('u u~ > d d~',{'QCD':0,'QED':2},['QCD'],{'QCD':2,'QED':4}))
+        my_proc_list.append(('b u > b d e+ ve',{'QCD':0,'QED':4},['QCD'],{'QCD':2,'QED':8}))
         #my_proc_list.append(('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
         #my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
         #my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
         #my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
-        my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
-        #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
-        my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
-        #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
-        #my_proc_list.append(('d d~ > d~ u u~ d',{'QED':4,'QCD':0},['QCD'],{'QCD':2,'QED':8}))
+        
         
         # Store list of non-zero processes and results in file
         self.compare_processes(my_proc_list,
                              model = "loop_sm",
                              energy = 90,
-                             filename = "loop_gauge_e90.log",
+                             filename = "loop_gauge_e90_p1.log",
                              tolerance = 1e-3)   
         # Do the test for high energy
         self.compare_processes(my_proc_list,
                              model = "loop_sm",
                              energy = 500,
-                             filename = "loop_gauge_e500.log",
+                             filename = "loop_gauge_e500_p1.log",
                              tolerance = 1e-3)   
         
+    def test_gauge_loop_p2(self):
+        """Test a semi-complete list of sm 2->2 processes"""
+        # Create a list of processes to check automatically
+        my_proc_list = []
+        my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
+        #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
+        my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
+        #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
+        my_proc_list.append(('d d~ > d~ u u~ d',{'QED':4,'QCD':0},['QCD'],{'QCD':2,'QED':8}))        
+        #my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
+        #my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+        #my_proc_list.append(('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}))
+        #my_proc_list.append(('d d~ > d~ u u~ d',{'QED':4,'QCD':0},['QCD'],{'QCD':2,'QED':8}))
+        
+        
+        # Store list of non-zero processes and results in file
+        self.compare_processes(my_proc_list,
+                             model = "loop_sm",
+                             energy = 90,
+                             filename = "loop_gauge_e90_p2.log",
+                             tolerance = 1e-3)   
+        # Do the test for high energy
+        self.compare_processes(my_proc_list,
+                             model = "loop_sm",
+                             energy = 500,
+                             filename = "loop_gauge_e500_p2.log",
+                             tolerance = 1e-3)   
+

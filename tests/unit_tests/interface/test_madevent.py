@@ -62,18 +62,10 @@ class TestMadEventCmd(unittest.TestCase):
                          'plot_card.dat')
 
         # Delphes
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_ATLAS.dat')),
-                         'delphes_card.dat')
         self.assertEqual(detect(pjoin(card_dir, 'delphes_card_CMS.dat')),
                          'delphes_card.dat')
         self.assertEqual(detect(pjoin(card_dir, 'delphes_card_default.dat')),
                          'delphes_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_ATLAS.dat')),
-                         'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_CMS.dat')),
-                         'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_default.dat')),
-                         'delphes_trigger.dat')
         # PGS
         self.assertEqual(detect(pjoin(card_dir, 'pgs_card_ATLAS.dat')),
                          'pgs_card.dat')
