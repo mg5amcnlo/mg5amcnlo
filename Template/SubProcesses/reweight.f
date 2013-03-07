@@ -498,6 +498,8 @@ c   Cluster the configuration
 c   
       
 c     First time, cluster according to this config and store jets
+c     (following times, only accept configurations if the same partons
+c      are flagged as jets)
       if(njetstore(iconfig).eq.-1)then
          chclusold=chcluster
          chcluster=.true.
@@ -574,12 +576,17 @@ c   external particle clustering scales)
 c     Prepare beam related variables for scale and jet determination
       do i=1,2
          ibeam(i)=ishft(1,i-1)
+c        jfirst is first parton splitting on this side
          jfirst(i)=0
+c        jlast is last parton on this side
          jlast(i)=0
+c        jcentral is the central scale vertex on this side
          jcentral(i)=0
-         partonline(i)=isparton(ipdgcl(ibeam(i),igraphs(1),iproc))
+c        qcdline gives whether this IS line is QCD
          qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
+c        partonline gives whether this IS line is parton (start out true for any QCD)
          partonline(i)=qcdline(i)
+c        goodjet gives whether this cluster line is considered a jet
          goodjet(ibeam(i))=partonline(i)
       enddo
 
@@ -588,13 +595,15 @@ c     Prepare beam related variables for scale and jet determination
          goodjet(j)=isjet(ipdgcl(j,igraphs(1),iproc))
       enddo
 
-c   Go through clusterings and set factorization scale points for use in dsig
-c   as well as which FS particles count as jets (from jet vertices)
+c     Go through clusterings and set factorization scale points for use in dsig
+c     as well as which FS particles count as jets (from jet vertices)
       do i=1,nexternal
          iqjets(i)=0
       enddo
       if (nexternal.eq.3) goto 10
+c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
       jcode=1
+c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
         do i=1,2
@@ -602,6 +611,7 @@ c   as well as which FS particles count as jets (from jet vertices)
             if(idacl(n,i).eq.ibeam(j))then
 c             IS clustering
               ibeam(j)=imocl(n)
+c             Determine which are beam particles based on n
               if(n.lt.nexternal-2) then
                  ida(i)=idacl(n,i)
                  ida(3-i)=idacl(n,3-i)
@@ -611,18 +621,10 @@ c             IS clustering
                  ida(3-i)=imocl(n)
                  imo=idacl(n,3-i)
               endif
-c             Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
-c             f1(x1,pt2E) is given by DSIG, just need to set scale.
-              if(qcdline(j).and.jfirst(j).eq.0)then
-                 if(isjetvx(imocl(n),idacl(n,1),idacl(n,2),
-     $                ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
-                    jfirst(j)=n
-                 else
-                    jfirst(j)=-1
-                 endif
-              endif
+c             
               if(partonline(j))then
 c             Stop fact scale where parton line stops
+                 if(jfirst(j).eq.0) jfirst(j)=n
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
      $                isjet(ipdgcl(imo,igraphs(1),iproc))
@@ -662,15 +664,17 @@ c             Trace QCD line through event
         enddo
         if (imocl(n).ne.ibeam(1).and.imocl(n).ne.ibeam(2)) then
 c          FS clustering
-c          Check QCD jet, take care so it's not a decay
+c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
 c          Remove non-gluon jets that lead up to non-jet vertices
-              if(ipart(1,imocl(n)).gt.2)then
+              if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c                The ishft gives the FS particle corresponding to imocl
                  if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
      $              iqjets(ipart(1,imocl(n)))=0
               endif
-              if(ipart(2,imocl(n)).gt.2)then
+              if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c                The ishft gives the FS particle corresponding to imocl
                  if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
      $             iqjets(ipart(2,imocl(n)))=0
               endif
@@ -679,6 +683,7 @@ c          Set goodjet to false for mother
               cycle
            endif
 c          This is a jet vertex, so set jet flag for final-state jets
+c          ifsno gives leg number if daughter is FS particle, otherwise 0
            fsnum(1)=ifsno(idacl(n,1),ipart)
            if(isjet(ipdgcl(idacl(n,1),igraphs(1),iproc)).and.
      $          fsnum(1).gt.0) then
@@ -689,6 +694,7 @@ c          This is a jet vertex, so set jet flag for final-state jets
      $          fsnum(1).gt.0) then
               iqjets(fsnum(1))=1
            endif
+c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
      $          goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
@@ -698,9 +704,11 @@ c          This is a jet vertex, so set jet flag for final-state jets
       if (btest(mlevel,4))then
          write(*,*) 'QCD jet status (before): ',(iqjets(i),i=3,nexternal)
       endif
-c     Now take care of possible jets
+c     Emissions with code 1 are always jets
+c     Now take care of possible jets (i.e., with code > 1)
       if(.not. partonline(1).or..not.partonline(2))then
 c       First reduce jcode by one if one remaining partonline
+c       (in that case accept all jets with final jcode)
         if(partonline(1).or.partonline(2)) jcode=jcode-1
 c       There parton emissions with code <= jcode are not jets
          do i=3,nexternal
@@ -905,6 +913,8 @@ c     Take care of case when jcentral are zero
             q2fact(2)=q2fact(1)
          endif
       elseif(ickkw.eq.2.or.pdfwgt)then
+c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
+c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
          if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
