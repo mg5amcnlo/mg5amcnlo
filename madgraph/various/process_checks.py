@@ -958,7 +958,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                      
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)
-            return None, None
+            return None, None, None
 
         if not checkRam:
             start=time.time()

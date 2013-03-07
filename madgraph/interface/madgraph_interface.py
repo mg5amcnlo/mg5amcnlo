@@ -2963,7 +2963,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # We use the reuse tag for an alternative way of skipping the pager.
         if len(text.split('\n'))>20 and not '-reuse' in line and text!='':
-            pydoc.pager(text)
+            if 'test_manager' not in sys.argv[0]:
+                pydoc.pager(text)
             
         # Restore diagram logger
         for i, log in enumerate(loggers):
