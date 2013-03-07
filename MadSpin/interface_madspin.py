@@ -367,10 +367,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                         
         self.branching_ratio = generate_all.branching_ratio
         evt_path = self.events_file.name
-        misc.call(['gzip %s' % evt_path], shell=True)
+        try:
+            self.events_file.close()
+        except:
+            pass
+        misc.call(['gzip -f %s' % evt_path], shell=True)
         decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
         shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
-        misc.call(['gzip %s' % decayed_evt_file], shell=True)
+        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
     

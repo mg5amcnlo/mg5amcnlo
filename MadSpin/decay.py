@@ -2598,12 +2598,12 @@ class decay_all_events:
                         decay['decay_tag']))
                         
                      
-                    if weight > 25 * decay['max_weight']:
-                        error = """Found a weight larger than the computed max_weight (ratio: %s). 
-    Please relaunch MS with more events/PS point by event (or smaller BW_cut) in the
-    computation of the maximum_weight. This error occur for channel %s.
-                        """ % (weight/decay['max_weight'], decay['decay_tag'])  
-                        raise MadSpinError, error
+                    if weight > 10 * decay['max_weight']:
+                        error = """Found a weight MUCH larger than the computed max_weight (ratio: %s). 
+    This usually means that the Narrow width approximation reaches it's limit on part of the Phase-Space.
+    Do not trust too much the tale of the distribution and/or relaunch the code with smaller BW_cut.""" \
+                        % (weight/decay['max_weight'], decay['decay_tag'])  
+                        logger.warning(error)
                     elif report['over_weight'] > max(0.005*event_nb,3):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
@@ -2753,7 +2753,7 @@ class decay_all_events:
                         elif valid[(i,j)] is True:
                             valid[(i,j)] = values[j]/values[i]
                             valid[(j,i)] = valid[(i,j)]
-                        elif (valid[(i,j)] - values[j]/values[i]) < 1e-5 * (valid[(i,j)] + values[j]/values[i]):
+                        elif (valid[(i,j)] - values[j]/values[i]) < 1e-6 * (valid[(i,j)] + values[j]/values[i]):
                             pass
                         else:
                             valid[(i, j)] = 0
