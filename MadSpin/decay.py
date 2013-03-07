@@ -2585,9 +2585,9 @@ class decay_all_events:
                 if weight > decay['max_weight']:
                     report['over_weight'] += 1
                     report['%s_f' % (decay['decay_tag'],)] +=1
-                    if __debug__:                     
+                    if __debug__:                  
                         misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
-                        production_tag:%s [%s], decay:%s [%s]\n %s
+                        production_tag:%s [%s], decay:%s [%s]\n
                         ''' %\
                         (weight/decay['max_weight'], decay['decay_tag'], 
                         100 * report['over_weight']/event_nb,
@@ -2595,16 +2595,16 @@ class decay_all_events:
                         os.path.basename(self.all_ME[production_tag]['path']),
                         production_tag,
                         os.path.basename(decay['path']),
-                        decay['decay_tag'], p_full_str))
+                        decay['decay_tag']))
                         
                      
-                    if weight > 10 * decay['max_weight']:
+                    if weight > 25 * decay['max_weight']:
                         error = """Found a weight larger than the computed max_weight (ratio: %s). 
     Please relaunch MS with more events/PS point by event (or smaller BW_cut) in the
     computation of the maximum_weight. This error occur for channel %s.
                         """ % (weight/decay['max_weight'], decay['decay_tag'])  
                         raise MadSpinError, error
-                    elif report['over_weight'] > max(0.06*math.sqrt(event_nb),1):
+                    elif report['over_weight'] > max(0.2*math.sqrt(event_nb),1):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2612,7 +2612,7 @@ class decay_all_events:
                         raise MadSpinError, error
                         
                         error = True
-                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.1*report[decay['decay_tag']],1):
+                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.4*report[decay['decay_tag']],1):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2652,22 +2652,18 @@ class decay_all_events:
         self.evtfile.close()
         self.outputfile.close()
 
-        if report['over_weight'] > max(0.04*math.sqrt(event_nb),1):
-            error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
-    Please relaunch MS with more events/PS point by event in the
-    computation of the maximum_weight.
+        if report['over_weight'] > max(0.15*math.sqrt(event_nb),1):
+            error = """Found many weight larger than the computed max_weight (%s/%s = %s%%). 
             """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
-            raise MadSpinError, error
+            logger.warning(error)
         for decay_tag in self.all_decay.keys():
-            if report['%s_f' % (decay_tag,)] > max(0.06*report[decay_tag],1):
-                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
-    for channel %s. Please relaunch MS with more events/PS point by event in the
-    computation of the maximum_weight.
-                        """ % (report['%s_f' % (decay_tag,)],\
+            if report['%s_f' % (decay_tag,)] > max(0.2*report[decay_tag],1):
+                error = """Found many weight larger than the computed max_weight (%s/%s = %s%%),
+    for channel %s.""" % (report['%s_f' % (decay_tag,)],\
                                report['%s' % (decay_tag,)],\
                                100 * report['%s_f' % (decay_tag,)] / report[decay_tag] ,\
-                               decay_tag)  
-                        raise MadSpinError, error
+                               decay_tag)
+                logger.warning(error)  
         
         
 
@@ -2731,7 +2727,7 @@ class decay_all_events:
                                           for i in range(len(decays)) 
                                           if i != j])
                 
-            for nb in range(25):
+            for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
                                         True, self.pid2width, self.pid2mass, BW_cut)
 
