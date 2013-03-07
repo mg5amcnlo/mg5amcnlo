@@ -1520,6 +1520,7 @@ class ProcessTest(unittest.TestCase):
                        'perturbation_couplings':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'legs_with_decays': self.myleglist,
                        'squared_orders': {},
                        'has_born': True,
                        'overall_orders': {},
@@ -1605,6 +1606,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
         goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'legs_with_decays\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree'\n}"

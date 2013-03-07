@@ -1064,7 +1064,7 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-2) then
+     $           .gt.1d-1) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1119,6 +1119,7 @@ c reweighting
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
       double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
      $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
      $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
@@ -1177,6 +1178,9 @@ c IRPOC's
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
             call leshouche_inc_chooser()
+c Set Bjorken x's to some random value before calling the dlum() function
+            xbk(1)=0.5d0
+            xbk(2)=0.5d0
             dummy=dlum()
 c 1. First map the IPROC's for this nFKSprocess to the underlying Born
 c to get the unique IPROC's

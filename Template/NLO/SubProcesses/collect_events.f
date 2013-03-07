@@ -12,13 +12,16 @@
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
 
-      write (*,*) 'Keep the original weights from the event files, '
-      write (*,*) 'or overwrite them by the (total Xsec)/(# events)?'
-      write (*,*)
-     &     "give '0' for original or '1' for overwrite (default is '1')"
+      write (*,*) "Overwrite the event weights?"
+      write (*,*) "give '0' to keep original weights;"
+      write (*,*) "give '1' to overwrite the weights"/
+     $     /" to sum to the Xsec;"
+      write (*,*) "give '2' to overwrite the weights"/
+     $     /" to average to the Xsec (=default)"
       read (*,*) i_orig
-      if (i_orig.ne.0 .and. i_orig.ne.1) stop
+      if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2) stop
       write(*,*) i_orig
+
 
       istep=0
  1    continue
@@ -61,7 +64,11 @@ c store here the number of events per file
 c Every time we find 80 files, collect the events
          if (numoffiles.eq.80) then
             nbunches=nbunches+1
-            evwgt=xtotal/dfloat(nevents)
+            if (i_orig.eq.1) then
+               evwgt=xtotal/dfloat(nevents)
+            elseif(i_orig.eq.2) then
+               evwgt=xtotal
+            endif
             write (*,*) 'found ',numoffiles,
      &           ' files, bunch number is',nbunches
             if(nbunches.le.9) then
@@ -96,7 +103,11 @@ c Every time we find 80 files, collect the events
 c Also collect events from the rest files
       if(numoffiles.ne.0) then
          nbunches=nbunches+1
-         evwgt=xtotal/dfloat(nevents)
+         if (i_orig.eq.1) then
+            evwgt=xtotal/dfloat(nevents)
+         elseif(i_orig.eq.2) then
+            evwgt=xtotal
+         endif
          write (*,*) 'found ',numoffiles,
      &        ' files, bunch number is',nbunches
          if(nbunches.le.9) then
@@ -148,7 +159,7 @@ c
       common /c_i_orig/i_orig
       integer ioutput,junit(80)
       integer imaxevt,maxevt,ii,numoffiles,nevents,itot,iunit,
-     # mx_of_evt(80),i0
+     # mx_of_evt(80),i0,i,j
       double precision evwgt,evwgt_sign
       integer ione
       parameter (ione=1)
@@ -173,6 +184,7 @@ c
       parameter (debug=.false.)
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
+      include 'reweight_all.inc'
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -257,7 +269,7 @@ c      header. Check consistency in this case
       call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
-     #  XSECUP,XERRUP,XMAXUP,LPRUP)
+     #  XSECUP,XERRUP,abs(evwgt),LPRUP)
       itot=maxevt
       do ii=1,maxevt
         rnd=fk88random(iseed)
@@ -272,16 +284,26 @@ c assigned randomly with a weight according to the contribution of that
 c channel to the total cross section)
         if( ( abs(XWGTUP/evwgt).gt.2.d0.or.
      #        abs(XWGTUP/evwgt).lt.0.5d0 ) .and.
-     #       mx_of_evt(i0).gt.50 )then
-          write(*,*)'Error in collect_all_evfiles'
-          write(*,*)'Events weights appear to be wrong'
-          write(*,*)XWGTUP,evwgt
-          stop
+     #       mx_of_evt(i0).gt.50 .and. i_orig.eq.1)then
+           write(*,*)'Error in collect_all_evfiles'
+           write(*,*)'Events weights appear to be wrong'
+           write(*,*)XWGTUP,evwgt
+           stop
         endif
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
         else
+c Overwrite the weights. Also overwrite the weights used for PDF & scale
+c reweighting
            evwgt_sign=dsign(evwgt,XWGTUP)
+           do i=1,numscales
+              do j=1,numscales
+                 wgtxsecmu(i,j)=wgtxsecmu(i,j)*evwgt_sign/XWGTUP
+              enddo
+           enddo
+           do i=1,numPDFpairs*2
+              wgtxsecPDF(i)=wgtxsecPDF(i)*evwgt_sign/XWGTUP
+          enddo
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,

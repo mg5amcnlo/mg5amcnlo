@@ -253,6 +253,7 @@ class FKSRealProcess(object):
         self.pdgs = array.array('i',[s[0] for s in legs]) 
         self.colors = [leg['color'] for leg in leglist]
         self.process.set('legs', MG.LegList(leglist))
+        self.process.set('legs_with_decays', MG.LegList())
         self.amplitude = diagram_generation.Amplitude()
         self.is_to_integrate = True
         self.is_nbody_only = False

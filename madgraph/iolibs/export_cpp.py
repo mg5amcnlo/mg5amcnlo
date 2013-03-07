@@ -1298,10 +1298,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                 for proc in valid_proc:
                     # decaying id
                     decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
-                    curr_final_id = [l.get('id') for l in \
-                                 proc.get('legs') if l.get('state')]
-                    for id in decay_id:
-                        curr_final_id.remove(id)
+                    curr_final_id = [l.get('id') for l in proc.get('legs') 
+                              if l.get('state') and l.get('id') not in decay_id]
                     # extend with the decay final state
                     curr_final_id += [l.get('id') for dec in \
                                      proc.get('decay_chains') for l in \
@@ -1406,14 +1404,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             for proc in me.get('processes'):
                 # decaying id
                 decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
-                curr_id = [l.get('id') for l in \
-                             proc.get('legs') if l.get('state')]
-                for id in decay_id:
-                    curr_id.remove(id)
+                curr_id = [l.get('id') for l in proc.get('legs') 
+                              if l.get('state') and l.get('id') not in decay_id]
                 # extend with the decay final state
-                curr_id += [l.get('id') for dec in \
-                                 proc.get('decay_chains') for l in \
-                                 dec.get('legs')   if l.get('state')]
+                curr_id += [l.get('id') for dec in proc.get('decay_chains') 
+                             for l in dec.get('legs')   if l.get('state')]
                 curr_id = [l.get('id') for l in \
                              proc.get('legs') if not l.get('state')] + curr_id
                 id_list.append(tuple(curr_id))

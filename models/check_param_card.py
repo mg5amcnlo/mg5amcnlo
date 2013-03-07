@@ -132,7 +132,6 @@ class Block(list):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
-            
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:
@@ -152,6 +151,7 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
+
         
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
@@ -1180,7 +1180,6 @@ def check_valid_param_card(path, restrictpath=None):
         restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
-            print 'no restriction card'
             return True
         
     cardrule = ParamCardRule()

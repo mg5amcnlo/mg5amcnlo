@@ -896,7 +896,7 @@ class MEComparatorGauge(MEComparator):
             res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
             res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
                         
-            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
+            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
                diff_unit < 1e-2:
                 pass_proc += 1
                 res_str += "Pass"
