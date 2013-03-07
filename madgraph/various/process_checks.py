@@ -1939,6 +1939,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                              keep_folder,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
+    options['reuse'] = reusing
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myProfiler.loop_optimized_output=False
@@ -1976,6 +1977,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
     timing, matrix_element = generate_loop_matrix_element(process_definition,
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
+    options['reuse'] = reusing
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
                                                             model=model,cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
@@ -2003,6 +2005,7 @@ def check_timing(process_definition, param_card= None, cuttools="",
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                            keep_folder, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
+    options['reuse'] = reusing
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myTimer.loop_optimized_output=False

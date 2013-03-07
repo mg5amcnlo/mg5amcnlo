@@ -2962,7 +2962,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if len(text.split('\n'))>20 and not options['reuse'] and text!='':
+        if len(text.split('\n'))>20 and not '-reuse' in line and text!='':
             pydoc.pager(text)
             
         # Restore diagram logger

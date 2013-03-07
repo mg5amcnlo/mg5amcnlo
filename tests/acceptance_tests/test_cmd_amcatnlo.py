@@ -158,16 +158,16 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events LO -f')        
         
         # test the lhe event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz'))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz') > \
-                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
         
 
 
@@ -184,16 +184,16 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events LO -f')        
         
         # test the lhe event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
         # test the hep event file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz'))
         # sanity check on the size
-        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6Q_0.hep.gz') > \
-                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
         
 
         
@@ -262,8 +262,8 @@ class TestMECmdShell(unittest.TestCase):
         self.do('calculate_xsect  LO -f')        
         
         # test the plot file exists
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res.txt'))
     
     def test_amcatnlo_from_file(self):
         """ """
