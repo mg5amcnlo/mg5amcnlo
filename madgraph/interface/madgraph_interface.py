@@ -3819,6 +3819,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+            to_copy = [os.path.join('SubProcesses', 'reweight0.inc')]
+            for f in to_copy:
+                files.cp(os.path.join(MG5DIR, 'Template', 'NLO', f), \
+                        os.path.join(MG5DIR, 'MCatNLO-utilities', 'MCatNLO', 'srcCommon'))
             
         # Compile the file
         # Check for F77 compiler
