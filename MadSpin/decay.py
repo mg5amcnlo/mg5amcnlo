@@ -2604,7 +2604,7 @@ class decay_all_events:
     computation of the maximum_weight. This error occur for channel %s.
                         """ % (weight/decay['max_weight'], decay['decay_tag'])  
                         raise MadSpinError, error
-                    elif report['over_weight'] > max(0.2*math.sqrt(event_nb),1):
+                    elif report['over_weight'] > max(0.005*event_nb,3):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
@@ -2612,7 +2612,7 @@ class decay_all_events:
                         raise MadSpinError, error
                         
                         error = True
-                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.4*report[decay['decay_tag']],1):
+                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
