@@ -887,6 +887,7 @@ class production_topo(dict):
         # topo, to_decay, pid2name
 
         weight=1.0
+        self.max_bw = 0
         for part in self["get_id"].keys():
             pid=self["get_id"][part]
             if pid in self.production['decaying']:
@@ -895,6 +896,7 @@ class production_topo(dict):
                 virtualmass2, jac=self.transpole(mass,width)
                 virtualmass2=virtualmass2*(2.0*pid2mass(pid))**2
                 weight=weight*jac
+                self.max_bw = max(self.max_bw, abs(math.sqrt(virtualmass2) - pid2mass(pid)) / abs(pid2width(pid)))
                 #print "need to generate BW mass of "+str(part)
                 ##print "mass: "+str(pid2mass[pid])
                 #print "width: "+str(pid2width[pid])
@@ -938,6 +940,7 @@ class production_topo(dict):
                                     logger.debug('pole mass: %s' % pid2mass[pid])
                                 except Exception:
                                     pass
+
         return weight
 
     def transpole(self,pole,width):
@@ -2350,6 +2353,7 @@ class decay_misc:
         for item in list_obj:
             sd+=(item-mean)**2
         sd=sd/(N-1.0)
+        
         return mean, sd
      
 
@@ -2585,9 +2589,9 @@ class decay_all_events:
                 if weight > decay['max_weight']:
                     report['over_weight'] += 1
                     report['%s_f' % (decay['decay_tag'],)] +=1
-                    if __debug__:                  
+                    if __debug__:               
                         misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
-                        production_tag:%s [%s], decay:%s [%s]\n
+                        production_tag:%s [%s], decay:%s [%s], BW_cut: %1g\n
                         ''' %\
                         (weight/decay['max_weight'], decay['decay_tag'], 
                         100 * report['over_weight']/event_nb,
@@ -2595,15 +2599,19 @@ class decay_all_events:
                         os.path.basename(self.all_ME[production_tag]['path']),
                         production_tag,
                         os.path.basename(decay['path']),
-                        decay['decay_tag']))
+                        decay['decay_tag'],
+                        self.all_ME[production_tag][tag_topo].max_bw))
                         
                      
-                    if weight > 10 * decay['max_weight']:
+                    if weight > 10.0 * decay['max_weight']:
+                        topology = self.all_ME[production_tag][tag_topo]
+                        BW_value = topology.max_bw
                         error = """Found a weight MUCH larger than the computed max_weight (ratio: %s). 
     This usually means that the Narrow width approximation reaches it's limit on part of the Phase-Space.
-    Do not trust too much the tale of the distribution and/or relaunch the code with smaller BW_cut.""" \
-                        % (weight/decay['max_weight'], decay['decay_tag'])  
-                        logger.warning(error)
+    Do not trust too much the tale of the distribution and/or relaunch the code with smaller BW_cut.
+    This is for channel %s with current BW_value at : %g'""" \
+                        % (weight/decay['max_weight'], decay['decay_tag'], BW_value)  
+                        logger.error(error)
                     elif report['over_weight'] > max(0.005*event_nb,3):
                         error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
@@ -3267,10 +3275,11 @@ class decay_all_events:
                         continue
                     mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                     #     then decayed weight:
-                    p_full, p_full_str=decayed_event.give_momenta()
+                    p_full, p_full_str =decayed_event.give_momenta()
                     #print p_full_str
                     mg5_me_full = self.calculate_matrix_element('full',
                                                       decay['path'], p_full_str)
+                    
                     weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
                     if tag in max_decay:
                         max_decay[tag] = max([max_decay[tag], weight])
@@ -3312,13 +3321,17 @@ class decay_all_events:
                     continue
                 weights.sort(reverse=True)
                 assert weights[0] >= weights[1]
-                if len(weights) > 30:
-                    to_keep = min(len(weights)//2, 50)
-                weights[to_keep:]
-                
-                ave_weight, std_weight=decay_tools.get_mean_sd(weights)
+                ave_weight, std_weight = decay_tools.get_mean_sd(weights)
                 std_weight=math.sqrt(std_weight)
                 base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
+
+                for i in [20, 30, 40, 50]:
+                    if len(weights) < i:
+                        break
+                    ave_weight, std_weight = decay_tools.get_mean_sd(weights[:i])
+                    std_weight=math.sqrt(std_weight)
+                    base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
+                    
                 if weights[0] > base_max_weight:
                     base_max_weight = 1.05 * weights[0]
               

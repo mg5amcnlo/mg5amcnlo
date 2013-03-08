@@ -123,6 +123,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options['Nevents_for_max_weigth'] = 75
             self.options['nb_sigma'] = 4.5
         
+        if 'madspin' in self.banner:
+            raise self.InvalidCmd('This event file was already decayed by MS. This is not possible to add to it a second decay')
+        
         if 'mgruncard' in self.banner and not self.options['Nevents_for_max_weigth']:
             nevents = int(self.banner.get_detail('run_card', 'nevents'))
             N_weight = max([75, int(3*nevents**(1/3))])
