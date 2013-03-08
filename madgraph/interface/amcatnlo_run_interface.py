@@ -1135,7 +1135,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         self.proc_characteristics = {}
         for l in lines:
             key, value = l.split('=')
-            self.proc_characteristics[key.strip()] = [value.strip()]
+            self.proc_characteristics[key.strip()] = value.strip()
             
         
     def run(self, mode, options):
