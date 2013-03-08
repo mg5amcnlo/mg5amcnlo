@@ -17,6 +17,7 @@
 """
 
 import atexit
+import collections
 import logging
 import optparse
 import os
@@ -631,7 +632,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if not self._curr_model:
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
-    
+        
         self.check_process_format(' '.join(args[1:]))
 
     def check_define(self, args):
@@ -726,10 +727,10 @@ class CheckValidForCmd(cmd.CheckCmd):
                 args.insert(1, '-no_reuse')
         else:
             args.append('-no_reuse')
-
+            
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
-
+            misc.sprint(param_card)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -2246,6 +2247,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         args = self.split_arg(line)
         
+        warning_duplicate = True
+        if '--no_warning=duplicate' in args:
+            warning_duplicate = False
+            args.remove('--no_warning=duplicate')
+        
         # Check the validity of the arguments
         self.check_add(args)
 
@@ -2305,7 +2311,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
-                else:
+                elif warning_duplicate:
                     raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
 
@@ -3278,7 +3284,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
         """
-                
+
         if not self._curr_model['case_sensitive']:
             procline = procline.lower()
         pids = self._curr_model.get('name2pdg')
@@ -3627,6 +3633,45 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
+
+    def remove_pointless_decay(self, param_card):
+        """ For simple decay chain: remove diagram that are not in the BR.
+            param_card should be a ParamCard instance."""
+            
+        assert isinstance(param_card, check_param_card.ParamCard)
+        
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        to_remove = []        
+        for amp in amplitudes:
+            mother = [l.get('id') for l in amp['process'].get('legs') \
+                                                        if not l.get('state')]
+            if 1 == len(mother):
+                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                # create the tuple associate to the decay mode
+                child = [l.get('id') for l in amp['process'].get('legs') \
+                                                              if l.get('state')]
+                if not mother[0] > 0:
+                    child = [-id for id in child]
+                child.sort()
+                child.insert(0, len(child))
+
+                #check if the decay is present or not:
+                if tuple(child) not in decay_table.keys():
+                    to_remove.append(amp)
+                    
+        def remove_amp(amps):
+            for amp in amps[:]:
+                if amp in to_remove:
+                    amps.remove(amp)
+                if isinstance(amp, diagram_generation.DecayChainAmplitude):
+                    remove_amp(amp.get('decay_chains'))
+                    for decay in amp.get('decay_chains'):
+                        remove_amp(decay.get('amplitudes'))
+        remove_amp(self._curr_amps) 
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -4738,7 +4783,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ## Other Output #
         #################
         if not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone','standalone_ms']:
+               and self._export_format in ['madevent', 'standalone']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)
@@ -4768,7 +4813,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name)
+        self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -4780,13 +4825,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = ""):
+    def export(self, nojpeg = False, main_file_name = "", args=[]):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            if self._export_format == 'standalone_ms':
+                to_distinguish = []
+                for part in self._curr_model.get('particles'):
+                    if part.get('name') in args and part.get('antiname') in args and\
+                       part.get('name') != part.get('antiname'):
+                        to_distinguish.append(abs(part.get('pdg_code'))) 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
@@ -4837,14 +4888,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
+                    mode = {}
+                    if self._export_format == 'standalone_ms':
+                        mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
-                        helas_objects.HelasMultiProcess(self._curr_amps)
+                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
-                                  get_matrix_elements()])
+                                  get_matrix_elements()])                    
                     # assign a unique id number to all process
                     uid = 0 
-                    for me in self._curr_matrix_elements.get_matrix_elements():
+                    for me in self._curr_matrix_elements.get_matrix_elements()[:]:
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
 
@@ -4930,10 +4984,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Fortran MadGraph Standalone
         if self._export_format in ['standalone', 'standalone_ms']:
-            for me in matrix_elements:
-                calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
+            for me in matrix_elements[:]:
+                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
+                if not new_calls:
+                    matrix_elements.remove(me)
+                calls = calls + new_calls
 
         # Just the matrix.f files
         if self._export_format == 'matrix':
