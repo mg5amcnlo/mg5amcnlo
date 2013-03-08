@@ -776,11 +776,20 @@ class CheckValidForCmd(object):
                 restrict_file = pjoin(ufo_path, 'restrict_default.dat')
             model = import_ufo.import_model(modelname, decay=True, 
                         restrict_file=restrict_file)
+            if self.mother.options['complex_mass_scheme']:
+                model.change_mass_to_complex_scheme()
             
             
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            #pattern for checking complex mass scheme.
+            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
+                                   ).read()):
+                model.change_mass_to_complex_scheme()
+   
+        
             
         if not hasattr(model.get('particles')[0], 'partial_widths'):
             raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
@@ -1462,7 +1471,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-    
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
@@ -1526,7 +1534,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         try:
             import madgraph.various.lhe_parser as lhe_parser
         except:
-            import internal.lhe_parser as lhe_parser
+            import internal.lhe_parser as lhe_parser 
             
         logger.info('Add time of flight information on file %s' % event_path)
         lhe = lhe_parser.EventFile(event_path)

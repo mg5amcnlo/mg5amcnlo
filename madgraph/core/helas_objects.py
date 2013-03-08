@@ -36,6 +36,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.core.color_algebra as color
+import madgraph.various.misc as misc
 
 from madgraph import InvalidCmd, MadGraph5Error
 
@@ -69,16 +70,16 @@ class IdentifyMETag(diagram_generation.DiagramTag):
     # in order to get the right factor for identical/non-identical particles
     dec_number = 1
     
-    @staticmethod
-    def create_tag(amplitude, identical_particle_factor = 0):
+    @classmethod
+    def create_tag(cls, amplitude, identical_particle_factor = 0):
         """Create a tag which identifies identical matrix elements"""
         process = amplitude.get('process')
         ninitial = process.get_ninitial()
         model = process.get('model')
         dc = 0
         if process.get('is_decay_chain'):
-            dc = IdentifyMETag.dec_number
-            IdentifyMETag.dec_number += 1
+            dc = cls.dec_number
+            cls.dec_number += 1
         if not identical_particle_factor:
             identical_particle_factor = process.identical_particle_factor()
         if process.get('perturbation_couplings') and \
@@ -86,7 +87,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             sorted_tags = sorted([IdentifyMETagFKS(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
         else:
-            sorted_tags = sorted([IdentifyMETag(d, model, ninitial) for d in \
+            sorted_tags = sorted([cls(d, model, ninitial) for d in \
                                       amplitude.get('diagrams')])
         # Do not use this for loop diagrams as for now the HelasMultiProcess
         # always contain only exactly one loop amplitude.
@@ -226,6 +227,24 @@ class IdentifyMETagFKS(IdentifyMETag):
                 self.flow_charge_diff == other.flow_charge_diff
 
 
+class IdentifyMETagMadSpin(IdentifyMETag):
+    """Should ensure that the splitting is the same with and without decay 
+       So we want to combine processes with different possibly
+       onshell s-channel propagators. This was done by the vertex.
+    """
+    
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify matrix elements:
+        interaction color, lorentz, coupling, and wavefunction spin,
+        self_antipart, mass, width, color, decay and is_part.
+        BUT NOT PDG code for possible onshell s-channel prop."""
+        if last_vertex:
+            return IdentifyMETag.vertex_id_from_vertex(vertex, last_vertex, model, ninitial)
+        import random
+        data = IdentifyMETag.vertex_id_from_vertex(vertex, last_vertex, model, ninitial)
+        ((spin, color, selfanti, mass, width, pdg), ret_list) = data
+        return ((spin, color, selfanti, mass, width, random.random()), ret_list) 
 
         
 
@@ -2834,7 +2853,6 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                            other['identical_particle_factor'] or \
                self['diagrams'] != other['diagrams']:
             return False
-
         return True
 
     def __ne__(self, other):
@@ -4093,15 +4111,15 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         initial_legs = filter(lambda leg: leg.get('state') == False, \
                               self.get('processes')[0].get('legs'))
 
-        spin_factor = reduce(lambda x, y: x * y,
-                             [ len(model.get('particle_dict')[leg.get('id')].\
-                                   get_helicity_states())\
-                               for leg in initial_legs ])
-
         color_factor = reduce(lambda x, y: x * y,
                               [ model.get('particle_dict')[leg.get('id')].\
                                     get('color')\
                                 for leg in initial_legs ])
+            
+        spin_factor = reduce(lambda x, y: x * y,
+                             [ len(model.get('particle_dict')[leg.get('id')].\
+                                   get_helicity_states())\
+                               for leg in initial_legs ])
 
         return spin_factor * color_factor * self['identical_particle_factor']
 
@@ -4394,6 +4412,12 @@ class HelasMatrixElementList(base_objects.PhysicsObjectList):
         """Test if object obj is a valid HelasMatrixElement for the list."""
 
         return isinstance(obj, HelasMatrixElement)
+    
+    def remove(self,obj):
+        pos = (i for i in xrange(len(self)) if self[i] is obj)
+        for i in pos:
+            del self[i]
+            break
 
 #===============================================================================
 # HelasDecayChainProcess
@@ -4486,7 +4510,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                 decay_chain))
             
 
-    def combine_decay_chain_processes(self):
+    def combine_decay_chain_processes(self, combine=True):
         """Recursive function to generate complete
         HelasMatrixElements, combining the core process with the decay
         chains.
@@ -4497,6 +4521,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         * If the number of decay chains and decaying final state particles
         don't correspond, all decays applying to a given particle type are
         combined (without double counting).
+        * combine allow to merge identical ME
         """
 
         # End recursion when there are no more decay chains
@@ -4510,7 +4535,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
 
         for decay_chain in self['decay_chains']:
             # This is where recursion happens
-            decay_elements.append(decay_chain.combine_decay_chain_processes())
+            decay_elements.append(decay_chain.combine_decay_chain_processes(combine))
 
         # Store the result in matrix_elements
         matrix_elements = HelasMatrixElementList()
@@ -4639,14 +4664,16 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                              ", ".join([d.get('processes')[0].nice_string().\
                                         replace('Process: ', '') \
                                         for d in decay_dict.values()])))
-
+                    
                 matrix_element.insert_decay_chains(decay_dict)    
                 
-                me_tag = IdentifyMETag.create_tag(\
+                if combine:
+                    me_tag = IdentifyMETag.create_tag(\
                             matrix_element.get_base_amplitude(),
                             matrix_element.get('identical_particle_factor'))
-
                 try:
+                    if not combine:
+                        raise ValueError
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
@@ -4657,8 +4684,9 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     if matrix_element.get('processes') and \
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
-                        me_tags.append(me_tag)
-                        permutations.append(me_tag[-1][0].\
+                        if combine:
+                            me_tags.append(me_tag)
+                            permutations.append(me_tag[-1][0].\
                                             get_external_numbers())
                 else: # try
                     other_processes = matrix_elements[me_index].get('processes')
@@ -4841,6 +4869,11 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "%s is not valid AmplitudeList" % type(amplitudes)
 
+        combine = combine_matrix_elements
+        if 'mode' in matrix_element_opts and matrix_element_opts['mode']=='MadSpin':
+            combine = False
+            del matrix_element_opts['mode']
+
         # Keep track of already generated color objects, to reuse as
         # much as possible
         list_colorize = []
@@ -4873,7 +4906,7 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
                 tmp_matrix_element_list = HelasDecayChainProcess(amplitude).\
-                                          combine_decay_chain_processes()
+                                          combine_decay_chain_processes(combine)
                 # Use IdentifyMETag to check if matrix elements present
                 matrix_element_list = []
                 for matrix_element in tmp_matrix_element_list:
@@ -4890,6 +4923,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                     amplitude_tag = IdentifyMETag.create_tag(\
                                     matrix_element.get_base_amplitude())
                     try:
+                        if not combine:
+                            raise ValueError
                         me_index = amplitude_tags.index(amplitude_tag)
                     except ValueError:
                         # Create matrix element for this amplitude
@@ -4967,6 +5002,43 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
+#<<<<<<< TREE
+#                # If the matrix element has no diagrams,
+#                # remove this matrix element.
+#                if not matrix_element.get('processes') or \
+#                       not matrix_element.get('diagrams'):
+#                    continue
+#                
+#                # Check if identical matrix element already present
+#
+#                
+#                if combine and matrix_element in matrix_elements:
+#                    me = matrix_elements[matrix_elements.index(matrix_element)]
+#                    me_procs = me.get('processes')
+#                    procs = matrix_element.get('processes')
+#                    if me_procs[0].get_ninitial() > 1 or \
+#                            procs[0].get_initial_ids() == \
+#                            me_procs[0].get_initial_ids():
+#                        logger.info("Combining process %s with %s" % \
+#                                (procs[0].nice_string().\
+#                                     replace('Process: ', ''),
+#                                 me_procs[0].nice_string().\
+#                                     replace('Process: ', '')))
+#                        for proc in procs:
+#                            if proc not in me_procs:
+#                                me_procs.append(proc)
+#                            else:
+#                                raise InvalidCmd,("Duplicate process %s found."\
+#                                           +" Please check your processes.") % \
+#                                    proc.nice_string().replace('Process: ', '')
+#                        # Remove this matrix element from the lists
+#                        if combine_matrix_elements and amplitude_tags:
+#                            amplitude_tags.pop(-1)
+#                            identified_matrix_elements.pop(-1)
+#                            permutations.pop(-1)
+#                        continue
+#=======
+#>>>>>>> MERGE-SOURCE
 
                 # Add this matrix element to list
                 matrix_elements.append(matrix_element)

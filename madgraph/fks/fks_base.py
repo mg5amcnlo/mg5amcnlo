@@ -364,6 +364,8 @@ class FKSProcess(object):
                 raise fks_common.FKSProcessError(\
                     'Not valid start_proc in FKSProcess')
 
+            self.born_proc.set('legs_with_decays', MG.LegList())
+
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
                 % self.born_proc.nice_string(print_weighted=False).replace(\
                                                                  'Process', '')) 

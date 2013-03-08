@@ -83,7 +83,10 @@ class Parameter (object):
         data = data.split()
         if not len(data):
             return
-        self.lhacode = tuple([int(d) for d in data[1:]])
+        self.lhacode = [int(d) for d in data[2:]]
+        self.lhacode.sort()
+        self.lhacode = tuple([len(self.lhacode)] + self.lhacode)
+        
         self.value = float(data[0]) 
         self.format = 'decay_table'
 
@@ -308,7 +311,9 @@ class ParamCard(dict):
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
-        if isinstance(outpath, str):
+        if not outpath:
+            return text
+        elif isinstance(outpath, str):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose

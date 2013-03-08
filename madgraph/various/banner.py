@@ -75,7 +75,8 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
-      'montecarlomasses':''
+      'montecarlomasses':'',
+      'madspin':'madspin_card.dat' 
       }
     
     def read_banner(self, input_path):

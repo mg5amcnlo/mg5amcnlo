@@ -644,6 +644,7 @@ class TestFKSProcess(unittest.TestCase):
         realproc.generate_real_amplitude()
 
         self.assertEqual(sorted_real_proc, realproc.amplitude.get('process'))
+        self.assertEqual(realproc.amplitude['process']['legs_with_decays'], MG.LegList())
         amp = diagram_generation.Amplitude(sorted_real_proc)
         self.assertEqual(amp,realproc.amplitude)
         self.assertEqual(array.array('i',[2,21,2,21,21]), realproc.pdgs)
@@ -1343,7 +1344,8 @@ class TestFKSProcess(unittest.TestCase):
 
     def test_sort_fks_proc(self):
         """tests that two FKSProcesses with different legs order in the
-        input process/amplitude are returned as equal"""
+        input process/amplitude are returned as equal. check also that
+        born_proc has 'legs_with_decay' = madgraph.base_objects.LegList()"""
         model = import_ufo.import_model('sm')
 
 # sorted leglist for e+ e- > u u~ g
@@ -1383,4 +1385,5 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(fks_a_s.born_proc, fks_a_u.born_proc)
         self.assertEqual(fks_a_s.born_amp, fks_a_u.born_amp)
 
-
+        self.assertEqual(fks_a_s.born_proc['legs_with_decays'], MG.LegList())
+        self.assertEqual(fks_a_u.born_proc['legs_with_decays'], MG.LegList())

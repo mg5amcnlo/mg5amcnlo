@@ -71,6 +71,10 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+clean4pdf:
+	rm -f ../lib/libpdf.a
+	rm -f ../lib/libgeneric.a
+
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
