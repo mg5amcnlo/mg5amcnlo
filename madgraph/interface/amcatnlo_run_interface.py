@@ -1127,6 +1127,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
             randinit.write('r=%d' % iseed)
             randinit.close()
 
+
+    def get_characteristics(self, file):
+        """reads the proc_characteristics file and initialises the correspondent
+        dictionary"""
+        lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
+        self.proc_characteristics = {}
+        for l in lines:
+            key, value = l.split('=')
+            self.proc_characteristics[key.strip()] = [value.strip()]
             
         
     def run(self, mode, options):
@@ -1137,6 +1146,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             options['only_generation'] = False
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1280,7 +1291,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
 # check that PYTHIA6PT is not used for processes with FSR
             if shower == 'PYTHIA6PT' and \
-                os.path.exists(pjoin(self.me_dir, 'SubProcesses', 'has_fsr.dat')):
+                self.proc_characteristics['has_fsr'] == '.true.':
                 raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
