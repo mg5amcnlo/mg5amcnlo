@@ -54,12 +54,12 @@ class TestMECmdShell(unittest.TestCase):
             pass
 
         interface = MGCmd.MasterCmd()
-        interface.onecmd('import model %s' % model)
+        interface.exec_cmd('import model %s' % model)
         if isinstance(process, str):
-            interface.onecmd('generate %s' % process)
+            interface.exec_cmd('generate %s' % process)
         else:
             for p in process:
-                interface.onecmd('add process %s' % p)
+                interface.exec_cmd('add process %s' % p)
                 
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -84,8 +84,8 @@ class TestMECmdShell(unittest.TestCase):
                     pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
         self.assertTrue(os.path.exists(\
                     pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))        
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
+#        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
+#        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
@@ -99,6 +99,20 @@ class TestMECmdShell(unittest.TestCase):
     def do(self, line):
         """ exec a line in the cmd under test """        
         self.cmd_line.exec_cmd(line)
+
+
+    def test_check_ppzjj(self):
+        """test that p p > z j j is correctly output without raising errors"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > z p p [real=QCD]'], 'sm')
+        self.assertEqual(cmd, os.getcwd())
+        self.do('compile')
+        self.do('quit')
+
+        for pdir in open('/tmp/MGPROCESS/SubProcesses/subproc.mg').split('\n'):
+            exe = os.path.join('/tmp/MGPROCESS/SubProcesses', pdir, 'madevent_mintMC')
+            self.assertTrue(os.path.exists(exe))
 
 
     def test_calculate_xsect_script(self):
