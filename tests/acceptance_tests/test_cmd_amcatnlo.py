@@ -120,7 +120,10 @@ class TestMECmdShell(unittest.TestCase):
         self.do('compile -f')
         self.do('quit')
 
-        for pdir in open('/tmp/MGPROCESS/SubProcesses/subproc.mg').read().split('\n'):
+        pdirs = [dir for dir in \
+                open('/tmp/MGPROCESS/SubProcesses/subproc.mg').read().split('\n') if dir]
+
+        for pdir in pdirs:
             exe = os.path.join('/tmp/MGPROCESS/SubProcesses', pdir, 'madevent_mintMC')
             self.assertTrue(os.path.exists(exe))
 
