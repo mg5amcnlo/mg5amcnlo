@@ -54,12 +54,12 @@ class TestMECmdShell(unittest.TestCase):
             pass
 
         interface = MGCmd.MasterCmd()
-        interface.exec_cmd('import model %s' % model)
+        interface.onecmd('import model %s' % model)
         if isinstance(process, str):
-            interface.exec_cmd('generate %s' % process)
+            interface.onecmd('generate %s' % process)
         else:
             for p in process:
-                interface.exec_cmd('add process %s' % p)
+                interface.onecmd('add process %s' % p)
                 
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
@@ -86,6 +86,8 @@ class TestMECmdShell(unittest.TestCase):
                     pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))        
 #        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
 #        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
+        proc_card = open('/tmp/MGPROCESS/Cards/proc_card_mg5.dat').read()
+        self.assertTrue('generate' in proc_card)
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
