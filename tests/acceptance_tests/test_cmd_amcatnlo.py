@@ -45,22 +45,30 @@ pjoin = os.path.join
 class TestMECmdShell(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
     
-    def generate(self, process, model):
+    def generate(self, process, model, multiparticles=[]):
         """Create a process"""
 
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+            
+
+        
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
             pass
 
         interface = MGCmd.MasterCmd()
-        interface.onecmd('import model %s' % model)
+        
+        run_cmd('import model %s' % model)
+        for multi in multiparticles:
+            run_cmd('define %s' % multi)
         if isinstance(process, str):
-            interface.onecmd('generate %s' % process)
+            run_cmd('generate %s' % process)
         else:
             for p in process:
-                interface.onecmd('add process %s' % p)
-                
+                run_cmd('add process %s' % p)
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
@@ -87,7 +95,7 @@ class TestMECmdShell(unittest.TestCase):
 #        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
 #        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
         proc_card = open('/tmp/MGPROCESS/Cards/proc_card_mg5.dat').read()
-        self.assertTrue('generate' in proc_card)
+        self.assertTrue('generate' in proc_card or 'add process' in proc_card)
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
         self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
@@ -100,19 +108,19 @@ class TestMECmdShell(unittest.TestCase):
     
     def do(self, line):
         """ exec a line in the cmd under test """        
-        self.cmd_line.exec_cmd(line)
+        self.cmd_line.exec_cmd(line, errorhandling=False,precmd=True)
 
 
     def test_check_ppzjj(self):
         """test that p p > z j j is correctly output without raising errors"""
         
         cmd = os.getcwd()
-        self.generate(['p p > z p p [real=QCD]'], 'sm')
+        self.generate(['p p > z p p [real=QCD]'], 'sm', multiparticles=['p = g u'])
         self.assertEqual(cmd, os.getcwd())
-        self.do('compile')
+        self.do('compile -f')
         self.do('quit')
 
-        for pdir in open('/tmp/MGPROCESS/SubProcesses/subproc.mg').split('\n'):
+        for pdir in open('/tmp/MGPROCESS/SubProcesses/subproc.mg').read().split('\n'):
             exe = os.path.join('/tmp/MGPROCESS/SubProcesses', pdir, 'madevent_mintMC')
             self.assertTrue(os.path.exists(exe))
 
