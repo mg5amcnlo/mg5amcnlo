@@ -56,7 +56,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   10042    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q )                              *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT)                   *
+# WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   HERWIG6   = parton_shower
 #***********************************************************************

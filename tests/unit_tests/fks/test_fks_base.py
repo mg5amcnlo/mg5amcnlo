@@ -1387,5 +1387,3 @@ class TestFKSProcess(unittest.TestCase):
 
         self.assertEqual(fks_a_s.born_proc['legs_with_decays'], MG.LegList())
         self.assertEqual(fks_a_u.born_proc['legs_with_decays'], MG.LegList())
-
-

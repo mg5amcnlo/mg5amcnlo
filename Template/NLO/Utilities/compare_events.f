@@ -1,5 +1,6 @@
 c Compile with
-c g77 -o compare_events compare_events.f handling_lhe_events.f
+c gfortran -ffixed-line-length-132 -fno-automatic -I../SubProcesses/P0_<anydir>
+c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
       program compare_events
       implicit none
       integer maxevt,maxevt2,ifile,ifile2,i
@@ -21,7 +22,7 @@ c g77 -o compare_events compare_events.f handling_lhe_events.f
       character*80 event_file,event_file2
       character*10 MonteCarlo,MonteCarlo2
       character*140 buff
-
+      include "nexternal.inc"
       include "genps.inc"
       integer j,k
       real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
@@ -48,8 +49,8 @@ c g77 -o compare_events compare_events.f handling_lhe_events.f
      &     XSECUP2,XERRUP2,XMAXUP2,LPRUP2)
 
       if(MonteCarlo.ne.MonteCarlo2)then
-        write(*,*)'Files are not relevant to the same MC',
-     #            MonteCarlo,'  ',MonteCarlo2
+        write(*,*)'Files are not relevant to the same MC:'
+        write(*,*)MonteCarlo,MonteCarlo2
         stop
       endif
       if(maxevt.ne.maxevt2)then
@@ -128,6 +129,7 @@ c Checks four-momentum conservation. Derived from phspncheck;
 c works in any frame
       implicit none
       integer npart,maxmom
+      include "nexternal.inc"
       include "genps.inc"
       real*8 xmass(nexternal),xmom(0:3,nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
