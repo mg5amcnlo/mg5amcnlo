@@ -257,7 +257,41 @@ class TestMECmdShell(unittest.TestCase):
         # sanity check on the size
         self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events_PYTHIA6Q_0.hep.gz') > \
                         os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+
+
+    def test_generate_events_nlo_py6pt_stdhep(self):
+        """check that py6pt event generation works in this case"""
         
+        self.generate_production()
+
+        #change to py6
+        card = open('/tmp/MGPROCESS/Cards/run_card.dat').read()
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
+        self.do('generate_events -f')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        # test the hep event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6PT_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01/events_PYTHIA6PT_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+
+
+    def test_check_generate_eventsnlo_py6pt_fsr(self):
+        """check that py6pt event generation stops in this case (because of fsr)"""
+        
+        cmd = os.getcwd()
+        self.generate(['e+ e- > t t~ [real=QCD]'], 'sm')
+        #change to py6
+        card = open('/tmp/MGPROCESS/Cards/run_card.dat').read()
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
+        #self.do('generate_events -f')        
+        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'generate_events -f')
 
         
     def test_generate_events_nlo_hw6_stdhep(self):
