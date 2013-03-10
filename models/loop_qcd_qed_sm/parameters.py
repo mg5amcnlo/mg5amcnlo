@@ -24,6 +24,12 @@ lhv = Parameter(name = 'lhv',
                  value = '1.0',
                  texname = '\lambda_{HV}')
 
+vep = Parameter(name = 'vep',
+                nature = 'internal',
+                type = 'real',
+                value = '1e-10',
+                texname = '\eps')
+
 Ncol = Parameter(name = 'Ncol',
                  nature = 'internal',
                  type = 'real',
