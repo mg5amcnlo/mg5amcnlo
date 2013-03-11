@@ -3573,8 +3573,8 @@ class decay_all_events:
                             istup=2
                             mothup1=1
                             mothup2=2
-                            colup1=curr_event.particle[part]["colup1"]
-                            colup2=curr_event.particle[part]["colup2"]
+                            colup1=curr_event.particle[event_map[part-1]+1]["colup1"]
+                            colup2=curr_event.particle[event_map[part-1]+1]["colup2"]
                             decay_products[res]["colup1"]=colup1
                             decay_products[res]["colup2"]=colup2
                             mass=mom.m
