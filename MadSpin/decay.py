@@ -2647,10 +2647,10 @@ class decay_all_events:
                                     decay['decay_struct'],
                                     event_map,
                                     BW_cut,
-                                    ran=0)
+                                    ran=0, write=1)
                     
                     decayed_event.wgt = decayed_event.wgt * self.branching_ratio
-                     
+                    
                     self.outputfile.write(decayed_event.string_event())
                 #print "number of trials: "+str(trial_nb)
                     trial_nb_all_events+=trial_nb
@@ -3512,7 +3512,7 @@ class decay_all_events:
  
         return BW_weight_prod, topology
         
-    def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1):
+    def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1, write=0):
         """Consider the production event recorded in "curr_event", and decay it
             according to the structure recoreded in "decay_struct".
             If ran=1: random decay, phi and cos theta generated according to 
@@ -3543,13 +3543,22 @@ class decay_all_events:
         maxcol=curr_event.max_col
         weight=1.0
 
-        #event2mg
+        # in order to preserve the natural order in lhe file,
+        # we need the inverse of the dico event_map
+        inv_event_map={}
+        for i in event_map.keys():
+            inv_event_map[event_map[i]]=i
         sol_nb = None
         for index in curr_event.event2mg.keys():
             if curr_event.event2mg[index]>0:
-                part=curr_event.event2mg[index]
+                if write==0:
+                    part=curr_event.event2mg[index]
+                    part_for_curr_evt=event_map[part-1]+1                 
+                else:
+                    part=inv_event_map[curr_event.event2mg[index]-1]+1
+                    part_for_curr_evt=curr_event.event2mg[index]
                 if part in decay_struct:
-                    mom_init = curr_event.particle[event_map[part-1]+1]["momentum"].copy()
+                    mom_init = curr_event.particle[part_for_curr_evt]["momentum"].copy()
                     # sanity check
                     if mom_init.m<1e-6:
                         logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event_old')
@@ -3573,8 +3582,8 @@ class decay_all_events:
                             istup=2
                             mothup1=1
                             mothup2=2
-                            colup1=curr_event.particle[event_map[part-1]+1]["colup1"]
-                            colup2=curr_event.particle[event_map[part-1]+1]["colup2"]
+                            colup1=curr_event.particle[part_for_curr_evt]["colup1"]
+                            colup2=curr_event.particle[part_for_curr_evt]["colup2"]
                             decay_products[res]["colup1"]=colup1
                             decay_products[res]["colup2"]=colup2
                             mass=mom.m
@@ -3722,9 +3731,9 @@ class decay_all_events:
                 else:
                     external+=1 
                     part_number+=1
-                    decayed_event.particle[part_number]=curr_event.particle[event_map[part-1]+1]
+                    decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
                     decayed_event.event2mg[part_number]=part_number
-           
+            
             else: # resonance in the production event
                 if (ran==0): # write resonances in the prod. event ONLY if the 
                     # decayed event is ready to be written down    
