@@ -280,10 +280,7 @@ class UFOMG5Converter(object):
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
 
-        # load the lorentz structure, while making sure to ignore the spin sign
-        # Notice that I afford here to directly modify the ufomodel given in input
-        for lorentz in self.ufomodel.all_lorentz:
-            lorentz.spins=[abs(s) for s in lorentz.spins]
+        # load the lorentz structure.
         self.model.set('lorentz', self.ufomodel.all_lorentz)
 
         logger.info('load vertices')
