@@ -28,7 +28,7 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       include "nexternal.inc"
       include "genps.inc"
       integer j,k,itype,istep,ievts_ok
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
@@ -187,7 +187,7 @@ c works in any frame
       integer nev,npart,maxmom
       include "nexternal.inc"
       include "genps.inc"
-      real*8 xmass(nexternal),xmom(0:3,nexternal)
+      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)

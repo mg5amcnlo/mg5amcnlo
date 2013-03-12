@@ -51,7 +51,7 @@ c negative number of events
 
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 
       include 'reweight0.inc'
       integer kr,kf,kpdf
@@ -859,7 +859,7 @@ c works in any frame
       implicit none
       integer nev,npart,maxmom
       include "nexternal.inc"
-      real*8 xmass(nexternal),xmom(0:3,nexternal)
+      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
