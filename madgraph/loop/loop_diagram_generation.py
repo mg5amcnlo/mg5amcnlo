@@ -389,6 +389,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # HSS
             #if sum([loop_orders[order] for order in pert_loop_order])>=2:
                 valid_diag=False
+            # HSS, 12/03/2013,it is only valid in SM
+            #if loop_orders['QCD']==1 and diag.get_nloopline()==2:
+            #    valid_diag=False
+            # HSS
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection

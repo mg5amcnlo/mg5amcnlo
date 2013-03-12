@@ -27,7 +27,7 @@ lhv = Parameter(name = 'lhv',
 vep = Parameter(name = 'vep',
                 nature = 'internal',
                 type = 'real',
-                value = '1e-10',
+                value = '0.0',
                 texname = '\eps')
 
 Ncol = Parameter(name = 'Ncol',
