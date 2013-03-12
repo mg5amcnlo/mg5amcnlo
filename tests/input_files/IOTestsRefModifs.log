@@ -57,3 +57,16 @@ The following reference files have been updated :
    short_ML_SMQCD_optimized/ddx_ttx/improve_ps.f
    short_ML_SMQCD_default/gg_ttx/improve_ps.f
    short_ML_SMQCD_LoopInduced/gg_hh/improve_ps.f
+ 
+Modifications performed on 2013-03-12 at 19h15 in
+   MadGraph 5 v. 2.0.0.beta3, 2013-01-13
+The following reference files have been updated :
+   long_ML_SMQCD_default/dux_mumvmxg/loop_matrix.f
+   short_ML_SMQCD_default/ddx_ttx/loop_matrix.f
+   short_ML_SMQCD_optimized/gg_ttx/loop_matrix.f
+   long_ML_SMQCD_optimized/gg_wmtbx/loop_matrix.f
+   long_ML_SMQCD_optimized/dux_mumvmxg/loop_matrix.f
+   long_ML_SMQCD_default/gg_wmtbx/loop_matrix.f
+   short_ML_SMQCD_optimized/ddx_ttx/loop_matrix.f
+   short_ML_SMQCD_default/gg_ttx/loop_matrix.f
+   short_ML_SMQCD_LoopInduced/gg_hh/loop_matrix.f
