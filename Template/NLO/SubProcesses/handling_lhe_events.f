@@ -67,7 +67,7 @@ c
       do
          read(92,'(a)',err=87,end=87) buffer
 c Replace the random number seed with the one used...
-         if (index(buffer,'iseed').ne.0) then
+         if (index(buffer,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
             open (unit=93,file="randinit",status="old",err=96)
             read(93,'(a)') buffer2
             if (index(buffer2,'=').eq.0) goto 96
@@ -75,6 +75,10 @@ c Replace the random number seed with the one used...
             read(buffer2,*) iseed
             close(93)
             write(buffer,'(i11,a)')iseed,' =  iseed'
+c Update the number of events
+         elseif (index(buffer,'nevents').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            write(buffer,'(i11,a)')nevents,' = nevents'
          endif
          goto 95
  96      write (*,*) '"randinit" file not found in write_lhef_header_'/
