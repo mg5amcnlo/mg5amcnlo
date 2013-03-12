@@ -257,7 +257,7 @@ class UFOMG5Converter(object):
             if param.nature == "external":
                 if len(param.lhablock.split())>1:
                     raise InvalidModel, '''LHABlock should be single word which is not the case for
-    \'%s\' parameter with lhablock \'%s\'''' % (param.name, param.lhablock)
+    \'%s\' parameter with lhablock \'%s\' ''' % (param.name, param.lhablock)
          
         if hasattr(self.ufomodel, 'gauge'):    
             self.model.set('gauge', self.ufomodel.gauge)
@@ -280,7 +280,10 @@ class UFOMG5Converter(object):
         # Find which particles is in the 3/3bar color states (retrun {id: 3/-3})
         color_info = self.find_color_anti_color_rep()
 
-        # load the lorentz structure
+        # load the lorentz structure, while making sure to ignore the spin sign
+        # Notice that I afford here to directly modify the ufomodel given in input
+        for lorentz in self.ufomodel.all_lorentz:
+            lorentz.spins=[abs(s) for s in lorentz.spins]
         self.model.set('lorentz', self.ufomodel.all_lorentz)
 
         logger.info('load vertices')
@@ -585,9 +588,9 @@ class UFOMG5Converter(object):
             # Interaction with a ghost/goldstone
             return 
         particles = base_objects.ParticleList(particles)
-        
+
         # Import Lorentz content:
-        lorentz = [helas for helas in interaction_info.lorentz]
+        lorentz = [helas for helas in interaction_info.lorentz]            
         
         # Check the coherence of the Fermion Flow
         nb_fermion = sum([ 1 if p.is_fermion() else 0 for p in particles])
@@ -609,7 +612,8 @@ class UFOMG5Converter(object):
             raise InvalidModel, text
         
         
-            
+        
+        # Now consider the name only
         lorentz = [helas.name for helas in lorentz] 
         # Import color information:
         colors = [self.treat_color(color_obj, interaction_info, color_info) 
