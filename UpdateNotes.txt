@@ -8,6 +8,7 @@ Update notes for MadGraph 5 (in reverse time order)
 			  can still be chosen by setting the flag 'sum = event_norm' in the run_card.
 		      RF: Fixes a bug related to the mass of the tau that was not consistently 
  		          taking into account in the phase-space set-up.
+		      VH: Fixed the incorrect implementation of the four gluons R2 in the loop_sm UFO.
 		      RF: The PDF uncertainty for NNPDF is now also correctly given in the run summary
 		      RF: Some improvements in the test_MC and test_ME when matrix elements are
                           numerically very large

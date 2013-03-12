@@ -236,7 +236,8 @@ c x(ndim-1) -> tau_cnt(0); x(ndim) -> ycm_cnt(0)
 c tau is fixed by the mass of the final state particle
             call compute_tau_one_body(totmass,stot,tau_born,xjac0)
          else
-            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0)then
+            if(nt_channel.eq.0 .and. qwidth(-ns_channel-1).ne.0.d0 .and.
+     $           cBW(-ns_channel-1).ne.2)then
 c Generate tau according to a Breit-Wiger function
                call generate_tau_BW(stot,x(ndim-4),qmass(-ns_channel-1)
      $              ,qwidth(-ns_channel-1),cBW(-ns_channel-1),cBW_mass(
@@ -1986,7 +1987,7 @@ c Generate invariant masses for all s-channel branchings of the Born
             stop
          endif
 c Choose the appropriate s given our constraints smin,smax
-         if(qwidth(i).ne.0.d0)then
+         if(qwidth(i).ne.0.d0 .and. cBW(i).ne.2)then
 c Breit Wigner
             if (cBW(i).eq.1 .and.
      &          cBW_width(i,1).gt.0d0 .and. cBW_width(i,-1).gt.0d0) then

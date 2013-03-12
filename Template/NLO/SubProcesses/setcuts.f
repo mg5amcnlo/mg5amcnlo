@@ -247,13 +247,15 @@ c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
                      if (is_a_lm(j)) then
-                        if (j_fks.gt.nincoming) taumin(iFKS)=
-     &                       taumin(iFKS)-ptl+max(mll/2d0,ptl)
-                        taumin_s(iFKS)=
-     &                       taumin_s(iFKS)-ptl+max(mll/2d0,ptl)
-                        taumin_j(iFKS)=
-     &                       taumin_j(iFKS)-ptl+max(mll/2d0,ptl)
-                        xm(i)=xm(i)-ptl+max(mll/2d0,ptl)
+                        if (j_fks.gt.nincoming)
+     &                       taumin(iFKS)= taumin(iFKS)-ptl-emass(i) +
+     &                                     max(mll/2d0,ptl+emass(i))
+                        taumin_s(iFKS) = taumin_s(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,ptl+emass(i))
+                        taumin_j(iFKS) = taumin_j(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,ptl+emass(i))
+                        xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
+     $                       +emass(i))
                         exit
                      endif
                   enddo
@@ -271,13 +273,15 @@ c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
                      if (is_a_lp(j)) then
-                        if (j_fks.gt.nincoming) taumin(iFKS)=
-     &                       taumin(iFKS)-ptl+max(mll/2d0,ptl)
-                        taumin_s(iFKS)=
-     &                       taumin_s(iFKS)-ptl+max(mll/2d0,ptl)
-                        taumin_j(iFKS)=
-     &                       taumin_j(iFKS)-ptl+max(mll/2d0,ptl)
-                        xm(i)=xm(i)-ptl+max(mll/2d0,ptl)
+                        if (j_fks.gt.nincoming)
+     &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
+     &                                      max(mll/2d0,ptl+emass(i))
+                        taumin_s(iFKS) = taumin_s(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,ptl+emass(i))
+                        taumin_j(iFKS) = taumin_j(iFKS)-ptl-emass(i)
+     $                       + max(mll/2d0,ptl+emass(i))
+                        xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,ptl
+     $                       +emass(i))
                         exit
                      endif
                   enddo
