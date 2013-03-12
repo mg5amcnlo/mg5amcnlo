@@ -4662,8 +4662,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
             elif int(output.split('.')[0]) < 3:
-                logger.warning('%s is not ' + \
-                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                logger.warning('%s is not ' % args[1] + \
+                        'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
 
         elif args[0] == 'lhapdf':
