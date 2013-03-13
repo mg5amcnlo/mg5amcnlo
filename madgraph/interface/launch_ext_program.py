@@ -234,7 +234,7 @@ class MadLoopLauncher(ExtLauncher):
         ret_code_u = res['return_code']%10
         StabilityOutput=[]
         if ret_code_h==1:
-            if ret_code_t==3:
+            if ret_code_t==3 or ret_code_t==4:
                 StabilityOutput.append('| Unknown numerical stability because '+\
                                       'MadLoop is in the initialization stage.')
             else:
@@ -250,7 +250,7 @@ class MadLoopLauncher(ExtLauncher):
             StabilityOutput.append('| Both double and quadruple precision'+\
                                                   ' computations are unstable.')
         
-        if ret_code_t==2:
+        if ret_code_t==2 or ret_code_t==4:
             StabilityOutput.append('| Quadruple precision was used for this'+\
                                                                  'computation.')
         if ret_code_h!=1:

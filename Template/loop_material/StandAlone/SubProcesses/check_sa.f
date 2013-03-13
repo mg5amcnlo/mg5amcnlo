@@ -160,7 +160,7 @@
       TENS=(MOD(RETURNCODE,100)-UNITS)/10
       HUNDREDS=(RETURNCODE-TENS*10-UNITS)/100
       if (HUNDREDS.eq.1) then
-        if (TENS.eq.3) then
+        if (TENS.eq.3.or.TENS.eq.4) then
           write(*,*) 'Unknown numerical stability because ',
      &' MadLoop is in the initialization stage.'
         else
@@ -177,7 +177,7 @@
         write(*,*) 'Both double an quadruple precision computations',
      %' are unstable.'
       endif
-      if (TENS.eq.2) then
+      if (TENS.eq.2.or.TENS.eq.4) then
         write(*,*) 'Quadruple precision computation used.'
       endif
       if (HUNDREDS.ne.1) then

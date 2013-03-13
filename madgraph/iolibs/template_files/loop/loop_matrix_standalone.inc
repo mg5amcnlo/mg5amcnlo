@@ -228,6 +228,10 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  DATA RET_CODE_H,RET_CODE_T,RET_CODE_U/1,1,0/
 	  common/ACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
 
+	  LOGICAL MP_DONE_ONCE
+	  DATA MP_DONE_ONCE/.FALSE./
+	  common/MP_DONE_ONCE/MP_DONE_ONCE
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -647,14 +651,14 @@ ENDIF
  9999 continue
 
 C Finalize the return code
-IF (MP_DONE) THEN
+IF (MP_DONE_ONCE) THEN
   RET_CODE_T=2
 ELSE
   RET_CODE_T=1
 ENDIF
 IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
   RET_CODE_H=1
-  RET_CODE_T=3
+  RET_CODE_T=RET_CODE_T+2
   ACCURACY=-1.0d0
 ENDIF
 RET_CODE_U=0
@@ -849,7 +853,9 @@ C         Default computation (double prec.) was performed.
 C     T == 2
 C         Quadruple precision was used for this PS point.
 C     T == 3
-C         MadLoop in initialization phase.
+C         MadLoop in initialization phase. Only double precision used.
+C     T == 4
+C         MadLoop in initialization phase. Quadruple precision used.
 C
 C     U is a number left for future use (always set to 0 for now).
 C     example: TIR vs OPP usage.
