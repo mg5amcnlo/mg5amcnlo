@@ -303,7 +303,7 @@ in presence of majorana particle/flow violation"""
                     if not massless and (spin_id % 2):
                         lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     elif not massless and not (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorin('I2', id, 'I3', spin_id, outgoing)
+                        lorentz *= Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
                     elif spin_id %2:
                         lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
                     else :
@@ -412,9 +412,9 @@ in presence of majorana particle/flow violation"""
                 new='\'%s\'' % new
             else:
                 new = str(new)
-            numerator = numerator.replace(old, new)
+            numerator = re.sub(r'\b%s\b' % old, new,numerator)
             if denominator:
-                denominator = denominator.replace(old, new)
+                denominator = re.sub(r'\b%s\b' % old, new, denominator)
         
         
         numerator = self.parse_expression(numerator, needPflipping)
