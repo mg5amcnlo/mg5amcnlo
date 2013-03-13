@@ -1,5 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+2.0.0beta4(xx/xx/xx) VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
+		     RF: Use MC over helicities (for the MadLoop virtual corrections only) if there are 5 or more independent helicity configurations.
+		     VH+RF: Added MadLoop stability information to the log files (and run summary in DEBUG mode).x
+
 2.0.0.beta3(13/01/13) OM: Merge with 1.5.7 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
                           friendly way.

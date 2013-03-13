@@ -222,12 +222,11 @@ c Update the statistics using the ret_code:
       endif
       if (mod(ret_code,100)/10.eq.1 .or. mod(ret_code,100)/10.eq.3) then
          nddp = nddp+1          ! only double precision was used
+         if (mod(ret_code,100)/10.eq.3) nini=nini+1 ! MadLoop initialization phase
       elseif (mod(ret_code,100)/10.eq.2 .or. mod(ret_code,100)/10.eq.4)
      $        then
          nqdp = nqdp+1          ! quadruple precision was used
-      elseif (mod(ret_code,100)/10.eq.3 .or. mod(ret_code,100)/10.eq.4)
-     $        then
-         nini = nini+1          ! MadLoop initialization phase
+         if (mod(ret_code,100)/10.eq.4) nini=nini+1 ! MadLoop initialization phase
       else
          n10=n10+1              ! no known ret_code (10)
       endif
