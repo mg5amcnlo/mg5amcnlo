@@ -106,8 +106,8 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer nunst, ntot
-      common/ups_stats/nunst, ntot
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 C-----
 C  BEGIN CODE
@@ -115,8 +115,18 @@ C-----
 c
 c     Read process number
 c
-      nunst=0
       ntot=0
+      nsun=0
+      nsps=0
+      nups=0
+      neps=0
+      n100=0
+      nddp=0
+      nqdp=0
+      nini=0
+      n10=0
+      n1=0
+      
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -233,15 +243,6 @@ c to save grids:
          close (12)
 
       elseif(imode.eq.1) then
-c$$$         open (unit=99,file='nevts',status='old',err=999)
-c$$$         read (99,*) nevts
-c$$$         close(99)
-c$$$         if(nevts.eq.0) then
-c$$$            write (*,*)
-c$$$     &           'No events needed for this channel...skipping it'
-c$$$            stop
-c$$$         endif
-c
          if(plotKin)then
             open(unit=99,file='MADatNLO.top',status='unknown')
             call initplot
@@ -389,45 +390,38 @@ c to restore grids:
       write(*,*)'Maximum weight found:',fksmaxwgt
       write(*,*)'Found for:',xisave,ysave
 
-
-c$$$ THIS INFORMATION IS NO LONGER UP-TO-DATE
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'Total points tried:                   ',
-c$$$     &     ncall*itmax
-c$$$      write (*,*) 'Total points passing generation cuts: ',
-c$$$     &     itotalpoints
-c$$$      write (*,*) 'Efficiency of events passing cuts:    ',
-c$$$     &     dble(itotalpoints)/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'number of except PS points:',ivirtpointsExcept,
-c$$$     &     'out of',ivirtpoints,'points'
-c$$$      write (*,*) '   treatment of exceptional PS points:'
-c$$$      write (*,*) '      maximum approximation:',
-c$$$     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
-c$$$      write (*,*) '      minimum approximation:',
-c$$$     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
-c$$$      write (*,*) '      taking the max/min average:',
-c$$$     &     total_wgt_sum/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-
-
-
       if(plotEv.or.plotKin)then
         call mclear
         call topout
         close(99)
       endif
 
-      write(*,*) "Satisctics from MadLoop:"
-      write(*,*) "Total points tried: ", ntot
-      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
-     1 nunst
-      return
+      if (ntot.ne.0) then
+         write(*,*) "Satistics from MadLoop:"
+         write(*,*)
+     &        "  Total points tried:                              ",ntot
+         write(*,*)
+     &        "  Stability unknown:                               ",nsun
+         write(*,*)
+     &        "  Stable PS point:                                 ",nsps
+         write(*,*)
+     &        "  Unstable PS point (and rescued):                 ",nups
+         write(*,*)
+     &        "  Exceptional PS point (unstable and not rescued): ",neps
+         write(*,*)
+     &        "  Double precision used:                           ",nddp
+         write(*,*)
+     &        "  Quadruple precision used:                        ",nqdp
+         write(*,*)
+     &        "  Initialization phase-space points:               ",nini
+         write(*,*)
+     &        "  Unknown return code (100):                       ",n100
+         write(*,*)
+     &        "  Unknown return code (10):                        ",n10
+         write(*,*)
+     &        "  Unknown return code (1):                         ",n1
+         return
+      endif
  999  write (*,*) 'nevts file not found'
       stop
       end

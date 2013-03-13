@@ -9,7 +9,7 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked
+      integer npoints, npointsChecked,ret_code
       integer i, j, k
       double precision tolerance, tolerance_default
       double precision accuracy
@@ -139,7 +139,8 @@ C-----
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy
+     $         ,ret_code) 
 
           finite = virt_wgts(1)/dble(ngluons)
           single = virt_wgts(2)/dble(ngluons)

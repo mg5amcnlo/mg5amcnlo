@@ -91,8 +91,8 @@ c For tests of virtuals
 
       integer n_mp, n_disc
 c statistics for MadLoop      
-      integer nunst, ntot
-      common/ups_stats/nunst, ntot
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 C-----
 C  BEGIN CODE
@@ -100,8 +100,18 @@ C-----
 c
 c     Read process number
 c
-      nunst=0
       ntot=0
+      nsun=0
+      nsps=0
+      nups=0
+      neps=0
+      n100=0
+      nddp=0
+      nqdp=0
+      nini=0
+      n10=0
+      n1=0
+
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -253,13 +263,32 @@ c
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
 
-c Uncomment for getting CutTools statistics
-c$$$      call ctsstatistics(n_mp,n_disc)
-c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
-      write(*,*) "Satisctics from MadLoop:"
-      write(*,*) "Total points tried: ", ntot
-      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
-     1 nunst
+      if (ntot.ne.0) then
+         write(*,*) "Satistics from MadLoop:"
+         write(*,*)
+     &        "  Total points tried:                              ",ntot
+         write(*,*)
+     &        "  Stability unknown:                               ",nsun
+         write(*,*)
+     &        "  Stable PS point:                                 ",nsps
+         write(*,*)
+     &        "  Unstable PS point (and rescued):                 ",nups
+         write(*,*)
+     &        "  Exceptional PS point (unstable and not rescued): ",neps
+         write(*,*)
+     &        "  Double precision used:                           ",nddp
+         write(*,*)
+     &        "  Quadruple precision used:                        ",nqdp
+         write(*,*)
+     &        "  Initialization phase-space points:               ",nini
+         write(*,*)
+     &        "  Unknown return code (100):                       ",n100
+         write(*,*)
+     &        "  Unknown return code (10):                        ",n10
+         write(*,*)
+     &        "  Unknown return code (1):                         ",n1
+      endif
+      return
 
       if(savegrid)call initplot
       call mclear
