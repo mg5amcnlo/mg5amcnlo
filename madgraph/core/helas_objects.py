@@ -209,21 +209,23 @@ class IdentifyMETag(diagram_generation.DiagramTag):
 class CanonicalConfigTag(diagram_generation.DiagramTag):
     """DiagramTag daughter class to create canonical order of
     config. Need to compare leg number, mass, width, and color.
-    Also find s- and t-channels from the tag."""
+    Also implement find s- and t-channels from the tag.
+    Warning! The sorting in this tag must be identical to that of
+       IdentifySGConfigTag in diagram_symmetry.py (apart from leg number)
+       to make sure symmetry works!"""
 
     def get_s_and_t_channels(self, ninitial, model, new_pdg):
         """Get s and t channels from the tag, as two lists of vertices
         ordered from the outermost s-channel and in/down towards the highest
         number initial state leg. 
-        Idea: Reorder vertices to start from IS leg 2
-        Algorithm: 
-        Start from the final tag. Check for final leg number for all links
-        and move in the direction towards ninitial (or 1, if no ninitial).
+        Algorithm: Start from the final tag. Check for final leg number for 
+        all links and move in the direction towards leg 2 (or 1, if 1 and 2
+        are in the same direction).
         """
 
         # Look for final leg numbers in all links
         done = [l for l in self.tag.links if \
-                l.end_link and l.links[0][0][0] == ninitial]
+                l.end_link and l.links[0][1][0] == ninitial]
         while not done:
             # Identify the chain closest to ninitial
             right_num = -1
@@ -242,8 +244,6 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                 raise diagram_generation.DiagramTag.DiagramTagError, \
                     "Error in CanonicalConfigTag, no link with number 1 or 2."
 
-
-
             # Now move one step in the direction of right_link
             right_link = self.tag.links[right_num]
             # Create a new link corresponding to moving one step
@@ -255,7 +255,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                                              self.tag.vertex_id,
                                              right_link.vertex_id,
                                              new_links))
-            # Create a new final vertex in the direction of the longest link
+            # Create a new final vertex in the direction of the right_link
             other_links = list(right_link.links) + [new_link]
             other_link = diagram_generation.DiagramTagChainLink(\
                                              other_links,
@@ -265,7 +265,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                                                  other_links))
             self.tag = other_link
             done = [l for l in self.tag.links if \
-                    l.end_link and l.links[0][0][0] == ninitial]
+                    l.end_link and l.links[0][1][0] == ninitial]
 
         # Construct a diagram from the resulting tag
         diagram = self.diagram_from_tag(model)
@@ -280,12 +280,18 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             else:
                 tchannels.append(vert)
 
-        lastvert = diagram.get('vertices')[-1]
-        if sorted([l.get('number') for l in \
-                 lastvert.get('legs')])[:2] == [1,2]:
-            schannels.append(lastvert)
+        # Need to make sure leg number 2 is always last in last vertex
+        lastvertex = diagram.get('vertices')[-1]
+        legs = lastvertex.get('legs')
+        leg2 = [l.get('number') for l in legs].index(ninitial)
+        legs.append(legs.pop(leg2))
+        if ninitial == 2:
+            # Last vertex always counts as t-channel        
+            tchannels.append(lastvertex)
         else:
-            tchannels.append(lastvert)
+            legs[-1].set('id', 
+                     model.get_particle(legs[-1].get('id')).get_anti_pdg_code())
+            schannels.append(lastvertex)
 
         # Split up multiparticle vertices using fake s-channel propagators
         multischannels = [(i, v) for (i, v) in enumerate(schannels) \
@@ -339,13 +345,16 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             else:
                 legs.sort(lambda l1, l2: l1.get('number') - \
                           l2.get('number'))
-            for leg in legs:
+            for ileg,leg in enumerate(legs):
+                newleg = copy.copy(leg)
                 try:
-                    leg.set('number', number_dict[leg.get('number')])
+                    newleg.set('number', number_dict[leg.get('number')])
                 except KeyError:
                     pass
+                else:
+                    legs[ileg] = newleg                    
             nprop = nprop - 1
-            last_leg = vertex.get('legs')[-1]
+            last_leg = copy.copy(vertex.get('legs')[-1])
             number_dict[last_leg.get('number')] = nprop
             last_leg.set('number', nprop)
             legs.append(last_leg)
@@ -360,8 +369,8 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         part = model.get_particle(leg.get('id'))
 
-        return [((leg.get('number'),
-                  part.get('mass'), part.get('width'), part.get('color')),
+        return [((leg.get('number'), part.get('spin'), part.get('color'),
+                  part.get('mass'), part.get('width')),
                  (leg.get('number'),leg.get('id'),leg.get('state')))]
         
     @staticmethod
@@ -372,8 +381,9 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         inter = model.get_interaction(vertex.get('id'))
 
         if last_vertex:
-            return ((0,),(vertex.get('id'),
-                          min([l.get('number') for l in vertex.get('legs')])))
+            return ((0,),
+                    (vertex.get('id'),
+                     min([l.get('number') for l in vertex.get('legs')])))
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
@@ -388,7 +398,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         # Find leg numbers for new vertex
         min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
-                         + [l.links[0][0][0] for l in links if l.end_link])
+                         + [l.links[0][1][0] for l in links if l.end_link])
 
         if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
             # We go from a last link to next-to-last link 
@@ -396,7 +406,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
                     (new_vertex[1][0], old_vertex[1][1], min_number))
         elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (old_vertex[0], new_vertex[1])
+            return (old_vertex[0], (new_vertex[1][0], min_number))
 
         # We should not get here
         raise diagram_generation.DiagramTag.DiagramTagError, \
@@ -411,7 +421,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
             leg = base_objects.Leg({'number':link.links[0][1][0],
                                      'id':link.links[0][1][1],
                                      'state':link.links[0][1][2],
-                                     'onshell':False})
+                                     'onshell':None})
             return leg
         # This shouldn't happen
         assert False
@@ -421,7 +431,8 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
         """Return a vertex given a leg list and a vertex id"""
         vertex = base_objects.Vertex({'legs': legs,
                                       'id': vertex_id[1][0]})
-        vertex.get('legs')[-1].set('onshell', vertex_id[1])
+        if len(vertex_id[1]) == 3:
+            vertex.get('legs')[-1].set('onshell', vertex_id[1][1])
         return vertex
 
     @staticmethod
@@ -2029,8 +2040,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
         s-channel and in/down towards the highest number initial state
         leg."""
 
-        # Create a new HelasAmplitude based on a CanonicalConfigTag
-        # to ensure that the order of propagators is canonical
+        # Create a CanonicalConfigTag to ensure that the order of
+        # propagators is canonical
         wf_dict = {}
         tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
         diagram = tag.diagram_from_tag(model)

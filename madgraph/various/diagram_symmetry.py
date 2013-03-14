@@ -287,8 +287,11 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
 #===============================================================================
 
 class IdentifySGConfigTag(diagram_generation.DiagramTag):
-    """DiagramTag daughter class to identify configs giving the same
-    config. Need to compare state, spin, mass, width, and color."""
+    """DiagramTag daughter class to identify diagrams giving the same
+    config. Need to compare state, spin, mass, width, and color.
+    Warning: If changing this tag, then also CanonicalConfigTag in 
+             helas_objects.py must be changed!
+    """
 
     @staticmethod
     def link_from_leg(leg, model):

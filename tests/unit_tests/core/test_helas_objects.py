@@ -2573,6 +2573,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                          goal_no_quark)
 
         diagrams = helas_amplitude.get('diagrams')
+        wf_dict = {}
         for idiag in range(len(diagrams)):
             if idiag in quark_none:
                 vertices, tchannels = \
