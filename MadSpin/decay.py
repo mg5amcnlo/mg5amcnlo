@@ -1961,7 +1961,14 @@ class width_estimate(object):
         pids = set([abs(label2pid[name]) for name in to_decay])
         particle_set = [label2pid[pid] for pid in pids]
     
-        commandline="import model %s\n" % self.model.get('modelpath')
+
+        modelpath = self.model.get('modelpath')
+        if os.path.basename(modelpath) != self.model['name']:
+            name, restrict = self.model['name'].rsplit('-',1)
+            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                modelpath = pjoin(os.path.dirname(modelpath), self.model['name'])
+    
+        commandline="import model %s\n" % modelpath
         commandline+="generate %s > all all \n" % particle_set[0]
         commandline+= "set automatic_html_opening False --no_save\n"
         if len(particle_set)>1:
@@ -2494,7 +2501,7 @@ class decay_all_events:
         self.terminate_fortran_executables()
         shutil.rmtree(pjoin(self.path_me,'production_me'))
         shutil.rmtree(pjoin(self.path_me,'full_me'))
-
+        shutil.rmtree(pjoin(self.path_me,'decay_me'))
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
@@ -2880,10 +2887,16 @@ class decay_all_events:
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]       
+                      if re.search('^\s*add\s+process', line)]      
         
         mgcmd = self.mgcmd
-        commandline="import model %s " % self.model.get('modelpath')
+        modelpath = self.model.get('modelpath')
+        if os.path.basename(modelpath) != mgcmd._curr_model['name']:
+            name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
+            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+            
+        commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
         mgcmd.exec_cmd("set group_subprocesses False")
 
@@ -2901,7 +2914,7 @@ class decay_all_events:
                         commandline+="add process %s j ;" % (process)
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
-
+        
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -3064,7 +3077,7 @@ class decay_all_events:
         misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
 
         file=pjoin(path_me, 'param_card.dat')
-        shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat"))    
+        shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
 
         for direc in list_prod:
             if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
@@ -3194,9 +3207,6 @@ class decay_all_events:
         # check all set of decay that need to be done:
         decay_set = set()
         for production in self.all_ME.values():
-            if not production['decaying']:
-                misc.sprint(production['path'], production['base_order'], production['decaying'], production['total_br'])
-            
             decay_set.add(frozenset(production['decaying']))
 
         numberev = self.options['Nevents_for_max_weigth'] # number of events
@@ -3296,18 +3306,20 @@ class decay_all_events:
             probe_weight[decaying].append(max_decay)
 
                     
-
-            running_time = misc.format_timer(time.time()-starttime)
-            info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
-            for  index,tag_decay in enumerate(max_decay):
-                info_text += '            decay_config %s [%s] : %s\n' % \
-                   (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
-            logger.info(info_text[:-1])
+            if ev % 5 == 0:
+                running_time = misc.format_timer(time.time()-starttime)
+                info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
+                for  index,tag_decay in enumerate(max_decay):
+                    info_text += '            decay_config %s [%s] : %s\n' % \
+                       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
+                logger.info(info_text[:-1])
         
         
         
         # Computation of the maximum weight used in the unweighting procedure
         for decaying in probe_weight:
+            if not probe_weight[decaying]:
+                continue
             #me_linked = [me for me in self.all_ME.values() if me['decaying'] == decaying]
             for decay_tag in probe_weight[decaying][0].keys():
                 weights=[]
