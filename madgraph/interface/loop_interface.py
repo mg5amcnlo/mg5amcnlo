@@ -304,7 +304,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
                     
-        if not loop_type.startswith('real') and \
+        if loop_type and not loop_type.startswith('real') and \
                  not self.options['gauge']=='Feynman' and \
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
@@ -331,7 +331,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.history.clean(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -608,7 +609,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
         # Now make sure the process is acceptable
-        proc = " ".join(argss[1:])
+        proc = " ".join(argss[1:-1])
         myprocdef = self.extract_process(proc)
         self.validate_model('virtual')
         self.proc_validity(myprocdef,'ML5_check')

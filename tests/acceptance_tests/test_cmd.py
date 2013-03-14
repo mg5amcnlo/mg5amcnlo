@@ -552,7 +552,7 @@ class TestCmdShell2(unittest.TestCase,
         self.do('define p = u c~ g d s b~ b h')
         self.assertEqual(self.cmd._multiparticles['p'],
                          [21, 2, 1, 3, 5, -4, -5, 25])
-        
+
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -637,7 +637,7 @@ class TestCmdShell2(unittest.TestCase,
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
                 value = eval(value)
-                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                self.assertAlmostEqual(value, 0.019538610404713896)
 
     def test_load_feynman(self):
         """ Test that feynman gauge assignment works """

@@ -83,7 +83,10 @@ class Parameter (object):
         data = data.split()
         if not len(data):
             return
-        self.lhacode = tuple([int(d) for d in data[1:]])
+        self.lhacode = [int(d) for d in data[2:]]
+        self.lhacode.sort()
+        self.lhacode = tuple([len(self.lhacode)] + self.lhacode)
+        
         self.value = float(data[0]) 
         self.format = 'decay_table'
 
@@ -129,7 +132,6 @@ class Block(list):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
-            
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:
@@ -149,6 +151,7 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
+
         
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
@@ -308,7 +311,9 @@ class ParamCard(dict):
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
-        if isinstance(outpath, str):
+        if not outpath:
+            return text
+        elif isinstance(outpath, str):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
@@ -1175,7 +1180,6 @@ def check_valid_param_card(path, restrictpath=None):
         restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
-            print 'no restriction card'
             return True
         
     cardrule = ParamCardRule()

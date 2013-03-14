@@ -1012,6 +1012,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
 
+        if self.opt['sa_for_decay']:
+            # avoid symmetric output
+            proc = matrix_element.get('processes')[0]
+            leg0 = proc.get('legs')[0]
+            leg1 = proc.get('legs')[1]
+            if not leg1.get('state'):
+                proc.get('legs')[0] = leg1
+                proc.get('legs')[1] = leg0
+                dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                       "P%s" % proc.shell_string())
+                #restore original order
+                proc.get('legs')[1] = leg1
+                proc.get('legs')[0] = leg0                
+                if os.path.exists(dirpath2):
+                    logger.info('Symmetric directory exists')
+                    return 0
+
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -1137,8 +1154,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         # Extract overall denominator
         # Averaging initial state color, spin, and identical FS particles
-        den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
+        replace_dict['den_factor_line'] = self.get_den_factor_line(matrix_element)
 
         # Extract ngraphs
         ngraphs = matrix_element.get_number_of_amplitudes()
@@ -1170,8 +1186,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         else:
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
-            
-
+         
         file = file % replace_dict
 
         # Write the file
@@ -1241,6 +1256,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 
         #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
+        cp(_file_path+'/various/lhe_parser.py', 
+                                self.dir_path+'/bin/internal/lhe_parser.py')         
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
         cp(_file_path+'/various/banner.py', 
@@ -1772,10 +1789,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['define_subdiag_lines'] = \
                  """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+            replace_dict['cutsdone'] = ""
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
+            replace_dict['cutsdone'] = "      cutsdone=.false."
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -2400,9 +2419,9 @@ c           This is dummy particle used in multiparticle vertices
             if me.get('has_mirror_process'):
                 mirror_procs = [copy.copy(p) for p in me.get('processes')]
                 for proc in mirror_procs:
-                    legs = copy.copy(proc.get('legs'))
+                    legs = copy.copy(proc.get('legs_with_decays'))
                     legs.insert(0, legs.pop(1))
-                    proc.set("legs", legs)
+                    proc.set("legs_with_decays", legs)
                 lines.append("mirror  %s" % ",".join(p.base_string() for p in \
                                                      mirror_procs))
             else:
@@ -2966,6 +2985,8 @@ class UFO_model_to_mg4(object):
         for key in keys:
             for param in self.model['parameters'][key]:
                 lower_name = param.name.lower()
+                if not lower_name:
+                    continue
                 try:
                     lower_dict[lower_name].append(param)
                 except KeyError:
@@ -3017,12 +3038,14 @@ class UFO_model_to_mg4(object):
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
         for key in keys:
+            to_add = [o for o in self.model['parameters'][key] if o.name]
+
             if key == ('external',):
-                self.params_ext += self.model['parameters'][key]
+                self.params_ext += to_add
             elif any([(k in key) for k in self.PS_dependent_key]):
-                self.params_dep += self.model['parameters'][key]
+                self.params_dep += to_add
             else:
-                self.params_indep += self.model['parameters'][key]
+                self.params_indep += to_add
         # same for couplings
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
@@ -3675,6 +3698,8 @@ class UFO_model_to_mg4(object):
             colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
+            if not parameter.name:
+                return ''
             return ' '.join(colum)+'\n'
     
         fsock = self.open('ident_card.dat')
@@ -3818,12 +3843,11 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'cuttools_dir': cmd._cuttools_dir,
               'fortran_compiler':cmd.options['fortran_compiler']}
         if not cmd.options['loop_optimized_output']:
-            logger.info("Writing out the aMC@NLO code, starting from born process")
+            logger.info("Writing out the aMC@NLO code")
             ExporterClass = export_fks.ProcessExporterFortranFKS
             options['export_format']='FKS5_default'
         else:
-            logger.info("Writing out the aMC@NLO code, starting from "+\
-                                           "born process using optimized Loops")
+            logger.info("Writing out the aMC@NLO code, using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
             options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)

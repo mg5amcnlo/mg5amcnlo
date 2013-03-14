@@ -1,5 +1,5 @@
 
-__date__ = "22 Sept 2011"
+__date__ = "02 Aug 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from function_library import *
@@ -28,6 +28,7 @@ class ParamCardWriter(object):
         self.fsock.write(self.header)
         
         self.write_card(list_of_parameters)
+        self.fsock.close()
     
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
@@ -167,7 +168,6 @@ class ParamCardWriter(object):
                                  'antipart': part.name != part.antiname and 1 or 0}
         
         self.fsock.write(text)
-        
         
             
             

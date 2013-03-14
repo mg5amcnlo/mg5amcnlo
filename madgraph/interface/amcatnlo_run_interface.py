@@ -124,7 +124,7 @@ def compile_dir(arguments):
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and not options['noreweight']:
+    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and not options['noreweight']:
         misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
             raise aMCatNLOError('reweight_xsec_events compilation failed')
@@ -471,7 +471,8 @@ class CheckValidForCmd(object):
             self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
-                              
+                
+        lock = None              
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
             filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
@@ -487,6 +488,8 @@ class CheckValidForCmd(object):
             if tag: 
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
+        
+        return lock
             
 
     def check_delphes(self, arg):
@@ -672,7 +675,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
             #return mode
-            return self.list_completion(text,['LO','NLO','aMC@NLO', 'aMC@LO'],line)
+            return self.list_completion(text,['LO','NLO','aMC@NLO','aMC@LO'],line)
         elif len(args) == 2 and line[begidx-1] == '@':
             return self.list_completion(text,['LO','NLO'],line)
         else:
@@ -801,31 +804,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'launch': ['launch [OPTIONS]', 'shower'],
         'shower' : ['generate_events [OPTIONS]']
     }
-    
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
     
     
     ############################################################################
@@ -1030,8 +1008,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 #            self.options_madevent['automatic_html_opening'] = False
 
         mode = 'aMC@' + argss[0]
-        if options['parton']:
+        if options['parton'] and mode == 'aMC@NLO':
             mode = 'noshower'
+        elif options['parton'] and mode == 'aMC@LO':
+            mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
@@ -1082,7 +1062,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
-        if not mode in ['LO', 'NLO', 'noshower'] and self.check_mcatnlo_dir() \
+        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] and self.check_mcatnlo_dir() \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file)
         elif mode == 'noshower':
@@ -1136,7 +1116,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         If this is 0, update the number according to a fresh one"""
         iseed = int(self.run_card['iseed'])
         if iseed != 0:
-            misc.call(['echo "r=%d > %s"' \
+            misc.call(['echo "r=%d" > %s' \
                     % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
                     cwd=self.me_dir, shell=True)
         else:
@@ -1147,6 +1127,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
             randinit.write('r=%d' % iseed)
             randinit.close()
 
+
+    def get_characteristics(self, file):
+        """reads the proc_characteristics file and initialises the correspondent
+        dictionary"""
+        lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
+        self.proc_characteristics = {}
+        for l in lines:
+            key, value = l.split('=')
+            self.proc_characteristics[key.strip()] = value.strip()
             
         
     def run(self, mode, options):
@@ -1157,6 +1146,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             options['only_generation'] = False
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1184,6 +1175,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
                     'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
+        folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
                     if file.startswith('P') and \
@@ -1201,14 +1193,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith(obj[:-1]) and \
                                 (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                     files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
         if options['reweightonly']:
+            event_norm=self.run_card['event_norm']
             nevents=int(self.run_card['nevents'])
-            self.reweight_and_collect_events(options, mode, nevents)
+            self.reweight_and_collect_events(options, mode, nevents, event_norm)
             return
 
         devnull = os.open(os.devnull, os.O_RDWR) 
@@ -1225,7 +1218,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1243,7 +1236,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
@@ -1255,7 +1248,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                    stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(0, mode)
+                self.print_summary(options, 0, mode)
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1272,7 +1265,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(1, mode)
+            self.print_summary(options, 1, mode)
             misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
                                 stdout=devnull, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -1285,19 +1278,25 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             return
 
-        elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
+        elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
             shower = self.run_card['parton_shower']
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
 
+# check that PYTHIA6PT is not used for processes with FSR
+            if shower == 'PYTHIA6PT' and \
+                self.proc_characteristics['has_fsr'] == '.true.':
+                raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
+
             if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
-            elif mode == 'noshower':
+            elif mode in ['noshower','noshowerLO']:
                 logger.info('Generating events without running the shower.')
             elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
@@ -1308,7 +1307,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     # if the number of events requested is zero,
                     # skip mint step 2
                     if i==2 and nevents==0:
-                        self.print_summary(2,mode)
+                        self.print_summary(options, 2,mode)
                         return
 
                     self.update_status(status, level='parton')
@@ -1317,7 +1316,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
                         self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
                         
-                    elif mode == 'aMC@LO':
+                    elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
                         self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
@@ -1332,7 +1331,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
-                    self.print_summary(i, mode)
+                    self.print_summary(options, i, mode)
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1341,7 +1340,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     level='parton')
             time.sleep(10)
 
-        return self.reweight_and_collect_events(options, mode, nevents)
+        event_norm=self.run_card['event_norm']
+        return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
@@ -1358,7 +1358,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         for NLO/LO
         The cross_sect_dict is returned"""
         res = {}
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             pat = re.compile(\
 '''Found (\d+) correctly terminated jobs 
 random seed found in 'randinit' is (\d+)
@@ -1380,7 +1380,7 @@ Integrated cross-section
             raise aMCatNLOError('An error occurred during the collection of results')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower']:
+        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
@@ -1390,7 +1390,7 @@ Integrated cross-section
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
 
-    def print_summary(self, step, mode, scale_pdf_info={}):
+    def print_summary(self, options, step, mode, scale_pdf_info={}):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -1409,7 +1409,7 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','GV*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
@@ -1454,7 +1454,7 @@ Integrated cross-section
                 stats['Errors'].append((str(log),nErrors))
             
         
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower']:
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
                       'Summary:']
@@ -1470,7 +1470,8 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' \
+                        and not options['noreweight']:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
@@ -1505,7 +1506,7 @@ Integrated cross-section
                              self.cross_sect_dict
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
-           (mode in ['aMC@NLO', 'aMC@LO', 'noshower'] and step!=2):
+           (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
             logger.info(message+'\n')
             return
 
@@ -1552,7 +1553,7 @@ Integrated cross-section
 
 
 
-    def reweight_and_collect_events(self, options, mode, nevents):
+    def reweight_and_collect_events(self, options, mode, nevents, event_norm):
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
@@ -1566,7 +1567,10 @@ Integrated cross-section
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
-        p.communicate(input = '1\n')
+        if event_norm == 'sum':
+            p.communicate(input = '1\n')
+        else:
+            p.communicate(input = '2\n')
 
         #get filename from collect events
         filename = open(pjoin(self.me_dir, 'collect_events.log')).read().split()[-1]
@@ -1578,7 +1582,7 @@ Integrated cross-section
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
         misc.call(['gzip %s' % evt_file], shell=True)
         if not options['reweightonly']:
-            self.print_summary(2, mode, scale_pdf_info)
+            self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
         return evt_file
@@ -1695,6 +1699,7 @@ Integrated cross-section
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
             if not topfiles:
+                misc.call(['gzip %s' % evt_file], shell=True)
                 logger.warning('No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir)
 
@@ -1851,8 +1856,12 @@ Integrated cross-section
         content += 'ZWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 23).value
         content += 'WMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 24).value
         content += 'WWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 24).value
-        content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
-        content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        try:
+            content += 'HGGMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 25).value
+            content += 'HGGWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 25).value
+        except KeyError:
+            content += 'HGGMASS=120.\n'
+            content += 'HGGWIDTH=0.00575308848\n'
         content += 'beammom1=%s\n' % self.banner.get_detail('run_card', 'ebeam1')
         content += 'beammom2=%s\n' % self.banner.get_detail('run_card', 'ebeam2')
         content += 'BEAM1=%s\n' % self.banner.get_detail('run_card', 'lpp1')
@@ -1863,6 +1872,7 @@ Integrated cross-section
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
+        content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
@@ -1927,11 +1937,9 @@ Integrated cross-section
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
-        Hessian method) and returns it in percents.
-        The expected format of the file is:
-        n_scales
-        xsec_scale_central xsec_scale1 ...
-        n_pdf
+        Hessian method (if lhaid<90000) or Gaussian (if lhaid>90000))
+        and returns it in percents.  The expected format of the file
+        is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
         scale_pdf_info={}
         scales=[]
@@ -1985,15 +1993,25 @@ Integrated cross-section
             scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
 
         # get the pdf uncertainty in percent (according to the Hessian method)
+        lhaid=int(self.run_card['lhaid'])
         pdf_upp=0.0
         pdf_low=0.0
-        if numofpdf>1:
-            for i in range(int(numofpdf/2)):
-                pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
-                pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-            scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-            scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
-
+        if lhaid <= 90000:
+            # use Hessian method (CTEQ & MSTW)
+            if numofpdf>1:
+                for i in range(int(numofpdf/2)):
+                    pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
+                    pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
+                scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
+                scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+        else:
+            # use Gaussian method (NNPDF)
+            pdf_stdev=0.0
+            for i in range(int(numofpdf-1)):
+                pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
+            pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
+            scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         return scale_pdf_info
 
 
@@ -2252,7 +2270,7 @@ Integrated cross-section
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
-        elif mode in ['aMC@NLO', 'aMC@LO','noshower']:
+        elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
 
@@ -2279,10 +2297,14 @@ Integrated cross-section
             self.link_lhapdf(libdir)
         else:
             logger.info('Using built-in libraries for PDFs')
-            os.unsetenv('lhapdf')
+            try:
+                del os.environ['lhapdf']
+            except KeyError:
+                pass
 
         # make Source
         self.update_status('Compiling source...', level=None)
+        misc.compile(['clean4pdf'], cwd = sourcedir)
         misc.compile(cwd = sourcedir)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
@@ -2400,7 +2422,7 @@ Integrated cross-section
             os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.putenv('lhapdf', 'True')
+        os.environ['lhapdf'] = 'True'
 
 
     def write_test_input(self, test):
@@ -2465,8 +2487,8 @@ Integrated cross-section
         if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower' 
                 
-        available_mode = ['0', '1', '2', '3']
-        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower'}
+        available_mode = ['0', '1', '2', '3', '4', '5', '6']
+        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower', '4': 'LO', '5':'aMC@LO', '6':'noshowerLO'}
         answers = []
         for opt in available_mode:
             value = int(opt)
@@ -2477,11 +2499,14 @@ Integrated cross-section
                 answers.append('%s+madspin' % tag)
             
         question = """Which programs do you want to run?
-  0 / auto     : All for which cards exist.
-  1 / NLO      : Fixed order NLO calculation (no event generation).
-  2 / aMC@NLO  : Event generation (include running the shower).
-  3 / noshower : Event generation (without running the shower).
-+10 / +madspin : Add decays with MadSpin (before the shower).\n"""
+  0 / auto       : NLO event generation and -if cards exist- shower and madspin.
+  1 / NLO        : Fixed order NLO calculation (no event generation).
+  2 / aMC@NLO    : NLO event generation (include running the shower).
+  3 / noshower   : NLO event generation (without running the shower).
+  4 / LO         : Fixed order LO calculation (no event generation).
+  5 / aMC@LO     : LO event generation (include running the shower).
+  6 / noshowerLO : LO event generation (without running the shower).
++10 / +madspin   : Add decays with MadSpin (before the shower).\n"""
 
         if not self.force:
             if not mode:
@@ -2508,7 +2533,7 @@ Integrated cross-section
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
                 mode += '+madspin'         
         logger.info('Will run in mode %s' % mode)
-        if 'noshower' in mode:
+        if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
         
@@ -2531,12 +2556,18 @@ Please, shower the Les Houches events before using them for physics analyses."""
             cards = ['shower_card.dat']
         
         if not options['force'] and not  self.force:
-            self.ask_edit_cards(cards)   
+            self.ask_edit_cards(cards)
+            
+
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
+        #add a tag in the run_name for distinguish run_type
+        if self.run_name.startswith('run_'):
+            if mode in ['LO','aMC@LO','noshowerLO']:
+                self.run_name += '_LO' 
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         if 'aMC@' in mode or mode == 'onlyshower':
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
@@ -2603,7 +2634,7 @@ _compile_parser.add_option("-R", "--noreweight", default=False, action='store_tr
 
 _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
                 "     computation of the total cross-section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \

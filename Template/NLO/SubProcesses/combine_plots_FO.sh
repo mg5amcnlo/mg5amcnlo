@@ -24,7 +24,7 @@ make read40
 EXENAME=$thisdir/read40
 echo -n "" > dir
 counterp=0
-for p in P0_* ; do
+for p in P* ; do
     cd $thisdir
     cd $p
     rm -f MADatNLO*

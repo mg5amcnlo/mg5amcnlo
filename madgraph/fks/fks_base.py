@@ -22,7 +22,6 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.fks.fks_common as fks_common
-#import madgraph.fks.fks_real as fks_real
 import copy
 import logging
 import array
@@ -48,7 +47,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcess, self).get_sorted_keys()
-        keys += ['born_processes', 'real_amplitudes', 'real_pdgs']
+        keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 'has_fsr']
         return keys
 
     def filter(self, name, value):
@@ -166,11 +165,16 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
 
+        self['has_isr'] = any([proc.isr for proc in self['born_processes']])
+        self['has_fsr'] = any([proc.fsr for proc in self['born_processes']])
+
     def add(self, other):
         """combines self and other, extending the lists of born/real amplitudes"""
         self['born_processes'].extend(other['born_processes'])
         self['real_amplitudes'].extend(other['real_amplitudes'])
         self['pdgs'].extend(other['pdgs'])
+        self['has_isr'] = self['has_isr'] or other['has_isr']
+        self['has_fsr'] = self['has_fsr'] or other['has_fsr']
 
 
     def get_born_amplitudes(self):
@@ -247,17 +251,14 @@ class FKSRealProcess(object):
                 orders[order] +=1
             except KeyError:
                 pass
-            if order == 'QCD':
-                orders['WEIGHTED'] +=1
-            else: 
-                orders['WEIGHTED'] +=2
-
+            orders['WEIGHTED'] += born_proc.get('model').get('order_hierarchy')[order]
         self.process.set('orders', orders)
 
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs]) 
         self.colors = [leg['color'] for leg in leglist]
         self.process.set('legs', MG.LegList(leglist))
+        self.process.set('legs_with_decays', MG.LegList())
         self.amplitude = diagram_generation.Amplitude()
         self.is_to_integrate = True
         self.is_nbody_only = False
@@ -363,6 +364,8 @@ class FKSProcess(object):
                 raise fks_common.FKSProcessError(\
                     'Not valid start_proc in FKSProcess')
 
+            self.born_proc.set('legs_with_decays', MG.LegList())
+
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
                 % self.born_proc.nice_string(print_weighted=False).replace(\
                                                                  'Process', '')) 
@@ -373,26 +376,17 @@ class FKSProcess(object):
             self.nlegs = len(self.leglist)
             self.pdg_codes = [leg.get('id') for leg in self.leglist]
             self.colors = [leg.get('color') for leg in self.leglist]
+            self.isr = set([leg.get('color') for leg in self.leglist if not leg.get('state')]) != set([1])
+            self.fsr = set([leg.get('color') for leg in self.leglist if leg.get('state')]) != set([1])
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
             # find the correct qcd/qed orders from born_amp
             self.orders = fks_common.find_orders(self.born_amp)
-            #self.born_proc['orders'] = orders
                 
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
                 self.find_reals(order)
-#            self.find_color_links()
-
-
-
-#    def find_color_links(self): #test written
-#        """Finds all the possible color links between two legs of the born.
-#        Uses the find_color_links function in fks_common.
-#        """
-#        self.color_links = fks_common.find_color_links(self.leglist, symm=True)
-#        return self.color_links
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):

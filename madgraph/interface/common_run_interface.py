@@ -138,14 +138,7 @@ class HelpToCmd(object):
         logger.info("This functionality allows for the decay of resonances")
         logger.info("in a .lhe file, keeping track of the spin correlation effets.")
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
-        logger.info("  (1) you can use multiparticle tag ONLY on final-state ")
-        logger.info("      particles, not for intermediate resonances ")
-        logger.info("  (2) only decay channels with splitting of the type")
-        logger.info("      A -> B(stable) + C((un)stable)")
-        logger.info("      have been tested so far")
-        logger.info("  (3) when entering the decay chain structure,")
-        logger.info("      please note that the reading module is ")
-        logger.info("      CASE SENSITIVE")
+        logger.info("  (1) Only a succession of 2 body decay are currently allowed")
 
 
 
@@ -313,6 +306,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     debug_output = 'ME5_debug'
     helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
+
+    # The three options categories are treated on a different footage when a 
+    # set/save configuration occur. current value are kept in self.options
+    options_configuration = {'pythia8_path': './pythia8',
+                       'madanalysis_path': './MadAnalysis',
+                       'pythia-pgs_path':'./pythia-pgs',
+                       'td_path':'./td',
+                       'delphes_path':'./Delphes',
+                       'exrootanalysis_path':'./ExRootAnalysis',
+                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'timeout': 60,
+                       'web_browser':None,
+                       'eps_viewer':None,
+                       'text_editor':None,
+                       'fortran_compiler':None,
+                       'auto_update':7,
+                       'cluster_type': 'condor',
+                       'cluster_status_update': (600, 30)}
+    
+    options_madgraph= {'stdout_level':None}
+    
+    options_madevent = {'automatic_html_opening':True,
+                         'run_mode':2,
+                         'cluster_queue':'madgraph',
+                         'nb_core': None,
+                         'cluster_temp_path':None}
+    
 
 
     def __init__(self, me_dir, options, *args, **opts):
@@ -484,11 +504,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         card = {0:'done'}
         
         for i, card_name in enumerate(cards):
-            mode = path2name(card_name)
+            imode = path2name(card_name)
             possible_answer.append(i+1)
-            possible_answer.append(mode)
-            question += '  %s / %-9s : %s\n' % (i+1, mode, card_name)
-            card[i+1] = mode
+            possible_answer.append(imode)
+            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            card[i+1] = imode
         
         if plot and self.options['madanalysis_path']:
             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
@@ -529,14 +549,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat
         """
         
-        text = open(path).read()
+        text = open(path).read(50000)
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
-        if '<mgversion>' in text:
+        if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
+        elif 'particlepropagator' in text:
+            return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#trigger card' in text:
@@ -851,6 +873,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # if lock is define this a locker for the completion of the thread
         lock = self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
+        
+        
+        if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+            delphes3 = False
+            prog = '../bin/internal/run_delphes'
+        else:
+            delphes3 = True
+            prog =  '../bin/internal/run_delphes3'
                 
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
@@ -862,11 +892,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+        if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or self.force):
-            self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'])
+            if delphes3:
+                self.ask_edit_cards(['delphes_card.dat'], args)
+            else:
+                self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'], args)
             
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
@@ -879,13 +912,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         tag = self.run_tag
         if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
             self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
-            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+            if not delphes3:
+                self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
             self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-        self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+        self.cluster.launch_and_wait(prog, 
                         argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
@@ -1019,6 +1053,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options['nb_core'] = self.nb_core
         elif args[0] == 'timeout':
             self.options[args[0]] = int(args[1]) 
+        elif args[0] == 'cluster_status_update':
+            if '(' in args[1]:
+                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+                data = data.replace('(','').replace(')','').replace(',',' ').split()
+                first, second = data[:2]
+            else: 
+                first, second = args[1:3]            
+            
+            self.options[args[0]] = (int(first), int(second))
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -1047,13 +1090,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
         if run_mode in [0, 2]:
             self.cluster = cluster.MultiCore(nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
+                             cluster_temp_path=self.options['cluster_temp_path'])
             
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
-                                                        opt['cluster_temp_path'])
+            self.cluster = cluster.from_name[cluster_name](**opt)
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -1127,10 +1169,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
         """ assign all configuration variable from file 
             ./Cards/mg5_configuration.txt. assign to default if not define """
+            
         if not hasattr(self, 'options') or not self.options:  
             self.options = dict(self.options_configuration)
             self.options.update(self.options_madgraph)
             self.options.update(self.options_madevent) 
+            
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
@@ -1323,12 +1367,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the 
     set command define and modifying the param_card/run_card correctly"""
     
-    def __init__(self, cards=[], mode='auto', *args, **opt):
+    def __init__(self, question, cards=[], mode='auto', *args, **opt):
         
-        cmd.OneLinePathCompletion.__init__(self, *args, **opt)
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        try:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
+        except check_param_card.InvalidParamCard:
+            logger.error('Current param_card is not valid. We are going to use the default one.')
+            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
+                     pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
     
         self.pname2block = {}
@@ -1660,13 +1710,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.exists(line):
             self.copy_file(line)
             self.value = 'repeat'
-        elif line.strip() != '0' and line.strip() != 'done' and str(line) != 'EOF':
+        elif line.strip() != '0' and line.strip() != 'done' and \
+            str(line) != 'EOF' and line.strip() in self.allow_arg:
             self.open_file(line)
             self.value = 'repeat'
         else:
             self.value = line
         
+        return line
+    
 
+        
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
         

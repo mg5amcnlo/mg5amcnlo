@@ -450,7 +450,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = 'import model sm_mw \n'
+        v5_string = 'import model sm \n'
         v5_string += "set automatic_html_opening False\n"
         v5_string += 'set complex_mass_scheme %s \n' % self.cms
         v5_string += 'set gauge %s \n' % self.gauge
@@ -896,7 +896,7 @@ class MEComparatorGauge(MEComparator):
             res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
             res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
                         
-            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
+            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
                diff_unit < 1e-2:
                 pass_proc += 1
                 res_str += "Pass"
@@ -1029,15 +1029,4 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-
-
-
-
-
-
-
-
-
-
-
 
