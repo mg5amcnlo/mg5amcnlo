@@ -2551,6 +2551,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.exists(pjoin(self.me_dir,'error')):
             os.remove(pjoin(self.me_dir,'error'))
                         
+        # Before compiling, remove lhapdf stuff
+        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+
         self.configure_directory()
         # Save original random number
         self.random_orig = self.random

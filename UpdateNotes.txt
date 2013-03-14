@@ -5,6 +5,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       processes (such as p p > z z j, z > l+ l-). Apart from the 
                       propagators (with status 2) in the event file, this bug didn't
                       affect any other results (such as distributions).
+                  JA: Automatically remove libpdf and libgeneric before survey,
+                      so everything works automatically when switching between
+                      built-in PDFs and LHAPDF.
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
