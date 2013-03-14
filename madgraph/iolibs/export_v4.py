@@ -1809,9 +1809,10 @@ c           This is dummy particle used in multiparticle vertices
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
-        mapconfigs = [c[0] for c in configs]
         model = matrix_element.get('processes')[0].get('model')
+        configs = [(i+1, d) for (i, d) in \
+                       enumerate(matrix_element.get('diagrams'))]
+        mapconfigs = [c[0] for c in configs]
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
                                                             [[c[1]] for c in configs],
                                                             mapconfigs,
@@ -1879,7 +1880,8 @@ c           This is dummy particle used in multiparticle vertices
                     # get_s_and_t_channels gives vertices starting from
                     # final state external particles and working inwards
                     stchannels.append(h.get('amplitudes')[0].\
-                                      get_s_and_t_channels(ninitial, new_pdg))
+                                      get_s_and_t_channels(ninitial, model,
+                                                           new_pdg))
                 else:
                     stchannels.append((empty_verts, None))
 

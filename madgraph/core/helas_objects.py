@@ -163,7 +163,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         and PDG code needs to be flipped if we move the final vertex around."""
 
         if vertex.get('id') == 0:
-            return (0,)
+            return ((0,),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -173,7 +173,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                          inter.get('lorentz'))
                    
         if last_vertex:
-            return (ret_list,)
+            return ((ret_list,),)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             # If we have possibly onshell s-channel particles with
@@ -184,24 +184,252 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             if s_pdg and (part.get('width').lower() == 'zero' or \
                vertex.get('legs')[-1].get('onshell') == False):
                 s_pdg = 0
-            return ((part.get('spin'), part.get('color'),
+            return (((part.get('spin'), part.get('color'),
                      part.get('self_antipart'),
                      part.get('mass'), part.get('width'), s_pdg),
-                    ret_list)
+                    ret_list),)
 
     @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
+    def flip_vertex(new_vertex, old_vertex, links):
         """Move the wavefunction part of vertex id appropriately"""
 
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) == 2:
             # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            return ((old_vertex[0][0],new_vertex[0][0]),)
+        elif len(new_vertex[0]) == 2 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
+            return ((new_vertex[0][1],),)
         # We should not get here
         assert(False)
         
+#===============================================================================
+# DiagramTag class to create canonical order configs
+#===============================================================================
+
+class CanonicalConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to create canonical order of
+    config. Need to compare leg number, mass, width, and color.
+    Also find s- and t-channels from the tag."""
+
+    def get_s_and_t_channels(self, ninitial, model, new_pdg):
+        """Get s and t channels from the tag, as two lists of vertices
+        ordered from the outermost s-channel and in/down towards the highest
+        number initial state leg. 
+        Idea: Reorder vertices to start from IS leg 2
+        Algorithm: 
+        Start from the final tag. Check for final leg number for all links
+        and move in the direction towards ninitial (or 1, if no ninitial).
+        """
+
+        # Look for final leg numbers in all links
+        done = [l for l in self.tag.links if \
+                l.end_link and l.links[0][0][0] == ninitial]
+        while not done:
+            # Identify the chain closest to ninitial
+            right_num = -1
+            for num, link in enumerate(self.tag.links):
+                if len(link.vertex_id) == 2 and \
+                        link.vertex_id[-1][-1] == ninitial:
+                    right_num = num
+            if right_num == -1:
+                # We need to look for leg number 1 instead
+                for num, link in enumerate(self.tag.links):
+                    if len(link.vertex_id) == 2 and \
+                       link.vertex_id[-1][-1] == 1:
+                        right_num = num
+            if right_num == -1:
+                # This should never happen
+                raise diagram_generation.DiagramTag.DiagramTagError, \
+                    "Error in CanonicalConfigTag, no link with number 1 or 2."
+
+
+
+            # Now move one step in the direction of right_link
+            right_link = self.tag.links[right_num]
+            # Create a new link corresponding to moving one step
+            new_links = list(self.tag.links[:right_num]) + \
+                                           list(self.tag.links[right_num + 1:])
+            new_link = diagram_generation.DiagramTagChainLink(\
+                                           new_links,
+                                           self.flip_vertex(\
+                                             self.tag.vertex_id,
+                                             right_link.vertex_id,
+                                             new_links))
+            # Create a new final vertex in the direction of the longest link
+            other_links = list(right_link.links) + [new_link]
+            other_link = diagram_generation.DiagramTagChainLink(\
+                                             other_links,
+                                             self.flip_vertex(\
+                                                 right_link.vertex_id,
+                                                 self.tag.vertex_id,
+                                                 other_links))
+            self.tag = other_link
+            done = [l for l in self.tag.links if \
+                    l.end_link and l.links[0][0][0] == ninitial]
+
+        # Construct a diagram from the resulting tag
+        diagram = self.diagram_from_tag(model)
+
+        # Go through the vertices and add them to s-channel or t-channel
+        schannels = base_objects.VertexList()
+        tchannels = base_objects.VertexList()
+
+        for vert in diagram.get('vertices')[:-1]:
+            if vert.get('legs')[-1].get('number') > ninitial:
+                schannels.append(vert)
+            else:
+                tchannels.append(vert)
+
+        lastvert = diagram.get('vertices')[-1]
+        if sorted([l.get('number') for l in \
+                 lastvert.get('legs')])[:2] == [1,2]:
+            schannels.append(lastvert)
+        else:
+            tchannels.append(lastvert)
+
+        # Split up multiparticle vertices using fake s-channel propagators
+        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
+                          if len(v.get('legs')) > 3]
+        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
+                          if len(v.get('legs')) > 3]
+        
+        increase = 0
+        for channel in multischannels + multitchannels:
+            newschannels = []
+            vertex = channel[1]
+            while len(vertex.get('legs')) > 3:
+                # Pop the first two legs and create a new
+                # s-channel from them
+                popped_legs = \
+                           base_objects.LegList([vertex.get('legs').pop(0) \
+                                                    for i in [0,1]])
+                popped_legs.append(base_objects.Leg({\
+                    'id': new_pdg,
+                    'number': min([l.get('number') for l in popped_legs]),
+                    'state': True,
+                    'onshell': None}))
+
+                new_vertex = base_objects.Vertex({
+                    'id': vertex.get('id'),
+                    'legs': popped_legs})
+
+                # Insert the new s-channel before this vertex
+                if channel in multischannels:
+                    schannels.insert(channel[0]+increase, new_vertex)
+                    # Account for previous insertions
+                    increase += 1
+                else:
+                    schannels.append(new_vertex)
+                legs = vertex.get('legs')
+                # Insert the new s-channel into vertex
+                legs.insert(0, copy.copy(popped_legs[-1]))
+                # Renumber resulting leg according to minimum leg number
+                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+
+        # Finally go through all vertices, sort the legs and replace
+        # leg number with propagator number -1, -2, ...
+        number_dict = {}
+        nprop = 0
+        for vertex in schannels + tchannels:
+            # Sort the legs
+            legs = vertex.get('legs')[:-1]
+            if vertex in schannels:
+                legs.sort(lambda l1, l2: l2.get('number') - \
+                          l1.get('number'))
+            else:
+                legs.sort(lambda l1, l2: l1.get('number') - \
+                          l2.get('number'))
+            for leg in legs:
+                try:
+                    leg.set('number', number_dict[leg.get('number')])
+                except KeyError:
+                    pass
+            nprop = nprop - 1
+            last_leg = vertex.get('legs')[-1]
+            number_dict[last_leg.get('number')] = nprop
+            last_leg.set('number', nprop)
+            legs.append(last_leg)
+            vertex.set('legs', base_objects.LegList(legs))
+
+        return schannels, tchannels
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify configs: 
+        ((leg numer, mass, width, color), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        return [((leg.get('number'),
+                  part.get('mass'), part.get('width'), part.get('color')),
+                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify configs:
+        interaction color, mass, width. Also provide propagator PDG code."""
+
+        inter = model.get_interaction(vertex.get('id'))
+
+        if last_vertex:
+            return ((0,),(vertex.get('id'),
+                          min([l.get('number') for l in vertex.get('legs')])))
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    (vertex.get('id'), 
+                     vertex.get('legs')[-1].get('onshell'),
+                     vertex.get('legs')[-1].get('number')))
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex, links):
+        """Move the wavefunction part of propagator id appropriately"""
+
+        # Find leg numbers for new vertex
+        min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
+                         + [l.links[0][0][0] for l in links if l.end_link])
+
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
+            # We go from a last link to next-to-last link 
+            return (old_vertex[0], 
+                    (new_vertex[1][0], old_vertex[1][1], min_number))
+        elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (old_vertex[0], new_vertex[1])
+
+        # We should not get here
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in CanonicalConfigTag, wrong setup of vertices in link."
+        
+    @staticmethod
+    def leg_from_link(link):
+        """Return a leg from a link"""
+
+        if link.end_link:
+            # This is an external leg, info in links
+            leg = base_objects.Leg({'number':link.links[0][1][0],
+                                     'id':link.links[0][1][1],
+                                     'state':link.links[0][1][2],
+                                     'onshell':False})
+            return leg
+        # This shouldn't happen
+        assert False
+
+    @staticmethod
+    def vertex_from_link(legs, vertex_id, model):
+        """Return a vertex given a leg list and a vertex id"""
+        vertex = base_objects.Vertex({'legs': legs,
+                                      'id': vertex_id[1][0]})
+        vertex.get('legs')[-1].set('onshell', vertex_id[1])
+        return vertex
+
+    @staticmethod
+    def id_from_vertex_id(vertex_id):
+        """Return the numerical vertex id from a link.vertex_id"""
+
+        return vertex_id[-1][0]
+
 
 #===============================================================================
 # HelasWavefunction
@@ -1107,141 +1335,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         return color_indices
 
-    def get_s_and_t_channels(self, ninitial, mother_leg):
-        """Returns two lists of vertices corresponding to the s- and
-        t-channels that can be traced from this wavefunction, ordered
-        from the outermost s-channel and in/down towards the highest
-        number initial state leg. mother_leg corresponds to self but with
-        correct leg number = min(final state mothers)."""
-
-        schannels = base_objects.VertexList()
-        tchannels = base_objects.VertexList()
-
-        mother_leg = copy.copy(mother_leg)
-
-        # Add vertices for all s-channel mothers
-        final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
-                               self.get('mothers'))
-
-        for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}, optimization = 0))
-
-        # Extract initial state mothers
-        init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
-                              self.get('mothers'))
-
-        assert len(init_mothers) < 3 , \
-                   "get_s_and_t_channels can only handle up to 2 initial states"
-
-        if len(init_mothers) == 1:
-            # This is an s-channel or t-channel leg, or the initial
-            # leg of a decay process. Add vertex and continue stepping
-            # down towards external initial state
-            legs = base_objects.LegList()
-            mothers = final_mothers + init_mothers
-
-            for mother in mothers:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-
-            if init_mothers[0].get('number_external') == 1 and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
-                # If this is t-channel going towards external leg 1,
-                # mother_leg is resulting wf
-                legs.append(mother_leg)
-            else:
-                # For decay processes or if init_mother is an s-channel leg
-                # or we are going towards external leg 2, mother_leg
-                # is one of the mothers (placed next-to-last)
-                legs.insert(-1, mother_leg)
-                # Need to switch direction of the resulting s-channel
-                legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-                
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels from init_mother
-            new_mother_leg = legs[-1]
-            if init_mothers[0].get('number_external') == 1 and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
-                # Mother of next vertex is init_mothers[0]
-                # (next-to-last in legs)
-                new_mother_leg = legs[-2]
-
-            mother_s, tchannels = \
-                      init_mothers[0].get_s_and_t_channels(ninitial,
-                                                           new_mother_leg)
-            if ninitial == 1 or init_mothers[0].get('leg_state') == True:
-                # This vertex is s-channel
-                schannels.append(vertex)
-            elif init_mothers[0].get('number_external') == 1:
-                # If init_mothers is going towards external leg 1, add
-                # to t-channels, at end
-                tchannels.append(vertex)
-            else:
-                # If init_mothers is going towards external leg 2, add to
-                # t-channels, at start
-                tchannels.insert(0, vertex)
-
-            schannels.extend(mother_s)
-
-        elif len(init_mothers) == 2:
-            # This is a t-channel junction. Start with the leg going
-            # towards external particle 1, and then do external
-            # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
-                                   init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1, init_mothers2]:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-            legs.insert(0, mother_leg)
-
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels going down towards leg 1
-            mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
-            schannels.extend(mother_s)
-
-            # Add vertex
-            tchannels.append(vertex)
-
-            # Add s- and t-channels going down towards leg 2
-            mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
-            schannels.extend(mother_s)
-            tchannels.extend(mother_t)
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
-
-        return schannels, tchannels
-
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
 
@@ -1930,169 +2023,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial, new_pdg):
+    def get_s_and_t_channels(self, ninitial, model, new_pdg):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
         s-channel and in/down towards the highest number initial state
         leg."""
 
-        schannels = base_objects.VertexList()
-        tchannels = base_objects.VertexList()
-
-        # Add vertices for all s-channel mothers
-        final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
-                               self.get('mothers'))
-
-        for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}, optimization = 0))
-
-        # Extract initial state mothers
-        init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
-                              self.get('mothers'))
-
-        if len(init_mothers) > 2:
-            raise self.PhysicsObjectError, \
-                  "get_s_and_t_channels can only handle up to 2 initial states"
-
-        if len(init_mothers) == 1:
-            # This is an s-channel leg, or the first vertex in a decay
-            # process. Add vertex and start stepping down towards
-            # initial state
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + init_mothers:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-            # Change direction of init_mother
-            legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-
-            # Add vertex to s-channels
-            schannels.append(base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs}))
-
-            # Add s- and t-channels from further down
-            mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1])
-
-            schannels.extend(mother_s)
-        else:
-            # This is a t-channel leg. Start with the leg going
-            # towards external particle 1, and then do external
-            # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
-                                   init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1] + [init_mothers2]:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels going down towards leg 1
-            mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
-
-            schannels.extend(mother_s)
-
-            # Add vertex to t-channels
-            tchannels.append(vertex)
-
-            # Add s- and t-channels going down towards leg 2
-            mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
-            schannels.extend(mother_s)
-            tchannels.extend(mother_t)
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
-
-        # Split up multiparticle vertices using fake s-channel propagators
-        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
-                          if len(v.get('legs')) > 3]
-        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
-                          if len(v.get('legs')) > 3]
-        
-        increase = 0
-        for channel in multischannels + multitchannels:
-            newschannels = []
-            vertex = channel[1]
-            while len(vertex.get('legs')) > 3:
-                # Pop the first two legs and create a new
-                # s-channel from them
-                popped_legs = \
-                           base_objects.LegList([vertex.get('legs').pop(0) \
-                                                    for i in [0,1]])
-                popped_legs.append(base_objects.Leg({\
-                    'id': new_pdg,
-                    'number': min([l.get('number') for l in popped_legs]),
-                    'state': True,
-                    'onshell': None}))
-
-                new_vertex = base_objects.Vertex({
-                    'id': vertex.get('id'),
-                    'legs': popped_legs})
-
-                # Insert the new s-channel before this vertex
-                if channel in multischannels:
-                    schannels.insert(channel[0]+increase, new_vertex)
-                    # Account for previous insertions
-                    increase += 1
-                else:
-                    schannels.append(new_vertex)
-                legs = vertex.get('legs')
-                # Insert the new s-channel into vertex
-                legs.insert(0, copy.copy(popped_legs[-1]))
-                # Renumber resulting leg according to minimum leg number
-                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-        # Finally go through all vertices, sort the legs and replace
-        # leg number with propagator number -1, -2, ...
-        number_dict = {}
-        nprop = 0
-        for vertex in schannels + tchannels:
-            # Sort the legs
-            legs = vertex.get('legs')[:-1]
-            if vertex in schannels:
-                legs.sort(lambda l1, l2: l2.get('number') - \
-                          l1.get('number'))
-            else:
-                legs.sort(lambda l1, l2: l1.get('number') - \
-                          l2.get('number'))
-            for leg in legs:
-                try:
-                    leg.set('number', number_dict[leg.get('number')])
-                except KeyError:
-                    pass
-            nprop = nprop - 1
-            last_leg = vertex.get('legs')[-1]
-            number_dict[last_leg.get('number')] = nprop
-            last_leg.set('number', nprop)
-            legs.append(last_leg)
-            vertex.set('legs', base_objects.LegList(legs))
-
-        return schannels, tchannels
+        # Create a new HelasAmplitude based on a CanonicalConfigTag
+        # to ensure that the order of propagators is canonical
+        wf_dict = {}
+        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
+        diagram = tag.diagram_from_tag(model)
+        return tag.get_s_and_t_channels(ninitial, model, new_pdg)
 
     def get_color_indices(self):
         """Get the color indices corresponding to

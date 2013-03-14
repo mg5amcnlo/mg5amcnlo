@@ -1191,7 +1191,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
         for diagram in diagrams:
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                   get_s_and_t_channels(self.ninitial, new_pdg)
+                                   get_s_and_t_channels(self.ninitial, model, 
+                                                        new_pdg)
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
@@ -1213,7 +1214,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         # schannel is True if all diagrams are s-channel and there are
         # no QCD vertices
         schannel = not any([\
-            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, new_pdg)[0])\
+            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, 
+                                                            model, new_pdg)[0])\
                  == 0 for d in diagrams]) and \
                    not any(['QCD' in d.calculate_orders() for d in diagrams])
 

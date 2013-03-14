@@ -3346,6 +3346,211 @@ C     Number of configs
       DATA MAPCONFIG(0)/12/
 """)
 
+    def test_different_order_process_symmetry(self):
+        """Test a process where different diagrams have different order props"""
+
+        # Setup a model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A electron and positron
+        mypartlist.append(base_objects.Particle({'name':'e-',
+                      'antiname':'e+',
+                      'spin':2,
+                      'color':1,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'e^-',
+                      'antitexname':'e^+',
+                      'line':'straight',
+                      'charge':-1.,
+                      'pdg_code':11,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        eminus = mypartlist[-1]
+        eplus = copy.copy(eminus)
+        eplus.set('is_part', False)
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Gluon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of Z to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
+                      'orders':{'QED':1}}))
+
+        # Coupling of Z to e+ e-
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [eplus, \
+                                             eminus, \
+                                             z]),
+                      'color': [color.ColorString([])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GEZ1'},
+                      'orders':{'QED':1}}))
+
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
+
+        proc = [21,2,23,23,2]
+        decay = [23,11,-11]
+
+        # Define the multiprocess
+        my_leglist = base_objects.LegList([\
+            base_objects.Leg({'id': id, 'state': True}) for id in proc])
+
+        my_leglist[0].set('state', False)
+        my_leglist[1].set('state', False)
+
+        my_decaylegs = base_objects.LegList([\
+            base_objects.Leg({'id': id, 'state': True}) for id in decay])
+
+        my_decaylegs[0].set('state', False)
+        my_process = base_objects.Process({'legs':my_leglist,
+                                           'model':mymodel})
+        my_decay_proc = base_objects.Process({'legs':my_decaylegs,
+                                              'model':mymodel,
+                                              'is_decay_chain': True})
+        my_process.set('decay_chains', 
+                       base_objects.ProcessList([my_decay_proc]))
+
+        my_decay = diagram_generation.DecayChainAmplitude(my_process)
+        helas_decay = helas_objects.HelasDecayChainProcess(my_decay)
+        matrix_element = helas_decay.combine_decay_chain_processes()[0]
+
+        # Exporter
+        exporter = export_v4.ProcessExporterFortranME()
+
+        # Test configs.inc
+
+        mapconfigs, s_and_t_channels = exporter.write_configs_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            matrix_element)
+
+        print open(self.give_pos('test')).read()
+#        self.assertFileContains('test',""" """)
+
+        symmetry, perms, ident_perms = \
+                  diagram_symmetry.find_symmetry(matrix_element)
+
+        # Test symfact.dat
+        
+        exporter.write_symfact_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            symmetry)
+        goal_symfact_dat = """ 1    2
+ 2    -1
+ 3    2
+ 4    -3
+ 5    2
+ 6    -5
+"""
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_symfact_dat)
+
+        # Test symperms.inc
+        
+        exporter.write_symperms_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            perms)
+        goal_symperms_dat = """      DATA (PERMS(I,1),I=1,NEXTERNAL)/1,2,3,4,5,6,7/
+      DATA (PERMS(I,2),I=1,NEXTERNAL)/1,2,5,6,3,4,7/
+      DATA (PERMS(I,3),I=1,NEXTERNAL)/1,2,3,4,5,6,7/
+      DATA (PERMS(I,4),I=1,NEXTERNAL)/1,2,5,6,3,4,7/
+      DATA (PERMS(I,5),I=1,NEXTERNAL)/1,2,3,4,5,6,7/
+      DATA (PERMS(I,6),I=1,NEXTERNAL)/1,2,5,6,3,4,7/
+"""
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_symperms_dat)
+
+        # Test symswap.inc
+        
+        exporter.write_symswap_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            ident_perms)
+        goal_symswap_dat = """      DATA (ISYM(I,1),I=1,NEXTERNAL)/1,2,3,4,5,6,7/
+      DATA (ISYM(I,2),I=1,NEXTERNAL)/1,2,5,6,3,4,7/
+      DATA NSYM/2/
+"""
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_symswap_dat)
+
 #===============================================================================
 # FullHelasOutputTest
 #===============================================================================
@@ -10413,10 +10618,13 @@ C     Number of configs
                            [-4, 3, -5], [-5, -1, -6]]]
                           
 
+        import models.import_ufo
+        mymodel = models.import_ufo.import_model('sm')
+
         for (idiag, diagram) in enumerate(diagrams):
 
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                         get_s_and_t_channels(2, 20)
+                                         get_s_and_t_channels(2, mymodel, 20)
 
             self.assertEqual([[l.get('number') for l in v.get('legs')] for v \
                               in schannels],

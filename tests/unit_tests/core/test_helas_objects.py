@@ -1444,7 +1444,7 @@ class HelasMatrixElementTest(unittest.TestCase):
             for idiag in range(len(diagrams)):
                 if idiag in photon_none[ngluons]:
                     vertices, tchannels = \
-                       diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                       diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                     for ivert in range(len(vertices)):
                         if ivert in photon_none[ngluons][idiag]:
                             self.assertEqual(False,
@@ -1485,7 +1485,7 @@ class HelasMatrixElementTest(unittest.TestCase):
             for idiag in range(len(diagrams)):
                 if idiag in quark_none[ngluons]:
                     vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                     for ivert in range(len(vertices)):
                         if ivert in quark_none[ngluons][idiag]:
                             self.assertEqual(False,
@@ -2576,7 +2576,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         for idiag in range(len(diagrams)):
             if idiag in quark_none:
                 vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg
@@ -2636,7 +2636,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         for idiag in range(len(diagrams)):
             if idiag in quark_none:
                 vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg

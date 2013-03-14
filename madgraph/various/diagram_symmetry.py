@@ -316,30 +316,14 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
         final vertex around."""
 
         inter = model.get_interaction(vertex.get('id'))
-        ret_list = 0
                    
         if last_vertex:
-            return (ret_list,)
+            return (0,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
-                     part.get('mass'), part.get('width')),
-                    ret_list)
+                     part.get('mass'), part.get('width')),)
 
-    @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
-        """Move the wavefunction part of vertex id appropriately"""
-
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
-            # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
-            # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
-        # We should not get here
-        raise diagram_generation.DiagramTag.DiagramTagError, \
-              "Error in IdentifyConfigTag, wrong setup of vertices in link."
-        
 def find_symmetry_subproc_group(subproc_group):
     """Find symmetric configs by directly comparing the configurations
     using IdentifySGConfigTag."""
