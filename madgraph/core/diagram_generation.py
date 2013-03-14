@@ -1143,8 +1143,7 @@ class DecayChainAmplitude(Amplitude):
             for amp in self['amplitudes']:
                 amp.trim_diagrams(decay_ids)                    
 
-            # Finally, check that all decay ids are present in at
-            # least some process
+            # Check that all decay ids are present in at least some process
             for amp in self['amplitudes']:
                 for l in amp.get('process').get('legs'):
                     if l.get('id') in decay_ids:
@@ -1170,6 +1169,25 @@ class DecayChainAmplitude(Amplitude):
                     if not dc.get('amplitudes'):
                         # If no amplitudes left, remove the decay chain
                         self['decay_chains'].remove(dc)
+                    
+            # Finally, write a fat warning if any decay process has
+            # the decaying particle (or its antiparticle) in the final state
+            bad_procs = []
+            for dc in self['decay_chains']:
+                for amp in dc.get('amplitudes'):
+                    legs = amp.get('process').get('legs')
+                    fs_parts = [abs(l.get('id')) for l in legs if 
+                                l.get('state')]
+                    is_part = [l.get('id') for l in legs if not 
+                               l.get('state')][0]
+                    if abs(is_part) in fs_parts:
+                        bad_procs.append(amp.get('process'))
+
+            if bad_procs:
+                logger.warning(
+                    "$RED Decay(s) with particle decaying to itself:\n" + \
+                     '\n'.join([p.nice_string() for p in bad_procs]) + \
+                 "\nPlease check your process definition carefully. \n")
                     
 
         elif argument != None:
