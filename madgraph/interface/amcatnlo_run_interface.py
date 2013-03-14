@@ -2297,7 +2297,10 @@ Integrated cross-section
             self.link_lhapdf(libdir)
         else:
             logger.info('Using built-in libraries for PDFs')
-            os.unsetenv('lhapdf')
+            try:
+                del os.environ['lhapdf']
+            except KeyError:
+                pass
 
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -2419,7 +2422,7 @@ Integrated cross-section
             os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.putenv('lhapdf', 'True')
+        os.environ['lhapdf'] = 'True'
 
 
     def write_test_input(self, test):
