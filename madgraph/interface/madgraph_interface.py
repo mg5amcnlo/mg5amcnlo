@@ -413,9 +413,10 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_define(self):
         logger.info("syntax: define multipart_name [=] part_name_list")
-        logger.info("-- define a multiparticle")
+        logger.info("-- define a multiparticle. part_name_list can include multiparticles.")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-        
+        logger.info("   Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("   Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
@@ -1956,16 +1957,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if self._use_lower_part_names:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
