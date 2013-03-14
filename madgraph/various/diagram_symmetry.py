@@ -295,9 +295,9 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the end link for a leg needed to identify matrix
-        elements: ((leg numer, state, spin, self_antipart, mass,
-        width, color, decay and is_part), number)."""
+        """Returns the end link for a leg needed to identify symmetric
+        configs: ((leg number for initial state, spin, mass,
+        width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
 
@@ -312,11 +312,8 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
-        """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
+        """Returns the info needed to identify symmetric configs:
+        interaction color, mass, width."""
 
         inter = model.get_interaction(vertex.get('id'))
                    

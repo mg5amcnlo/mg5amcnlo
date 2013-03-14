@@ -56,18 +56,18 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify configs: 
-        ((leg numer, mass, width, color), number)."""
+        ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
 
-        return [((leg.get('number'),
+        return [((leg.get('number'), part.get('spin'),
                   part.get('mass'), part.get('width'), part.get('color')),
-                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+                 leg.get('number'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
         """Returns the info needed to identify configs:
-        interaction color, mass, width. Also provide propagator PDG code."""
+        interaction color, mass, width."""
 
         inter = model.get_interaction(vertex.get('id'))
                    
