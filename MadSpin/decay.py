@@ -539,9 +539,14 @@ class dc_branch_from_me(dict):
                     # NOTE: here pole and width are normalized by 4.0*mB**2,
                     # Just a convention
                     pole=0.25         #pid2mass[pid]**2/mA**2
+                    w=pid2width(pid)
+                    mpole=pid2mass(pid)
                     width=pid2width(pid)*pid2mass(pid)/(4.0*pid2mass(pid)**2)     #/mA**2
-                    m, jac=self.transpole(pole,width, BW_cut)
-                    m = math.sqrt(m * 4.0 * pid2mass(pid)**2)
+                    m=-1.0
+                    while m<0.0001 or m< (mpole-BW_cut*w)**2/4.0/mpole**2 \
+                                   or m> (mpole+BW_cut*w)**2/4.0/mpole**2:
+                       m, jac=self.transpole(pole,width, BW_cut)
+                    m = math.sqrt(m * 4.0 * mpole**2)
                     # record the mass for the reshuffling phase, 
                     # in case the point passes the reweighting creteria
                     tree[tag]["mass"] = m
@@ -553,7 +558,7 @@ class dc_branch_from_me(dict):
                 if mass_sum < 0:
                     logger.debug('mA<mB+mC in generate_momenta')
                     logger.debug('mA = %s' % mA)
-                    return 0, 0 # If that happens, throw away the DC phase-space point ...
+                    return 0, 0, 0 # If that happens, throw away the DC phase-space point ...
                     # I don't expect this to be inefficient, since there is a BW cut                                    
 
             if tree["nbody"] > 2:
@@ -615,9 +620,9 @@ class dc_branch_from_me(dict):
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-        
-        zmin = math.atan(-2*BW_cut)/width
-        zmax = math.atan(2*BW_cut)/width
+    
+        zmin = -math.pi/2.0/width
+        zmax = math.pi/2.0/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -893,8 +898,15 @@ class production_topo(dict):
             if pid in self.production['decaying']:
                 mass=0.25
                 width=pid2width(pid)*pid2mass(pid)/(2.0*pid2mass(pid))**2
-                virtualmass2, jac=self.transpole(mass,width)
-                virtualmass2=virtualmass2*(2.0*pid2mass(pid))**2
+            
+                mpole=pid2mass(pid)
+                w=pid2width(pid)
+                BW_cut = float(self.options['BW_cut'])
+                virtualmass2 = -1.0
+                while virtualmass2<0.0001 or virtualmass2< (mpole-BW_cut*w)**2/4.0/mpole**2 \
+                               or virtualmass2> (mpole+BW_cut*w)**2/4.0/mpole**2:
+                    virtualmass2, jac=self.transpole(mass,width)
+                virtualmass2=virtualmass2*(2.0*mpole)**2
                 weight=weight*jac
                 self.max_bw = max(self.max_bw, abs(math.sqrt(virtualmass2) - pid2mass(pid)) / abs(pid2width(pid)))
                 #print "need to generate BW mass of "+str(part)
@@ -951,10 +963,8 @@ class production_topo(dict):
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
 
-        gap = 2 * float(self.options['BW_cut'])
-
-        zmin = math.atan(-gap)/width
-        zmax = math.atan(gap)/width
+        zmin = -math.pi/2.0/width
+        zmax = math.pi/2.0/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -2429,15 +2439,15 @@ class decay_all_events:
             os.remove(pjoin(self.path_me,"param_card.dat"))        
 
         # now overwrite the param_card.dat in Cards:
-        param_card=self.banner['slha']
+        #param_card=self.banner['slha']
         #param_card=decay_tools.check_param_card( param_card)
 
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
-        param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        param.write(param_card)
-        param.close()     
+        #param=open(pjoin(self.path_me,'param_card.dat'),"w")
+        #param.write(param_card)
+        #param.close()     
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
@@ -2447,9 +2457,28 @@ class decay_all_events:
                 decay_ids += self.mgcmd._multiparticles[multi]
         self.all_ME = AllMatrixElement(banner, self.options, decay_ids)
         self.all_decay = {}
-        
+
+
+ 
         # generate BR and all the square matrix element based on the banner.
         self.generate_all_matrix_element()
+
+        resonances = self.width_estimator.resonances
+        logger.debug('List of resonances: %s' % resonances)
+        self.extract_resonances_mass_width(resonances) 
+
+        # now overwrite the param_card.dat in Cards:
+        param_card=self.banner['slha']
+        #param_card=decay_tools.check_param_card( param_card)
+
+        # now we can write the param_card.dat:
+        # Note that the width of each resonance in the    
+        # decay chain should be >0 , we will check that later on
+        param=open(pjoin(self.path_me,'param_card.dat'),"w")
+        param.write(param_card)
+        param.close()
+
+
         self.compile()
         
     def run(self):
@@ -2458,9 +2487,6 @@ class decay_all_events:
         max_weight_arg = self.options['max_weight']  
         BW_effects = self.options['BW_effect']
         decay_tools=decay_misc()
-        resonances = self.width_estimator.resonances
-        logger.debug('List of resonances: %s' % resonances)
-        self.extract_resonances_mass_width(resonances) 
         
         #Next step: we need to determine which matrix elements are really necessary
         #==========================================================================
@@ -2581,7 +2607,7 @@ class decay_all_events:
                                     BW_cut)
                                     
                 if decayed_event==0:
-                    logger.warning('failed to decay event properly')
+                    #logger.warning('failed to decay event properly') this is not a problem, we just had mA<mB+mC
                     continue
                 mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                 #     then decayed weight:
