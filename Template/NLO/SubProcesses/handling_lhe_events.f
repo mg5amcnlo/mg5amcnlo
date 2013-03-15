@@ -10,6 +10,15 @@ c and the dimensions of the latter are typically defined by nexternal.
 c Hence, one may need an explicit copy of one onto the other
 c
 
+      block data
+      integer event_id
+      common /c_event_id/ event_id
+      data event_id /-99/
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
+      data rwgt_skip /.false./
+      end
+
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
       integer ifile,nevents
@@ -41,7 +50,9 @@ c
       character*10 MonteCarlo
       character*100 path
       character*72 buffer,buffer2
-      logical rwgt_skip,rwgt_skip_pdf,rwgt_skip_scales
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
+      logical rwgt_skip_pdf,rwgt_skip_scales
       integer event_id
       common /c_event_id/ event_id
       include 'reweight_all.inc'
@@ -211,13 +222,6 @@ c Write here the reweight information if need be
       end
 
 
-      block data
-      integer event_id
-      common /c_event_id/ event_id
-      data event_id /-99/
-      end
-
-
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
       integer ifile,nevents,i,ii,iistr
@@ -301,7 +305,6 @@ c
       return
       end
 
-
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -316,6 +319,8 @@ c
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
       integer event_id
       common /c_event_id/ event_id
       include 'reweight_all.inc'
@@ -356,7 +361,7 @@ c     to write_lhef_header_banner) update it and write it
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#') then
+      if(buff(1:1).eq.'#' .and. .not.rwgt_skip) then
         write(ifile,'(a)') buff(1:len_trim(buff))
         read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -364,8 +369,7 @@ c     to write_lhef_header_banner) update it and write it
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
         if(jwgtinfo.ge.1.and.jwgtinfo.le.4)then
-          write(ifile,'(a)')
-     # '  <rwgt>'
+           write(ifile,'(a)') '  <rwgt>'
           write(ifile,401)wgtref,wgtqes2(2)
           write(ifile,402)wgtxbj(1,1),wgtxbj(2,1),
      #                    wgtxbj(1,2),wgtxbj(2,2),
@@ -401,8 +405,7 @@ c     to write_lhef_header_banner) update it and write it
           enddo
           if(jwgtinfo.eq.4) write(ifile,'(1x,e14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
-          write(ifile,'(a)')
-     # '  </rwgt>'
+          write(ifile,'(a)') '  </rwgt>'
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
@@ -474,8 +477,7 @@ c$$$                 enddo
            write(ifile,'(a)')'  </rwgt>'
 
         elseif(jwgtinfo.eq.8)then
-          write(ifile,'(a)')
-     # '  <rwgt>'
+           write(ifile,'(a)') '  <rwgt>'
           write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
           do i=1,numscales
             write(ifile,404)(wgtxsecmu(i,j),j=1,numscales)
@@ -485,8 +487,7 @@ c$$$                 enddo
             nng=2*i
             write(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
-          write(ifile,'(a)')
-     # '  </rwgt>'
+          write(ifile,'(a)') '  </rwgt>'
 
         elseif(jwgtinfo.eq.9)then
            write(ifile,'(a)') '  <rwgt>'
@@ -505,8 +506,7 @@ c$$$                 enddo
            write(ifile,'(a)') '  </rwgt>'
         endif
       endif
-      write(ifile,'(a)')
-     # '  </event>'
+      write(ifile,'(a)') '  </event>'
  200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -682,7 +682,7 @@ c
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.9)then
            read(ifile,'(a)')string
-           wgtref=0d0
+           wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
                  read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
@@ -887,7 +887,7 @@ c
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.9)then
            read(ifile,'(a)')string
-           wgtref=0d0
+           wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
                  read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
