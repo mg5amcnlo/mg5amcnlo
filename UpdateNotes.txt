@@ -13,6 +13,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   JA: Added fat warning if any decay process in a decay chain
                       includes a particle decaying to itself (as is the case
                       if you do w+ > all all, since you include w+ > w+ a).
+                  JA: Forbid running newprocess_mg5 from a process directory
+                      that have already been generated, to avoid confusion.
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
