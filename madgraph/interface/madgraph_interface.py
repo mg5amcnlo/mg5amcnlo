@@ -2216,7 +2216,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.history.clean(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',keep_switch=True)
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -4662,8 +4662,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
             elif int(output.split('.')[0]) < 3:
-                logger.warning('%s is not ' + \
-                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                logger.warning('%s is not ' % args[1] + \
+                        'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
 
         elif args[0] == 'lhapdf':

@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta3(13/01/13) OM: Merge with 1.5.7+1.5.8 (See information below)
+2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
                           friendly way.
                       RF: Event normalization is now Les Houches compliant (the weights
@@ -8,7 +8,9 @@ Update notes for MadGraph 5 (in reverse time order)
 			  can still be chosen by setting the flag 'sum = event_norm' in the run_card.
 		      RF: Fixes a bug related to the mass of the tau that was not consistently 
  		          taking into account in the phase-space set-up.
-		      RF: The PDF uncertainty for NNPDF is now also correctly given in the run summary
+		      VH: Fixed the incorrect implementation of the four gluons R2 in the loop_sm UFO.
+		      VH: Fixed the UV renormalization for the SM with massive c quarks.
+			  RF: The PDF uncertainty for NNPDF is now also correctly given in the run summary
 		      RF: Some improvements in the test_MC and test_ME when matrix elements are
                           numerically very large
 		      OM+RF: Added the running at LO to the 'launch questions'

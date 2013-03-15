@@ -13,12 +13,19 @@ The bin/aMCatNLO executables open a MadGraph5-like shell, from which
 you can exec different commands (some of which are also covered by
 the other executables)
 
-compile
--------------------
-Just Compile the code, also running some sanity tests, like testing 
-the behaviour of the real emission matrix-element and counterterms in 
-the sngular (soft/collinear) region, and testing that the IR poles
-of virtual origin cancel with those from real radiation
+Shower settings
+---------------
+During the shower phase some parameters are not arbitrary as they have
+to be identical to those we have assumed in the Monte Carlo subtraction
+terms.
+In particular, the following settings MUST NOT BE CHANGED:
+
+HERWIG6:   SOFTME = .FALSE., HARDME = .FALSE., PTMIN = 0.5D0
+HERWIGPP:  ReconstructionOption=General, InitialInitialBoostOption=LongTransBoost
+PYTHIA6Q:  MSTJ(43) = 3, MSTJ(47) = 0, MSTJ(48) = 0, MSTJ(50) = 2,
+           MSTP(67) = 2, MSTP(68) = 0, PARP(67) = 1D0, PARP(71) = 1D0.
+PYTHIA6PT: MSTP(67) = 2, MSTP(68) = 0, PARP(67) = 1D0.
+
 
 generate_events
 -------------------
@@ -63,5 +70,3 @@ Calculate the cross-section at NLO. This command does not generate
 any event file. If you want to generate parton-level plots, you
 have to manually edit the SubProcesses/madfks_plot.f file before running
 this command
-
-

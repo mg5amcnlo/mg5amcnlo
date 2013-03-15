@@ -457,6 +457,10 @@ UV_3Gq = Coupling(name = 'UV_3Gq',
                  value = '-G_UVq*G',
                  order = {'QCD':3})
 
+UV_3Gc = Coupling(name = 'UV_3Gc',
+                 value = '-G_UVc*G',
+                 order = {'QCD':3})
+
 UV_3Gb = Coupling(name = 'UV_3Gb',
                  value = '-G_UVb*G',
                  order = {'QCD':3})
@@ -471,6 +475,10 @@ UV_4Gg = Coupling(name = 'UV_4Gg',
 
 UV_4Gq = Coupling(name = 'UV_4Gq',
                  value = '2.0*complex(0,1)*G_UVq*(G**2)',
+                 order = {'QCD':4})
+
+UV_4Gc = Coupling(name = 'UV_4Gc',
+                 value = '2.0*complex(0,1)*G_UVc*(G**2)',
                  order = {'QCD':4})
 
 UV_4Gb = Coupling(name = 'UV_4Gb',
@@ -489,6 +497,10 @@ UV_GQQq = Coupling(name = 'UV_GQQq',
                  value = 'complex(0,1)*G_UVq*G',
                  order = {'QCD':3})
 
+UV_GQQc = Coupling(name = 'UV_GQQc',
+                 value = 'complex(0,1)*G_UVc*G',
+                 order = {'QCD':3})
+
 UV_GQQb = Coupling(name = 'UV_GQQb',
                  value = 'complex(0,1)*G_UVb*G',
                  order = {'QCD':3})
@@ -496,6 +508,10 @@ UV_GQQb = Coupling(name = 'UV_GQQb',
 UV_GQQt = Coupling(name = 'UV_GQQt',
                  value = 'complex(0,1)*G_UVt*G',
                  order = {'QCD':3})
+
+UV_cMass = Coupling(name = 'UV_cMass',
+                 value = 'cMass_UV',
+                 order = {'QCD':2})
 
 UV_bMass = Coupling(name = 'UV_bMass',
                  value = 'bMass_UV',

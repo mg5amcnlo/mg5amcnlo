@@ -1961,7 +1961,14 @@ class width_estimate(object):
         pids = set([abs(label2pid[name]) for name in to_decay])
         particle_set = [label2pid[pid] for pid in pids]
     
-        commandline="import model %s\n" % self.model.get('modelpath')
+
+        modelpath = self.model.get('modelpath')
+        if os.path.basename(modelpath) != self.model['name']:
+            name, restrict = self.model['name'].rsplit('-',1)
+            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                modelpath = pjoin(os.path.dirname(modelpath), self.model['name'])
+    
+        commandline="import model %s\n" % modelpath
         commandline+="generate %s > all all \n" % particle_set[0]
         commandline+= "set automatic_html_opening False --no_save\n"
         if len(particle_set)>1:
@@ -2494,7 +2501,7 @@ class decay_all_events:
         self.terminate_fortran_executables()
         shutil.rmtree(pjoin(self.path_me,'production_me'))
         shutil.rmtree(pjoin(self.path_me,'full_me'))
-
+        shutil.rmtree(pjoin(self.path_me,'decay_me'))
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
@@ -2647,10 +2654,10 @@ class decay_all_events:
                                     decay['decay_struct'],
                                     event_map,
                                     BW_cut,
-                                    ran=0)
+                                    ran=0, write=1)
                     
                     decayed_event.wgt = decayed_event.wgt * self.branching_ratio
-                     
+                    
                     self.outputfile.write(decayed_event.string_event())
                 #print "number of trials: "+str(trial_nb)
                     trial_nb_all_events+=trial_nb
@@ -2880,10 +2887,16 @@ class decay_all_events:
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]       
+                      if re.search('^\s*add\s+process', line)]      
         
         mgcmd = self.mgcmd
-        commandline="import model %s " % self.model.get('modelpath')
+        modelpath = self.model.get('modelpath')
+        if os.path.basename(modelpath) != mgcmd._curr_model['name']:
+            name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
+            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+            
+        commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
         mgcmd.exec_cmd("set group_subprocesses False")
 
@@ -2901,7 +2914,7 @@ class decay_all_events:
                         commandline+="add process %s j ;" % (process)
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
-
+        
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -3064,7 +3077,7 @@ class decay_all_events:
         misc.compile( cwd=pjoin(path_me, mode,"Source","MODEL"), mode='fortran')                   
 
         file=pjoin(path_me, 'param_card.dat')
-        shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat"))    
+        shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
 
         for direc in list_prod:
             if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
@@ -3194,9 +3207,6 @@ class decay_all_events:
         # check all set of decay that need to be done:
         decay_set = set()
         for production in self.all_ME.values():
-            if not production['decaying']:
-                misc.sprint(production['path'], production['base_order'], production['decaying'], production['total_br'])
-            
             decay_set.add(frozenset(production['decaying']))
 
         numberev = self.options['Nevents_for_max_weigth'] # number of events
@@ -3296,18 +3306,20 @@ class decay_all_events:
             probe_weight[decaying].append(max_decay)
 
                     
-
-            running_time = misc.format_timer(time.time()-starttime)
-            info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
-            for  index,tag_decay in enumerate(max_decay):
-                info_text += '            decay_config %s [%s] : %s\n' % \
-                   (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
-            logger.info(info_text[:-1])
+            if ev % 5 == 0:
+                running_time = misc.format_timer(time.time()-starttime)
+                info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
+                for  index,tag_decay in enumerate(max_decay):
+                    info_text += '            decay_config %s [%s] : %s\n' % \
+                       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
+                logger.info(info_text[:-1])
         
         
         
         # Computation of the maximum weight used in the unweighting procedure
         for decaying in probe_weight:
+            if not probe_weight[decaying]:
+                continue
             #me_linked = [me for me in self.all_ME.values() if me['decaying'] == decaying]
             for decay_tag in probe_weight[decaying][0].keys():
                 weights=[]
@@ -3512,7 +3524,7 @@ class decay_all_events:
  
         return BW_weight_prod, topology
         
-    def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1):
+    def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1, write=0):
         """Consider the production event recorded in "curr_event", and decay it
             according to the structure recoreded in "decay_struct".
             If ran=1: random decay, phi and cos theta generated according to 
@@ -3543,13 +3555,22 @@ class decay_all_events:
         maxcol=curr_event.max_col
         weight=1.0
 
-        #event2mg
+        # in order to preserve the natural order in lhe file,
+        # we need the inverse of the dico event_map
+        inv_event_map={}
+        for i in event_map.keys():
+            inv_event_map[event_map[i]]=i
         sol_nb = None
         for index in curr_event.event2mg.keys():
             if curr_event.event2mg[index]>0:
-                part=curr_event.event2mg[index]
+                if write==0:
+                    part=curr_event.event2mg[index]
+                    part_for_curr_evt=event_map[part-1]+1                 
+                else:
+                    part=inv_event_map[curr_event.event2mg[index]-1]+1
+                    part_for_curr_evt=curr_event.event2mg[index]
                 if part in decay_struct:
-                    mom_init = curr_event.particle[event_map[part-1]+1]["momentum"].copy()
+                    mom_init = curr_event.particle[part_for_curr_evt]["momentum"].copy()
                     # sanity check
                     if mom_init.m<1e-6:
                         logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event_old')
@@ -3573,8 +3594,8 @@ class decay_all_events:
                             istup=2
                             mothup1=1
                             mothup2=2
-                            colup1=curr_event.particle[event_map[part-1]+1]["colup1"]
-                            colup2=curr_event.particle[event_map[part-1]+1]["colup2"]
+                            colup1=curr_event.particle[part_for_curr_evt]["colup1"]
+                            colup2=curr_event.particle[part_for_curr_evt]["colup2"]
                             decay_products[res]["colup1"]=colup1
                             decay_products[res]["colup2"]=colup2
                             mass=mom.m
@@ -3722,9 +3743,9 @@ class decay_all_events:
                 else:
                     external+=1 
                     part_number+=1
-                    decayed_event.particle[part_number]=curr_event.particle[event_map[part-1]+1]
+                    decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
                     decayed_event.event2mg[part_number]=part_number
-           
+            
             else: # resonance in the production event
                 if (ran==0): # write resonances in the prod. event ONLY if the 
                     # decayed event is ready to be written down    

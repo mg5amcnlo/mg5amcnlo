@@ -114,7 +114,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = lorentz.spins
+        self.spins = self.spins = [abs(s) for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []

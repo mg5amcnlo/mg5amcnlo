@@ -65,7 +65,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'curr_dir': os.path.realpath(os.getcwd()),
                         'Nevents_for_max_weigth': 0,
                         'max_weight_ps_point': 400,
-                        'BW_cut':15,
+                        'BW_cut':-1,
                         'zeromass_for_max_weight':5,
                         'nb_sigma':0}
         
@@ -119,20 +119,29 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif 'mg5proccard' not in self.banner:
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain generation information')
-        elif 'mgruncard' not in self.banner and not self.options['Nevents_for_max_weigth']:
-            self.options['Nevents_for_max_weigth'] = 75
-            self.options['nb_sigma'] = 4.5
+
         
         if 'madspin' in self.banner:
             raise self.InvalidCmd('This event file was already decayed by MS. This is not possible to add to it a second decay')
         
-        if 'mgruncard' in self.banner and not self.options['Nevents_for_max_weigth']:
-            nevents = int(self.banner.get_detail('run_card', 'nevents'))
-            N_weight = max([75, int(3*nevents**(1/3))])
-            self.options['Nevents_for_max_weigth'] = N_weight
-            N_sigma = max(4.5, math.log(nevents,7.7))
-            self.options['nb_sigma'] = N_sigma
-        
+        if 'mgruncard' in self.banner:
+            if not self.options['Nevents_for_max_weigth']:
+                nevents = int(self.banner.get_detail('run_card', 'nevents'))
+                N_weight = max([75, int(3*nevents**(1/3))])
+                self.options['Nevents_for_max_weigth'] = N_weight
+                N_sigma = max(4.5, math.log(nevents,7.7))
+                self.options['nb_sigma'] = N_sigma
+            if self.options['BW_cut'] == -1:
+                self.options['BW_cut'] = float(self.banner.get_detail('run_card', 'bwcutoff'))
+
+        else:
+            if not self.options['Nevents_for_max_weigth']:
+                self.options['Nevents_for_max_weigth'] = 75
+                self.options['nb_sigma'] = 4.5
+            if self.options['BW_cut'] == -1:
+                self.options['BW_cut'] = 15.0
+                
+                
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if not process:
