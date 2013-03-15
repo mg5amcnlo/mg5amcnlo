@@ -419,7 +419,6 @@ c
       call setcuts
       call setfksfactor(iconfig)
       wgt=1d0
-
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
 

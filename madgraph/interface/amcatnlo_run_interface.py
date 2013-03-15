@@ -471,7 +471,8 @@ class CheckValidForCmd(object):
             self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
-                              
+                
+        lock = None              
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
             filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
@@ -487,6 +488,8 @@ class CheckValidForCmd(object):
             if tag: 
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
+        
+        return lock
             
 
     def check_delphes(self, arg):
@@ -1124,6 +1127,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
             randinit.write('r=%d' % iseed)
             randinit.close()
 
+
+    def get_characteristics(self, file):
+        """reads the proc_characteristics file and initialises the correspondent
+        dictionary"""
+        lines = [l for l in open(file).read().split('\n') if l and not l.startswith('#')]
+        self.proc_characteristics = {}
+        for l in lines:
+            key, value = l.split('=')
+            self.proc_characteristics[key.strip()] = value.strip()
             
         
     def run(self, mode, options):
@@ -1134,6 +1146,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             options['only_generation'] = False
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
@@ -1269,10 +1283,16 @@ Please, shower the Les Houches events before using them for physics analyses."""
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
+
+# check that PYTHIA6PT is not used for processes with FSR
+            if shower == 'PYTHIA6PT' and \
+                self.proc_characteristics['has_fsr'] == '.true.':
+                raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
@@ -2344,10 +2364,14 @@ Integrated cross-section
             self.link_lhapdf(libdir)
         else:
             logger.info('Using built-in libraries for PDFs')
-            os.unsetenv('lhapdf')
+            try:
+                del os.environ['lhapdf']
+            except KeyError:
+                pass
 
         # make Source
         self.update_status('Compiling source...', level=None)
+        misc.compile(['clean4pdf'], cwd = sourcedir)
         misc.compile(cwd = sourcedir)
         if os.path.exists(pjoin(libdir, 'libdhelas.a')) \
           and os.path.exists(pjoin(libdir, 'libgeneric.a')) \
@@ -2465,7 +2489,7 @@ Integrated cross-section
             os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.putenv('lhapdf', 'True')
+        os.environ['lhapdf'] = 'True'
 
 
     def write_test_input(self, test):

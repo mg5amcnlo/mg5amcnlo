@@ -291,7 +291,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
         self.history.clean(remove_bef_last='import',
-                           to_keep=['set','add','load','import'])
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -541,6 +541,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
+            proc_characteristics = ''
+            for charac in ['has_isr', 'has_fsr']:
+                if self._curr_matrix_elements[charac]:
+                    proc_characteristics += '%s = .true.\n' % charac
+                else:
+                    proc_characteristics += '%s = .false.\n' % charac
+
+            open(pjoin(path, 'proc_characteristics.dat'),'w').write(proc_characteristics)
+
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals

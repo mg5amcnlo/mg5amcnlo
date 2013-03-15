@@ -75,7 +75,8 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
-      'montecarlomasses':''
+      'montecarlomasses':'',
+      'madspin':'madspin_card.dat' 
       }
     
     def read_banner(self, input_path):
@@ -146,6 +147,8 @@ class Banner(dict):
             if tag == 'mgversion':
                 continue
             if not proc_card and tag in ['mg5proccard','mgproccard']:
+                continue
+            if not self.tag_to_file[tag]:
                 continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
@@ -717,7 +720,8 @@ class ProcCard(list):
     
     def append(self, line):
         """"add a line in the proc_card perform automatically cleaning"""
-
+        
+        line = line.strip()
         cmds = line.split()
         if len(cmds) == 0:
             return

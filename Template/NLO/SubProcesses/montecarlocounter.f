@@ -2769,6 +2769,10 @@ c Distinguish initial or final state radiation
         isr=.true.
         delta=min(1.d0,deltaI)
       elseif(ileg.eq.3.or.ileg.eq.4)then
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        stop
         fsr=.true.
         delta=min(1.d0,deltaO)
       else

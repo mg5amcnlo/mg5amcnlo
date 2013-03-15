@@ -187,18 +187,8 @@ c (for 'this_dim') has been picked.
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
-c
-c Give a nice printout of the grids used for the current iteration
       do this_dim=1,maxdim
          if (nintervals(this_dim).eq.0) cycle
-         do i=1,101
-            buff(i:i)=' '
-         enddo
-         do i=0,nintervals(this_dim)
-            ib=1+int(grid(i,this_dim)*100)
-            write (buff(ib:ib),'(i1)') mod(i,10)
-         enddo
-         write (*,*) 'nFKSprocess ',buff
 c
 c Compute the accumulated cross section
          ncall(0,this_dim)=0
@@ -254,6 +244,19 @@ c Write grid to a file
          write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
+c
+c Give a nice printout of the grids after the current iteration
+      do this_dim=1,maxdim
+         if (nintervals(this_dim).eq.0) cycle
+         do i=1,101
+            buff(i:i)=' '
+         enddo
+         do i=0,nintervals(this_dim)
+            ib=1+int(grid(i,this_dim)*100)
+            write (buff(ib:ib),'(i1)') mod(i,10)
+         enddo
+         write (*,'(i3,a,a)') this_dim,':  ',buff
+      enddo
 c
 c Reset the accumulated results because we start new iteration.
       do this_dim=1,maxdim

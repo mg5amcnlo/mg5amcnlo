@@ -38,7 +38,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements']
+        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr']]
         return keys
 
     def filter(self, name, value):
@@ -69,6 +69,9 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                                 fksmulti, 
                                 gen_color, decay_ids)
         self['initial_states']=[]
+
+        self['has_isr'] = fksmulti['has_isr']
+        self['has_fsr'] = fksmulti['has_fsr']
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
