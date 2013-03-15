@@ -17,6 +17,7 @@
 """
 
 import atexit
+import collections
 import logging
 import optparse
 import os
@@ -457,6 +458,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Comments",'$MG:color:GREEN')         
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
+        logger.info("   If that file is an (LHE) event file. The param_card of the banner")
+        logger.info("   is used and the first event compatible with the requested process")
+        logger.info("   is used for the computation of the square matrix elements")
         logger.info(" > \"--energy=\" allows to change the default value of sqrt(S).")
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
@@ -628,7 +632,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if not self._curr_model:
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
-    
+        
         self.check_process_format(' '.join(args[1:]))
 
     def check_define(self, args):
@@ -723,10 +727,10 @@ class CheckValidForCmd(cmd.CheckCmd):
                 args.insert(1, '-no_reuse')
         else:
             args.append('-no_reuse')
-
+            
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
-
+            misc.sprint(param_card)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -2099,7 +2103,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
+                     'MCatNLO-utilities','update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -2129,6 +2134,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None
@@ -2210,7 +2216,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.history.clean(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',keep_switch=True)
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -2240,6 +2246,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """
 
         args = self.split_arg(line)
+        
+        warning_duplicate = True
+        if '--no_warning=duplicate' in args:
+            warning_duplicate = False
+            args.remove('--no_warning=duplicate')
         
         # Check the validity of the arguments
         self.check_add(args)
@@ -2300,7 +2311,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
-                else:
+                elif warning_duplicate:
                     raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
 
@@ -2734,22 +2745,31 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-        args = self.split_arg(line)
+        
+        args = self.split_arg(line)        
         # Check args validity
         param_card = self.check_check(args)
-        
+        options= {'events':None} # If the momentum needs to be picked from a event file
+        if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
+            logger.info("Will use the param_card contained in the banner and  the events associated")
+            import madgraph.various.banner as banner
+            options['events'] = param_card
+            mybanner = banner.Banner(param_card)
+            param_card = mybanner.charge_card('param_card')
+ 
+
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        reuse = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"       
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
         if args[0] in ['stability', 'profile']:
-            stab_statistics = int(args[1])
+            options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
 
-        energy = float(args[-1].split('=')[1])
+        options['energy'] = float(args[-1].split('=')[1])
         args = args[:-1]        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
@@ -2784,9 +2804,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('cmdprint'),
                    logging.getLogger('madgraph.model'),
                    logging.getLogger('madgraph.base_objects')]
-        old_levels = [logger.level for logger in loggers]
-        for logger in loggers:
-            logger.setLevel(logging.WARNING)
+        old_levels = [log.level for log in loggers]
+        for log in loggers:
+            log.setLevel(logging.WARNING)
         
         # run the check
         cpu_time1 = time.time()
@@ -2819,15 +2839,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  reuse = reuse,
-                                                  cmd = self)        
+                                                  options = options,
+                                                  cmd = self,
+                                                  )        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -2836,8 +2856,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -2862,9 +2881,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                energy=energy,
+                                                options=options,
                                                 cuttools=CT_dir,
-                                                reuse = reuse,
+                                                reuse = options['reuse'],
                                                 cmd = self)
             
             # restore previous settings
@@ -2877,9 +2896,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
-                                            reuse = reuse,
+                                            reuse = options['reuse'],
                                             cmd = self,
-                                            energy=energy)
+                                            options=options)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2887,18 +2906,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(lorentz_result)
         
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
+                                          reuse = options['reuse'],
                                           cmd = self,
-                                          energy=energy)
+                                          options=options)
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
@@ -2933,7 +2952,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,reuse) + '\n'
+                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
@@ -2950,16 +2969,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if len(text.split('\n'))>20 and not reuse and text!='':
-            pydoc.pager(text)
+        if len(text.split('\n'))>20 and not '-reuse' in line and text!='':
+            if 'test_manager' not in sys.argv[0]:
+                pydoc.pager(text)
             
         # Restore diagram logger
-        for i, logger in enumerate(loggers):
-            logger.setLevel(old_levels[i])
+        for i, log in enumerate(loggers):
+            log.setLevel(old_levels[i])
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if len(text.split('\n'))<=20 or reuse:
+        if len(text.split('\n'))<=20 or options['reuse']:
             # Useful to really specify what logger is used for ML acceptance tests
             logging.getLogger('madgraph.check_cmd').info(text)
         else:
@@ -2967,7 +2987,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
-        if not reuse:
+        if not options['reuse']:
             process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
@@ -3264,7 +3284,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
         """
-                
+
         if not self._curr_model['case_sensitive']:
             procline = procline.lower()
         pids = self._curr_model.get('name2pdg')
@@ -3524,7 +3544,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          self._curr_model.get('perturbation_couplings') not in \
                                                                    [[],['QCD']]:
                         if 1 not in self._curr_model.get('gauge') :
-                            logger.warning('This model does not allow Feynman '+\
+                            logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
                                                 'QCD loop cmputations with it.')
                         else:
@@ -3534,13 +3554,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             self.do_set('gauge Feynman', log=False)
                             return
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to Feynman since '+\
+                        logger_stderr.warning('Change the gauge to Feynman since '+\
                                        'the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the'+\
+                        logger_stderr.warning('Change the gauge to unitary since the'+\
                           ' model does not allow Feynman gauge.'+\
                                                   ' Please re-import the model')
                         self._curr_model = None
@@ -3613,6 +3633,45 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
+
+    def remove_pointless_decay(self, param_card):
+        """ For simple decay chain: remove diagram that are not in the BR.
+            param_card should be a ParamCard instance."""
+            
+        assert isinstance(param_card, check_param_card.ParamCard)
+        
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        to_remove = []        
+        for amp in amplitudes:
+            mother = [l.get('id') for l in amp['process'].get('legs') \
+                                                        if not l.get('state')]
+            if 1 == len(mother):
+                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                # create the tuple associate to the decay mode
+                child = [l.get('id') for l in amp['process'].get('legs') \
+                                                              if l.get('state')]
+                if not mother[0] > 0:
+                    child = [-id for id in child]
+                child.sort()
+                child.insert(0, len(child))
+
+                #check if the decay is present or not:
+                if tuple(child) not in decay_table.keys():
+                    to_remove.append(amp)
+                    
+        def remove_amp(amps):
+            for amp in amps[:]:
+                if amp in to_remove:
+                    amps.remove(amp)
+                if isinstance(amp, diagram_generation.DecayChainAmplitude):
+                    remove_amp(amp.get('decay_chains'))
+                    for decay in amp.get('decay_chains'):
+                        remove_amp(decay.get('amplitudes'))
+        remove_amp(self._curr_amps) 
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -3742,10 +3801,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
+
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
-                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes', 
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis', 
+                'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
 
         try:
@@ -3776,6 +3839,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
         
+        
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
             created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name) 
@@ -3800,6 +3864,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+            to_copy = [os.path.join('SubProcesses', 'reweight0.inc')]
+            for f in to_copy:
+                files.cp(os.path.join(MG5DIR, 'Template', 'NLO', f), \
+                        os.path.join(MG5DIR, 'MCatNLO-utilities', 'MCatNLO', 'srcCommon'))
             
         # Compile the file
         # Check for F77 compiler
@@ -3882,7 +3950,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     
             if args[0] == 'MCatNLO-utilities':
                 self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
-
+            
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))  
+        
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
@@ -4349,7 +4426,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]
@@ -4551,7 +4633,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif log:
                 logger.info('Note that you have to reload the model') 
 
-		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
                 if log:
@@ -4581,8 +4662,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
             elif int(output.split('.')[0]) < 3:
-                logger.warning('%s is not ' + \
-                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                logger.warning('%s is not ' % args[1] + \
+                        'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
 
         elif args[0] == 'lhapdf':
@@ -4601,6 +4682,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
+        elif args[0] == 'cluster_status_update':
+            if '(' in args[1]:
+                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+                data = data.replace('(','').replace(')','').replace(',',' ').split()
+                first, second = data[:2]
+            else: 
+                first, second = args[1:3]            
+            
+            self.options[args[0]] = (int(first), int(second))
+             
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -4696,7 +4787,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         ## Other Output #
         #################
         if not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone','standalone_ms']:
+               and self._export_format in ['madevent', 'standalone']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)
@@ -4726,7 +4817,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name)
+        self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -4738,13 +4829,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = ""):
+    def export(self, nojpeg = False, main_file_name = "", args=[]):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            if self._export_format == 'standalone_ms':
+                to_distinguish = []
+                for part in self._curr_model.get('particles'):
+                    if part.get('name') in args and part.get('antiname') in args and\
+                       part.get('name') != part.get('antiname'):
+                        to_distinguish.append(abs(part.get('pdg_code'))) 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
@@ -4795,14 +4892,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
+                    mode = {}
+                    if self._export_format == 'standalone_ms':
+                        mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
-                        helas_objects.HelasMultiProcess(self._curr_amps)
+                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
-                                  get_matrix_elements()])
+                                  get_matrix_elements()])                    
                     # assign a unique id number to all process
                     uid = 0 
-                    for me in self._curr_matrix_elements.get_matrix_elements():
+                    for me in self._curr_matrix_elements.get_matrix_elements()[:]:
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
 
@@ -4888,10 +4988,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Fortran MadGraph Standalone
         if self._export_format in ['standalone', 'standalone_ms']:
-            for me in matrix_elements:
-                calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
+            for me in matrix_elements[:]:
+                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
+                if not new_calls:
+                    matrix_elements.remove(me)
+                calls = calls + new_calls
 
         # Just the matrix.f files
         if self._export_format == 'matrix':

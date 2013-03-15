@@ -3371,18 +3371,18 @@ c
               if(abs(xnum).eq.0d0.and.abs(xden).le.vtiny)xrat=0d0
 c The following line solves some problem as well, but before putting
 c it as the standard, one should think a bit about it
-c              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
+              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
               if(xrat.gt.tiny .and.
      &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
                  write(*,*)'Kinematics of counterevents'
                  write(*,*)inum,iden
                  write(*,*)'is different. Particle:',ipart
                  write(*,*) xrat,xnum,xden
-                 do j=1,6
-                    write(*,*) j,(p1_cnt(k,j,0),k=0,3)
+                 do j=1,nexternal
+                    write(*,*) j,(p1_cnt(k,j,inum),k=0,3)
                  enddo
-                 do j=1,6
-                    write(*,*) j,(p1_cnt(k,j,1),k=0,3)
+                 do j=1,nexternal
+                    write(*,*) j,(p1_cnt(k,j,iden),k=0,3)
                  enddo
                  stop
               endif
@@ -3621,7 +3621,7 @@ c
       endif
 c
       i=1
-      dowhile(ckc(i).gt.0.1d0)
+      do while(ckc(i).gt.0.1d0 .and. xseclvc.ne.0d0)
         i=i+1
       enddo
       imin=i
@@ -3634,7 +3634,7 @@ c
       enddo
       icount=0
       i=imin
-      dowhile(icount.lt.ithrs.and.i.lt.imax)
+      do while(icount.lt.ithrs.and.i.lt.imax)
         if(rckc(i).gt.rat)then
           icount=icount+1
         else

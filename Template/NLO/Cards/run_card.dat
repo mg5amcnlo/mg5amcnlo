@@ -22,11 +22,13 @@
 #***********************************************************************
   tag_1     = run_tag ! name of the run 
 #***********************************************************************
-# Number of events and the required (relative) accuracy on the Xsec    *
-# (ignored for fixed order runs)                                       *
+# Number of events (and their normalization) and the required          *
+# (relative) accuracy on the Xsec.                                     *
+# These values are ignored for fixed order runs                        *
 #***********************************************************************
- 10000 = nevents ! Number of unweighted events requested 
-    -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
+  10000 = nevents    ! Number of unweighted events requested 
+     -1 = req_acc    ! Required accuracy (-1=auto determined from nevents)
+average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
@@ -54,7 +56,8 @@
   10042    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA8)                              *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
+# WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   HERWIG6   = parton_shower
 #***********************************************************************

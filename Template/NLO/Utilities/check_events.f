@@ -1,6 +1,6 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c g77 -I./P0_<anydir> -o check_events 
+c gfortran -I../SubProcesses/P0_<anydir> -o check_events 
 c   check_events.f handling_lhe_events.f fill_MC_mshell.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
@@ -41,15 +41,17 @@ c negative number of events
       character*140 buff
       character*6 ch6
       character*5 ch5
-      character*3 ch3
+      character*3 ch3,event_norm
       character*10 MonteCarlo
-      character*2 ch2
+      character*2 ch2,pm
       character*1 ch1
+      common/cevtnorm/event_norm
+
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
 
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 
       include 'reweight0.inc'
       integer kr,kf,kpdf
@@ -73,25 +75,24 @@ c negative number of events
       write (*,*) 'Enter event file name'
       read (*,*) event_file
 
-      write (*,*) 'Enter 0 to get integrals from res_1'
+      write (*,*) 'Enter 0 to get integrals from res_1_tot.txt'
       write (*,*) '      1 otherwise'
       read (*,*) iuseres_1
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
       if(iuseres_1.eq.0)then
-c Probably fragile. Assumes res_1 is in the form
-c  string  tot_abs +/- err_abs
-c  string  tot     +/- err
+c
         jfile=50
-        open (unit=jfile,file='res_1',status='old')
-        read(jfile,'(a)')buff
-        read(buff(index(buff,':')+1:index(buff,'+/-')-1),*) xint
-        read(buff(index(buff,'+/-')+3:),*) xinterr
-c Discard absolute values
-        read(jfile,'(a)')buff
-        read(buff(index(buff,':')+1:index(buff,'+/-')-1),*) xint
-        read(buff(index(buff,'+/-')+3:),*) xinterr
+        open (unit=jfile,file='res_1_tot.txt',status='old')
+        do while(buff(1:6).ne.'Total:')
+           read(jfile,*)buff
+        enddo
+        read(jfile,*)xint,pm,xinterr
+        if(pm.ne.'+-')then
+           write(*,*)'File res_1_tot.txt has unexpected format'
+           stop
+        endif
       elseif(iuseres_1.eq.1)then
         jfile=50
         open (unit=jfile,file='res_wgt',status='unknown')
@@ -361,10 +362,12 @@ c Don't check momentum conservation in that case
 
       enddo
 
+      if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
       err_wgt=sum_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
-      write (*,*) 'The sum of the weights is:',sum_wgt,' +-',err_wgt
+      write (*,*) 'Xsec from the sum of the weights is:',
+     &sum_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
         toterr=sqrt(xinterr**2+err_wgt**2)
@@ -376,9 +379,13 @@ c Error if more that 1sigma away
           write(44,*)'WEIGHTS'
           write(44,*)'Integral:',xint,' +-',xinterr
           write(44,*)'Weights: ',sum_wgt,' +-',err_wgt
+          write(44,*)' '
+          write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/
+     &sqrt(xinterr**2+err_wgt**2)
         endif
       elseif(iuseres_1.eq.1)then
-        write (50,*) 'The sum of the weights is:',sum_wgt,' +-',err_wgt
+        write (50,*) 'Xsec from the sum of the weights is:',
+     &sum_wgt,' +-',err_wgt
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -852,7 +859,7 @@ c works in any frame
       implicit none
       integer nev,npart,maxmom
       include "nexternal.inc"
-      real*8 xmass(nexternal),xmom(0:3,nexternal)
+      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)

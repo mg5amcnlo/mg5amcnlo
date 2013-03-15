@@ -140,6 +140,10 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
                 args.append('auto')
+            else:
+                self.help_launch()
+                raise self.InvalidCmd, '%s is not a valid process directory nor run mode' % args[0]
+
         mode = args[1]
         
         # search for a valid path
@@ -287,7 +291,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
         self.history.clean(remove_bef_last='import',
-                           to_keep=['set','add','load','import'])
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -501,11 +505,26 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
-                    # assign a unique id number to all process
+                    # assign a unique id number to all process and
+                    # generate a list of possible PDF combinations
                     uid = 0 
+                    initial_states=[]
                     for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
+                        for fksreal in me.real_processes:
+                        # Pick out all initial state particles for the two beams
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                             p in fksreal.matrix_element.get('processes')))))
+                        
+                    # remove doubles from the list
+                    checked = []
+                    for e in initial_states:
+                        if e not in checked:
+                            checked.append(e)
+                    initial_states=checked
+
+                    self._curr_matrix_elements.set('initial_states',initial_states)
 
             cpu_time2 = time.time()
             return ndiags, cpu_time2 - cpu_time1
@@ -522,6 +541,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
+            proc_characteristics = ''
+            for charac in ['has_isr', 'has_fsr']:
+                if self._curr_matrix_elements[charac]:
+                    proc_characteristics += '%s = .true.\n' % charac
+                else:
+                    proc_characteristics += '%s = .false.\n' % charac
+
+            open(pjoin(path, 'proc_characteristics.dat'),'w').write(proc_characteristics)
+
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
@@ -544,6 +572,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 except Exception:
                     logger.debug('fail to run command \"history cmd\"')
                     pass
+            subproc_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+                                     'initial_states_map.dat')
+            self._curr_exporter.write_init_map(subproc_path,
+                                               self._curr_matrix_elements.get('initial_states'))
             
         cpu_time1 = time.time()
 
@@ -589,7 +621,7 @@ class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "-- execute the aMC@NLO output present in DIRPATH\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
                 "     computation of the total cross-section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \

@@ -1,7 +1,8 @@
       program select_events
 c Keeps selected events out of those originally stored in the event file.
 c Compile with
-c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
+c gfortran -ffixed-line-length-132 -fno-automatic -I../SubProcesses/P0_<anydir> -o
+c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       implicit none
       integer maxevt,ifile,ofile,i,npart,nevmin,nevmax
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
@@ -22,12 +23,12 @@ c g77 -o select_events select_events.f mcatnlo_str.f handling_lhe_events.f
       character*10 MonteCarlo,string
       character*1 ch1
       logical AddInfoLHE,condition
-      integer numev
+      integer numev,number,ioffset,jj,loc
 
+      include "nexternal.inc"
       include "genps.inc"
-      include 'nexternal.inc'
       integer j,k,itype,istep,ievts_ok
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
@@ -35,56 +36,40 @@ c
       write(*,*)'     2 to keep H events'
       write(*,*)'     3 to keep a subset of events'
       read(*,*)itype
+
+      loc=index(event_file,' ')
       if(itype.eq.1)then
-         call fk88strcat(event_file,'.S',fname2)
+         fname2=event_file(1:loc-1)//'.S'
       elseif(itype.eq.2)then
-         call fk88strcat(event_file,'.H',fname2)
+         fname2=event_file(1:loc-1)//'.H'
       elseif(itype.eq.3)then
-         call fk88strcat(event_file,'.RED',fname2)
+         fname2=event_file(1:loc-1)//'.RED'
          write(*,*)'Enter first and last event to keep'
          read(*,*)nevmin,nevmax
-         ifile=34
-         open(unit=ifile,file=event_file,status='old')
-         call read_lhef_header(ifile,maxevt,MonteCarlo)
-         if(nevmin.gt.maxevt.and.nevmax.gt.maxevt)then
-            write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
-            stop
-         endif
-         close(34)
-      else 
+      else
          write(*,*)'Invalid itype',itype
          stop
       endif
 
+c first round to establish ievts_ok
       ifile=34
-      ofile=35
-      open(unit=ifile,file=event_file,status='old')
-      open(unit=ofile,file=fname2,status='unknown')
-      open(unit=36,file='select_events.out')
-      AddInfoLHE=.false.
-
+      open(unit=ifile,file=event_file,status='unknown')
       call read_lhef_header(ifile,maxevt,MonteCarlo)
+      if(itype.eq.3.and.min(nevmin,nevmax).gt.maxevt)then
+         write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
+         stop
+      endif
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
-      string='abcdeABCDE'
-      call write_lhef_header_string(ofile,string,MonteCarlo)
-      call write_lhef_init(ofile,
-     &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
-     &     XSECUP,XERRUP,XMAXUP,LPRUP)
-      
       i=1
       ievts_ok=0
-      sum_wgt=0d0
-
       if(itype.le.2)numev=maxevt
-      if(itype.eq.3)numev=min(maxevt,nevmax)
+      if(itype.eq.3)numev=min(maxevt,max(nevmin,nevmax))
       do while(i.le.numev)
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-         sum_wgt=sum_wgt+XWGTUP
-
          if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
          if(AddInfoLHE)then
             if(buff(1:1).ne.'#')then
@@ -97,7 +82,49 @@ c
      #                        jwgtinfo,mexternal,iwgtnumpartn,
      #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
          endif
+         if(itype.le.2)condition=itype.eq.iSorH_lhe
+         if(itype.eq.3)condition=i.ge.min(nevmin,nevmax)
+         if(condition)ievts_ok=ievts_ok+1
+         i=i+1
+      enddo
+      close(34)
 
+c second round to write file
+      ifile=34
+      ofile=35
+      open(unit=ifile,file=event_file,status='old')
+      open(unit=ofile,file=fname2,status='unknown')
+      AddInfoLHE=.false.
+
+      call copy_header(ifile,ofile,ievts_ok)
+      call read_lhef_init(ifile,
+     &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
+     &     XSECUP,XERRUP,XMAXUP,LPRUP)
+      call write_lhef_init(ofile,
+     &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
+     &     XSECUP,XERRUP,XMAXUP,LPRUP)
+      i=1
+      ievts_ok=0
+      sum_wgt=0d0
+      if(itype.le.2)numev=maxevt
+      if(itype.eq.3)numev=min(maxevt,max(nevmin,nevmax))
+      do while(i.le.numev)
+         call read_lhef_event(ifile,
+     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         sum_wgt=sum_wgt+XWGTUP
+         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
+         if(AddInfoLHE)then
+            if(buff(1:1).ne.'#')then
+               write(*,*)'Inconsistency in event file',i,' ',buff
+               stop
+            endif
+            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                        fksfather_lhe,ipartner_lhe,
+     #                        scale1_lhe,scale2_lhe,
+     #                        jwgtinfo,mexternal,iwgtnumpartn,
+     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+         endif
          npart=0
          do k=1,nup
             if(abs(ISTUP(k)).eq.1)then
@@ -109,32 +136,31 @@ c
             endif
          enddo
          call phspncheck_nocms2(i,npart,xmass,xmom)
-
          if(itype.le.2)condition=itype.eq.iSorH_lhe
-         if(itype.eq.3)condition=i.ge.nevmin.and.i.le.nevmax
-
+         if(itype.eq.3)condition=i.ge.min(nevmin,nevmax)
          if(condition)then
             ievts_ok=ievts_ok+1
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          endif
-
          if(itype.le.2)then
-            istep=maxevt/10
-            if(istep.eq.0)istep=1
-            percentage=i*100.d0/maxevt
-            if(mod(i,istep).eq.0.or.i.eq.maxevt)
-     &           write(*,*)'Read',int(percentage),'% of event file'
+            ioffset=0
+            number=maxevt
+         elseif(itype.eq.3)then
+            ioffset=min(nevmin,nevmax)
+            number=abs(min(max(nevmin,nevmax),maxevt)-ioffset)
          endif
+         istep=number/10
+         if(istep.eq.0)istep=1
+         jj=i-ioffset
+         percentage=jj*100.d0/number
+         if(jj.gt.0.and.mod(jj,istep).eq.0.or.jj.eq.number)
+     &        write(*,*)'Read',int(percentage),'% of event file'
          i=i+1
       enddo
 
       write(ofile,*)'</LesHouchesEvents>'
-
-      write(36,*)event_file
-      write(36,*)itype
-      write(36,*)ievts_ok
 
       if(ievts_ok.eq.0)then
          write(*,*)' '
@@ -149,7 +175,6 @@ c
 
       close(34)
       close(35)
-      close(36)
 
       end
 
@@ -160,9 +185,9 @@ c Checks four-momentum conservation. Derived from phspncheck;
 c works in any frame
       implicit none
       integer nev,npart,maxmom
+      include "nexternal.inc"
       include "genps.inc"
-      include 'nexternal.inc'
-      real*8 xmass(nexternal),xmom(0:3,nexternal)
+      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
