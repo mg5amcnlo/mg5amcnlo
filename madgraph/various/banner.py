@@ -720,7 +720,8 @@ class ProcCard(list):
     
     def append(self, line):
         """"add a line in the proc_card perform automatically cleaning"""
-
+        
+        line = line.strip()
         cmds = line.split()
         if len(cmds) == 0:
             return
