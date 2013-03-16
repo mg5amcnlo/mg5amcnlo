@@ -477,7 +477,7 @@ class dc_branch_from_me(dict):
         # launch the recursive loop
         add_decay(process)
 
-    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,BW_cut, sol_nb=None):
+    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,BW_cut,E_collider, sol_nb=None):
         """Generate the momenta in each decay branch 
              If ran=1: the generation is random, with 
                                      a. p^2 of each resonance generated according to a BW distribution 
@@ -544,7 +544,8 @@ class dc_branch_from_me(dict):
                     width=pid2width(pid)*pid2mass(pid)/(4.0*pid2mass(pid)**2)     #/mA**2
 
                     m_min=max(mpole-BW_cut*w, 0.5)
-                    m_max=mpole+BW_cut*w  #min(mpole+BW_cut*w),)
+                    m_max=mpole+BW_cut*w 
+                    if E_collider>0: m_max=min(m_max,0.99*E_collider)
 
                     zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
                     zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
@@ -888,7 +889,7 @@ class production_topo(dict):
                     logger.debug('Decaying particle with a mass of less than 1 MeV in topo2event')
 
 
-    def generate_BW_masses (self, pid2width, pid2mass,s):
+    def generate_BW_masses (self, pid2width, pid2mass,s,E_collider):
         """Generate the BW masses of the particles to be decayed in the production event    """    
         # topo, to_decay, pid2name
 
@@ -905,7 +906,8 @@ class production_topo(dict):
                 BW_cut = float(self.options['BW_cut'])
 
                 m_min=max(mpole-BW_cut*w, 0.5)
-                m_max=mpole+BW_cut*w #  min(mpole+BW_cut*w),)
+                m_max=mpole+BW_cut*w 
+                if E_collider>0:m_max=min(m_max,0.99*E_collider)
 
                 zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
                 zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
@@ -2440,6 +2442,11 @@ class decay_all_events:
         self.pid2label.update(label2pid(self.model))
         # dictionary pid > color_rep
         self.pid2color = pid2color(self.model)
+
+        # energy of the collider
+        self.Ecollider=float(self.banner.get('run_card', 'ebeam1'))\
+                       +float(self.banner.get('run_card', 'ebeam2'))
+
         
         # width and mass information will be filled up later
         self.pid2width = lambda pid: self.banner.get('param_card', 'decay', abs(pid)).value
@@ -2780,7 +2787,7 @@ class decay_all_events:
                 
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
-                                        True, self.pid2width, self.pid2mass, BW_cut)
+                                        True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
 
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
@@ -3533,7 +3540,7 @@ class decay_all_events:
             topology = self.all_ME[production_tag][tag_topo]
             
             BW_weight_prod = topology.generate_BW_masses(self.pid2width,self.pid2mass, \
-                                                           self.curr_event.shat)
+                                                           self.curr_event.shat, self.Ecollider)
 
             # end sanity check
             if topology.reshuffle_momenta():
@@ -3614,7 +3621,7 @@ class decay_all_events:
                     #choose which final state to take
                                         
                     decay_products, jac, sol_nb=decay_struct[part].generate_momenta(mom_init,\
-                                        ran, pid2width,pid2mass,BW_cut, sol_nb)
+                                        ran, pid2width,pid2mass,BW_cut,self.Ecollider, sol_nb)
 
                     if ran==1:
                         if decay_products==0: return 0, 0
