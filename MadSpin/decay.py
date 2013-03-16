@@ -542,10 +542,14 @@ class dc_branch_from_me(dict):
                     w=pid2width(pid)
                     mpole=pid2mass(pid)
                     width=pid2width(pid)*pid2mass(pid)/(4.0*pid2mass(pid)**2)     #/mA**2
-                    m=-1.0
-                    while m<0.0001 or m< (mpole-BW_cut*w)**2/4.0/mpole**2 \
-                                   or m> (mpole+BW_cut*w)**2/4.0/mpole**2:
-                       m, jac=self.transpole(pole,width, BW_cut)
+
+                    m_min=max(mpole-BW_cut*w, 0.5)
+                    m_max=mpole+BW_cut*w  #min(mpole+BW_cut*w),)
+
+                    zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
+                    zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
+
+                    m, jac=self.transpole(pole,width, zmin,zmax)
                     m = math.sqrt(m * 4.0 * mpole**2)
                     # record the mass for the reshuffling phase, 
                     # in case the point passes the reweighting creteria
@@ -613,16 +617,13 @@ class dc_branch_from_me(dict):
 
         return index2mom, weight, sol_nb
         
-    def transpole(self,pole,width, BW_cut):
+    def transpole(self,pole,width, zmin, zmax):
 
         """ routine for the generation of a p^2 according to 
             a Breit Wigner distribution
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-    
-        zmin = -math.pi/2.0/width
-        zmax = math.pi/2.0/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -902,12 +903,17 @@ class production_topo(dict):
                 mpole=pid2mass(pid)
                 w=pid2width(pid)
                 BW_cut = float(self.options['BW_cut'])
-                virtualmass2 = -1.0
-                while virtualmass2<0.0001 or virtualmass2< (mpole-BW_cut*w)**2/4.0/mpole**2 \
-                               or virtualmass2> (mpole+BW_cut*w)**2/4.0/mpole**2:
-                    virtualmass2, jac=self.transpole(mass,width)
+
+                m_min=max(mpole-BW_cut*w, 0.5)
+                m_max=mpole+BW_cut*w #  min(mpole+BW_cut*w),)
+
+                zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
+                zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
+                
+                virtualmass2, jac=self.transpole(mass,width, zmin, zmax)
                 virtualmass2=virtualmass2*(2.0*mpole)**2
                 weight=weight*jac
+
                 self.max_bw = max(self.max_bw, abs(math.sqrt(virtualmass2) - pid2mass(pid)) / abs(pid2width(pid)))
                 #print "need to generate BW mass of "+str(part)
                 ##print "mass: "+str(pid2mass[pid])
@@ -955,16 +961,13 @@ class production_topo(dict):
 
         return weight
 
-    def transpole(self,pole,width):
+    def transpole(self,pole,width, zmin, zmax):
 
         """ routine for the generation of a p^2 according to 
             a Breit Wigner distribution
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-
-        zmin = -math.pi/2.0/width
-        zmax = math.pi/2.0/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -2110,6 +2113,14 @@ class width_estimate(object):
             return self.br
 
         for id, data in param_card['decay'].decay_table.items():
+#           check is the new width is close to the one originally in the banner
+            recalculated_width=param_card['decay'].param_dict[(id,)].value
+            width_in_the_banner=self.banner.get('param_card', 'decay', abs(id)).value
+            relative_diff=abs(recalculated_width-width_in_the_banner)/recalculated_width
+            if (relative_diff > 0.05):
+               logger.warning('The LO estimate for the width of particle %s ' % id)
+               logger.warning('differs from the one in the banner by %d percent ' % (relative_diff*100))
+
             label = self.pid2label[id]
             current = [] # tmp name for  self.br[label]
             for parameter in data:
@@ -2404,7 +2415,6 @@ class decay_all_events:
         self.curr_event = Event(self.evtfile) 
                
         self.curr_dir = os.getcwd()
-    
         # dictionary to fortan evaluator
         self.calculator = {}
         self.calculator_nbcall = {}
@@ -2439,15 +2449,15 @@ class decay_all_events:
             os.remove(pjoin(self.path_me,"param_card.dat"))        
 
         # now overwrite the param_card.dat in Cards:
-        #param_card=self.banner['slha']
+        param_card=self.banner['slha']
         #param_card=decay_tools.check_param_card( param_card)
 
         # now we can write the param_card.dat:
         # Note that the width of each resonance in the    
         # decay chain should be >0 , we will check that later on
-        #param=open(pjoin(self.path_me,'param_card.dat'),"w")
-        #param.write(param_card)
-        #param.close()     
+        param=open(pjoin(self.path_me,'param_card.dat'),"w")
+        param.write(param_card)
+        param.close()     
         
         self.list_branches = ms_interface.list_branches
         decay_ids = [self.pid2label[key] for key in self.list_branches \
