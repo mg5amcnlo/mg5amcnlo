@@ -420,8 +420,8 @@ c to restore grids:
      &        "  Unknown return code (10):                        ",n10
          write(*,*)
      &        "  Unknown return code (1):                         ",n1
-         return
       endif
+      return
  999  write (*,*) 'nevts file not found'
       stop
       end

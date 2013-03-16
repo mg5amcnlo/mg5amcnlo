@@ -288,14 +288,13 @@ c
          write(*,*)
      &        "  Unknown return code (1):                         ",n1
       endif
-      return
 
       if(savegrid)call initplot
       call mclear
       open(unit=99,file='MADatNLO.top',status='unknown')
       call topout
       close(99)
-
+      return
       end
 
 
