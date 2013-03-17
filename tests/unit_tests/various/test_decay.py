@@ -766,6 +766,9 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_vertexlist(self):
         """Test of the find_vertexlist"""
 
+        # Set the mass of bottom to be nonzero for the test of radiation
+        self.my_testmodel.get_particle(5)['mass'] = '4.7'
+
         # Test the exception of get_max_vertexorder
         self.assertEqual(None, self.my_testmodel.get_max_vertexorder())
 
@@ -854,40 +857,100 @@ class Test_DecayModel(unittest.TestCase):
 
 
         # Test vertices with higher number of final particles (higher order)
-        #      Exceptions when vertices are repeated.
+        # Exceptions when vertices are repeated.
         # Create 5-pt interaction
         for interaction in self.my_testmodel.get('interactions'):
             pids = set([p.get_pdg_code() for p in interaction.get('particles')])
             if pids == set([-6, 24, 5]):
-                new_inter = copy.deepcopy(interaction)
+                new_inter1 = copy.deepcopy(interaction)
+                new_inter2 = copy.deepcopy(interaction)
+                new_inter5 = copy.deepcopy(interaction)
+            if pids == set([-5, 5, 22]):
+                new_inter3 = copy.deepcopy(interaction)
+            if pids == set([6, -5, -24]):
+                new_inter4 = copy.deepcopy(interaction)
 
-        # new_inter = -6, 24, 5, 5, 5
-        new_inter['id'] = 1000
-        new_inter['particles'].append(self.my_testmodel.get_particle(5))
-        new_inter['particles'].append(self.my_testmodel.get_particle(5))
-        self.my_testmodel['interactions'].append(new_inter)
+        # new_inter1 = -6, 24, 5, 5, -5
+        new_inter1['id'] = 1001
+        new_inter1['particles'].append(self.my_testmodel.get_particle(5))
+        new_inter1['particles'].append(self.my_testmodel.get_particle(-5))
+        self.my_testmodel['interactions'].append(new_inter1)
 
+        # new_inter2 = -6, 24, 5, -5, -5
+        new_inter2['id'] = 1002
+        new_inter2['particles'].append(self.my_testmodel.get_particle(-5))
+        new_inter2['particles'].append(self.my_testmodel.get_particle(-5))
+        self.my_testmodel['interactions'].append(new_inter2)
+
+        # new_inter3 = -5 -5 11, not in vertexlist but not radiation either
+        new_inter3['id'] = 1003
+        new_inter3['particles'].remove(self.my_testmodel.get_particle(5))
+        new_inter3['particles'].remove(self.my_testmodel.get_particle(22))
+        new_inter3['particles'].append(self.my_testmodel.get_particle(11))
+        new_inter3['particles'].append(self.my_testmodel.get_particle(-5))
+        self.my_testmodel['interactions'].append(new_inter3)
+
+        # new_inter4 = 6 -24 -5 22, potentially gauge dependent
+        new_inter4['id'] = 1004
+        new_inter4['particles'].append(self.my_testmodel.get_particle(22))
+        self.my_testmodel['interactions'].append(new_inter4)
+
+        # new_inter5 = -6 24 5 22, potentially gauge dependent
+        new_inter5['id'] = 1005
+        new_inter5['particles'].append(self.my_testmodel.get_particle(22))
+        self.my_testmodel['interactions'].append(new_inter5)
+
+        
         # Reset everything
         self.my_testmodel['vertexlist_found'] = False
         self.my_testmodel.reset_dictionaries()
         for p in self.my_testmodel['particles']:
             p['decay_vertexlist'] = {}
 
-        # Set goal vertex
-        goal_vertex = copy.deepcopy(top_vlist_2_on[0])
-        goal_vertex['id'] = 1000
-        goal_vertex['legs'].insert(-1, base_objects.Leg({'id':5}))
-        goal_vertex['legs'].insert(-1, base_objects.Leg({'id':5}))
+        # redefine tquark and bottom
+        tquark = self.my_testmodel.get_particle(6)
+        bottom = self.my_testmodel.get_particle(5)
+                 
+        # Set bottom to be unstable
+        bottom['is_stable'] = False
+
+        # Set goal vertex 1 and 2
+        goal_vertex1 = copy.deepcopy(top_vlist_2_on[0])
+        goal_vertex1['id'] = 1001
+        goal_vertex1['legs'].insert(-1, base_objects.Leg({'id':5}))
+        goal_vertex1['legs'].insert(-1, base_objects.Leg({'id':-5}))
+
+        goal_vertex2 = copy.deepcopy(top_vlist_2_on[0])
+        goal_vertex2['id'] = 1002
+        goal_vertex2['legs'].insert(-1, base_objects.Leg({'id':-5}))
+        goal_vertex2['legs'].insert(-1, base_objects.Leg({'id':-5}))
         
         # Test for both onshell and off-shell cases
         self.my_testmodel.find_vertexlist()
-        # redefine tquark to
-        tquark = decay_objects.DecayParticle(self.my_testmodel.get_particle(6),
-                                             True)
         self.assertEqual(tquark.get_vertexlist(4, True), 
-                         base_objects.VertexList([goal_vertex]))
+                         base_objects.VertexList([goal_vertex1, goal_vertex2]))
         self.assertEqual(tquark.get_vertexlist(4, False), empty)
         
+        # radiations has only 22, no 11 from new_inter3, and new_inter1, 2
+        self.assertEqual(bottom['radiations'], [22])
+        self.assertEqual(self.my_testmodel['potential_gaugedependence_ids'], 
+                         [1004, 1005])
+
+        # b > t~ w- a is in vertexlist, when remove_gauge_dependence is False.
+        self.assertTrue(bottom.get_vertexlist(3, False))
+
+        # b > t~ w- a is not in vertexlist, 
+        # when remove_potential_gauge_dependence = True
+        self.my_testmodel['vertexlist_found'] = False
+        self.my_testmodel['remove_potential_gauge_dependence'] = True
+        for p in self.my_testmodel['particles']:
+            p['decay_vertexlist'] = {}
+            p['potential_gaugedependence_ids'] = []
+
+        self.my_testmodel.find_vertexlist()
+        self.assertEqual(self.my_testmodel['potential_gaugedependence_ids'], 
+                         [1004, 1005])
+        self.assertEqual(bottom.get_vertexlist(3, False), [])
 
 
         # Test miscellaneous properties setup in find_vertexlist
@@ -1631,7 +1694,7 @@ class Test_Channel(unittest.TestCase):
         h_tt_bbww.calculate_orders(self.my_testmodel)
         self.my_testmodel.find_vertexlist()
 
-        # Test the connect_channel_vertex
+        """ Test the connect_channel_vertex """
         # 1. connect the w- in h_tt_bbww with w_muvm to get h_tt_bwbmuvm
         #    the interaction id should change from w+ decay into w- decay
         # 2. connect the w+ in h_tt_bwbmuvm with w_muvm to get h_tt_bbmmvv
@@ -1683,7 +1746,7 @@ class Test_Channel(unittest.TestCase):
         
 
 
-        # Test of check_idlegs
+        """ Test of check_idlegs """
         # based on t > w+ b, add one more w+
         # w+, b, t
         temp_vert = copy.deepcopy(vertexlist[2])
@@ -1716,25 +1779,8 @@ class Test_Channel(unittest.TestCase):
         self.assertTrue(idpart_channel.get('has_idpart'))
 
 
-        # Test of generate_configs
-        """test_list = {21: [1,4,6], 25: [2, 3, 7, 9]}
-        goal_configs = {21: [[1,4,6], [1,6,4], [4,1,6], [4,6,1], 
-                             [6,1,4], [6,4,1]],
-                        25: [[2,3,7,9], [2,3,9,7], [2,7,3,9], [2,7,9,3],
-                             [2,9,3,7], [2,9,7,3],
-                             [3,2,7,9], [3,2,9,7], [3,7,2,9], [3,7,9,2],
-                             [3,9,2,7], [3,9,7,2],
-                             [7,2,3,9], [7,2,9,3], [7,3,2,9], [7,3,9,2],
-                             [7,9,2,3], [7,9,3,2],
-                             [9,2,3,7], [9,2,7,3], [9,3,2,7], [9,3,7,2],
-                             [9,7,2,3], [9,7,3,2]]}
-        self.assertEqual(decay_objects.Channel.generate_configs(test_list),
 
-                         goal_configs)"""
-
-
-
-        # Test of check_channels_equiv
+        """Test of check_channels_equiv """
         # Create several fake vertices for test
         # h > t t~ t t~ t~
         vert_1_id = copy.deepcopy(vertexlist[4])
@@ -1784,6 +1830,7 @@ class Test_Channel(unittest.TestCase):
 
         self.my_testmodel.reset_dictionaries()
 
+        # Information about channel a, b, c, for my own convenience.
         # Nice string for channel_a:
         # ((8(13),12(-14)>8(-24),id:1001), (7(11),11(-12)>7(-24),id:43),
         #  (5(-5),10(-24)>5(-6),id:54),(4(5),9(24)>4(6),id:33),
@@ -1942,7 +1989,8 @@ class Test_Channel(unittest.TestCase):
         self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_a,
                                                                     channel_c))
 
-        # Test of fermionic mother
+
+        """ Test of fermionic mother """
         # Change initial pid
         vert_2_id['legs'][-1]['id'] = -6
         # Correct the leg numbers
@@ -1988,6 +2036,154 @@ class Test_Channel(unittest.TestCase):
                                                                    channel_f))
         self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_e,
                                                                    channel_f))
+
+    def test_check_gauge_dependence(self):
+        """ Test of the check of gauge dependence function."""
+
+        # change MH to 200 to allow h > b b~ w+ w-
+        decay_objects.MH = 200
+
+        # Add new interaction t > b w+ a, and 
+        #                     t > b w+ b
+        for interaction in self.my_testmodel.get('interactions'):
+            pids = set([p.get_pdg_code() for p in interaction.get('particles')])
+            if pids == set([-6, 24, 5]):
+                new_inter1 = copy.deepcopy(interaction)
+                new_inter2 = copy.deepcopy(interaction)
+            if pids == set([6, -24, -5]):
+                new_inter3 = copy.deepcopy(interaction)
+                new_inter4 = copy.deepcopy(interaction)
+ 
+        # t > w+ b a, potentially gauge-dependent
+        new_inter1['id'] = 1001
+        new_inter1['particles'].append(self.my_testmodel.get_particle(22))
+        self.my_testmodel['interactions'].append(new_inter1)
+
+        # t > w+ b w-
+        new_inter2['id'] = 1002
+        new_inter2['particles'].append(self.my_testmodel.get_particle(-24))
+        self.my_testmodel['interactions'].append(new_inter2)
+        
+        # t w- b~ a, conjugate of new_inter1, potentially gauge-dependent
+        new_inter3['id'] = 1003
+        new_inter3['particles'].append(self.my_testmodel.get_particle(22))
+        self.my_testmodel['interactions'].append(new_inter3)
+
+        # w- b t~ w+
+        new_inter4['id'] = 1004
+        new_inter4['particles'].append(self.my_testmodel.get_particle(24))
+        self.my_testmodel['interactions'].append(new_inter4)
+
+        # Reset everything
+        self.my_testmodel['vertexlist_found'] = False
+        self.my_testmodel.reset_dictionaries()
+        for p in self.my_testmodel['particles']:
+            p['decay_vertexlist'] = {}
+        
+        top = self.my_testmodel.get_particle(6)
+        wp = self.my_testmodel.get_particle(24)
+        higgs = self.my_testmodel.get_particle(25)
+
+        top.find_channels(3, self.my_testmodel)
+        wp.find_channels(4, self.my_testmodel)
+        higgs.find_channels(5, self.my_testmodel)
+
+        # Test exception
+        self.assertRaises(decay_objects.DecayParticle.PhysicsObjectError,
+                          top.check_gauge_dependence,
+                          [1, 2, 3, 4])
+
+        # Preliminary test of radiation identification in find_vertexlist
+        self.assertEqual(set(top['radiations']), set([22, 23, 25]))
+
+        # 3-body decay test
+        # Test remove_radiation directly
+        self.assertTrue(top.check_gauge_dependence([5, 24, 22]))
+        self.assertTrue(top.check_gauge_dependence([5, 24, 23]))
+        self.assertFalse(top.check_gauge_dependence([3, 24, 23]))
+
+        # Test the potential_gaugedependence_ids
+        self.assertEqual(set(self.my_testmodel['potential_gaugedependence_ids']), 
+                         set([1001, 1003]))
+
+
+        # Test the final result of find_channels
+        # 1.) potentially gauge dependence is not removed
+
+        self.assertTrue(top.get_amplitude([5, 24, 22]))        
+        self.assertTrue(wp.get_vertexlist(3, False))
+        #print wp.get_vertexlist(3, False)
+        #print wp.get_channels(3, False).nice_string()
+        # w+ > b~ t a and w+ > b~ t, t > b w+
+        self.assertEqual(len(wp.get_channels(3, False)), 2)
+
+
+        # Test the if the potential_gauge_dependence is set
+        self.assertFalse(top.get_channels(2, True)[0]['potential_gauge_dependence'])
+        # Only the new_inter1,3 are gaug depedent, not new_inter2
+        # Test channels directly made of a single vertex.
+        for c in top.get_channels(3, True):
+            if c['vertices'][0]['id'] == 1001:                
+                self.assertTrue(c['potential_gauge_dependence'])
+            if c['vertices'][0]['id'] == 1002:
+                self.assertFalse(c['potential_gauge_dependence'])
+                
+        self.assertTrue(top.get_amplitude([5, 24, 22])['potential_gauge_dependence'])
+        self.assertFalse(top.get_amplitude([5, -24, 24])['potential_gauge_dependence'])
+     
+        # Test channels made of several vertices
+        #print wp.get_channels(4, False).nice_string()
+        #print wp.get_amplitudes(4).nice_string()
+        #print wp.get_amplitudes(4).decaytable_string()
+        for c in wp.get_channels(4, False):
+            if c['vertices'][-1]['id'] == 1003:                
+                self.assertTrue(c['potential_gauge_dependence'])
+            if c['vertices'][0]['id'] == 1002:
+                self.assertFalse(c['potential_gauge_dependence'])
+            if c['vertices'][0]['id'] == 1001:
+                self.assertTrue(c['potential_gauge_dependence'])
+                
+        #print higgs.get_amplitude([5, 24, -5, -24, 22]).nice_string()
+        #print higgs.get_amplitude([5, 24, -5, -24, 22]).decaytable_string()
+        self.assertTrue(higgs.get_amplitude([5, -5, 24, -24, 22])['potential_gauge_dependence'])
+
+        # Test for amplitudes by adding gauge-depedendent diagram
+        test_amp = higgs.get_amplitude([5, 24, -5, -24])
+        self.assertFalse(test_amp['potential_gauge_dependence'])
+        new_diagram = copy.deepcopy(test_amp['diagrams'][0])
+        new_diagram['potential_gauge_dependence'] = True
+        test_amp.add_std_diagram(new_diagram)
+        self.assertTrue(test_amp['potential_gauge_dependence'])
+
+
+
+        # 2.) Test when gauge dependent vertices are explicitly removed
+        self.my_testmodel['vertexlist_found'] = False
+        self.my_testmodel['remove_potential_gauge_dependence'] = True
+        self.my_testmodel['potential_gaugedependence_ids'] = []
+        for p in self.my_testmodel['particles']:
+            p['decay_vertexlist'] = {}
+        top['decay_channels'] = {}
+        top.decay_amplitudes = {}
+        wp['decay_channels'] = {}
+        wp.decay_amplitudes = {}
+
+        self.my_testmodel.find_vertexlist()
+        top.find_channels(3, self.my_testmodel)
+        self.assertEqual(set(self.my_testmodel['potential_gaugedependence_ids']), 
+                         set([1001, 1003]))
+        self.assertFalse(top.get_amplitude([5, 24, 22]))
+
+        wp.find_channels(4, self.my_testmodel)
+        #print wp.get_vertexlist(3, False)
+        self.assertEqual(len(wp.get_vertexlist(3, False)), 0)
+        #print wp.get_channels(3,False).nice_string()
+        self.assertEqual(len(wp.get_channels(3, False)), 1)
+        self.assertEqual(len(wp.get_channels(4, False)), 2)
+    
+        # Other amplitudes should still exist
+        self.assertTrue(top.get_amplitude([5, 24, -24]))
+
 
         
     def test_findchannels(self):
@@ -2747,7 +2943,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Test the set from normal list of Amplitude
         higgs.set_amplitudes(4, [amplt_h_mmvv])
         self.assertEqual(higgs.get_amplitudes(4), my_amplist)
-        self.assertEqual(higgs.get_amplitudes(6), None)
+        self.assertEqual(higgs.get_amplitudes(6), [])
 
 
         # Test for exceptions

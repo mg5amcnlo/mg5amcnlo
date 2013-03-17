@@ -100,7 +100,7 @@ def make_vertexlist(model):
             #Reset the leg to normal state and normal id
             temp_legs[num].set('state', True)
             temp_legs[num].set('id', part.get_pdg_code())
-"""    
+"""
     path_1 = os.path.join(MG5DIR, 'models', model['name'])
     path_2 = os.path.join(MG5DIR, 'tests/input_files', model['name'])
 
@@ -111,4 +111,5 @@ def make_vertexlist(model):
     fdata2 = open(os.path.join(path_2, 'vertices_sort.dat'), 'w')
     fdata2.write(str(full_vertexlist))
     fdata2.close()
+    
 """

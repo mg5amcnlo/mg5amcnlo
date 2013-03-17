@@ -82,7 +82,8 @@ class DecayParticle(base_objects.Particle):
                    'texname', 'antitexname', 'line', 'propagating',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
-                   'apx_decaywidth_err', '2body_massdiff'
+                   'apx_decaywidth_err', '2body_massdiff',
+                   'radiations'
                   ]
 
 
@@ -135,6 +136,8 @@ class DecayParticle(base_objects.Particle):
         self['apx_decaywidth'] = 0.
         self['apx_decaywidth_err'] = 0.
         self['2body_massdiff'] = 0.
+        self['radiations']=[]
+        
         
     def get(self, name):
         """ Evaluate some special properties first if the user request. """
@@ -743,7 +746,7 @@ class DecayParticle(base_objects.Particle):
             return self.get('decay_amplitudes')[partnum]
         except KeyError:
             logger.info('The amplitudes of %d for final particle number % d do not exist' % (self['pdg_code'],partnum))
-            return None
+            return []
 
     def set_amplitudes(self, partnum, value):
         """Set the n_body decay_amplitudes.
@@ -881,6 +884,7 @@ class DecayParticle(base_objects.Particle):
                 (clevel, False) in self['decay_vertexlist'].keys():
             for vert in (self.get_vertexlist(clevel, True) + \
                              self.get_vertexlist(clevel, False)):
+                
                 temp_channel = Channel()
                 temp_vert = copy.deepcopy(vert)
 
@@ -901,6 +905,9 @@ class DecayParticle(base_objects.Particle):
                 # Setup the 'has_idpart' property
                 if Channel.check_idlegs(temp_vert):
                     temp_channel['has_idpart'] = True
+
+                # Check gauge dependence
+                temp_channel.check_gauge_dependence(model)
 
                 # Add width to total width if onshell
                 if temp_channel.get_onshell(model):
@@ -949,6 +956,10 @@ class DecayParticle(base_objects.Particle):
                         # Append this channel if it is new
                         if not self.check_repeat(clevel,
                                                  temp_c_o, temp_c):
+
+                            # Check gauge dependence
+                            temp_c.check_gauge_dependence(model)
+
                             # Calculate the width if onshell
                             # Add to the apx_decaywidth of mother particle
                             if temp_c_o:
@@ -956,7 +967,8 @@ class DecayParticle(base_objects.Particle):
                                     get_apx_decaywidth(model)
                             self.get_channels(clevel, temp_c_o).append(temp_c)
 
-        # For two-body decay, record the maxima mass difference
+
+        # For two-body decay, record the maximal mass difference
         if clevel == 2:
             for channel in self.get_channels(2, True):
                 mass_diff = abs(eval(self['mass'])) - sum(channel.get('final_mass_list'))
@@ -967,8 +979,10 @@ class DecayParticle(base_objects.Particle):
         ## Sort the channels by their width
         #self.get_channels(clevel, False).sort(channelcmp_width)
 
+
         # Group channels into amplitudes
         self.group_channels_2_amplitudes(clevel, model)
+        
 
     def connect_channel_vertex(self, sub_channel, index, vertex, model):
         """ Helper function to connect a vertex to one of the legs 
@@ -1052,6 +1066,39 @@ class DecayParticle(base_objects.Particle):
                        sum(channel['final_mass_list']))< 0.00001
                    )
 
+    def check_gauge_dependence(self, final_pids):
+        """ Check processes that are potentially gauge dependent, i.e.
+            identical to radiation plus regular 2-body decay."""
+
+        improper_decay_tag = False
+
+        if len(final_pids) !=3:
+            raise self.PhysicsObjectError, \
+                "The check_gauge_dependence only works for 4-pt vertex."
+
+        # Scanning all the 2-body vertices, including both onshell and offshell
+        # Try to match the given process with 
+        # 2-body decay + radiation
+        for Twobody_process in self.get_vertexlist(2, True)+\
+                self.get_vertexlist(2, False):
+            Twobody_products = [l['id'] for l in Twobody_process['legs'][:-1]]
+
+            for radiation in self['radiations']:
+                try:
+                    final_pids.remove(radiation)
+                    if set(Twobody_products) == set(final_pids):
+                        improper_decay_tag = True
+                        break
+                    else:
+                        # reset the final_pids if it's not radiative!
+                        final_pids.append(radiation)
+                except ValueError:
+                    continue
+    
+
+        return improper_decay_tag                
+
+
     def group_channels_2_amplitudes(self, clevel, model):
         """ After the channels is found, combining channels with the same 
             final states into amplitudes.
@@ -1100,12 +1147,13 @@ class DecayParticle(base_objects.Particle):
                                                                   model))
 
 
-
-        # Calculate the apx_decaywidth and for every amplitude.
+        # Finally, check the potential gauge dependence and
+        # calculate the apx_decaywidth and for every amplitude.
         # apr_br WILL NOT be calculated!
         for amp in self.get_amplitudes(clevel):
             amp.get('apx_decaywidth')
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
+
 
     # This helper function is obselete in current algorithm...
     def generate_configlist(self, channel, partnum, model):
@@ -1208,6 +1256,7 @@ class DecayModel(model_reader.ModelReader):
                    'stable_particles', 'vertexlist_found',
                    'reduced_interactions', 'decay_groups', 'max_vertexorder',
                    'decaywidth_list', 
+                   'potential_gaugedependence_ids', 'remove_potential_gauge_dependence',
                    'ab_model', 'abmodel_generated', 'coupling_dict','parameter_dict'
                   ]
 
@@ -1247,6 +1296,9 @@ class DecayModel(model_reader.ModelReader):
         self['vertexlist_found'] = False
         self['max_vertexorder'] = 0
         self['conj_int_dict'] = {}
+        self['remove_potential_gauge_dependence'] = False
+        self['potential_gaugedependence_ids']=[]
+
         self['decay_groups'] = []
         self['reduced_interactions'] = []
         self['stable_particles'] = []
@@ -1408,6 +1460,8 @@ class DecayModel(model_reader.ModelReader):
         """ Check whether the interaction is able to decay from mother_part.
             Set the 'decay_vertexlist' of the corresponding particles.
             Utilize in finding all the decay table of the whole model.
+            remove_gauge_dependence: remove vertices that may be gauge dependent
+            force: set vertices even though it's already in the vertex list.
             Note: only construct VertexList with particle as mother,
                   fix the antiparticle vertices by conj_int_dict.
         """
@@ -1463,11 +1517,52 @@ class DecayModel(model_reader.ModelReader):
                 if not pid in ini_list:
                     continue
 
-                # Exclude initial particle appears in final particles
-                # i.e. radiation is excluded.
-                # count the number of abs(pdg_code)
-                pid_list = [p.get('pdg_code') for p in inter.get('particles')]
-                if pid_list.count(abs(pid)) > 1:
+                # Exclude initial particle (or its own antiparticle) 
+                # appears in final particles
+                # e.g. radiation, t > t h, and p > p~ etc.                
+                pid_list = [p.get_pdg_code() for p in inter.get('particles')]
+
+                # N.B. can't use #pid + #antipid here, which fail
+                # for neutral particles.
+                if pid_list.count(pid)+pid_list.count(-pid) > 1:
+
+                    antipid = part.get_pdg_code()
+
+                    # Simply ignore processes that're not radiation-like.
+                    if len(pid_list)>3:
+                        continue
+                    # If particle is not antiparticle, #pid=1 and #antipid=1
+                    if antipid != pid and not (pid_list.count(pid) ==1 and \
+                                                   pid_list.count(-pid) ==1):
+                        continue
+                    # If particle is antiparticle, #pid=2
+                    elif antipid == pid and pid_list.count(pid) ==2:
+                        continue
+
+                    # For radiation like process, we need to collect them to
+                    # check processes which are identical to 
+                    # radiation + proper decay
+                    # See check_gauge_dependence in DecayParticle
+
+
+                    # skip the 2nd initial particle (e.g. b b a)
+                    if num > [i for i, l in enumerate(pid_list) if l==antipid][0]:
+                        continue
+
+                    # Extract the radiation
+                    for temp_id in pid_list:
+                        if temp_id != pid and temp_id != antipid:
+                            self.get_particle(pid)['radiations'].append(temp_id)
+
+                    """# If the "radiation" turn particle into antiparticle
+                    # (p > ~p + something)
+                    # Include both the "radiation" and "anti-radiation", the
+                    # product emitted by anti-particle
+                    if pid_list.count(antipid) > 1:
+                        antiradiation = [self.get_particle(l).get_anti_pdg_code() for l in radiation]
+                        if set(antiradiation) != set(radiation):
+                            self.get_particle(pid)['radiative_products'].append(antiradiation)"""
+                        
                     continue
 
                 ini_mass = abs(eval(part.get('mass')))
@@ -1513,14 +1608,24 @@ class DecayModel(model_reader.ModelReader):
                         [temp_vertex])
 
 
-                        
         # Set the property vertexlist_found as True and for all particles
         self['vertexlist_found'] = True
         for part in self['particles']:
             part['vertexlist_found'] = True
 
+        # Find complex conjugate interaction pairs
+        self.find_conjugate_dict()
+
+        # Check gauge dependence
+        self.gauge_depedence_helper()
+
+
+    def find_conjugate_dict(self):
+        """ Find the dictionary connecting an interaction to its complex 
+            conjuagate. """
+
         # Setup the conj_int_dict for interaction id to the id of 
-        # its cp-conjugate.
+        # its complex conjugate.
         interlist = [(i['id'], [p.get_anti_pdg_code() for p in i['particles']])\
                          for i in self['interactions']]
 
@@ -1543,10 +1648,60 @@ class DecayModel(model_reader.ModelReader):
 
             if not found:
                 logger.warning('No hermitian conjugate is found for interaction #%d' %inter['id'])
-            
+
+
         #fdata = open(os.path.join(MG5DIR, 'models', self['name'], 'vertexlist_dict.dat'), 'w')
         #fdata.write(str(vertexlist_dict))
         #fdata.close()
+
+
+    def gauge_depedence_helper(self):
+        """ Check the potential gauge dependence of vertices, i.e.
+            3-pt interaction + radiation. 
+            Run inside find_vertexlist, after radiations are identified and
+            complex-conjugate interactions are found.
+            Whether potentially gauge dependent vertices are removed is
+            given by DecayModel['remove_potential_gauge_dependence']. """
+
+        remove_boolean = self['remove_potential_gauge_dependence']
+
+        # Check the possible gauge dependence of all the particles
+        # If the remove_gauge_dependence = True, remove them at this level.
+        # Otherwise, just add a tag in DecayParticle
+        for part in self['particles']:
+
+            # numbers of vertices to be removed
+            removal_list = []
+
+            # Only need to check 4-pt vertices
+            for num, vertex in enumerate(part.get_vertexlist(3, True)+\
+                                        part.get_vertexlist(3, False)):
+                pid_list = [l['id'] for l in vertex['legs'][:-1]]
+                if part.check_gauge_dependence(pid_list):
+                    # not replicate ids already in the list
+                    if vertex['id'] not in self['potential_gaugedependence_ids']:
+                        self['potential_gaugedependence_ids'].append(vertex['id'])
+                        self['potential_gaugedependence_ids'].append(self['conj_int_dict'][vertex['id']])
+
+                    if remove_boolean:
+                        removal_list.append(num)
+
+            # Remove gauge dependent ones
+            if remove_boolean and removal_list:
+                new_vlist_onshell = base_objects.VertexList()
+                new_vlist_offshell = base_objects.VertexList()
+                for num, v in enumerate(part.get_vertexlist(3, True)):
+                    if num not in removal_list:
+                        new_vlist_onshell.append(v)
+                        
+                start_len = len(part.get_vertexlist(3, True))
+                for num, v in enumerate(part.get_vertexlist(3, False)):
+                    if num+start_len not in removal_list:
+                        new_vlist_offshell.append(v)
+                        
+                part.set_vertexlist(3, True, new_vlist_onshell)
+                part.set_vertexlist(3, False, new_vlist_offshell)
+
 
     def color_multiplicity_def(self, colorlist):
         """ Defines the two-body color multiplicity. It is applied in the 
@@ -2896,7 +3051,8 @@ class Channel(base_objects.Diagram):
                    'orders',
                    'onshell', 'has_idpart', 'id_part_list',
                    'apx_matrixelement_sq', 'apx_psarea', 'apx_decaywidth',
-                   'apx_decaywidth_nextlevel', 'apx_width_calculated']
+                   'apx_decaywidth_nextlevel', 'apx_width_calculated',
+                   'potential_gauge_dependence']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -2922,6 +3078,9 @@ class Channel(base_objects.Diagram):
         # branch ratio is multiply by 100.
         self['apx_decaywidth_nextlevel'] = 0.
         self['apx_width_calculated'] = False
+
+        # Potential gauge dependence
+        self['potential_gauge_dependence'] = False
 
         # Properties for abstract Channel
         # [pseudo_ab_inter_ids, pseudo_ab_intermediate_pids, pseudo_ab_finalids]
@@ -2995,6 +3154,9 @@ class Channel(base_objects.Diagram):
             else:
                 mystr +=" (est. further width = %.3e)" % self['apx_decaywidth_nextlevel']              
 
+            if self['potential_gauge_dependence']:
+                mystr +="*PGD"
+
         return mystr
 
     def initial_setups(self, model, force):
@@ -3057,6 +3219,14 @@ class Channel(base_objects.Diagram):
             self['onshell'] = ini_mass > sum(self['final_mass_list'])
 
         return self['onshell']
+
+    def check_gauge_dependence(self, model):
+        """ compare the vertex ids to see if anyone of them may be illed."""
+
+        vids = [v['id'] for v in self['vertices']]
+        
+        if (set(vids) & set(model['potential_gaugedependence_ids'])):
+            self['potential_gauge_dependence'] = True
 
     def get_fermion_factor(self, model):
         """ Get the fermion_factor, same as get_fermion_factor 
@@ -3836,7 +4006,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
     sorted_keys = ['process', 'diagrams', 'apx_decaywidth', 'apx_br',
                    'exa_decaywidth', 'part_sn_dict', 'inter_sn_dict',
-                   'ab2real_dicts', 'has_mirror_process']
+                   'ab2real_dicts', 'has_mirror_process',
+                   'potential_gauge_dependence']
 
     def default_setup(self):
         """Default values for all properties. Property 'diagrams' is now
@@ -3847,6 +4018,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         self['apx_decaywidth'] = 0.
         self['apx_br'] = 0.
         self['exa_decaywidth'] = False
+        self['potential_gauge_dependence'] = False
+
         # Properties used in abstract amplitude
         self['part_sn_dict'] = {}
         self['inter_sn_dict'] = {}
@@ -3864,7 +4037,10 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
             # Set the corresponding process.
             self.set_process(argument, model)
+            
+            # Set diagram
             self.set('diagrams', ChannelList([argument]))
+            self['potential_gauge_dependence'] = argument['potential_gauge_dependence']
 
         else:
             super(DecayAmplitude, self).__init__(argument)
@@ -3948,7 +4124,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
         self['process'].set('model', model)
 
     def add_std_diagram(self, new_dia, model=None):
-        """ Add new diagram into amplitude, but check if the number identifiers 
+        """ Add new diagram into amplitude, update gauge dependence,
+            and check if the number identifiers 
             of outgoing legs are consistent with the process."""
 
         if not isinstance(new_dia, Channel):
@@ -3968,6 +4145,10 @@ class DecayAmplitude(diagram_generation.Amplitude):
             self.set_process(new_dia, model)
             self['diagrams'].append(new_dia)
             return
+        
+        # Edit the potential_gauge_dependence property
+        if new_dia['potential_gauge_dependence']:
+            self['potential_gauge_dependence'] = True
 
 
         # non_std_number: number of new_dia
@@ -4049,6 +4230,17 @@ class DecayAmplitude(diagram_generation.Amplitude):
         self['apx_decaywidth'] = 0.
         self['apx_br'] = 0.
 
+    def nice_string(self, indent=0):
+        """Returns a nicely formatted string of the amplitude content,
+           with potential_gauge_dependence info. """
+        if not self['potential_gauge_dependence']:
+            return self.get('process').nice_string(indent) + "\n" + \
+                self.get('diagrams').nice_string(indent)
+        else:
+            return self.get('process').nice_string(indent) + ", *PGD" + "\n" + \
+                self.get('diagrams').nice_string(indent)
+            
+
     def decaytable_string(self, format='normal'):
         """ Write the string in the format for decay table.
             format = 'normal': show only branching ratio
@@ -4064,8 +4256,14 @@ class DecayAmplitude(diagram_generation.Amplitude):
                 output += '\t%4.2f' % (self.get('apx_decaywidth')/self.get('exa_decaywidth'))
             else:
                 output += '\tN/A'
+        
+        output += '   #Br(%s)' %self.get('process').input_string()
 
-        output += '   #Br(%s)\n' %self.get('process').input_string()
+        # Gauge dependence tag
+        if self['potential_gauge_dependence']:
+            output += ', *PGD\n'
+        else:
+            output += '\n'
         
         # Output the channels if format is full
         if format=='full':
