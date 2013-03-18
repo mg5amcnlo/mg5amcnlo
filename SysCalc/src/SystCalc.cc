@@ -167,10 +167,7 @@ SystCalc::SystCalc(istream& conffile,
   for(int i=0; i < _PDFsets.size(); i++) {
     cout << "Init PDF set " << _PDFsets[i] << endl;
     int pdfnum = i+1; // Has to start with 1, otherwise get segfault in LHAPDF
-    if(atoi(_PDFsets[i].c_str()) > 0)
-      initPDFSet(pdfnum, atoi(_PDFsets[i].c_str()));
-    else
-      initPDFSet(pdfnum, _PDFsets[i]);
+    initPDFSet(pdfnum, _PDFsets[i]);
     if(_members[i] == 0) {
       _members[i] = numberPDF(pdfnum);
       if(_members[i] > 1) _members[i]++; // LHAPDF reports wrong for error PDFs
@@ -414,10 +411,12 @@ bool SystCalc::convertEvent()
 {
   // Set which member to use for alpha_s reweighting
   int orgnum = _PDFsets.size() + 1;
-  
+  if (DEBUG) cout << "Original PDF number: " << orgnum << endl;
+ 
   // Calculate original weight for the different factors
   double org_ren_alps = 1;
   if(_n_qcd > 0) org_ren_alps = pow(alphasPDF(orgnum, _ren_scale), _n_qcd);
+  if (DEBUG) cout << "Org central alps value: " << alphasPDF(orgnum, _ren_scale) << endl;
   if (DEBUG) cout << "Org central alps factor: " << org_ren_alps << endl;
 
   double org_em_alps = 1;
@@ -458,7 +457,7 @@ bool SystCalc::convertEvent()
 
     double ren_alps = 1;
     if(_n_qcd > 0) ren_alps = pow(alphasPDF(orgnum, sf*_ren_scale), _n_qcd);
-    if (DEBUG) cout << "New central alps factor: " << org_ren_alps << endl;
+    if (DEBUG) cout << "New central alps factor: " << ren_alps << endl;
     
     double pdf_fact = 1;
     pdf_fact *= calculatePDFWeight(orgnum, sf, _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
@@ -487,7 +486,8 @@ bool SystCalc::convertEvent()
   for(int i=0; i < _PDFsets.size(); i++){
     int pdfnum = i+1;
     // Initialize a new vector for the values of the members of this PDF
-    if (DEBUG) cout << "Reweighting with PDF set " << _PDFsets[i] << endl;
+    if (DEBUG) cout << "Reweighting with PDF set " << pdfnum << ": "
+		    << _PDFsets[i] << endl;
     vector<double>* pdffacts = new vector<double>;
     for(int j=0; j < _members[i]; j++) {
       if (DEBUG) cout << "PDF set member " << j << endl;      
@@ -496,11 +496,19 @@ bool SystCalc::convertEvent()
       // First recalculate alpha_s weights, since alpha_s differs between PDFs
       // Recalculate PDF weights
       double pdf_fact = 1;
-      if(_n_qcd > 0) pdf_fact *= pow(alphasPDF(pdfnum, _ren_scale), _n_qcd);
-      if (DEBUG) cout << "After PDF central alps factor: " << org_ren_alps << endl;
-      for(int k=0; k < _alpsem_scales.size(); k++)
+      if(_n_qcd > 0) {
+	pdf_fact *= pow(alphasPDF(pdfnum,_ren_scale), _n_qcd);
+	if (DEBUG) cout << "New central alps value due to PDF: " << alphasPDF(pdfnum, _ren_scale) << endl;
+	if (DEBUG) cout << "New alps fact due to PDF: " << pdf_fact << endl;
+      }
+      if (DEBUG) cout << "After PDF central alps factor: " << pdf_fact << endl;
+      for(int k=0; k < _alpsem_scales.size(); k++) {
+	if (DEBUG) cout << "Emission alpha_s due to PDF: " 
+			<< alphasPDF(pdfnum, _alpsem_scales[k]) 
+			<< " for scale " << _alpsem_scales[k] << endl;
 	pdf_fact *= alphasPDF(pdfnum, _alpsem_scales[k]);
-      if (DEBUG) cout << "After PDF emission alps factor: " << org_em_alps << endl;
+      }
+      if (DEBUG) cout << "After PDF emission alps factor: " << pdf_fact << endl;
       pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
       pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
       if (DEBUG) cout << "Total PDF factor: " << pdf_fact << endl;
