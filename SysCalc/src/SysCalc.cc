@@ -9,7 +9,7 @@ using namespace std;
 using namespace tinyxml2;
 using namespace LHAPDF;
 
-bool DEBUG = false;
+bool DEBUG = true;
 
 void SysCalc::clean_tokens(vector<string>& tokens){
 // Remove everything after "#"
@@ -214,29 +214,36 @@ SysCalc::SysCalc(istream& conffile,
       _sysfile->putback(linestr[i]);      
     
     // Read orgpdf info
-    _xml_document.Parse(_header_text.c_str());
+    int start = _header_text.find("<header");
+    _xml_document.Parse(_header_text.substr(start).c_str());
     XMLElement* header = _xml_document.FirstChildElement("header");
-    XMLElement* element = header->FirstChildElement("orgpdf");
-    if(element){
-      tokenize(element->GetText(), tokens);
+    XMLElement* orgpdf = header->FirstChildElement("orgpdf");
+    if(orgpdf){
+      tokenize(orgpdf->GetText(), tokens);
       if(tokens.size() > 0)
 	_orgPDF = tokens[0];
       if(tokens.size() > 1)
 	_org_member = atoi(tokens[1].c_str());
     }
-    else
-      cout << "Warning: Failed to read orgpdf from systematics file" << endl;
     // Read beams info
-    element = header->FirstChildElement("beams");
-    if(element){
-      tokenize(element->GetText(), tokens);
+    XMLElement* beams = header->FirstChildElement("beams");
+    if(beams){
+      tokenize(beams->GetText(), tokens);
       if(tokens.size() < 2) cout << "Warning: <beams> info not correct" << endl;
       _beam[0] = atoi(tokens[0].c_str());
       _beam[1] = atoi(tokens[1].c_str());
       cout << "Set beam info: " << _beam[0] << " " << _beam[1] << endl;
     }
-    else
-      cout << "Warning: Failed to read beams from systematics file" << endl;
+    if(!orgpdf || !beams){
+      // Try reading the information from the <init> block
+      XMLElement* init = _xml_document.FirstChildElement("init");      
+      tokenize(init->GetText(), tokens);
+      if(tokens.size() < 8) cout << "Warning: <init> info not correct" << endl;      
+      _beam[0] = copysign(1,atoi(tokens[0].c_str()));
+      _beam[1] = copysign(1,atoi(tokens[1].c_str()));
+      cout << "Set beam info: " << _beam[0] << " " << _beam[1] << endl;
+      _orgPDF = tokens[7];
+    }
   }
   else
     _filestatus = false;
@@ -330,6 +337,14 @@ bool SysCalc::parseEvent(string event)
     return false;
   }
 
+  // Try extracting the event weight if this is an lhe file
+  vector<string> tokens;
+  if (_event->GetText()) {
+    tokenize(_event->GetText(), tokens);
+    if(tokens.size() > 6) _event_weight = atof(tokens[3].c_str());
+    if(DEBUG) cout << "Set event weight: " << _event_weight << endl;
+  }
+
   _element = _event->FirstChildElement("mgrwt");
   if(!_element){
     cout << "Warning: No element <mgrwt> in event" << endl;
@@ -354,7 +369,6 @@ bool SysCalc::parseEvent(string event)
   _total_reweight_factor = 1;
 
   // Start filling variables
-  vector<string> tokens;
 
   XMLElement* subelement = 0;
 
@@ -596,12 +610,12 @@ bool SysCalc::writeHeader(ostream& outfile)
 {
   if (!_lhe_output) {
     // Write a clean header
-    outfile << "<header>";
+    outfile << "<header>\n";
   }
   else {
     // First copy the full header text, then add rwgt info at the end
-    int end = _eventtext.find("</header") - 1;
-    outfile << _eventtext.substr(0, end);
+    int end = _header_text.find("</header");
+    outfile << _header_text.substr(0, end);
   }
   outfile << "  <initrwgt>\n";
   if(_scalefacts.size() > 0) {
@@ -620,6 +634,11 @@ bool SysCalc::writeHeader(ostream& outfile)
       outfile << _alpsfacts[i]; }
     outfile << "</scale>\n";
   }
+  if(_PDFsets.size() > 0){
+    for (int i=0; i < _PDFsets.size(); i++)
+      outfile << "    <pdf type=\"" << _PDFsets[i] << "\" entries=\"" << _members[i]
+	      << "\" combine=\"" << _combinations[i] << "\"></pdf>\n";
+  }
   if(_matchscales.size() > 0) {
     outfile << "    <qmatch entries=\"" << _matchscales.size() << "\">";
     for (int i=0; i < _matchscales.size(); i++) {
@@ -627,18 +646,13 @@ bool SysCalc::writeHeader(ostream& outfile)
       outfile << _matchscales[i]; }
     outfile << "</qmatch>\n";
   }
-  if(_PDFsets.size() > 0){
-    for (int i=0; i < _PDFsets.size(); i++)
-      outfile << "    <pdf type=\"" << _PDFsets[i] << "\" entries=\"" << _members[i]
-	      << "\" combine=\"" << _combinations[i] << "\"></pdf>\n";
-  }
   outfile << "  </initrwgt>\n";
   if (!_lhe_output)
     outfile << "</header>\n";
   else {
     // Add rest of header text and init info
-    int start = _eventtext.find("</header");
-    outfile << _eventtext.substr(start);    
+    int start = _header_text.find("</header");
+    outfile << _header_text.substr(start);    
   }
   return true;
 }
@@ -653,7 +667,7 @@ bool SysCalc::writeEvent(ostream& outfile)
   }
   else {
     // First copy the full event text, then add rwgt info at the end
-    int end = _eventtext.find("</event") - 1;
+    int end = _eventtext.find("</event");
     outfile << _eventtext.substr(0, end);
   }
   outfile << "<rwgt>\n";
@@ -661,31 +675,31 @@ bool SysCalc::writeEvent(ostream& outfile)
     outfile << "  <scale type=\"central\">";
     for (int i=0; i < _scaleweights.size(); i++) {
       if(i > 0) outfile << " ";
-      outfile << _scaleweights[i]; }
+      outfile << _scaleweights[i]*_event_weight; }
     outfile << "</scale>\n";
   }
   if(_alpsweights.size() > 0) {
     outfile << "  <scale type=\"emission\">";
     for (int i=0; i < _alpsweights.size(); i++) {
       if(i > 0) outfile << " ";
-      outfile << _alpsweights[i]; }
+      outfile << _alpsweights[i]*_event_weight; }
     outfile << "</scale>\n";
-  }
-  if(_matchweights.size() > 0) {
-    outfile << "  <qmatch>";
-    for (int i=0; i < _matchweights.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _matchweights[i]; }
-    outfile << "</qmatch>\n";
   }
   if(_PDFweights.size() > 0){
     for (int i=0; i < _PDFweights.size(); i++){
       outfile << "  <pdf type=\"" << _PDFsets[i] << "\">";
       for (int j=0; j < _PDFweights[i].size(); j++) {
 	if(j > 0) outfile << " ";
-	outfile << _PDFweights[i][j]; }
+	outfile << _PDFweights[i][j]*_event_weight; }
       outfile << "</pdf>\n";
     }
+  }
+  if(_matchweights.size() > 0) {
+    outfile << "  <qmatch>";
+    for (int i=0; i < _matchweights.size(); i++) {
+      if(i > 0) outfile << " ";
+      outfile << _matchweights[i]*_event_weight; }
+    outfile << "</qmatch>\n";
   }
   outfile << "</rwgt>\n";
   outfile << "</event>\n";

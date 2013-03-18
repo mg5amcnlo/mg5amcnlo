@@ -65,5 +65,8 @@ int main( int argc, const char ** argv)
     // Write out new rwt block to outfile
     syscalc->writeEvent(outfile);
   }
+  if(syscalc->lheOutput())
+    outfile << "</LesHouchesEvents>";
+
   cout << "Finished parsing " << syscalc->parsedEvents() << " events." << endl;
 }
