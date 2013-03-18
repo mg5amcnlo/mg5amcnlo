@@ -1,4 +1,4 @@
-COPTS = -O -DDROP_CGAL
+COPTS = -O -g -DDROP_CGAL
 INCLUDES =  -I../include
 OBJECTS = SysCalc.o tinyxml2.o
 LIBS = -lLHAPDF

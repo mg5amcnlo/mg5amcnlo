@@ -22,8 +22,10 @@ class SysCalc
   bool writeHeader(ostream& outfile);
   bool writeEvent(ostream& outfile);
 
-  bool noFile() { return _filestatus != 0; }
-  XMLError fileStatus() { return _filestatus; }
+  void lheOutput(bool lheoutput) { _lhe_output = lheoutput; }
+  bool lheOutput() { return _lhe_output; }
+
+  bool fileStatus() { return _filestatus; }
   int parsedEvents() { return _parsed_events; }
 
  protected:
@@ -61,15 +63,23 @@ class SysCalc
   vector<int> _members;
   // Combination method for members in each of the sets
   vector<string> _combinations;
+  // Whether or not to write full event information
+  bool _lhe_output;
+
   
   /*** Parser variables ***/
-  XMLDocument _sysfile;
-  XMLError _filestatus;
+  ifstream* _sysfile;
+  XMLDocument _xml_document;
+  bool _filestatus; // true if open, otherwise false
+  string _header_text;
+  XMLElement* _event;
   XMLElement* _element;
   int _parsed_events;
 
   /*** Event variables ***/
+  string _eventtext;
   int _event_number;
+  double _event_weight;
   int _n_qcd;
   double _ren_scale;
   vector<double> _alpsem_scales;

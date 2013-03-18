@@ -1,4 +1,5 @@
 #include <math.h>
+#include <fstream>
 
 #include "SysCalc.h"
 #include "tinyxml2.h"
@@ -100,8 +101,9 @@ SysCalc::SysCalc(istream& conffile,
    **/
 
   _parsed_events = 0;
-  _beam[0]=1;
-  _beam[1]=1;
+  _beam[0] = 1;
+  _beam[1] = 1;
+  _lhe_output = false;
   
   string line;
   vector<string> tokens;
@@ -183,12 +185,38 @@ SysCalc::SysCalc(istream& conffile,
 
   // Load systematics file and read orgpdf and beams info
   if(sysfilename != "") {
-    _filestatus = _sysfile.LoadFile(sysfilename.c_str());
-    if (_filestatus != 0) {
+    // Open file
+    _sysfile = new ifstream(sysfilename.c_str(), ifstream::in);
+    _filestatus = _sysfile->is_open();
+    if (!_filestatus) {
       return;
     }
+    // Extract header from file
+    char line[1000];
+    _sysfile->getline(line, 1000);
+    string linestr = line;
+    bool done = (linestr.find("<event") != string::npos) || _sysfile->eof();
+    while (!done){
+      _header_text.append(linestr);
+      _header_text.push_back('\n');
+      _sysfile->getline(line, 1000);
+      linestr = line;
+      done = (linestr.find("<event") != string::npos) || _sysfile->eof();
+    }
+    // Make sure that there there is still something in the file
+    if (_sysfile->eof()){
+      _filestatus = false;
+      return;
+    }
+    // Push back last line read
+    _sysfile->putback('\n');
+    for(int i = linestr.length() - 1; i > -1; i--)
+      _sysfile->putback(linestr[i]);      
+    
     // Read orgpdf info
-    XMLElement* element = _sysfile.FirstChildElement("orgpdf");
+    _xml_document.Parse(_header_text.c_str());
+    XMLElement* header = _xml_document.FirstChildElement("header");
+    XMLElement* element = header->FirstChildElement("orgpdf");
     if(element){
       tokenize(element->GetText(), tokens);
       if(tokens.size() > 0)
@@ -199,7 +227,7 @@ SysCalc::SysCalc(istream& conffile,
     else
       cout << "Warning: Failed to read orgpdf from systematics file" << endl;
     // Read beams info
-    element = _sysfile.FirstChildElement("beams");
+    element = header->FirstChildElement("beams");
     if(element){
       tokenize(element->GetText(), tokens);
       if(tokens.size() < 2) cout << "Warning: <beams> info not correct" << endl;
@@ -211,7 +239,7 @@ SysCalc::SysCalc(istream& conffile,
       cout << "Warning: Failed to read beams from systematics file" << endl;
   }
   else
-    _filestatus = XML_ERROR_FILE_NOT_FOUND;
+    _filestatus = false;
 
   cout << "Set original PDF = " << _orgPDF << " with member " << _org_member << endl;
 
@@ -265,15 +293,48 @@ bool SysCalc::parseEvent(string event)
   // Set up event for parsing
 
   if(event != ""){
-    _sysfile.Parse(event.c_str());
-    _element = _sysfile.FirstChildElement("mgrwt");
+    _eventtext = event;
   }
-  else if (_filestatus != 0) 
+  else if (!_filestatus){
+    cout << "No more events in file" << endl;
     return false;
-  else if (_parsed_events == 0)
-    _element = _sysfile.FirstChildElement("mgrwt");
-  else
-    _element = _element->NextSiblingElement("mgrwt");
+  }
+  else {
+    // Extract one event from file
+    _eventtext = "";
+    char line[1000];
+    string linestr = line;
+    bool start = false;
+    bool done = false;
+    while (!done){
+      _sysfile->getline(line, 1000);
+      linestr = line;
+      if (!start){
+	start = linestr.find("<event") != string::npos;
+	if(_sysfile->eof()) done = true;
+	if (!start) continue;
+      }
+      _eventtext.append(linestr);
+      _eventtext.push_back('\n');
+      done = (linestr.find("</event>") != string::npos) || _sysfile->eof();
+    }
+    // Check if there is still something in the file
+    if (_sysfile->eof()){
+      _filestatus = false;
+    }
+  }
+  _xml_document.Parse(_eventtext.c_str());
+  _event = _xml_document.FirstChildElement("event");
+
+  if(!_event){
+    return false;
+  }
+
+  _element = _event->FirstChildElement("mgrwt");
+  if(!_element){
+    cout << "Warning: No element <mgrwt> in event" << endl;
+    return false;
+  }
   
   // Prepare for filling variables
 
@@ -292,21 +353,19 @@ bool SysCalc::parseEvent(string event)
   _smax = 0;
   _total_reweight_factor = 1;
 
-  if(!_element){
-    return false;
-  }
-
   // Start filling variables
   vector<string> tokens;
 
   XMLElement* subelement = 0;
 
   // Event number
-  if(_element->Attribute("event")){
-    _event_number = atoi(_element->Attribute("event"));
-    if(DEBUG) cout << "Event number: " << _event_number << endl;
-  }
+  if(_event->IntAttribute("id") != 0)
+    _event_number = _event->IntAttribute("id");
+  else
+    _event_number++;
 
+  if(DEBUG) cout << "Event number: " << _event_number << endl;
+    
   // nQCD and Ren scale
   subelement = _element->FirstChildElement("rscale");
   if(subelement){
@@ -535,7 +594,15 @@ bool SysCalc::convertEvent()
 
 bool SysCalc::writeHeader(ostream& outfile)
 {
-  outfile << "<header>\n";
+  if (!_lhe_output) {
+    // Write a clean header
+    outfile << "<header>";
+  }
+  else {
+    // First copy the full header text, then add rwgt info at the end
+    int end = _eventtext.find("</header") - 1;
+    outfile << _eventtext.substr(0, end);
+  }
   outfile << "  <initrwgt>\n";
   if(_scalefacts.size() > 0) {
     outfile << "    <scale type=\"central\" entries=\"" << _scalefacts.size() 
@@ -566,15 +633,29 @@ bool SysCalc::writeHeader(ostream& outfile)
 	      << "\" combine=\"" << _combinations[i] << "\"></pdf>\n";
   }
   outfile << "  </initrwgt>\n";
-  outfile << "</header>\n";
+  if (!_lhe_output)
+    outfile << "</header>\n";
+  else {
+    // Add rest of header text and init info
+    int start = _eventtext.find("</header");
+    outfile << _eventtext.substr(start);    
+  }
   return true;
 }
 
 bool SysCalc::writeEvent(ostream& outfile)
 {
-  outfile << "<event";
-  if (_event_number > 0) outfile << " id=\"" << _event_number << "\"";
-  outfile << ">\n";
+  if (!_lhe_output) {
+    // Write a clean event
+    outfile << "<event";
+    if (_event_number > 0) outfile << " id=\"" << _event_number << "\"";
+    outfile << ">\n";
+  }
+  else {
+    // First copy the full event text, then add rwgt info at the end
+    int end = _eventtext.find("</event") - 1;
+    outfile << _eventtext.substr(0, end);
+  }
   outfile << "<rwgt>\n";
   if(_scaleweights.size() > 0) {
     outfile << "  <scale type=\"central\">";

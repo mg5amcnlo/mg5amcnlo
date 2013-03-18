@@ -31,6 +31,7 @@ int main( int argc, const char ** argv)
 {
   if (argc < 4){
     cout << "Usage: sys_calc sysfile configfile outfile" << endl;
+    cout << " Note: If input file is .lhe, full event info is copied to outfile." << endl;
     exit(1);
   }
   ifstream conffile(argv[2]);
@@ -40,10 +41,15 @@ int main( int argc, const char ** argv)
 
   // Initialize SysCalc object with conffile and sysfile
   SysCalc* syscalc = new SysCalc(conffile, argv[1]);
-  if (syscalc->noFile()) { 
+  if (!syscalc->fileStatus()) { 
     cout << "Failed opening or parsing systematics file " << argv[1] << endl; 
     cout << "XML Error: " << syscalc->fileStatus() << endl;
     exit(1); }
+
+  if(string(argv[1]).find(".lhe") != string::npos)
+    syscalc->lheOutput(true);
+  else
+    syscalc->lheOutput(false);    
 
   ofstream outfile(argv[3]);
   if (outfile.fail()) { 
