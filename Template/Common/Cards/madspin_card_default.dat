@@ -11,10 +11,9 @@
 #Some options (uncomment to apply)
 #
 # set seed 1
-# set Nevents_for_max_weigth 0 # if zero based on the number of events in the file
-# set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
-# set BW_effect 1              # if 1 smear the momenta to have the Breit-Wigner
-# set BW_cut 15                # cut on how far the particle can be off-shell
+ set Nevents_for_max_weigth 0 # if zero based on the number of events in the file
+ set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
+ set BW_cut 15                # cut on how far the particle can be off-shell
 # 
 # specify the decay for the final state particles
 decay t > w+ b, w+ > all all
