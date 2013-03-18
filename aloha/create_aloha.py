@@ -128,7 +128,7 @@ class AbstractRoutineBuilder(object):
         self.fct = {}
         self.model = model
         self.denominator = None
-        assert model
+#        assert model
         
         
     
@@ -289,7 +289,7 @@ in presence of majorana particle/flow violation"""
                     #    #propagator incoming
                         lorentz *= SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
-                    if massless: 
+                    if massless or not aloha.unitary_gauge: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
                     else:
                         lorentz *= VectorPropagator(id, 'I2', id)

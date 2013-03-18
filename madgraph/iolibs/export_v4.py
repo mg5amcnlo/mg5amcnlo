@@ -1130,6 +1130,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 
         #madevent file
         cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
+        cp(_file_path+'/various/lhe_parser.py', 
+                                self.dir_path+'/bin/internal/lhe_parser.py')         
         cp(_file_path+'/various/gen_crossxhtml.py', 
                                 self.dir_path+'/bin/internal/gen_crossxhtml.py')                
         cp(_file_path+'/various/banner.py', 
@@ -1666,10 +1668,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['define_subdiag_lines'] = \
                  """\nINTEGER SUBDIAG(MAXSPROC),IB(2)
                  COMMON/TO_SUB_DIAG/SUBDIAG,IB"""    
+            replace_dict['cutsdone'] = ""
         else:
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
+            replace_dict['cutsdone'] = "      cutsdone=.false."
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -2294,9 +2298,9 @@ c           This is dummy particle used in multiparticle vertices
             if me.get('has_mirror_process'):
                 mirror_procs = [copy.copy(p) for p in me.get('processes')]
                 for proc in mirror_procs:
-                    legs = copy.copy(proc.get('legs'))
+                    legs = copy.copy(proc.get('legs_with_decays'))
                     legs.insert(0, legs.pop(1))
-                    proc.set("legs", legs)
+                    proc.set("legs_with_decays", legs)
                 lines.append("mirror  %s" % ",".join(p.base_string() for p in \
                                                      mirror_procs))
             else:
@@ -2849,6 +2853,8 @@ class UFO_model_to_mg4(object):
         for key in keys:
             for param in self.model['parameters'][key]:
                 lower_name = param.name.lower()
+                if not lower_name:
+                    continue
                 try:
                     lower_dict[lower_name].append(param)
                 except KeyError:
@@ -2900,18 +2906,20 @@ class UFO_model_to_mg4(object):
         keys = self.model['parameters'].keys()
         keys.sort(key=len)
         for key in keys:
+            to_add = [o for o in self.model['parameters'][key] if o.name]
+
             if key == ('external',):
-                self.params_ext += self.model['parameters'][key]
+                self.params_ext += to_add
             elif 'aS' in key:
-                self.params_dep += self.model['parameters'][key]
+                self.params_dep += to_add
             else:
-                self.params_indep += self.model['parameters'][key]
+                self.params_indep += to_add
         # same for couplings
         keys = self.model['couplings'].keys()
         keys.sort(key=len)
         for key, coup_list in self.model['couplings'].items():
             if 'aS' in key:
-                self.coups_dep += [c for c in coup_list if
+                self.coups_dep += [c for c in coup_list if 
                                    (not wanted_couplings or c.name in \
                                     wanted_couplings)]
             else:
@@ -3294,6 +3302,8 @@ class UFO_model_to_mg4(object):
             colum = [parameter.lhablock.lower()] + \
                     [str(value) for value in parameter.lhacode] + \
                     [parameter.name]
+            if not parameter.name:
+                return ''
             return ' '.join(colum)+'\n'
     
         fsock = self.open('ident_card.dat')

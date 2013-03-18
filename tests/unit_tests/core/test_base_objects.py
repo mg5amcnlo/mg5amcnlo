@@ -47,6 +47,7 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
+                      'propagator':'',
                       'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
@@ -161,10 +162,11 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
+        goal = goal + "    \'propagator\': '',\n"
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False\n}"
 
-        self.assertEqual(goal, str(self.mypart))
+        self.assertEqual(goal.split('\n'), str(self.mypart).split('\n'))
 
     def test_get_pdg_code(self):
         """Test the get_pdg_code function of Particle"""
@@ -1509,6 +1511,7 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'legs_with_decays': self.myleglist,
                        'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
@@ -1589,7 +1592,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'legs_with_decays\': %s\n}" % repr(self.myleglist)
 
         self.assertEqual(goal, str(self.myprocess))
 

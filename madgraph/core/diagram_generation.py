@@ -1038,9 +1038,15 @@ class DecayChainAmplitude(Amplitude):
                         decay_ids.remove(l.get('id'))
             
             if decay_ids:
-                logger.warning("Warning: " + \
-                 "Decay without corresponding particle in core process found. " + \
-                 "Please check your process definition carefully.")
+                model = amp.get('process').get('model')
+                names = [model.get_particle(id).get('name') for id in decay_ids]
+                
+                logger.warning(
+                 "$RED Decay without corresponding particle in core process found.\n" + \
+                 "Decay information for particle(s) %s is discarded.\n" % ','.join(names) + \
+                 "Please check your process definition carefully. \n" + \
+                 "This warning usually means that you forgot parentheses in presence of subdecay.\n" + \
+                 "Example of correct syntax: p p > t t~, ( t > w+ b, w+ > l+ vl)")
 
                 # Remove unused decays from the process list
                 for dc in reversed(self['decay_chains']):
