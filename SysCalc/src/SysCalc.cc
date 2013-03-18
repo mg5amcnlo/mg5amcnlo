@@ -104,6 +104,7 @@ SysCalc::SysCalc(istream& conffile,
   _beam[0] = 1;
   _beam[1] = 1;
   _lhe_output = false;
+  _event_weight = 1;
   
   string line;
   vector<string> tokens;
@@ -417,6 +418,10 @@ bool SysCalc::parseEvent(string event)
 		   << " scomp = " << _scomp
 		   << " smax = " << _smax << endl;
   }
+  else {
+    // No matching scale information, so remove from list
+    _matchscales.clear();
+  }
 
   // pdfrwt
   for(int i=0;i<2;i++){
@@ -618,33 +623,37 @@ bool SysCalc::writeHeader(ostream& outfile)
     outfile << _header_text.substr(0, end);
   }
   outfile << "  <initrwgt>\n";
+  int weight_id = 0;
   if(_scalefacts.size() > 0) {
-    outfile << "    <scale type=\"central\" entries=\"" << _scalefacts.size() 
-	    << "\">";
-    for (int i=0; i < _scalefacts.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _scalefacts[i]; }
-    outfile << "</scale>\n";
+    outfile << "    <weightgroup type=\"Central scale variation\" combine=\"envelope\">" << endl;
+    for (int i=0; i < _scalefacts.size(); i++)
+      outfile << "      <weight id=\"" << ++weight_id << "\"> scalefact="
+	      << _scalefacts[i] << "</weight>" << endl;
+    outfile << "    </weightgroup>" << endl;
   }
   if(_alpsfacts.size() > 0) {
-    outfile << "    <scale type=\"emission\" entries=\"" << _alpsfacts.size() 
-	    << "\">";
-    for (int i=0; i < _alpsfacts.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _alpsfacts[i]; }
-    outfile << "</scale>\n";
+    outfile << "    <weightgroup type=\"Emission scale variation\" combine=\"envelope\">" << endl;
+    for (int i=0; i < _alpsfacts.size(); i++)
+      outfile << "      <weight id=\"" << ++weight_id << "\"> alpsfact="
+	      << _alpsfacts[i] << "</weight>" << endl;
+    outfile << "    </weightgroup>" << endl;
   }
   if(_PDFsets.size() > 0){
-    for (int i=0; i < _PDFsets.size(); i++)
-      outfile << "    <pdf type=\"" << _PDFsets[i] << "\" entries=\"" << _members[i]
-	      << "\" combine=\"" << _combinations[i] << "\"></pdf>\n";
+    for (int i=0; i < _PDFsets.size(); i++){
+      outfile << "    <weightgroup type=\"" << _PDFsets[i] 
+	      << "\" combine=\"" << _combinations[i] << "\">" << endl;
+      for (int j=0; j < _members[i]; j++)
+	outfile << "      <weight id=\"" << ++weight_id << "\">Member "
+		<< j << "</weight>" << endl;
+      outfile << "    </weightgroup>" << endl;
+    }
   }
   if(_matchscales.size() > 0) {
-    outfile << "    <qmatch entries=\"" << _matchscales.size() << "\">";
-    for (int i=0; i < _matchscales.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _matchscales[i]; }
-    outfile << "</qmatch>\n";
+    outfile << "    <weightgroup type=\"Matching scale variation\" combine=\"envelope\">" << endl;
+    for (int i=0; i < _matchscales.size(); i++)
+      outfile << "      <weight id=\"" << ++weight_id << "\"> Qmatch="
+	      << _matchscales[i] << "</weight>" << endl;
+    outfile << "    </weightgroup>" << endl;
   }
   outfile << "  </initrwgt>\n";
   if (!_lhe_output)
@@ -671,35 +680,36 @@ bool SysCalc::writeEvent(ostream& outfile)
     outfile << _eventtext.substr(0, end);
   }
   outfile << "<rwgt>\n";
+  int weight_id = 0;
   if(_scaleweights.size() > 0) {
-    outfile << "  <scale type=\"central\">";
     for (int i=0; i < _scaleweights.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _scaleweights[i]*_event_weight; }
-    outfile << "</scale>\n";
+      outfile << "  <wgt id=\"" << ++weight_id << "\">";
+      outfile << _scaleweights[i]*_event_weight; 
+      outfile << "</wgt>\n";
+    }
   }
   if(_alpsweights.size() > 0) {
-    outfile << "  <scale type=\"emission\">";
     for (int i=0; i < _alpsweights.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _alpsweights[i]*_event_weight; }
-    outfile << "</scale>\n";
+      outfile << "  <wgt id=\"" << ++weight_id << "\">";
+      outfile << _alpsweights[i]*_event_weight; 
+      outfile << "</wgt>\n";
+    }
   }
   if(_PDFweights.size() > 0){
     for (int i=0; i < _PDFweights.size(); i++){
-      outfile << "  <pdf type=\"" << _PDFsets[i] << "\">";
       for (int j=0; j < _PDFweights[i].size(); j++) {
-	if(j > 0) outfile << " ";
-	outfile << _PDFweights[i][j]*_event_weight; }
-      outfile << "</pdf>\n";
+	outfile << "  <wgt id=\"" << ++weight_id << "\">";
+	outfile << _PDFweights[i][j]*_event_weight; 
+	outfile << "</wgt>\n";
+      }
     }
   }
   if(_matchweights.size() > 0) {
-    outfile << "  <qmatch>";
     for (int i=0; i < _matchweights.size(); i++) {
-      if(i > 0) outfile << " ";
-      outfile << _matchweights[i]*_event_weight; }
-    outfile << "</qmatch>\n";
+      outfile << "  <wgt id=\"" << ++weight_id << "\">";
+      outfile << _matchweights[i]*_event_weight; 
+      outfile << "</wgt>\n";
+    }
   }
   outfile << "</rwgt>\n";
   outfile << "</event>\n";

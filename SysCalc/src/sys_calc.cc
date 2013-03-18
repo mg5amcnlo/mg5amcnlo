@@ -51,15 +51,23 @@ int main( int argc, const char ** argv)
   else
     syscalc->lheOutput(false);    
 
+  // Open output file
   ofstream outfile(argv[3]);
   if (outfile.fail()) { 
     cout << "Failed opening output file " << argv[3] << endl; 
-    exit(1); }
-  // Write XML header for outfile
-  syscalc->writeHeader(outfile);
+    exit(1); 
+  }
+
+  bool first = true;
 
   // Parse events one by one
   while (syscalc->parseEvent()){
+    // If first time, write header
+    if (first){
+      // Write XML header for outfile
+      syscalc->writeHeader(outfile);
+      first = false;
+    }
     // Calculate event weights for systematics parameters
     syscalc->convertEvent();
     // Write out new rwt block to outfile
