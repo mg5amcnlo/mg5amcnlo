@@ -85,7 +85,7 @@ class ParamCardWriter(object):
         
         # 
         self.dep_mass, self.dep_width = [] , []
-        self.duplicate_mass, self.duplicate_width =[], [] 
+        self.duplicate_mass, self.duplicate_width = [], [] 
 
         def_param = [] 
         # one loop for the mass
@@ -220,7 +220,7 @@ class ParamCardWriter(object):
         """writing the requested LHA parameter"""
 
         if lhablock == 'MASS':
-            data = self.dep_mass 
+            data = self.dep_mass
             prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width

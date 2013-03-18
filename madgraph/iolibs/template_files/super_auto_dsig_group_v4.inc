@@ -77,10 +77,15 @@ C     CM_RAP has parton-parton system rapidity
       DOUBLE PRECISION CM_RAP
       LOGICAL SET_CM_RAP
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 C ----------
 C BEGIN CODE
 C ----------
       DSIG=0D0
+
+      CUTSDONE=.FALSE.
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact

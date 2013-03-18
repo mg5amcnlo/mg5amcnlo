@@ -308,6 +308,9 @@ c From dsample_fks
       double precision vol,sigintR
       integer itotalpoints
       common/ctotalpoints/itotalpoints
+
+      integer xBW
+      common /c_xBW/xBW
 c
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
@@ -385,7 +388,6 @@ c
       call setcuts
       call setfksfactor(iconfig)
       wgt=1d0
-
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
 c

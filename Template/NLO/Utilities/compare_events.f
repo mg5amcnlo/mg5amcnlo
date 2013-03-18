@@ -1,113 +1,137 @@
 c Compile with
-c   gfortran -g -ffixed-line-length-132 -fno-automatic -I./any-P-directory
-c      -o plot_events plot_events.f madfks_plot.f madfks_dbook.f setcuts.f
-c         handling_lhe_events.f 
-c         any-dependencies-in-madfksplot
-      program plot_events
+c gfortran -ffixed-line-length-132 -fno-automatic -I../SubProcesses/P0_<anydir>
+c -o compare_events compare_events.f handling_lhe_events.f fill_MC_mshell.f
+      program compare_events
       implicit none
-      integer maxevt,ifile,i,npart,itype
+      integer maxevt,maxevt2,ifile,ifile2,i
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
+      integer IDBMUP2(2),PDFGUP2(2),PDFSUP2(2),IDWTUP2,NPRUP2,LPRUP2
+      double precision EBMUP2(2),XSECUP2,XERRUP2,XMAXUP2
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      double precision sum_wgt
-      integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe
-      integer jwgtinfo,mexternal,iwgtnumpartn
-      double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-      double precision zero
-      parameter (zero=0.d0)
-      character*80 event_file
+      INTEGER NUP2,IDPRUP2,IDUP2(MAXNUP),ISTUP2(MAXNUP),
+     # MOTHUP2(2,MAXNUP),ICOLUP2(2,MAXNUP)
+      DOUBLE PRECISION XWGTUP2,SCALUP2,AQEDUP2,AQCDUP2,
+     # PUP2(5,MAXNUP),VTIMUP2(MAXNUP),SPINUP2(MAXNUP)
+      double precision sum_wgt,sum_wgt2,xtmp,ytmp,xmomshifts(4)
+      character*80 event_file,event_file2
+      character*10 MonteCarlo,MonteCarlo2
       character*140 buff
-      character*1 ch1
-      logical AddInfoLHE
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
-      integer itmax,ncall
-      common/citmax/itmax,ncall
-
+      include "nexternal.inc"
       include "genps.inc"
       integer j,k
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
-      character*10 MonteCarlo
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 
-      usexinteg=.false.
-      mint=.false.
-      itmax=1
-      ncall=1
-      call setcuts
-
-      write (*,*) 'Enter event file name'
+      write (*,*) 'Enter name of event file #1'
       read (*,*) event_file
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
-      AddInfoLHE=.false.
+
+      write (*,*) 'Enter name of event file #2'
+      read (*,*) event_file2
+
+      ifile2=35
+      open (unit=ifile2,file=event_file2,status='old')
 
       call read_lhef_header(ifile,maxevt,MonteCarlo)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
+      call read_lhef_header(ifile2,maxevt2,MonteCarlo2)
+      call read_lhef_init(ifile2,
+     &     IDBMUP2,EBMUP2,PDFGUP2,PDFSUP2,IDWTUP2,NPRUP2,
+     &     XSECUP2,XERRUP2,XMAXUP2,LPRUP2)
 
-      itype=12      
+      if(MonteCarlo.ne.MonteCarlo2)then
+        write(*,*)'Files are not relevant to the same MC:'
+        write(*,*)MonteCarlo,MonteCarlo2
+        stop
+      endif
+      if(maxevt.ne.maxevt2)then
+        write(*,*)'Files have different number of events',
+     #             maxevt,maxevt2
+        stop
+      endif
+      
       sum_wgt=0d0
-      call initplot
+      sum_wgt2=0d0
+      do i=1,4
+        xmomshifts(i)=0.d0
+      enddo
+
       do i=1,maxevt
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          sum_wgt=sum_wgt+XWGTUP
 
-         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
-         if(AddInfoLHE)then
-           if(buff(1:1).ne.'#')then
-             write(*,*)'Inconsistency in event file',i,' ',buff
-             stop
-           endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                       fksfather_lhe,ipartner_lhe,
-     #                       scale1_lhe,scale2_lhe,
-     #                       jwgtinfo,mexternal,iwgtnumpartn,
-     #            wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+         do k=1,nup
+           xmass(k)=pup(5,k)
+           do j=1,4
+             xmom(mod(j,4),k)=pup(j,k)
+           enddo
+         enddo
+         call phspncheck_nocms2(nup,xmass,xmom)
+
+         call read_lhef_event(ifile2,
+     &        NUP2,IDPRUP2,XWGTUP2,SCALUP2,AQEDUP2,AQCDUP2,
+     &        IDUP2,ISTUP2,MOTHUP2,ICOLUP2,PUP2,VTIMUP2,SPINUP2,buff)
+         sum_wgt2=sum_wgt2+XWGTUP2
+
+         if(nup.ne.nup2)then
+           write(*,*)'Mismatch in event #',i,nup,nup2
+           stop
          endif
 
-         npart=0
-         do k=1,nup
-           if(abs(ISTUP(k)).eq.1)then
-             npart=npart+1
-             xmass(npart)=pup(5,k)
-             do j=1,4
-               xmom(mod(j,4),npart)=pup(j,k)
-             enddo
-           endif
+         do k=1,nup2
+           xmass(k)=pup2(5,k)
+           do j=1,4
+             xmom(mod(j,4),k)=pup2(j,k)
+           enddo
          enddo
-         call phspncheck_nocms2(i,npart,xmass,xmom)
-         call outfun(xmom,zero,XWGTUP,itype)
+         call phspncheck_nocms2(nup2,xmass,xmom)
+
+         do j=1,4
+           ytmp=0.d0
+           do k=1,nup
+             if(abs(pup(j,k)).lt.1.d0)then
+               xtmp=pup(j,k)-pup2(j,k)
+             else
+               xtmp=(pup(j,k)-pup2(j,k))/pup(j,k)
+             endif
+             ytmp=ytmp+abs(xtmp)/dfloat(nup)
+           enddo
+           xmomshifts(j)=(xmomshifts(j)*(i-1)+ytmp)/dfloat(i)
+         enddo
 
       enddo
 
-      call mclear
-      open(unit=99,file='events.top',status='unknown')
-      call topout
-      close(99)
+      write (*,*) 'The sum of weights #1 is:',sum_wgt
+      write (*,*) 'The sum of weights #2 is:',sum_wgt2
 
-      write (*,*) 'The sum of the weights is:',sum_wgt
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+      write(*,*)'   '
+      write(*,*)'Average momentum shifts'
+      do i=1,4
+        write(*,*)'  ',i,': ',xmomshifts(i)
+      enddo
 
       end
 
 
-      subroutine phspncheck_nocms2(nev,npart,xmass,xmom)
+      subroutine phspncheck_nocms2(npart,xmass,xmom)
 c Checks four-momentum conservation. Derived from phspncheck;
 c works in any frame
       implicit none
-      integer nev,npart,maxmom
+      integer npart,maxmom
+      include "nexternal.inc"
       include "genps.inc"
-      real*8 xmass(nexternal),xmom(0:3,nexternal)
+      real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)
       parameter (tiny=5.d-3)
@@ -141,8 +165,7 @@ c
       if(jflag.eq.1)then
         write(*,'(4(d14.8,1x))') (xsum(jj),jj=0,3)
         write(*,'(4(d14.8,1x))') (xrat(jj),jj=0,3)
-        write(*,*)'event #',nev
-c$$$        stop
+        stop
       endif
 c
       do j=1,npart
@@ -162,8 +185,7 @@ c
           write(*,*)'mass=',xmass(j)
           write(*,*)'mass computed=',xm
           write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
-          write(*,*)'event #',nev
-c$$$          stop
+          stop
         endif
       enddo
 
@@ -193,33 +215,4 @@ c
       tmp=v(0)**2-v(1)**2-v(2)**2-v(3)**2
       xlen4=sign(1.d0,tmp)*sqrt(abs(tmp))
       return
-      end
-
-
-      subroutine boostwdir2(chybst,shybst,chybstmo,xd,xin,xout)
-c chybstmo = chybst-1; if it can be computed analytically it improves
-c the numerical accuracy
-      implicit none
-      real*8 chybst,shybst,chybstmo,xd(1:3),xin(0:3),xout(0:3)
-      real*8 tmp,en,pz
-      integer i
-c
-      if(abs(xd(1)**2+xd(2)**2+xd(3)**2-1).gt.1.d-6)then
-        write(*,*)'Error #1 in boostwdir2',xd
-        stop
-      endif
-c
-      en=xin(0)
-      pz=xin(1)*xd(1)+xin(2)*xd(2)+xin(3)*xd(3)
-      xout(0)=en*chybst-pz*shybst
-      do i=1,3
-        xout(i)=xin(i)+xd(i)*(pz*chybstmo-en*shybst)
-      enddo
-c
-      return
-      end
-
-
-c Dummy subroutine (normally used with vegas when resuming plots)
-      subroutine resume()
       end

@@ -1059,7 +1059,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 level = int(line) - 1
                 if level:
                     self.mother.lastcmd = 'quit %s' % level
-
+        logger.info(' ')
         return True
 
     # Aliases

@@ -1814,6 +1814,7 @@ c      include "fks.inc"
 
       integer i,j,npartner,cflows,ileg,N_p
       common/cileg/ileg
+      common/cxm12/xm12
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),xifake(nexternal),zPY6Q,xiPY6Q,xjacPY6Q_xiztoxy,
@@ -1956,6 +1957,11 @@ c variable, not yet defined) will not be needed in the computation of probne
         scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(ileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xm12))
+           scalemax=max(scalemin,scalemax)
+        endif
+
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2085,7 +2091,10 @@ c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(ileg.eq.3)then
+               xifake(npartner)=xi(npartner)+xm12
+               upper_scale=max(upper_scale,sqrt(xm12))
+            endif
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
 c z limits for the 'constrained' definition, following
@@ -2760,6 +2769,10 @@ c Distinguish initial or final state radiation
         isr=.true.
         delta=min(1.d0,deltaI)
       elseif(ileg.eq.3.or.ileg.eq.4)then
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        stop
         fsr=.true.
         delta=min(1.d0,deltaO)
       else
@@ -3415,7 +3428,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vca=3.d0)
 
       integer mstj50,mstp67
-      double precision en_fks,en_mother,theta2,theta2_cc,pt2father
+      double precision en_fks,en_mother,theta2,theta2_cc
       double precision upper_scale
       common/cupscale/upper_scale
 
@@ -3556,15 +3569,7 @@ c xmcsubt note
          xjac(npartner)=xjactmp
 c
 c Compute deadzones:
-          lzone(npartner)=.true.
-          if(ileg.ge.3)then
-             pt2father=p_born(1,fksfather)**2+p_born(2,fksfather)**2
-             if(xi(npartner).ge.pt2father)lzone(npartner)=.false.
-c check!!
-c compute an effective xi variable for the father and impose
-c the constraint there?
-          endif
-
+         lzone(npartner)=.true.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -6001,16 +6006,15 @@ c outgoing parton #3 (massive)
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+         w1=-xq1q+xq2q-xtk
+         w2=-xq2q+xq1q-xuk
          if(1-x.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)/2
          elseif(1-yj.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)*(s*x-xm12)**2/(2*(s-xm12)**2)
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
             z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-            xt=2*en_fks*en_fks_sister*(1-yj)
-            xiPY8=z*(1-z)*xt
+            xiPY8=z*(1-z)*w2
          endif
       endif
 
@@ -6302,6 +6306,10 @@ c entering this function
         if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.eetot)scalemax=eetot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(MonteCarlo(1:7).eq.'PYTHIA6'.and.iileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xxm12))
+           scalemax=max(scalemin,scalemax)
+        endif
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -6340,8 +6348,12 @@ c entering this function
       include "madfks_mcatnlo.inc"
       include "run.inc"
 
-      integer i
-      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot
+      integer i,ileg
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot,xm12
+      common/cileg/ileg
+      common/cxm12/xm12
+      character*4 abrv
+      common /to_abrv/ abrv
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -6353,6 +6365,17 @@ c
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
       if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)
       if(xxscalemax.ge.eetot)xxscalemax=eetot
+      if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
+c
+      if(abrv.ne.'born'.and.MonteCarlo(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+         if((ileg.ne.3.and.xm12.ne.0d0).or.
+     &      (ileg.eq.3.and.xm12.eq.0d0))then
+            write(*,*)'Wrong ileg or xm12 in assign_scalemax',ileg,xm12
+            stop
+         endif
+         xxscalemin=max(xxscalemin,sqrt(xm12))
+         xxscalemax=max(xxscalemin,xxscalemax)
+      endif
 
       return
       end

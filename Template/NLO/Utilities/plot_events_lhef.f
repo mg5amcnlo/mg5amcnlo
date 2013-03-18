@@ -43,7 +43,7 @@ c  reweight0.inc dbook.inc
       integer nexternal
       parameter (nexternal=20)
       integer j,k
-      real*8 ecm,xmass(nexternal),xmom(0:3,nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
       character*10 MonteCarlo
 
       usexinteg=.false.

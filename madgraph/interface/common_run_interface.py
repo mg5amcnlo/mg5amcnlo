@@ -138,14 +138,7 @@ class HelpToCmd(object):
         logger.info("This functionality allows for the decay of resonances")
         logger.info("in a .lhe file, keeping track of the spin correlation effets.")
         logger.info("BE AWARE OF THE CURRENT LIMITATIONS:")
-        logger.info("  (1) you can use multiparticle tag ONLY on final-state ")
-        logger.info("      particles, not for intermediate resonances ")
-        logger.info("  (2) only decay channels with splitting of the type")
-        logger.info("      A -> B(stable) + C((un)stable)")
-        logger.info("      have been tested so far")
-        logger.info("  (3) when entering the decay chain structure,")
-        logger.info("      please note that the reading module is ")
-        logger.info("      CASE SENSITIVE")
+        logger.info("  (1) Only a succession of 2 body decay are currently allowed")
 
 
 
@@ -511,11 +504,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         card = {0:'done'}
         
         for i, card_name in enumerate(cards):
-            mode = path2name(card_name)
+            imode = path2name(card_name)
             possible_answer.append(i+1)
-            possible_answer.append(mode)
-            question += '  %s / %-9s : %s\n' % (i+1, mode, card_name)
-            card[i+1] = mode
+            possible_answer.append(imode)
+            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            card[i+1] = imode
         
         if plot and self.options['madanalysis_path']:
             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
@@ -556,14 +549,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat
         """
         
-        text = open(path).read()
+        text = open(path).read(50000)
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
         text = [t.lower() for t in text]
-        if '<mgversion>' in text:
+        if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
+        elif 'particlepropagator' in text:
+            return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#trigger card' in text:
@@ -878,6 +873,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # if lock is define this a locker for the completion of the thread
         lock = self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
+        
+        
+        if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+            delphes3 = False
+            prog = '../bin/internal/run_delphes'
+        else:
+            delphes3 = True
+            prog =  '../bin/internal/run_delphes3'
                 
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
@@ -889,11 +892,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+        if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or self.force):
-            self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'])
+            if delphes3:
+                self.ask_edit_cards(['delphes_card.dat'], args)
+            else:
+                self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'], args)
             
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
@@ -906,13 +912,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         tag = self.run_tag
         if os.path.exists(pjoin(self.me_dir, 'Source', 'banner_header.txt')):
             self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
-            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+            if not delphes3:
+                self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
             self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-        self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+        self.cluster.launch_and_wait(prog, 
                         argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))

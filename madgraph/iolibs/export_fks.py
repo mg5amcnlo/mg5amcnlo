@@ -292,6 +292,27 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
     #===============================================================================
+    # write a initial states map, useful for the fast PDF NLO interface
+    #===============================================================================
+    def write_init_map(self, file_pos, initial_states):
+        """ Write an initial state process map. Each possible PDF
+        combination gets an unique identifier."""
+        
+        text=''
+        for i,e in enumerate(initial_states):
+            text=text+str(i+1)+' '+str(len(e))
+            for t in e:
+                text=text+'   '
+                for p in t:
+                    text=text+' '+str(p)
+            text=text+'\n'
+        
+        ff = open(file_pos, 'w')
+        ff.write(text)
+        ff.close()
+
+
+    #===============================================================================
     # write_coef_specs
     #===============================================================================
     def write_coef_specs_file(self, virt_me_list):
