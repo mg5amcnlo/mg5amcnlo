@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "SystCalc.h"
+#include "SysCalc.h"
 #include "tinyxml2.h"
 #include "LHAPDF/LHAPDF.h"
 
@@ -10,7 +10,7 @@ using namespace LHAPDF;
 
 bool DEBUG = false;
 
-void SystCalc::clean_tokens(vector<string>& tokens){
+void SysCalc::clean_tokens(vector<string>& tokens){
 // Remove everything after "#"
   for(vector<string>::iterator i = tokens.begin();
       i != tokens.end();++i){
@@ -21,7 +21,7 @@ void SystCalc::clean_tokens(vector<string>& tokens){
   }
 }
 
-void SystCalc::tokenize(const string& str,
+void SysCalc::tokenize(const string& str,
 			vector<string>& tokens,
 			const string& delimiters)
 {
@@ -48,7 +48,7 @@ void SystCalc::tokenize(const string& str,
   clean_tokens(tokens);
 }
 
-void SystCalc::insert_tokens_double(vector<string>& tokens, vector<double>& var)
+void SysCalc::insert_tokens_double(vector<string>& tokens, vector<double>& var)
 {
   /**
      Insert tokens into vector var
@@ -60,7 +60,7 @@ void SystCalc::insert_tokens_double(vector<string>& tokens, vector<double>& var)
   }
 }
 
-void SystCalc::insert_tokens_int(vector<string>& tokens, vector<int>& var)
+void SysCalc::insert_tokens_int(vector<string>& tokens, vector<int>& var)
 {
   /**
      Insert tokens into vector var
@@ -72,7 +72,7 @@ void SystCalc::insert_tokens_int(vector<string>& tokens, vector<int>& var)
   }
 }
 
-SystCalc::SystCalc(istream& conffile,
+SysCalc::SysCalc(istream& conffile,
 		   string sysfilename,
 		   string orgPDF,
 		   int org_member,
@@ -225,7 +225,7 @@ SystCalc::SystCalc(istream& conffile,
   cout << "Initialization done" << endl;
 }
 
-void SystCalc::fillPDFData(XMLElement* element, vector<int>& pdg, 
+void SysCalc::fillPDFData(XMLElement* element, vector<int>& pdg, 
 			   vector<double>& x, vector<double>& q)
 {
   /**
@@ -256,7 +256,7 @@ void SystCalc::fillPDFData(XMLElement* element, vector<int>& pdg,
   }
 }
 
-bool SystCalc::parseEvent(string event)
+bool SysCalc::parseEvent(string event)
 {
   /**
      Parse one event from the XML file sysfile.
@@ -376,7 +376,7 @@ bool SystCalc::parseEvent(string event)
   return true;
 }
 
-double SystCalc::calculatePDFWeight(int pdfnum, double fact, int beam,
+double SysCalc::calculatePDFWeight(int pdfnum, double fact, int beam,
 				    vector<int>& pdg, 
 				    vector<double>& x, 
 				    vector<double>& q)
@@ -407,7 +407,7 @@ double SystCalc::calculatePDFWeight(int pdfnum, double fact, int beam,
 }
 
 
-bool SystCalc::convertEvent()
+bool SysCalc::convertEvent()
 {
   // Set which member to use for alpha_s reweighting
   int orgnum = _PDFsets.size() + 1;
@@ -533,7 +533,7 @@ bool SystCalc::convertEvent()
   return true;
 }
 
-bool SystCalc::writeHeader(ostream& outfile)
+bool SysCalc::writeHeader(ostream& outfile)
 {
   outfile << "<header>\n";
   outfile << "  <initrwgt>\n";
@@ -570,7 +570,7 @@ bool SystCalc::writeHeader(ostream& outfile)
   return true;
 }
 
-bool SystCalc::writeEvent(ostream& outfile)
+bool SysCalc::writeEvent(ostream& outfile)
 {
   outfile << "<event";
   if (_event_number > 0) outfile << " id=\"" << _event_number << "\"";

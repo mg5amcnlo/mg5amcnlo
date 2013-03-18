@@ -1016,7 +1016,7 @@ C
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R
+      DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
@@ -1055,7 +1055,8 @@ C       Set up process information from file symfact
         NFACT=1
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
+          ICONF=INT(RCONF)
           IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
             NFACT=IFACT
           ENDIF
@@ -1090,7 +1091,7 @@ C     Only run if IMODE is 0
 C       Select a flavor combination (need to do here for right sign)
         CALL RANMAR(R)
         IPSEL=0
-        DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
           IPSEL=IPSEL+1
           R=R-DABS(PD(IPSEL))/PD(0)
         ENDDO
@@ -1887,7 +1888,7 @@ C
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R
+      DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
@@ -1928,7 +1929,8 @@ C       Set up process information from file symfact
         NFACT=1
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
+          ICONF=INT(RCONF)
           IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
             NFACT=IFACT
           ENDIF
@@ -1963,7 +1965,7 @@ C     Only run if IMODE is 0
 C     Select a flavor combination (need to do here for right sign)
       CALL RANMAR(R)
       IPSEL=0
-      DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
+      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
         IPSEL=IPSEL+1
         R=R-DABS(PD(IPSEL))/PD(0)
       ENDDO

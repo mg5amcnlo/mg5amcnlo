@@ -1,5 +1,5 @@
-#ifndef SystCalc_h
-#define SystCalc_h
+#ifndef SysCalc_h
+#define SysCalc_h
 
 #include <iostream>
 #include <vector>
@@ -9,11 +9,11 @@
 using namespace std;
 using namespace tinyxml2;
 
-class SystCalc
+class SysCalc
 {
  public:
-  SystCalc() {_parsed_events = 0; };
-  SystCalc(istream& conffile, string sysfilename = "",
+  SysCalc() {_parsed_events = 0; };
+  SysCalc(istream& conffile, string sysfilename = "",
 	   string orgPDF = "cteq6ll.LHpdf",
 	   int orgMember = 0, int beam1 = 1, int beam2 = 1);
   
@@ -93,4 +93,4 @@ class SystCalc
   vector<double> _matchweights;
 };
 
-#endif /* SystCalc_h */
+#endif /* SysCalc_h */

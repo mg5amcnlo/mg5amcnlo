@@ -1,12 +1,12 @@
 #include <iostream>
 #include <fstream> 
 
-#include "SystCalc.h"
+#include "SysCalc.h"
 
 /**************************************************************************
 Main program to convert systematics files from MG5 to systematics variation files.
 
-Usage: syst_calc sysfile configfile outfile
+Usage: sys_calc sysfile configfile outfile
 
 Example of a config file:
       # Central scale factors
@@ -30,7 +30,7 @@ Using tinyXML2 for XML parsing of syst file.
 int main( int argc, const char ** argv)
 {
   if (argc < 4){
-    cout << "Usage: syst_calc sysfile configfile outfile" << endl;
+    cout << "Usage: sys_calc sysfile configfile outfile" << endl;
     exit(1);
   }
   ifstream conffile(argv[2]);
@@ -38,11 +38,11 @@ int main( int argc, const char ** argv)
     cout << "Failed opening config file " << argv[2] << endl; 
     exit(1); }
 
-  // Initialize SystCalc object with conffile and sysfile
-  SystCalc* systcalc = new SystCalc(conffile, argv[1]);
-  if (systcalc->noFile()) { 
+  // Initialize SysCalc object with conffile and sysfile
+  SysCalc* syscalc = new SysCalc(conffile, argv[1]);
+  if (syscalc->noFile()) { 
     cout << "Failed opening or parsing systematics file " << argv[1] << endl; 
-    cout << "XML Error: " << systcalc->fileStatus() << endl;
+    cout << "XML Error: " << syscalc->fileStatus() << endl;
     exit(1); }
 
   ofstream outfile(argv[3]);
@@ -50,14 +50,14 @@ int main( int argc, const char ** argv)
     cout << "Failed opening output file " << argv[3] << endl; 
     exit(1); }
   // Write XML header for outfile
-  systcalc->writeHeader(outfile);
+  syscalc->writeHeader(outfile);
 
   // Parse events one by one
-  while (systcalc->parseEvent()){
+  while (syscalc->parseEvent()){
     // Calculate event weights for systematics parameters
-    systcalc->convertEvent();
+    syscalc->convertEvent();
     // Write out new rwt block to outfile
-    systcalc->writeEvent(outfile);
+    syscalc->writeEvent(outfile);
   }
-  cout << "Finished parsing " << systcalc->parsedEvents() << " events." << endl;
+  cout << "Finished parsing " << syscalc->parsedEvents() << " events." << endl;
 }

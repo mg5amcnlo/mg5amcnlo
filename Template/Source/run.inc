@@ -6,9 +6,9 @@ c     Scales
 c
       real*8          scale,scalefact,alpsfact
       logical         fixed_ren_scale,fixed_fac_scale,fixed_couplings,hmult
-      integer         ickkw,nhmult
+      integer         ickkw,nhmult,asrwgtflavor
       common/to_scale/scale,scalefact,alpsfact,fixed_ren_scale,fixed_fac_scale,
-     $                fixed_couplings,ickkw,nhmult,hmult
+     $                fixed_couplings,ickkw,nhmult,hmult,asrwgtflavor
 c
 c     Collider
 c
@@ -45,3 +45,8 @@ c     Common block for systematics variations
       DOUBLE PRECISION s_rwfact
       COMMON/TO_SYST/use_syst,n_qcd,n_alpsem,n_pdfrw,i_pdgpdf,
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
+c
+c     Include <clustering> tag for Pythia 8 CKKW-L matching
+c
+      logical clusinfo
+      COMMON/TO_CINFO/clusinfo

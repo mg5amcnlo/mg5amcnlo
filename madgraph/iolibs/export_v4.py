@@ -1720,10 +1720,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                for d in me.get('diagrams')], []) \
                           for me in matrix_elements], []))
 
-        leg_ids = set(sum([sum([[l.get('id') for l in \
-                                 p.get_legs_with_decays()] for p in \
-                                me.get('processes')], []) for me in
-                           matrix_elements], []))
+        leg_ids = set(sum([sum([sum([[l.get('id'), 
+                          model.get_particle(l.get('id')).get_anti_pdg_code()] \
+                                  for l in p.get_legs_with_decays()], []) \
+                                for p in me.get('processes')], []) \
+                           for me in matrix_elements], []))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)

@@ -553,19 +553,7 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc)
-
-c     Need to flip after addmothers, since color might get overwritten
-      if (flip) then
-         do i=1,7
-            j=jpart(i,1)
-            jpart(i,1)=jpart(i,2)
-            jpart(i,2)=j
-         enddo
-         ptcltmp(1)=ptclus(1)
-         ptclus(1)=ptclus(2)
-         ptclus(2)=ptcltmp(1)
-      endif
+     $                npart,numproc,flip)
 
 c
 c     Write events to lun
@@ -647,7 +635,7 @@ c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
 
 c     Write out buffers for clustering info
       nclus=0
-      if(icluster(1,1).ne.0 .and. ickkw.ne.0)then
+      if(icluster(1,1).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
          nclus=nexternal
          write(buffclus(1),'(a)')'<clustering>'
          do i=1,nexternal-2
