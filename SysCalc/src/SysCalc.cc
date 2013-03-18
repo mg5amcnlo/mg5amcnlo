@@ -9,7 +9,7 @@ using namespace std;
 using namespace tinyxml2;
 using namespace LHAPDF;
 
-bool DEBUG = true;
+bool DEBUG = false;
 
 void SysCalc::clean_tokens(vector<string>& tokens){
 // Remove everything after "#"
