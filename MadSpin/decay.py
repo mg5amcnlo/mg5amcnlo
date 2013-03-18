@@ -3324,7 +3324,7 @@ class decay_all_events:
                                         BW_cut)
                                         
                     if decayed_event==0:
-                        logger.warning('failed to decay event properly')
+                        #logger.warning('failed to decay event properly') unnecessary warning
                         continue
                     mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                     #     then decayed weight:
