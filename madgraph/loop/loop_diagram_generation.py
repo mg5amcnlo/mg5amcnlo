@@ -384,15 +384,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
-            # HSS, 13/12/2012
-            if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
-            # HSS
-            #if sum([loop_orders[order] for order in pert_loop_order])>=2:
+            # HSS, 17/03/2013
+            if len([col for col in [self['process'].get('model').get_particle(pdg).get('color') \
+                                                      for pdg in diag.get_pdgs_attached_to_loop(\
+                                                    self['structure_repository'])] if col!=1])==1:
                 valid_diag=False
-            # HSS, 12/03/2013,it is only valid in SM
-            #if loop_orders['QCD']==1 and diag.get_nloopline()==2:
-            #    valid_diag=False
+            # HSS        
+            # HSS, 13/12/2012
+            #if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
             # HSS
+#            if sum([loop_orders[order] for order in pert_loop_order])< 2:
+#                valid_diag=False
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection
@@ -1090,7 +1092,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         # wavefunction renormalization bubble is equal to the
                         # one of the inner particle.
 			# HSS 19/09/2012
-                        # if leg_id in depths:
+                        #if leg_id in depths:
 			# HSS
                             continue
                 

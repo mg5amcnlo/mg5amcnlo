@@ -244,7 +244,7 @@ class LoopDiagram(base_objects.Diagram):
                     #    inLegID=model.get('particle_dict')[inLegID].\
                     #                                         get_anti_pdg_code()
                     #if inLegID==outLegID:
-		    #	return True
+		            #          return True
                     return True
 		    # HSS
 	    # HSS 19/09/2012

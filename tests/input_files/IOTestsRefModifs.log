@@ -585,3 +585,111 @@ The following reference files have been updated :
    short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%intparam_definition.inc
    short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%mp_input.inc
    short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%mp_intparam_definition.inc
+ 
+Modifications performed on 2013-03-18 at 14h06 in
+   MadGraph 5 v. 2.0.0.beta2, 2012-11-24
+The following reference files have been updated :
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%model_functions.f
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%model_functions.inc
+The following reference files have been removed :
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%coupl.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%coupl_write.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%couplings2.f.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%couplings3.f.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%input.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_couplings3.f.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_input.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   short_ML_SMQCD_default/gg_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f.tmp
+ 
+Modifications performed on 2013-03-18 at 14h11 in
+   MadGraph 5 v. 2.0.0.beta2, 2012-11-24
+The following reference files have been updated :
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%model_functions.f
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%model_functions.inc
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%model_functions.f
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%model_functions.inc
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%model_functions.f
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%model_functions.inc
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%model_functions.f
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%model_functions.inc
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%model_functions.f
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%model_functions.inc
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%model_functions.f
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%model_functions.inc
+The following reference files have been removed :
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%coupl.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%coupl_write.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%couplings2.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%input.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%mp_input.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/loop_matrix.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/mp_born_amps_and_wfs.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%coupl.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%coupl_write.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%couplings2.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%couplings3.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%input.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_couplings3.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_input.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/mp_compute_loop_coefs.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%coupl.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%coupl_write.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%couplings2.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%couplings3.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%input.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_couplings3.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_input.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/helas_calls_ampb_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_helas_calls_ampb_1.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%coupl.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%coupl_write.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%couplings2.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%input.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%mp_input.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/loop_matrix.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/mp_compute_loop_coefs.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%coupl.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%coupl_write.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%couplings2.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%couplings3.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%input.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_coupl.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_coupl_same_name.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_couplings2.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_couplings3.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_input.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp
+   long_ML_SMQCD_default/gg_wmtbx/loop_matrix.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/mp_born_amps_and_wfs.f.tmp
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%input.inc.tmp
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%intparam_definition.inc.tmp
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%mp_input.inc.tmp
+   short_ML_SMQCD_LoopInduced/gg_hh/%..%..%Source%MODEL%mp_intparam_definition.inc.tmp

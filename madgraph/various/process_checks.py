@@ -134,7 +134,7 @@ class MatrixElementEvaluator(object):
     # Helper function evaluate_matrix_element
     #===============================================================================
     def evaluate_matrix_element(self, matrix_element, p=None, full_model=None, 
-                                gauge_check=False, auth_skipping=None, output='m2'):
+                                gauge_check=False, auth_skipping=None, output='m2',MLOptions={}):  # MLOptions is an dummy argument
         """Calculate the matrix element and evaluate it for a phase space point
            output is either m2, amp, jamp
         """
@@ -2552,11 +2552,11 @@ def check_gauge_process(process, evaluator):
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p, gauge_check = False,
                                                output='jamp',MLOptions=MLOptions)
 
-    for boost in range(1,4):
-        boost_p = boost_momenta(p, boost)
-        brsvalue0 = evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = True, output='jamp',MLOptions=MLOptions)
-        mvalue0 =  evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = False, output='jamp',MLOptions=MLOptions)
-        if mvalue and mvalue['m2']: print mvalue0['m2'], brsvalue0['m2'], brsvalue0['m2']/mvalue0['m2']
+#    for boost in range(1,4):
+#        boost_p = boost_momenta(p, boost)
+#        brsvalue0 = evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = True, output='jamp',MLOptions=MLOptions)
+#        mvalue0 =  evaluator.evaluate_matrix_element(matrix_element, p=boost_p, gauge_check = False, output='jamp',MLOptions=MLOptions)
+#        if mvalue and mvalue['m2']: print mvalue0['m2'], brsvalue0['m2'], brsvalue0['m2']/mvalue0['m2']
 
     if mvalue and mvalue['m2']:
         return {'process':process,'value':mvalue,'brs':brsvalue}

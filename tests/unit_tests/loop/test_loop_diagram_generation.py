@@ -921,8 +921,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
 
         ordersChoices=[({},['QCD'],{},1),\
                        ({},['QED'],{},7),\
-                       ({},['QCD','QED'],{},10),\
-                       ({},['QED','QCD'],{'QED':-1},3),\
+                       ({},['QCD','QED'],{},8),\
+                       ({},['QED','QCD'],{'QED':-1},1),\
                        ({},['QED','QCD'],{'QCD':-1},7)]
         for (bornOrders,pert,sqOrders,nDiagGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
@@ -985,8 +985,10 @@ class LoopDiagramGenerationTest(unittest.TestCase):
                                          'state':True}))
 
         ordersChoices=[
-                       ({},['QCD','QED'],{},37,12,4,18),
+                       ({},['QCD','QED'],{},23,11,4,18),  # 37->23,12->11 remove external bubble and some triangle
                        ({},['QCD'],{},15,5,2,10)]
+        
+                
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
                                            'model':self.myloopmodel,
@@ -1000,7 +1002,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             
             ### This is to plot the diagrams obtained
             #options = draw_lib.DrawOption()
-            #filename = os.path.join('/Users/Spooner/Documents/PhD/MG5/NLO', 'diagramsVall_' + \
+            #filename = os.path.join('/Users/erdissshaw/Works', 'diagramsVall1_' + \
             #              myloopamplitude.get('process').shell_string() + ".eps")
             #plot = draw.MultiEpsDiagramDrawer(myloopamplitude.get('diagrams'),
             #                                  filename,
@@ -1077,16 +1079,16 @@ class LoopDiagramGenerationTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':-1,
                                          'state':True}))
 
-        ordersChoices=[({},['QCD','QED'],{},21,7,6,12),\
-                       ({},['QCD','QED',],{'QED':-99},28,10,8,16),\
+        ordersChoices=[({},['QCD','QED'],{},17,7,6,12),\
+                       ({},['QCD','QED',],{'QED':-99},24,10,8,16),\
                        ({},['QCD'],{},9,3,2,4),\
                        ({},['QED'],{},2,2,2,4),\
                        ({'QED':0},['QCD'],{},9,3,2,4),\
                        ({'QCD':0},['QED'],{},7,3,2,4),\
                        ({},['QCD','QED'],{'QED':-1},9,3,2,4),\
                        ({},['QCD','QED'],{'QCD':-1},7,3,2,4),\
-                       ({},['QCD','QED'],{'QED':-2},21,7,6,12),\
-                       ({},['QCD','QED'],{'QED':-3},28,10,8,16)]
+                       ({},['QCD','QED'],{'QED':-2},17,7,6,12),\
+                       ({},['QCD','QED'],{'QED':-3},24,10,8,16)]
         
         for (bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVGoal,nUVWfctGoal) in ordersChoices:
             myproc = base_objects.Process({'legs':copy.copy(myleglist),
@@ -1133,8 +1135,8 @@ class LoopDiagramGenerationTest(unittest.TestCase):
 
         ordersChoices=[({},['QCD'],{},18,6,0,12),\
                        ({},['QED'],{},4,4,0,12),\
-                       ({},['QCD','QED'],{},42,14,0,36),\
-                       ({},['QCD','QED',],{'QED':-99},56,20,0,48),\
+                       ({},['QCD','QED'],{},34,14,0,36),\
+                       ({},['QCD','QED',],{'QED':-99},48,20,0,48),\
                        ({'QED':0},['QCD'],{},18,6,0,12),\
                        ({'QCD':0},['QED'],{},14,6,0,12),\
                        ({},['QCD','QED'],{'QED':-1},18,6,0,12),\
@@ -1155,6 +1157,10 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
                 sumR2+=len(diag.get_CT(self.myloopmodel,'R2'))
                 sumUV+=len(diag.get_CT(self.myloopmodel,'UV'))
+            #print "testing:",bornOrders,pert,sqOrders,nDiagGoal,nR2Goal,nUVmassGoal,nUVCTGoal
+            #print "I got diagrams"
+            #for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
+            #    print "diagram #%i is %s"%(i,diag.nice_string())
             self.assertEqual(len(myloopamplitude.get('loop_diagrams')),nDiagGoal)
             self.assertEqual(sumR2, nR2Goal)
             self.assertEqual(sumUV, nUVmassGoal)
