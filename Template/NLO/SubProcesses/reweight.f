@@ -150,8 +150,6 @@ c**************************************************
      &     q0,',',q1,',',q2,') -> ',sudwgt
       endif
 
-      if (sudwgt.lt.1d-8) stop
-
       return
       end
 
@@ -746,7 +744,7 @@ c Argument
       double precision p(0:3,nexternal),rewgt_exp
 c Local
       logical isvx
-      integer i,j,n,ipart(2,n_max_cl),ibeam(2)
+      integer i,j,n,k,l,ipart(2,n_max_cl),ibeam(2)
       double precision pt2min,etot,pt2prev(n_max_cl),pt2pdf(n_max_cl)
      $     ,xnow(2),asref,q2now,tmp,tmp2,pdfj1,pdfj2
       integer ib(2)
@@ -862,11 +860,13 @@ c
 c     Set strong coupling used
 c   
       nFxFx_ren_scales=0
+      q2now=-1d0
 
 c     Perform alpha_s reweighting based on type of vertex
       do n=1,nexternal-2
-c       scale for alpha_s reweighting
-         q2now=pt2ijcl(n)
+c        scale for alpha_s reweighting (in special cases, the scale of a
+c        cluster might be lower than previous, so take a max())
+         q2now=max(q2now,pt2ijcl(n))
          if(n.eq.nexternal-2) then
             q2now = scale**2
          endif

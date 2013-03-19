@@ -1172,10 +1172,12 @@ c$$$        iSorH_lhe=1+2 ! filled elsewhere
       endif
 c Set the upper value of the shower scale for the H and S events,
 c respectively
-      call set_cms_stuff(mohdr)
-      call set_shower_scale_noshape(pp,nFKSprocess*2)
-      call set_cms_stuff(izero)
-      call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      if (ickkw.ne.3) then
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(pp,nFKSprocess*2)
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      endif
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
@@ -1250,6 +1252,10 @@ c Compute the scales and sudakov-reweighting for the FxFx merging
          endif
          rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
          rewgt_izero_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
       endif
 
       gfactsf=1.d0
@@ -1274,6 +1280,10 @@ c     Compute the scales and sudakov-reweighting for the FxFx merging
          endif
          rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
          rewgt_mohdr_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(pp,nFKSprocess*2)
       endif
       call set_alphaS(pp)
       if(doreweight)then
@@ -1301,6 +1311,14 @@ c     Compute the scales and sudakov-reweighting for the FxFx merging
          sevmc = fks_Hij(pp,i_fks,j_fks)
          sevmc = sevmc*ffact
       endif
+
+      if (.not. (rewgt_mohdr_calculated .and. rewgt_izero_calculated) )
+     $     then
+         write (*,*)'Both shower scales should be set before'/
+     $        /' entering the MC subtraction terms'
+         stop
+      endif
+
       call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
@@ -1369,6 +1387,10 @@ c Compute the scales and sudakov-reweighting for the FxFx merging
          endif
          rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
          rewgt_izero_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
       endif
       call set_alphaS(p1_cnt(0,1,0))
       if(doreweight)then
@@ -1726,6 +1748,10 @@ c     Compute the scales and sudakov-reweighting for the FxFx merging
            endif
            rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
            rewgt_mohdr_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+           call set_cms_stuff(mohdr)
+           call set_shower_scale_noshape(pp,nFKSprocess*2)
         endif
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
@@ -2228,7 +2254,11 @@ c
       parameter (pfrac=0.9d0)
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
+      include 'run.inc'
       include 'nFKSconfigs.inc'
+      integer izero,mohdr
+      parameter (izero=0)
+      parameter (mohdr=-100)
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
       double precision sqrtshat_ev,shat_ev
@@ -2257,6 +2287,15 @@ c jet cluster algorithm
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
      &     ,palg,fastjetdmergemax,di_ev(nexternal),di_cnt(nexternal)
       external fastjetdmergemax
+c FxFx
+      double precision rewgt,rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      external setclscales,rewgt
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       NN=0
       do j=nincoming+1,nexternal
@@ -2269,6 +2308,35 @@ c
          write (*,*) 'Error in set_shower_scale_noshape '/
      &        /'not enough QCD partons in process',NN
          stop
+      elseif(ickkw.eq.3) then
+         call set_cms_stuff(izero)
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         if (nFxFx_ren_scales.ge.2) then
+            shower_S_scale(iFKS)=FxFx_ren_scales(2) 
+         else
+            shower_S_scale(iFKS)=FxFx_ren_scales(0)
+         endif
+         call set_cms_stuff(mohdr)
+         if (.not. setclscales(pp)) then
+            write (*,*) 'ERROR in setclscales mohdr'
+            stop
+         endif
+         rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+         if (nFxFx_ren_scales.ge.2) then
+            ref_H_scale(iFKS)=FxFx_ren_scales(2)
+            pt_hardness=FxFx_ren_scales(1)
+         elseif (nFxFx_ren_scales.eq.1) then
+            ref_H_scale(iFKS)=FxFx_ren_scales(0)
+            pt_hardness=FxFx_ren_scales(1)
+         else
+            ref_H_scale(iFKS)=FxFx_ren_scales(0)
+            pt_hardness=0d0
+         endif
+         shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
       elseif (NN.eq.1) then
 c
 c For processes without jets at the Born
@@ -2300,7 +2368,7 @@ c one MUST use kt, and no lower pt cut. The radius parameter
 c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
-            rfj=0.4d0           ! the radius parameter
+            rfj=1.0d0           ! the radius parameter
             call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
                di_cnt(i)=sqrt(fastjetdmergemax(i-1))
@@ -2336,7 +2404,7 @@ c One MUST use kt, and no lower pt cut. The radius parameter
 c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
-            rfj=0.4d0           ! the radius parameter
+            rfj=1.0d0           ! the radius parameter
             call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
                di_ev(i)=sqrt(fastjetdmergemax(i-1))

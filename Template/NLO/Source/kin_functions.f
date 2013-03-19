@@ -484,7 +484,7 @@ c-----
         print *,'Error in zclus: zclus = ',zclus,', sprev = ',sprev,
      $     ', sred = ',sred
         nerr=nerr+1
-        if(nerr.eq.10)
+        if(nerr.eq.100)
      $       print *,'No more zclus errors will be printed'
       endif
 

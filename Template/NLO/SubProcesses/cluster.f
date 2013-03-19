@@ -336,7 +336,7 @@ c     Ensure that there are some allowed clusterings
       return
       end
 
-      subroutine checkbw(nbw,ibwlist,isbw)
+      subroutine checkbw(p,nbw,ibwlist,isbw)
 c**************************************************************************
 c      Checks if any resonances are on the BW for this configuration
 c**************************************************************************
@@ -344,13 +344,12 @@ c**************************************************************************
       include 'genps.inc'
       include 'nexternal.inc'
       include 'ngraphs.inc'
-      integer nbw,ibwlist(nexternal),i
+      include 'run.inc'
+      include 'real_from_born_configs.inc'
+      double precision p(0:3,nexternal)
+      integer nbw,ibwlist(nexternal),i,j,ida(2),idenpart
       logical isbw(*)
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-c  NLO RUNNING DOESN'T SET THE ONBW 
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
-      logical             OnBW(-nexternal:0)     !Set if event is on B.W.
-      common/to_BWEvents/ OnBW
+      logical OnBW(-nexternal:0),onshell
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
       integer iforest(2,-max_branch:-1,n_max_cg)
@@ -359,7 +358,72 @@ c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
       integer mapconfig_dummy(0:n_max_cg)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig_dummy
       integer icl(-(nexternal-3):nexternal)
-      integer ibw
+      integer ibw,iconf
+      double precision xp(0:3,-nexternal:nexternal),xmass
+      double precision prmass(-max_branch:nexternal,n_max_cg)
+      double precision prwidth(-max_branch:-1,n_max_cg)
+      integer prow(-max_branch:-1,n_max_cg)
+      common/c_props_inc/prmass,prwidth,prow
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      double precision dot
+      external dot
+
+c Check that momenta lead to an on-shell BW
+      iconf=real_from_born_conf(this_config,nFKSprocess)
+      do i=1,nexternal
+         do j=0,3
+            xp(j,i)=p(j,i)
+         enddo
+      enddo
+      do i=-1,-(nexternal-3),-1 !Loop over propagators
+         onbw(i) = .false.
+c Skip the t-channels
+         if (iforest(1,i,iconf).eq.1 .or. iforest(2,i,iconf).eq.1 .or.
+     &       iforest(1,i,iconf).eq.2 .or. iforest(2,i,iconf).eq.2 ) exit
+         do j=0,3
+            xp(j,i) = xp(j,iforest(1,i,iconf))+xp(j,iforest(2,i,iconf))
+         enddo
+         if (prwidth(i,iconf) .gt. 0d0) then !This is B.W.
+c
+c     If the invariant mass is close to pole mass, set OnBW to true
+c
+            xmass = sqrt(dot(xp(0,i),xp(0,i)))
+            onshell = ( abs(xmass-prmass(i,iconf)) .lt.
+     &           bwcutoff*prwidth(i,iconf) )
+            if(onshell)then
+               OnBW(i) = .true.
+c     If mother and daughter have the same ID, remove one of them
+               idenpart=0
+               do j=1,2
+                  ida(j)=iforest(j,i,iconf)
+                  if(    (ida(j).lt.0.and.
+     &                        sprop(i,iconf).eq.sprop(ida(j),iconf))
+     &               .or.(ida(j).gt.0.and.
+     &                        sprop(i,iconf).eq.IDUP(ida(j),1)))
+     &                 idenpart=ida(j)    ! mother and daugher have same ID
+               enddo
+c     Always remove if daughter final-state (and identical)
+               if(idenpart.gt.0) then
+                  OnBW(i)=.false.
+c     Else remove either this resonance or daughter,
+c                  whichever is closer to mass shell
+               elseif(idenpart.lt.0.and.abs(xmass-prmass(i,iconf)).gt.
+     $                 abs(sqrt(dot(xp(0,idenpart),xp(0,idenpart)))-
+     $                 prmass(i,iconf))) then
+                  OnBW(i)=.false.         ! mother off-shell
+               elseif(idenpart.lt.0) then
+                  OnBW(idenpart)=.false.  ! daughter off-shell
+               endif
+            endif
+         endif
+      enddo
+
       nbw=0
       do i=-1,-(nexternal-3),-1
         if(OnBW(i)) then 
@@ -375,14 +439,14 @@ c        print *,'No BW found'
       enddo
       ibw=0
       do i=-1,-(nexternal-3),-1
-        icl(i)=icl(iforest(1,i,this_config))+
-     $     icl(iforest(2,i,this_config))
+        icl(i)=icl(iforest(1,i,iconf))+
+     $     icl(iforest(2,i,iconf))
         isbw(icl(i))=.false.
         if(OnBW(i))then
           ibw=ibw+1
           ibwlist(ibw)=icl(i)
           isbw(icl(i))=.true.
-c          print *,'Added BW for resonance ',i,icl(i),this_config
+c          print *,'Added BW for resonance ',i,icl(i),iconf
           if(ibw.eq.nbw) return
         endif
       enddo
@@ -513,7 +577,7 @@ c External
         pcmsp(i)=0d0
       enddo
 c     Check if any resonances are on the BW, store results in to_checkbw
-      call checkbw(nbw,ibwlist,isbw)
+      call checkbw(p,nbw,ibwlist,isbw)
       if(btest(mlevel,4).and.nbw.gt.0)
      $     write(*,*) 'Found BWs: ',(ibwlist(i),i=1,nbw)
 
