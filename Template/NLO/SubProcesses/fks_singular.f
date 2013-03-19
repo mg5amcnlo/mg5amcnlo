@@ -2308,35 +2308,36 @@ c
          write (*,*) 'Error in set_shower_scale_noshape '/
      &        /'not enough QCD partons in process',NN
          stop
-      elseif(ickkw.eq.3) then
-         call set_cms_stuff(izero)
-         if (.not. setclscales(p1_cnt(0,1,0))) then
-            write (*,*) 'ERROR in setclscales izero'
-            stop
-         endif
-         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
-         if (nFxFx_ren_scales.ge.2) then
-            shower_S_scale(iFKS)=FxFx_ren_scales(2) 
-         else
-            shower_S_scale(iFKS)=FxFx_ren_scales(0)
-         endif
-         call set_cms_stuff(mohdr)
-         if (.not. setclscales(pp)) then
-            write (*,*) 'ERROR in setclscales mohdr'
-            stop
-         endif
-         rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
-         if (nFxFx_ren_scales.ge.2) then
-            ref_H_scale(iFKS)=FxFx_ren_scales(2)
-            pt_hardness=FxFx_ren_scales(1)
-         elseif (nFxFx_ren_scales.eq.1) then
-            ref_H_scale(iFKS)=FxFx_ren_scales(0)
-            pt_hardness=FxFx_ren_scales(1)
-         else
-            ref_H_scale(iFKS)=FxFx_ren_scales(0)
-            pt_hardness=0d0
-         endif
-         shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
+c$$$      elseif(ickkw.eq.3) then
+c$$$         call set_cms_stuff(izero)
+c$$$         if (.not. setclscales(p1_cnt(0,1,0))) then
+c$$$            write (*,*) 'ERROR in setclscales izero'
+c$$$            stop
+c$$$         endif
+c$$$         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+c$$$         if (nFxFx_ren_scales.ge.2) then
+c$$$            shower_S_scale(iFKS)=max(FxFx_ren_scales(2)
+c$$$     $           ,FxFx_ren_scales(1))
+c$$$         else
+c$$$            shower_S_scale(iFKS)=FxFx_ren_scales(0)
+c$$$         endif
+c$$$         call set_cms_stuff(mohdr)
+c$$$         if (.not. setclscales(pp)) then
+c$$$            write (*,*) 'ERROR in setclscales mohdr'
+c$$$            stop
+c$$$         endif
+c$$$         rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+c$$$         if (nFxFx_ren_scales.ge.2) then
+c$$$            ref_H_scale(iFKS)=max(FxFx_ren_scales(2),FxFx_ren_scales(1))
+c$$$            pt_hardness=FxFx_ren_scales(1)
+c$$$         elseif (nFxFx_ren_scales.eq.1) then
+c$$$            ref_H_scale(iFKS)=FxFx_ren_scales(0)
+c$$$            pt_hardness=FxFx_ren_scales(1)
+c$$$         else
+c$$$            ref_H_scale(iFKS)=FxFx_ren_scales(0)
+c$$$            pt_hardness=0d0
+c$$$         endif
+c$$$         shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
       elseif (NN.eq.1) then
 c
 c For processes without jets at the Born
@@ -2419,7 +2420,8 @@ c can be changed
             enddo
             ref_H_scale(iFKS)=di_ev(NN-1)
             pt_hardness=di_ev(NN)
-            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+c$$$            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
          else
             ref_H_scale(iFKS)=shower_S_scale(iFKS)
             shower_H_scale(iFKS)=ref_H_scale(iFKS)

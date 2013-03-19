@@ -478,6 +478,10 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
 
+      logical setclscales
+      double precision rewgt,rewgt_exp_mohdr
+      external setclscales,rewgt
+
       double precision zero,one,tiny,vtiny,ymin
       parameter (zero=0d0)
       parameter (one=1d0)
@@ -594,6 +598,11 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
+c$$$         if (.not. setclscales(pp)) then
+c$$$            write (*,*) 'ERROR in setclscales mohdr'
+c$$$            stop
+c$$$         endif
+c$$$         probne=min(rewgt(pp,rewgt_exp_mohdr),bogus_probne_fun(ptHW6))
         probne=bogus_probne_fun(ptHW6)
       endif
 c
