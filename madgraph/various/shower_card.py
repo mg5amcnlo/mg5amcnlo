@@ -134,6 +134,7 @@ class ShowerCard(dict):
         """write the shower_card for shower in card_path.
         if self.testing, card_path takes the value of the string"""
 
+        shower = shower.upper()
         if shower.startswith('PYTHIA6'):
             self.shower = 'PYTHIA6'
         else:
