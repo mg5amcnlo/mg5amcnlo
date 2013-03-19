@@ -47,8 +47,8 @@ class DiagramTag(object):
            (((1,2,id12),(3,4,id34)),id1234),
            5,id91086712345)
     where idN is the id of the corresponding interaction. The ordering within
-    chains is based on chain length (depth; here, 1234 has depth 2, 910867 has
-    depth 3, 5 has depht 0), and if equal on the ordering of the chain elements.
+    chains is based on chain length (depth; here, 1234 has depth 3, 910867 has
+    depth 4, 5 has depht 0), and if equal on the ordering of the chain elements.
     The determination of central vertex is based on minimizing the chain length
     for the longest subchain. 
     This gives a unique tag which can be used to identify diagrams
