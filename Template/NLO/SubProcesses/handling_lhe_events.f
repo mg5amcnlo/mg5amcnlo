@@ -49,7 +49,7 @@ c
      $     ,rw_Fscale_down,rw_Fscale_up
       character*10 MonteCarlo
       character*100 path
-      character*72 buffer,buffer2
+      character*72 buffer,buffer_lc,buffer2
       logical rwgt_skip
       common /crwgt_skip/ rwgt_skip
       logical rwgt_skip_pdf,rwgt_skip_scales
@@ -92,8 +92,10 @@ c
       numscales=0
       do
          read(92,'(a)',err=87,end=87) buffer
+         buffer_lc=buffer
+         call case_trap3(72,buffer_lc)
 c Replace the random number seed with the one used...
-         if (index(buffer,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
+         if (index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
             open (unit=93,file="randinit",status="old",err=96)
             read(93,'(a)') buffer2
             if (index(buffer2,'=').eq.0) goto 96
@@ -102,34 +104,36 @@ c Replace the random number seed with the one used...
             close(93)
             write(buffer,'(i11,a)')iseed,' =  iseed'
 c Update the number of events
-         elseif (index(buffer,'nevents').ne.0 .and.
+         elseif (index(buffer_lc,'nevents').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             write(buffer,'(i11,a)')nevents,' = nevents'
-         elseif (index(buffer,'reweight_PDF').ne.0 .and. index(buffer
-     $           ,'.true.').ne.0 .and. buffer(1:1).ne.'#') then
+         elseif (index(buffer_lc,'reweight_pdf').ne.0 .and.
+     $           index(buffer_lc,'.true.').ne.0 .and.
+     $           buffer(1:1).ne.'#') then
             rwgt_skip=.false.
             rwgt_skip_pdf=.false.
-         elseif (index(buffer,'PDF_set_min').ne.0 .and.
+         elseif (index(buffer_lc,'pdf_set_min').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) pdf_set_min
-         elseif (index(buffer,'PDF_set_max').ne.0 .and.
+         elseif (index(buffer_lc,'pdf_set_max').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) pdf_set_max
-         elseif (index(buffer,'reweight_scale').ne.0 .and. index(buffer
-     $           ,'.true.').ne.0 .and. buffer(1:1).ne.'#') then
+         elseif (index(buffer_lc,'reweight_scale').ne.0 .and.
+     $           index(buffer_lc,'.true.').ne.0 .and.
+     $           buffer(1:1).ne.'#') then
             rwgt_skip=.false.
             rwgt_skip_scales=.false.
             numscales=3
-         elseif (index(buffer,'rw_Rscale_down').ne.0 .and.
+         elseif (index(buffer_lc,'rw_rscale_down').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_down
-         elseif (index(buffer,'rw_Rscale_up').ne.0 .and.
+         elseif (index(buffer_lc,'rw_rscale_up').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_up
-         elseif (index(buffer,'rw_Fscale_down').ne.0 .and.
+         elseif (index(buffer_lc,'rw_fscale_down').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_down
-         elseif (index(buffer,'rw_Fscale_up').ne.0 .and.
+         elseif (index(buffer_lc,'rw_fscale_up').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_up
          endif
@@ -979,3 +983,31 @@ c
 
       return
       end
+
+
+      subroutine case_trap3(ilength,name)
+c**********************************************************    
+c change the string to lowercase if the input is not
+c**********************************************************
+      implicit none
+c
+c     ARGUMENT
+c      
+      character*(*) name
+c
+c     LOCAL
+c
+      integer i,k,ilength
+
+      do i=1,ilength
+         k=ichar(name(i:i))
+         if(k.ge.65.and.k.le.90) then  !upper case A-Z
+            k=ichar(name(i:i))+32   
+            name(i:i)=char(k)        
+         endif
+      enddo
+
+      return
+      end
+
+
