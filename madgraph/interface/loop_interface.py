@@ -631,8 +631,14 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
 	# HSS,13/11/2012
-	args2=re.search("QED",line)
-	if args2:
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        args2=re.search("QED",perturbation_couplings)
+        if args2:
             self.validate_model(coupling_type='QED')
         else:
        	    self.validate_model()
@@ -650,9 +656,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         myprocdef = self.extract_process(proc)
 	# HSS, 13/11/2012
 	# Is it useless ?
-	if args2:
+        if args2:
             self.validate_model(loop_type='virtual',coupling_type='QED')
-	else:
+        else:
             self.validate_model(loop_type='virtual')
 	# HSS
         self.proc_validity(myprocdef,'ML5_check')
@@ -664,15 +670,20 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         existing amplitudes
         """
         args = self.split_arg(line)
-        
         # Check the validity of the arguments
         self.check_add(args)
 	# HSS, 13/11/2012
-	args2=re.search('QED',line)
-	if args2:
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        args2=re.search('QED',perturbation_couplings)
+        if args2:
             self.validate_model(coupling_type='QED')
-	else:
-	    self.validate_model()
+        else:
+            self.validate_model()
 	# HSS
 
         if args[0] == 'process':            

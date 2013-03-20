@@ -937,7 +937,7 @@ class GoSamRunner(me_comparator.MERunner):
             elif line.find("# out=")==0:
                 proc_card_out+="out="+','.join([particle_dictionary[p][1] for \
                                                 p in outcoming_parts])+'\n'
-            elif line.find("extensions=")==0:
+            elif line.find("# extensions=")==0:
                 if self.use_dred:
                     proc_card_out+="extensions=dred,"+line[11:]+'\n'
                 else:
@@ -1001,6 +1001,7 @@ class GoSamRunner(me_comparator.MERunner):
                 proc_card_out+="zero=wB,wT,mU,mD,mC,mS,me,mmu,"
                 proc_card_out+="VUS,CVSU,VUB,CVBU,VCD,CVDC,"
                 proc_card_out+="VCB,CVBC,VTD,CVDT,VTS,CVST"+'\n'
+            elif line.find("# one=")==0:
                 proc_card_out+="one=VUD,CVDU,VCS,CVSC,VTB,CVBT"+'\n'               
             elif line.find("# qgraf.options=")==0:
                 proc_card_out+="qgraf.options=nosnail ,notadpole ,onshell"+'\n'
@@ -1027,6 +1028,18 @@ class GoSamRunner(me_comparator.MERunner):
                     proc_card_out+="true=chord[ghZ,ghZbar,ghWp,ghWpbar,ghWm, ghWmbar,0, 0];\\n\\\n"
                 else:
                     proc_card_out+="# No qgraf specific options\n"
+            # HSS, 20/03/2013
+            elif line.find("# qgraf.bin=")==0:
+                proc_card_out+="qgraf.bin=/Users/erdissshaw/Works/qgraf/run\n"
+            elif line.find("# golem95.fcflags=")==0:
+                proc_card_out+="golem95.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
+            elif line.find("# golem95.ldflags=")==0:
+                proc_card_out+="golem95.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lgolem95\n"
+            elif line.find("# samurai.ldflags=")==0:
+                proc_card_out+="samurai.ldflags=-L/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/lib -lsamurai\n"
+            elif line.find("# samurai.fcflags=")==0:
+                proc_card_out+="samurai.fcflags=-I/Users/erdissshaw/Works/GoSam/gosam_contrib_dir/include/gosam-contrib\n"
+            # HSS
             else:
                 proc_card_out+=line
 

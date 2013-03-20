@@ -104,12 +104,12 @@ if '__main__' == __name__:
     #SavedRun = me_comparator.PickleRunner.find_comparisons(
     #                     os.path.join(pickle_path,'ml5_parallel_test.pkl'))[0]
     # Create a MERunner object for MadLoop 4
-    ML4 = loop_me_comparator.LoopMG4Runner()
-    ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+    #ML4 = loop_me_comparator.LoopMG4Runner()
+    #ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
 
     # Create a MERunner object for GoSam
-    # GoSam = loop_me_comparator.GoSamRunner()
-    # GoSam.setup('/Users/Spooner/Documents/PhD/HEP_softs/GoSam_bis')
+    GoSam = loop_me_comparator.GoSamRunner()
+    GoSam.setup('/Users/erdissshaw/Works/GoSam/gosam_dir')
 
     # Create a MERunner object for MadLoop 5 optimized
     ML5_opt = loop_me_comparator.LoopMG5Runner()
@@ -127,7 +127,7 @@ if '__main__' == __name__:
     my_comp = loop_me_comparator.LoopMEComparator()
     # Always put the saved run first if you use it, so that the corresponding PS
     # points will be used
-    my_comp.set_me_runners(ML5_opt)
+    my_comp.set_me_runners(ML5_opt,GoSam)
 
     # Run the actual comparison
     energy=1000
