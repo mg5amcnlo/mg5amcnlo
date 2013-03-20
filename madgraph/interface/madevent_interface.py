@@ -4253,6 +4253,8 @@ calculator."""
                             stdin=subprocess.PIPE,
                             cwd=event_dir)
             proc.wait()
+            # Wait 10 s to make sure file is finished writing
+            time.sleep(10)            
         except OSError, error:
             logger.error('fail to run reweight: %s. Please check that SysCalc is correctly installed.' % error)
         else:
