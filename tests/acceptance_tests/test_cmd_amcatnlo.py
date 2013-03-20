@@ -206,7 +206,51 @@ class TestMECmdShell(unittest.TestCase):
                         os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
 
 
+    def test_generate_events_lo_hwpp_set(self):
+        """test the param_card created is correct"""
+        
+        self.generate_production()
+        cmd = """generate_events LO -p
+                 set parton_shower herwigpp
+                 set nevents 100
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        #self.do('import command /tmp/mg5_cmd')
+        #self.do('generate_events LO -f')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
     
+
+    def test_generate_events_lo_hw6_set(self):
+        """test the param_card created is correct"""
+        
+        self.generate_production()
+        cmd = """generate_events LO
+                 set parton_shower herwig6
+                 set nevents 100
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        #self.do('import command /tmp/mg5_cmd')
+        #self.do('generate_events LO -f')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
+
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
 
 
 
