@@ -789,7 +789,7 @@ c   Set mimimum kt scale, depending on highest mult or not
       endif
 c For FxFx merging, pt2min should be set equal to the 2nd smallest (QCD)
 c clustering scale
-      if (pt2ijcl(ifxfx(2)).gt.0d0) then
+      if (ifxfx(2).gt.0 .and. pt2ijcl(ifxfx(2)).gt.0d0) then
          pt2min=pt2ijcl(ifxfx(2))
       else
          pt2min=1.0d37
