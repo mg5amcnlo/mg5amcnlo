@@ -2,7 +2,7 @@ P0=$(shell ls -dl ../SubProcesses/P0* | head -1)
 P01=$(shell echo $(P0) | cut -d'/' -f3)
 
 INCLUDE=-I../SubProcesses/$(P01)
-FF=gfortran -fno-automatic -ffixed-line-length-132 $(INCLUDE)
+FF=gfortran -g -fno-automatic -ffixed-line-length-132 -fbounds-check $(INCLUDE)
 FILES=handling_lhe_events.o fill_MC_mshell.o
 
 %.o : %.f
