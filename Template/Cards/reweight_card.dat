@@ -1,0 +1,13 @@
+# Central scale factors
+scalefact:
+0.5 1 2
+# \alpha_s emission scale factors
+alpsfact:
+0.5 1 2
+# matching scales
+matchscale:
+32 50 80
+# PDF sets and number of members (0 or none for all members)
+PDF:
+CT10nlo.LHgrid
+# MSTW2008nlo68cl.LHgrid 1
