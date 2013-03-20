@@ -90,8 +90,9 @@ c jet cluster algorithm
       integer njet_eta
 c Photon isolation
       integer nph,nem,k,nin
-      double precision ptg,chi_gamma_iso
-      double precision drlist(nexternal),Etsum(0:nexternal)
+      double precision ptg,chi_gamma_iso,iso_getdrv40
+      double precision Etsum(0:nexternal)
+      real drlist(nexternal)
       double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
       logical alliso
 c Sort array of results: ismode>0 for real, isway=0 for ascending order
@@ -321,8 +322,8 @@ c   Use is made of parton cm frame momenta. If this must be
 c   changed, pQCD used below must be redefined
 c NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE 
       if (ptgmin.ne.0d0) then
+        nph=0
         do j=nincoming+1,nexternal
-          nph=0
           if (is_a_ph(j)) then
             nph=nph+1
             do i=0,3
@@ -364,7 +365,7 @@ c Loop over all photons
 
 c Isolate from hadronic energy
           do i=1,nQCD
-            drlist(i)=sqrt(R2(pgamma(0,j),pQCD(0,i)))
+            drlist(i)=sngl(sqrt(iso_getdrv40(pgamma(0,j),pQCD(0,i))))
           enddo
           call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
           Etsum(0)=0.d0
@@ -384,11 +385,11 @@ c Isolate from hadronic energy
 c Isolate from EM energy
           if(isoEM.and.nem.gt.1)then
             do i=1,nem
-              drlist(i)=sqrt(R2(pgamma(0,j),pem(0,i)))
+              drlist(i)=sngl(sqrt(iso_getdrv40(pgamma(0,j),pem(0,i))))
             enddo
             call sortzv(drlist,isorted,nem,ismode,isway,izero)
 c First of list must be the photon: check this, and drop it
-            if(isorted(1).ne.j.or.drlist(isorted(1)).ne.0.d0)then
+            if(isorted(1).ne.j)then
               write(*,*)'Error #1 in photon isolation'
               write(*,*)j,isorted(1),drlist(isorted(1))
               stop
@@ -653,3 +654,69 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
  80   ICMPCH=1
       RETURN
       END
+
+
+      function iso_getdrv40(p1,p2)
+      implicit none
+      real*8 iso_getdrv40,p1(0:3),p2(0:3)
+      real*8 iso_getdr
+c
+      iso_getdrv40=iso_getdr(p1(0),p1(1),p1(2),p1(3),
+     #                       p2(0),p2(1),p2(2),p2(3))
+      return
+      end
+
+
+      function iso_getdr(en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2)
+      implicit none
+      real*8 iso_getdr,en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2,deta,dphi,
+     # iso_getpseudorap,iso_getdelphi
+c
+      deta=iso_getpseudorap(en1,ptx1,pty1,pl1)-
+     #     iso_getpseudorap(en2,ptx2,pty2,pl2)
+      dphi=iso_getdelphi(ptx1,pty1,ptx2,pty2)
+      iso_getdr=sqrt(dphi**2+deta**2)
+      return
+      end
+
+
+      function iso_getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 iso_getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      iso_getpseudorap=eta
+      return
+      end
+
+
+      function iso_getdelphi(ptx1,pty1,ptx2,pty2)
+      implicit none
+      real*8 iso_getdelphi,ptx1,pty1,ptx2,pty2,tiny,pt1,pt2,tmp
+      parameter (tiny=1.d-5)
+c
+      pt1=sqrt(ptx1**2+pty1**2)
+      pt2=sqrt(ptx2**2+pty2**2)
+      if(pt1.ne.0.d0.and.pt2.ne.0.d0)then
+        tmp=ptx1*ptx2+pty1*pty2
+        tmp=tmp/(pt1*pt2)
+        if(abs(tmp).gt.1.d0+tiny)then
+          write(*,*)'Cosine larger than 1'
+          stop
+        elseif(abs(tmp).ge.1.d0)then
+          tmp=sign(1.d0,tmp)
+        endif
+        tmp=acos(tmp)
+      else
+        tmp=1.d8
+      endif
+      iso_getdelphi=tmp
+      return
+      end
