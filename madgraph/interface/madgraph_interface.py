@@ -2882,6 +2882,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
+            # HSS, 20/03/2013
+            opt_loop_output=self.options["loop_optimized_output"]
+            # HSS
             self.do_set('loop_optimized_output %s' % opt_loop_output, log=False)
             
             nb_processes += len(gauge_result_no_brs)

@@ -951,9 +951,9 @@ class GoSamRunner(me_comparator.MERunner):
                 # here for now.
                 proc_card_out+="model=sm\n"
             elif line.find("# abbrev.level=")==0:
-                proc_card_out+="abbrev.level = diagram\n"
+                proc_card_out+="abbrev.level diagram\n"
             elif line.find("# abbrev.limit=")==0:
-                proc_card_out+="abbrev.limit = 500\n"
+                proc_card_out+="abbrev.limit 500\n"
             elif line.find("# group=")==0:
                 proc_card_out+="group = False\n"
             elif line.find("# order=")==0:

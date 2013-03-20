@@ -2904,6 +2904,9 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
 
         # Initialize matrix element evaluation
         # For the unitary gauge, open loops should not be used
+        # HSS, 20/03/2013
+        loop_optimized_bu = cmd.options['loop_optimized_output']
+        # HSS
         loop_optimized_output = False
         aloha.unitary_gauge = True
         if processes_unit.get('perturbation_couplings')==[]:
