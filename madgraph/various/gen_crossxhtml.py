@@ -629,6 +629,11 @@ class OneTagResults(dict):
                              exists(pjoin(path,"%s_pythia_events.hep" % tag))):
                 self.pythia.append('hep')
             
+            if 'rwt' not in self.pythia and \
+                            (exists(pjoin(path,"%s_reweight.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_reweight.dat" % tag))):
+                self.pythia.append('rwt')
+            
             if 'root' not in self.pythia and \
                               exists(pjoin(path,"%s_pythia_events.root" % tag)):
                 self.pythia.append('root')
@@ -731,6 +736,11 @@ class OneTagResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_events.root">rootfile (LHE)</a>"""
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
+            if 'rwt' in self.pythia:
+                link = './Events/%(run_name)s/%(tag)s_reweight.dat'
+                level = 'pythia'
+                name = 'Reweight'
+                out += self.special_link(link, level, name)                 
             if 'plot' in self.pythia:
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             return out % self

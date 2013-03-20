@@ -74,6 +74,9 @@
 #
 #**********************************************************
 # Store info for systematics studies
+# WARNING: If use_syst is T, matched Pythia output is 
+#          meaningful ONLY if plotted taking matchscale 
+#          reweighting into account!
 #**********************************************************
    F  = use_syst      ! Enable systematics studies
 #**********************************************************
