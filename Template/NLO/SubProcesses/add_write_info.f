@@ -316,8 +316,9 @@ c all went fine and we can copy the new momenta of the old ones.
                enddo
             enddo
          elseif(mfail.eq.1)then
-c Probably not need, but just to make sure: fill the momenta common
+c Probably not needed, but just to make sure: fill the momenta common
 c blocks again by call generate momenta again.
+            wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             if(Hevents)then
               call set_cms_stuff(mohdr)
