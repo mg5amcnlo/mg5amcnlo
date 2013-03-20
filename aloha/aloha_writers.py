@@ -669,7 +669,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
-            out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
+            if not abs(tmp - number) / abs(tmp + number) < 1e-8:
+                out = '%s%s' % (number, self.format)
+            else:
+                out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out
     
     def define_expression(self):
@@ -1203,8 +1206,17 @@ class ALOHAWriterForCPP(WriteALOHA):
     
     
     def change_number_format(self, number):
-        """Format numbers into C++ format"""
-        if isinstance(number, complex):
+        """Formating the number"""
+
+        def isinteger(x):
+            try:
+                return int(x) == x
+            except TypeError:
+                return False
+
+        if isinteger(number):
+            out = '%s.' % (str(int(number)))
+        elif isinstance(number, complex):
             if number.imag:
                 if number.real:
                     out = '(%s + %s*cI)' % (self.change_number_format(number.real), \
@@ -1217,13 +1229,16 @@ class ALOHAWriterForCPP(WriteALOHA):
                     else: 
                         out = '%s * cI' % self.change_number_format(number.imag)
             else:
-                out = '%s' % (self.change_number_format(number.real))                         
+                out = '%s' % (self.change_number_format(number.real))
         else:
-            if number == int(number):
-                out = '%d.' % int(number)
+            tmp = Fraction(str(number))
+            tmp = tmp.limit_denominator(100)
+            if not abs(tmp - number) / abs(tmp + number) < 1e-8:
+                out = '%.9f' % (number)
             else:
-                out = '%.9f' % number
+                out = '%s./%s.' % (tmp.numerator, tmp.denominator)
         return out
+    
     
     def shift_indices(self, match):
         """shift the indices for non impulsion object"""
@@ -1727,16 +1742,29 @@ class ALOHAWriterForPython(WriteALOHA):
     writer = writers.PythonWriter
     
     @staticmethod
-    def change_number_format(obj):
+    def change_number_format(obj, pure_complex=''):
+        change_number_format = ALOHAWriterForPython.change_number_format
         if obj.real == 0 and obj.imag:
             if int(obj.imag) == obj.imag: 
                 return '%ij' % obj.imag
             else:
-                return '%sj' % str(obj.imag)
-        elif obj.imag == 0 and int(obj.real) == obj:
-            return '%i' % obj.real 
-        else:
-            return str(obj)
+                return change_number_format(obj.imag, pure_complex='j')
+        elif obj.imag != 0:
+            return '(%s+%s)' % (change_number_format(obj.real),
+                               change_number_format(obj.imag, pure_complex='j')) 
+        elif obj.imag == 0: 
+            if int(obj.real) == obj:
+                return '%i%s' % (obj.real,pure_complex)
+            obj = obj.real
+            tmp = Fraction(str(obj))
+            tmp = tmp.limit_denominator(100)
+            if not abs(tmp - obj) / abs(tmp + obj) < 1e-8:
+                out = str(obj)
+            elif tmp.denominator != 1:
+                out = '%i%s/%i' % (tmp.numerator, pure_complex, tmp.denominator)
+            else:
+                out = '%i%s' % (tmp.numerator, pure_complex)
+        return out 
     
     
     def shift_indices(self, match):
