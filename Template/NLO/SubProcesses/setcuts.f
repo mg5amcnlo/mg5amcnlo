@@ -149,7 +149,8 @@ c variable ptj
       include 'nFKSconfigs.inc'
       include "fks_info.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
@@ -238,6 +239,19 @@ c Add the minimal jet pTs to tau
                      stop
                   endif
                   xm(i)=emass(i)+ptj
+c Add the minimal photon pTs to tau
+               elseif(IS_A_PH(i))then
+                  if (abs(emass(i)).gt.vtiny) then
+                     write (*,*) 'Error in set_tau_min in setcuts.f:'
+                     write (*,*) 'mass of a photon should be zero',i
+     &                    ,emass(i)
+                     stop
+                  endif
+                  if  (j_fks.gt.nincoming)
+     &                 taumin(iFKS)=taumin(iFKS)+ptgmin
+                  taumin_s(iFKS)=taumin_s(iFKS)+ptgmin
+                  taumin_j(iFKS)=taumin_j(iFKS)+ptgmin
+                  xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
                   taumin(iFKS)=taumin(iFKS)+emass(i)

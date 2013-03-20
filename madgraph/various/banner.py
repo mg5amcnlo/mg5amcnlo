@@ -681,6 +681,12 @@ class RunCardNLO(RunCard):
         self.add_line('ebeam2', 'float', 4000, fortran_name='ebeam(2)')
         # BW cutoff (M+/-bwcutoff*Gamma)
         self.add_line('bwcutoff', 'float', 15.0)
+        # Photon isolation
+        self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
         if self['pdlabel'] == 'lhapdf':
