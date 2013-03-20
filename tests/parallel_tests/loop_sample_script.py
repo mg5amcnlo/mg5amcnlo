@@ -65,6 +65,7 @@ if '__main__' == __name__:
 #    my_proc_list.append(('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
 #    my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
     my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}))
+    my_proc_list.append(('e+ e- > d d~',{'QED':2,'QCD':0},['QED'],{'QCD':0,'QED':6}))
 #    my_proc_list.append(('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}))
 ## Check higgs massive tt~ processes
 #    my_proc_list.append(('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}))

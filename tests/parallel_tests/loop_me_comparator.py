@@ -137,15 +137,17 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         self.non_zero = 0 
 
         dir_name = os.path.join(self.mg5_path, self.temp_dir_name)
-
+        print "is dir 1?",os.path.isdir(os.path.join(dir_name,'Cards'))
         # Create a proc_card.dat in the v5 format
         proc_card_location = os.path.join(self.mg5_path, 'proc_card_%s.dat' % \
                                           self.temp_dir_name)
+        print "is dir 2?",os.path.isdir(os.path.join(dir_name,'Cards'))
         proc_card_file = open(proc_card_location, 'w')
         proc_card_file.write(self.format_mg5_proc_card(proc_list, model))
         proc_card_file.close()
         logging.info("proc_card.dat file for %i processes successfully created in %s" % \
                      (len(proc_list), os.path.join(dir_name, 'Cards')))
+        print "is dir 3?",os.path.isdir(os.path.join(dir_name,'Cards'))
         # Run mg5
         logging.info("Running mg5")
         proc_card = open(proc_card_location, 'r').read()
