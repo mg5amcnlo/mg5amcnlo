@@ -105,6 +105,7 @@ SysCalc::SysCalc(istream& conffile,
   _beam[1] = 1;
   _lhe_output = false;
   _event_weight = 1;
+  _event_number = 0;
   
   string line;
   vector<string> tokens;
@@ -197,13 +198,19 @@ SysCalc::SysCalc(istream& conffile,
     _sysfile->getline(line, 1000);
     string linestr = line;
     bool done = (linestr.find("<event") != string::npos) || _sysfile->eof();
+    bool hold = false;
     while (!done){
-      _header_text.append(linestr);
-      _header_text.push_back('\n');
+      if (!hold) hold = (linestr.find("<initrwgt") != string::npos);
+      if (!hold){
+	_header_text.append(linestr);
+	_header_text.push_back('\n');
+      }
+      if (hold) hold = (linestr.find("</initrwgt") == string::npos);
       _sysfile->getline(line, 1000);
       linestr = line;
       done = (linestr.find("<event") != string::npos) || _sysfile->eof();
     }
+    
     // Make sure that there there is still something in the file
     if (_sysfile->eof()){
       _filestatus = false;
@@ -300,6 +307,8 @@ bool SysCalc::parseEvent(string event)
 
   // Set up event for parsing
 
+  if(DEBUG) cout << "Start parsing event" << endl;
+
   if(event != ""){
     _eventtext = event;
   }
@@ -322,21 +331,29 @@ bool SysCalc::parseEvent(string event)
 	if(_sysfile->eof()) done = true;
 	if (!start) continue;
       }
+      done = (linestr.find("</event>") != string::npos) 
+	|| (linestr.find("<rwgt>") != string::npos)
+	|| _sysfile->eof();
+      if (done) linestr = "</event>";
       _eventtext.append(linestr);
       _eventtext.push_back('\n');
-      done = (linestr.find("</event>") != string::npos) || _sysfile->eof();
     }
     // Check if there is still something in the file
     if (_sysfile->eof()){
       _filestatus = false;
     }
   }
+  if(DEBUG) cout << "Read event from file:" << endl;
+  if(DEBUG) cout << _eventtext << endl;
+
   _xml_document.Parse(_eventtext.c_str());
   _event = _xml_document.FirstChildElement("event");
 
   if(!_event){
     return false;
   }
+
+  if(DEBUG) cout << "Valid event tag found" << endl;
 
   // Try extracting the event weight if this is an lhe file
   vector<string> tokens;
@@ -352,9 +369,10 @@ bool SysCalc::parseEvent(string event)
     return false;
   }
   
+  if(DEBUG) cout << "Valid mgrwt tag found" << endl;
+
   // Prepare for filling variables
 
-  _event_number = 0;
   _n_qcd = 0;
   _ren_scale = 0;
   _alpsem_scales.clear();
@@ -370,6 +388,8 @@ bool SysCalc::parseEvent(string event)
   _total_reweight_factor = 1;
 
   // Start filling variables
+
+  if(DEBUG) cout << "Start reading variables from event" << endl;
 
   XMLElement* subelement = 0;
 
@@ -512,7 +532,7 @@ bool SysCalc::convertEvent()
 
   if (fabs(org_weight - _total_reweight_factor)/
       (org_weight+_total_reweight_factor) > 5e-3) {
-    cout << "Warning: Reweight factor not correctly calculated in event "
+    cout << "Warning: Reweight factor differs in event "
 	 << _event_number << ": ";
     cout << org_ren_alps*org_em_alps*org_pdf_fact << " (cf. "
 	 << _total_reweight_factor << ")" << endl;
@@ -622,40 +642,40 @@ bool SysCalc::writeHeader(ostream& outfile)
     int end = _header_text.find("</header");
     outfile << _header_text.substr(0, end);
   }
-  outfile << "  <initrwgt>\n";
+  outfile << "<initrwgt>\n";
   int weight_id = 0;
   if(_scalefacts.size() > 0) {
-    outfile << "    <weightgroup type=\"Central scale variation\" combine=\"envelope\">" << endl;
+    outfile << "  <weightgroup type=\"Central scale variation\" combine=\"envelope\">" << endl;
     for (int i=0; i < _scalefacts.size(); i++)
-      outfile << "      <weight id=\"" << ++weight_id << "\"> scalefact="
+      outfile << "    <weight id=\"" << ++weight_id << "\"> scalefact="
 	      << _scalefacts[i] << "</weight>" << endl;
-    outfile << "    </weightgroup>" << endl;
+    outfile << "  </weightgroup>" << endl;
   }
   if(_alpsfacts.size() > 0) {
-    outfile << "    <weightgroup type=\"Emission scale variation\" combine=\"envelope\">" << endl;
+    outfile << "  <weightgroup type=\"Emission scale variation\" combine=\"envelope\">" << endl;
     for (int i=0; i < _alpsfacts.size(); i++)
-      outfile << "      <weight id=\"" << ++weight_id << "\"> alpsfact="
+      outfile << "    <weight id=\"" << ++weight_id << "\"> alpsfact="
 	      << _alpsfacts[i] << "</weight>" << endl;
-    outfile << "    </weightgroup>" << endl;
+    outfile << "  </weightgroup>" << endl;
   }
   if(_PDFsets.size() > 0){
     for (int i=0; i < _PDFsets.size(); i++){
-      outfile << "    <weightgroup type=\"" << _PDFsets[i] 
+      outfile << "  <weightgroup type=\"" << _PDFsets[i] 
 	      << "\" combine=\"" << _combinations[i] << "\">" << endl;
       for (int j=0; j < _members[i]; j++)
-	outfile << "      <weight id=\"" << ++weight_id << "\">Member "
+	outfile << "    <weight id=\"" << ++weight_id << "\">Member "
 		<< j << "</weight>" << endl;
-      outfile << "    </weightgroup>" << endl;
+      outfile << "  </weightgroup>" << endl;
     }
   }
   if(_matchscales.size() > 0) {
-    outfile << "    <weightgroup type=\"Matching scale variation\" combine=\"envelope\">" << endl;
+    outfile << "  <weightgroup type=\"Matching scale variation\" combine=\"envelope\">" << endl;
     for (int i=0; i < _matchscales.size(); i++)
-      outfile << "      <weight id=\"" << ++weight_id << "\"> Qmatch="
+      outfile << "    <weight id=\"" << ++weight_id << "\"> Qmatch="
 	      << _matchscales[i] << "</weight>" << endl;
-    outfile << "    </weightgroup>" << endl;
+    outfile << "  </weightgroup>" << endl;
   }
-  outfile << "  </initrwgt>\n";
+  outfile << "</initrwgt>\n";
   if (!_lhe_output)
     outfile << "</header>\n";
   else {
