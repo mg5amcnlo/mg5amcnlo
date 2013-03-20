@@ -1935,7 +1935,8 @@ class width_estimate(object):
 
         for res in self.br.keys():
             logger.info('  ')
-            logger.info('decay channels for '+res+' :')
+            logger.info('decay channels for '+res+' : ( width = ' 
+                        +str(self.width_value[res])+' GeV )')
             logger.info('       BR                 d1  d2' )
             for decay in self.br[res]:
                 bran = decay['br']
@@ -2041,6 +2042,7 @@ class width_estimate(object):
                 continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res] = []
+            self.width_value[anti_res]=self.width_value[res]
             for chan, decay in enumerate(self.br[res]):
                 self.br[anti_res].append({})
                 bran=decay['br']
@@ -2114,6 +2116,7 @@ class width_estimate(object):
         if 'decay' not in param_card or not hasattr(param_card['decay'], 'decay_table'):
             return self.br
 
+        self.width_value={}
         for id, data in param_card['decay'].decay_table.items():
 #           check is the new width is close to the one originally in the banner
             recalculated_width=param_card['decay'].param_dict[(id,)].value
@@ -2130,7 +2133,8 @@ class width_estimate(object):
                     d = [self.pid2label[pid] for pid in  parameter.lhacode[1:]]
                     current.append({'daughters':d, 'br': parameter.value})
             self.br[label] = current
-        
+            self.width_value[label]=recalculated_width  
+
         #update the banner:
         self.banner['slha'] = param_card.write(None)
         self.banner.param_card = param_card
@@ -2585,7 +2589,7 @@ class decay_all_events:
             else:
                 event_nb+=1
                 report[decay['decay_tag']] += 1 
-                if (event_nb % max(int(10**int(math.log10(float(event_nb)))),10)==0): 
+                if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                     running_time = misc.format_timer(time.time()-starttime)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
 
@@ -2819,14 +2823,14 @@ class decay_all_events:
                 
             if __debug__:    
                 for i in range(len(decays)):
-                    print "|  ",
+                    comment= "| "
                     for j in range(len(decays)):
                         if i == j:
-                            print "%4e " % 1,
+                            comment+= "%4e " % 1
                             continue
-                        print  "%4e " % valid[(i,j)],
-                    print "|", os.path.basename(decays[i]['path'])                     
-                
+                        comment+=  "%4e " % valid[(i,j)]
+                    comment+= "|"+ os.path.basename(decays[i]['path'])                     
+                    logger.debug(comment)
             
             # store the result in the relation object. (using tag as key)
             for i in range(len(decays)):
@@ -3342,7 +3346,7 @@ class decay_all_events:
                     #raise Exception   
                 if not atleastonedecay:
                     # NO decay [one possibility is all decay are identical to their particle]
-                    logger.info('No independant decay for one type of final states -> skip those events')
+                    logger.info('No independent decay for one type of final states -> skip those events')
                     nb_decay[decaying] = numberev
                     ev += numberev -1
                     break
@@ -3355,7 +3359,7 @@ class decay_all_events:
                 for  index,tag_decay in enumerate(max_decay):
                     info_text += '            decay_config %s [%s] : %s\n' % \
                        (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
-                logger.info(info_text[:-1])
+                logger.debug(info_text[:-1])
         
         
         
@@ -3406,10 +3410,10 @@ class decay_all_events:
                                 nb_finals = len(mi['finals'])
 
                     if decay_tag == associated_decay:                
-                        logger.info('Decay channel %s :Using maximum weight %s [%s] (BR: %s)' % \
+                        logger.debug('Decay channel %s :Using maximum weight %s [%s] (BR: %s)' % \
                                (','.join(decay_tag), base_max_weight, max(weights), br/nb_finals))
                     else:  
-                        logger.info('Decay channel %s :Using maximum weight %s (BR: %s)' % \
+                        logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
  
         # sanity check that all decay have a max_weight
@@ -3870,7 +3874,7 @@ class decay_all_events:
         self.branching_ratio = max(total_br) * eff
         
         
-        self.banner['madspin'] += ms_banner
+        #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
             mg_info = self.banner['mggenerationinfo'].split('\n')
