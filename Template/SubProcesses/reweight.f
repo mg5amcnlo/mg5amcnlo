@@ -564,6 +564,16 @@ C   anyway already set by "scale" above)
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
+
+c   ipart gives the external particle number corresponding to the present
+c   quark or gluon line. 
+c   For t-channel lines, ipart(1) contains the connected beam. 
+c   For s-channel lines, it depends if it is quark or gluon line:
+c   For quark lines, ipart(2) is 0 and ipart(1) connects to the corresponding
+c   final-state quark. For gluons, if it splits into two gluons, 
+c   it connects to the hardest gluon. If it splits into qqbar, it ipart(1) is
+c   the hardest and ipart(2) is the softest.
+
       do i=1,nexternal
          ipart(1,ishft(1,i-1))=i
          ipart(2,ishft(1,i-1))=0
@@ -623,8 +633,9 @@ c             Determine which are beam particles based on n
               endif
 c             
               if(partonline(j))then
-c             Stop fact scale where parton line stops
+c             If jfirst not set, set it
                  if(jfirst(j).eq.0) jfirst(j)=n
+c             Stop fact scale where parton line stops
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
      $                isjet(ipdgcl(imo,igraphs(1),iproc))
@@ -801,10 +812,11 @@ c     Check xqcut for vertices with jet daughters only
          do n=1,nexternal-3
 c        Check if any of vertex daughters among jets
             do i=1,2
+c              ifsno gives leg number if daughter is FS particle, otherwise 0
                fsnum(1)=ifsno(idacl(n,i),ipart)
                if(fsnum(1).gt.0)then
                   if(iqjets(fsnum(1)).gt.0)then
-c                       Daughter among jets - check xqcut
+c                    Daughter among jets - check xqcut
                      if(sqrt(pt2ijcl(n)).lt.xqcut)then
                         if (btest(mlevel,3))
      $                       write(*,*) 'Failed xqcut: ',n,
