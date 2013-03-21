@@ -3718,8 +3718,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for proc in self.get('processes'):
             legs = copy.copy(proc.get('legs'))
             legs[0:2] = [legs[1],legs[0]]
+            decay_legs = copy.copy(proc.get('legs_with_decays'))
+            decay_legs[0:2] = [decay_legs[1],decay_legs[0]]
             process = copy.copy(proc)
             process.set('legs', legs)
+            process.set('legs_with_decays', decay_legs)
             processes.append(process)
         return processes
 
