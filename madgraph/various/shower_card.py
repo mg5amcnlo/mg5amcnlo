@@ -31,7 +31,7 @@ class ShowerCard(dict):
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
     path_vars = ['hwpppath', 'thepegpath', 'hepmcpath', 'lhapdfpath']
-    string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
+    string_vars = ['pdfname', 'extralibs', 'extrapaths', 'includepaths', 'analyse']
     int_vars = ['maxprint','nevents','pdfcode','rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
     float_vars = ['maxerrs', 'lambda_5']
 
@@ -44,6 +44,7 @@ class ShowerCard(dict):
             'ue_enabled' : {'HERWIG6':'lhsoft', 'PYTHIA6': 'mstp_81', 'HERWIGPP': 'ue_hwpp'},
             'int_pdf' : {'HERWIG6':'int_pdf', 'PYTHIA6': 'int_pdf', 'HERWIGPP': 'int_pdf'},
             'pdfcode' : {'HERWIG6':'pdfcode', 'PYTHIA6': 'pdfcode', 'HERWIGPP': 'pdfcode'},
+            'pdfname' : {'HERWIG6':'pdfname', 'PYTHIA6': 'pdfname', 'HERWIGPP': 'pdfname'},
             'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents'},
             'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp'},
             'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp'},

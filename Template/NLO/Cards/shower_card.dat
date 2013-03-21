@@ -20,7 +20,8 @@ LHAPDFPATH =  None  # Path to the dir where LHAPDF is installed
 nevents    = -1     # number of events to shower. If negative, shower all events
 ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
 int_pdf    = T      # use (T) or not (F) internal parton-shower pdf set
-pdfcode    = 10042  # pdf code, used only if int_pdf = F
+pdfcode    = 10042  # pdf code, used only if int_pdf = F and by HW6 and PY6
+pdfname    = cteq6ll.LHpdf # pdf name, used only if int_pdf = F and by HW++ and PY8
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
 maxerrs    = 0.1    # maximum tolerated fraction of errors
