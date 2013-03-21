@@ -371,15 +371,15 @@ c Isolate from hadronic energy
           Etsum(0)=0.d0
           nin=0
           do i=1,nQCD
-            if(drlist(isorted(i)).le.R0gamma)then
+            if(dble(drlist(isorted(i))).le.R0gamma)then
               nin=nin+1
-              Etsum(i)=Etsum(i-1)+pt(pQCD(0,isorted(i)))
+              Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
             endif
           enddo
           do i=1,nin
             alliso=alliso .and.
-     #        Etsum(i).le.
-     #        chi_gamma_iso(drlist(isorted(i)),R0gamma,xn,epsgamma,ptg)
+     #        Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+     #                                  R0gamma,xn,epsgamma,ptg)
           enddo
 
 c Isolate from EM energy
@@ -397,15 +397,15 @@ c First of list must be the photon: check this, and drop it
             Etsum(0)=0.d0
             nin=0
             do i=2,nem
-              if(drlist(isorted(i)).le.R0gamma)then
+              if(dble(drlist(isorted(i))).le.R0gamma)then
                 nin=nin+1
-                Etsum(i-1)=Etsum(i-2)+pt(pem(0,isorted(i)))
+                Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
               endif
             enddo
             do i=1,nin
-            alliso=alliso .and.
-     #        Etsum(i).le.
-     #        chi_gamma_iso(drlist(isorted(i)),R0gamma,xn,epsgamma,ptg)
+              alliso=alliso .and.
+     #          Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+     #                                    R0gamma,xn,epsgamma,ptg)
             enddo
 
           endif

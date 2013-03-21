@@ -6,14 +6,14 @@ c With some work on finalizeprocesses(), it should work also for
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
       implicit none
-      integer maxevt,ifile,efile,jfile,kfile,rfile,i,npart,
+      integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec
       double precision chtot,xint,xinterr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
       double precision remcmass(-5:21)
       common/cremcmass/remcmass
-      integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,
+      integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
      # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
       logical wrong
       integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
@@ -126,6 +126,8 @@ c read from events
       endif
       efile=44
       open (unit=efile,file='LHEF.errors',status='unknown')
+      mfile=45
+      open (unit=mfile,file='LHEF.mass_errors',status='unknown')
       kfile=54
       open (unit=kfile,file='LHEF.stats',status='unknown')
       AddInfoLHE=.false.
@@ -259,6 +261,7 @@ c
       nevH_lhe=0
       npartH_lhe=0
       itoterr=0
+      mtoterr=0
       if(jwgtinfo.eq.8)then
         do kr=1,maxscales
           do kf=1,maxscales
@@ -336,11 +339,11 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
                zmasses(abs(IDUP(k)))=xmass(npart)
              else
                if(abs(zmasses(abs(IDUP(k)))-xmass(npart)).gt.qtiny)then
-                 write(44,*)'####event:',i
-                 write(44,*)' Wrong mass shell',xmass(npart)
-                 write(44,*)' for particle',k,
+                 write(45,*)'####event:',i
+                 write(45,*)' Wrong mass shell',xmass(npart)
+                 write(45,*)' for particle',k,
      #                      ' Must be:',zmasses(abs(IDUP(k)))
-                 itoterr=itoterr+1
+                 mtoterr=mtoterr+1
                endif
              endif
            endif
@@ -516,7 +519,8 @@ c Error if more that 1sigma away
       endif
 
       write (*,*) ' '
-      write (*,*) 'Total number of errors found:',itoterr
+      write (*,*) 'Total number of errors found:',itoterr+mtoterr
+      write (*,*) '         Of which mass shell:',mtoterr
 
       close(34)
       close(44)
@@ -554,6 +558,7 @@ c
       charges(15)=-1.d0
       charges(16)=0.d0
       charges(21)=0.d0
+      charges(22)=0.d0
       charges(23)=0.d0
       charges(24)=1.d0
       charges(25)=0.d0
@@ -1345,7 +1350,7 @@ c
       subroutine intorder(iset,imax)
 c Orders the first imax entries of iset
       implicit none
-      integer imax,iset(50)
+      integer imax,iset(5)
       integer i,j,itmp
 c
       do i=imax,2,-1
@@ -1365,7 +1370,7 @@ c
       implicit none
       integer k,itmp
       integer nmothers(-25:25),nch(20),ndec(40,20)
-      integer jmo(20),jda(5,40,20),ndecev(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
       integer ndeccor(0:40,0:40,20,20)
       common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
 c
