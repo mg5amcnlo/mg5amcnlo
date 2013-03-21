@@ -381,8 +381,10 @@ c Check that momenta lead to an on-shell BW
             xp(j,i)=p(j,i)
          enddo
       enddo
-      do i=-1,-(nexternal-3),-1 !Loop over propagators
+      do i=-1,-(nexternal-3),-1
          onbw(i) = .false.
+      enddo
+      do i=-1,-(nexternal-3),-1 !Loop over propagators
 c Skip the t-channels
          if (iforest(1,i,iconf).eq.1 .or. iforest(2,i,iconf).eq.1 .or.
      &       iforest(1,i,iconf).eq.2 .or. iforest(2,i,iconf).eq.2 ) exit

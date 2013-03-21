@@ -54,8 +54,9 @@ SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
-	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o
+	cuts.o fastjetfortran_madfks.o boostwdir2.o			\
+	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
+	reweight.o get_color.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<

@@ -799,6 +799,13 @@ c with the reference weight
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -828,6 +835,13 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
+          if (ickkw.eq.3) then
+             if (.not. setclscales(wgtkin(0,1,1))) then
+                write (*,*) 'ERROR in setclscales mohdr'
+                stop
+             endif
+             rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+          endif
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Hev',kwgtinfo
@@ -863,6 +877,13 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
+           if (ickkw.eq.3) then
+              if (.not. setclscales(wgtkin(0,1,2))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_izero=rewgt(wgtkin(0,1,2),rewgt_exp_izero)
+           endif
           call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Hev',kwgtinfo
@@ -898,6 +919,13 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
+           if (ickkw.eq.3) then
+              if (.not. setclscales(wgtkin(0,1,1))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+           endif
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0c in compute_rwgt_wgt_Hev',kwgtinfo
@@ -956,12 +984,19 @@ c with the reference weight
       parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -993,6 +1028,14 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
+           if (ickkw.eq.3) then
+              nFKSprocess=nFKSprocess_used
+              if (.not. setclscales(wgtkin(0,1,1))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+           endif
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Sev',kwgtinfo
@@ -1029,6 +1072,14 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
+           if (ickkw.eq.3) then
+              nFKSprocess=nFKSprocess_used
+              if (.not. setclscales(wgtkin(0,1,2))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_izero=rewgt(wgtkin(0,1,2),rewgt_exp_izero)
+           endif
           call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
@@ -1113,6 +1164,14 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
+           if (ickkw.eq.3) then
+              nFKSprocess=nFKSprocess_used
+              if (.not. setclscales(wgtkin(0,1,1))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+           endif
           call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
@@ -1177,6 +1236,13 @@ c with the reference weight
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -1199,6 +1265,13 @@ c
       call set_cms_stuff(izero)
 
       if( passcuts(wgtkin_all(0,1,2,0),rwgt) )then
+           if (ickkw.eq.3) then
+              if (.not. setclscales(wgtkin_all(0,1,2,0))) then
+                 write (*,*) 'ERROR in setclscales mohdr'
+                 stop
+              endif
+              rewgt_izero=rewgt(wgtkin_all(0,1,2,0),rewgt_exp_izero)
+           endif
          call set_alphaS(wgtkin_all(0,1,2,0))
          QES2_local=wgtqes2_all(2,0)
          if(abs(QES2/QES2_local-1.d0).gt.tiny)then
