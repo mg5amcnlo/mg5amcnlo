@@ -11,9 +11,8 @@ C
       parameter (zero = 0d0)
       integer npoints, npointsChecked,ret_code
       integer i, j, k
-      double precision tolerance, tolerance_default
+      double precision tolerance
       double precision accuracy
-      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       parameter (ren_scale = 1d2)
       parameter (energy = 1d3)
@@ -44,10 +43,17 @@ cc
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
       
+c general MadFKS parameters
+      include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
 C-----  
+c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -59,9 +65,9 @@ C-----
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'
       write(*,*)' A negative number will mean use the default one: ',
-     1 tolerance_default 
+     1 IRPoleCheckThreshold 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = tolerance_default
+      if (tolerance .le. zero) tolerance = IRPoleCheckThreshold
 
       mu_r = ren_scale
       qes2 = ren_scale**2

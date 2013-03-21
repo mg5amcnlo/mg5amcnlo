@@ -22,6 +22,8 @@ c
       include "nexternal.inc"
       include "coupl.inc"
       include 'born_nhel.inc'
+c general MadFKS parameters
+      include 'FKSParams.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
@@ -48,9 +50,8 @@ c
       logical fksprefact
       parameter (fksprefact=.true.)
       integer ret_code
-      double precision run_tolerance, madfks_single, madfks_double
-      parameter (run_tolerance = 1d-4)
-      double precision tolerance,acc_found,prec_found
+      double precision madfks_single, madfks_double
+      double precision tolerance,prec_found
       integer i,j
       integer nbad, nbadmax
 c statistics for MadLoop
@@ -68,6 +69,7 @@ c statistics for MadLoop
       logical cpol
       include 'pmass.inc'
       data nbad / 0 /
+
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
@@ -77,20 +79,20 @@ c Ellis-Sexton scale)
       virt_wgt= 0d0
       single  = 0d0
       double  = 0d0
+      prec_found = 1.0d0
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=1d-5
-         call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found,
+         tolerance=IRPoleCheckThreshold
+         call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
       else
-         tolerance=run_tolerance ! for the poles check below
+         tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
-         acc_found=1.0d0
          if (mc_hel.eq.0) then
             mone=-1d0
             call sloopmatrix_thres(p,virt_wgts,mone,prec_found
@@ -140,7 +142,8 @@ c======================================================================
 c check for poles cancellation for the first couple of PS points
 c Check poles for the first PS points (but not for the initialization PS
 c points)
-      if (firsttime .and. mod(ret_code,100)/10.ne.3) then 
+      if (firsttime .and. mod(ret_code,100)/10.ne.3 .and.
+     & mod(ret_code,100)/10.ne.4) then 
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          avgPoleRes(1)=(single+madfks_single)/2.0d0
          avgPoleRes(2)=(double+madfks_double)/2.0d0
@@ -151,6 +154,9 @@ c points)
      $          (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))).lt.tolerance)
          else
             cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
+         endif
+         if (tolerance.lt.0.0d0) then
+            cpol = .false.
          endif
          if (.not. cpol) then
             write(*,*) "---- POLES CANCELLED ----"
@@ -170,9 +176,9 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                   endif
                enddo
-c Only do MC over helicities if there are 5 or more non-zero
-c (independent) helicities
-               if (hel(0).lt.5) then
+c Only do MC over helicities if there are NHelForMCoverHels
+c or more non-zero (independent) helicities
+               if (hel(0).lt.NHelForMCoverHels) then
                   write (*,'(a,i3,a)') 'Only ',hel(0)
      $                 ,' independent helicities:'/
      $                 /' switching to explicitly summing over them'
@@ -252,6 +258,7 @@ c Update the statistics using the ret_code:
             write(78,*) '1/eps    expected from MadFKS=',madfks_single
             write(78,*) '1/eps    obtained in MadLoop =',single
             write(78,*) 'finite   obtained in MadLoop =',virt_wgt
+            write(78,*) 'Accuracy estimated by MadLop =',prec_found
             do i = 1, nexternal-1
                write(78,'(i2,1x,5e25.15)') 
      &              i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)

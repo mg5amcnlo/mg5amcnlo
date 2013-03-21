@@ -122,3 +122,87 @@ The following reference files have been updated :
    short_ML_SMQCD_default/gg_ttx/loop_num.f
    short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f
    short_ML_SMQCD_default/gg_ttx/ngraphs.inc
+ 
+Modifications performed on 2013-03-21 at 18h04 in
+   MadGraph 5 v. 2.0.0.beta3, 2013-02-14
+The following reference files have been updated :
+   long_ML_SMQCD_default/dux_mumvmxg/loop_matrix.f
+   long_ML_SMQCD_default/dux_mumvmxg/mp_born_amps_and_wfs.f
+   short_ML_SMQCD_default/ddx_ttx/loop_matrix.f
+   short_ML_SMQCD_default/ddx_ttx/mp_born_amps_and_wfs.f
+   short_ML_SMQCD_optimized/gg_ttx/loop_matrix.f
+   short_ML_SMQCD_optimized/gg_ttx/mp_compute_loop_coefs.f
+   long_ML_SMQCD_optimized/gg_wmtbx/loop_matrix.f
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_compute_loop_coefs.f
+   long_ML_SMQCD_optimized/dux_mumvmxg/loop_matrix.f
+   long_ML_SMQCD_optimized/dux_mumvmxg/mp_compute_loop_coefs.f
+   long_ML_SMQCD_default/gg_wmtbx/loop_matrix.f
+   long_ML_SMQCD_default/gg_wmtbx/mp_born_amps_and_wfs.f
+   short_ML_SMQCD_optimized/ddx_ttx/loop_matrix.f
+   short_ML_SMQCD_optimized/ddx_ttx/mp_compute_loop_coefs.f
+   short_ML_SMQCD_default/gg_ttx/loop_matrix.f
+   short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f
+   short_ML_SMQCD_LoopInduced/gg_hh/loop_matrix.f
+   short_ML_SMQCD_LoopInduced/gg_hh/mp_born_amps_and_wfs.f
+The following reference files have been removed :
+   long_ML_SMQCD_default/dux_mumvmxg/ColorDenomFactors.dat.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/ColorNumFactors.dat.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/CT_interface.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/loop_matrix.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/loop_num.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/mp_born_amps_and_wfs.f.tmp
+   long_ML_SMQCD_default/dux_mumvmxg/ngraphs.inc.tmp
+   short_ML_SMQCD_default/ddx_ttx/ColorDenomFactors.dat.tmp
+   short_ML_SMQCD_default/ddx_ttx/ColorNumFactors.dat.tmp
+   short_ML_SMQCD_default/ddx_ttx/CT_interface.f.tmp
+   short_ML_SMQCD_default/ddx_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_default/ddx_ttx/loop_num.f.tmp
+   short_ML_SMQCD_default/ddx_ttx/mp_born_amps_and_wfs.f.tmp
+   short_ML_SMQCD_default/ddx_ttx/ngraphs.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/ColorDenomFactors.dat.tmp
+   short_ML_SMQCD_optimized/gg_ttx/ColorNumFactors.dat.tmp
+   short_ML_SMQCD_optimized/gg_ttx/CT_interface.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/mp_compute_loop_coefs.f.tmp
+   short_ML_SMQCD_optimized/gg_ttx/ngraphs.inc.tmp
+   short_ML_SMQCD_optimized/gg_ttx/polynomial.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/coef_construction_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/ColorDenomFactors.dat.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/ColorNumFactors.dat.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/CT_interface.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/helas_calls_ampb_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/loop_CT_calls_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/loop_matrix.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_coef_construction_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_compute_loop_coefs.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_helas_calls_ampb_1.f.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/ngraphs.inc.tmp
+   long_ML_SMQCD_optimized/gg_wmtbx/polynomial.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/ColorDenomFactors.dat.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/ColorNumFactors.dat.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/CT_interface.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/loop_matrix.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/mp_compute_loop_coefs.f.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/ngraphs.inc.tmp
+   long_ML_SMQCD_optimized/dux_mumvmxg/polynomial.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/ColorDenomFactors.dat.tmp
+   long_ML_SMQCD_default/gg_wmtbx/ColorNumFactors.dat.tmp
+   long_ML_SMQCD_default/gg_wmtbx/CT_interface.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/loop_matrix.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/loop_num.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/mp_born_amps_and_wfs.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/ngraphs.inc.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/ColorDenomFactors.dat.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/ColorNumFactors.dat.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/CT_interface.f.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/mp_compute_loop_coefs.f.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/ngraphs.inc.tmp
+   short_ML_SMQCD_optimized/ddx_ttx/polynomial.f.tmp
+   short_ML_SMQCD_default/gg_ttx/ColorDenomFactors.dat.tmp
+   short_ML_SMQCD_default/gg_ttx/ColorNumFactors.dat.tmp
+   short_ML_SMQCD_default/gg_ttx/CT_interface.f.tmp
+   short_ML_SMQCD_default/gg_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_default/gg_ttx/loop_num.f.tmp
+   short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f.tmp
+   short_ML_SMQCD_default/gg_ttx/ngraphs.inc.tmp
