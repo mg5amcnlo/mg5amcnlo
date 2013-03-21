@@ -426,9 +426,10 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_define(self):
         logger.info("syntax: define multipart_name [=] part_name_list")
-        logger.info("-- define a multiparticle")
+        logger.info("-- define a multiparticle. part_name_list can include multiparticles.")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-        
+        logger.info("   Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("   Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
@@ -1859,7 +1860,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'update']
+                     'update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -2064,16 +2065,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if self._use_lower_part_names:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
@@ -3161,9 +3174,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             split = line.split()   
             path[split[0]] = split[1]
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+        
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes3':'Delphes',
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis'}
+                'MadAnalysis':'MadAnalysis', 'Delphes2': 'Delphes'}
         name = name[args[0]]
         
         try:
@@ -3182,6 +3198,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -3268,6 +3285,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.platform == "darwin":
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
+            
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Cards', 'delphes_card_default.dat'))  
+        
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
@@ -3755,7 +3782,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]

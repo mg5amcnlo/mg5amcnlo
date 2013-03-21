@@ -384,9 +384,11 @@ class HelpToCmd(object):
 
     
     def help_add_time_of_flight(self):
-        logger.info("syntax: add_secondary_vertex [run_name|path_to_file]")
-        logger.info('-- Add in the unweighted_events.lhe the information')
-        logger.info('   related to secondary vertex.')
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
+        logger.info('   threshold option allows to change the minimal value required to')
+        logger.info('   a non zero value for the particle (default:1e-12s)')
 
     def help_calculate_decay_widths(self):
         
@@ -800,21 +802,40 @@ class CheckValidForCmd(object):
     def check_add_time_of_flight(self, args):
         """check that the argument are correct"""
         
-        if len(args) >1:
-            self.help_add_secondary_vertex()
+        
+        if len(args) >2:
+            self.help_time_of_flight()
             raise self.InvalidCmd('Too many arguments')
         
-        if len(args) == 1: 
-            if os.path.exists(args[0]):
-                return
-            elif self.run_name == args[0]:
-                args.pop(0)
-            else:
+        # check if the threshold is define. and keep it's value
+        if args and args[-1].startswith('--threshold='):
+            try:
+                threshold = float(args[-1].split('=')[1])
+            except ValueError:
+                raise self.InvalidCmd('threshold options require a number.')
+            args.remove(args[-1])
+        else:
+            threshold = 1e-12
+            
+        if len(args) == 1 and  os.path.exists(args[0]): 
+                event_path = args[0]
+        else:
+            if len(args) and self.run_name != args[0]:
                 self.set_run_name(args.pop(0))
-        elif not self.run_name:            
-            self.help_add_secondary_vertex()
-            raise self.InvalidCmd('Need a run_name to process')
+            elif not self.run_name:            
+                self.help_add_secondary_vertex()
+                raise self.InvalidCmd('Need a run_name to process')            
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            if not os.path.exists(event_path):
+                event_path = event_path[:-3]
+                if not os.path.exists(event_path):    
+                    raise self.InvalidCmd('No unweighted events associate to this run.')
+
+
         
+        #reformat the data
+        args[:] = [event_path, threshold]
+
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -1300,7 +1321,13 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
             data = [n.rsplit('/',2)[1] for n in data]
-            return  self.list_completion(text, data)
+            return  self.list_completion(text, data + ['--threshold='], line)
+        elif args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        else:
+            return self.list_completion(text, ['--threshold='], line)
     
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
@@ -1871,14 +1898,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_add_time_of_flight(self, line):
 
         args = self.split_arg(line)
-        #check the validity of the arguments
+        #check the validity of the arguments and reformat args
         self.check_add_time_of_flight(args)
         
-        if args: #custom output file
-            event_path = args[0]
-        else:
-            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
-        
+        event_path, threshold = args
         #gunzip the file
         if event_path.endswith('.gz'):
             need_zip = True
@@ -1911,7 +1934,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 id = particle.pid
                 width = param_card['decay'].get((abs(id),)).value
                 if width:
-                    particle.vtim = random.expovariate(width/cst)
+                    vtim = random.expovariate(width/cst)
+                    if vtim > threshold:
+                        particle.vtim = vtim
             #write this modify event
             output.write(str(event))
         output.write('</LesHouchesEvents>\n')
@@ -2529,6 +2554,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.exists(pjoin(self.me_dir,'error')):
             os.remove(pjoin(self.me_dir,'error'))
                         
+        # Before compiling, remove lhapdf stuff
+        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+
         self.configure_directory()
         # Save original random number
         self.random_orig = self.random
@@ -3516,6 +3544,9 @@ calculator."""
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
  
+        
+ 
+ 
         args = self.split_arg(line)
         # Check argument's validity
         if '--no_default' in args:
@@ -3525,6 +3556,15 @@ calculator."""
             no_default = False
         self.check_delphes(args) 
         self.update_status('prepare delphes run', level=None)
+        
+        delphes_dir = self.options['delphes_path']
+        if os.path.exists(pjoin(delphes_dir, 'data')):
+            delphes3 = False
+            prog = '../bin/internal/run_delphes'
+        else:
+            delphes3 = True
+            prog =  '../bin/internal/run_delphes3'
+        
                 
         # Check that the delphes_card exists. If not copy the default and
         # ask for edition of the card.
@@ -3536,36 +3576,38 @@ calculator."""
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
-        if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
+        if not delphes3 and not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat')):    
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_trigger_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_trigger.dat'))
         if not (no_default or self.force):
-            self.ask_edit_cards(['delphes', 'trigger'], args)
-            
+            if delphes3:
+                self.ask_edit_cards(['delphes'], args)
+            else:
+                self.ask_edit_cards(['delphes', 'trigger'], args)
+                
         self.update_status('Running Delphes', level=None)  
         # Wait that the gunzip of the files is finished (if any)
         if hasattr(self, 'control_thread') and self.control_thread[0]:
             self.monitor(mode=2)        
 
 
- 
-        delphes_dir = self.options['delphes_path']
         tag = self.run_tag
         self.banner.add(pjoin(self.me_dir, 'Cards','delphes_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
+        if not delphes3:
+            self.banner.add(pjoin(self.me_dir, 'Cards','delphes_trigger.dat'))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag)))
         
         cross = self.results[self.run_name].get_current_info()['cross']
                     
         if self.cluster_mode == 1:
             delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-            self.cluster.launch_and_wait('../bin/internal/run_delphes', 
+            self.cluster.launch_and_wait(prog, 
                         argument= [delphes_dir, self.run_name, tag, str(cross)],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            misc.call(['../bin/internal/run_delphes', delphes_dir, 
+            misc.call([prog, delphes_dir, 
                                 self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
@@ -4162,11 +4204,12 @@ calculator."""
                      pjoin(self.me_dir,'Events','xsecs.tree'))
                 
             # Generate the matching plots
+            devnull = open(os.devnull, 'w')
             misc.call([self.dirbin+'/create_matching_plots.sh', 
                        self.run_name, tag, madir],
-                            stdout = os.open(os.devnull, os.O_RDWR),
+                            stdout = devnull,
                             cwd=pjoin(self.me_dir,'Events'))
-
+            devnull.close()
             #Clean output
             misc.call(['gzip','-f','events.tree'], 
                                                 cwd=pjoin(self.me_dir,'Events'))          
@@ -4325,7 +4368,10 @@ calculator."""
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
             self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
 
         if self.force:
@@ -4349,11 +4395,12 @@ calculator."""
                 possible_answer.append('pgs')            
             elif mode == 'delphes':
                 question += '  5 / delphes : delphes_card.dat\n'
-                question += '  6 / trigger : delphes_trigger.dat\n'
                 possible_answer.append(5)
                 possible_answer.append('delphes')
-                possible_answer.append(6)
-                possible_answer.append('trigger')
+                if not delphes3:
+                    question += '  6 / trigger : delphes_trigger.dat\n'
+                    possible_answer.append(6)
+                    possible_answer.append('trigger')
             if self.options['madanalysis_path']:
                 question += '  9 / plot    : plot_card.dat\n'
                 possible_answer.append(9)
@@ -4427,7 +4474,7 @@ calculator."""
     1 / pythia  : Pythia 
     2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
-            question += """  3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia + Delphes.\n"""
 
         if not self.force:
             if not mode:
@@ -4459,7 +4506,11 @@ calculator."""
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                self.add_card_to_run('trigger')
+
             cards.append('delphes_card.dat')
         
         if self.force:
@@ -4478,13 +4529,15 @@ calculator."""
             card[2] = 'pgs'           
         if mode == 'delphes':
             question += '  2 / delphes : delphes_card.dat\n'
-            question += '  3 / trigger : delphes_trigger.dat\n'
             possible_answer.append(2)
             possible_answer.append('delphes')
-            possible_answer.append(3)
-            possible_answer.append('trigger')
             card[2] = 'delphes'
-            card[3] = 'trigger'
+            if not delphes3:
+                question += '  3 / trigger : delphes_trigger.dat\n'
+                possible_answer.append(3)
+                possible_answer.append('trigger')
+                card[3] = 'trigger'
+
         if self.options['madanalysis_path']:
             question += '  9 / plot : plot_card.dat\n'
             possible_answer.append(9)
@@ -4622,10 +4675,12 @@ calculator."""
         """
         
         text = open(path).read()
-        text = re.findall('(<MGVersion>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
+        text = re.findall('(<MGVersion>|CEN_max_tracker|ParticlePropagator|#TRIGGER CARD|parameter set name|muon eta coverage|MSTP|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text:
             return 'banner'
+        elif 'particlepropagator' in text:
+            return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
         elif '#trigger card' in text:
@@ -4817,7 +4872,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
-        devnull = os.open(os.devnull, os.O_RDWR)
+        devnull = open(os.devnull, 'w')
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)

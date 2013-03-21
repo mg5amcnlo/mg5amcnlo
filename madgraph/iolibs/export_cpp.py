@@ -1191,7 +1191,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
         for diagram in diagrams:
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                   get_s_and_t_channels(self.ninitial, new_pdg)
+                                   get_s_and_t_channels(self.ninitial, model, 
+                                                        new_pdg)
 
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
@@ -1213,7 +1214,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         # schannel is True if all diagrams are s-channel and there are
         # no QCD vertices
         schannel = not any([\
-            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, new_pdg)[0])\
+            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, 
+                                                            model, new_pdg)[0])\
                  == 0 for d in diagrams]) and \
                    not any(['QCD' in d.calculate_orders() for d in diagrams])
 
@@ -1298,10 +1300,8 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                 for proc in valid_proc:
                     # decaying id
                     decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
-                    curr_final_id = [l.get('id') for l in \
-                                 proc.get('legs') if l.get('state')]
-                    for id in decay_id:
-                        curr_final_id.remove(id)
+                    curr_final_id = [l.get('id') for l in proc.get('legs') 
+                              if l.get('state') and l.get('id') not in decay_id]
                     # extend with the decay final state
                     curr_final_id += [l.get('id') for dec in \
                                      proc.get('decay_chains') for l in \
@@ -1406,14 +1406,11 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             for proc in me.get('processes'):
                 # decaying id
                 decay_id = [d.get('legs')[0].get('id') for d in proc.get('decay_chains')]
-                curr_id = [l.get('id') for l in \
-                             proc.get('legs') if l.get('state')]
-                for id in decay_id:
-                    curr_id.remove(id)
+                curr_id = [l.get('id') for l in proc.get('legs') 
+                              if l.get('state') and l.get('id') not in decay_id]
                 # extend with the decay final state
-                curr_id += [l.get('id') for dec in \
-                                 proc.get('decay_chains') for l in \
-                                 dec.get('legs')   if l.get('state')]
+                curr_id += [l.get('id') for dec in proc.get('decay_chains') 
+                             for l in dec.get('legs')   if l.get('state')]
                 curr_id = [l.get('id') for l in \
                              proc.get('legs') if not l.get('state')] + curr_id
                 id_list.append(tuple(curr_id))

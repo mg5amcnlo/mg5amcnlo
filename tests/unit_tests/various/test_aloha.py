@@ -3456,6 +3456,69 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         for out,sol in zip(ufo_value,solution):
             self.assertAlmostEqual(out, sol)
 
+    def test_aloha_expr_VVS1(self):
+        """Test analytical expression for VVS from SILH. 
+        This checks that P(-1,1)**2 is correct."""
+        
+        
+        aloha_lib.KERNEL.clean()
+        from models.mssm.object_library import Lorentz
+        VVS1 = Lorentz(name = 'VVS1',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
+        builder = create_aloha.AbstractRoutineBuilder(VVS1)
+        amp = builder.compute_routine(0)
+
+        solution = """subroutine VVS1_0(V1, V2, S3, COUP,vertex)
+implicit none
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 V2(*)
+ complex*16 TMP2
+ complex*16 S3(*)
+ complex*16 TMP1
+ real*8 P1(0:3)
+ complex*16 TMP0
+ complex*16 vertex
+ complex*16 COUP
+ complex*16 V1(*)
+ complex*16 TMP3
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+ TMP1 = (P1(0)*V1(3)-P1(1)*V1(4)-P1(2)*V1(5)-P1(3)*V1(6))
+ TMP0 = (V2(3)*P1(0)-V2(4)*P1(1)-V2(5)*P1(2)-V2(6)*P1(3))
+ TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
+ TMP2 = (V2(3)*V1(3)-V2(4)*V1(4)-V2(5)*V1(5)-V2(6)*V1(6))
+ vertex = COUP*S3(3)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
+end
+
+
+"""
+        routine = amp.write(output_dir=None, language='Fortran')
+        split_solution = [l.strip() for l in solution.split('\n')]
+        split_routine = [l.strip() for l in routine.split('\n')]
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+        V1_1, V1_2, V1_3, V1_4 = 1,2,3,4
+        V2_1, V2_2, V2_3, V2_4 = 5,5,6,7
+        S3_1, S3_2, S3_3, S3_4 = 10,20,32,44
+        P1_0, P1_1, P1_2, P1_3 = 1,2,3,6
+        M1 = P1_0**2 - P1_1**2 - P1_2**2 - P1_3**2
+        # For V4:
+        cImag = complex(0,1)
+
+        for name, expr in amp.contracted.items():
+            exec('%s = %s' % (name,expr))       
+
+
+        ufo_value = eval(str(amp.expr.get_rep([0])))
+        self.assertAlmostEqual(ufo_value, 1080j)
+
+
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
