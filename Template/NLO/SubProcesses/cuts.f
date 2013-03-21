@@ -365,7 +365,7 @@ c Loop over all photons
 
 c Isolate from hadronic energy
           do i=1,nQCD
-            drlist(i)=sngl(sqrt(iso_getdrv40(pgamma(0,j),pQCD(0,i))))
+            drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pQCD(0,i)))
           enddo
           call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
           Etsum(0)=0.d0
@@ -385,11 +385,11 @@ c Isolate from hadronic energy
 c Isolate from EM energy
           if(isoEM.and.nem.gt.1)then
             do i=1,nem
-              drlist(i)=sngl(sqrt(iso_getdrv40(pgamma(0,j),pem(0,i))))
+              drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pem(0,i)))
             enddo
             call sortzv(drlist,isorted,nem,ismode,isway,izero)
 c First of list must be the photon: check this, and drop it
-            if(isorted(1).ne.j)then
+            if(isorted(1).ne.j.or.drlist(isorted(1)).gt.1.e-4)then
               write(*,*)'Error #1 in photon isolation'
               write(*,*)j,isorted(1),drlist(isorted(1))
               stop
