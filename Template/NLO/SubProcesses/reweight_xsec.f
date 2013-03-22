@@ -836,6 +836,7 @@ c Should cause the code to crash if used
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
           if (ickkw.eq.3) then
+             nFKSprocess=nFKSprocess_used
              if (.not. setclscales(wgtkin(0,1,1))) then
                 write (*,*) 'ERROR in setclscales mohdr'
                 stop
@@ -878,6 +879,7 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then
+              nFKSprocess=nFKSprocess_used
               if (.not. setclscales(wgtkin(0,1,2))) then
                  write (*,*) 'ERROR in setclscales mohdr'
                  stop
@@ -919,7 +921,8 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
-           if (ickkw.eq.3) then
+           if (ickkw.eq.3) then 
+              nFKSprocess=nFKSprocess_used
               if (.not. setclscales(wgtkin(0,1,1))) then
                  write (*,*) 'ERROR in setclscales mohdr'
                  stop

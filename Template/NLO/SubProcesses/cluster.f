@@ -192,31 +192,21 @@ c     Set pdg code for propagator
 c     If s-channel (this only works with compile flag 'fno-automatic')
                      if(sprop(k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum,nFKSprocess)=sprop(k,ignum)
-c     If this is radiation off heavy particle, set heavyrad to true
-c     (check that one daughter is a light QCD parton and the other isn't
-c     and has PDG code equal to the mother)
-                        if((isjet(ipdgcl(ipids(i,1,ipnum),ignum,nFKSprocess)).and.
-     $                       .not.isjet(ipdgcl(ipids(j,1,ipnum),ignum,nFKSprocess)).and.
-     $                       ipdgcl(ipids(j,1,ipnum),ignum,nFKSprocess).eq.sprop(k,ignum)).or.
-     $                       (isjet(ipdgcl(ipids(j,1,ipnum),ignum,nFKSprocess)).and.
-     $                       .not.isjet(ipdgcl(ipids(i,1,ipnum),ignum,nFKSprocess)).and.
-     $                       ipdgcl(ipids(i,1,ipnum),ignum,nFKSprocess).eq.sprop(k,ignum)))then
-                           heavyrad(ignum) = .true.
-                        endif
 c     If t-channel (this only works with compile flag 'fno-automatic')
                      else if(tprid(k,ignum).ne.0)then
                         ipdgcl(icmp(l),ignum,nFKSprocess)=tprid(k,ignum)
 c     Final 2->1 process
                      else if(ipnum.eq.3)then
-                        ipdgcl(icmp(l),ignum,nFKSprocess)=ipdgcl(2,ignum,nFKSprocess)
+                        ipdgcl(icmp(l),ignum,nFKSprocess)=ipdgcl(2,ignum
+     $                       ,nFKSprocess)
                      else
                         ipdgcl(icmp(l),ignum,nFKSprocess)=0
                      endif
-                     if(btest(mlevel,4))
-     $                    write(*,*) 'add table entry for (',ipids(i,1,ipnum),
-     &                    ',',ipids(j,1,ipnum),',',icmp(l),')',
-     $                    'proc: ',nFKSprocess,
-     $                    ', pdg: ',ipdgcl(icmp(l),ignum,nFKSprocess)
+                     if(btest(mlevel,4)) write(*,*)
+     $                    'add table entry for (',ipids(i,1,ipnum), ','
+     $                    ,ipids(j,1,ipnum),',',icmp(l),')', 'proc: '
+     $                    ,nFKSprocess, ', pdg: ',ipdgcl(icmp(l),ignum
+     $                    ,nFKSprocess)
                      call filprp(nFKSprocess,ignum,icmp(l))
 c               Insert graph in list of propagators
                      if(prwidth(k,ignum).gt.ZERO) then
@@ -305,7 +295,6 @@ c Initialize all the clustering ID's to zero
       enddo
 c Loop over the configurations
       do i=start_config,end_config
-         heavyrad(i)=.false.
 c         write (*,*) ' at graph ',i
          do j=1,nexternal
             ipids(j,1,nexternal)=ishft(1,j-1)
@@ -315,23 +304,10 @@ c         write (*,*) ' at graph ',i
             ipdgcl(ipids(j,1,nexternal),i,nFKSprocess)=idup(j,1)
          enddo
          inpids=nexternal
-c         print *,'Inserting graph ',i
+         if(btest(mlevel,3))
+     $        write(*,*) 'Inserting graph ',i
  10      if (filgrp(i,inpids,ipids)) goto 10
-         if(btest(mlevel,4).and.heavyrad(i)) then
-            write(*,*)' set heavyrad of ',i,' to T'
-         endif
       enddo
-c     Ensure that there are some allowed clusterings
-      do i=start_config,end_config
-         if(.not.heavyrad(i)) goto 20
-      enddo
-      if(btest(mlevel,4)) then
-         write(*,*)' Reset all heavyrad to .false.'
-      endif      
-      do i=start_config,end_config
-         heavyrad(i)=.false.
-      enddo
- 20   continue
       filmap=.true.
       return
       end
@@ -347,7 +323,7 @@ c**************************************************************************
       include 'run.inc'
       include 'real_from_born_configs.inc'
       double precision p(0:3,nexternal)
-      integer nbw,ibwlist(nexternal),i,j,ida(2),idenpart
+      integer nbw,ibwlist(2,nexternal),i,j,ida(2),idenpart
       logical isbw(*)
       logical OnBW(-nexternal:0),onshell
       integer            mapconfig(0:lmaxconfigs), this_config
@@ -427,36 +403,25 @@ c                  whichever is closer to mass shell
       enddo
 
       nbw=0
-      do i=-1,-(nexternal-3),-1
-        if(OnBW(i)) then 
-           nbw=nbw+1
-        endif
-      enddo
-      if(nbw.eq.0)then
-c        print *,'No BW found'
-        return
-      endif
       do i=1,nexternal
         icl(i)=ishft(1,i-1)
       enddo
-      ibw=0
       do i=-1,-(nexternal-3),-1
         icl(i)=icl(iforest(1,i,iconf))+
      $     icl(iforest(2,i,iconf))
         isbw(icl(i))=.false.
         if(OnBW(i))then
-          ibw=ibw+1
-          ibwlist(ibw)=icl(i)
+          nbw=nbw+1
+          ibwlist(1,nbw)=icl(i)
+          ibwlist(2,nbw)=i
           isbw(icl(i))=.true.
-c          print *,'Added BW for resonance ',i,icl(i),iconf
-          if(ibw.eq.nbw) return
+c          print *,'Added BW for resonance ',i,icl(i),this_config
         endif
       enddo
-      
       end
 
 
-      logical function findmt(idij,icgs,nbw,ibwlist)
+      logical function findmt(idij,icgs)
 c**************************************************************************
 c     input:
 c            idij, icgs
@@ -466,11 +431,16 @@ c**************************************************************************
       implicit none
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
+      include 'maxconfigs.inc'
       include 'cluster.inc'
       include 'message.inc'
-      integer idij,nbw,ibwlist(nexternal),icgs(0:n_max_cg)
+      include 'real_from_born_configs.inc'
+      include 'run.inc'
+      integer idij,icgs(0:n_max_cg)
       logical foundbw
       integer i, ii, j, jj, il, igsbk(0:n_max_cg)
+      integer            mapconfig(0:lmaxconfigs), this_config
+      common/to_mconfigs/mapconfig, this_config
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 c
@@ -479,19 +449,19 @@ c     if first clustering, set possible graphs
       if (icgs(0).eq.0) then
          ii=0
          do i=1,id_cl(nFKSprocess,idij,0)
-c        check if we have constraint from onshell resonances
+c     if chcluster, allow only this config
+           if(chcluster)then
+              if(id_cl(nFKSprocess,idij ,i) .ne.
+     $             real_from_born_conf(this_config,nFKSprocess)) cycle
+           endif
+c     check if we have constraint from onshell resonances
             foundbw=.true.
             do j=1,nbw
-               if(resmap(ibwlist(j),id_cl(nFKSprocess,idij,i)))then
+               if(resmap(ibwlist(1,j),id_cl(nFKSprocess,idij,i)))then
                   cycle
                endif
                foundbw=.false.
  10         enddo
-c        check if this diagram has radiation off heavy particle
-c        For now, turn this off if there is a bw in the process,
-c        since this created problems when the bw included a radiated part.
-c        This is something that might need to be thought more about later
-c        (in order for b matching to work...)
             if(nbw.eq.0.and.heavyrad(id_cl(nFKSprocess,idij,i))) cycle
             if((nbw.eq.0.or.foundbw))then
                ii=ii+1
@@ -554,7 +524,7 @@ c Argument
       double precision p(0:3,nexternal)
 c Local
       integer i,j,k,n,idi,idj,idij,icgs(0:n_max_cg),nleft,iwin,jwin
-     $     ,iwinp,imap(nexternal,2),nbw,ibwlist(nexternal)
+     $     ,iwinp,imap(nexternal,2)
       double precision pcmsp(0:3),p1(0:3),pi(0:3),nr(0:3),nn2,ct,st
      $     ,minpt2ij,pt2ij(n_max_cl),zij(n_max_cl)
       double precision pz(0:3)
@@ -581,7 +551,7 @@ c External
 c     Check if any resonances are on the BW, store results in to_checkbw
       call checkbw(p,nbw,ibwlist,isbw)
       if(btest(mlevel,4).and.nbw.gt.0)
-     $     write(*,*) 'Found BWs: ',(ibwlist(i),i=1,nbw)
+     $     write(*,*) 'Found BWs: ',(ibwlist(1,i),i=1,nbw)
 
 c     initialize index map
       do i=1,nexternal
@@ -589,7 +559,7 @@ c     initialize index map
          imap(i,2)=ishft(1,i-1)
          mt2ij(i)=0
       enddo   
-      mt2last=0
+      mt2last=0d0
       minpt2ij=1.0d37
       do i=1,nexternal
 c     initialize momenta
@@ -607,14 +577,12 @@ c     determine all ptij
                idj=ishft(1,j-1)
                if (btest(mlevel,4)) then
                   write (*,*)'i = ',i,'(',idi,'), j = ',j,'(',idj,')'
-                  write (*,*)'nbw =',nbw,ibwlist
                endif
-     
 c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
-               if (findmt(idij,icgs,nbw,ibwlist)) then
+               if (findmt(idij,icgs)) then
                   if (btest(mlevel,4)) then
                      write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                   endif
@@ -676,6 +644,10 @@ c     Make sure that initial-state particles are daughters
          imocl(n)=imap(3,2)
          pt2ijcl(n)=pcl(4,imocl(n))
          zcl(n)=0.
+c        Set info for LH clustering output
+         icluster(1,n)=1
+         icluster(2,n)=3
+         icluster(3,n)=2
          igraphs(0)=1
          igraphs(1)=real_from_born_conf(this_config,nFKSprocess)
          cluster=.true.
@@ -698,8 +670,21 @@ c     combine winner
      &           ' -> ',minpt2ij,', z = ',zcl(n)
             write (*,*) 'iwin,jwin:',iwin,jwin,imocl(n)
          endif
+c        Set info for LH clustering output
+         icluster(1,n)=imap(iwin,1)
+         icluster(2,n)=imap(jwin,1)
+         icluster(3,n)=0
+         icluster(4,n)=0
+         if (isbw(imocl(n))) then
+            do i=1,nbw
+               if(ibwlist(1,i).eq.imocl(n))then
+                  icluster(4,n)=ibwlist(2,i)
+                  exit
+               endif
+            enddo
+         endif
 c     Reset igraphs with new mother
-         if (.not.findmt(imocl(n),igraphs,nbw,ibwlist)) then
+         if (.not.findmt(imocl(n),igraphs)) then
             write(*,*) 'cluster.f: Error. Invalid combination.' 
             return
          endif
@@ -715,6 +700,8 @@ c     Set mt2ij to m^2+pt^2
      $              ,sqrt(mt2ij(n)),' (cf ',sqrt(pt2ijcl(n)),')'
             endif
             iwinp=imap(3-iwin,2);
+c        Set partner info for LH clustering output
+            icluster(3,n)=imap(3-iwin,1)
             do i=0,3
                pcl(i,imocl(n))=pcl(i,idacl(n,1))-pcl(i,idacl(n,2))
                pcmsp(i)=-pcl(i,imocl(n))-pcl(i,iwinp)
@@ -792,6 +779,11 @@ c     Make sure that initial-state particle is always among daughters
             imocl(n+1)=imap(3,2)
 
             pt2ijcl(n+1)=djb(pcl(0,imap(3,2)))
+c        Set info for LH clustering output
+            icluster(1,n+1)=1
+            icluster(2,n+1)=3
+            icluster(3,n+1)=2
+            icluster(4,n+1)=0
             if (btest(mlevel,3)) then
                write(*,*) 'Last vertex is',imap(1,2),imap(2,2),imap(3,2)
                write(*,*) '          ->',pt2ijcl(n+1),sqrt(pt2ijcl(n+1))
@@ -832,9 +824,10 @@ c     Reset diagram list icgs
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
 c     cluster only combinable legs (acc. to diagrams)
-               if (.not.findmt(idij,icgs,nbw,ibwlist)) cycle
+               if (.not.findmt(idij,icgs)) cycle
                if (btest(mlevel,4)) then
-                  write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0)),i,j,idi,idj
+                  write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0)),i,j,idi
+     $                 ,idj
                endif
                if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     
@@ -854,9 +847,6 @@ c     final state clustering
 c     initial state clustering, only if hadronic collision
 c     check whether 2->(n-1) process w/ cms energy > 0 remains
                   iwinp=imap(3-j,2);
-                  do k=0,3
-                     pcl(k,idij)=pcl(k,idj)-pcl(k,idi)
-                  enddo
                   if(ickkw.eq.2.or.ktscheme.eq.2)then
                      pt2ij(idij)=pyjb(pcl(0,idi),pcl(0,idj),pcl(0
      $                    ,iwinp),zij(idij))

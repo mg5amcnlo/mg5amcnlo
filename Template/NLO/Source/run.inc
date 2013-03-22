@@ -66,7 +66,6 @@ c     Shower MonteCarlo
 c     
       character*10 shower_mc
       common /cMonteCarloType/shower_mc
-
 c
 c     Reweight info
 c

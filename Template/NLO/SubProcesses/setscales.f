@@ -408,7 +408,7 @@ c
       tmp=0
       if(ickkw.eq.3)then
 c FxFx merging scale:
-        tmp=sqrt(FxFx_fac_scale(1)*FxFx_fac_scale(2))
+        tmp=min(FxFx_fac_scale(1),FxFx_fac_scale(2))
         temp_scale_id='FxFx merging scale'
       elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)
