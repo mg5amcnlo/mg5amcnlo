@@ -9,8 +9,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       slower than they should be. Thanks Eric Mintun for reporting.
                   JA: Fix problem in event clustering (introduced in v. 1.5.8)
                       which made events from some processes fail Pythia running.
-                  JA: Fixed Pythia 8 C++ matrix element output for decay chain 
-                      processes such as p p > z j, z > j j.
+                  JA: Fixed bug #1156474, Pythia 8 C++ matrix element output for 
+                      decay chain processes such as p p > z j, z > j j.
                   JA: Automatically remove libpdf and libgeneric before survey,
                       so everything works automatically when switching between
                       built-in PDFs and LHAPDF.

@@ -1152,7 +1152,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             if self.model.get_particle(process.get_legs_with_decays()[i].get('id')).\
                    get('mass') not in  ['zero', 'ZERO']:
                 mass_strings.append("int id%dMass() const {return %d;}" % \
-                                (i + 1, abs(process.get('legs')[i].get('id'))))
+                                (i + 1, abs(process.get_legs_with_decays()[i].get('id'))))
 
         return "\n".join(mass_strings)
 
