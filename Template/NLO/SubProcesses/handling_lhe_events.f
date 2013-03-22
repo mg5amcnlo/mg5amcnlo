@@ -56,8 +56,8 @@ c
       integer event_id
       common /c_event_id/ event_id
       include 'reweight_all.inc'
-c     Set the event_id to 0. If 0 or posititive, this value will be
-c     update in write_lhe_event. It is set to -99 through a block data
+c     Set the event_id to 0. If 0 or positive, this value will be update
+c     in write_lhe_event. It is set to -99 through a block data
 c     statement.
       event_id=0
 c
@@ -330,6 +330,9 @@ c
       include 'reweight_all.inc'
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
+c RF: don't use the event_id:
+      event_id = -99
+c
       if (event_id.ge.0) then
          event_id=event_id+1
          if (event_id.le.9) then
