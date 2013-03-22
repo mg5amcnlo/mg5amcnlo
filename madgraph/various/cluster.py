@@ -382,8 +382,8 @@ class MultiCore(Cluster):
                     if self.submitted == self.done:
                         break
                     logger.debug('Found too many jobs. Recovering')
-                    time.sleep(5)
                     no_in_queue += 1
+                    time.sleep(min(180, 5 * no_in_queue))
                     if no_in_queue > 3:
                         logger.debug('Still too many jobs. Continue')
                         break
@@ -439,8 +439,8 @@ class MultiCore(Cluster):
                 else:
                     no_in_queue += 1
                     try:
-                        time.sleep(5)
-                        if no_in_queue > 5 * 3600.0 / 5:
+                        time.sleep(min(180,5*no_in_queue))
+                        if no_in_queue > 5 * 3600.0 / 162:
                             break
                     except KeyboardInterrupt:
                         logger.warning('CTRL-C assumes that all jobs are done. Continue the code')
@@ -466,9 +466,9 @@ class MultiCore(Cluster):
                     if update_status:
                         update_status(len(self.waiting_submission), len(self.pids) ,
                                                                       self.done)
-                    time.sleep(5)
+                    time.sleep(min(5*no_in_queue, 180))
                     no_in_queue += 1
-                    if no_in_queue > 5 * 3600.0 / 5:
+                    if no_in_queue > 5 * 3600.0 / 162:
                             break
                 except KeyboardInterrupt:
                     break

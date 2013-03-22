@@ -23,6 +23,7 @@ import sys
 import time
 import optparse
 import subprocess
+import shutil
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -442,11 +443,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                and self._export_format in ['NLO']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be deleted and replaced.')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
         if self._export_format in ['NLO']:

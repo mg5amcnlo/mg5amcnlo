@@ -267,6 +267,67 @@ c if the file is a partial file the header is non-standard
       end
 
 
+c Same as read_lhef_header, except that more parameters are read.
+c Avoid overloading read_lhef_header, meant to be used in utilities
+      subroutine read_lhef_header_full(ifile,nevents,MonteCarlo)
+      implicit none 
+      integer ifile,nevents,i,ii,iistr,ipart
+      character*10 MonteCarlo
+      character*80 string,string0
+      character*3 event_norm
+      common/cevtnorm/event_norm
+      double precision temp,remcmass(-5:21)
+      common/cremcmass/remcmass
+      ipart=-1000000
+      nevents = -1
+      MonteCarlo = ''
+c
+      string='  '
+      dowhile(string.ne.'  -->')
+        string0=string
+        if (index(string,'</header>').ne.0) return
+        read(ifile,'(a)')string
+        if(index(string,'= nevents').ne.0)
+     #    read(string,*)nevents,string0
+        if(index(string,'parton_shower').ne.0)then
+           ii=iistr(string)
+           MonteCarlo=string(ii:ii+10)
+        endif
+        if(index(string,'event_norm').ne.0)then
+           ii=iistr(string)
+           event_norm=string(ii:ii+3)
+        endif
+        if( index(string,'<montecarlomasses>').ne.0 .or.
+     #      index(string,'<MonteCarloMasses>').ne.0 )then
+          read(ifile,'(a)')string
+          dowhile( index(string,'</montecarlomasses>').eq.0 .and.
+     #             index(string,'</MonteCarloMasses>').eq.0 )
+            read(string,*)ipart,temp
+            if(ipart.lt.-5.or.ipart.gt.21)then
+              write(*,*)'Error in read_lhef_header:'
+              write(*,*)' incomprehensible list of parton masses',ipart
+              stop
+            endif
+            remcmass(ipart)=temp
+            read(ifile,'(a)')string
+          enddo
+        endif
+      enddo
+c Works only if the name of the MC is the last line of the comments
+      MonteCarlo=string0(1:10)
+c Here we are at the end of (user-defined) comments. Now go to end
+c of headers
+      dowhile(index(string,'</header>').eq.0)
+        string0=string
+        read(ifile,'(a)')string
+      enddo
+c if the file is a partial file the header is non-standard   
+      if (MonteCarlo .ne. '') read(string0,250) nevents
+ 250  format(1x,i8)
+      return
+      end
+
+
       subroutine write_lhef_init(ifile,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
