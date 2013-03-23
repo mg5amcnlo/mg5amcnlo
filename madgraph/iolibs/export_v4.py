@@ -758,7 +758,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         
         # Check for compiler
-        if misc.which(default_compiler):
+        if default_compiler and misc.which(default_compiler):
             compiler = default_compiler
         elif misc.which('gfortran'):
             compiler = 'gfortran'
@@ -766,9 +766,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             compiler = 'g77'
         elif misc.which('f77'):
             compiler = 'f77'
-        else:
+        elif default_compiler:
             logger.warning('No Fortran Compiler detected! Please install one')
-            compiler = default_compiler
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
