@@ -32,6 +32,8 @@ import madgraph.iolibs.import_v4 as import_v4
 from madgraph import MG5DIR
 import mg5decay.decay_objects as decay_objects
 import tests.input_files.import_vertexlist as import_vertexlist
+import madgraph.core.diagram_generation as diagram_generation
+import madgraph.various.diagram_symmetry as diagram_symmetry
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -693,10 +695,11 @@ class Test_DecayModel(unittest.TestCase):
 
         for param in sum([self.base_model.get('parameters')[key] for key \
                               in self.base_model.get('parameters')], []):
-            value = eval("decay_objects.%s" % param.name)
-            self.assertTrue(isinstance(value, int) or \
-                            isinstance(value, float) or \
-                            isinstance(value, complex))
+            if param.name:
+                value = eval("decay_objects.%s" % param.name)
+                self.assertTrue(isinstance(value, int) or \
+                                    isinstance(value, float) or \
+                                    isinstance(value, complex))
 
     def test_setget(self):
         """ Test the set and get for special properties"""
@@ -1543,8 +1546,8 @@ class Test_Channel(unittest.TestCase):
                 vert_3 = copy.deepcopy(vertex)
                 vert_6 = copy.deepcopy(vertex)
             elif legs_set == set([-13, 14, 24]):
-                # w- > e- v~ (decay of antiparticle)
-                # w+ > e+ v
+                # w- > mu- vm~ (decay of antiparticle)
+                # w+ > mu+ vm
                 vert_4 = copy.deepcopy(vertex)
                 vert_5 = copy.deepcopy(vertex)
 
@@ -1801,11 +1804,7 @@ class Test_Channel(unittest.TestCase):
         vert_2_id.get('legs')[2]['number'] = 0
         #print vert_2_id
 
-        # w+ > mu vm mu
-        w_muvmu = copy.deepcopy(vertexlist[0])
-        w_muvmu.set('id', 1000)
-        w_muvmu.get('legs')[0].set('id', -13)
-        w_muvmu.get('legs')[1].set('id', 14)
+        # w+ > mu vm is given by vertex[0]
 
         # w+ > mu ve
         w_muve = copy.deepcopy(vertexlist[0])
@@ -1813,7 +1812,7 @@ class Test_Channel(unittest.TestCase):
         w_muve.get('legs')[0].set('id', -13)
         w_muve.get('legs')[1].set('id', 12)
 
-        # w+ > e- vm mu
+        # w+ > e- vm
         w_evmu = copy.deepcopy(vertexlist[0])
         w_evmu.set('id', 1200)
         w_evmu.get('legs')[0].set('id', -11)
@@ -1823,7 +1822,7 @@ class Test_Channel(unittest.TestCase):
         # Update informations in model
         for new_inter_id in [800, 900, 1000, 1100, 1200]:
             self.my_testmodel.get('interactions').append(\
-                base_objects.Interaction({'id':new_inter_id}))
+                base_objects.Interaction({'id':new_inter_id }))
             self.my_testmodel.get('interactions').append(\
                 base_objects.Interaction({'id':new_inter_id+1}))
             self.my_testmodel['conj_int_dict'][new_inter_id] = new_inter_id+1
@@ -1850,26 +1849,46 @@ class Test_Channel(unittest.TestCase):
         # (2(-6),3(6),4(6),5(-6),6(-6)>2(25),id:800)) ()
         """ 
         Nice string of channel_a,b,c (new leg ordering):
+        h--t (2) 
+          \t~(3) > b~(3) w-(7)          w-(8)
+                         \ mu(7) vm(11) \ mu(8) vm(12)
+          \t (4) > w+ (4) b(9)
+          \t~(5) > b~ (5) w-(10)
+          \t~(6) 
         Channel_a:
-        ((8(13),12(-14)>8(-24),id:1001),(7(13),11(-14)>7(-24),id:44),
+        ((8(13),12(-14)>8(-24),id:44),(7(13),11(-14)>7(-24),id:44),
         (5(-5),10(-24)>5(-6),id:54),(4(24),9(5)>4(6),id:33),
         (3(-5),7(-24),8(-24)>3(-6),id:901),
-        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) (QED=3) 
+        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) (QED=4) 
         (est. further width = 0.000e+00)
-
+        --------------
+        Compare to channel a:  t(2) <> t(4); t~(6) <> t~(3)
+        h--t (2) > w+ (4) b(9)
+          \t~(3) > b~ (5) w-(10)
+          \t (4) 
+          \t~(5) 
+          \t~(6) > b~(6) w-(9)          w-(10)
+                         \ mu(9) vm(11) \ mu(10) vm(12)
         Channel_b:
-        ((10(13),12(-14)>10(-24),id:44),(9(13),11(-14)>9(-24),id:1001),
+        ((10(13),12(-14)>10(-24),id:44),(9(13),11(-14)>9(-24),id:44),
         (6(-5),9(-24),10(-24)>6(-6),id:901),(3(-5),8(-24)>3(-6),id:54),
         (2(24),7(5)>2(6),id:33),
-        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) (QED=3) 
-        (est. further width = 0.000e+00)
-
+        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) 
+        (QED=4) (est. further width = 0.000e+00)
+        --------------
+        h--t (2) 
+          \t~(3) > b~(3) w-(7)          w-(8)
+                         \ mu(7) vm(11) 
+          \t (4) > w+ (4) b(9)
+          \t~(5) > b~ (5) w-(10)
+                          \ mu(10) vm(12)
+          \t~(6) 
         Channel_c:
-        ((10(13),12(-14)>10(-24),id:1001),(9(13),11(-14)>9(-24),id:1001),
-        (6(-5),9(-24),10(-24)>6(-6),id:901),(3(-5),8(-24)>3(-6),id:54),
-        (2(24),7(5)>2(6),id:33),
-        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) (QED=2) 
-        (est. further width = 0.000e+00)
+        ((10(13),12(-14)>10(-24),id:44),(7(13),11(-14)>7(-24),id:44),
+        (5(-5),10(-24)>5(-6),id:54),(4(24),9(5)>4(6),id:33),
+        (3(-5),7(-24),8(-24)>3(-6),id:901),
+        (2(6),3(-6),4(6),5(-6),6(-6),1(25),id:800)) 
+        (QED=4) (est. further width = 0.000e+00)
         """
 
 
@@ -1896,15 +1915,15 @@ class Test_Channel(unittest.TestCase):
                                                  self.my_testmodel)
         #print channel_a.nice_string()
 
-        # Add w- > e- ve~ to first w- in t~ > b~ w- w- decay chain
+        # Add w- > mu- vm~ to first w- in t~ > b~ w- w- decay chain
         channel_a = higgs.connect_channel_vertex(channel_a, 5,
-                                                 vertexlist[0],
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print channel_a.nice_string()
 
         # Add w- > mu vm~ to 2nd w- in t~ > b~ w- w- decay chain
         channel_a = higgs.connect_channel_vertex(channel_a, 7,
-                                                 w_muvmu,
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print 'Channel_a:\n', channel_a.nice_string()
         
@@ -1935,13 +1954,13 @@ class Test_Channel(unittest.TestCase):
 
         # Add w- > mu vm~ to 1st w- in t~ decay chain
         channel_b = higgs.connect_channel_vertex(channel_b, 1,
-                                                 w_muvmu,
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print channel_b.nice_string()
 
-        # Add w- > e- ve~ to 2nd w- in t~ decay chain
+        # Add w- > mu vm~ to 2nd w- in t~ decay chain
         channel_b = higgs.connect_channel_vertex(channel_b, 3,
-                                                 vertexlist[0],
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print 'Channel_b:\n', channel_b.nice_string()
 
@@ -1951,46 +1970,60 @@ class Test_Channel(unittest.TestCase):
         channel_c = decay_objects.Channel({'vertices': base_objects.VertexList(\
                     [vert_1_id])})
 
-        # Add t > b w+ to 1st t
-        channel_c = higgs.connect_channel_vertex(channel_c, 0,
-                                                 vertexlist[2],
-                                                 self.my_testmodel)
-        #print '\n', channel_c.nice_string()
-
-        # Add t~ > b~ w- to 1st t~
-        channel_c = higgs.connect_channel_vertex(channel_c, 2,
-                                                 vertexlist[2],
-                                                 self.my_testmodel)
-        #print channel_c.nice_string()
-
-        # Add t~ > b~ w- w- to final t~
-        channel_c = higgs.connect_channel_vertex(channel_c, 6,
+        # Add t~ > b~ w- w- to first t~
+        channel_c = higgs.connect_channel_vertex(channel_c, 1,
                                                  vert_2_id,
                                                  self.my_testmodel)
-        #print channel_c.nice_string()
+        #print channel_a.nice_string()
+
+        # Add t > b w+ to 2nd t
+        channel_c = higgs.connect_channel_vertex(channel_c, 4,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
+        #print channel_a.nice_string()
+
+        # Add t~ > b~ w- to 2nd t~
+        channel_c = higgs.connect_channel_vertex(channel_c, 6,
+                                                 vertexlist[2],
+                                                 self.my_testmodel)
 
         # Add w- > mu vm~ to 1st w- in t~ decay chain
-        channel_c = higgs.connect_channel_vertex(channel_c, 1,
-                                                 w_muvmu,
+        channel_c = higgs.connect_channel_vertex(channel_c, 5,
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print channel_c.nice_string()
 
         # Add w- > mu vm~ to 2nd w- in t~ decay chain
         channel_c = higgs.connect_channel_vertex(channel_c, 3,
-                                                 w_muvmu,
+                                                 w_muvm,
                                                  self.my_testmodel)
         #print 'Channel_c:\n', channel_c.nice_string()
-        self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, 4, channel_b, 2))                        
-        self.assertTrue(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_b, -1))
-        self.assertFalse(decay_objects.Channel.check_channels_equiv_rec(channel_a, -1, channel_c, -1))
 
+
+        """ Test for using DiagramTag """
+        Tag_a = diagram_generation.DiagramTag(channel_a)
+        Tag_b = diagram_generation.DiagramTag(channel_b)
+        Tag_c = diagram_generation.DiagramTag(channel_c)
+        #print 'Channel_a:\n', channel_a.nice_string(), '\n', Tag_a
+        #print 'Channel_b:\n', channel_b.nice_string(), '\n', Tag_b
+        #print 'Channel_c:\n', channel_c.nice_string(), '\n', Tag_c
+
+        # Test the get function
+        self.assertFalse(channel_a['tag'])
+        self.assertEqual(channel_a.get('tag'), Tag_a)
+        self.assertTrue(Tag_a == Tag_b)
+        self.assertFalse(Tag_a == Tag_c)
+
+        # Test the check_channels_equiv function
         self.assertTrue(decay_objects.Channel.check_channels_equiv(channel_a,
                                                                    channel_b))
         self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_a,
                                                                     channel_c))
+        self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_a,
+                                                                    self.h_tt_bbmmvv))
 
 
-        """ Test of fermionic mother """
+        """ Test of check_channels_equiv for fermionic mother """
         # Change initial pid
         vert_2_id['legs'][-1]['id'] = -6
         # Correct the leg numbers
@@ -2003,7 +2036,7 @@ class Test_Channel(unittest.TestCase):
         channel_d = decay_objects.Channel({'vertices': base_objects.VertexList(\
                     [vert_2_id])})
         channel_d = higgs.connect_channel_vertex(channel_d, 0,
-                                                 w_muvmu,
+                                                 w_muvm,
                                                  self.my_testmodel)        
         channel_d = higgs.connect_channel_vertex(channel_d, 3,
                                                  vertexlist[0],
@@ -2015,7 +2048,7 @@ class Test_Channel(unittest.TestCase):
                                                  vertexlist[0],
                                                  self.my_testmodel)        
         channel_e = higgs.connect_channel_vertex(channel_e, 3,
-                                                 w_muvmu,
+                                                 w_muvm,
                                                  self.my_testmodel)
         # t > w+ b~ w+, w+ > e+ vm, w+ > mu+ ve
         channel_f = decay_objects.Channel({'vertices': base_objects.VertexList(\
@@ -2036,6 +2069,13 @@ class Test_Channel(unittest.TestCase):
                                                                    channel_f))
         self.assertFalse(decay_objects.Channel.check_channels_equiv(channel_e,
                                                                    channel_f))
+        Tag_d = diagram_generation.DiagramTag(channel_d)
+        Tag_e = diagram_generation.DiagramTag(channel_e)
+        Tag_f = diagram_generation.DiagramTag(channel_f)
+
+        self.assertTrue(Tag_d == Tag_e)
+        self.assertFalse(Tag_d == Tag_f)
+        self.assertFalse(Tag_e == Tag_f)
 
     def test_check_gauge_dependence(self):
         """ Test of the check of gauge dependence function."""
@@ -2251,6 +2291,8 @@ class Test_Channel(unittest.TestCase):
                                                 self.my_testmodel)
         channel_a.get_apx_decaywidth(self.my_testmodel)
         channel_b.get_apx_decaywidth(self.my_testmodel)
+        channel_a.get('tag')
+        channel_b.get('tag')
         channel_a['has_idpart']=True
         channel_b['has_idpart']=True
         #print channel_a.nice_string(), '\n', channel_b.nice_string()
@@ -2277,6 +2319,8 @@ class Test_Channel(unittest.TestCase):
         #print channel_c.nice_string(), '\n', channel_d.nice_string()
         channel_c.calculate_orders(self.my_testmodel)
         channel_d.calculate_orders(self.my_testmodel)
+        channel_c.get('tag')
+        channel_d.get('tag')
         
 
         # Test of find_channels

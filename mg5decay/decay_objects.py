@@ -53,6 +53,8 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.core.diagram_generation as diagram_generation
+
 import models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -922,27 +924,24 @@ class DecayParticle(base_objects.Particle):
  clevel):
             # The vertex level that should be combine with sub_clevel
             vlevel = clevel - sub_clevel+1
+
             # Go through each 'off-shell' channel in the given sub_clevel.
             # Decay of on-shell channel is not a new channel.
             for sub_c in self.get_channels(sub_clevel, False):
                 # Scan each leg to see if there is any appropriate vertex
                 for index, leg in enumerate(sub_c.get_final_legs()):
+
                     # Get the particle even for anti-particle leg.
                     inter_part = model.get_particle(abs(leg['id']))
+
                     # If this inter_part is stable, do not attach vertices to it
                     if inter_part.get('is_stable'):
                         continue
                     # Get the vertexlist in vlevel
                     # Both on-shell and off-shell vertex 
                     # should be considered.
-                    try:
-                        vlist_a = inter_part.get_vertexlist(vlevel, True)
-                    except KeyError:
-                        vlist_a = []
-                    try:
-                        vlist_b = inter_part.get_vertexlist(vlevel, False)
-                    except KeyError:
-                        vlist_b = []
+                    vlist_a = inter_part.get_vertexlist(vlevel, True)
+                    vlist_b = inter_part.get_vertexlist(vlevel, False)
 
                     # Find appropriate vertex
                     for vert in (vlist_a + vlist_b):
@@ -1060,11 +1059,10 @@ class DecayParticle(base_objects.Particle):
         # check_channels_equiv
 
 
-        return any(Channel.check_channels_equiv(other_c, channel)\
-                       for other_c in self.get_channels(clevel, onshell) \
+        return any([Channel.check_channels_equiv(other_c, channel)\
+                       for other_c in self.get_channels(clevel, onshell)
                        if abs(sum(other_c['final_mass_list'])-\
-                       sum(channel['final_mass_list']))< 0.00001
-                   )
+                       sum(channel['final_mass_list']))< 0.01])
 
     def check_gauge_dependence(self, final_pids):
         """ Check processes that are potentially gauge dependent, i.e.
@@ -3061,15 +3059,21 @@ class Channel(base_objects.Diagram):
         
         # New properties
         self['onshell'] = 0
+        self['ini_pid'] = 0
+        self['final_legs'] = base_objects.LegList()
+
         # This property denotes whether the channel has 
         # identical particles in it.
         self['has_idpart'] = False
+
+        # (real) DiagramTag
+        self['tag'] = []
+
+        # old properties for check_channels_equiv, removable
         # The position of the identicle particles with pid as keys.
         self['id_part_list'] = {}
-        self['ini_pid'] = 0
-        self['final_legs'] = base_objects.LegList()
-        # Property for optimizing the check_repeat of DecayParticle
         self['final_mass_list'] = 0
+
         # Decay width related properties.
         self['apx_matrixelement_sq'] = 0.
         self['s_factor'] = 1
@@ -3119,6 +3123,9 @@ class Channel(base_objects.Diagram):
 
         if name == 'apx_decaywidth_nextlevel' and model:
             return self.get_apx_decaywidth_nextlevel(model)
+
+        if name == 'tag' and not self['tag']:
+            self['tag'] = diagram_generation.DiagramTag(self)
 
         return super(Channel, self).get(name)
 
@@ -3386,6 +3393,23 @@ class Channel(base_objects.Diagram):
 
         return id_part_list
 
+    @staticmethod
+    def check_channels_equiv(channel_a, channel_b):
+        """ Helper function to check if any channel is indeed identical to
+            the given channel. (This may happens when identical particle in
+            channel.) This function check the final state first.
+            Then use DiagramTag for full comparison."""
+
+        # Get the final states of channels
+        final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
+        final_pid_b = set([l.get('id') for l in channel_b.get_final_legs()])
+
+        # Return False if they are not the same
+        if final_pid_a != final_pid_b:
+            return False
+
+        return channel_a.get('tag') == channel_b.get('tag')
+
     # OBSELETE
     def get_idpartlist(self):
         """ Get the position of identical particles in this channel.
@@ -3412,30 +3436,8 @@ class Channel(base_objects.Diagram):
                         self['has_idpart'] = True
 
         return self['id_part_list']
-                
-    @staticmethod
-    def check_channels_equiv(channel_a, channel_b):
-        """ Helper function to check if any channel is indeed identical to
-            the given channel. (This may happens when identical particle in
-            channel.) This function check the 'has_idpart' and the final
-            state particles of the two channels. Then check the equivalence
-            by the recursive "check_channels_equiv_rec" function."""
 
-        # Return if the channel has no identical particle.
-        #if not channel_a.get('has_idpart') or not channel_b.get('has_idpart'):
-        #    return False
-        
-        # Get the final states of channels
-        final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
-        final_pid_b = set([l.get('id') for l in channel_b.get_final_legs()])
-        # Return False if they are not the same
-        if final_pid_a != final_pid_b:
-            return False
-
-        # Recursively check the two channels from the final vertices
-        # (the origin of decay.)
-        return Channel.check_channels_equiv_rec(channel_a, -1, channel_b, -1)
-
+    # Obselete, replaced by DiagramTag
     @staticmethod
     def check_channels_equiv_rec(channel_a, vindex_a, channel_b, vindex_b):
         """ The recursive function to check the equivalence of channels 
