@@ -137,11 +137,13 @@ c         firsttime_conversion=.false.
 c      endif
 c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
-c check for poles cancellation for the first couple of PS points
-c Check poles for the first PS points (but not for the initialization PS
-c points)
-      if (firsttime .and. mod(ret_code,100)/10.ne.3 .and.
-     &     mod(ret_code,100)/10.ne.4) then 
+c
+c Check poles for the first PS points when doing MC over helicities, and
+c for all phase-space points when not doing MC over helicities. Skip
+c MadLoop initialization PS points.
+      cpol=.false.
+      if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
+     $     .and. mod(ret_code,100)/10.ne.4) then 
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          avgPoleRes(1)=(single+madfks_single)/2.0d0
          avgPoleRes(2)=(double+madfks_double)/2.0d0
@@ -153,7 +155,7 @@ c points)
          else
             cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
          endif
-         if (.not. cpol) then
+         if (.not. cpol .and. firsttime) then
             write(*,*) "---- POLES CANCELLED ----"
             firsttime = .false.
             if (mc_hel.ne.0) then
@@ -181,7 +183,7 @@ c (independent) helicities
                endif
                close(67)
             endif
-         else
+         elseif(cpol .and. firsttime) then
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
      &           tolerance
             write(*,*) " COEFFICIENT DOUBLE POLE:"
@@ -208,7 +210,7 @@ c (independent) helicities
             endif
          endif
       endif
-c Update the statistics using the ret_code:
+c Update the statistics using the MadLoop return code (ret_code)
       ntot = ntot+1             ! total number of PS
       if (ret_code/100.eq.1) then
          nsun = nsun+1          ! stability unknown
@@ -235,7 +237,10 @@ c Update the statistics using the ret_code:
          n1=n1+1                ! no known ret_code (1)
       endif
 
-      if (.not. firsttime .and. ret_code/100.eq.4) then
+c Write out the unstable, non-rescued phase-space points (MadLoop return
+c code is in the four hundreds) or the ones that are found by the pole
+c check (only available when not doing MC over hels)
+      if (.not. firsttime .and. (ret_code/100.eq.4 .or. cpol)) then
          if (neps.lt.10) then
             if (neps.eq.1) then
                open(unit=78, file='UPS.log')
@@ -245,6 +250,8 @@ c Update the statistics using the ret_code:
             write(78,*) '===== EPS #',neps,' ====='
             write(78,*) 'mu_r    =',mu_r           
             write(78,*) 'alpha_S =',alpha_S
+            write(78,*) 'MadLoop return code and pole check',ret_code
+     $           ,cpol
             if (mc_hel.ne.0) then
                write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
             endif
