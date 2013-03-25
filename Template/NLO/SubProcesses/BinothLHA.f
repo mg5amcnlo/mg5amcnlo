@@ -140,7 +140,8 @@ c======================================================================
 c check for poles cancellation for the first couple of PS points
 c Check poles for the first PS points (but not for the initialization PS
 c points)
-      if (firsttime .and. mod(ret_code,100)/10.ne.3) then 
+      if (firsttime .and. mod(ret_code,100)/10.ne.3 .and.
+     &     mod(ret_code,100)/10.ne.4) then 
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          avgPoleRes(1)=(single+madfks_single)/2.0d0
          avgPoleRes(2)=(double+madfks_double)/2.0d0
@@ -163,7 +164,7 @@ c exists, which should be the case when firsttime is false.
                j=0
                do i=1,max_bhel
                   read(67,*,err=201) goodhel(i)
-                  if (goodhel(i).gt.0) then
+                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
                      goodhel(j)=goodhel(i)
                      hel(0)=hel(0)+1
