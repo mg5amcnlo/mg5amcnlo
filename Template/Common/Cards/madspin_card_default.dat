@@ -11,7 +11,7 @@
 #Some options (uncomment to apply)
 #
 # set seed 1
- set Nevents_for_max_weigth 0 # if zero based on the number of events in the file
+# set Nevents_for_max_weigth 75 # number of events for the estimate of the max. weight
  set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
  set BW_cut 15                # cut on how far the particle can be off-shell
 # 
