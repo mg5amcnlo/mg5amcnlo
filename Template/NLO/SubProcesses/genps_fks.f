@@ -142,7 +142,7 @@ c local
      &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
      &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
      &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1)
-      logical one_body,pass
+      logical one_body,pass,check_cnt
 c external
       double precision lambda
       external lambda
@@ -583,7 +583,9 @@ c must stay so for the computation of enhancement factors.
      &            (jac_cnt(2).le.0.d0)
       call xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
      &                  p_i_fks_ev,p_i_fks_cnt,
-     &                  xi_i_fks_ev,y_ij_fks_ev)
+     &                  xi_i_fks_ev,y_ij_fks_ev,check_cnt)
+c check_cnt=.false. is an exceedingly rare situation -- just dump the event
+      if(.not.check_cnt)goto 222
 c
 c If all went well, we are done and can exit
 c
