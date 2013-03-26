@@ -854,6 +854,7 @@ c     Store external jet numbers if first time
          njetstore(nFKSprocess,iconf)=njets
          if (btest(mlevel,4)) write(*,*)'Storing jets: ',(iqjetstore(i
      $        ,nFKSprocess,iconf),i=1,njets)
+c     Recluster without requiring chcluster
          goto 100
       else
 c     Otherwise, check that we have the right jets
@@ -1250,18 +1251,6 @@ c     Set incoming particle identities
      $        2,ipdgcl(2,igraphs(1),nFKSprocess)
       endif
       
-c     Store pdf information for systematics studies (initial)
-      if(use_syst)then
-         do j=1,2
-            n_pdfrw(j)=1
-            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),nFKSprocess)
-            s_xpdf(1,j)=xbk(ib(j))
-            s_qpdf(1,j)=sqrt(q2fact(j))
-         enddo
-      endif
-
-      if(ickkw.le.0) goto 100
-
 c     Store pdf information for systematics studies (initial)
       if(use_syst)then
          do j=1,2
