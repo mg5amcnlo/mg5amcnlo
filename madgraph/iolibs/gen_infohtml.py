@@ -175,7 +175,7 @@ class make_info_html:
         """add the meta in the replacement rule"""
         
         if os.path.exists(os.path.join(self.dir,'SubProcesses','done')):
-           self.rep_rule['meta'] = 'HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\"'
+            self.rep_rule['meta'] = 'HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\"'
         else:
             self.rep_rule['meta'] = "<META HTTP-EQUIV=\"EXPIRES\" CONTENT=\"20\" >"
         
@@ -379,9 +379,7 @@ class make_info_html_nlo(make_info_html):
                         self.rep_rule['nb_gen_diag'] += line_dict['diag']
                         line_dict['subprocesslist'] = ', <br>'.join([' </SPAN> , <SPAN style="white-space: nowrap;"> '.join(info) for info in names])
                         line_dict['postscript'] = self.check_postcript_from_file(proc, file)
-                        
-                        
-                    
+                       
                         text += line_template.substitute(line_dict)
         return text
 
@@ -400,7 +398,7 @@ class make_info_html_nlo(make_info_html):
             if line.startswith('C     Process:'):
                 found += 1
                 names[''][0].append(line[15:])
-            elif found >1:
+            elif found >0:
                 break    
         return names    
 

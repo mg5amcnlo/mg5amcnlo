@@ -191,11 +191,13 @@ class MadLoopLauncher(ExtLauncher):
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
+                # We use mu_r=1.0 to use the one defined by the user in the
+                # param_car.dat
                 evaluator.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
-                  npoints = 1)
+                  npoints = 1, mu_r=-1.0)
                 # check
-                t1, t2 =  evaluator.make_and_run(curr_path)
+                t1, t2, ram_usage = evaluator.make_and_run(curr_path)
                 if t1==None or t2==None:
                     raise MadGraph5Error,"Error while running process %s."\
                                                                      %shell_name
@@ -210,7 +212,7 @@ class MadLoopLauncher(ExtLauncher):
                 # I should have used a dictionary instead.
                 result = evaluator.parse_check_output(rFile.readlines(),\
                                                                   format='dict')
-                print self.format_res_string(result)%shell_name
+                logger.info(self.format_res_string(result)%shell_name)
 
     def format_res_string(self, res):
         """ Returns a good-looking string presenting the results.
@@ -229,7 +231,7 @@ class MadLoopLauncher(ExtLauncher):
                                                      for pmom in res['res_p']]),
                   '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with alpha_S/(2*pi):',
+                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   '|    Single pole = %s'%special_float_format(res['1eps']),
                   '|    Double pole = %s'%special_float_format(res['2eps']),
@@ -269,7 +271,7 @@ class SALauncher(ExtLauncher):
 class aMCatNLOLauncher(ExtLauncher):
     """A class to launch MadEvent run"""
     
-    def __init__(self, running_dir, cmd_int, run_mode='aMC@NLO', unit='pb', **option):
+    def __init__(self, running_dir, cmd_int, run_mode='', unit='pb', **option):
         """ initialize the StandAlone Version"""
 
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
@@ -312,12 +314,11 @@ class aMCatNLOLauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 
         import madgraph.interface.amcatnlo_run_interface as run_int
-        
         if hasattr(self, 'shell'):
             usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir, options = self.cmd_int.options)
         else:
@@ -329,7 +330,8 @@ class aMCatNLOLauncher(ExtLauncher):
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
-                misc.sprint('command %s fails with msg: %s' % error)
+                misc.sprint('Command %s fails with msg: %s'%(str(line), \
+                                                                    str(error)))
                 pass
         launch = self.cmd_int.define_child_cmd_interface(
                      usecmd, interface=False)
@@ -342,6 +344,7 @@ class aMCatNLOLauncher(ExtLauncher):
             command += " -c"
         elif mode == "2":
             command += " -m" 
+            usecmd.nb_core = int(nb_node)
         try:
             os.remove('ME5_debug')
         except:
@@ -400,7 +403,7 @@ class MELauncher(ExtLauncher):
             elif max_node == 2:
                 nb_node = 2
             elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, range(2,max_node+1))
+                nb_node = self.ask('How many cores do you want to use?', max_node, range(2,max_node+1))
             else:
                 nb_node=max_node
                 

@@ -311,20 +311,21 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-            if len(diag.get_loop_lines_pdgs())!=4:
-                valid_diag=False
+#            if len(diag.get_loop_lines_pdgs())!=4:
+#                valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-            if 23 in diag.get_pdgs_attached_to_loop(structs):
-                valid_diag=False
+#            if 23 in diag.get_pdgs_attached_to_loop(structs):
+#                valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
             #        the PDG. 
             #        In this example, only massive parts. are allowed in the loop.
-            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
-                                                    diag.get_loop_lines_pdgs()]:
+#            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
+#                                                    diag.get_loop_lines_pdgs()]:
+            if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
                 valid_diag=False
             
             # If you need any more advanced function for your filter and cannot
@@ -379,6 +380,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection
+        # To monitor what are the diagrams filtered, simply comment the line
+        # directly above and uncomment the two directly below.
+#        self['loop_diagrams'] = base_objects.DiagramList(
+#        [diag for diag in self['loop_diagrams'] if diag not in newloopselection])
 
     def check_factorization(self):
         """ Makes sure that all non perturbed orders factorize the born diagrams

@@ -449,6 +449,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
+                   '':'(%s)'
                    }
             
         if fct in self.fct_format:
@@ -682,6 +683,8 @@ class ALOHAWriterForFortran(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
+                
         
         def sort_fct(a, b):
             if len(a) < len(b):
@@ -884,6 +887,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
 
         if not 'Coup(1)' in self.routine.infostr:
             coup = True
@@ -894,7 +898,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         poly_object = q_polynomial.Polynomial(rank)
         nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
         size = self.type_to_size[self.particles[self.l_id-1]] - 2
-        
         for K in range(size):
             for J in range(nb_coeff):
                 data = poly_object.get_coef_at_position(J)
@@ -1450,10 +1453,12 @@ class ALOHAWriterForCPP(WriteALOHA):
         if self.routine.contracted:
             for name,obj in self.routine.contracted.items():
                 out.write(' %s = %s;\n' % (name, self.write_obj(obj)))
+                self.declaration.add(('complex', name))
                 
         for name, (fct, objs) in self.routine.fct.items():
             format = ' %s = %s;\n' % (name, self.get_fct_format(fct))
             out.write(format % ','.join([self.write_obj(obj) for obj in objs]))
+            
         
 
         numerator = self.routine.expr
@@ -1727,7 +1732,9 @@ class ALOHAWriterForPython(WriteALOHA):
                 return '%ij' % obj.imag
             else:
                 return '%sj' % str(obj.imag)
-        else: 
+        elif obj.imag == 0 and int(obj.real) == obj:
+            return '%i' % obj.real 
+        else:
             return str(obj)
     
     

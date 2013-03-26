@@ -165,7 +165,7 @@ def multiple_try(nb_try=5, sleep=20):
                         logger_stderr.debug('error is %s' % str(error))
                     wait_once = True
                     time.sleep(sleep * (i+1))
-            raise
+            raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
 
@@ -190,7 +190,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
             error_text += "In general this means that your computer is not able to compile."
             if sys.platform == "darwin":
                 error_text += "Note that MacOSX doesn\'t have gmake/gfortan install by default.\n"
-                error_text += "Xcode3 contains those required program"
+                error_text += "Xcode3 contains those required programs"
             raise MadGraph5Error, error_text
 
     if p.returncode:
@@ -264,6 +264,39 @@ def mod_compilator(directory, new='gfortran', current=None):
         pattern = re.compile(current)
         text= pattern.sub(new, text)
         open(name,'w').write(text)
+
+
+#===============================================================================
+# mute_logger (designed to be a decorator)
+#===============================================================================
+def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,50,50]):
+    """change the logger level and restore those at their initial value at the
+    end of the function decorated."""
+    def control_logger(f):
+        def restore_old_levels(names, levels):
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)            
+        
+        def f_with_no_logger(self, *args, **opt):
+            old_levels = []
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                old_levels.append(log_module.level)
+                log_module.setLevel(level)
+            try:
+                out = f(self, *args, **opt)
+                restore_old_levels(names, old_levels)
+                return out
+            except:
+                restore_old_levels(names, old_levels)
+                raise
+            
+        return f_with_no_logger
+    return control_logger
+
+
+
 
 def detect_current_compiler(path):
     """find the current compiler for the current directory"""
@@ -593,39 +626,39 @@ class open_file(object):
         
         
     def open_program(self, program, file_path, mac_check=True, background=False):
-      """ open a file with a given program """
+        """ open a file with a given program """
+        
+        if mac_check==True and sys.platform == 'darwin':
+            return self.open_mac_program(program, file_path)
+        
+        # Shell program only                                                                                                                                                                 
+        if program:
+            arguments = program.split() # allow argument in program definition
+            arguments.append(file_path)
+        
+            if not background:
+                subprocess.call(arguments)
+            else:
+                import thread
+                thread.start_new_thread(subprocess.call,(arguments,))
+        else:
+            logger.warning('Not able to open file %s since no program configured.' % file_path + \
+                                'Please set one in ./input/mg5_configuration.txt')
 
-      if mac_check==True and sys.platform == 'darwin':
-          return self.open_mac_program(program, file_path)
-
-      # Shell program only                                                                                                                                                                 
-      if program:
-          arguments = program.split() # allow argument in program definition
-          arguments.append(file_path)
-
-          if not background:
-              subprocess.call(arguments)
-          else:
-              import thread
-              thread.start_new_thread(subprocess.call,(arguments,))
-      else:
-          logger.warning('Not able to open file %s since no program configured.' % file_path + \
-                              'Please set one in ./input/mg5_configuration.txt')
-    
     def open_mac_program(self, program, file_path):
-      """ open a text with the text editor """
-      
-      if not program:
-          # Ask to mac manager
-          os.system('open %s' % file_path)
-      elif which(program):
-          # shell program
-          arguments = program.split() # Allow argument in program definition
-          arguments.append(file_path)
-          subprocess.call(arguments)
-      else:
-         # not shell program
-         os.system('open -a %s %s' % (program, file_path))
+        """ open a text with the text editor """
+        
+        if not program:
+            # Ask to mac manager
+            os.system('open %s' % file_path)
+        elif which(program):
+            # shell program
+            arguments = program.split() # Allow argument in program definition
+            arguments.append(file_path)
+            subprocess.call(arguments)
+        else:
+            # not shell program
+            os.system('open -a %s %s' % (program, file_path))
 
 def is_executable(path):
     """ check if a path is executable"""
@@ -633,8 +666,7 @@ def is_executable(path):
         return os.access(path, os.X_OK)
     except Exception:
         return False        
-
-
+    
 class OptionParser(optparse.OptionParser):
     """Option Peaser which raise an error instead as calling exit"""
     
@@ -654,8 +686,9 @@ def sprint(*args, **opt):
     if opt.has_key('level'):
         level = opt['level']
     else:
-        level=10
-    
+        level = logging.getLogger('madgraph').level
+        if level == 20:
+            level = 10 #avoid info level
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
@@ -709,7 +742,9 @@ class digest:
         import zlib
         def digest(text):
             return zlib.adler32(text)
-        
+    
 digest = digest().test_all()
+
+
 
 

@@ -106,6 +106,8 @@ class Computation(dict):
             out, tag = self.reduced_expr[str_expr]
             self.add_tag((tag,))
             return out          
+        if expression == 0:
+            return 0
         new_2 = expression.simplify()
         if new_2 == 0:
             return 0
@@ -133,7 +135,7 @@ class Computation(dict):
                 argument.append(expression)
         if str(fct_tag)+str(argument) in self.inverted_fct:
             return self.inverted_fct[str(fct_tag)+str(argument)]
-        else:
+        else: 
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))
@@ -187,12 +189,47 @@ class AddVariable(list):
             else:
                 items[tag] = term.__class__(term, term.prefactor)
                 self[pos] = items[tag]
-                         
+        
+        # get the optimized prefactor
+        countprefact = defaultdict(int)
+        nbplus, nbminus = 0,0
+        if constant not in [0, 1,-1]:
+            countprefact[constant] += 1
+            if constant.real + constant.imag > 0:
+                nbplus += 1
+            else:
+                nbminus += 1  
+             
         for var in items.values():
             if var.prefactor == 0:
                 self.remove(var)
+            else:
+                nb = var.prefactor
+                if nb in [1,-1]:
+                    continue
+                countprefact[abs(nb)] +=1
+                if nb.real + nb.imag > 0:
+                    nbplus += 1
+                else:
+                    nbminus += 1
+        if countprefact and max(countprefact.values()) >1:
+            fact_prefactor = sorted(countprefact.items(), key=lambda x: x[1], reverse=True)[0][0]
+        else:
+            fact_prefactor = 1
+        if nbplus < nbminus:
+                fact_prefactor *= -1
+        self.prefactor *= fact_prefactor
+
+        if fact_prefactor != 1:
+            for i,a in enumerate(self):
+                try:
+                    a.prefactor /= fact_prefactor
+                except AttributeError:
+                    self[i] /= fact_prefactor  
+                    
         if constant:
-            self.append(constant)
+            self.append(constant/ fact_prefactor  )
+            
         # deal with one/zero length object
         varlen = len(self)
         if varlen == 1:
@@ -238,7 +275,6 @@ class AddVariable(list):
            Note that this should be canonical form (this should contains ONLY
            MULTVARIABLE) --so this should be called before a factorize.
         """
-
         new = self.__class__()
         
         for obj in self:
@@ -864,8 +900,13 @@ class MultLorentz(MultVariable):
                 scalar = fact.get_rep([0])
                 if hasattr(scalar, 'vartype') and scalar.vartype == 1:
                     if not veto or not scalar.contains(veto):
+                        scalar = scalar.simplify()
+                        prefactor = 1
+                        if hasattr(scalar, 'vartype') and scalar.prefactor not in  [1,-1]:
+                            prefactor = scalar.prefactor
+                            scalar.prefactor = 1
                         new = KERNEL.add_expression_contraction(scalar)
-                        fact.set_rep([0], new)
+                        fact.set_rep([0], prefactor * new)
             out *= fact
         return out
 

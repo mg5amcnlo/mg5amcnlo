@@ -17,11 +17,12 @@
    loop_helas_objects.py"""
 
 import copy
-import logging
 import math
 import os
 import sys
 import shutil
+import tarfile
+import datetime
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -33,7 +34,6 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.color_amp as color_amp
-import madgraph.loop.loop_color_amp as loop_color_amp
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
@@ -42,466 +42,182 @@ import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import models.import_ufo as models
+import models.import_ufo as import_ufo
+import madgraph.various.misc as misc
+import tests.IOTests as IOTests
 import aloha
-import tests.unit_tests.various.test_aloha as test_aloha
-import aloha.create_aloha as create_aloha
-from tests.unit_tests.various.test_aloha import set_global
 
+from madgraph.iolibs.files import cp, ln, mv
 from madgraph import MadGraph5Error
+
+pjoin = os.path.join
+path = os.path
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 
-_input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
-                                'input_files')
-_mgme_file_path = os.path.join(_file_path, *([os.path.pardir]*3))
+_input_file_path = os.path.abspath(os.path.join(_file_path, \
+                                  os.path.pardir, os.path.pardir,'input_files'))
+_mgme_file_path = os.path.abspath(os.path.join(_file_path, *([os.path.pardir]*3)))
 _loop_file_path = os.path.join(_mgme_file_path,'Template','loop_material')
 _cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
-_proc_file_path = os.path.join(_mgme_file_path, 'test_proc')
+_proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
 
 #===============================================================================
-# LoopExporterTest Test
+# Tests that the ad-hoc solution for aloha open loop routine in unitary gauge
+# is still present and must be changed to something more elegant one day.
 #===============================================================================
-class LoopExporterTest(unittest.TestCase):
-    """Test class for all functions related to the Loop exporters."""
+class CheckAdHocFixInAloha(unittest.TestCase):
+    """ Check if the adhoc fix is still present. """
+    
+    def setUp(self):
+        """ Initialize the model and aloha model. """
+        
+        self.model = import_ufo.import_model('loop_sm')
+        self.aloha_model = aloha.create_aloha.AbstractALOHAModel(\
+                                                         self.model.get('name'))
+        self.aloha_model.add_Lorentz_object(self.model.get('lorentz'))
 
-    myloopmodel = loop_base_objects.LoopModel()
-    fortran_model= helas_call_writers.FortranUFOHelasCallWriter()
-    
-    loopExporter = loop_exporters.LoopProcessExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
-    
-    loopOptimizedExporter = loop_exporters.LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
-                                  {'clean':False, 'complex_mass':False, 
-                                   'export_format':'madloop','mp':True,
-                                   'loop_dir':_loop_file_path,
-                                   'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
+    def test_adHoc_aloha_fix(self):
+        """ Test if the adHoc aloha fix is still present, and if yes raise an 
+        error warning that for now it is fine like this, but it will have to be 
+        fixed more elegantly later."""
+        
+        old_aloha_gauge = aloha.unitary_gauge
+        aloha.unitary_gauge = True
+        LorentzToCheck = [(('FFV1',), ('L1',), 3)]
+        write_dir = os.path.join('/tmp/')
+        self.aloha_model.compute_subset(LorentzToCheck)
+        self.aloha_model.write(write_dir, 'Fortran')
+        aloha.unitary_gauge = old_aloha_gauge
+        file_path = os.path.join(write_dir,'FFV1L1_3.f')
+        assert os.path.isfile(file_path)
+        res = open(file_path).read()
+        os.remove(file_path)
+        if 'OM3' not in res and 'COEFF(1,1,1)' not in res:
+            print("\nThere is still the ad-hoc quick fix in aloha for having "+\
+            "open loops work in unitary gauge. It must be eventually replaced "+\
+            "by a cleaner solution! Read the (only) modifications brought by "+\
+            "this quick fix at the beginning of 'compute_subset(data)' in "+\
+            "create_aloha.py. This failing test is basically a reminder of "+\
+                                       "this and can be disregarded for now.\n")
+            self.assertTrue(False, "Reminder-Test for aloha quick fix. "+\
+                                                  "Can be disregarded for now.")
+        else:
+            print("\nApparently the quick fix for having open loops work"+\
+              " in unitary gauge has been replaced by a cleaner solution."+\
+                       " This test 'test_adHoc_aloha_fix' can now be removed\n")
+
+#===============================================================================
+# IOExportMadLoopUTest
+#===============================================================================
+class IOExportMadLoopUnitTest(IOTests.IOTestManager):
+    """Test class for the loop exporter modules. It uses hardcoded output 
+    for the comparisons."""
+
+    # A helper function to add more easily IOTests for several exporters.
+    def addIOTestsForProcess(self,testName,testFolder,particles_ids,exporters,orders,
+                             files_to_check=IOTests.IOTest.all_files,
+                             perturbation_couplings=['QCD'],
+                             NLO_mode='virt',
+                             model=None,
+                             fortran_model=None):
+        """ Simply adds a test for the process defined and all the exporters
+        specified."""
+        
+        if model==None:
+            model = self.models['loop_sm']
+        if fortran_model==None:
+            fortran_model = self.fortran_models['fortran_model']
+        
+        needed = False
+        if not isinstance(exporters,dict):
+            if self.need(testFolder,testName):
+                needed = True
+        elif any(self.need('%s_%s'%(testFolder,exporter) ,testName) for \
+                                                  exporter in exporters.keys()):
+            needed = True
+        if not needed:
+            return
+        
+        myleglist = base_objects.LegList()
+        for i, pid in enumerate(particles_ids):
+            myleglist.append(base_objects.Leg({'id':pid, 
+                                           'state':False if i<2 else True}))
+        myproc = base_objects.Process({'legs': myleglist,
+                        'model': model,
+                        'orders': orders,
+                        'perturbation_couplings': perturbation_couplings,
+                        'NLO_mode': NLO_mode})
+        
+        myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
+        # Exporter directly given
+        if not isinstance(exporters,dict):
+            test_list = [(testFolder,exporters)]
+        # Several exporters given in a dictionary
+        else:
+            test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
+                                                               exporters.keys()]         
+        for (folderName, exporter) in test_list:
+            if self.need(folderName,testName): 
+                self.addIOTest(folderName,testName, IOTests.IOTest(\
+                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                  exporter=exporter,
+                  helasModel=fortran_model,
+                  testedFiles=files_to_check,
+                  outputPath=_proc_file_path))
 
     def setUp(self):
-        """load the NLO toy model"""
-        self.loadModel("UFO")
-        
-    def loadModel(self, mode="UFO"):
-        """ Either loads the model from a UFO model in the input files
-        (if mode is set to "UFO") or use the equivalent hardcoded one."""
-        # Import it from the stone-graved smQCDNLO model in the input_files of
-        # the test.
-        if mode=="UFO":
-            self.myloopmodel = models.import_full_model(os.path.join(\
-                                                _input_file_path,'LoopSMTest'))
-            self.fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
-                                                            self.myloopmodel)
-            return
+        """load the models and exporters if necessary."""
+            
+        if not hasattr(self, 'models') or \
+           not hasattr(self, 'fortran_models') or \
+           not hasattr(self, 'loop_exporters'):\
+           
+            self.models = { \
+                'loop_sm' : import_ufo.import_model('loop_sm') 
+                          }
+            self.fortran_models = {
+                'fortran_model' : helas_call_writers.FortranUFOHelasCallWriter(\
+                                                         self.models['loop_sm']) 
+                                  }
+            
+            self.loop_exporters = {
+                'default' : loop_exporters.LoopProcessExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'}),
+                'optimized' : loop_exporters.\
+                                  LoopProcessOptimizedExporterFortranSA(\
+                                  _mgme_file_path, _proc_file_path,
+                                  {'clean':False, 'complex_mass':False, 
+                                   'export_format':'madloop','mp':True,
+                                   'loop_dir':_loop_file_path,
+                                   'cuttools_dir':_cuttools_file_path,
+                                   'fortran_compiler':'gfortran'})
+                                  }
+            
+            # g g > t t~
+            self.addIOTestsForProcess( testName = 'gg_ttx',
+                                       testFolder = 'short_ML_SMQCD',
+                                       particles_ids = [21,21,6,-6],
+                                       exporters = self.loop_exporters,
+                                       orders = {'QCD':2,'QED':0} )
 
-    @test_aloha.set_global(loop=True, unitary=False, mp=True, cms=False) 
-    def check_output_sanity(self, loopME, chosenLoopExporter=None):
-        """ Test different characteristics of the output of the 
-        LoopMatrixElement given in argument to check the correct behavior
-        of the loop exporter"""
+            # d d > t t~ (only the proc files for this one)
+            self.addIOTestsForProcess( testName = 'ddx_ttx',
+                                       testFolder = 'short_ML_SMQCD',
+                                       particles_ids = [1,-1,6,-6],
+                                       exporters = self.loop_exporters,
+                                       orders = {'QCD':2,'QED':0},
+                                       files_to_check=IOTests.IOTest.proc_files)
 
-        if chosenLoopExporter==None:
-            exporter=self.loopExporter
-        else:
-            exporter=chosenLoopExporter
-
-        # Cleaning last process directory
-        if os.path.exists(_proc_file_path):
-            shutil.rmtree(_proc_file_path)
-        
-        exporter.copy_v4template(self.myloopmodel.get('name'))
-        exporter.generate_loop_subprocess(\
-                            loopME, self.fortran_model)
-        wanted_lorentz = loopME.get_used_lorentz()
-        wanted_couplings = list(set(sum(loopME.get_used_couplings(),[])))
-        exporter.convert_model_to_mg4(self.myloopmodel,
-                                           wanted_lorentz,
-                                           wanted_couplings)
-        exporter.finalize_v4_directory( \
-                        helas_objects.HelasMatrixElementList([loopME,]),
-                        ["Generation from test_loop_exporters.py",],
-                        False,False)
-        proc_name='P'+loopME.get('processes')[0].shell_string()
-        files=['mpmodule.mod','libcts.a']
-        for file in files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'lib',file)))
-        files=['param_card.dat']
-        for file in files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'Cards',file)))
-        files=['DHELAS','MODEL','coupl.inc','make_opts','makefile']
-        for file in files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                                              ,'Source',file)))
-        files=[proc_name,'coupl.inc','cts_mprec.h','makefile',\
-               'check_sa.f','cts_mpc.h']
-        for file in files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                     ,'SubProcesses',file)),'File %s not created.'%file)    
-        
-        files=['CT_interface.f','check_sa.f','cts_mprec.h','loop_num.f',
-               'nexternal.inc','born_matrix.f','coupl.inc',
-               'makefile','ngraphs.inc','born_matrix.ps',
-               'cts_mpc.h','loop_matrix.f','mpmodule.mod','pmass.inc']
-#        files.append('loop_matrix.ps')
-        for file in files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                             ,'SubProcesses',proc_name,file)))
-
-    @test_aloha.set_global()
-    def test_aloha_loop_HELAS_subroutines(self):
-        """ Test that Aloha correctly processes loop HELAS subroutines. """
-        
-        aloha_model = create_aloha.AbstractALOHAModel(self.myloopmodel.get('name'))
-        target_lorentz=[(('R2_QQ_1',), (), 0), (('FFV1',), ('L',), 1)]
-        target_lorentz+=[(('FFV1',), ('L',), 0), (('VVVV3',), ('L',), 0)]
-        target_lorentz+=[(('R2_GG_1', 'R2_GG_2'), (), 0), (('R2_GG_1', 'R2_GG_3'), (), 0)]
-        target_lorentz+=[(('FFV1',), ('L',), 3), (('VVVV3',), ('L',), 1), (('VVVV4',), ('L',), 0)]
-        target_lorentz+=[(('VVV1',), (), 0), (('GHGHG',), ('L',), 0), (('VVV1',), (), 1)]
-        target_lorentz+=[(('GHGHG',), ('L',), 1),(('VVVV1',), ('L',), 0), (('VVVV1',), ('L',), 1)]
-        target_lorentz+=[(('VVV1',), ('L',), 1), (('VVV1',), ('L',), 0),(('VVV1',), ('L',), 0)]
-        target_lorentz+=[(('FFV1',), (), 2), (('FFV1',), (), 3),(('FFV1',), (), 0)]
-        target_lorentz+=[(('FFV1',), (), 1), (('VVVV4',), ('L',), 1), (('R2_GG_1',), (), 0)]
-        aloha_model.compute_subset(target_lorentz)
-        
-        for list_l_name, tag, outgoing in target_lorentz:
-            entry_tuple=(list_l_name[0]+''.join(tag),outgoing)
-            self.assertTrue(entry_tuple in aloha_model.keys())
-            AbstractRoutine=aloha_model[entry_tuple]
-            self.assertEqual(list(tag),AbstractRoutine.tag)
-
-    def test_LoopProcessExporterFortranSA_ddx_uux(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':True}))
-                
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'forbidden_particles':[],
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-        
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-        
-        subproc_file_path=os.path.join(_proc_file_path,'Subprocesses',\
-                                       'P0_ddx_uux')
-        
-        #        shutil.rmtree(_proc_file_path)
-
-    def test_LoopProcessExporterFortranSA_ddx_ddx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-    
-    def test_LoopProcessExporterFortranSA_ddx_ttx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':6,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-6,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-
-    def test_LoopProcessExporterFortranSA_gg_ttx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':6,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-6,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude,
-                                                          optimized_output=True)
-        self.check_output_sanity(myloopME,self.loopOptimizedExporter)
-
-    def notest_LoopProcessExporterFortranSA_gg_gddx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude,
-                                                          optimized_output=True)
-        self.check_output_sanity(myloopME,self.loopOptimizedExporter)
-
-    def test_LoopProcessExporterFortranSA_ddx_gg(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'forbidden_particles':[],
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-        # Further Check that the right ALOHA subroutines are created
-        HELAS_files=['aloha_file.inc', 'aloha_functions.f',
-                     'FFV1_0.f', 'FFV1_1.f', 'FFV1_2.f', 'FFV1_3.f', 'FFV1L_1.f',
-                     'FFV1L_2.f', 'FFV1L_3.f', 'GHGHGL_1.f', 'GHGHGL_2.f', 'makefile',
-                     'MP_FFV1_0.f', 'MP_FFV1_1.f', 'MP_FFV1_2.f', 'MP_FFV1_3.f',
-                     'MP_FFV1L_1.f', 'MP_FFV1L_2.f', 'MP_FFV1L_3.f', 'MP_GHGHGL_1.f',
-                     'MP_GHGHGL_2.f', 'MP_R2_GG_1_0.f', 'MP_R2_GG_1_R2_GG_2_0.f',
-                     'MP_R2_GG_1_R2_GG_3_0.f', 'MP_R2_GG_2_0.f', 'MP_R2_GG_3_0.f',
-                     'MP_R2_QQ_1_0.f', 'MP_VVV1_0.f', 'MP_VVV1_1.f', 'MP_VVV1L_1.f',
-                     'MP_VVVV1L_1.f', 'MP_VVVV3L_1.f', 'MP_VVVV4L_1.f', 'R2_GG_1_0.f',
-                     'R2_GG_1_R2_GG_2_0.f', 'R2_GG_1_R2_GG_3_0.f',
-                     'R2_GG_2_0.f', 'R2_GG_3_0.f', 'R2_QQ_1_0.f', 'VVV1_0.f',
-                     'VVV1_1.f', 'VVV1L_1.f', 'VVVV1L_1.f', 'VVVV3L_1.f', 'VVVV4L_1.f']
-        for hFile in HELAS_files:
-            self.assertTrue(os.path.exists(os.path.join(_proc_file_path\
-                        ,'Source','DHELAS',hFile)), 'file %s not found in %s' % 
-                                                       (hFile, _proc_file_path))        
-        
-    def notest_LoopProcessExporterFortranSA_dg_dg(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-
-    def notest_LoopProcessExporterFortranSA_ddx_uuxddx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-
-    def notest_LoopProcessExporterFortranSA_ddx_ddxddx(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':1,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':-1,
-                                         'state':True}))
-                        
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-
-    def test_LoopProcessExporterFortranSA_gg_gg(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-                
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'forbidden_particles':[3,4,5,6],
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-        
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
-
-    def notest_LoopProcessExporterFortranSA_gg_ggg(self):
-        """Test the StandAlone output for different processes.
-        """
-        
-        myleglist = base_objects.LegList()
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))                     
-        myloopproc = base_objects.Process({'legs':myleglist,
-                                        'model':self.myloopmodel,
-                                        'orders':{},
-                                        'forbidden_particles':[3,4,5,6],
-                                        'perturbation_couplings':['QCD',],
-                                        'squared_orders':{}})
-    
-        myloopamplitude = loop_diagram_generation.LoopAmplitude()
-        myloopamplitude.set('process', myloopproc)
-        myloopamplitude.generate_diagrams()
-        myloopME=loop_helas_objects.LoopHelasMatrixElement(myloopamplitude)
-        self.check_output_sanity(myloopME)
+            # And the loop induced g g > h h for good measure 
+            # Use only one exporter only here
+            self.addIOTestsForProcess( testName = 'gg_hh',
+                                       testFolder = 'short_ML_SMQCD_LoopInduced',
+                                       particles_ids = [21,21,25,25],
+                                       exporters = self.loop_exporters['default'],
+                                       orders = {'QCD': 2, 'QED': 2} )

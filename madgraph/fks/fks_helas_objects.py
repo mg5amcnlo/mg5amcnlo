@@ -38,7 +38,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements']
+        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr']]
         return keys
 
     def filter(self, name, value):
@@ -55,7 +55,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'),
                        logging.getLogger('madgraph.helas_objects')]
-        old_levels = [logg.getEffectiveLevel() for logg in loggers_off]
+        old_levels = [logg.level for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
 
@@ -68,6 +68,10 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         self['matrix_elements'] = self.generate_matrix_elements_fks(
                                 fksmulti, 
                                 gen_color, decay_ids)
+        self['initial_states']=[]
+
+        self['has_isr'] = fksmulti['has_isr']
+        self['has_fsr'] = fksmulti['has_fsr']
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
@@ -126,7 +130,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         matrix_elements = FKSHelasProcessList()
 
         for proc in fksprocs:
-            logger.info("Generating Helas calls for FKS process %s" % \
+            logger.info("Generating Helas calls for FKS %s" % \
               proc.born_amp.get('process').nice_string(print_weighted = False).\
                                                   replace('Process', 'process'))
             matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],

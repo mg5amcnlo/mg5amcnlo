@@ -83,8 +83,35 @@
          stop 'Could not read the PS.input phase-space point.'
   978  continue
        close(967)
-       else
-        CALL GET_MOMENTA(SQRTS,PMASS,P)  
+      else
+        if ((nincoming.eq.2).and.((nexternal - nincoming .eq.1))) then
+          if (pmass(3).eq.0.0d0) then
+              stop 'Cannot generate 2>1 kin. config. with m3=0.0d0'
+          else
+              ! deal with the case of only one particle in the final
+              ! state
+               p(0,1) = pmass(3)/2d0
+               p(1,1) = 0d0
+               p(2,1) = 0d0
+               p(3,1) = pmass(3)/2d0
+               if (pmass(1).GT.0d0) then
+                 p(3,1) = dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+               endif
+               p(0,2) = pmass(3)/2d0
+               p(1,2) = 0d0
+               p(2,2) = 0d0
+               p(3,2) = -pmass(3)/2d0
+               if (pmass(2) > 0d0) then
+                 p(3,2) = -dsqrt(pmass(3)**2/4d0 - pmass(1)**2)
+               endif
+               p(0,3) = pmass(3)
+               p(1,3) = 0d0
+               p(2,3) = 0d0
+               p(3,3) = 0d0
+          endif
+        else
+          CALL GET_MOMENTA(SQRTS,PMASS,P)
+        endif
       endif
 
       do i=0,3
@@ -97,9 +124,11 @@
 !---  In standalone mode, always use sqrt_s as the renormalization
 !     scale.
       SQRTS=dsqrt(dabs(DOT(PIN(0),PIN(0))))
-      MU_R=91.188d0
+
+      MU_R=SQRTS
+
 !---  Update the couplings with the new MU_R
-      CALL COUP()
+      CALL UPDATE_AS_PARAM()
 
 !     
 !     Now we can call the matrix element!

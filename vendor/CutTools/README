@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.7.4 (June 09 2012)
+              CutTools V1.8.7 (Dec 15 2012)
 
               contact author: pittau@ugr.es
 
@@ -268,18 +268,16 @@ compiling and running example0.f in the directory "examples"
 
    25 Jan 2007:
 
-   Towards a version with m-denominators
+- Towards a version with m-denominators
 
    09 Apr 2008:
 
 - in dp_cutting4: 
   if (real(cb3).le.0.d0) then changed to
   if (real(cb3).lt.0.d0) then
-
 - in mp_cutting4: 
   if (mpreal(cb3).le.0.d0) then changed to
   if (mpreal(cb3).lt.0.d0) 
-
 - corrected test_rat in multiprecision (d_6 was not properly allocated 
   when printing out its value)
 
@@ -417,26 +415,18 @@ compiling and running example0.f in the directory "examples"
 
 - new test for numerical precision introduced, based on reversing the order 
   of the denominators at the input level  
-
 - the threshold for testmp has been put to 10^-11 (rnk= 4) in this version, 
   because the loop functions are computed in double precision only
 
 - November 24 2011:
 
 - inclusion of new fortran95 version of OneLOop in this version
-
 - December 16 2011:
-  
 - mp_OneLOop implemented in this version
-
 - the threshold for testmp has been re-put to 10^-21 and rnk= 6
-
 - input/output of ctsxcut, ctsinit and ctsstatistics restructured
-
 - imode options intruduced in ctsxcut
-
 - mp/qp option introduced in the makefile
-
 - DOS/Windows Platforms optiond eliminated from the makefile
 
 - Jan 17 2012:
@@ -444,14 +434,40 @@ compiling and running example0.f in the directory "examples"
 - Bug corrected in OneLOop-2.2:In "subroutine box16"
   sm1 = cmplx(abs(rmu)) -> cmplx(abs(rmu),kind=kindc2)
 
-- May 15 2012:
+- Nov 30 2012: 
 
-- OneLOop-3.1 implemented
+- Dimensionality of the arrays reduced
+- attribute "private" in all modules
+- mpmodule not used when compiling with external multiprecision
+  (but multirecision routines are still compiled)
+- n_disc -> n_unst in subroutine ctsstatistics
+- mp_tiny= tiny(1.d0) in cts_constants.f90
+- OneLoop-3.2, implemented (same as MadLoop, some error lines commented)
+- option dmr= -1 working for any number of denominators 
+  Ment to compute processes with the Hgg vertex where 
+  1 denominator is always reconstructed in the numerator function
+- The external numerator is always called when computing R1
 
-- June 9 2012:
+- Dec 05 2012:
 
-- OneLOop-3.1.1 implemented
+- logical flag "ext_num_for_r1" added in ctsinit to use the external 
+  numerator (ext_num_for_r1=.true.) or the reconstructed one 
+  (ext_num_for_r1=.false.) when computing R1 
+
+- Dec 07 2012:
+
+- Minimal fixi of dynamical allocation of local variables
+- maxden= 8 
+
+- Dec 10 2012:
+
+- Fixed 2 bound-check errors due to 1) OneLOop and 2) to the dynamical 
+  allocation of local variables in CutTools
+
+- Dec 15 2012:
+
+- Minimal fix dmns_a,b,c,d -> dmns_1,2,3,4 in computeamp 
 
 ---------------------------------------------------------------------------
-Last modification of this document: June 9 2012
+Last modification of this document: Dec 15 2012
 ---------------------------------------------------------------------------

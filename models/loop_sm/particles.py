@@ -62,7 +62,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = Param.ZERO,
+             mass = Param.MC,
              width = Param.ZERO,
              texname = 'c',
              antitexname = 'c',
@@ -115,7 +115,7 @@ G = Particle(pdg_code = 21,
              LeptonNumber = 0,
              GhostNumber = 0)
 
-gh = Particle(pdg_code = 100033,
+gh = Particle(pdg_code = 82,
              name = 'gh',
              antiname = 'gh~',
              spin = -1,
@@ -279,32 +279,64 @@ tt__minus__ = Particle(pdg_code = 15,
 
 tt__plus__ = tt__minus__.anti()
 
+# ======================================================================
+# Goldstones 
+# ======================================================================
 
-# Set counterterms values
+G0 = Particle(pdg_code = 250,
+              name = 'G0',
+              antiname = 'G0',
+              spin = 1,
+              color = 1,
+              mass = Param.MZ,
+              width = Param.WZ,
+              texname = 'G0',
+              antitexname = 'G0',
+              GoldstoneBoson = True,
+              charge = 0,
+              GhostNumber = 0,
+              LeptonNumber = 0)
 
-Param.MT.loop_particles= [[[t,G]]]  
-Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}          
-Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
-Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]]
-Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value}
+G__plus__ = Particle(pdg_code = 251,
+                     name = 'G+',
+                     antiname = 'G-',
+                     spin = 1,
+                     color = 1,
+                     mass = Param.MW,
+                     width = Param.WW,
+                     texname = 'G+',
+                     antitexname = 'G-',
+                     GoldstoneBoson = True,
+                     charge = 1,
+                     GhostNumber = 0,
+                     LeptonNumber = 0)
+
+G__minus__ = G__plus__.anti()
 
 # Wavefunction renormalization
 
 b.loop_particles = [[[b,G]]]
 b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
+c.loop_particles = [[[c,G]]]
+c.counterterm = {(1,0,0):CTParam.cWcft_UV.value}
+
 t.loop_particles = [[[t,G]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[b]],[[t]]]
-G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
+G.loop_particles = [[[c]],[[b]],[[t]]]
+G.counterterm = {(1,0,0):CTParam.GWcft_UV_c.value,(1,0,1):CTParam.GWcft_UV_b.value,(1,0,2):CTParam.GWcft_UV_t.value}
+
+# Set counterterms values
 
 Param.MB.loop_particles= [[[b,G]]]
 Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
+Param.MC.loop_particles= [[[c,G]]]
+Param.MC.counterterm = {(1,0,0):CTParam.cMass_UV.value}
+
 Param.MT.loop_particles= [[[t,G]]]
 Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
-Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]],
-Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value},
+Param.G.loop_particles = [[[u],[d],[s]],[[c]],[[b]],[[t]],[[G]]],
+Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVc.value,(1,0,2):CTParam.G_UVb.value,(1,0,3):CTParam.G_UVt.value,(1,0,4):CTParam.G_UVg.value},

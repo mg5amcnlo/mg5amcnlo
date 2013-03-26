@@ -72,6 +72,7 @@ class Testmadweight(unittest.TestCase):
         cmd = os.getcwd()
         self.generate('p p > Z h , Z > mu+ mu- , h > b b~ ' , 'sm')
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
+        
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix1.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix2.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/auto_dsig1.f'))
@@ -87,7 +88,6 @@ class Testmadweight(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/makefile'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/nexternal.inc'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/mirrorprocs.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/permutation.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/phasespace.inc'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/pmass.inc'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/props.inc'))

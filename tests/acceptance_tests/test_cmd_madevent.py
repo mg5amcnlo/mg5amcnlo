@@ -29,7 +29,9 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
+
 import madgraph.various.misc as misc
+import madgraph.various.lhe_parser as lhe_parser
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -63,12 +65,30 @@ class TestMECmdShell(unittest.TestCase):
         else:
             for p in process:
                 interface.onecmd('add process %s' % p)
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
         if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
-            interface.onecmd('install pythia-pgs')
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+        if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install MadAnalysis')
+        misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
+
         if not misc.which('root'):
             raise Exception, 'root is require for this test'
-        if not os.path.exists(pjoin(MG5DIR, 'MadAnalysis')):
-            interface.onecmd('install MadAnalysis')
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')            
@@ -86,6 +106,12 @@ class TestMECmdShell(unittest.TestCase):
     def do(self, line):
         """ exec a line in the cmd under test """        
         self.cmd_line.exec_cmd(line)
+        
+  
+        
+        
+            
+        
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -183,13 +209,54 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(err2 / val2 < 0.005)
         self.assertTrue(err1 / val1 < 0.005)
         
+    def test_e_p_collision(self):
+        """check that e p > e j gives the correct result"""
         
-    
-        
-        
-        
-        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
 
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate e- p  > e- j')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 3864.0
+        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        
+    def test_e_e_collision(self):
+        """check that e+ e- > t t~ gives the correct result"""
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd(' generate e+ e-  > t t~')
+        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
+                    '/tmp/MGPROCESS/Cards/run_card.dat')
+        
+        self.do('generate_events -f')
+        val1 = self.cmd_line.results.current['cross']
+        err1 = self.cmd_line.results.current['error']
+        
+        target = 0.545
+        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object
@@ -229,6 +296,56 @@ class TestMECmdShell(unittest.TestCase):
 class TestMEfromfile(unittest.TestCase):
     """test that we can launch everything from a single file"""
 
+    def test_add_time_of_flight(self):
+        """checking time of flight is working fine"""
+
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        cmd = """import model sm
+                set automatic_html_opening False --no-save
+                 generate p p > w+ z
+                 output /tmp/MGPROCESS -f -nojpeg
+                 launch -i 
+                 generate_events
+                 parton
+                 set nevents 100
+                 add_time_of_flight --threshold=3e-26
+                 pythia
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        
+        devnull =open(os.devnull,'w')
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+                         '/tmp/mg5_cmd'],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=devnull, stderr=devnull)
+
+        self.check_parton_output(cross=17.21, error=0.19)
+        self.check_pythia_output()
+        event = '/tmp/MGPROCESS/Events/run_01/unweighted_events.lhe'
+        if not os.path.exists(event):
+            os.system('gunzip %s.gz' % event)
+        
+        has_zero = False
+        has_non_zero = False
+        for event in lhe_parser.EventFile(event):
+            for particle in event:
+                if particle.pid in [23,25]:
+                    self.assertTrue(particle.vtim ==0 or particle.vtim > 3e-26)
+                    if particle.vtim == 0 :
+                        has_zero = True
+                    else:
+                        has_non_zero = True
+        self.assertTrue(has_zero)
+        self.assertTrue(has_non_zero)
+        
+        
+        
+
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
@@ -237,7 +354,7 @@ class TestMEfromfile(unittest.TestCase):
         except Exception, error:
             pass
         import subprocess
-        if logging.getLogger('madgraph').level > 10:
+        if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
         else:
@@ -245,17 +362,16 @@ class TestMEfromfile(unittest.TestCase):
             stdout=devnull
             stderr=devnull
 
-        
-
-        if not os.path.exists(pjoin(_file_path, os.path.pardir, 'pythia-pgs')):
-            p = subprocess.Popen([pjoin(_file_path, os.path.pardir,'bin','mg5')],
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
         
 
 
-            
+        
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(MG5DIR),
@@ -293,7 +409,29 @@ class TestMEfromfile(unittest.TestCase):
         data = self.load_result(run_name)
         self.assertTrue('lhe' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
-        self.assertTrue('hep' in data[0].pythia)
+    
+    def test_decay_width_nlo_model(self):
+        """ """
+        
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        cmd = MGCmd.MasterCmd()
+        cmd.run_cmd('import model loop_sm')
+        self.assertEqual(cmd.cmd.__name__, 'aMCatNLOInterface')
+        #cmd.run_cmd('switch MG5')
+        #self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
+        cmd.run_cmd('set automatic_html_opening False --no_save')
+        cmd.run_cmd('generate w+ > all all')
+        self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
+        cmd.run_cmd('output  /tmp/MGPROCESS -f')
+        cmd.run_cmd('launch -f')
+        data = self.load_result('run_01')
+        self.assertNotEqual(data[0]['cross'], 0)
+        
+        
 
 #===============================================================================
 # TestCmd

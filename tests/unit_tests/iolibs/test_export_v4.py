@@ -910,6 +910,7 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
+C     Needed for v4 models
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
@@ -1016,7 +1017,7 @@ C
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R
+      DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
@@ -1036,6 +1037,9 @@ C     MINCFIG has this config number
       COMMON/TO_CONFIGS/MINCFIG, MAXCFIG
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 
       INCLUDE 'coupl.inc'
       INCLUDE 'run.inc'
@@ -1048,14 +1052,15 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       DSIG=0D0
-
+      CUTSDONE=.FALSE.
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         NFACT=1
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
+          ICONF=INT(RCONF)
           IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
             NFACT=IFACT
           ENDIF
@@ -1753,6 +1758,9 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
       COMPLEX*16 W(18,NWAVEFUNCS)
+C     Needed for v4 models
+      COMPLEX*16 DUM0,DUM1
+      DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
 C     GLOBAL VARIABLES
 C     
@@ -1870,7 +1878,7 @@ C
       DOUBLE PRECISION U1
       DOUBLE PRECISION UX2
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R
+      DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
@@ -1890,6 +1898,9 @@ C     MINCFIG has this config number
       COMMON/TO_CONFIGS/MINCFIG, MAXCFIG
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 
       INTEGER SUBDIAG(MAXSPROC),IB(2)
       COMMON/TO_SUB_DIAG/SUBDIAG,IB
@@ -1911,7 +1922,8 @@ C       Set up process information from file symfact
         NFACT=1
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
+          ICONF=INT(RCONF)
           IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
             NFACT=IFACT
           ENDIF
@@ -2060,10 +2072,15 @@ C     CM_RAP has parton-parton system rapidity
       DOUBLE PRECISION CM_RAP
       LOGICAL SET_CM_RAP
       COMMON/TO_CM_RAP/SET_CM_RAP,CM_RAP
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 C     ----------
 C     BEGIN CODE
 C     ----------
       DSIG=0D0
+
+      CUTSDONE=.FALSE.
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
@@ -4645,7 +4662,321 @@ CALL IOVXXX(W(1,5),W(1,3),W(1,2),GZN11,AMP(2))""")
         self.assertEqual(exporter.get_JAMP_lines(matrix_element)[0],
                          "JAMP(1)=-AMP(1)-AMP(2)")
 
+    def test_generate_helas_diagrams_gb_t1go_tttxn1x1m(self):
+        """Testing the helas diagram generation g b > t1 go > t t t~ n1 x1-
+        This diagrams get for mssm_v4 an inconsistency in the matrix.f in version
+        lower than 1.5.7. This specific point is automatically check by the
+        optimization routine.
+        """
 
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+        
+        mypartlist.append(base_objects.Particle({
+                    'name': 'g',
+                    'antiname': 'g',
+                    'spin': 3,
+                    'color': 8,
+                    'charge': 0.00,
+                    'mass': 'ZERO',
+                    'width': 'ZERO',
+                    'pdg_code': 21,
+                    'texname': '_',
+                    'antitexname': '_',
+                    'line': 'curly',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': True
+                    }))
+        p_g = mypartlist[-1]
+                        
+        mypartlist.append(base_objects.Particle({
+                    'name': 'b',
+                    'antiname': 'b~',
+                    'spin': 2,
+                    'color': 3,
+                    'charge': 0.00,
+                    'mass': 'BMASS',
+                    'width': 'ZERO',
+                    'pdg_code': 5,
+                    'texname': 'b',
+                    'antitexname': 'b',
+                    'line': 'straight',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': False
+                }))
+        p_b = mypartlist[-1]
+        p_bx = copy.copy(p_b)
+        p_bx.set('is_part', False)
+        
+        mypartlist.append(base_objects.Particle({
+                    'name': 't1',
+                    'antiname': 't1~',
+                    'spin': 1,
+                    'color': 3,
+                    'charge': 0.00,
+                    'mass': 'MT1',
+                    'width': 'WT1',
+                    'pdg_code': 1000006,
+                    'texname': 't1',
+                    'antitexname': 't1',
+                    'line': 'dashed',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': False
+                }))
+        p_t1 = mypartlist[-1]
+        p_t1x = copy.copy(p_t1)
+        p_t1x.set('is_part', False)
+         
+        mypartlist.append(base_objects.Particle({
+                    'name': 'go',
+                    'antiname': 'go',
+                    'spin': 2,
+                    'color': 8,
+                    'charge': 0.00,
+                    'mass': 'MGO',
+                    'width': 'WGO',
+                    'pdg_code': 1000021,
+                    'texname': 'go',
+                    'antitexname': 'go',
+                    'line': 'straight',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': True
+                }))
+        p_go = mypartlist[-1]
+                 
+        mypartlist.append(base_objects.Particle({
+                    'name': 't',
+                    'antiname': 't~',
+                    'spin': 2,
+                    'color': 3,
+                    'charge': 0.00,
+                    'mass': 'TMASS',
+                    'width': 'TWIDTH',
+                    'pdg_code': 6,
+                    'texname': 't',
+                    'antitexname': 't',
+                    'line': 'straight',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': False
+                }))
+        p_t = mypartlist[-1]
+        p_tx = copy.copy(p_t)
+        p_tx.set('is_part', False) 
+        
+        mypartlist.append(base_objects.Particle({
+                    'name': 'n1',
+                    'antiname': 'n1',
+                    'spin': 2,
+                    'color': 1,
+                    'charge': 0.00,
+                    'mass': 'MN1',
+                    'width': 'WN1',
+                    'pdg_code': 1000022,
+                    'texname': 'N1',
+                    'antitexname': 'N1',
+                    'line': 'straight',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': True
+                })) 
+        p_n1 = mypartlist[-1]
+
+        mypartlist.append(base_objects.Particle({
+                    'name': 'x1-',
+                    'antiname': 'x1+',
+                    'spin': 2,
+                    'color': 1,
+                    'charge': 0.00,
+                    'mass': 'MX1',
+                    'width': 'WX1',
+                    'pdg_code': -1000024,
+                    'texname': 'X1',
+                    'antitexname': 'X1',
+                    'line': 'straight',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': False
+                }))
+        p_x1m = mypartlist[-1]
+        p_x1p = copy.copy(p_x1m)
+        p_x1p.set('is_part', False) 
+        
+        mypartlist.append(base_objects.Particle({
+                    'name': 'b1',
+                    'antiname': 'b1~',
+                    'spin': 1,
+                    'color': 3,
+                    'charge': 0.00,
+                    'mass': 'MB1',
+                    'width': 'WB1',
+                    'pdg_code': 1000005,
+                    'texname': 'b1',
+                    'antitexname': 'b1',
+                    'line': 'dashed',
+                    'propagating': True,
+                    'is_part': True,
+                    'self_antipart': False
+                }))
+        p_b1 = mypartlist[-1]
+        p_b1x = copy.copy(p_b1)
+        p_b1x.set('is_part', False)
+
+
+        myinterlist.append(base_objects.Interaction({
+                    'id': 5,
+                    'particles': base_objects.ParticleList([p_bx, p_b, p_g]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GG'},
+                    'orders': {'QCD': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({'id': 362,
+                    'particles': base_objects.ParticleList([p_bx, p_x1m, p_t1]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1X1M'},
+                    'orders': {'QED': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 363,
+                    'particles': base_objects.ParticleList([p_x1p, p_b, p_t1x]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1X1P'},
+                    'orders': {'QED': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 109,
+                    'particles': base_objects.ParticleList([p_go, p_t, p_t1x]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1GOP'},
+                    'orders': {'QCD': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 108,
+                    'particles': base_objects.ParticleList([p_tx, p_go, p_t1]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1GOM'},
+                    'orders': {'QCD': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 250,
+                    'particles': base_objects.ParticleList([p_tx, p_b1, p_t1]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1N1M'},
+                    'orders': {'QED': 1}}))
+        
+        myinterlist.append(base_objects.Interaction({
+                    'id': 251,
+                    'particles': base_objects.ParticleList([p_n1, p_t, p_t1x]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GT1N1P'},
+                    'orders': {'QED': 1}}))
+        myinterlist.append(base_objects.Interaction({
+                    'id': 105,
+                    'particles': base_objects.ParticleList([p_go, p_b, p_b1x]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GB1GOP'},
+                    'orders': {'QCD': 1}}))
+        myinterlist.append(base_objects.Interaction({
+                    'id': 104,
+                    'particles': base_objects.ParticleList([p_bx, p_go, p_b1]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GB1GOM'},
+                    'orders': {'QCD': 1}}))
+        myinterlist.append(base_objects.Interaction({
+                    'id': 354,
+                    'particles': base_objects.ParticleList([p_tx, p_x1p, p_b1]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GB1X1M'},
+                    'orders': {'QED': 1}}))
+        myinterlist.append(base_objects.Interaction({
+                    'id': 355,
+                    'particles': base_objects.ParticleList([p_x1m, p_t, p_b1x]),
+                    'color': [],
+                    'lorentz': [''],
+                    'couplings': {(0, 0): 'GB1X1P'},
+                    'orders': {'QED': 1}}))
+        
+        mybasemodel = base_objects.Model()
+        mybasemodel.set('particles', mypartlist)
+        mybasemodel.set('interactions', myinterlist)
+
+        myleglist = base_objects.LegList()
+
+        myleglist.append(base_objects.Leg({'id':21,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':5,
+                                         'state':False}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-6,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':1000022,
+                                         'state':True}))
+        myleglist.append(base_objects.Leg({'id':-1000024,
+                                         'state':True}))
+        
+        myproc = base_objects.Process({'legs':myleglist,
+                                       'model':mybasemodel})
+
+        myamplitude = diagram_generation.Amplitude({'process': myproc})
+
+        matrix_element = helas_objects.HelasMatrixElement(myamplitude, 1)
+
+        self.assertEqual(helas_call_writers.FortranHelasCallWriter(mybasemodel).\
+                                   get_matrix_element_calls(matrix_element),
+                         """CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
+CALL IXXXXX(P(0,2),BMASS,NHEL(2),+1*IC(2),W(1,2))
+CALL OXXXXX(P(0,3),TMASS,NHEL(3),+1*IC(3),W(1,3))
+CALL OXXXXX(P(0,4),TMASS,NHEL(4),+1*IC(4),W(1,4))
+CALL IXXXXX(P(0,5),TMASS,NHEL(5),-1*IC(5),W(1,5))
+CALL IXXXXX(P(0,6),MN1,NHEL(6),-1*IC(6),W(1,6))
+CALL OXXXXX(P(0,7),MX1,NHEL(7),+1*IC(7),W(1,7))
+CALL FVIXXX(W(1,2),W(1,1),GG,BMASS,ZERO,W(1,8))
+CALL HIOXXX(W(1,6),W(1,3),GT1N1P,MT1,WT1,W(1,2))
+CALL HIOXXX(W(1,8),W(1,7),GT1X1M,MT1,WT1,W(1,9))
+CALL FSIXXX(W(1,5),W(1,2),GT1GOM,MGO,WGO,W(1,7))
+# Amplitude(s) for diagram number 1
+CALL IOSXXX(W(1,7),W(1,4),W(1,9),GT1GOP,AMP(1))
+CALL IXXXXX(P(0,7),MX1,NHEL(7),-1*IC(7),W(1,7))
+CALL HIOCXX(W(1,7),W(1,4),GB1X1P,MB1,WB1,W(1,10))
+CALL FSIXXX(W(1,8),W(1,2),GT1X1M,MX1,WX1,W(1,11))
+CALL OXXXXX(P(0,5),TMASS,NHEL(5),+1*IC(5),W(1,12))
+# Amplitude(s) for diagram number 2
+CALL IOSCXX(W(1,11),W(1,12),W(1,10),GB1X1M,AMP(2))
+CALL OXXXXX(P(0,2),BMASS,NHEL(2),-1*IC(2),W(1,11))
+CALL FVOCXX(W(1,11),W(1,1),GG,BMASS,ZERO,W(1,13))
+CALL FSOCXX(W(1,13),W(1,10),GB1GOM,MGO,WGO,W(1,11))
+# Amplitude(s) for diagram number 3
+CALL IOSXXX(W(1,5),W(1,11),W(1,2),GT1GOM,AMP(3))
+CALL HIOCXX(W(1,7),W(1,3),GB1X1P,MB1,WB1,W(1,11))
+CALL HIOXXX(W(1,6),W(1,4),GT1N1P,MT1,WT1,W(1,7))
+CALL FSOCXX(W(1,13),W(1,11),GB1GOM,MGO,WGO,W(1,6))
+# Amplitude(s) for diagram number 4
+CALL IOSXXX(W(1,5),W(1,6),W(1,7),GT1GOM,AMP(4))
+CALL FSIXXX(W(1,8),W(1,7),GT1X1M,MX1,WX1,W(1,6))
+# Amplitude(s) for diagram number 5
+CALL IOSCXX(W(1,6),W(1,12),W(1,11),GB1X1M,AMP(5))
+CALL FSIXXX(W(1,5),W(1,7),GT1GOM,MGO,WGO,W(1,6))
+# Amplitude(s) for diagram number 6
+CALL IOSXXX(W(1,6),W(1,3),W(1,9),GT1GOP,AMP(6))""".split('\n'))
+        
+    
     def test_generate_helas_diagrams_epem_elpelmepem(self):
         """Testing the helas diagram generation e+ e- > sl2+ sl2- e+ e-
         """

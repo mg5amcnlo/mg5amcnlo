@@ -111,6 +111,12 @@ C
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM
+C
+C     Keep track of whether cuts already calculated for this event
+C
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      DATA CUTSDONE,CUTSPASSED/.FALSE.,.FALSE./
 
 C $B$ MW_NEW_DEF $E$ !this is a tag for MadWeight
 
@@ -221,7 +227,15 @@ c     Put momenta in the common block to zero to start
             enddo
          enddo
          
+      ENDIF ! IF FIRSTTIME
+
+      IF (CUTSDONE) THEN
+         PASSCUTS=CUTSPASSED
+         RETURN
       ENDIF
+      CUTSDONE=.TRUE.
+      CUTSPASSED=.FALSE.
+
 c
 c     Make sure have reasonable 4-momenta
 c
@@ -239,6 +253,7 @@ c     Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+      
 c
 c     Limit S_hat
 c
@@ -438,6 +453,7 @@ c
 c     JA 4/8/11 always check pass_bw
       if ( pass_bw ) then
          passcuts=.false.
+         if(debug) write (*,*) ' pass_bw -> fails'
          return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
@@ -671,6 +687,7 @@ C     REQUIRE AT LEAST ONE LEPTON  WITH PT>XPTL
             enddo
             if (xvar .lt. xptl) then
                passcuts=.false.
+               if(debug) write (*,*) ' xptl -> fails'
                return
             endif
          ENDIF
@@ -755,6 +772,7 @@ c     scales on an event-by-event basis, as well as check xqcut for jets
 c
       if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
         if(.not.setclscales(p))then
+         if(debug) write (*,*) ' setclscales -> fails'
          passcuts=.false.
          return
        endif
@@ -781,6 +799,7 @@ c     Set couplings in model files
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '
       if(debug) write (*,*) '============================='
 
+      CUTSPASSED=.TRUE.
 
       RETURN
       END

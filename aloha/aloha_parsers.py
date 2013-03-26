@@ -28,7 +28,6 @@ import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path))
 
-from madgraph import MadGraph5Error, MG5DIR
 import aloha_lib
 from aloha_object import *
 import vendor.ply.lex as lex
@@ -208,7 +207,11 @@ class ALOHAExpressionParser(UFOExpressionParser):
     def p_expression_power(self, p):
         'expression : expression POWER expression'
         
-        if p[1] in self.aloha_object:
+        obj = p[1]
+        if '(' in p[1]:
+            obj = p[1].split('(',1)[0]
+        
+        if obj in self.aloha_object:
             p[0] = ''.join(p[1:])
         else:
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))

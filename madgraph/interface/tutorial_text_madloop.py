@@ -127,7 +127,7 @@ the edition of the cards and phase-space point specification.
 launch = """
 You just launched the MadLoop standalone evalutation of the squared loop matrix
 element for (a/many) specific process(es) for a random Phase-Space point.
-The two processes proposed in this tutorial where g g > d d~ and e+ e- > d d~.
+The two processes proposed in this tutorial were g g > d d~ and e+ e- > d d~.
 You can check that you get the right double pole normalized with respect to
 the born*(alpha_s/2*pi), namely -26/3 and -8/3 respectively.
 

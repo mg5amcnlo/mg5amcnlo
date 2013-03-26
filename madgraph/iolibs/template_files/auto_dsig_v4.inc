@@ -37,7 +37,7 @@ C
       INTEGER I,ITYPE,LP,IPROC
 %(pdf_vars)s      
       DOUBLE PRECISION XPQ(-7:7),PD(0:MAXPROC)
-      DOUBLE PRECISION DSIGUU,R
+      DOUBLE PRECISION DSIGUU,R,RCONF
       INTEGER LUN,ICONF,IFACT,NFACT
       DATA NFACT/1/
       SAVE NFACT
@@ -57,6 +57,9 @@ C     MINCFIG has this config number
       common/to_configs/mincfig, maxcfig
       INTEGER MAPCONFIG(0:LMAXCONFIGS), ICONFIG
       COMMON/TO_MCONFIGS/MAPCONFIG, ICONFIG
+C     Keep track of whether cuts already calculated for this event
+      LOGICAL cutsdone,cutspassed
+      COMMON/TO_CUTSDONE/cutsdone,cutspassed
 %(define_subdiag_lines)s
       include 'coupl.inc'
       include 'run.inc'
@@ -68,14 +71,15 @@ C ----------
 C BEGIN CODE
 C ----------
       DSIG%(proc_id)s=0D0
-
+      %(cutsdone)s
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
         NFACT=1
         OPEN(UNIT=LUN,FILE='../symfact.dat',STATUS='OLD',ERR=20)
         DO WHILE(.TRUE.)
-          READ(LUN,*,ERR=10,END=10) ICONF, IFACT
+          READ(LUN,*,ERR=10,END=10) RCONF, IFACT
+          ICONF=INT(RCONF)
           IF(ICONF.EQ.MAPCONFIG(MINCFIG))THEN
              NFACT=IFACT
           ENDIF

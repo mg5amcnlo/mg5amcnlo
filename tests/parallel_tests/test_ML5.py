@@ -1,5 +1,5 @@
-import logging
 import logging.config
+import logging
 import pydoc
 import os
 import loop_me_comparator
@@ -8,12 +8,15 @@ import unittest
 
 
 from madgraph import MG5DIR
+from madgraph import MadGraph5Error
 from madgraph.iolibs.files import cp
 
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
 _file_path = os.path.dirname(os.path.realpath(__file__))
-_pickle_path = os.path.join(_file_path, 'input_files')
+_pickle_path = os.path.join(_file_path, 'input_files', 'ML_parallel_saved_runs')
+
+# The processes below are treated all together because they are relatively quick
 
 ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
@@ -22,15 +25,6 @@ ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('g g > t t~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d~ d > g a',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
                        ('d~ d > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
-
-ML4_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
-                       ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),
-                       ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
-                       ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
-                       ('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
-                       ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
-                       ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
-                       ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
 
 ML5_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
                        ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
@@ -43,6 +37,34 @@ ML5_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0
                        ('u~ u > g z',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2}),
                        ('e+ e- > d d~',{'QED':2,'QCD':0},['QCD'],{'QCD':2,'QED':4}),
                        ('d u~ > w- g',{'QED':1,'QCD':1},['QCD'],{'QCD':4,'QED':2})]
+
+def procToFolderName(proc):
+    """ Transform a string proc like 'u u~ > e+ e-' to a string for a folder name
+    which would be uux_epem"""
+    res=''.join(proc.split(' '))
+    equiv_strings = [('+','p'),('-','m'),('~','x'),('>','_')]
+    for eq in equiv_strings:
+        res=res.replace(eq[0],eq[1])
+    return res
+
+# The longer processes below are treated one by one so that they can be better
+# independently checked/updated (especially the corresponding reference pickle.)
+
+ML4_processes_long =  [
+                       # The process below is for testing the parallel tests only
+                       ('e+ e- > d d~',{'QCD':0,'QED':2},['QCD'],{'QCD':2,'QED':4}),
+                       # Below are the processes really tested
+                       ('g g > h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}), 
+                       ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
+                       ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
+                       ('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
+                       ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
+                       ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
+                       ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
+
+ML4_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
+                                                             ML4_processes_long)
+
 ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
                        ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
@@ -55,26 +77,32 @@ ML5_processes_long =  [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':
                        ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}),
                        ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),
                        ('u u~ > w+ w- b b~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4}),                       
-                       ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})]
+                       ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0}),
+                       ('u u~ > z z z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
+                       ('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
+                       ('u u~ > w+ w- z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
+                       ('g g > g t t~',{'QED':0,'QCD':3},['QCD'],{'QCD':8,'QED':0}),
+                       ('g s > e- ve~ c',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4}),
+                       ('g g > z c c~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})]
 
-#ML4_processes_short = [('u u~ > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}),
-#                       ('d g > d g',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0})]
-#
-#ML5_processes_short = ML4_processes_short 
-#ML5_processes_long = ML4_processes_short + [('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})]
-#ML4_processes_short = ML4_processes_short
-#ML4_processes_long = ML4_processes_short + [('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})]
+ML5_processes_long_dic = dict((procToFolderName(elem[0]),elem) for elem in \
+                                                             ML5_processes_long)
 
 class ML5Test(unittest.TestCase):
     """ A class to test ML5 versus runs from older versions or ML4 """
 
     test_model_name = 'loop_sm-parallel_test'
+    test_model_name_c_massive = 'loop_sm-parallel_test_c_massive'
 
     def setUp(self):
         """ Here we just copy the hidden restrict_card to a regular one.
         And we don't bother making it hidden again after the test."""
         cp(os.path.join(_mg5_path,'models','loop_sm','.restrict_parallel_test.dat'),
            os.path.join(_mg5_path,'models','loop_sm','restrict_parallel_test.dat'))
+        cp(os.path.join(_mg5_path,'models','loop_sm',
+                                       '.restrict_parallel_test_c_massive.dat'),
+           os.path.join(_mg5_path,'models','loop_sm',
+                                        'restrict_parallel_test_c_massive.dat'))
 
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
@@ -83,7 +111,7 @@ class ML5Test(unittest.TestCase):
         and also possibly using the PS points provided by the reference runner """
         
         my_comp = loop_me_comparator.LoopMEComparator()
-        if ref_runner:
+        if not ref_runner is None:
             my_comp.set_me_runners(ref_runner,runner)
         else:
             my_comp.set_me_runners(runner)
@@ -94,17 +122,25 @@ class ML5Test(unittest.TestCase):
             [runner.proc_list,runner.res_list],
             runner.model,runner.name,energy=runner.energy)
         
-        my_comp.cleanup()
-        
-
     def compare_processes(self, my_proc_list = [], model = 'loop_sm-parallel_test',
-                      pickle_file = "", energy = 2000, tolerance = 1e-06, filename = ""):
-        """ A helper function to compare processes. """
+            pickle_file = "", energy = 2000, tolerance = 1e-06, filename = "",
+            chosen_runner = "ML5_opt"):
+        """ A helper function to compare processes. 
+        Note that the chosen_runner is what runner should to create the reference
+        pickle if missing"""
+        
+        # Print out progress if it is a run for an individual process
+        if len(my_proc_list)==1:
+            print "\n== %s =="%my_proc_list[0][0]
+        else:
+            print "\n== %s =="%filename
         
         # Check if pickle exists, if not create it        
-        if pickle_file!="" and not os.path.isfile(os.path.join(_pickle_path,pickle_file)): 
-            self.test_create_loop_pickles()
-
+        if pickle_file!="" and not os.path.isfile(os.path.join(_pickle_path,pickle_file)):
+            print " => Computing reference evaluation with %s"%chosen_runner
+            self.create_loop_pickle(my_proc_list, model,
+                                             pickle_file, energy, chosen_runner)
+            print "\n => Done with %s evaluation"%chosen_runner
         # Load the stored runner
         if pickle_file != "":
             stored_runner = me_comparator.PickleRunner.find_comparisons(
@@ -142,36 +178,274 @@ class ML5Test(unittest.TestCase):
         # Do some cleanup
         my_comp.cleanup()
 
-    def test_create_loop_pickles(self):
-
-        if not os.path.isfile(os.path.join(_pickle_path,'ml5_parallel_test.pkl')):
-            ML5_opt = loop_me_comparator.LoopMG5Runner()
-            ML5_opt.setup(_mg5_path, optimized_output=True)       
-            self.create_pickle(ML5_processes_short+ML5_processes_long,'ml5_parallel_test.pkl',
-                           ML5_opt, ref_runner=None, model=self.test_model_name,energy=2000)
-
-        if not os.path.isfile(os.path.join(_pickle_path,'ml4_parallel_test.pkl')): 
-            ML4 = loop_me_comparator.LoopMG4Runner()
+    def create_loop_pickle(self, my_proc_list, model, pickle_file, energy, \
+                                                                 chosen_runner):
+        """ Create the pickle file for reference for the arguments here."""
+#       print "Creating loop pickle for chosen_runner=",chosen_runner
+        allowed_chosen_runners = ['ML4','ML5_opt','ML5_default'] 
+        if chosen_runner not in allowed_chosen_runners:
+            raise MadGraph5Error, 'The reference runner can only be in %s.'%\
+                                                          allowed_chosen_runners
+        
+        runner = None
+        if chosen_runner == 'ML5_opt':
+            runner = loop_me_comparator.LoopMG5Runner()
+            runner.setup(_mg5_path, optimized_output=True)
+        if chosen_runner == 'ML5_default':
+            runner = loop_me_comparator.LoopMG5Runner()
+            runner.setup(_mg5_path, optimized_output=False)
+        if chosen_runner == 'ML4':
+            runner = loop_me_comparator.LoopMG4Runner()
             # Replace here the path of your ML4 installation
-            ML4.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
-            self.create_pickle(ML4_processes_short+ML4_processes_long,'ml4_parallel_test.pkl',
-                           ML4, ref_runner=None, model=self.test_model_name,energy=2000) 
+            runner.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+        
+        self.create_pickle(my_proc_list,pickle_file, runner, ref_runner=None, \
+                                                      model=model,energy=energy)
+        # Clean up the runner only if it is not ML4
+        if chosen_runner != 'ML4':
+            runner.cleanup()
 
+    #===========================================================================
+    # First tests consisting in a list of quick 2>2 processes to be run together
+    #===========================================================================
 
     def test_short_ML5_sm_vs_stored_ML5(self):
-        self.compare_processes(ML5_processes_short, model = self.test_model_name,
-          pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_short_ml5_vs_old_ml5')
+        self.compare_processes(ML5_processes_short,model = self.test_model_name,
+                                   pickle_file = 'ml5_short_parallel_tests.pkl',
+                                        filename = 'ptest_short_ml5_vs_old_ml5',
+                                                            chosen_runner='ML5')
 
-    # The test below is a bit lengthy, so only run it when you want full proof check of ML5.
-    def test_long_ML5_sm_vs_stored_ML5(self):
-        self.compare_processes(ML5_processes_long, model = self.test_model_name,
-          pickle_file = 'ml5_parallel_test.pkl',filename = 'ptest_long_ml5_vs_old_ml5')
-    # In principle since previous version of ML5 has been validated against ML4, it is not 
-    # necessary to test both against ML4 and the old ML5.
+    # In principle since previous version of ML5 has been validated against ML4, 
+    # it is not necessary to test both against ML4 and the old ML5.
     def test_short_ML5_sm_vs_stored_ML4(self):
-        self.compare_processes(ML4_processes_short, model = self.test_model_name,
-          pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_short_ml5_vs_ml4')
+        self.compare_processes(ML4_processes_short,model = self.test_model_name,
+                                    pickle_file = 'ml4_short_parallel_test.pkl',
+                                            filename = 'ptest_short_ml5_vs_ml4',
+                                                            chosen_runner='ML4')
 
-    def test_long_ML5_sm_vs_stored_ML4(self):
-        self.compare_processes(ML4_processes_long, model = self.test_model_name,
-          pickle_file = 'ml4_parallel_test.pkl',filename = 'ptest_long_ml5_vs_ml4')
+    # The tests below probe one quite long process at a time individually, so
+    # one can better manage them.
+    
+    #===========================================================================
+    # First the long checks against results available in MadLoop4
+    #===========================================================================
+
+#   Use the quick process below for testing the parallel test
+    def notest_long_sm_vs_stored_ML4_epem_ddx(self):
+        proc = 'epem_ddx'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML4_gg_httx(self):
+        proc = 'gg_httx'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})    
+    def test_long_sm_vs_stored_ML4_ddx_wpwmg(self):
+        proc = 'ddx_wpwmg'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+                                      filename = 'ptest_long_sm_vs_ml4_%s'%proc)
+
+#   ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})
+    def test_long_sm_vs_stored_ML4_dxd_zzg(self):
+        proc = 'dxd_zzg'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML4_dxd_zgg(self):
+        proc = 'dxd_zgg'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML4_dxd_agg(self):
+        proc = 'dxd_agg'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML4_gg_zttx(self):
+        proc = 'gg_zttx'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+#   ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML4_gg_attx(self):
+        proc = 'gg_zttx'
+        self.compare_processes([ML4_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'ml4_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
+
+    #===========================================================================
+    # Now the long checks against results previsouly generated in MadLoop 5.
+    #===========================================================================
+
+#   ('g g > g t t~ ',{'QED':0,'QCD':3},['QCD'],{'QCD':8,'QED':0})
+    def test_long_sm_vs_stored_ML5_gg_gttx(self):
+        proc = "gg_gttx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('g g > h t t~',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_gg_httx(self):
+        proc = "gg_httx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('d d~ > w+ w- g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})
+    def test_long_sm_vs_stored_ML5_ddx_wpwmg(self):
+        proc = "ddx_wpwmg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('d~ d > z z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})
+    def test_long_sm_vs_stored_ML5_dxd_zzg(self):
+        proc = "dxd_zzg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+    
+#   ('s s~ > a z g',{'QED':2,'QCD':1},['QCD'],{'QCD':4,'QED':4})
+    def test_long_sm_vs_stored_ML5_ssx_azg(self):
+        proc = "ssx_azg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+    
+#   ('d~ d > z g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_dxd_zgg(self):
+        proc = "dxd_zgg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('d~ d > a g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_dxd_agg(self):
+        proc = "dxd_agg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('d~ u > w+ g g',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_dxu_wpgg(self):
+        proc = "dxu_wpgg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('g g > w- d~ u',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2}) 
+    def test_long_sm_vs_stored_ML5_gg_wmdxu(self):
+        proc = "gg_wmdxu"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+                      
+#   ('g g > z t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_gg_zttx(self):
+        proc = "gg_zttx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('g g > a t t~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_gg_attx(self):
+        proc = "gg_attx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('g g > h h t t~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4})
+    def test_long_sm_vs_stored_ML5_gg_hhttx(self):
+        proc = "gg_hhttx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('u u~ > w+ w- b b~',{'QCD':2,'QED':2},['QCD'],{'QCD':6,'QED':4})
+    def test_long_sm_vs_stored_ML5_uux_wpwmbbx(self):
+        proc = "uux_wpwmbbx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+             
+#   ('g g > g g g',{'QCD':3,'QED':0},['QCD'],{'QCD':8,'QED':0})
+#   The chosen PS point for this process turns out to be  unstable, so that 
+#   MadLoop goes to quadruple precision. The agreement is then fine (10e-14!)
+#   but it takes several hours for the non-optimized evaluation. So better skip
+#   it unless you explicitly want to try out quad prec behaviors.
+    def notest_long_sm_vs_stored_ML5_gg_ggg(self):
+        proc = "gg_ggg"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('u u~ > z z z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})
+    def test_long_sm_vs_stored_ML5_uux_zzz(self):
+        proc = "uux_zzz"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('u d~ > h t b~',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6}),
+    def test_long_sm_vs_stored_ML5_udx_htbx(self):
+        proc = "udx_htbx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+
+#   ('u u~ > w+ w- z',{'QED':3,'QCD':0},['QCD'],{'QCD':2,'QED':6})
+    def test_long_sm_vs_stored_ML5_uux_wpwmz(self):
+        proc = "uux_wpwmz"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
+                                  filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+                                                      chosen_runner = 'ML5_opt')
+        
+#    ('g s > e- ve~ c',{'QED':2,'QCD':1},['QCD'],{'QCD':3,'QED':2})
+    def test_long_sm_vs_stored_ML5_gs_emvexc(self):
+        proc = "gs_emvexc"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+            model = self.test_model_name_c_massive, 
+            pickle_file = 'ml5_sm_%s.pkl'%proc,
+            filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+            chosen_runner = 'ML5_opt')
+        
+#   ('g g > z c c~',{'QED':1,'QCD':2},['QCD'],{'QCD':6,'QED':2})
+    def test_long_sm_vs_stored_ML5_gg_zccx(self):
+        proc = "gg_zccx"
+        self.compare_processes([ML5_processes_long_dic[proc]],
+               model = self.test_model_name_c_massive,
+               pickle_file = 'ml5_sm_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_old_ml5_%s'%proc,
+               chosen_runner = 'ML5_opt')
+
+

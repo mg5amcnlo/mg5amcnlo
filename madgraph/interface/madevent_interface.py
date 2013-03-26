@@ -67,7 +67,7 @@ try:
     import models.check_param_card as check_param_card    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT = False
-except Exception, error:
+except ImportError, error:
     if __debug__:
         print error
     # import from madevent directory
@@ -94,7 +94,7 @@ class ZeroResult(MadEventError):
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class CmdExtended(cmd.Cmd):
+class CmdExtended(common_run.CommonRunCmd):
     """Particularisation of the cmd command for MadEvent"""
 
     #suggested list of command
@@ -117,7 +117,7 @@ class CmdExtended(cmd.Cmd):
     InvalidCmd = InvalidCmd
     ConfigurationError = MadGraph5Error
 
-    def __init__(self, *arg, **opt):
+    def __init__(self, me_dir, options, *arg, **opt):
         """Init history and line continuation"""
         
         # Tag allowing/forbiding question
@@ -189,8 +189,7 @@ class CmdExtended(cmd.Cmd):
         "*               Type 'help' for in-line help.              *\n" + \
         "*                                                          *\n" + \
         "************************************************************")
-        
-        cmd.Cmd.__init__(self, *arg, **opt)
+        super(CmdExtended, self).__init__(me_dir, options, *arg, **opt)
         
     def get_history_header(self):
         """return the history header""" 
@@ -349,6 +348,14 @@ class HelpToCmd(object):
         logger.info("   and if the related card are present in the Cards directory.")
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
+
+    
+    def help_add_time_of_flight(self):
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
+        logger.info('   threshold option allows to change the minimal value required to')
+        logger.info('   a non zero value for the particle (default:1e-12s)')
 
     def help_calculate_decay_widths(self):
         
@@ -617,6 +624,43 @@ class CheckValidForCmd(object):
                     
         return run
 
+    def check_add_time_of_flight(self, args):
+        """check that the argument are correct"""
+        
+        
+        if len(args) >2:
+            self.help_time_of_flight()
+            raise self.InvalidCmd('Too many arguments')
+        
+        # check if the threshold is define. and keep it's value
+        if args and args[-1].startswith('--threshold='):
+            try:
+                threshold = float(args[-1].split('=')[1])
+            except ValueError:
+                raise self.InvalidCmd('threshold options require a number.')
+            args.remove(args[-1])
+        else:
+            threshold = 1e-12
+            
+        if len(args) == 1 and  os.path.exists(args[0]): 
+                event_path = args[0]
+        else:
+            if len(args) and self.run_name != args[0]:
+                self.set_run_name(args.pop(0))
+            elif not self.run_name:            
+                self.help_add_time_of_flight()
+                raise self.InvalidCmd('Need a run_name to process')            
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            if not os.path.exists(event_path):
+                event_path = event_path[:-3]
+                if not os.path.exists(event_path):    
+                    raise self.InvalidCmd('No unweighted events associate to this run.')
+
+
+        
+        #reformat the data
+        args[:] = [event_path, threshold]
+
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -722,17 +766,33 @@ class CheckValidForCmd(object):
         except ImportError:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
-            
+        
+        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            model = import_ufo.import_model(modelname, decay=True)
+            restrict_file = None
+            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            model = import_ufo.import_model(modelname, decay=True, 
+                        restrict_file=restrict_file)
+            if self.mother.options['complex_mass_scheme']:
+                model.change_mass_to_complex_scheme()
+            
+            
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            #pattern for checking complex mass scheme.
+            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
+                                   ).read()):
+                model.change_mass_to_complex_scheme()
+   
+        
             
         if not hasattr(model.get('particles')[0], 'partial_widths'):
-            raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
+            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
             
         # check if the name are passed to default MG5
         if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
@@ -858,7 +918,6 @@ class CheckValidForCmd(object):
         if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name,'unweighted_events.lhe.gz')):
             raise self.InvalidCmd('No events file corresponding to %s run. '% self.run_name)
 
-        
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')
         os.system('gunzip -c %s > %s' % (input_file, output_file))
@@ -1087,6 +1146,24 @@ class CheckValidForCmd(object):
 #===============================================================================
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
+    
+    
+    def complete_add_time_of_flight(self, text, line, begidx, endidx):
+        "Complete command"
+       
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data + ['--threshold='], line)
+        elif args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        else:
+            return self.list_completion(text, ['--threshold='], line)
     
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
@@ -1394,39 +1471,15 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
-    
-    
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
 
-        CmdExtended.__init__(self, *completekey, **stdin)
-        common_run.CommonRunCmd.__init__(self, me_dir, options)
+        CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
+        #common_run.CommonRunCmd.__init__(self, me_dir, options)
         
 
+        self.mode = 'madevent'
         self.nb_refine=0
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
@@ -1461,7 +1514,60 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else: 
             return False
             
+    ############################################################################
+    def do_add_time_of_flight(self, line):
 
+        args = self.split_arg(line)
+        #check the validity of the arguments and reformat args
+        self.check_add_time_of_flight(args)
+        
+        event_path, threshold = args
+        #gunzip the file
+        if event_path.endswith('.gz'):
+            need_zip = True
+            subprocess.call(['gunzip', event_path])
+            event_path = event_path[:-3]
+        else:
+            need_zip = False
+            
+        import random
+        try:
+            import madgraph.various.lhe_parser as lhe_parser
+        except:
+            import internal.lhe_parser as lhe_parser 
+            
+        logger.info('Add time of flight information on file %s' % event_path)
+        lhe = lhe_parser.EventFile(event_path)
+        output = open('%s_2vertex.lhe' % event_path, 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+
+        # get the associate param_card
+        begin_param = lhe.banner.find('<slha>')
+        end_param = lhe.banner.find('</slha>')
+        param_card = lhe.banner[begin_param+6:end_param].split('\n')
+        param_card = check_param_card.ParamCard(param_card)
+
+        cst = 6.58211915e-25
+        # Loop over all events
+        for event in lhe:
+            for particle in event:
+                id = particle.pid
+                width = param_card['decay'].get((abs(id),)).value
+                if width:
+                    vtim = random.expovariate(width/cst)
+                    if vtim > threshold:
+                        particle.vtim = vtim
+            #write this modify event
+            output.write(str(event))
+        output.write('</LesHouchesEvents>\n')
+        output.close()
+        
+        files.mv('%s_2vertex.lhe' % event_path, event_path)
+        
+        if need_zip:
+            subprocess.call(['gzip', event_path])
+        
     ############################################################################
     def do_banner_run(self, line): 
         """Make a run from the banner file"""
@@ -1665,7 +1771,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 text = '''Survey return zero cross section. 
    Typical reasons are the following:
    1) A massive s-channel particle has a width set to zero.
-   2) The pdf are zero for at least one of the initial state particles.
+   2) The pdf are zero for at least one of the initial state particles
+      or you are using maxjetflavor=4 for initial state b:s.
    3) The cuts are too strong.
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
@@ -1677,6 +1784,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.print_results_in_shell(self.results.current)
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
+            self.exec_cmd('decay_events -from_cards', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed
             self.store_result()
@@ -1773,11 +1881,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         initial = pjoin(self.me_dir, 'Cards', 'param_card.dat'),
                         output=pjoin(self.me_dir, 'Events', run_name, "param_card.dat"))
     
-    def update_width_in_param_card(self, decay_info, initial=None, output=None):
+    @staticmethod
+    def update_width_in_param_card(decay_info, initial, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
         
-        if not initial:
-            initial = pjoin(self.me_dir,'Cards','param_card.dat')
         if not output:
             output = initial
         
@@ -1923,7 +2030,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         args = self.split_arg(line)
         mode,  opt  = self.check_treatcards(args)
-
+        
+        #check if no 'Auto' are present in the file
+        self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
+        
+        
         if mode in ['run', 'all']:
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
@@ -2011,7 +2122,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             p = misc.Popen(['./gensym'], stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
-            sym_input = "%(points)d %(iterations)d %(accuracy)f %(gridpack)s\n" % self.opts
+            sym_input = "%(points)d %(iterations)d %(accuracy)f \n" % self.opts
             (stdout, stderr) = p.communicate(sym_input)
             if os.path.exists(pjoin(self.me_dir,'error')):
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
@@ -2184,9 +2295,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                                      '%s_%s_banner.txt' % (self.run_name, tag)))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
-        self.banner.add(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-        
         
         misc.call(['%s/put_banner' % self.dirbin, 'events.lhe',
                    str(self.random_orig)],
@@ -2224,12 +2332,15 @@ calculator."""
         if args['input']:
             files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
         elif not args['force']: 
-            self.ask_edit_cards(['param'], [], plot=False)
+            self.ask_edit_cards(['param_card.dat'], plot=False)
         
         model = args['model']
+        self.compute_widths(model, args)
+    
+    @staticmethod
+    def compute_widths(model, args):
         
-        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                                              'param_card.dat'))
+        data = model.set_parameters_and_couplings(args['input'])
         
         # find UFO particles linked to the require names. 
         decay_info = {}        
@@ -2237,8 +2348,7 @@ calculator."""
             particle = model.get_particle(pid)
             decay_info[pid] = []
             mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                            'param_card.dat'), scale= mass)
+            data = model.set_parameters_and_couplings(args['input'], scale= mass)
             for mode, expr in particle.partial_widths.items():
                 tmp_mass = mass    
                 for p in mode:
@@ -2259,7 +2369,7 @@ calculator."""
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                           
-        self.update_width_in_param_card(decay_info, args['input'], args['output'])
+        MadEventCmd.update_width_in_param_card(decay_info, args['input'], args['output'])
         
     ############################################################################ 
     def do_store_events(self, line):
@@ -2650,7 +2760,7 @@ calculator."""
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         
-        self.ask_edit_cards([], args)
+        self.ask_edit_cards([], args, plot=True)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -2763,25 +2873,10 @@ calculator."""
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
-                
+
                 #Find the correct PDF input file
-                if self.pdffile:
-                    input_files.append(self.pdffile)
-                else:
-                    for line in open(pjoin(self.me_dir,'Source','PDF','pdf_list.txt')):
-                        data = line.split()
-                        if len(data) < 4:
-                            continue
-                        if data[1].lower() == self.run_card['pdlabel'].lower():
-                            self.pdffile = pjoin(self.me_dir, 'lib', 'Pdfdata', data[2])
-                            input_files.append(self.pdffile) 
-                            break
-                    else:
-                        # possible when using lhapdf
-                        self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
-                        input_files.append(self.pdffile) 
+                input_files.append(self.get_pdf_input_filename())
                         
-                
                 #Find the correct ajob
                 Gre = re.compile("\s*j=(G[\d\.\w]+)")
                 Ire = re
@@ -2845,7 +2940,7 @@ calculator."""
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Error detected. Do you want to clean the queue?',
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
@@ -3111,20 +3206,18 @@ calculator."""
         except Exception:
             # If nothing runs they they are no result to update
             pass
+        
         try:
             self.update_status('', level=None)
-        except Exception, error:         
+        except Exception, error:        
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except Exception:
             pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -3201,22 +3294,6 @@ calculator."""
                             cwd=pjoin(self.me_dir, 'Events'))
         except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
-    
-    def clean_pointless_card(self, mode):
-        """ Clean the pointless card """
-
-        if mode == 'parton':
-            if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                os.remove(pjoin(self.me_dir,'Cards','pythia_card.dat'))
-        elif mode in ['parton', 'pythia', 'delphes']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','pgs_card.dat'))
-        elif mode in ['pythia', 'pgs']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_card.dat'))
-            if os.path.exists(pjoin(self.me_dir,'Cards','delphes_trigger.dat')):
-                    os.remove(pjoin(self.me_dir,'Cards','delphes_trigger.dat'))
-
 
     ############################################################################
     def ask_run_configuration(self, mode=None):
@@ -3231,41 +3308,55 @@ calculator."""
             if self.options['delphes_path']:
                 available_mode.append('4')
 
-        if len(available_mode) == 2:
-            mode = 'parton'
-        else:
-            name = {'0': 'auto', '1': 'parton', '2':'pythia', '3':'pgs', '4':'delphes'}
-            options = available_mode + [name[val] for val in available_mode]
-            question = """Which programs do you want to run?
+        name = {'0': 'auto', '1': 'parton', '2':'pythia', '3':'pgs', '4':'delphes'}
+        options = []
+        for opt in available_mode:
+            value = int(opt)
+            tag = name[opt]
+            options += [opt, tag]
+            if value:
+                options.append(10+value)
+                options.append('%s+madspin' % tag)
+            
+        question = """Which programs do you want to run?
   0 / auto    : running existing card
   1 / parton  :  Madevent\n"""
-            if '2' in available_mode:
-                question += """  2 / pythia  : MadEvent + Pythia.
+        if '2' in available_mode:
+            question += """  2 / pythia  : MadEvent + Pythia.
   3 / pgs     : MadEvent + Pythia + PGS.\n"""
-            if '4' in available_mode:
-                question += """  4 / delphes :  MadEvent + Pythia + Delphes.\n"""
-
-            if not self.force:
-                if not mode:
-                    mode = self.ask(question, '0', options)
-            elif not mode:
-                mode = 'auto'
-                
-            if mode.isdigit():
-                mode = name[mode]
-            auto = False
-            if mode == 'auto':
-                auto = True
-                if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
-                    mode = 'parton'
-                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-                    mode = 'pgs'
-                elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
-                    mode = 'delphes'
-                else: 
-                    mode = 'pythia'
+        if '4' in available_mode:
+            question += """  4 / delphes :  MadEvent + Pythia + Delphes.\n"""
+        
+        question += '+10 / +madspin: adding MadSpin [before Pythia if asked]'
+        
+        if not self.force:
+            if not mode:
+                mode = self.ask(question, '0', options)
+        elif not mode:
+            mode = 'auto'
+            
+        if mode.isdigit():
+            value =  int(mode)
+            if value > 10:
+                # Running MadSpin
+                mode = str(value-10)
+                mode = name[mode] + '+madspin'
             else:
-                self.clean_pointless_card(mode)                
+                mode = name[mode]
+        
+        auto = False
+        if mode == 'auto':
+            auto = True
+            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
+                mode = 'parton'
+            elif os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+                mode = 'pgs'
+            elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+                mode = 'delphes'
+            else: 
+                mode = 'pythia'    
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
+                mode += '+madspin'         
         logger.info('Will run in mode %s' % mode)
                                                                      
 
@@ -3273,101 +3364,30 @@ calculator."""
         #exists (copy default if needed)
 
         cards = ['param_card.dat', 'run_card.dat']
+        if mode.endswith('+madspin'):
+            mode = mode[:-8]
+            cards.append('madspin_card.dat')
         if mode in ['pythia', 'pgs', 'delphes']:
-            self.add_card_to_run('pythia')
             cards.append('pythia_card.dat')
         if mode == 'pgs':
-            self.add_card_to_run('pgs')
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
-            self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
-
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
+        self.keep_cards(cards)
         if self.force:
+            self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
 
-        def get_question(mode):
-            # Ask the user if he wants to edit any of the files
-            #First create the asking text
-            question = """Do you want to edit one cards (press enter to bypass editing)?
-  1 / param   : param_card.dat (be carefull about parameter consistency, especially widths)
-  2 / run     : run_card.dat\n"""
-            possible_answer = ['0','done', 1, 'param', 2, 'run']
-            if mode in ['pythia', 'pgs', 'delphes']:
-                question += '  3 / pythia  : pythia_card.dat\n'
-                possible_answer.append(3)
-                possible_answer.append('pythia')
-            if mode == 'pgs':
-                question += '  4 / pgs     : pgs_card.dat\n'
-                possible_answer.append(4)
-                possible_answer.append('pgs')            
-            elif mode == 'delphes':
-                question += '  5 / delphes : delphes_card.dat\n'
-                question += '  6 / trigger : delphes_trigger.dat\n'
-                possible_answer.append(5)
-                possible_answer.append('delphes')
-                possible_answer.append(6)
-                possible_answer.append('trigger')
-            if self.options['madanalysis_path']:
-                question += '  9 / plot    : plot_card.dat\n'
-                possible_answer.append(9)
-                possible_answer.append('plot')
-            card = {0:'done', 1:'param', 2:'run', 3:'pythia', 
-                      4: 'pgs', 5: 'delphes', 6:'trigger',9:'plot'}
-            # Add the path options + set
-            question += ' you can also\n'
-            question += '   - enter the path to a valid card or banner.\n'
-            question += '   - use the \'set\' command to modify a parameter directly.\n'
-            question += '     The set option works only for param_card and run_card.\n'
-            question += '     Type \'help set\' for more information on this command.\n'
-            return question, possible_answer, card
-        
-        # Loop as long as the user is not done.
-        answer = 'no'
-        while answer != 'done':
-            question, possible_answer, card = get_question(mode)
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
-                              path_msg='enter path', ask_class = AskforEditCard)
-            if answer.isdigit():
-                answer = card[int(answer)]
-            if answer == 'done':
-                #check that the param_card doesn't have a auto for the width
-                self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
-                return
-            if not os.path.isfile(answer):
-                if answer != 'trigger':
-                    path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-                else:
-                    path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-                self.exec_cmd('open %s' % path)
-                if answer == 'param':
-                    self.check_param_card(path)                                    
-            else:
-                # detect which card is provide
-                card_name = self.detect_card_type(answer)
-                if card_name == 'unknown':
-                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                   'param_card.dat', choices=['param_card.dat', 'run_card.dat','pythia_card.dat','pgs_card.dat',
-                    'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-                if card_name != 'banner':
-                    logger.info('copy %s as %s' % (answer, card_name))
-                    files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                    if card_name == 'param_card.dat':
-                        self.check_param_card(pjoin(self.me_dir, 'Cards', card_name))                        
-                elif card_name == 'banner':
-                    banner_mod.split_banner(answer, self.me_dir, proc_card=False)
-                    logger.info('Splitting the banner in it\'s component')
-                    if auto:
-                        # Re-compute the current mode
-                        mode = 'parton'
-                        for level in ['delphes','pgs','pythia']:
-                            if os.path.exists(pjoin(self.me_dir,'Cards','%s_card.dat' % level)):
-                                mode = level
-                                break
-                    else:
-                        self.clean_pointless_card(mode)
-
+        if auto:
+            self.ask_edit_cards(cards, mode='auto')
+        else:
+            self.ask_edit_cards(cards)
+        return
+    
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
         """Ask the question when launching pythia"""
@@ -3382,7 +3402,7 @@ calculator."""
     1 / pythia  : Pythia 
     2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
-            question += """  3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia + Delphes.\n"""
 
         if not self.force:
             if not mode:
@@ -3393,7 +3413,9 @@ calculator."""
         if mode.isdigit():
             mode = name[mode]
              
+        auto = False
         if mode == 'auto':
+            auto = True
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
                 mode = 'pgs'
             elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
@@ -3401,80 +3423,32 @@ calculator."""
             else: 
                 mode = 'pythia'
         logger.info('Will run in mode %s' % mode)
-        
-        self.clean_pointless_card(mode)
-                                                 
+                                               
         # Now that we know in which mode we are check that all the card
-        #exists (copy default if needed)
-        
+        #exists (copy default if needed) remove pointless one
         cards = ['pythia_card.dat']
-        self.add_card_to_run('pythia')
         if mode == 'pgs':
-            self.add_card_to_run('pgs')
             cards.append('pgs_card.dat')
         if mode == 'delphes':
-            self.add_card_to_run('delphes')
-            self.add_card_to_run('trigger')
             cards.append('delphes_card.dat')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
+        self.keep_cards(cards)
         
         if self.force:
             return mode
         
-        # Ask the user if he wants to edit any of the files
-        #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?\n"""
-        question += """  1 / pythia   : pythia_card.dat\n""" 
-        possible_answer = ['0','done', '1', 'pythia']
-        card = {0:'done', 1:'pythia', 9:'plot'}
-        if mode == 'pgs':
-            question += '  2 / pgs     : pgs_card.dat\n'
-            possible_answer.append(2)
-            possible_answer.append('pgs') 
-            card[2] = 'pgs'           
-        if mode == 'delphes':
-            question += '  2 / delphes : delphes_card.dat\n'
-            question += '  3 / trigger : delphes_trigger.dat\n'
-            possible_answer.append(2)
-            possible_answer.append('delphes')
-            possible_answer.append(3)
-            possible_answer.append('trigger')
-            card[2] = 'delphes'
-            card[3] = 'trigger'
-        if self.options['madanalysis_path']:
-            question += '  9 / plot : plot_card.dat\n'
-            possible_answer.append(9)
-            possible_answer.append('plot')
+        if auto:
+            self.ask_edit_cards(cards, mode='auto')
+        else:
+            self.ask_edit_cards(cards)
         
-        # Add the path options
-        question += '  Path to a valid card.\n'
-        
-        # Loop as long as the user is not done.
-        answer = 'no'
-        while answer != 'done':
-            answer = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), path_msg='enter path')
-            if answer.isdigit():
-                answer = card[int(answer)]
-            if answer == 'done':
-                return
-            if os.path.exists(answer):
-                # detect which card is provide
-                card_name = self.detect_card_type(answer)
-                if card_name == 'unknown':
-                    card_name = self.ask('Fail to determine the type of the file. Please specify the format',
-                  'pythia_card.dat',choices=['pythia_card.dat','pgs_card.dat',
-                   'delphes_card.dat', 'delphes_trigger.dat','plot_card.dat'])
-        
-                logger.info('copy %s as %s' % (answer, card_name))
-                files.cp(answer, pjoin(self.me_dir, 'Cards', card_name))
-                continue
-            if answer != 'trigger':
-                path = pjoin(self.me_dir,'Cards','%s_card.dat' % answer)
-            else:
-                path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
-            self.exec_cmd('open %s' % path)                    
-                 
         return mode
-
+                
+  
+            
     def check_param_card(self, path):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
@@ -3645,6 +3619,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = open(os.devnull, 'w')
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -3656,7 +3631,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -3697,334 +3672,10 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
 
 
-class AskforEditCard(cmd.OneLinePathCompletion):
-    """A class for asking a question where in addition you can have the 
-    set command define and modifying the param_card/run_card correctly"""
-    
-    def __init__(self, *args, **opt):
-        
-        cmd.OneLinePathCompletion.__init__(self, *args, **opt)
-        self.me_dir = self.mother_interface.me_dir
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
-        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-    
-        self.pname2block = {}
-        self.conflict = []
-        self.restricted_value = {}
-        
-        # Read the comment of the param_card_default to find name variable for 
-        # the param_card also check which value seems to be constrained in the
-        # model.
-        for bname, block in default_param.items():
-            for lha_id, param in block.param_dict.items():
-                all_var = []
-                comment = param.comment
-                # treat merge parameter
-                if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
-                # just the variable name as comment
-                elif len(comment.split()) == 1:
-                    all_var = [comment.strip().lower()]
-                # either contraction or not formatted
-                else:
-                    split = comment.split()
-                    if len(split) >2 and split[1] == ':':
-                        # NO VAR associated
-                        self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
-                    elif len(split) == 2:
-                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
-                            all_var = [comment.strip().lower()]
-                    else:
-                        # not recognized format
-                        continue
-                    
-                for var in all_var:
-                    var = var.lower()
-                    if var in self.pname2block:
-                        self.pname2block[var].append((bname, lha_id))
-                    else:
-                        self.pname2block[var] = [(bname, lha_id)]
-        
-                    
-        # check for conflict with run_card
-        for var in self.pname2block:                
-            if var in self.run_card:
-                self.conflict.append(var)        
-                            
-    
-    def complete_set(self, text, line, begidx, endidx):
-        """ Complete the set command"""
 
-        prev_timer = signal.alarm(0) # avoid timer if any
-        if prev_timer:
-            nb_back = len(line)
-            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
-            self.stdout.write(line)
-            self.stdout.flush()
-        
-        possibilities = {}
-        allowed = {}
-        args = self.split_arg(line[0:begidx])
-        if len(args) == 1:
-            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':''}
-        elif len(args) == 2:
-            if args[1] == 'run_card':
-                allowed = {'run_card':'default'}
-            elif args[1] == 'param_card':
-                allowed = {'block':'all', 'param_card':'default'}
-            elif args[1] in self.param_card.keys():
-                allowed = {'block':args[1]}
-            elif args[1] == 'width':
-                allowed = {'block': 'decay'}
-            else:
-                allowed = {'value':''}
-        else:
-            start = 1
-            if args[1] in  ['run_card', 'param_card']:
-                start = 2
-            if args[start] in self.param_card.keys():
-                if args[start+1:]:
-                    allowed = {'block':(args[start], args[start+1:])}
-                else:
-                    allowed = {'block':args[start]}
-            elif len(args) == start +1:
-                    allowed['value'] = ''
-
-            
-        if 'category' in allowed.keys():
-            possibilities['category of parameter (optional)'] = \
-                          self.list_completion(text, ['run_card', 'param_card'])
-        
-        if 'run_card' in allowed.keys():
-            opts = self.run_card.keys()
-            if allowed['run_card'] == 'default':
-                opts.append('default')
-            
-            possibilities['Run Card'] = self.list_completion(text, opts)
-
-        if 'param_card' in allowed.keys():
-            opts = self.pname2block.keys()
-            if allowed['param_card'] == 'default':
-                opts.append('default')
-            possibilities['Param Card'] = self.list_completion(text, opts)
-                                
-        if 'value' in allowed.keys():
-            opts = ['default']
-            if 'decay' in args:
-                opts.append('Auto')
-            if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
-                opts.append('Auto')
-            possibilities['Special Value'] = self.list_completion(text, opts)
-                 
-
-        if 'block' in allowed.keys():
-            if allowed['block'] == 'all':
-                allowed_block = [i for i in self.param_card.keys() if 'qnumbers' not in i]
-                allowed_block.append('width')
-                possibilities['Param Card Block' ] = \
-                                       self.list_completion(text, allowed_block)
-            elif isinstance(allowed['block'], basestring):
-                block = self.param_card[allowed['block']].param_dict
-                ids = [str(i[0]) for i in block 
-                          if (allowed['block'], i) not in self.restricted_value]
-                possibilities['Param Card id' ] = self.list_completion(text, ids)
-                varname = [name for name, all_var in self.pname2block.items()
-                                               if any((bname == allowed['block'] 
-                                                   for bname,lhaid in all_var))]
-                possibilities['Param card variable'] = self.list_completion(text,
-                                                                        varname)
-            else:
-                block = self.param_card[allowed['block'][0]].param_dict
-                nb = len(allowed['block'][1])
-                ids = [str(i[nb]) for i in block if len(i) > nb and \
-                            [str(a) for a in i[:nb]] == allowed['block'][1]]
-                
-                if not ids:
-                    if tuple([int(i) for i in allowed['block'][1]]) in block:
-                        opts = ['default']
-                        if allowed['block'][0] == 'decay':
-                            opts.append('Auto')
-                        possibilities['Special value'] = self.list_completion(text, opts)
-                possibilities['Param Card id' ] = self.list_completion(text, ids)        
-
-        return self.deal_multiple_categories(possibilities)
-           
-    def do_set(self, line):
-        """ edit the value of one parameter in the card"""
-
-        args = self.split_arg(line.lower())
-        start = 0
-        if len(args) < 2:
-            logger.warning('invalid set command %s' % line)
-            return
-
-        card = '' #store which card need to be modify (for name conflict)
-        if args[0] in ['run_card', 'param_card']:
-            if args[1] == 'default':
-                logging.info('replace %s by the default card' % args[0])
-                files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
-                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
-                return
-            else:
-                card = args[0]
-            start=1
-            if len(args) < 3:
-                logger.warning('invalid set command: %s' % line)
-                return
-
-        #### RUN CARD
-        if args[start] in self.run_card.keys() and card != 'param_card':
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
-                logger.warning(text)
-                return
-                
-            if args[start+1] == 'default':
-                default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
-                if args[start] in default.keys():
-                    self.setR(args[start],default[args[start]]) 
-                else:
-                    del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
-                self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
-                self.setR(args[start], '.false.')
-            else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
-                self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
-                              pjoin(self.me_dir,'Cards','run_card_default.dat'))
-            
-        ### PARAM_CARD WITH BLOCK NAME
-        elif (args[start] in self.param_card or args[start] == 'width') \
-                                                         and card != 'run_card':
-            if args[start] == 'width':
-                args[start] = 'decay'
-                
-            if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
-                logger.warning(text)
-                return
-            
-            if args[start+1] in self.pname2block:
-                all_var = self.pname2block[args[start+1]]
-                key = None
-                for bname, lhaid in all_var:
-                    if bname == args[start]:
-                        key = lhaid
-                        break
-                else:
-                    logger.warning('%s is not part of block "%s" but "%s". please correct.' %
-                                    (args[start+1], args[start], bname))
-                    return
-            else:
-                try:
-                    key = tuple([int(i) for i in args[start+1:-1]])
-                except ValueError:
-                    logger.warning('invalid set command %s' % line)
-                    return 
-
-            if key in self.param_card[args[start]].param_dict:
-                if (args[start], key) in self.restricted_value:
-                    text = "Note that this parameter seems to be ignore by MG.\n"
-                    text += "MG will use instead the expression: %s\n" % \
-                                      self.restricted_value[(args[start], key)]
-                    text += "You need to match this expression for external program (such pythia)."
-                    logger.warning(text)
-                
-                if args[-1].lower() in ['default', 'auto']:
-                    self.setP(args[start], key, args[-1])   
-                else:
-                    try:
-                        value = float(args[-1])
-                    except Exception:
-                        logger.warning('Invalid input: Expected number and not \'%s\'' \
-                                                                     % args[-1])
-                        return
-                    self.setP(args[start], key, value)
-            else:
-                logger.warning('invalid set command %s' % line)
-                return                   
-            self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-        
-        # PARAM_CARD NO BLOCK NAME
-        elif args[start] in self.pname2block and card != 'run_card':
-            all_var = self.pname2block[args[start]]
-            for bname, lhaid in all_var:
-                new_line = 'param_card %s %s %s' % (bname, 
-                   ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
-                self.do_set(new_line)
-            if len(all_var) > 1:
-                logger.warning('This variable correspond to more than one parameter in the param_card.')
-                for bname, lhaid in all_var: 
-                    logger.warning('   %s %s' % (bname, ' '.join([str(i) for i in lhaid])))
-                logger.warning('all listed variables have been modified')
-        #INVALID
-        else:
-            logger.warning('invalid set command %s' % line)
-            return            
-    
-    def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
-        self.run_card[name] = value
-        
-    def setP(self, block, lhaid, value):
-        if isinstance(value, str):
-            value = value.lower()
-            if value == 'default':
-                default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-                value = default[block].param_dict[lhaid].value
-        
-            elif value == 'auto':
-                value = 'Auto'
-                if block != 'decay':
-                    logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
-                    return
-            else:
-                try:
-                    value = float(value)
-                except ValueError:
-                    logger.warning('Invalid input: \'%s\' not valid intput.'% value)
-                    
-        logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
-                    (block, lhaid, value))
-        self.param_card[block].param_dict[lhaid].value = value
-        
-      
-    def help_set(self):
-        '''help message for set'''
-        
-        logger.info('********************* HELP SET ***************************')
-        logger.info("syntax: set [run_card|param_card] NAME [VALUE|default]")
-        logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
-        logger.info('')
-        logger.info('-- Edit the param_card/run_card and replace the value of the')
-        logger.info('    parameter by the value VALUE.')
-        logger.info('   ')
-        logger.info('-- Example:')
-        logger.info('     set run_card ebeam1 4000')
-        logger.info('     set ebeam2 4000')
-        logger.info('     set lpp1 0')
-        logger.info('     set ptj default')
-        logger.info('')
-        logger.info('     set param_card mass 6 175')
-        logger.info('     set mass 25 125.3')
-        logger.info('     set mass mh 125')
-        logger.info('     set mh 125')
-        logger.info('     set decay 25 0.004')
-        logger.info('     set decay wh 0.004')
-        logger.info('     set vmix 2 1 2.326612e-01')
-        logger.info('')
-        logger.info('     set param_card default #return all parameter to default')
-        logger.info('     set run_card default')
-        logger.info('********************* HELP SET ***************************')
-    
-    
+AskforEditCard = common_run.AskforEditCard
 
 

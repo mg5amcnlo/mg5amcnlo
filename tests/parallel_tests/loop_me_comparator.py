@@ -41,6 +41,8 @@ import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
 
+import madgraph.various.process_checks as process_checks
+
 import me_comparator
 from madgraph.iolibs.files import mv
 
@@ -165,6 +167,12 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         # Move the proc_card to the created folder
         mv(proc_card_location,os.path.join(dir_name,'Cards','proc_card_mg5.dat'))
         if self.non_zero:
+            # Initialize the processes (i.e. HelFilter)
+            initializations = []
+            for i, proc in enumerate(proc_list):
+                init = LoopMG5Runner.initialize_process(\
+                          proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
+                initializations.append(init)
             self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
             self.fix_MadLoopParamCard(dir_name)
             if PSpoints==[]:
@@ -172,9 +180,13 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
             # Get the ME value
             for i, proc in enumerate(proc_list):
-                value = LoopMG5Runner.get_me_value(proc, i, os.path.join(self.mg5_path,\
-                    self.temp_dir_name), ([] if PSpoints==[] else PSpoints[i]))
-                self.res_list.append(value)
+                if initializations[i]:
+                    value = LoopMG5Runner.get_me_value(proc, i, os.path.join(\
+                                              self.mg5_path,self.temp_dir_name), 
+                                          ([] if PSpoints==[] else PSpoints[i]))
+                    self.res_list.append(value)
+                else:
+                    self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
 
             return self.res_list
         else:
@@ -206,6 +218,37 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         return v5_string
 
     @staticmethod
+    def initialize_process(proc, proc_id, working_dir, verbose=True):
+        """Compile and run ./check, then parse the output and return the result
+        for process with id = proc_id and PSpoint if specified."""  
+        if verbose:
+            sys.stdout.write('.')
+            sys.stdout.flush()
+         
+        shell_name = None
+        directories = glob.glob(os.path.join(working_dir, 'SubProcesses',
+                                                             'P%i_*' % proc_id))
+        if directories and os.path.isdir(directories[0]):
+            shell_name = os.path.basename(directories[0])
+
+        # If directory doesn't exist, skip and return 0
+        if not shell_name:
+            logging.info("Directory hasn't been created for process %s"%str(proc))
+            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+
+        if verbose: logging.info("Initializing process %s in dir %s"%(str(proc), shell_name))
+        
+        dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+
+        init = process_checks.LoopMatrixElementTimer.run_initialization(\
+          run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'))
+        
+        if init is None:
+            return False
+        else:
+            return True
+
+    @staticmethod
     def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified."""  
@@ -227,6 +270,11 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        # Make sure the modified source file are recompiled
+        if os.path.isfile(os.path.join(dir_name,'check')):
+            os.remove(os.path.join(dir_name,'check'))
+        if os.path.isfile(os.path.join(dir_name,'check_sa.o')):        
+            os.remove(os.path.join(dir_name,'check_sa.o'))
         # Run make
         devnull = open(os.devnull, 'w')
         retcode = subprocess.call('make',
@@ -322,16 +370,59 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'r')
         MLParams = file.read()
         file.close()
-        mode = 4 if mp else 1
+        run_mode = 4 if mp else -1
+        init_mode = 4 if mp else 1
         file = open(os.path.join(dir_name,'Cards','MadLoopParams.dat'), 'w')
-        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
-        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
+        MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%run_mode, MLParams)
+        MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%init_mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n.FALSE.", 
                                                                        MLParams)                
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
                                  "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
         file.write(MLParams)
         file.close()
+        
+class LoopMG5Runner_gauge(LoopMG5Runner):
+    
+    #name = 'MG5_gauge'
+    #type = 'ufo_cms'
+    
+    def __init__(self, cms, gauge):
+        self.cms = cms
+        self.gauge = gauge
+        self.type =  '%s_%s' %(self.cms, self.gauge)
+        self.name =  'MG5_%s_%s' %(self.cms, self.gauge)
+    
+    def format_mg5_proc_card(self, proc_list, model):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "set loop_optimized_output %s\n"%str(self.optimized_output) 
+
+        v5_string += "import model %s\n" % os.path.join(self.model_dir, model)
+        v5_string += "set automatic_html_opening False\n"
+        v5_string += 'set complex_mass_scheme %s \n' % self.cms
+        v5_string += 'set gauge %s \n' % self.gauge
+        
+        for i, (proc, born_orders, perturbation_orders, squared_orders) in \
+            enumerate(proc_list):      
+            
+            born_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in born_orders.items()])
+            perturbations = ' '.join([k for k \
+                                   in perturbation_orders])
+
+            squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in squared_orders.items()])      
+            v5_string += 'add process ' + proc + ' ' + born_couplings + \
+                         ' [virt=' + perturbations + '] ' + squared_couplings + \
+                         (' @%i\n'%i)
+        v5_string += "output standalone %s -f\n"%\
+                     os.path.join(self.mg5_path, self.temp_dir_name)
+                     
+        v5_string += 'set complex_mass_scheme False \n'
+        v5_string += 'set gauge unitary \n'
+        
+        return v5_string
 
 class LoopMG4RunnerError(Exception):
         """class for error in LoopMG4Runner"""
@@ -365,7 +456,6 @@ class LoopMG4Runner(me_comparator.MERunner):
         the specified model and the specified orders with a given c.o.m energy
         or the given Phase-Space points if specified.
         """
-        
         self.res_list = [] # ensure that to be void, and avoid pointer problem 
         self.proc_list = proc_list
         self.model = model
@@ -1375,3 +1465,129 @@ class LoopMEComparator(me_comparator.MEComparator):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
+class LoopMEComparatorGauge(LoopMEComparator):
+    """Base object to run comparison tests for loop processes. Take standard 
+    MERunner objects and a list of loop proc as an input and return detailed 
+    comparison tables in various formats."""
+
+    me_runners = []
+    results    = []
+    proc_list  = []
+    orders     = []
+    
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+        """Output result as a nicely formated table. If filename is provided,
+        write it to the file, else to the screen. Tolerance can be adjusted."""
+
+        proc_col_size = 20
+
+        for proc in self.proc_list:
+            if len(proc) + 2 > proc_col_size:
+                proc_col_size = len(proc) + 2
+        
+        col_size = 20
+
+        pass_proc = 0
+        fail_proc = 0
+
+        failed_proc_list = []
+        
+        res_str = ""
+        
+        testing_list=['Finite', 'Born', 'Single pole', 'Double pole']
+        for index in range(0,4):
+            res_str +=("\n\n" if index!=0 else "")
+#            res_str +=''.join(['=']*(len(testing_list[index])+8))
+            res_str +="=== "+testing_list[index]+" ==="
+#            res_str +="\n"+''.join(['=']*(len(testing_list[index])+8))
+            res_str += "\n" + self._fixed_string_length("Process", proc_col_size) + \
+                    ''.join([self._fixed_string_length(runner.name, col_size) for \
+                               runner in self.me_runners]) + \
+                      self._fixed_string_length("Diff both unit", col_size) + \
+                      self._fixed_string_length("Diff both cms", col_size) + \
+                      self._fixed_string_length("Diff both fixw", col_size) + \
+                      self._fixed_string_length("Diff both feyn", col_size) + \
+                      "Result"
+    
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+              in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                
+                diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+                diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+                diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+                diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+
+                res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                       ''.join([self._fixed_string_length("%1.10e" % res,
+                                               col_size) for res in list_res])
+
+                res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
+                        
+                if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
+                    diff_unit < 1e-2:
+                    pass_proc += 1
+                    res_str += "Pass"
+                else:
+                    if proc not in failed_proc_list:
+                        fail_proc += 1
+                        failed_proc_list.append(proc)
+                    res_str += "Fail"
+                    
+        res_str +="\n\n=== Summary ==="
+
+        res_str += "\n %i/%i passed, %i/%i failed" % \
+                    (pass_proc, pass_proc + fail_proc,
+                     fail_proc, pass_proc + fail_proc)
+
+        if fail_proc != 0:
+            res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+        logging.info("\n"+res_str)
+
+        if filename:
+            file = open(filename, 'w')
+            file.write(res_str)
+            if failed_proc_list:
+                file.write('\n'+str(failed_proc_list))
+            file.close()
+
+    def assert_processes(self, test_object, tolerance = 1e-06):
+        """Run assert to check that all processes passed comparison""" 
+
+        col_size = 17
+        fail_proc = 0
+        fail_str = "Failed for processes:"
+        failed_proc_list = []
+
+        for index in range(0,4):        
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+                                                 in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                if max(list_res) == 0.0 and min(list_res) == 0.0:
+                    diff = 0.0
+                else:
+                    diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+                    diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+                    diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+                    diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+                
+                if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
+                  diff_unit > 1e-2 and proc not in failed_proc_list:
+                    failed_proc_list.append(proc)
+                    fail_str += self._fixed_string_length(proc, col_size) + \
+                                ''.join([self._fixed_string_length("%1.10e" % res,
+                                         col_size) for res in list_res])
+
+        test_object.assertEqual(fail_str, "Failed for processes:")
