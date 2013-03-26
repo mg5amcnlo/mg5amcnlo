@@ -768,7 +768,7 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
-                pass
+                self.submitted_ids.remove(id)
             else:
                 fail += 1
 
