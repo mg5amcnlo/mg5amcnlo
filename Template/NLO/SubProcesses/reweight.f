@@ -559,6 +559,10 @@ c FxFx
      $     ,FxFx_fac_scale
 c
       setclscales=.true.
+
+      if(ickkw.le.0.and.xqcut.le.0d0.and.q2fact(1).gt.0.and.scale.gt.0)
+     $     return
+
       if (ickkw.eq.3) then
          use_syst=.false.
          chcluster=.false.
@@ -768,7 +772,8 @@ c     Trace QCD line through event
             enddo
          enddo
          if (imocl(n).ne.ibeam(1).and.imocl(n).ne.ibeam(2)) then
-c     Final State clustering Check QCD jet, take care so not a decay
+c     Final State clustering
+c           Check QCD jet, take care so not a decay
             if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $           ipdgcl(1,igraphs(1),nFKSprocess),ipart,n.eq.nexternal-2)) then
 c     Remove non-gluon jets that lead up to non-jet vertices
@@ -1271,6 +1276,16 @@ c     Store pdf information for systematics studies (initial)
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
+
+c   ipart gives the external particle number corresponding to the present
+c   quark or gluon line. 
+c   For t-channel lines, ipart(1) contains the connected beam. 
+c   For s-channel lines, it depends if it is quark or gluon line:
+c   For quark lines, ipart(2) is 0 and ipart(1) connects to the corresponding
+c   final-state quark. For gluons, if it splits into two gluons, 
+c   it connects to the hardest gluon. If it splits into qqbar, it ipart(1) is
+c   the hardest and ipart(2) is the softest.
+
       do i=1,nexternal
          pt2prev(ishft(1,i-1))=0d0
          if (ickkw.ge.2) then

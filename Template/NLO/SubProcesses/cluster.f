@@ -14,6 +14,7 @@ c**************************************************************************
       return 
       end
 
+
       subroutine rotate(p1,p2,n,nn2,ct,st,d)
 c**************************************************************************
 c     input:
@@ -462,7 +463,6 @@ c     check if we have constraint from onshell resonances
                endif
                foundbw=.false.
  10         enddo
-            if(nbw.eq.0.and.heavyrad(id_cl(nFKSprocess,idij,i))) cycle
             if((nbw.eq.0.or.foundbw))then
                ii=ii+1
                icgs(ii)=id_cl(nFKSprocess,idij,i)
