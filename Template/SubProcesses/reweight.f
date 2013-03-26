@@ -533,21 +533,6 @@ c     Reset chcluster to run_card value
         write(*,*)'iconfig is ',iconfig
       endif
 
-c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
-c     (i.e. geom. average of transverse mass of t and t~)
-        if(mt2last.gt.4d0 .and. nexternal.gt.3) then
-           if(jlast(1).eq.nexternal-2.and.jlast(2).eq.nexternal-2.and.
-     $        isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1),iproc)).and.
-     $        isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1),iproc)).and.
-     $        isqcd(ipdgcl(imocl(nexternal-3),igraphs(1),iproc)))then
-              mt2ij(nexternal-2)=mt2last
-              mt2ij(nexternal-3)=mt2last
-              if (btest(mlevel,3)) then
-                 write(*,*)' setclscales: set last vertices to mtlast: ',sqrt(mt2last)
-              endif
-           endif
-        endif
-
 C   If we have fixed factorization scale, for ickkw>0 means central
 C   scale, i.e. last two scales (ren. scale for these vertices are
 C   anyway already set by "scale" above)
@@ -756,6 +741,8 @@ c     Store external jet numbers if first time
          njetstore(iconfig)=njets
          if (btest(mlevel,4))
      $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+c     Recluster without requiring chcluster
+         goto 100
       else
 c     Otherwise, check that we have the right jets
 c     if not, recluster according to iconfig
@@ -789,6 +776,21 @@ c     if not, recluster according to iconfig
          endif
       endif
       
+c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
+c     (i.e. geom. average of transverse mass of t and t~)
+        if(mt2last.gt.4d0 .and. nexternal.gt.3) then
+           if(jlast(1).eq.nexternal-2.and.jlast(2).eq.nexternal-2.and.
+     $        isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(imocl(nexternal-3),igraphs(1),iproc)))then
+              mt2ij(nexternal-2)=mt2last
+              mt2ij(nexternal-3)=mt2last
+              if (btest(mlevel,3)) then
+                 write(*,*)' setclscales: set last vertices to mtlast: ',sqrt(mt2last)
+              endif
+           endif
+        endif
+
 c     Set central scale to mT2
       if(jcentral(1).gt.0) then
          if(mt2ij(jcentral(1)).gt.0d0)
@@ -1114,18 +1116,6 @@ c     Set incoming particle identities
 
       endif
       
-c     Store pdf information for systematics studies (initial)
-      if(use_syst)then
-         do j=1,2
-            n_pdfrw(j)=1
-            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-            s_xpdf(1,j)=xbk(ib(j))
-            s_qpdf(1,j)=sqrt(q2fact(j))
-         enddo
-      endif
-
-      if(ickkw.le.0) goto 100
-
 c     Store pdf information for systematics studies (initial)
       if(use_syst)then
          do j=1,2
