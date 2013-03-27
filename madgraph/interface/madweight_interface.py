@@ -473,8 +473,6 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
                 base_output = xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
                 sec_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
-                misc.sprint(base_output)
-                misc.sprint(base_output['1'])
                 base_output.refine(sec_output)
                 files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
                 base_output.write(pjoin(out_dir, 'output.xml'), MWdir)
