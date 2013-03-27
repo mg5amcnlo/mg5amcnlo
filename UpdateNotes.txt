@@ -24,6 +24,15 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Fix lxplus server issue (Bug #1159929)
                   OM: Fix an issue when MG5 directory is on a read only disk 
                       (Bug #1160629)
+                  OM: Fix a bug which prevent to have the pythia matching plot/cross-section
+                      in some particular case.
+                  OM: Support of new UFO convention allowing to define custom propagator.
+                      (Both in MG5 and ALOHA)
+                  OM: Change ALOHA default propagator to have a specific expression for the
+                      massless case allowing to speed up matrix element computation with 
+                      photon/gluon.
+                  OM: Correct the default spin 3/2 propagator (wrong incoming/outcoming 
+                      definition)
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 

@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating','propagator',
                    'is_part', 'self_antipart']
 
     def default_setup(self):
@@ -219,6 +219,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
 

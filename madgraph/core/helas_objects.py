@@ -1183,6 +1183,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
+        output['propa'] = self.get('particle').get('propagator')
+        if output['propa'] != '':
+            output['propa'] = 'P%s' % output['propa']
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
@@ -2122,6 +2125,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
         output['out'] = self.get('number') - flip
+        output['propa'] = ''
         return output
 
 
@@ -3692,11 +3696,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
+        out = [(tuple(wa.get('lorentz')),  
+                 tuple(list(wa.get('conjugate_indices')) + \
+                  [] if wa.get('particle').get('propagator') =='' else \
+                  ['P%s' % wa.get('particle').get('propagator')]),
                  wa.find_outgoing_number()) for wa in \
-                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+                self.get_all_wavefunctions()\
+                if wa.get('interaction_id') != 0]  
+        out += [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
+                 wa.find_outgoing_number()) for wa in  self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
-        
+
+        return out
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
