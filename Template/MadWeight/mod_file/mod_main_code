@@ -139,8 +139,8 @@ C|       - num_sol: number of the solution to charge                     |
 C|       - x      : random number from vegas                             |
 C+-----------------------------------------------------------------------+
 
-	integer config,perm_pos
-	common /to_config/ config,perm_pos
+c	integer config,perm_pos
+c	common /to_config/ config,perm_pos
 	double precision x(20)
 	integer n_var
 	double precision    S,X1,X2,PSWGT,JAC
@@ -150,6 +150,8 @@ c
 	external multi_channel_weight
 c
 	include 'd_choices.inc'
+	include 'phasespace.inc'
+	include 'data.inc'
 C+-----------------------------------------------------------------------+
 C|     Scedullar Part					                 |
 C+-----------------------------------------------------------------------+    
@@ -170,6 +172,7 @@ $B$ COMMON_DEF $B$
         integer propa_max(max_branches,max_branches,nb_sol_config)
         integer propa_min(max_branches,max_branches,nb_sol_config)
         integer propa_cont(max_branches,nb_sol_config)
+        integer var2random(dim_phase_space,nb_sol_config)
 
 ##************************************************************************
 $E$ COMMON_DEF $E$

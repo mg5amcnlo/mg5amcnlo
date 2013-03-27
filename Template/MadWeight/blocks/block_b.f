@@ -1,4 +1,4 @@
-      subroutine block_b(x,n_var,p1,p2,p3,r1,r2)
+      subroutine block_b(x,n_var,var2random,p1,p2,p3,r1,r2)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -19,7 +19,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     argument
 c
-      integer p1,p2,p3,r1,r2,n_var
+      integer p1,p2,p3,r1,r2,n_var,config, local_var
+      integer var2random(*)
       double precision x(20)
 c
 c     local
@@ -59,7 +60,8 @@ c
 c     First generate  phi of the missing particle
 c
       n_var=n_var+1     ! update the component of random variable
-      call get_component(0d0,7d0,x(n_var),phi_miss,jac_temp,2,S) !phi 
+      local_var = var2random(3*p1-5)
+      call get_component(0d0,7d0,x(local_var),phi_miss,jac_temp,2,S) !phi
       jac_loc=jac_temp
 c      write(*,*) 'phi, x,nvar',phi_miss,x(n_var),n_var
 c

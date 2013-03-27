@@ -1,4 +1,4 @@
-      subroutine class_f(x,n_var,p1,p2,p3,p4,r1,r2)
+      subroutine class_f(x,n_var,var2random,p1,p2,p3,p4,r1,r2)
 c********************************************************************
 c     This subroutine gets the two missing momenta for 
 c     the following topology:
@@ -20,7 +20,8 @@ c
 c     arguments
 c
       double precision x(20)
-      integer p1,p2,p3,p4,r1,r2,n_var
+      integer p1,p2,p3,p4,r1,r2,n_var,local_var
+      integer var2random(*)
 
 c
 c     local
@@ -97,25 +98,25 @@ c
       if (c_point(1,1,2).gt.0d0) then
         n_var=n_var+1
         call  get_bjk_fraction(c_point(1,1,1),
-     &  c_point(1,1,2),x(n_var),x1,jac_temp)
+     &  c_point(1,1,2),x(var2random(1)),x1,jac_temp)
         jac_loc=jac_loc*jac_temp
       elseif(c_point(1,1,2).eq.0d0) then
         x1=c_point(1,1,1)
       elseif (c_point(1,1,2).lt.0d0) then
         n_var=n_var+1
-        x1=x(n_var)
+        x1=x(var2random(1))
       endif
 
       if (c_point(2,1,2).gt.0d0) then
         n_var=n_var+1
         call  get_bjk_fraction(c_point(2,1,1),
-     &  c_point(2,1,2),x(n_var),x2,jac_temp)
+     &  c_point(2,1,2),x(var2random(2)),x2,jac_temp)
         jac_loc=jac_loc*jac_temp
       elseif (c_point(2,1,2).eq.0d0) then
         x2=c_point(2,1,1)
       elseif (c_point(2,1,2).lt.0d0) then
         n_var=n_var+1
-        x2=x(n_var)
+        x2=x(var2random(2))
       endif
 
       miss_px=0d0

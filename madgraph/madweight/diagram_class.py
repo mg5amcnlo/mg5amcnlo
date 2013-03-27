@@ -162,6 +162,7 @@ class MG_diagram(diagram):
         dico_pid_to_label=self.ParticlesFile.give_pid_to_label()           
 
         dico_type_to_tflevel={}
+        has_theta_tf, has_phi_tf  = [] , []
         ff=open(file,'r')
         #pattern
         pattern=re.compile(r'''^\s*(?P<width>\w+)\s+(?P<type>[\w,01]*)''',re.VERBOSE)
@@ -180,6 +181,16 @@ class MG_diagram(diagram):
                 elif(re_obj.group('width').lower()=='x'):
                     self.x_constrained=int(re_obj.group('type'))
                     continue
+                elif(re_obj.group('width').lower()=='theta'):
+                    list=re_obj.group('type').split(',')
+                    for tag in list:
+                        has_theta_tf.append(tag)
+                    continue
+                elif(re_obj.group('width').lower()=='phi'):
+                    list=re_obj.group('type').split(',')
+                    for tag in list:
+                        has_phi_tf.append(tag)
+                    continue                
                 else:
                     tf_level=2
                 list=re_obj.group('type').split(',')
@@ -188,14 +199,18 @@ class MG_diagram(diagram):
 
         #put information in external particle
         for part in self.ext_content:
+            label=dico_pid_to_label[abs(part.pid)]
             if not part.neutrino:
-                label=dico_pid_to_label[abs(part.pid)]
                 if dico_type_to_tflevel.has_key(label):
                     part.tf_level=dico_type_to_tflevel[label]
                 else:
-                    part.tf_level=0  #delta is the default
+                    part.tf_level=0  #delta is the default            
             else:
                 part.tf_level=3
+            if label in has_theta_tf:
+                part.has_theta_tf = True
+            if label in has_phi_tf:
+                part.has_phi_tf = True            
                 
     def define_neutrino_stuff(self):
         """ put all neutrino dependent variable """

@@ -1,4 +1,4 @@
-      subroutine block_d(x,n_var,p1,p2,r1) 
+      subroutine block_d(x,n_var,var2random,p1,p2,r1)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -19,7 +19,8 @@ c
 c     argument
 c
 c      integer parg1,parg2 !old variable
-      integer p1,p2,r1,n_var	
+      integer p1,p2,r1,n_var, local_var
+      integer var2random(*)
       double precision x(20)
 c
 c     local
@@ -95,7 +96,9 @@ c----------------------------------------------
             gen_var(j)=c_point(p2,j,1)
          elseif(c_point(p2,j,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(n_var),
+            local_var = var2random(3*p2-j-3)
+            if (local_var.eq.0) local_var = var2random(3*p1-j-3)
+            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(local_var),
      &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
 c            write(*,*) "gen_var",c_point(p2,j,1),c_point(p2,j,2),x(n_var),
 c     &                          gen_var(j),jac_temp,j,n_var

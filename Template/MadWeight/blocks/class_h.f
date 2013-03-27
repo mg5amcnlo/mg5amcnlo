@@ -1,4 +1,4 @@
-      subroutine class_h(x,n_var,p1,p2)
+      subroutine class_h(x,n_var,var2random,p1,p2)
 c***************************************************************************
 c     ECS in CLASS H
 c  
@@ -10,7 +10,8 @@ c
 c     argument
 c
       double precision x(20) 
-      integer n_var, p1, p2
+      integer n_var, p1, p2,local_var
+      integer var2random(*)
 c
 c     local
 c
@@ -79,8 +80,9 @@ c         if width is positive, generate the component
           elseif(c_point(vis(i),j,2).gt.0d0) then
 
              n_var=n_var+1     ! update the component of random variable
+             local_var = var2random(3*vis(i)-j-3)
             call get_component(c_point(vis(i),j,1),c_point(vis(i),j,2),
-     &           x(n_var), gen_var(i,j),jac_temp,j,sqrts-Etot)
+     &           x(local_var), gen_var(i,j),jac_temp,j,sqrts-Etot)
 
             jac_loc=jac_loc*jac_temp
             if (jac_temp.le.0d0) then

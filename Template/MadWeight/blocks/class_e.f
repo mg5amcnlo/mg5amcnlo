@@ -1,4 +1,4 @@
-      subroutine class_e(x,n_var,p1,p2,p3,p4,r1,r2,r3)
+      subroutine class_e(x,n_var,var2random,p1,p2,p3,p4,r1,r2,r3)
 c********************************************************************
 c     This subroutine gets the two missing momenta for 
 c     the following topology:
@@ -20,7 +20,8 @@ c
 c     arguments
 c
       double precision x(20)
-      integer p1,p2,p3,p4,r1,r2,r3,n_var
+      integer p1,p2,p3,p4,r1,r2,r3,n_var,local_var
+      integer var2random(*)
 
 c      double precision m1,m2,misspx,misspy,Etv,pztv,Einit,pzinit
 c      double precision p3(0:3),p4(0:3),p1(0:3,2),p2(0:3,2),mvir13,mvir24
@@ -100,7 +101,7 @@ c
       n_var=n_var+1
       ETAMIN = .5D0*LOG(mvir2(r3)/s)
       ETAMAX = -ETAMIN
-      ETA    = (ETAMAX-ETAMIN)*X(n_var)+ETAMIN
+      ETA    = (ETAMAX-ETAMIN)*X(var2random(1))+ETAMIN
       jac_loc =(ETAMAX-ETAMIN)
 c      write(*,*) 'jac_loc',jac_loc,x(n_var)
       

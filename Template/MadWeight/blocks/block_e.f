@@ -1,4 +1,4 @@
-      subroutine block_e(x,n_var,p1,p2,p3,r1,r2) 
+      subroutine block_e(x,n_var,var2random,p1,p2,p3,r1,r2)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -24,7 +24,8 @@ c      parameter (thres=1000d0)
 c
 c     argument
 c
-      integer p1,p2,p3,r1,r2,n_var
+      integer p1,p2,p3,r1,r2,n_var,local_var
+      integer var2random(*)
       double precision x(20)
 c
 c     local
@@ -73,7 +74,8 @@ c----------------------------------------------
             gen_var(j)=c_point(p1,j,1)
          elseif(c_point(p1,j,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(n_var),
+            local_var = var2random(3*p1-j-3)
+            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(local_var),
      &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
 c            write(*,*) "gen_var",j,gen_var(j)
             jac_loc=jac_loc*jac_temp
@@ -96,7 +98,8 @@ c----------------------------------------------
             gen_var(j)=c_point(p2,j,1)
          elseif(c_point(p2,j,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(n_var),
+            local_var = var2random(3*p2-j-3)
+            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(local_var),
      &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
 c            write(*,*) "gen_var",j,gen_var(j)
             jac_loc=jac_loc*jac_temp

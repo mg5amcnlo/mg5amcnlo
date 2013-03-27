@@ -1,4 +1,4 @@
-      subroutine class_g(x,n_var,p1,p2,p3,p4,r1,r2)
+      subroutine class_g(x,n_var,var2random,p1,p2,p3,p4,r1,r2)
 c********************************************************************
 c     This subroutine gets the two missing momenta for 
 c     the following topology:
@@ -20,7 +20,8 @@ c
 c     arguments
 c
       double precision x(20)
-      integer p1,p2,p3,p4,r1,r2,n_var
+      integer p1,p2,p3,p4,r1,r2,n_var,local_var
+      integer var2random(*)
 
 c      double precision m1,m2,misspx,misspy,Etv,pztv,Einit,pzinit
 c      double precision p3(0:3),p4(0:3),p1(0:3,2),p2(0:3,2),mvir13,mvir24
@@ -101,14 +102,14 @@ C     IF THERE IS NO S CHANNEL POLE USE BELOW:
       TAUMIN = (dsqrt(mvir2(r1))+dsqrt(mvir2(r2)))**2/S
       TAUMAX = 1D0
       n_var=n_var+1
-      TAU    = (TAUMAX-TAUMIN)*X(n_var)+TAUMIN
+      TAU    = (TAUMAX-TAUMIN)*X(var2random(1))+TAUMIN
       jac_loc= (TAUMAX-TAUMIN)
 
 C     FROM HERE ON SAME WITH OR WITHOUT POLE
       ETAMIN = .5d0*LOG(TAU)
       ETAMAX = -ETAMIN
       n_var=n_var+1
-      ETA    = (ETAMAX-ETAMIN)*X(n_var)+ETAMIN
+      ETA    = (ETAMAX-ETAMIN)*X(var2random(2))+ETAMIN
 c      if (.not. warned) then
 c         write(*,*) 'Fixing eta = 0'
 c         warned=.true.

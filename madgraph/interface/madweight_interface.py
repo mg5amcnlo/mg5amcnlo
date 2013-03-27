@@ -374,7 +374,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         except Exception:
             self.cluster.remove()
             raise                
-        except KeyboardInterupt:
+        except KeyboardInterrupt:
             if not self.force:
                 ans = self.ask('Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])

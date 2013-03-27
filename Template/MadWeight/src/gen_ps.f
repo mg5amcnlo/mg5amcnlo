@@ -84,6 +84,7 @@ c
 c     arguments
 c
       integer n_var
+      integer local_var
       double precision x(20)
       double precision jac_visible
 c
@@ -145,9 +146,11 @@ c         if width is zero, just take the exp. component (TF=delta function)
 c
 c         if width is positive, generate the component
           elseif(c_point(i,j,2).gt.0d0) then
-
+             write(*,*) 'take for random ', config_pos,3*i-j-3
+             local_var = var2random(3*i-j-3,config_pos)
+             write(*,*) 'use random ', local_var
              n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(i,j,1),c_point(i,j,2),x(n_var),
+            call get_component(c_point(i,j,1),c_point(i,j,2),x(local_var),
      &                          gen_var(i,j),jac_temp,j,Emax)
  
             jac_visible=jac_visible*jac_temp
@@ -366,6 +369,7 @@ c     argument
 c
       double precision x(20)
       integer n_var
+      integer local_var
 c
 c     parameter
 c
@@ -397,6 +401,7 @@ c
 c---
 c Begin code
 c---
+      local_var = 0
       include 'props.inc'
       if (NWA) then
         do i=1,num_propa(config_pos)
@@ -448,7 +453,9 @@ c     lower bound
         gam=(prwidth(propa_cont(i,config_pos),1)*
      & prmass(propa_cont(i,config_pos),1))/(upper_bound-lower_bound)
         n_var=n_var+1
-        call transpole(pole,gam,x(n_var),y,jac)
+        local_var = local_var +1
+        write(*,*) 'use random ', local_var
+        call transpole(pole,gam,x(local_var),y,jac)
         jac=jac*(upper_bound-lower_bound)
         mvir2(propa_cont(i,config_pos))=y*(upper_bound-lower_bound)
      & +lower_bound

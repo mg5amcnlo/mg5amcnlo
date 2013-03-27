@@ -1,4 +1,4 @@
-      subroutine class_a(x,n_var,p1,p2)
+      subroutine class_a(x,n_var,var2random,p1,p2)
 c***************************************************************************
 c     ECS in CLASS A
 c  
@@ -10,7 +10,8 @@ c
 c     arguments
 c      
       double precision x(20)
-      integer p1,p2,n_var
+      integer p1,p2,n_var,local_var
+      integer var2random(*)
 c
 c     local
 c
@@ -57,7 +58,7 @@ c if pTmiss reconstructed is NOT used,
 c the boost is defined by the pT balancing the visible particles
 c in class_h 
        if (ISR_mode.eq.3) then
-         call class_h(x,n_var,p1,p2)
+         call class_h(x,n_var,var2random,p1,p2)
          return
        endif
 
@@ -77,7 +78,8 @@ c     generate angles associated to p1
             angles(1,j)=c_point(p1,j,1)
          elseif(c_point(p1,j,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(n_var),
+            local_var = var2random(3*p1-j-3)
+            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(local_var),
      &                          angles(1,j),jac_temp,j,S)
             jac_loc=jac_loc*jac_temp
          endif

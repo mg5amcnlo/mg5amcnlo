@@ -14,3 +14,5 @@
   THIN         $b$ THIN $e$
   LARGE        $b$ LARGE $e$
   X            $b$ X $e$
+  THETA        $b$ THETA $e$
+  PHI          $b$ PHI $e$

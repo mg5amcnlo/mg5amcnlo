@@ -13,7 +13,8 @@ except ImportError:
     from internal.madweight.MW_fct import *
     import internal.madweight.diagram_class as diagram_class
     import internal.madweight.mod_file as mod_file
-    import internal.madweight.Cards as Cards   
+    import internal.madweight.Cards as Cards
+    import internal.misc as misc   
 
 
 
@@ -279,7 +280,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 elif block.chgt_var in ['A']:
                     block_name=' call block_' + block.chgt_var.lower() + '('
                 else:
-                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,'
+                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,var2random(1,config),'
                 line=block_name
                 for particle in block.order_content:
                     if particle.MG < 0:
@@ -323,7 +324,7 @@ class MG_diagram(diagram_class.MG_diagram):
             if block.chgt_var == '2':
                 line=' call fuse('
             elif block.chgt_var in ['a', 'c', 'e', 'f', 'g']:
-                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,'
+                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,var2random(1,config),'
             else:
                 line=' call class_' + ECS.chgt_var.lower() + '('
             for particle in block.order_content:
@@ -387,6 +388,13 @@ class MG_diagram(diagram_class.MG_diagram):
 
         ECS=full_sol_obj[0]
         blob_sol_list=full_sol_obj[1]
+        mapping = [0] * ((3*len(self.ext_content))+2)
+        m_random, p_random = 0, 0
+        var2mrandom = {'a':0,'b':1,'c':2,'d':4,'e':3,'f':2,
+                       'A':3,'B':2,'C':1,'D':1,'E':2,
+                       '0':0,'1':0,'2':0}
+        
+        
 #        template=self.template
         blob_sol=[]
         for b_sol in blob_sol_list:
@@ -404,14 +412,26 @@ class MG_diagram(diagram_class.MG_diagram):
         part_treated = set()
         ambiguous_external = set()
         for block in ECS.step + blob_sol:
+            m_random += var2mrandom[block.chgt_var]
             if block.chgt_var == '0':
                 particle = block.in_part[0]
                 if particle.external and not particle.neutrino:
                     ambiguous_external.add(particle.MG)
+                    if mapping[3*particle.MG-7] == 0 and particle.tf_level:
+                        mapping[3*particle.MG-7] = p_random+1
+                        p_random += 1
                 continue
             else:
                 [part_treated.add(part.MG) for part in block.in_part]
-                    
+            
+            if block.chgt_var == 'e':
+                mapping[0] = p_random+1
+                p_random += 1 
+            elif block.chgt_var in ['f','g']:
+                mapping[0] = p_random+1
+                mapping[1] = p_random+2            
+                p_random += 2
+                 
             if block.chgt_var not in ['D', 'E', 'a', 'c']:
                 for particle in block.in_part:
                     if particle.external and not particle.neutrino:
@@ -419,6 +439,10 @@ class MG_diagram(diagram_class.MG_diagram):
                             num_vis += 1
                             vis_str += str(particle.MG) + ','
                             vis_list.append(particle.MG)
+                            if mapping[3*particle.MG-7] == 0 and particle.tf_level:
+                                mapping[3*particle.MG-7] = p_random+1
+                                p_random += 1
+
             elif block.chgt_var in ['E', 'c']:
                 if block.chgt_var == 'E':
                     particle=block.in_part[2] #take the forward particle
@@ -429,7 +453,9 @@ class MG_diagram(diagram_class.MG_diagram):
                         num_vis += 1
                         vis_str += str(particle.MG) + ','
                         vis_list.append(particle.MG)
-
+                        if mapping[3*particle.MG-7] == 0 and particle.tf_level:
+                            mapping[3*particle.MG-7] = p_random+1
+                            p_random += 1
         for particle in ambiguous_external:
             if particle not in part_treated:
                 #part_treated.append(
@@ -442,7 +468,18 @@ class MG_diagram(diagram_class.MG_diagram):
             vis_list.sort()
             vis_str=','.join([str(MG) for MG in vis_list])
             text += ' data (vis_nb(label,' + str(num_sol) + '),label=1,' + str(num_vis) + ') /' + vis_str + '/\n'
-        text += ' data nb_block(' + str(num_sol) + ') / ' + str(self.nb_block) + '/\n\n\n'
+        text += ' data nb_block(' + str(num_sol) + ') / ' + str(self.nb_block) + '/\n'
+        # check transfer function
+        for particle in self.ext_content:
+            if hasattr(particle,'has_theta_tf') and particle.has_theta_tf:
+                mapping[3*particle.MG-5] = p_random+1
+                p_random += 1
+            if hasattr(particle,'has_phi_tf') and particle.has_phi_tf:    
+                mapping[3*particle.MG-6] = p_random+1
+                p_random += 1
+        mapping = [str(i+m_random) if i else str(i) for i in mapping]
+        text += 'data (var2random(label, %(num_sol)s), label=1,%(size)s) / %(data)s/\n\n\n' % \
+             {'num_sol': num_sol, 'size':len(mapping),'data':','.join(mapping)}
         write_text += put_in_fortran_format(text)
         #
         #   PROPAGATOR CONTENT -> LINKED TO SOLUTION
@@ -464,7 +501,7 @@ class MG_diagram(diagram_class.MG_diagram):
             text += self.return_propa_generation(list, i, num_sol)
         text=put_in_fortran_format(text)
         write_text += text
-        
+
         return write_text
 
 ##     def create_pmass2(self):
@@ -526,6 +563,7 @@ class MG_diagram(diagram_class.MG_diagram):
         # create permutations.inc file
         self.write_permutations_file()
 
+
     def write_f77_parameter(self):
         """ define the f77 parameter for the data file """
         
@@ -535,6 +573,7 @@ class MG_diagram(diagram_class.MG_diagram):
         text += ' parameter (nb_vis_part=' + str(len(self.ext_content) - self.num_neut) + ')\n'        
         text += ' integer nb_sol_config\n'                    
         text += ' parameter (nb_sol_config=' + str(len(self.code)) + ')\n'
+        text += ' integer dim_phase_space\n parameter (dim_phase_space=%i)\n' % ((3*len(self.ext_content))+2) 
 #        text+=' integer max_branch\n'                    
 #        text+=' parameter (max_branch='+str(len(self.ext_content))+')\n'        
         text = put_in_fortran_format(text)

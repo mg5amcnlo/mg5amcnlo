@@ -161,7 +161,8 @@ class TF_input(XML_input):
         thin=[]
         large=[]
         with_x=0
-   
+        theta = []
+        phi = []
         for block in self.block.values():
             if block.order==1:
                 thin+=block.particles
@@ -169,13 +170,21 @@ class TF_input(XML_input):
                 large+=block.particles
             if "x1" in block.particles or "x2" in block.particles:
                 with_x=1
-        
+            if block['THETA'].tf_code.strip() != 'tf=1d0' or \
+                block['THETA'].width_code.strip() != 'width=0d0':
+                theta += block.particles
+            if block['PHI'].tf_code.strip() != 'tf=1d0' or \
+                block['PHI'].width_code.strip() != 'width=0d0':
+                phi += block.particles            
+
         #define the rule of how modif file transfer_function/input/ordering_file.inc        
         modif_rule={}
         modif_rule['THIN']=','.join(thin)
         modif_rule['LARGE']=','.join(large)
         modif_rule['X']=str(with_x)
-        modif_rule['NAME_TF']=self.tf_name        
+        modif_rule['NAME_TF']=self.tf_name
+        modif_rule['THETA'] = ','.join(theta)
+        modif_rule['PHI'] =  ','.join(phi)
 
         #modify file
         mod_file.mod_file('./input/ordering_file.inc',modif_rule,write='./ordering_file.inc')

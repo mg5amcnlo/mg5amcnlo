@@ -28,7 +28,7 @@ Block MW_Run
      ME_int_points        10000   # number of points in MadEvent integration 
      MW_int_points        50000   # number of points in MadWeight integration
      nb_event_by_node     5      # one job submission compute the weight for N events
-     log_level            full  # from low level of log to extensive log: 
+     log_level            weight  # from low level of log to extensive log: 
                                   # weight, permutation, channel, full
      use_cut              F       # use the cut defined in run_card.dat
      bw_cut               F       # use the BW cut 

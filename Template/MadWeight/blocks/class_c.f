@@ -1,4 +1,4 @@
-      subroutine class_c(x,n_var,p1,p2,p3,r1,r2)
+      subroutine class_c(x,n_var,var2random,p1,p2,p3,r1,r2)
 c
 c     this subroutine catches the momenta p1 and p3 for the topology
 c
@@ -42,7 +42,8 @@ c
 c
 c      arguments
 c
-      integer p1,p2,p3,r1,r2,n_var
+      integer p1,p2,p3,r1,r2,n_var,local_var
+      integer var2random(*)
       double precision x(20)
 c
 c     parameters
@@ -132,8 +133,9 @@ c     generate theta3, phi3
             theta3=c_point(p3,1,1)
          elseif(c_point(p3,1,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
+            local_var = var2random(3*p3-1-3)
 c            write(*,*) 'n_var',n_var
-            call get_component(c_point(p3,1,1),c_point(p3,1,2),x(n_var),
+            call get_component(c_point(p3,1,1),c_point(p3,1,2),x(local_var),
      &                          theta3,jac_temp,1,S)
             jac_loc=jac_loc*jac_temp
          endif
@@ -142,8 +144,9 @@ c
             phi3=c_point(p3,2,1)
          elseif(c_point(p3,2,2).gt.0d0) then
             n_var=n_var+1     ! update the component of random variable
+            local_var = var2random(3*p3-5)
 c            write(*,*) 'n_var',n_var
-            call get_component(c_point(p3,2,1),c_point(p3,2,2),x(n_var),
+            call get_component(c_point(p3,2,1),c_point(p3,2,2),x(local_var),
      &                          phi3,jac_temp,2,S)
             jac_loc=jac_loc*jac_temp
          endif
