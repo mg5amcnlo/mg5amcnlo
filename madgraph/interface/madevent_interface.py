@@ -2551,9 +2551,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         if os.path.exists(pjoin(self.me_dir,'error')):
             os.remove(pjoin(self.me_dir,'error'))
                         
-        # Before compiling, remove lhapdf stuff
-        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
-
         self.configure_directory()
         # Save original random number
         self.random_orig = self.random
@@ -2957,7 +2954,10 @@ calculator."""
             args.remove('--no_default')
         else:
             no_default = False
-                                    
+        
+        # initialize / remove lhapdf mode        
+        self.configure_directory()
+                               
         self.check_pythia(args)        
         # the args are modify and the last arg is always the mode 
         if not no_default:
@@ -2967,8 +2967,7 @@ calculator."""
         if not self.banner:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
-        # initialize / remove lhapdf mode        
-        self.configure_directory()
+   
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
@@ -3816,6 +3815,8 @@ calculator."""
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         self.pdffile = None
+        #remove lhapdf stuff
+        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3900,13 +3901,16 @@ calculator."""
         # store new name
         self.run_name = name
         
-        # Read run_card
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCard(run_card)
-
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, name)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
+        else:
+            # Read run_card
+            run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+            self.run_card = banner_mod.RunCard(run_card)   
+        
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -3930,8 +3934,7 @@ calculator."""
                 # We can add the results to the current run
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
-             
-                    
+                   
         if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
@@ -5026,6 +5029,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
 
         args = self.split_arg(line.lower())
+        if '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=')
+            args += [arg1, arg2]
+            
         start = 0
         if len(args) < 2:
             logger.warning('invalid set command %s' % line)
