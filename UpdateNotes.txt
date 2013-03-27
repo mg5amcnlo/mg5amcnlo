@@ -21,6 +21,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       if you do w+ > all all, since you include w+ > w+ a).
                   JA: Forbid running newprocess_mg5 from a process directory
                       that has already been generated, to avoid confusion.
+                  OM: Fix lxplus server issue (Bug #1159929)
+                  OM: Fix an issue when MG5 directory is on a read only disk 
+                      (Bug #1160629)
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 

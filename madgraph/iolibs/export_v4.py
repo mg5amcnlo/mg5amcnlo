@@ -789,7 +789,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             FC_result = FC_re.match(line)
             if FC_result:
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
-        outfile = open(make_opts, 'w')
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
         outfile.write('\n'.join(lines))
 
 #===============================================================================
