@@ -4315,7 +4315,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
         elif args[0] == 'madweight':
             import madgraph.interface.madweight_interface as madweight_interface
-            if 1:#options['interactive']:
+            if options['interactive']:
                 if hasattr(self, 'do_shell'):
                     MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
                 else:
@@ -4326,7 +4326,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     MW.exec_cmd(line)
                 stop = self.define_child_cmd_interface(MW)                
                 return stop
-            ext_program = launch_ext.MWLauncher( args[1], self, **options)            
+            ext_program = launch_ext.MWLauncher( self, args[1],
+                                                 shell = hasattr(self, 'do_shell'),
+                                                 options=self.options,**options)            
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]

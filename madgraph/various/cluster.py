@@ -85,7 +85,6 @@ class Cluster(object):
             return self.submit(prog, argument, cwd, stdout, stderr, log)
 
         if not input_files and not output_files:
-            misc.sprint('not using submit2: no input/output')
             return self.submit(prog, argument, cwd, stdout, stderr, log)
 
         if cwd is None:
@@ -105,7 +104,8 @@ class Cluster(object):
             cp -R -L $i $MYTMP
         done
         cd $MYTMP
-        bash ./%(script)s %(arguments)s
+        chmod +x ./%(script)s
+        %(program)s ./%(script)s %(arguments)s
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
@@ -118,7 +118,8 @@ class Cluster(object):
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
-                'arguments': ' '.join(argument)}
+                'arguments': ' '.join([str(a) for a in argument]),
+                'program': ' ' if '.py' in prog else 'bash'}
         
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
@@ -634,7 +635,7 @@ class CondorCluster(Cluster):
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
         if argument:
-            argument = 'Arguments = %s' % ' '.join(argument)
+            argument = 'Arguments = %s' % ' '.join([str(a) for a in argument])
         else:
             argument = ''
         # input/output file treatment

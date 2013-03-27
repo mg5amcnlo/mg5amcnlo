@@ -2944,7 +2944,7 @@ calculator."""
                              default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
-                if ans:
+                if ans == 'y':
                     self.cluster.remove()
                 raise
             except KeyboardInterrupt, error:
@@ -3194,36 +3194,10 @@ calculator."""
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
         fsock.writelines('r=%s\n' % self.random)
 
-    def do_quit(self, line):
-        """Not in help: exit """
-  
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
-        try:
-            self.store_result()
-        except Exception:
-            # If nothing runs they they are no result to update
-            pass
+    def do_quit(self, *args, **opts):
         
-        try:
-            self.update_status('', level=None)
-        except Exception, error:        
-            pass
-        devnull = open(os.devnull, 'w')
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        devnull.close()
-
-        return super(MadEventCmd, self).do_quit(line)
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
+        common_run.CommonRunCmd.do_quit(self, *args, **opts)
+        CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
     def treat_ckkw_matching(self):

@@ -493,8 +493,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return path.split('_card')[0]
             elif path == 'delphes_trigger.dat':
                 return 'trigger'
+            elif path == 'input.lhco':
+                return 'lhco'
             else:
-                raise Exception, 'Unknow cards name'
+                raise Exception, 'Unknow cards name:%s' % path 
             
         # Ask the user if he wants to edit any of the files
         #First create the asking text
@@ -544,15 +546,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            pgs_card.dat
            delphes_card.dat
            delphes_trigger.dat
-           shower_card.dat
-           madspin_card.dat
+           shower_card.dat [aMCatNLO]
+           madspin_card.dat [MS]
+           transfer_card.dat [MW]
+           madweight_card.dat [MW]
         """
         
         text = open(path).read(50000)
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin|block\s*mw_run|transfer_card\.dat)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -573,10 +577,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif ('gridpack' in text and 'ebeam1' in text) or \
                 ('qes_over_ref' in text and 'ebeam1' in text):
             return 'run_card.dat'
+        elif 'mw_run' in text:
+            return 'madweight_card.dat'
+        elif 'transfer_card.dat' in text:
+            return 'transfer_card.dat'
         elif 'block' in text and 'decay' in text: 
             return 'param_card.dat'
         elif 'herwig++' in text:
             return 'shower_card.dat'
+
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
         else:
@@ -985,8 +994,40 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                 return self.pdffile
                 
-                
+    def do_quit(self, line):
+        """Not in help: exit """
+  
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except Exception, error:
+            pass
         
+        try:
+            self.store_result()
+        except Exception:
+            # If nothing runs they they are no result to update
+            pass
+        
+        try:
+            self.update_status('', level=None)
+        except Exception, error:        
+            pass
+        try:
+            devnull = open(os.devnull, 'w') 
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        try:
+            devnull.close()
+        except Exception:
+            pass
+
+    
+    # Aliases
+    do_EOF = do_quit
+    do_exit = do_quit
+    
   
     ############################################################################ 
     def do_open(self, line):
@@ -1723,7 +1764,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
         
-        card_name = CommonRunCmd.detect_card_type(path)
+        if path.endswith('.lhco'):
+            logger.info('copy %s as Events/input.lhco' % (path))
+            files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco' ))     
+            return
+        elif path.endswith('.lhco.gz'):
+            logger.info('copy %s as Events/input.lhco.gz' % (path))
+            files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco.gz' ))
+            return             
+        else:
+            card_name = CommonRunCmd.detect_card_type(path)
         
         if card_name == 'unknown':
             logger.warning('Fail to determine the type of the file. Not copied')

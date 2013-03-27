@@ -27,8 +27,11 @@ c
       tempname=filename 	 
       fine=index(tempname,' ') 	 
       if(fine.eq.0) fine=len(tempname)
+      open(unit=lun,file=tempname,status='old',ERR=20)
+      fopened=.true.
+      return
 
-      if(index(filename,"_card").gt.0) then
+ 20   if(index(filename,"_card").gt.0) then
          tempname='Cards/'//tempname(1:fine)
          fine=fine+6
       endif

@@ -118,7 +118,6 @@ class Lhco_filter:
 
         #define internal variable
         self.write_events=0
-        print 'time  init Lhco_filter',time.time()-start
         if lhco_file and auto:
             self.verif_event(lhco_file,self.partdef)
 
@@ -257,8 +256,12 @@ class Lhco_filter:
         list_part=[] #store the different particle of the events
         nb_part={}   #dictionary saying with type of particles are expected
         self.event_position=0
+        lhco_id_tag = set()
+        nb_accepted = 0
         #start to reading the file
         for line in f_in:
+            if nb_accepted >= self.MWparam.info['mw_run']['nb_exp_events']:
+                break
             if line[0]=='#':
                 continue
             try:
@@ -267,7 +270,9 @@ class Lhco_filter:
                 identity=part_def.identify_particle(part)
                 part.def_identity(identity)
                 if identity=='begin':
+                    lhco_id_tag.add(line.split()[1])
                     if self.check_valid(nb_part):
+                        nb_accepted += 1
                         self.write(list_part)
 #                    elif self.write_events:
 #                        print 'not valid'
@@ -289,9 +294,11 @@ class Lhco_filter:
                 list_part=[]
                 nb_part={}			
 
+        assert len(lhco_id_tag) == self.event_position 
         #check last data to be sure that we don't forget the last event
         if self.check_valid(nb_part):
-            self.write(list_part)	
+            if nb_accepted < self.MWparam.info['mw_run']['nb_exp_events']:
+                self.write(list_part)	
         print 'time  verif event Lhco_filter',time.time()-start
         print self.write_events-self.start,'selected  events for ',self.directory,' subprocess'
         # Comment this for multi-output run
@@ -339,12 +346,12 @@ class Lhco_filter:
     	""" write the output file """
 
         if hasattr(self, 'f_out') and self.write_events and \
-        self.write_events % (self.MWparam['run_mode']['nb_event_by_node'] * self.MWparam['run_mode']['event_packing']) == 0:
+        self.write_events % (self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing']) == 0:
             
-            i = self.write_events // (self.MWparam['run_mode']['nb_event_by_node'] * self.MWparam['run_mode']['event_packing'])
+            i = self.write_events // (self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing'])
             name = self.f_out.name
             base, name = os.path.split(name)
-            name = os.path.join(base, name.replace('_%i' % i-1, '_%i' % i ))
+            name = os.path.join(base, name.replace('_%i' % (i-1), '_%i' % i ))
             self.f_out = open(name,'w')    
         
         

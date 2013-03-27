@@ -73,12 +73,12 @@ c     specific case of nexternal=4, num_inv=0
       open(UNIT=32,FILE='vegas_value.out',STATUS='unknown')
 
       close(89)
-      call setpara(param_name)
 
-       if(fixed_ren_scale) then
-          G = SQRT(4d0*PI*ALPHAS(scale))
-          call UPDATE_AS_PARAM() 
-       endif
+c      call setpara(param_name)
+c       if(fixed_ren_scale) then
+c          G = SQRT(4d0*PI*ALPHAS(scale))
+c          call UPDATE_AS_PARAM()
+c       endif
 
 c     set cuts
 c      CALL SETCUTS

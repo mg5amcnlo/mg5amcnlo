@@ -228,23 +228,25 @@ c
       write(21,*) temp_val,'  ',temp_err
       close(21)
 
-      write(23,*) ' permutation channel   value      error'
+c      write(23,*) ' permutation channel   value      error'
+      OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
       counter=0
       do perm_pos=1,num_per
          call get_perm(perm_pos, perm_id)
-         write(23,*) "======================================"
-         write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
+c         write(23,*) "======================================"
+c         write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
 
          do ll=1,nb_sol_config
             counter=counter+1
-            write(23,*) perm_pos,'\t',ll,'\t',
+            write(23,*) perm_pos,' ',ll,' ',
      & order_value(counter),
-     &           '\t', order_error(counter)
+     &           ' ', order_error(counter),
+     & '1   2', (2+perm_id(i-2), i=3,nexternal)
          enddo
       enddo
-      write(23,*) "======================================"
-      write(23,*)'Weight: ',temp_val,'+-', temp_err
-      write(23,*) "======================================"
+c      write(23,*) "======================================"
+c      write(23,*)'Weight: ',temp_val,'+-', temp_err
+c      write(23,*) "======================================"
 
 C**************************************************************************
 C     write histogram file (not activated in the standard mode)           *
