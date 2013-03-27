@@ -2,11 +2,15 @@
 
 #Extension
 import string,os,sys,re,popen2,time,stat,filecmp
-import mod_file,progressbar
-sys.path.append('../transfer_function/')
-sys.path.append('Source/MadWeight/transfer_function/')
-sys.path.append('../Source/MadWeight/transfer_function/')
-import change_tf
+
+try: 
+    import madgraph.madweight.mod_file as mod_file
+    import madgraph.madweight.change_tf as change_tf
+    import madgraph.various.progressbar as progressbar
+except ImportError:
+    import internal.madweight.mod_file as mod_file
+    import internal.progressbar as progressbar
+
 
 ###########################################################################
 ##                                CONTENT                                ##

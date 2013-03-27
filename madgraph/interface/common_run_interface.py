@@ -332,7 +332,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          'cluster_queue':'madgraph',
                          'nb_core': None,
                          'cluster_temp_path':None}
-    
 
 
     def __init__(self, me_dir, options, *args, **opts):

@@ -5,13 +5,34 @@ import os
 import stat
 import re
 
-import Cards
 
-from particle_class import Particle,propagator,external_part
-from substructure_class import diagram,ECS_sector,blob_sector
-from blob_solution import Block_sector
-from proc_info import Decay_info
-from MW_fct import Multi_list
+try: 
+    import madgraph.madweight.Cards as Cards
+    import madgraph.madweight.particle_class as particle_class
+    import madgraph.madweight.substructure_class as substructure_class
+    import madgraph.madweight.blob_solution as blob_solution
+    import madgraph.madweight.proc_info as proc_info
+    import madgraph.madweight.MW_fct as MW_fct
+    import madgraph.madweight.MW_info as MW_param
+except ImportError:
+    import internal.madweight.Cards as Cards
+    import internal.madweight.particle_class as particle_class
+    import internal.madweight.substructure_class as substructure_class
+    import internal.madweight.blob_solution as blob_solution
+    import internal.madweight.proc_info as proc_info
+    import internal.madweight.MW_fct as MW_fct   
+    import internal.madweight.MW_info as MW_param 
+
+Particle = particle_class.Particle
+propagator = particle_class.propagator
+external_part = particle_class.external_part
+diagram = substructure_class.diagram
+ECS_sector = substructure_class.ECS_sector
+blob_sector = substructure_class.blob_sector
+Block_sector = blob_solution.Block_sector
+Decay_info = proc_info.Decay_info
+Multi_list = MW_fct.Multi_list
+
            
             
 class MG_diagram(diagram):
@@ -128,8 +149,7 @@ class MG_diagram(diagram):
         """define mass+width of all particle"""
 
         #load the information from the param card
-        from MW_param  import read_card
-        info=read_card(param_card)
+        info=MW_param.read_card(param_card)
 
         for obj in self.content.values():
             obj.def_mass(info) #this routines defines also width if the particle is a propagator
@@ -754,9 +774,8 @@ class Option:
 
     def __init__(self,info='default'):
        "initialize option"
-       import madweight
        if isinstance(info, basestring) and info!='default':
-            info=madweight.read_card(info)
+            info=MW_param.read_card(info)
        # DEFAULT VALUE:
        self.ecs_fuse=1
        self.blob_fuse=1

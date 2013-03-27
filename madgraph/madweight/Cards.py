@@ -388,21 +388,3 @@ def read_leshouches_file(filepos):
     
     return pid_list
 
-
-# update for the card -transfer_card and madweight_card-
-if(__name__=="__main__"):
-
-    import MW_param
-    pos=os.getcwd()
-    if pos.count('SubProcesses/MW_P') or pos.count('SubProcesses/P'):
-        os.chdir('../..')
-    MW_param.go_to_main_dir()
-    MWparam=MW_param.MW_info('MadWeight_card.dat')
-    create_include_file(MWparam)
-    from create_run import update_cuts_status
-    update_cuts_status(MWparam)
-
-
-    if pos.count('SubProcesses/MW_P'):
-                os.chdir(pos)
-                os.system('make')

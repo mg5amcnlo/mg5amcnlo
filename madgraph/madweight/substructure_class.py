@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 
 
-from blob_solution import Level_generation,Blob_solution,Block_ECS,Block_sector,Block_B
+try:
+    import madgraph.madweight.blob_solution as blob_solution
+except importError:
+    import internal.madweight.blob_solution as blob_solution
+    
+Level_generation = blob_solution.Level_generation
+Blob_solution = blob_solution.Blob_solution  
+Block_ECS =blob_solution.Block_ECS
+Block_sector =blob_solution.Block_sector
+Block_B =blob_solution.Block_B
+
 import sys
 
 class diagram:

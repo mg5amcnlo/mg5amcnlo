@@ -16,7 +16,7 @@ import write_MadWeight,create_run,put_banner
 import create_param
 import Cards
 from Cards import Card
-import cluster_lib as Cluster
+import cluster as Cluster
 from create_run import update_cuts_status
 from MW_param import MW_info,go_to_main_dir,check_for_help,detect_SubProcess
 from collect_result import collect_schedular

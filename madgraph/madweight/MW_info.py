@@ -61,7 +61,12 @@ import sys
 import os
 import re
 import stat
-import Cards
+try: 
+    import madgraph.madweight.Cards as Cards
+except ImportError, error:
+    print error
+    import internal.madweight.Cards as Cards
+
 ##
 ## END INCLUDE
 ## GLOBAL DEFINITION
@@ -140,8 +145,6 @@ class P_info:
             
         P_SubProcess_list,MW_SubProcess_list=detect_SubProcess(P_mode)
         return P_SubProcess_list,MW_SubProcess_list 
-
-    
 
 
 
@@ -505,12 +508,10 @@ class move:
         self.old=old
 
 
-def detect_SubProcess(P_mode=1):
+def detect_SubProcess(P_mode=0):
         MW_SubProcess_list=[]
-        
-        if P_mode:
-            print '''WARNING: automatic normalize run is not supported anymore!!
-                  pass in non-normalize run.'''
+        if P_mode == 1:
+            print 'WARNING: automatic renormalization is not supported anymore'
 
         list_dir=os.listdir("./SubProcesses/")
         for name in list_dir:
@@ -519,9 +520,9 @@ def detect_SubProcess(P_mode=1):
             except os.error:
                 continue
             if stat.S_ISDIR(st.st_mode):
-                #
                 if name[0]=='P':
-                    MW_SubProcess_list.append(name)   
-        
-        return [], MW_SubProcess_list
+                    MW_SubProcess_list.append(name)                
+
+# Pierre: set MW_SubProcess_list to SubProcess_list, set SubProcess_list to []
+        return [],MW_SubProcess_list
 

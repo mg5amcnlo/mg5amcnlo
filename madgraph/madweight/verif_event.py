@@ -38,11 +38,19 @@ import re
 import sys
 import time
 import math
-import diagram_class
-import substructure_class
-from MW_param import go_to_main_dir
 
-split=re.compile(r'''\s''')
+try: 
+    import madgraph.madweight.diagram_class as diagram_class
+    import madgraph.madweight.substructure_class as substructure_class
+    import madgraph.madweight.MW_info as MW_param
+    
+except ImportError:
+    import internal.diagram_class as diagram_class
+    import internal.madweight.substructure_class as substructure_class
+    import internal.madweight.MW_info as MW_param
+
+go_to_main_dir = MW_param.go_to_main_dir
+
 
 #1 ##############################################
 def verif_event(MWparam):
@@ -238,11 +246,11 @@ class Lhco_filter:
         #define the output file
         if output==0:
             os.system('mkdir '+self.directory+'/'+self.MWparam.name+' &>/dev/null')
-            self.f_out=open(self.directory+'/'+self.MWparam.name+'/verif.lhco','w')
+            self.f_out=open(self.directory+'/'+self.MWparam.name+'/verif_0.lhco','w')
         elif output==1:
             self.accepted_list=[]
 
-        print 'time  begin verif event Lhco_filter',time.time()-start
+        #print 'time  begin verif event Lhco_filter',time.time()-start
         #end init
         
         #initialize variable for the loop on events
@@ -330,6 +338,16 @@ class Lhco_filter:
     def write(self,list_part):
     	""" write the output file """
 
+        if hasattr(self, 'f_out') and self.write_events and \
+        self.write_events % (self.MWparam['run_mode']['nb_event_by_node'] * self.MWparam['run_mode']['event_packing']) == 0:
+            
+            i = self.write_events // (self.MWparam['run_mode']['nb_event_by_node'] * self.MWparam['run_mode']['event_packing'])
+            name = self.f_out.name
+            base, name = os.path.split(name)
+            name = os.path.join(base, name.replace('_%i' % i-1, '_%i' % i ))
+            self.f_out = open(name,'w')    
+        
+        
         self.write_events+=1
         if self.write_mode==0:
             return

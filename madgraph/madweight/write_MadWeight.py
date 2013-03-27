@@ -4,15 +4,21 @@
 #Extension
 import os
 
-from MW_fct import *
-import diagram_class
-import mod_file
-import Cards
+try:
+    from madgraph.madweight.MW_fct import *
+    import madgraph.madweight.diagram_class as diagram_class
+    import madgraph.madweight.mod_file as mod_file
+    import madgraph.madweight.Cards as Cards
+except ImportError:
+    from internal.madweight.MW_fct import *
+    import internal.madweight.diagram_class as diagram_class
+    import internal.madweight.mod_file as mod_file
+    import internal.madweight.Cards as Cards   
+
 
 
 def create_all_fortran_code(MW_info, i=1):
     """goes  in each subprocess and creates the fortran code in each of them"""
-    import madweight
     # load template for file    
     template = mod_file.Mod_file(rule_file='./Source/MadWeight/mod_file/mod_main_code')
     # load MadWeight option
