@@ -302,7 +302,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
     def do_check_events(self, line):
         """check that the events are valid"""
-        
+        self.configure()
         evt_file = pjoin(self.me_dir,'Events','input.lhco')
         if not os.path.exists(evt_file):
             question = 'Which LHCO file do you want to use?'
@@ -355,6 +355,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_submit_jobs(self, line):
         """Submitting the jobs to the cluster"""
         
+        self.configure()
         args = self.split_arg(line)
         self.check_launch_jobs(args)
         # now args is of the type [True True]
@@ -446,6 +447,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_collect(self, line):
         """making the collect of the results"""
         
+        self.configure()
         args = self.split_arg(line)
         self.check_collect(args)
         xml_reader = MWParserXML()
@@ -453,7 +455,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         name = self.MWparam.name
         # 1. Concatanate the file. #############################################
         for MWdir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
             if '-refine' in args:
                 out_path = pjoin(out_dir, 'refine.xml') 
             else:
@@ -470,7 +472,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if '-refine' in args:
             xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
             for MWdir in self.MWparam.MW_listdir:
-                out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
+                out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
                 base_output = xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
                 sec_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
                 base_output.refine(sec_output)
@@ -484,7 +486,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         cards = set()
         events = set()
         for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
 
             generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
@@ -541,26 +543,33 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_launch(self, line):
         """run the full suite of commands"""
 
-        args = self.split_arg(line)
+        current_cwd = os.getcwd()
+        try:
+            os.chdir(self.me_dir)
+            args = self.split_arg(line)
         
-        if not os.path.exists(pjoin(self.me_dir, 'Cards','transfer_card.dat')):
-            self.exec_cmd('define_transfer_fct')
-        
-        cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
-                 'transfer_card.dat', 'input.lhco']
-        
-        self.ask_edit_cards(cards, mode='fixed', plot=False)
-        
-        if not (os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')) or \
-                 os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco.gz'))):
-            raise self.InvalidCmd('Please specify a valid LHCO File')
-
-        self.exec_cmd('treatcards')
-        self.exec_cmd('get_integration_channel')
-        self.exec_cmd('compile')
-        self.exec_cmd('check_events')
-        self.exec_cmd('submit_jobs')
-        self.exec_cmd('collect')
+            if not os.path.exists(pjoin(self.me_dir, 'Cards','transfer_card.dat')):
+                self.exec_cmd('define_transfer_fct')
+            
+            cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
+                     'transfer_card.dat', 'input.lhco']
+            
+            self.ask_edit_cards(cards, mode='fixed', plot=False)
+            
+            if not (os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')) or \
+                     os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco.gz'))):
+                raise self.InvalidCmd('Please specify a valid LHCO File')
+    
+            self.exec_cmd('treatcards')
+            self.exec_cmd('get_integration_channel')
+            self.exec_cmd('compile')
+            self.exec_cmd('check_events')
+            self.exec_cmd('submit_jobs')
+            self.exec_cmd('collect')
+        except:
+            os.chdir(current_cwd)
+            raise
+        os.chdir(current_cwd)
         
     
     def check_refine(self, args):
@@ -613,7 +622,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                         event_to_file[int(split[1])] = evt_nb
 
             to_refine = {}
-            out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
 
             generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
@@ -678,7 +687,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         xml_reader = MWParserXML()
         for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'Subprocesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
         
         

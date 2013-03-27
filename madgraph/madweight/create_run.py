@@ -55,7 +55,7 @@ def update_cuts_status(MW_param):
     return
 
     #check cut status for cross section:
-    if (MW_param.info['mw_run']['91']+cut_is_active('cuts.f'))%2: #pass if not coherent between asked and actual status
+    if (MW_param.info['mw_run']['use_cut']+cut_is_active('cuts.f'))%2: #pass if not coherent between asked and actual status
         file_to_mod=['./SubProcesses/cuts.f']
         rule=['./Source/MadWeight/mod_file/suppress_cuts_MG']
         #modify file
@@ -64,7 +64,7 @@ def update_cuts_status(MW_param):
         check_Subprocesses_update('cuts.f',MW_param.P_listdir,'./Source/MadWeight/mod_file/suppress_cuts_MG')
 
     #check cut status for Weight computation:
-    if (MW_param.info['mw_run']['9']+cut_is_active('cuts_MW.f'))%2: #pass if not coherent between asked and actual status
+    if (MW_param.info['mw_run']['use_cut']+cut_is_active('cuts_MW.f'))%2: #pass if not coherent between asked and actual status
         file_to_mod=['./SubProcesses/cuts_MW.f']
         rule=['./Source/MadWeight/mod_file/suppress_cuts_MW']
         #modify file
@@ -73,7 +73,7 @@ def update_cuts_status(MW_param):
         check_Subprocesses_update('cuts_MW.f',MW_param.MW_listdir,'./Source/MadWeight/mod_file/suppress_cuts_MW')
 
     #check BW cut status for cross section
-    if (MW_param['mw_run']['me_bw_cut']+bw_cut_is_active('cuts.f'))%2: #pass if not coherent between asked and actual status
+    if (MW_param['mw_run']['bw_cut']+bw_cut_is_active('cuts.f'))%2: #pass if not coherent between asked and actual status
         file_to_mod=['./SubProcesses/cuts.f']
         rule=['./Source/MadWeight/mod_file/suppress_BW_cuts']
         #modify file
@@ -82,7 +82,7 @@ def update_cuts_status(MW_param):
         check_Subprocesses_update('cuts.f',MW_param.P_listdir,'./Source/MadWeight/mod_file/suppress_BW_cuts')
 
     #check cut status for Weight computation:
-    if (MW_param.info['mw_run']['mw_bw_cut']+bw_cut_is_active('cuts_MW.f'))%2: #pass if not coherent between asked and actual status
+    if (MW_param.info['mw_run']['bw_cut']+bw_cut_is_active('cuts_MW.f'))%2: #pass if not coherent between asked and actual status
         file_to_mod=['./SubProcesses/cuts_MW.f']
         rule=['./Source/MadWeight/mod_file/suppress_BW_cuts']
         #modify file               
@@ -505,7 +505,7 @@ class create_dir:
             
         ff=open(pos+'/param.dat','w')
         ff.writelines('param_card_'+str(card)+'.dat\n')
-        ff.writelines(str(self.MWparam['mw_run']['6'])+'\n')
+        ff.writelines(str(self.MWparam['mw_run']['MW_int_points'])+'\n')
         ff.close()
 
         if card==self.ref_card:
@@ -536,7 +536,7 @@ class create_dir:
                 return
         ff=open(pos+'/param.dat','w')
         ff.writelines('param_card_'+str(card)+'.dat\n')
-        ff.writelines(str(self.MWparam['mw_run']['6'])+'\n')
+        ff.writelines(str(self.MWparam['mw_run']['MW_int_points'])+'\n')
         ff.close()
         os.system('ln -s ../../madevent.py '+pos+'/madevent.py')
         os.system('ln -s ../../madevent '+pos+'/madevent')

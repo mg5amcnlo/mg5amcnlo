@@ -31,8 +31,6 @@
 ##      |     +  init                                                   ##
 ##      |     |    + init_run_opt                                       ##
 ##      |     +  check_info                                             ##
-##      |     |    + pass_in_XXX                                        ##
-##      |     +  check_condor                                           ##
 ##      |     +  take_un_name                                           ##
 ##      |     +  update_nb_card                                         ##
 ##      |     +  number_of_P_run                                        ##
@@ -138,10 +136,8 @@ class P_info:
             return self.Plistdir
 
     #2#########################################################################
-    def detect_SubProcess(self,P_mode=''):
+    def detect_SubProcess(self,P_mode=0):
         
-        if P_mode == '':
-            P_mode = self.norm_with_cross
             
         P_SubProcess_list,MW_SubProcess_list=detect_SubProcess(P_mode)
         return P_SubProcess_list,MW_SubProcess_list 
@@ -164,9 +160,8 @@ class MW_info(dict,P_info):
         dict.__init__(self.info)
         self.check_info()
         #assign special value
-        self.nb_event= self.info['mw_run']['2']
+        self.nb_event= self.info['mw_run']['nb_exp_events']
         self.nb_card=self.number_of_P_run()
-        self.check_condor()
         try:
             self.name = self.info['mw_run']['name']
         except:
@@ -180,7 +175,6 @@ class MW_info(dict,P_info):
         self.Pinupdate=[]
         self.Minpudate=[]
         self.startevent=0
-        self.n_join = self.info['mw_run']['packet']
 
 
     #3#########################################################################
@@ -262,16 +256,6 @@ class MW_info(dict,P_info):
                 self['mw_parameter'][str(nb_param*10+3)]=[self['mw_parameter'][str(nb_param*10+3)]]
             nb_param+=1
                 
-        
-    #2#########################################################################
-    def check_condor(self):
-        """ assign variable cluster and normalisation """
-
-        self.cluster=self.info['mw_run']['1']
-        self.norm_with_cross=self.info['mw_run']['4']
-        self.condor_req=self.info['mw_run']['11']
-
-
 
     #2#########################################################################
     def take_run_name(self):

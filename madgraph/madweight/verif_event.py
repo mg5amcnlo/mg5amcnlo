@@ -132,7 +132,7 @@ class Lhco_filter:
         self.nb_part['photon']=0
         #define each type of particle
         partdef=lhco_all_particles_def()
-        if not self.MWparam.info['mw_perm']['21']:
+        if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             partdef.use_bjet()
         if self.MWparam.info.has_key('eventselection'):
             partdef.update_hlt_cut(self.MWparam.info['eventselection'])	
@@ -156,7 +156,7 @@ class Lhco_filter:
         #data['n_out']=total
         
         #check status of the b-jet
-        if not self.MWparam.info['mw_perm']['21']:
+        if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             self.use_bjet=1
         else:
             self.use_bjet=0
@@ -191,7 +191,7 @@ class Lhco_filter:
         os.chdir('../..')
 
         #check status of the b-jet
-        if not self.MWparam.info['mw_perm']['21']:
+        if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             self.use_bjet=1
         else:
             self.use_bjet=0
@@ -703,7 +703,7 @@ class Test_one_file(Lhco_filter):
             self.nb_part['photon']=0
 
         partdef=lhco_all_particles_def()
-        if not self.MWparam.info['mw_perm']['21']:
+        if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
             partdef.use_bjet()
         if self.MWparam.info.has_key('eventselection'):
             partdef.update_hlt_cut(self.MWparam.info['eventselection'])

@@ -146,9 +146,7 @@ c         if width is zero, just take the exp. component (TF=delta function)
 c
 c         if width is positive, generate the component
           elseif(c_point(i,j,2).gt.0d0) then
-             write(*,*) 'take for random ', config_pos,3*i-j-3
              local_var = var2random(3*i-j-3,config_pos)
-             write(*,*) 'use random ', local_var
              n_var=n_var+1     ! update the component of random variable
             call get_component(c_point(i,j,1),c_point(i,j,2),x(local_var),
      &                          gen_var(i,j),jac_temp,j,Emax)
@@ -454,7 +452,6 @@ c     lower bound
      & prmass(propa_cont(i,config_pos),1))/(upper_bound-lower_bound)
         n_var=n_var+1
         local_var = local_var +1
-        write(*,*) 'use random ', local_var
         call transpole(pole,gam,x(local_var),y,jac)
         jac=jac*(upper_bound-lower_bound)
         mvir2(propa_cont(i,config_pos))=y*(upper_bound-lower_bound)

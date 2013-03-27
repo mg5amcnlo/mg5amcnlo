@@ -112,9 +112,8 @@ class Cluster(object):
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        #rm -rf $MYTMP
+        rm -rf $MYTMP
         """
-        misc.sprint('submit2 in debug mode')
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),

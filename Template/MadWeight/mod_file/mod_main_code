@@ -138,9 +138,8 @@ C|     Central Routine for the change of variable choice                 |
 C|       - num_sol: number of the solution to charge                     |
 C|       - x      : random number from vegas                             |
 C+-----------------------------------------------------------------------+
-
-c	integer config,perm_pos
-c	common /to_config/ config,perm_pos
+	implicit none
+	
 	double precision x(20)
 	integer n_var
 	double precision    S,X1,X2,PSWGT,JAC

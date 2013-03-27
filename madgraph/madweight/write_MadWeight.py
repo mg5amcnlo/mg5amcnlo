@@ -254,9 +254,9 @@ class MG_diagram(diagram_class.MG_diagram):
         #
         #write_text=template.dico['INTRO_FOR_MAIN']           #tag re-interpreted later to insert intro in file
         if num_sol == 1:
-            write_text += '''       if (config.eq.1) then '''
+            write_text += '''       if (config_pos.eq.1) then '''
         else:
-           write_text += '       elseif (config.eq.' + str(num_sol) + ') then ' 
+           write_text += '       elseif (config_pos.eq.' + str(num_sol) + ') then ' 
         write_text += '\n$B$ S-COMMENT_C $B$\n'
         write_text += full_sol_obj[0].info()                    # -> write short ECS/BLOB information
         write_text += '\n$E$ S-COMMENT_C $E$\n'        
@@ -280,7 +280,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 elif block.chgt_var in ['A']:
                     block_name=' call block_' + block.chgt_var.lower() + '('
                 else:
-                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,var2random(1,config),'
+                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
                 line=block_name
                 for particle in block.order_content:
                     if particle.MG < 0:
@@ -304,10 +304,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 line=line[:-1] + ')\n' #supress last , and add )
                 line=put_in_fortran_format(line)
                 write_text += line
-                if(self.opt.use_stat):
-                    text=' call block_stat(' + str(step) + ",\'" + str(block.chgt_var) + '-' + str(block.order_content[0].MG) + """')\n"""
-                    text += ' if (jac.le.0d0) return\n'
-                elif(block.chgt_var not in ['1', '2', '3']):
+                if(block.chgt_var not in ['1', '2', '3']):
                     text=' if (jac.le.0d0) return\n'
                 else:
                     continue
@@ -324,7 +321,7 @@ class MG_diagram(diagram_class.MG_diagram):
             if block.chgt_var == '2':
                 line=' call fuse('
             elif block.chgt_var in ['a', 'c', 'e', 'f', 'g']:
-                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,var2random(1,config),'
+                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
             else:
                 line=' call class_' + ECS.chgt_var.lower() + '('
             for particle in block.order_content:
@@ -344,10 +341,7 @@ class MG_diagram(diagram_class.MG_diagram):
             line=line[:-1] + ')\n' #supress last , and add )
             line=put_in_fortran_format(line)
             write_text += line
-            if(self.opt.use_stat):
-                text=' call block_stat(' + str(step) + ",\'" + str(block.chgt_var) + '-' + str(block.order_content[0].MG) + """')\n"""
-                text += ' if (jac.le.0d0) return\n'
-            elif block.chgt_var not in ['2']:
+            if block.chgt_var not in ['1','2']:
                 text=' if (jac.le.0d0) return\n'
             else:
                 text='\n'
@@ -456,6 +450,18 @@ class MG_diagram(diagram_class.MG_diagram):
                         if mapping[3*particle.MG-7] == 0 and particle.tf_level:
                             mapping[3*particle.MG-7] = p_random+1
                             p_random += 1
+            elif block.chgt_var in ['D']:
+                p1 = block.in_part[0]
+                p2 = block.in_part[1]
+                if hasattr(p1, 'tf_level') and hasattr(p2,'tf_level'):
+                    #one should be generate randomly
+                    if mapping[3*p1.MG-7] == 0 and p1.tf_level:
+                        mapping[3*p1.MG-7] = p_random+1
+                    if mapping[3*p2.MG-7] == 0 and p2.tf_level:
+                        mapping[3*p2.MG-7] = p_random+1
+                    p_random+=1                   
+               
+                
         for particle in ambiguous_external:
             if particle not in part_treated:
                 #part_treated.append(
@@ -542,7 +548,7 @@ class MG_diagram(diagram_class.MG_diagram):
         write_mchannel=template.dico['INTRO_FOR_MULTICHANNEL']
         write_mchannel+=self.def_text_for_channel_weight(self.unaligned)
         for i in range(0, len(self.code)):
-            write_main += self.code[i][0]
+            write_main += self.code[i][0].replace('elseif (config_pos.eq.1)','if (config_pos.eq.1)')
             write_data += self.code[i][1]
             write_mchannel += self.create_multi_channel_weight(i,self.sol_nb[i])
         write_main += '        endif\n'

@@ -43,13 +43,6 @@ def Launch_all_SubProcess(MWparam):
     if MWparam.run_opt['compilation']:
         print 'starting program compilation'
         compile_SubProcesses(MW_proclist)
-        #if MWparam.norm_with_cross:
-            #if MWparam['mw_run']['acceptance_run']:
-            #    create_run.activate_acceptance_run()
-            #else:
-            #    create_run.desactivate_acceptance_run()
-            #make_symb_link(P_proclist)    
-            #compile_P_SubProcesses(P_proclist)
             
     if MWparam.run_opt['event']:
         verif_event(MWparam)
@@ -66,9 +59,6 @@ def Launch_all_SubProcess(MWparam):
     if MWparam.run_opt['collect']:
         print "collecting data"
         collect_schedular(MWparam)          
-        
-    #if MWparam['mw_run']['acceptance_run']:
-    #    create_run.restore_pythia_pgs()
 
 
 #########################################################################

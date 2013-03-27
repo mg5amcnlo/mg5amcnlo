@@ -24,10 +24,9 @@
 Block MW_Run 
 #   TAG                 VALUE                    UTILITY
      name                fermi    # name for the run  
-     nb_exp_events        20     # number of experimental events to consider
-     ME_int_points        10000   # number of points in MadEvent integration 
+     nb_exp_events        4     # number of experimental events to consider
      MW_int_points        50000   # number of points in MadWeight integration
-     nb_event_by_node     5      # one job submission compute the weight for N events
+     nb_event_by_node     1      # one job submission compute the weight for N events
      log_level            weight  # from low level of log to extensive log: 
                                   # weight, permutation, channel, full
      use_cut              F       # use the cut defined in run_card.dat

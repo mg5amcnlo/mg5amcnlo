@@ -804,7 +804,6 @@ class Option:
        self.use_ecs_d=1
        self.use_ecs_e=1
        self.use_ecs_f=1
-       self.use_stat=1
 
        if info=='default':
            return
@@ -826,10 +825,6 @@ class Option:
        for key, value in info['mw_gen'].items():
            exec('%s = %s' % (tag_to_genvar[key],value))
 
-       if info['mw_run']['3']=="T":
-           self.use_stat=1
-       elif info['mw_run']['3']=="F":
-           self.use_stat=0
 
        self.ecs_on=[]
        for letter in 'abcdef':
