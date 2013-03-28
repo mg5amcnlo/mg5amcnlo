@@ -1459,15 +1459,38 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         self.pname2block[var].append((bname, lha_id))
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
-        
                     
         # check for conflict with run_card
         for var in self.pname2block:                
             if var in self.run_card:
-                self.conflict.append(var)        
-                            
+                self.conflict.append(var)     
+                
+        
+        #check if Madweight_card is present:
+        self.has_mw = False
+        if os.path.exists(pjoin(self.me_dir,'Cards','MadWeight_card.dat')):
+            self.has_mw = True
+            import madgraph.madweight.Cards as mwcards
+            self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+            self.mw_card = self.mw_card.info
+            self.mw_vars = []
+            for key in self.mw_card:
+                if key == 'comment': 
+                    continue
+                for key2 in self.mw_card.info[key]:
+                    if isinstance(key2, str) and not key2.isdigit():
+                        self.mw_vars.append(key2)
+            
+            # check for conflict with run_card/param_card
+            for var in self.pname2block:                
+                if var in self.mw_vars:
+                    self.conflict.append(var)           
+            for var in self.mw_vars:
+                if var in self.run_card:
+                    self.conflict.append(var)
     
     def complete_set(self, text, line, begidx, endidx):
+     try:
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -1477,11 +1500,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.stdout.write(line)
             self.stdout.flush()
         
+
+        
         possibilities = {}
         allowed = {}
         args = self.split_arg(line[0:begidx])
+        if args[-1] in ['Auto', 'default']:
+            return
         if len(args) == 1:
-            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':''}
+            allowed = {'category':'', 'run_card':'', 'block':'all', 'param_card':'',}
+            if self.has_mw:
+                allowed['madweight_card'] = ''
+                allowed['mw_block'] = 'all'
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -1491,24 +1521,37 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block':args[1]}
             elif args[1] == 'width':
                 allowed = {'block': 'decay'}
+            elif args[1] == 'madweight_card':
+                allowed = {'madweight_card':'default', 'mw_block': 'all'}
+            elif self.has_mw and args[1] in self.mw_card.keys():
+                allowed = {'mw_block':args[1]}
             else:
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card']:
+            if args[1] in  ['run_card', 'param_card', 'madweight_card']:
                 start = 2
             if args[start] in self.param_card.keys():
                 if args[start+1:]:
                     allowed = {'block':(args[start], args[start+1:])}
                 else:
                     allowed = {'block':args[start]}
+            elif self.has_mw and args[start] in self.mw_card.keys():
+                if args[start+1:]:
+                    allowed = {'mw_block':(args[start], args[start+1:])}
+                else:
+                    allowed = {'mw_block':args[start]}                
             elif len(args) == start +1:
                     allowed['value'] = ''
 
             
         if 'category' in allowed.keys():
+            categories = ['run_card', 'param_card']
+            if self.has_mw:
+                categories.append('madweight_card')
+            
             possibilities['category of parameter (optional)'] = \
-                          self.list_completion(text, ['run_card', 'param_card'])
+                          self.list_completion(text, categories)
         
         if 'run_card' in allowed.keys():
             opts = self.run_card.keys()
@@ -1522,6 +1565,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['param_card'] == 'default':
                 opts.append('default')
             possibilities['Param Card'] = self.list_completion(text, opts)
+            
+        if 'madweight_card' in allowed.keys():
+            opts = self.mw_vars + [k for k in self.mw_card.keys() if k !='comment']
+            if allowed['madweight_card'] == 'default':
+                opts.append('default')
+            possibilities['MadWeight Card'] = self.list_completion(text, opts)            
                                 
         if 'value' in allowed.keys():
             opts = ['default']
@@ -1562,7 +1611,32 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['Param Card id' ] = self.list_completion(text, ids)        
 
+        if 'mw_block' in allowed.keys():
+            if allowed['mw_block'] == 'all':
+                allowed_block = [i for i in self.mw_card.keys() if 'comment' not in i]
+                possibilities['MadWeight Block' ] = \
+                                       self.list_completion(text, allowed_block)
+            elif isinstance(allowed['mw_block'], basestring):
+                block = self.mw_card[allowed['mw_block']]
+                ids = [str(i[0]) if isinstance(i, tuple) else str(i) for i in block]
+                possibilities['MadWeight Card id' ] = self.list_completion(text, ids)
+            else:
+                block = self.mw_card[allowed['mw_block'][0]]
+                nb = len(allowed['mw_block'][1])
+                ids = [str(i[nb]) for i in block if isinstance(i, tuple) and\
+                           len(i) > nb and \
+                           [str(a) for a in i[:nb]] == allowed['mw_block'][1]]
+                
+                if not ids:
+                    if tuple([i for i in allowed['mw_block'][1]]) in block or \
+                                      allowed['mw_block'][1][0] in block.keys():
+                        opts = ['default']
+                        possibilities['Special value'] = self.list_completion(text, opts)
+                possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
+
         return self.deal_multiple_categories(possibilities)
+     except Exception, error:
+         print 'fail with',error
            
     def do_set(self, line):
         """ edit the value of one parameter in the card"""

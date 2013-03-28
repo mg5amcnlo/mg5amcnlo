@@ -62,11 +62,15 @@ def create_include_file(MWparam):
 
 
 #1 #########################################################################
-class Card:
+class Card(dict):
     """ The routine to read and treat all the card (but the run_card.dat)"""
     
     #2 #########################################################################
     def __init__(self,file,type=''):
+        
+        dict.__init__(self)
+        self.info = self #retro compatibility
+        
         self.file=file
         self.charged = 0 # most of the file are automaticaly read, but not all
         
@@ -76,9 +80,11 @@ class Card:
             self.type=type.lower()
 
         if self.type in ['transfer','param','madweight']:
-            self.info=self.read(self.file)
+            self.read(self.file)
         elif(self.type in ['ident']):
-            self.info=self.read_ident()
+            self.read_ident()
+        
+        
 
     #3 #########################################################################           
     def detect_type(self):
@@ -113,7 +119,8 @@ class Card:
                 card=open("./Events/"+name_card,'r')  #->read banner
 
         #init output
-        info={'comment':{}}
+        info = self
+        self['comment'] = {}
         name_block=''
 
         #read the card
@@ -189,7 +196,7 @@ class Card:
             either newprocess was not perform after ./bin/PassToMadWeight, either your transfer function is not correctly set up. launch\n\
             $>./bin/change_tf.py to solve that problem')
         line_format=re.compile(r'''^\s*(?P<block>\w+)\s+(?P<tag>\w+)\s+(?P<name>\w+)\s+(?P<type>\w+)\s*(?P<default>[\w.+-]*)\s*$''')
-        ident={}
+        ident = self
         while 1:
             line=ff.readline()
             if line=='':
@@ -267,6 +274,57 @@ class Card:
             return value
         else:
             print 'error in type for',value,type
+            
+    #3 #########################################################################
+    def write(self, output):
+
+        if isinstance(output, str):
+            output = open(output, 'w')
+                
+        header = """##########################################################################
+##                                                                      ##
+##                             MadWeigth                                ##
+##                             =============                            ##
+##                                                                      ##
+##                              Run control                             ##
+##                              -----------                             ##
+##                                                                      ##
+##                                                                      ##
+##    Author: Mattelaer Olivier (UIUC)                                  ##
+##            Artoisenet Pierre (NIKHEF)                                ##
+##                                                                      ##
+##    Version:     5.0.0                                                ##
+##    Last change: 27/03/13                                             ##
+##                                                                      ##
+##########################################################################
+##                                                                      ##
+##  This Card defines all specific parameters of Madweight              ##
+##                                                                      ##
+##########################################################################
+"""
+        output.write(header)
+        
+        for key in self.info:
+            if key == 'comment':
+                continue
+            else:
+                output.write('\n\nBlock %s\n' % key)
+                for key2, value in self.info.items():
+                    if isinstance(key2,tuple):
+                        key2 = '%s'.join(map(str, key2))
+                    
+                    if not isinstance(value, list):
+                        value = [value]
+                    for value in value:
+                        output.write('    %s   %s\n' % (key2,value))
+        
+        
+        
+        
+        
+
+
+
 
 class Particles_file(Card):
     """ all routine linked to particles.dat file """
