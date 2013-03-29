@@ -90,6 +90,12 @@ class BasicCmd(cmd.Cmd):
                 out += opt
             return out
 
+        # check if more than one categories but only one value:
+        if all(len(s) <= 1 for s in dico.values() ):
+            values = set((s[0] for s in dico.values() if len(s)==1))
+            if len(values) == 1:
+                return values
+                
         # That's the real work
         out = []
         valid=0

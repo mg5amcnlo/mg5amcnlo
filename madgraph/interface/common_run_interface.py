@@ -1468,7 +1468,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         #check if Madweight_card is present:
         self.has_mw = False
-        if os.path.exists(pjoin(self.me_dir,'Cards','MadWeight_card.dat')):
+        if 'madweight_card.dat' in cards:
             self.has_mw = True
             import madgraph.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
@@ -1488,9 +1488,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             for var in self.mw_vars:
                 if var in self.run_card:
                     self.conflict.append(var)
-    
+            
     def complete_set(self, text, line, begidx, endidx):
-     try:
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -1521,7 +1520,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'block':args[1]}
             elif args[1] == 'width':
                 allowed = {'block': 'decay'}
-            elif args[1] == 'madweight_card':
+            elif args[1] == 'MadWeight_card':
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
@@ -1529,9 +1528,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'madweight_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card']:
                 start = 2
-            if args[start] in self.param_card.keys():
+            if args[-1] in self.pname2block.keys():
+                allowed['value'] = 'default'   
+            elif args[start] in self.param_card.keys() or args[start] == 'width':
+                if args[start] == 'width':
+                    args[start] = 'decay'
+                    
                 if args[start+1:]:
                     allowed = {'block':(args[start], args[start+1:])}
                 else:
@@ -1540,15 +1544,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start+1:]:
                     allowed = {'mw_block':(args[start], args[start+1:])}
                 else:
-                    allowed = {'mw_block':args[start]}                
-            elif len(args) == start +1:
-                    allowed['value'] = ''
+                    allowed = {'mw_block':args[start]}     
+            #elif len(args) == start +1:
+            #        allowed['value'] = ''
+            else: 
+                allowed['value'] = ''
 
-            
+
         if 'category' in allowed.keys():
             categories = ['run_card', 'param_card']
             if self.has_mw:
-                categories.append('madweight_card')
+                categories.append('MadWeight_card')
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -1635,8 +1641,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
         return self.deal_multiple_categories(possibilities)
-     except Exception, error:
-         print 'fail with',error
            
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
@@ -1648,7 +1652,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             return
 
         card = '' #store which card need to be modify (for name conflict)
-        if args[0] in ['run_card', 'param_card']:
+        if args[0] == 'madweight_card':
+            if not self.mw_card:
+                logger.warning('Invalid Command: No MadWeight card defined.')
+                return
+            args[0] = 'MadWeight_card'
+        
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card']:                                    
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
@@ -1660,11 +1670,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('invalid set command: %s' % line)
                 return
+            
 
-        #### RUN CARD
-        if args[start] in self.run_card.keys() and card != 'param_card':
+        #### RUN CARD ----------------------------------------------------------
+        if args[start] in self.run_card.keys() and card in ['', 'run_card']:
             if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 logger.warning(text)
                 return
                 
@@ -1686,17 +1697,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'))
             
-        ### PARAM_CARD WITH BLOCK NAME
+        ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
-                                                         and card != 'run_card':
-            if args[start] == 'width':
-                args[start] = 'decay'
-                
+                                                  and card in ['','param_card']:
             if args[start+1] in self.conflict and card == '':
-                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 logger.warning(text)
                 return
             
+            if args[start] == 'width':
+                args[start] = 'decay'
+                            
             if args[start+1] in self.pname2block:
                 all_var = self.pname2block[args[start+1]]
                 key = None
@@ -1738,8 +1749,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return                   
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
-        # PARAM_CARD NO BLOCK NAME
+        # PARAM_CARD NO BLOCK NAME ---------------------------------------------
         elif args[start] in self.pname2block and card != 'run_card':
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in both param_card and run_card. Please specify'
+                logger.warning(text)
+                return
+            
             all_var = self.pname2block[args[start]]
             for bname, lhaid in all_var:
                 new_line = 'param_card %s %s %s' % (bname, 
@@ -1750,10 +1766,84 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 for bname, lhaid in all_var: 
                     logger.warning('   %s %s' % (bname, ' '.join([str(i) for i in lhaid])))
                 logger.warning('all listed variables have been modified')
-        #INVALID
+                
+        # MadWeight_card with block name ---------------------------------------
+        elif self.has_mw and (args[start] in self.mw_card and args[start] != 'comment') \
+                                              and card in ['','MadWeight_card']:
+            
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+                       
+            block = args[start]
+            name = args[start+1]
+            value = args[start+2:]
+            self.setM(block, name, value)
+            self.mw_card.write(pjoin(self.me_dir,'Cards','Madweight_card.dat'))        
+        
+        # MadWeight_card NO Block name -----------------------------------------
+        elif self.has_mw and args[start] in self.mw_vars \
+                                             and card in ['', 'MadWeight_card']:
+            
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            block = [b for b, data in self.mw_card.items() if args[start] in data]
+            if len(block) > 1:
+                logger.warning('%s is define in more than one block: %s.Please specify.'
+                               % (args[start], ','.join(block)))
+                return
+           
+            block = block[0]
+            name = args[start]
+            value = args[start+1:]
+            self.setM(block, name, value)
+            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+             
+        # MadWeight_card New Block
+        elif self.has_mw and args[start].startswith('mw_') and len(args[start:]) == 3\
+                                                    and card == 'MadWeight_card':
+            block = args[start]
+            name = args[start+1]
+            value = args[start+2]
+            self.setM(block, name, value)
+            self.mw_card.write(pjoin(self.me_dir,'Cards','Madweight_card.dat'))    
+        #INVALID --------------------------------------------------------------
         else:
             logger.warning('invalid set command %s' % line)
             return            
+
+    def setM(self, block, name, value):
+        
+        if isinstance(value, list) and len(value) == 1:
+            value = value[0]
+            
+        if block not in self.mw_card:
+            logger.warning('block %s was not present in the current MadWeight card. We are adding it' % block)
+            self.mw_card[block] = {}
+        elif name not in self.mw_card[block]:
+            logger.info('$BLACK name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block))
+        if value == 'default':
+            import madgraph.madweight.Cards as mwcards
+            mw_default = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card_default.dat'))
+            try:
+                value = mw_default[block][name]
+            except KeyError:
+                logger.info('removing id "%s" from Block "%s" '% (name, block))
+                if name in self.mw_card[block]:
+                    del self.mw_card[block][name]
+                return
+        if value:
+            logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s' %\
+                    (block, name, value))
+        else:
+            logger.value("Invalid command: No value. To set default value. Use \"default\" as value")
+            return
+        
+        self.mw_card[block][name] = value
     
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))

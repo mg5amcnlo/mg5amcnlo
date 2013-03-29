@@ -137,8 +137,13 @@ class Card(dict):
                 info['comment'][name_block]=p_block.search(line).group('comment')
                 continue
 
-            
-            line_content= line.split('#',1)[0].strip()
+            if '#' in line:
+                line_content, comment= line.split('#',1)
+            else: 
+                line_content = line
+                comment = ''
+            line_content = line_content.strip()
+            comment = comment.strip()
             if not line_content:
                 continue
             
@@ -168,20 +173,27 @@ class Card(dict):
                 obj={line_content[i]:obj}
             #put in final data
             dico=info[name_block]
+            if 'comment' not in dico:
+                dico['comment'] = {}
+            comments = dico['comment']
+            
             if len(line_content)==1:
                 dico[' ']=obj
             for i in range(0,len(line_content)-1):
                 if line_content[i] not in dico.keys():
                     dico[line_content[i]]=obj[line_content[i]]
+                    comments[line_content[i]] = comment
                     break
                 elif i!=len(line_content)-2:
                     dico=dico[line_content[i]]
+                    comments[line_content[i]] = comment
                     obj=obj[line_content[i]]
                 elif(type(dico[line_content[i]])==list):                         #multiple definition of the same input
                     dico[line_content[i]].append(obj[line_content[i]])
+                    comments[line_content[i]] += comment
                 else:
                     dico[line_content[i]]=[dico[line_content[i]],line_content[i+1]]
-
+                    comments[line_content[i]] += comment
         return info
 
     #2 #########################################################################
@@ -304,19 +316,26 @@ class Card(dict):
 """
         output.write(header)
         
-        for key in self.info:
+        for key in self:
             if key == 'comment':
                 continue
-            else:
-                output.write('\n\nBlock %s\n' % key)
-                for key2, value in self.info.items():
-                    if isinstance(key2,tuple):
-                        key2 = '%s'.join(map(str, key2))
+
+            output.write('\n\nBlock %s\n' % key)
+            for key2, value in self[key].items():
+                if key2 == 'comment':
+                    continue
+                if isinstance(key2,tuple):
+                    key2 = '%s'.join(map(str, key2))
+                comment = ''
+                try:
+                    comment = self[key]['comment'][key2] 
+                except Exception:
+                    pass
                     
-                    if not isinstance(value, list):
-                        value = [value]
-                    for value in value:
-                        output.write('    %s   %s\n' % (key2,value))
+                if not isinstance(value, list):
+                    value = [value]
+                for value in value:
+                    output.write('    %s   %s    #%s\n' % (key2,value,comment))
         
         
         
