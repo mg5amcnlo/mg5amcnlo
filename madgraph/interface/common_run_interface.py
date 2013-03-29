@@ -527,6 +527,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             question += ' you can also\n'
             question += '   - enter the path to a valid card.\n'
+            
+        if 'transfer_card.dat' in cards:
+            question += '   - use the \'change_tf\' command to set a transfer functions.\n'
         
         out = 'to_run'
         while out not in ['0', 'done']:
@@ -1079,8 +1082,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 args[1] = None
             self.options[args[0]] = args[1]
             opt = self.options
-            self.cluster = cluster.from_name[opt['cluster_type']](\
+            if opt['run_mode'] == 1:
+                self.cluster = cluster.from_name[opt['cluster_type']](\
                                  opt['cluster_queue'], opt['cluster_temp_path'])
+            elif opt['run_mode'] == 2:
+                self.cluster = cluster.MultiCore(cluster_temp_path=opt['cluster_temp_path'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -1469,6 +1475,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #check if Madweight_card is present:
         self.has_mw = False
         if 'madweight_card.dat' in cards:
+            
+            self.do_change_tf = self.mother_interface.do_define_transfer_fct
+            self.complete_change_tf = self.mother_interface.complete_define_transfer_fct
+            self.help_change_tf = self.mother_interface.help_define_transfer_fct
+            if not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
+                logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
+            
+            
             self.has_mw = True
             import madgraph.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
@@ -1870,7 +1884,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('modify param_card information BLOCK %s with id %s set to %s' %\
                     (block, lhaid, value))
         self.param_card[block].param_dict[lhaid].value = value
+    
+    def reask(self, *args, **opt):
         
+        cmd.OneLinePathCompletion.reask(self,*args, **opt)
+        if self.has_mw and not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
+            logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
+            
       
     def help_set(self):
         '''help message for set'''

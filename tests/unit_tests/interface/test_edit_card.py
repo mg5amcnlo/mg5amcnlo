@@ -32,8 +32,14 @@ pjoin = os.path.join
 
 class FakeInterface(object):
     
+    do_define_transfer_fct = ''
+    complete_define_transfer_fct = ''
+    help_define_transfer_fct = ''
+    
     def __init__(self, me_dir):
         self.me_dir = me_dir
+        
+    
 
 class TestEditCardCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """

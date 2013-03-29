@@ -163,6 +163,7 @@ def multiple_try(nb_try=5, sleep=20):
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
+                    raise
                     wait_once = True
                     time.sleep(sleep * (i+1))
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
@@ -265,6 +266,18 @@ def mod_compilator(directory, new='gfortran', current=None):
         text= pattern.sub(new, text)
         open(name,'w').write(text)
 
+#===============================================================================
+# mute_logger (designed to be a decorator)
+#===============================================================================
+class chdir:
+    def __init__(self, path):
+        self.current = os.getcwd()
+        self.path = path
+    def __enter__(self):
+        os.chdir(self.path)
+        return
+    def __exit__(self, type, value, traceback):
+        os.chdir(self.current)
 
 #===============================================================================
 # mute_logger (designed to be a decorator)

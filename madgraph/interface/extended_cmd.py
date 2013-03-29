@@ -122,6 +122,8 @@ class BasicCmd(cmd.Cmd):
     @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
+        if not hasattr(self, 'completion_prefix'):
+            self.completion_prefix = ''
         longest_match_length += len(self.completion_prefix)
         try:
             if len(matches) == 1:
@@ -1367,7 +1369,11 @@ class SmartQuestion(BasicCmd):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
-            
+
+    def get_names(self):
+        # This method used to pull in base class attributes
+        # at a time dir() didn't do it yet.
+        return dir(self)            
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')

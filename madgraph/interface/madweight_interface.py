@@ -190,7 +190,12 @@ class HelpToCmd(object):
         logger.info('  The option \'-refine\' is to be added if this is not the first')
         logger.info('  cluster submission. Otherwise previous run submission will be lost.')
            
-    
+    def help_define_transfer_fct(self):
+        """help for define transfer_fct"""
+        logger.info('  Modify the current transfer functions')
+        logger.info('  If no argument provided a question showing the list of possibilities.')
+        logger.info('  will be ask. If the TF is provided as argument, no question is asked.')
+
 
 class CompleteForCmd(object):
     
@@ -200,6 +205,18 @@ class CompleteForCmd(object):
         args = self.split_arg(line[0:begidx])
 
         return self.list_completion(text,['-refine','-f','--refine'], line)
+    
+    def complete_define_transfer_fct(self, text, line, begidx, endidx):
+        """ complete the define_transfer_fct """
+        
+        path = pjoin(self.me_dir, 'Source', 'MadWeight', 'transfer_function', 'data')
+        listdir=os.listdir(path)
+        args = self.split_arg(line[0:begidx])
+        if len(args) == 1:
+            
+            possibilities = [content[3:-4] for content in listdir \
+                     if (content.startswith('TF') and content.endswith('dat'))]
+            return self.list_completion(text, possibilities, line)
 
 #===============================================================================
 # MadWeightCmd
@@ -240,29 +257,31 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
     def do_define_transfer_fct(self, line):
         """Define the current transfer function"""
-        self.configure()
-        args = self.split_arg(line)
         
-        
-        listdir=os.listdir('./Source/MadWeight/transfer_function/data')
-        question = 'Please choose your transfer_function between\n'
-        possibilities = [content[3:-4] for content in listdir \
-                     if (content.startswith('TF') and content.endswith('dat'))]
-        for i, tfname in enumerate(possibilities):
-            question += ' %s / %s\n' % (i, tfname)
-        possibilities += range(len(possibilities))
-        
-        if args and args[0] in possibilities:
-            tfname = args[0]
-        else:
-            tfname = self.ask(question, 'dbl_gauss_pt_jet', possibilities)
-        if tfname.isdigit():
-            tfname = possibilities[int(tfname)]
-        
-        P_dir, MW_dir = MW_info.detect_SubProcess(P_mode=1)
-        os.chdir('./Source/MadWeight/transfer_function')
-        change_tf.create_TF_main(tfname,0,MW_dir)
-        os.chdir('../../..')
+        with misc.chdir(self.me_dir):  
+            self.configure()
+            args = self.split_arg(line)
+            
+            path = pjoin(self.me_dir, 'Source', 'MadWeight', 'transfer_function', 'data')
+            listdir=os.listdir(path)
+            question = 'Please choose your transfer_function between\n'
+            possibilities = [content[3:-4] for content in listdir \
+                         if (content.startswith('TF') and content.endswith('dat'))]
+            for i, tfname in enumerate(possibilities):
+                question += ' %s / %s\n' % (i, tfname)
+            possibilities += range(len(possibilities))
+            
+            if args and args[0] in possibilities:
+                tfname = args[0]
+            else:
+                tfname = self.ask(question, 'dbl_gauss_pt_jet', possibilities)
+            if tfname.isdigit():
+                tfname = possibilities[int(tfname)]
+            
+            P_dir, MW_dir = MW_info.detect_SubProcess(P_mode=1)
+            os.chdir('./Source/MadWeight/transfer_function')
+            change_tf.create_TF_main(tfname,0, MW_dir)
+            
         
     def do_treatcards(self, line):
         """create the various param_card // compile input for the run_card"""
@@ -370,6 +389,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         #logger.info('     Waiting for submitted jobs to complete')
         update_status = lambda i, r, f: self.update_status((i, r, f, 'madweight'), 
                       starttime=starttime, level='madweight', update_results=False)
+
         try:
             self.cluster.wait(self.me_dir, update_status)
         except Exception:
@@ -543,19 +563,15 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_launch(self, line):
         """run the full suite of commands"""
 
-        current_cwd = os.getcwd()
-        try:
-            os.chdir(self.me_dir)
-            args = self.split_arg(line)
+        args = self.split_arg(line)
+    
+        #if not os.path.exists(pjoin(self.me_dir, 'Cards','transfer_card.dat')):
+        #    self.exec_cmd('define_transfer_fct')
         
-            if not os.path.exists(pjoin(self.me_dir, 'Cards','transfer_card.dat')):
-                self.exec_cmd('define_transfer_fct')
-            
-            cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
-                     'transfer_card.dat', 'input.lhco']
-            
-            self.ask_edit_cards(cards, mode='fixed', plot=False)
-            
+        cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
+                 'transfer_card.dat', 'input.lhco']
+        self.ask_edit_cards(cards, mode='fixed', plot=False)
+        with misc.chdir(self.me_dir):          
             if not (os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')) or \
                      os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco.gz'))):
                 raise self.InvalidCmd('Please specify a valid LHCO File')
@@ -566,10 +582,6 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             self.exec_cmd('check_events')
             self.exec_cmd('submit_jobs')
             self.exec_cmd('collect')
-        except:
-            os.chdir(current_cwd)
-            raise
-        os.chdir(current_cwd)
         
     
     def check_refine(self, args):

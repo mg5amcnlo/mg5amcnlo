@@ -314,6 +314,7 @@ class MWLauncher(ExtLauncher):
                 usecmd.do_set(line[3:], log=False)
             except Exception:
                 pass
+            
         usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
         #ensure that the logger level 
         launch = self.cmd_int.define_child_cmd_interface(
@@ -327,7 +328,6 @@ class MWLauncher(ExtLauncher):
         
         if self.force:
             command+= " -f"
-        
         if self.laststep:
             command += ' --laststep=%s' % self.laststep
         

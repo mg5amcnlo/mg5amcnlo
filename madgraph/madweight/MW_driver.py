@@ -130,7 +130,8 @@ class Weight(list):
         self.value = 0
         self.error = 0
         self.lhco_number = lhco_number
-        list.__init__(self)        
+        list.__init__(self)
+        self.log = ''        
     
     def get(self):
         

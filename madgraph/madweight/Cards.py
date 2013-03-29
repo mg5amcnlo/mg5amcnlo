@@ -108,7 +108,9 @@ class Card(dict):
 
         p_block=re.compile(r'''^block\s+(?P<block>\w*)\s*(?P<comment>.*)''',re.I)
         
-        
+        get_comment = False
+        if 'madweight' in name_card.lower():
+            get_comment = True
 
         try:
             card=open("./Cards/"+name_card,'r')
@@ -173,27 +175,34 @@ class Card(dict):
                 obj={line_content[i]:obj}
             #put in final data
             dico=info[name_block]
-            if 'comment' not in dico:
+            if 'comment' not in dico and get_comment:
                 dico['comment'] = {}
-            comments = dico['comment']
+            if get_comment:
+                comments = dico['comment']
             
             if len(line_content)==1:
                 dico[' ']=obj
             for i in range(0,len(line_content)-1):
+                if line_content[0] == 'comment':
+                    continue
                 if line_content[i] not in dico.keys():
                     dico[line_content[i]]=obj[line_content[i]]
-                    comments[line_content[i]] = comment
+                    if get_comment and line_content[i] != 'comment':
+                        comments[line_content[i]] = comment
                     break
                 elif i!=len(line_content)-2:
                     dico=dico[line_content[i]]
-                    comments[line_content[i]] = comment
+                    if get_comment and line_content[i] != 'comment':
+                        comments[line_content[i]] = comment
                     obj=obj[line_content[i]]
                 elif(type(dico[line_content[i]])==list):                         #multiple definition of the same input
                     dico[line_content[i]].append(obj[line_content[i]])
-                    comments[line_content[i]] += comment
+                    if get_comment and line_content[i] != 'comment':
+                        comments[line_content[i]] += comment
                 else:
                     dico[line_content[i]]=[dico[line_content[i]],line_content[i+1]]
-                    comments[line_content[i]] += comment
+                    if get_comment and line_content[i] != 'comment':
+                        comments[line_content[i]] += comment
         return info
 
     #2 #########################################################################

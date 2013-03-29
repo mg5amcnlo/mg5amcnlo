@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+# idea have 2 script
+# madweight.py -> direct submission 
+# madweight_cmd.py -> interface
+
+
 #Extension
 import string
 import sys
