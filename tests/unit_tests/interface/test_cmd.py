@@ -20,6 +20,7 @@ import madgraph.interface.master_interface as cmd
 import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import os
+import logging
 
 import tests.unit_tests.various.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
@@ -158,7 +159,7 @@ class TestValidCmd(unittest.TestCase):
         
         import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
         tmp = cmd_madloop.TestCmdLoop
-        tmp.setup_logFile_for_logger('fatalerror', level='WARNING')
+        tmp.setup_logFile_for_logger('fatalerror', level=logging.WARNING)
 
         try:
             master.run_cmd('define aa')

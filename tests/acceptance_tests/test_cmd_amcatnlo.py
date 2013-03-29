@@ -206,7 +206,51 @@ class TestMECmdShell(unittest.TestCase):
                         os.path.getsize('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
 
 
+    def test_generate_events_lo_hwpp_set(self):
+        """test the param_card created is correct"""
+        
+        self.generate_production()
+        cmd = """generate_events LO -p
+                 set parton_shower herwigpp
+                 set nevents 100
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        #self.do('import command /tmp/mg5_cmd')
+        #self.do('generate_events LO -f')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
     
+
+    def test_generate_events_lo_hw6_set(self):
+        """test the param_card created is correct"""
+        
+        self.generate_production()
+        cmd = """generate_events LO
+                 set parton_shower herwig6
+                 set nevents 100
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        self.cmd_line.import_command_file('/tmp/mg5_cmd')
+        #self.do('import command /tmp/mg5_cmd')
+        #self.do('generate_events LO -f')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_abs.txt'))
+
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz'))
+        # sanity check on the size
+        self.assertTrue(os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events_HERWIG6_0.hep.gz') > \
+                        os.path.getsize('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
 
 
 
@@ -389,7 +433,11 @@ class TestMECmdShell(unittest.TestCase):
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
-        self.assertAlmostEqual(4232.0, cross_section,delta=50)
+        try:
+            self.assertAlmostEqual(4232.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4282. and cross_section > 4182.)
+
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
         
