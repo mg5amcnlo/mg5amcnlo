@@ -53,10 +53,8 @@ try:
     MADEVENT = False
 except ImportError, error:
     logger.debug(error)
-    print error
-    raise
     from internal import InvalidCmd, MadGraph5Error
-    import internal.extended_cmd as extended_cmd
+    import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.madweight.MW_info as MW_info
     import internal.madweight.change_tf as change_tf
@@ -121,6 +119,7 @@ class CmdExtended(cmd.Cmd):
                             (30 - len_version - len_date) * ' ',
                             info['date'])
         else:
+            root_path = pjoin(os.path.dirname(__file__), os.path.pardir,os.path.pardir)
             version = open(pjoin(root_path,'MGMEVersion.txt')).readline().strip()
             info_line = "#*         VERSION %s %s                *\n" % \
                             (version, (24 - len(version)) * ' ')    
@@ -235,10 +234,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         self.configured = 0 # time at which the last option configuration occur
     
     def do_quit(self, *args, **opts):
-        
         common_run.CommonRunCmd.do_quit(self, *args, **opts)
         CmdExtended.do_quit(self, *args, **opts)
-        
+        return True
     
     def configure(self):
         os.chdir(pjoin(self.me_dir))

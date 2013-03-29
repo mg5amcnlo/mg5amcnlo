@@ -297,6 +297,8 @@ class CheckValidForCmd(object):
 
 class MadEventAlreadyRunning(InvalidCmd):
     pass
+class AlreadyRunning(MadEventAlreadyRunning):
+    pass
 
 #===============================================================================
 # CommonRunCmd
@@ -352,9 +354,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Check that the directory is not currently running
         if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of madevent is currently running.
-            Please wait that all instance of madevent are closed. If no
-            instance is running, you can delete the file
+            message = '''Another instance of the program is currently running.
+            (for this exact same directory) Please wait that this is instance is 
+            closed. If no instance is running, you can delete the file
             %s and try again.''' % pjoin(me_dir,'RunWeb')
             raise MadEventAlreadyRunning, message
         else:
@@ -1025,6 +1027,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             devnull.close()
         except Exception:
             pass
+        return True
 
     
     # Aliases

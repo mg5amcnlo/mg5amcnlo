@@ -20,7 +20,6 @@ helas=$main/../HELAS
 mgmedir=$main/..
 
 
-
 echo "Transforming standard template into madweight version"
 cd $main
 mkdir temp
@@ -62,7 +61,7 @@ mkdir Events
 mv ./temp/Pdfdata ./lib/
 mv ./temp/setup_model-pl ./bin/
 mv ./temp/Passto_g77.py ./bin/
-mv ./temp/internal ./bin/
+mv ./temp/internal ./bin/internal
 mv ./temp/Passto_gfortran.py ./bin/
 mv ./temp/mod_file.py ./bin/
 mv ./temp/proc_card.dat ./Cards/
@@ -91,14 +90,18 @@ mv ./temp/rw_routines.f ./Source/rw_routines.f
 mv ./temp/setrun.f ./Source/setrun.f
 mv ./temp/transpole.f ./Source/transpole.f
 
-cp ./Source/MadWeight/Python/madweight.py  ./bin/.
-cp ./Source/MadWeight/Python/put_banner.py ./bin/put_banner.py
-cp ./Source/MadWeight/Python/splitbanner.py ./bin/splitbanner.py
-cp ./Source/MadWeight/Python/automatic_selection_point.py  ./bin/automatic_selection_point.py
-cp ./Source/MadWeight/transfer_function/change_tf.py    ./bin/change_tf.py
-cp  ./Source/MadWeight/Python/MW_likelihood_selection_event.py ./bin/MW_likelihood_selection_event.py
+#cp ./Source/MadWeight/Python/madweight.py  ./bin/.
+#cp ./Source/MadWeight/Python/put_banner.py ./bin/internal/put_banner.py
+#cp ./Source/MadWeight/Python/splitbanner.py ./bin/internal/splitbanner.py
+#cp ./Source/MadWeight/transfer_function/change_tf.py    ./bin/internal/change_tf.py
+#cp  ./Source/MadWeight/Python/MW_likelihood_selection_event.py ./bin/MW_likelihood_selection_event.py
+cp ./Source/MadWeight/Python/progressbar.py ./bin/internal/madweight
 rm -f temp
 rm -rf MadWeight/src
 rm -rf MadWeight/Cards
+cp -r ./Source/MadWeight/bin/* ./bin/
+rm -rf bin/internal/pass_to_madweight
+rm -rf ./Source/MadWeight/bin/
+
 
 echo " Ready to go with MadWeight  "

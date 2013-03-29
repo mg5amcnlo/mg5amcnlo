@@ -163,7 +163,6 @@ def multiple_try(nb_try=5, sleep=20):
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
-                    raise
                     wait_once = True
                     time.sleep(sleep * (i+1))
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)

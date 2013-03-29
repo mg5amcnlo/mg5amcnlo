@@ -45,7 +45,7 @@ try:
     import madgraph.madweight.MW_info as MW_param
     
 except ImportError:
-    import internal.diagram_class as diagram_class
+    import internal.madweight.diagram_class as diagram_class
     import internal.madweight.substructure_class as substructure_class
     import internal.madweight.MW_info as MW_param
 

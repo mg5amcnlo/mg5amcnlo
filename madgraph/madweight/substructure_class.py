@@ -3,7 +3,7 @@
 
 try:
     import madgraph.madweight.blob_solution as blob_solution
-except importError:
+except ImportError:
     import internal.madweight.blob_solution as blob_solution
     
 Level_generation = blob_solution.Level_generation

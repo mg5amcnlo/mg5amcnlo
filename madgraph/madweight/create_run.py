@@ -6,10 +6,10 @@ import string,os,sys,re,popen2,time,stat,filecmp
 try: 
     import madgraph.madweight.mod_file as mod_file
     import madgraph.madweight.change_tf as change_tf
-    import madgraph.various.progressbar as progressbar
+    #import madgraph.various.progressbar as progressbar
 except ImportError:
     import internal.madweight.mod_file as mod_file
-    import internal.progressbar as progressbar
+    #import internal.madweight.progressbar as progressbar
 
 
 ###########################################################################

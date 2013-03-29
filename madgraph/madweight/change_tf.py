@@ -14,7 +14,6 @@ try:
     import madgraph.madweight.particle_class as particle_class
     import madgraph.madweight.MW_fct as MW_fct
 except ImportError:
-    raise
     import internal.madweight.Cards as Cards
     import internal.madweight.mod_file as mod_file
     import internal.madweight.particle_class as particle_class

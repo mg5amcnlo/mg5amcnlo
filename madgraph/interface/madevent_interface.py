@@ -3197,7 +3197,7 @@ calculator."""
     def do_quit(self, *args, **opts):
         
         common_run.CommonRunCmd.do_quit(self, *args, **opts)
-        CmdExtended.do_quit(self, *args, **opts)
+        return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
     def treat_ckkw_matching(self):

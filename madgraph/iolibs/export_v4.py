@@ -1351,17 +1351,65 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_run_config_file(writers.FortranWriter(filename))
 
         try:
-            subprocess.call([os.path.join('bin', 'madweight')],
+            subprocess.call([os.path.join(self.dir_path, 'Source','MadWeight','bin','internal','pass_to_madweight')],
                             stdout = os.open(os.devnull, os.O_RDWR),
                             stderr = os.open(os.devnull, os.O_RDWR),
                             cwd=self.dir_path)
         except OSError:
             # Probably madweight already called
             pass
+        
+        # Copy the different python file in the Template
+        self.copy_python_file()
 
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FortranWriter(filename))
+
+    #===========================================================================
+    # generate_subprocess_directory_v4 
+    #===========================================================================        
+    def copy_python_file(self):
+        """copy the python file require for the Template"""
+
+        # madevent interface
+        cp(_file_path+'/interface/madweight_interface.py',
+                            self.dir_path+'/bin/internal/madweight_interface.py')
+        cp(_file_path+'/interface/extended_cmd.py',
+                                  self.dir_path+'/bin/internal/extended_cmd.py')
+        cp(_file_path+'/interface/common_run_interface.py',
+                            self.dir_path+'/bin/internal/common_run_interface.py')
+        cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
+        cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
+        #cp(_file_path+'/iolibs/save_load_object.py', 
+        #                      self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/file_writers.py', 
+                              self.dir_path+'/bin/internal/file_writers.py')
+        #model file                        
+        cp(_file_path+'../models/check_param_card.py', 
+                              self.dir_path+'/bin/internal/check_param_card.py')   
+                
+        #madevent file
+        cp(_file_path+'/__init__.py', self.dir_path+'/bin/internal/__init__.py')
+        cp(_file_path+'/various/lhe_parser.py', 
+                                self.dir_path+'/bin/internal/lhe_parser.py')         
+        #cp(_file_path+'/various/gen_crossxhtml.py', 
+        #                        self.dir_path+'/bin/internal/gen_crossxhtml.py')                
+        cp(_file_path+'/various/banner.py', 
+                                   self.dir_path+'/bin/internal/banner.py')
+        cp(_file_path+'/various/cluster.py', 
+                                       self.dir_path+'/bin/internal/cluster.py') 
+        #cp(_file_path+'/various/sum_html.py', 
+        #                               self.dir_path+'/bin/internal/sum_html.py') 
+        #cp(_file_path+'/various/combine_runs.py', 
+        #                               self.dir_path+'/bin/internal/combine_runs.py')
+        
+        # logging configuration
+        cp(_file_path+'/interface/.mg5_logging.conf', 
+                                 self.dir_path+'/bin/internal/me5_logging.conf') 
+        cp(_file_path+'/interface/coloring_logging.py', 
+                                 self.dir_path+'/bin/internal/coloring_logging.py')
+
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
