@@ -1913,8 +1913,15 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
-        content += 'LHAPDFPATH=%s\n' % subprocess.Popen('%s --prefix' % self.options['lhapdf'],
+        lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+        if lhapdfpath:
+            content += 'LHAPDFPATH=%s\n' % lhapdfpath
+        else:
+            #overwrite the PDFCODE variable in order to use internal lhapdf
+            content += 'LHAPDFPATH=\n' 
+            content += 'PDFCODE=0\n'
+
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
