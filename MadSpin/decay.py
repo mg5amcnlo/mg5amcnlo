@@ -3356,10 +3356,10 @@ class decay_all_events:
             if ev % 5 == 0:
                 running_time = misc.format_timer(time.time()-starttime)
                 info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
-                for  index,tag_decay in enumerate(max_decay):
-                    info_text += '            decay_config %s [%s] : %s\n' % \
-                       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
-                logger.debug(info_text[:-1])
+                #for  index,tag_decay in enumerate(max_decay):
+                #    info_text += '            decay_config %s [%s] : %s\n' % \
+                #       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
+                logger.info(info_text[:-1])
         
         
         
