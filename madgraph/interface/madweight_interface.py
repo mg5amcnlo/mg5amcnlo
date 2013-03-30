@@ -23,6 +23,7 @@ import time
 import glob
 import math
 import xml.sax.handler
+import shutil
 from cStringIO import StringIO
 
 if __name__ == '__main__':
@@ -72,6 +73,7 @@ except ImportError, error:
     MADEVENT = True
 
 
+AlreadyRunning = common_run.AlreadyRunning
 
 #===============================================================================
 # CmdExtended
@@ -224,6 +226,16 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
     _set_options = []
     prompt = 'MadWeight5>'
+    helporder = ['MadWeight Function', 'Documented commands', 'Advanced commands']
+    
+    def remove_fct(self):
+        """Not in help: remove fct"""
+        return None
+    
+    do_decay_events = remove_fct
+    do_delphes = remove_fct
+    do_pgs = remove_fct
+    
     
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
@@ -245,7 +257,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))])
         
-        if self.configured > time_mod:
+        if self.configured > time_mod and \
+                           hasattr(self,'MWparam') and hasattr(self,'run_card'):
             return
                         
         self.MWparam = MW_info.MW_info(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
@@ -254,7 +267,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         
     def do_define_transfer_fct(self, line):
-        """Define the current transfer function"""
+        """MadWeight Function:Define the current transfer function"""
         
         with misc.chdir(self.me_dir):  
             self.configure()
@@ -282,7 +295,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             
         
     def do_treatcards(self, line):
-        """create the various param_card // compile input for the run_card"""
+        """MadWeight Function:create the various param_card // compile input for the run_card"""
         self.configure()
         args = self.split_arg(line)
         
@@ -292,14 +305,15 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         create_run.update_cuts_status(self.MWparam)
         
     def do_get_integration_channel(self, line):
-        """analyze the cards/diagram to find an way to integrate efficiently"""
+        """MadWeight Function:analyze the cards/diagram to find an way to integrate efficiently"""
         self.configure()
         args = self.split_arg(line)        
     
         write_MadWeight.create_all_fortran_code(self.MWparam)
         
     def do_compile(self, line):
-        """compile the code"""
+        """MadWeight Function:compile the code"""
+        self.configure()
         
         misc.compile(arg=["../lib/libtools.a"], cwd=pjoin(self.me_dir,'Source')) 
         misc.compile(arg=["../lib/libblocks.a"], cwd=pjoin(self.me_dir,'Source')) 
@@ -318,7 +332,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
     
     def do_check_events(self, line):
-        """check that the events are valid"""
+        """MadWeight Function: check that the events are valid"""
         self.configure()
         evt_file = pjoin(self.me_dir,'Events','input.lhco')
         if not os.path.exists(evt_file):
@@ -370,7 +384,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             return
         
     def do_submit_jobs(self, line):
-        """Submitting the jobs to the cluster"""
+        """MadWeight Function:Submitting the jobs to the cluster"""
         
         self.configure()
         args = self.split_arg(line)
@@ -463,7 +477,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 raise self.InvalidCmd, 'Invalid Command format'
 
     def do_collect(self, line):
-        """making the collect of the results"""
+        """MadWeight Function: making the collect of the results"""
         
         self.configure()
         args = self.split_arg(line)
@@ -473,14 +487,17 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         name = self.MWparam.name
         # 1. Concatanate the file. #############################################
         for MWdir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+            input_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+            if not os.path.exists(out_dir):
+                os.mkdir(out_dir)
             if '-refine' in args:
                 out_path = pjoin(out_dir, 'refine.xml') 
             else:
                 out_path = pjoin(out_dir, 'output.xml')
             fsock = open(out_path, 'w')
             fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
-            for output in glob.glob(pjoin(out_dir, 'output_*_*.xml')):
+            for output in glob.glob(pjoin(input_dir, 'output_*_*.xml')):
                 fsock.write(open(output).read())
                 os.remove(output)
             fsock.write('</subprocess>')
@@ -504,7 +521,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         cards = set()
         events = set()
         for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
 
             generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
@@ -555,11 +572,33 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             error = math.sqrt(error)
             fsock.write('%s %s %s \n' % (card, value, error))
             
-            
+    
+    def do_clean(self, line):
+        """MadWeight Function: syntax: clean [XXX]
+           clean the previous run XXX (the last one by default)"""
+           
+        args = self.split_arg(line)
+        self.configure()
+        if len(args) == 0:
+            name = self.MWparam.name
+        else:
+            name = args[0]
+        
+        ans = self.ask('Do you want to remove Events/%s directory?', 'y',['y','n'])
+        if ans == 'y':
+            try:
+                shutil.rmtree(pjoin(self.me_dir, 'Events', name))
+            except Exception, error:
+                logger.warning(error)
+        for Pdir in self.MWparam.MW_listdir:
+            try:
+                shutil.rmtree(pjoin(self.me_dir, 'SubProcesses', Pdir, name))
+            except Exception, error:
+                logger.warning(error)            
         
         
     def do_launch(self, line):
-        """run the full suite of commands"""
+        """MadWeight Function:run the full suite of commands"""
 
         args = self.split_arg(line)
     
@@ -568,7 +607,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
                  'transfer_card.dat', 'input.lhco']
-        self.ask_edit_cards(cards, mode='fixed', plot=False)
+        if not self.force:
+            self.ask_edit_cards(cards, mode='fixed', plot=False)
         with misc.chdir(self.me_dir):          
             if not (os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')) or \
                      os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco.gz'))):
@@ -597,10 +637,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             raise self.InvalidCmd('The first argument should be a number between 0 and 1.')
     
     def do_refine(self, line):
-        """relaunch the computation of the weight which have a precision lower than"""
+        """MadWeight Function:syntax: refine X
+        relaunch the computation of the weight which have a precision lower than X"""
         args = self.split_arg(line)
         self.check_refine(args)
         self.configure()
+        
         
         
         nb_events_by_file = self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing'] 

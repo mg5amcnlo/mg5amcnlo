@@ -358,7 +358,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             (for this exact same directory) Please wait that this is instance is 
             closed. If no instance is running, you can delete the file
             %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise MadEventAlreadyRunning, message
+            raise AlreadyRunning, message
         else:
             pid = os.getpid()
             fsock = open(pjoin(me_dir,'RunWeb'),'w')
@@ -1487,7 +1487,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             
             self.has_mw = True
-            import madgraph.madweight.Cards as mwcards
+            try:
+                import madgraph.madweight.Cards as mwcards
+            except:
+                import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
             self.mw_card = self.mw_card.info
             self.mw_vars = []

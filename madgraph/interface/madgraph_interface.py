@@ -2246,7 +2246,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         value = super(MadGraphCmd, self).do_quit(line)
         self.do_install('update --mode=mg5_end')
 
-        return value
+        return True
         
     # Add a process to the existing multiprocess definition
     # Generate a new amplitude
