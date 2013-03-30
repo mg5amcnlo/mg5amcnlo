@@ -33,6 +33,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       photon/gluon.
                   OM: Correct the default spin 3/2 propagator (wrong incoming/outcoming 
                       definition)
+                  ML (by OM): Adding support of the SLURM cluster. Thanks to 
+                      Matthew Low for the implementation.
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
