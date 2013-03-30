@@ -1969,7 +1969,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         remove_ids = []
         try:
             remove_index = args.index("/")
-        except:
+        except ValueError:
             pass
         else:
             remove_ids = args[remove_index + 1:]
