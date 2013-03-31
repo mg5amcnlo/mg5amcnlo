@@ -3042,7 +3042,14 @@ calculator."""
         td = self.options['td_path']
         
         
+        #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
+        if int(self.run_card['ickkw']):
+            # Add the matched cross-section
+            if 'MGGenerationInfo' in self.banner:
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+            else:
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         

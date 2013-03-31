@@ -469,6 +469,39 @@ class TestCmdShell2(unittest.TestCase,
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+    
+    def test_standalone_cpp(self):
+        """test that standalone cpp is working"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('import model mssm-full')
+        self.do('generate g g > go go QED=2')
+        self.do('output standalone_cpp %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_Sigma_mssm_full_gg_gogo',
+                               'check.log')
+        # Check that check_sa.cc compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_Sigma_mssm_full_gg_gogo'))
+        
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_Sigma_mssm_full_gg_gogo'), shell=True)
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)
+        
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
+    
         
     def test_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""
@@ -1328,7 +1361,7 @@ P1_qq_wp_wp_lvl
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
-        self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+        self.assertAlmostEqual(float(me_groups.group('value')), 0.019455844550069087)
         
     def test_import_banner_command(self):
         """check that the import banner command works"""

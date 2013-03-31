@@ -1668,7 +1668,7 @@ class UFOModelConverterCPP(object):
         params_ext = []
         for key in keys:
             if key == ('external',):
-                params_ext += self.model['parameters'][key]
+                params_ext += [p for p in self.model['parameters'][key] if p.name]
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
@@ -2133,7 +2133,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         params_ext = []
         for key in keys:
             if key == ('external',):
-                params_ext += self.model['parameters'][key]
+                params_ext += [p for p in self.model['parameters'][key] if p.name]
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,

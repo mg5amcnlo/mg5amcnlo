@@ -2091,11 +2091,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True)
             elif schannel:
-                return self.shell_string(False, False, False)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
             
             
             
