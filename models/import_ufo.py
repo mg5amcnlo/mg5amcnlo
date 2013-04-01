@@ -313,8 +313,7 @@ class UFOMG5Converter(object):
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson'):
                 if particle_info.GoldstoneBoson:
-                    return
-               
+                    return              
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -333,14 +332,27 @@ class UFOMG5Converter(object):
                     particle.set(key, float(value))
                 elif key in ['mass','width']:
                     particle.set(key, str(value))
+                elif key == 'propagator':
+                    if aloha.unitary_gauge:
+                        particle.set(key, str(value[0]))
+                    else: 
+                        particle.set(key, str(value[1]))
                 else:
                     particle.set(key, value)
             elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-            
-        assert(12 == nb_property) #basic check that all the information is there         
+        
+        if not hasattr(particle_info, 'propagator'):
+            nb_property += 1
+            if particle.get('spin') >= 3:
+                if particle.get('mass').lower() == 'zero':
+                    particle.set('propagator', 0) 
+                elif particle.get('spin') == 3 and not aloha.unitary_gauge:
+                    particle.set('propagator', 0)
+                
+        assert(13 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:

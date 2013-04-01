@@ -758,7 +758,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         
         # Check for compiler
-        if misc.which(default_compiler):
+        if default_compiler and misc.which(default_compiler):
             compiler = default_compiler
         elif misc.which('gfortran'):
             compiler = 'gfortran'
@@ -766,9 +766,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             compiler = 'g77'
         elif misc.which('f77'):
             compiler = 'f77'
-        else:
+        elif default_compiler:
             logger.warning('No Fortran Compiler detected! Please install one')
-            compiler = default_compiler
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
@@ -787,7 +789,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             FC_result = FC_re.match(line)
             if FC_result:
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
-        outfile = open(make_opts, 'w')
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
         outfile.write('\n'.join(lines))
 
 #===============================================================================
@@ -1809,9 +1816,10 @@ c           This is dummy particle used in multiparticle vertices
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
-        mapconfigs = [c[0] for c in configs]
         model = matrix_element.get('processes')[0].get('model')
+        configs = [(i+1, d) for (i, d) in \
+                       enumerate(matrix_element.get('diagrams'))]
+        mapconfigs = [c[0] for c in configs]
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
                                                             [[c[1]] for c in configs],
                                                             mapconfigs,
@@ -1879,7 +1887,8 @@ c           This is dummy particle used in multiparticle vertices
                     # get_s_and_t_channels gives vertices starting from
                     # final state external particles and working inwards
                     stchannels.append(h.get('amplitudes')[0].\
-                                      get_s_and_t_channels(ninitial, new_pdg))
+                                      get_s_and_t_channels(ninitial, model,
+                                                           new_pdg))
                 else:
                     stchannels.append((empty_verts, None))
 
