@@ -1,6 +1,6 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.9 (XX/XX/13)  JA: Fix bug in identification of symmetric diagrams, which could
+1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
                       processes (such as p p > z z j, z > l+ l-). Apart from the 
                       propagators (with status 2) in the event file, this bug didn't
@@ -11,7 +11,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       which made events from some processes fail Pythia running.
                   JA: Fixed bug #1156474, Pythia 8 C++ matrix element output for 
                       decay chain processes such as p p > z j, z > j j.
-                  JA: Automatically remove libpdf and libgeneric before survey,
+                      (Bug #1156474)
+                  JA + OM: Automatically remove libpdf and libgeneric before survey,
                       so everything works automatically when switching between
                       built-in PDFs and LHAPDF.
                   JA: Allow syntax / to remove particles in the define command.
@@ -37,6 +38,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       Matthew Low for the implementation.
                   OM: Fixing the standalone_cpp output for the mssm model. (only model impacted)
                       Thanks to Silvan S Kuttimalai for reporting. 
+                  OM: Fix Bug #1162512: Wrong line splitting in cpp when some name were very long.
+                      (shorten the name + fix the splitting)
 
 1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
