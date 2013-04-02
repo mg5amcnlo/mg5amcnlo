@@ -27,6 +27,10 @@ import shutil
 import subprocess
 import sys
 import time
+# HSS, 2/4/2013
+import operator
+import math
+# HSS
 
 pjoin = os.path.join
 # Get the grand parent directory (mg5 root) of the module real path 
@@ -950,11 +954,11 @@ class GoSamRunner(me_comparator.MERunner):
                 # here for now.
                 proc_card_out+="model=sm\n"
             elif line.find("# abbrev.level=")==0:
-                proc_card_out+="abbrev.level diagram\n"
+                proc_card_out+="abbrev.level=diagram\n"
             elif line.find("# abbrev.limit=")==0:
-                proc_card_out+="abbrev.limit 500\n"
+                proc_card_out+="abbrev.limit=500\n"
             elif line.find("# group=")==0:
-                proc_card_out+="group = False\n"
+                proc_card_out+="group=false\n"
             elif line.find("# order=")==0:
                 # Please always put 'QCD' first in the list below
                 orders_considered=['QCD','QED']
@@ -985,12 +989,14 @@ class GoSamRunner(me_comparator.MERunner):
                     # GoSam only accepts one order specification, so we choose
                     # here QCD if defined and otherwise the first available
                     if not order_specified:
-                        if gosam_born_orders[order]!=-1:   
+                        if gosam_born_orders[order]!=-1:
+                            # HSS, remove =   
                             proc_card_out+="order="+', '.join([order,\
                                             str(gosam_born_orders[order]),\
                                             str(gosam_loop_orders[order])])+'\n'
                             order_specified=True
                         elif gosam_loop_orders[order]!=-1:
+                            # HSS, remove =
                             proc_card_out+="order="+', '.join([order,\
                                             str(gosam_loop_orders[order]),\
                                             str(gosam_loop_orders[order])])+'\n'
@@ -1361,10 +1367,13 @@ class LoopMEComparator(me_comparator.MEComparator):
                                runner in self.me_runners]) + \
                       self._fixed_string_length("Relative diff.", col_size) + \
                       "Result"
-    
+            
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
               in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
+                # HSS, 02/04/2013
+                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
+                # HSS
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                     if skip_zero:
@@ -1372,14 +1381,15 @@ class LoopMEComparator(me_comparator.MEComparator):
                 else:
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
-    
+
                 res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                            ''.join([self._fixed_string_length("%1.10e" % res,
                                                    col_size) for res in list_res])
     
                 res_str += self._fixed_string_length("%1.10e" % diff, col_size)
-    
-                if diff < tolerance:
+                # HSS, 02/04/2013
+                if diff < tolerance or max(map(abs,list_res))/maxfin<tolerance and index>1:
+                # HSS
                     if index==3 and proc not in failed_proc_list:
                         pass_proc += 1
                     res_str += "Pass"
@@ -1419,13 +1429,16 @@ class LoopMEComparator(me_comparator.MEComparator):
             for i, (proc, born_orders, perturbation_orders, squared_orders) \
                                                  in enumerate(self.proc_list):
                 list_res = [res[i][0][index] for res in self.results]
+                if index==0:maxfin=max(max(map(abs,list_res)),1e-99)
                 if max(list_res) == 0.0 and min(list_res) == 0.0:
                     diff = 0.0
                 else:
                     diff = (max(list_res) - min(list_res)) / \
                            abs((max(list_res) + min(list_res)))
-
-                if diff >= tolerance and proc not in failed_proc_list:
+                # HSS, 02/04/2013
+                if diff >= tolerance and proc not in failed_proc_list and\
+                 (max(map(abs,list_res))/maxfin>=tolerance or index<=1):
+                # HSS
                     failed_proc_list.append(proc)
                     fail_str += self._fixed_string_length(proc, col_size) + \
                                 ''.join([self._fixed_string_length("%1.10e" % res,
@@ -1435,3 +1448,32 @@ class LoopMEComparator(me_comparator.MEComparator):
 
         test_object.assertEqual(fail_str, "Failed for processes:")
 
+
+
+# HSS, 28/03/2013
+class LoopHardCodedRefRunnerError(Exception):
+        """class for error in LoopHardCodedRefRunner"""
+        pass
+    
+class LoopHardCodedRefRunner(me_comparator.MERunner):
+    """Runner object for hard-coded reference loop processes."""
+    name = 'Hard-Coded Ref.'
+    type = 'HCR'
+    def setup(self,proc_list,res_list,model,decay=False):
+        self.proc_list=proc_list
+        self.res_list=res_list
+        self.model=model
+        PS = res_list[0][-1]
+        if not decay:
+            PSinit = list(itertools.imap(operator.add,PS[0],PS[1]))
+        else:
+            PSinit = PS[0]
+        energy = math.sqrt(PSinit[0]**2-PSinit[1]**2-PSinit[2]**2-PSinit[3]**2)
+        self.energy = energy
+
+    def run(self,proc_list, model, energy=1000, PSpoints=[]):
+        if PSpoints!=[] and PSpoints!=self.res_list[0][-1]:
+            raise self.LoopHardCodedRefRunnerError,\
+                 "Phase space point is not provided !"
+        return self.res_list
+# HSSrence loop proc
