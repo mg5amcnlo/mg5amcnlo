@@ -1329,6 +1329,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 PSpoints=[]
             self.results.append(runner.run(proc_list, model[i], energy,
                                 PSpoints))
+
             if hasattr(runner, 'new_proc_list'):
                 pass_proc = runner.new_proc_list
             cpu_time2 = time.time()
@@ -1341,13 +1342,13 @@ class LoopMEComparator(me_comparator.MEComparator):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
-        proc_col_size = 20
+        proc_col_size = 24
 
         for proc in self.proc_list:
             if len(proc) + 2 > proc_col_size:
                 proc_col_size = len(proc) + 2
         
-        col_size = 20
+        col_size = 24
 
         pass_proc = 0
         fail_proc = 0
@@ -1476,4 +1477,4 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
             raise self.LoopHardCodedRefRunnerError,\
                  "Phase space point is not provided !"
         return self.res_list
-# HSSrence loop proc
+# HSS

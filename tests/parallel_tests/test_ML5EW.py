@@ -2,21 +2,22 @@ import logging.config
 import logging
 import pydoc
 import os
-import loop_me_comparator
-import me_comparator
 import unittest
+import sys
 
+#Look for MG5/MG4 path
+_mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
+sys.path.append(_mg5_path)
+_file_path = os.path.dirname(os.path.realpath(__file__))
+_pickle_path = os.path.join(_file_path, 'input_files', 'ML_parallel_saved_runs')
 
 from madgraph import MG5DIR
 from madgraph import MadGraph5Error
 from madgraph.iolibs.files import cp
+#import madgraph.iolibs.save_load_object as save_load_object
+import loop_me_comparator
+import me_comparator
 from test_ML5 import procToFolderName
-
-#Look for MG5/MG4 path
-_mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
-_file_path = os.path.dirname(os.path.realpath(__file__))
-_pickle_path = os.path.join(_file_path, 'input_files', 'ML_parallel_saved_runs')
-
 # The processes below are treated all together because they are relatively quick
 
 HCR_processes_short = []
@@ -30,15 +31,22 @@ HCR_processes_long =  [
                        # The process below is for testing the parallel tests only
                        ('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2}),
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
-                       ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4})]
+                       ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
+                       ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
+                       ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
+                       ('u u~ > g a',{},['QCD QED'],{})]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                for elem in HCR_processes_long)
 
+
 ML5EW_processes_long =  [
                          ('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2}),
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
-                       ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4})]
+                       ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
+                       ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
+                       ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
+                       ('u u~ > g a',{},['QCD QED'],{})]
 
 ML5EW_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                 for elem in ML5EW_processes_long)
@@ -95,7 +103,8 @@ class ML5EWTest(unittest.TestCase):
         if pickle_file != "":
             stored_runner = me_comparator.PickleRunner.find_comparisons(
                               os.path.join(_pickle_path,pickle_file))[0]
-
+            energy = stored_runner.energy
+            
         # Create a MERunner object for MadLoop 5 optimized
         ML5_opt = loop_me_comparator.LoopMG5Runner()
         ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
@@ -189,6 +198,26 @@ class ML5EWTest(unittest.TestCase):
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR')
 
+#   ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8})
+    def test_long_sm_vs_stored_HCR_aa_ttxa_QED(self):
+        proc = 'aa_ttxa_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8})
+    def test_long_sm_vs_stored_HCR_hh_hhh_QED(self):
+        proc = 'hh_hhh_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > g a',{},['QCD QED'],{})
+    def test_long_sm_vs_stored_HCR_uux_ga_QCD_QED(self):
+        proc = 'uux_ga_QCD_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR')
 
     #===========================================================================
     # Now the long checks against results previsouly generated in MadLoop 5.
@@ -216,10 +245,11 @@ if '__main__' == __name__:
         
     logging.basicConfig(level=logging.INFO)
     
+    # save hard-coded reference results
     # Replace here the path of your HCR output file
     HCRpath = '/Users/erdissshaw/Works/FLibatM/check-ML/OutputML'
-    model = 'loop_qcd_qed_sm--parallel_test'
-    for savefile,proc in HCR_processes_long_dic:
+    model = 'loop_qcd_qed_sm-parallel_test'
+    for savefile in HCR_processes_long_dic.keys():
         res_list = []
         proc_list = []
         if os.path.isfile(os.path.join(_pickle_path,"hcr_"+savefile+".pkl")):
@@ -228,6 +258,7 @@ if '__main__' == __name__:
             pickle_file = "hcr_"+savefile+".pkl"
         if not os.path.isfile(os.path.join(HCRpath,savefile+'.dat')):
             continue
+        proc = HCR_processes_long_dic[savefile]
         proc_list.append(proc)
         res_list.append(loop_me_comparator.LoopMG5Runner.\
         parse_check_output(file(os.path.join(HCRpath,savefile+'.dat'))))
@@ -237,4 +268,8 @@ if '__main__' == __name__:
             os.path.join(_pickle_path,pickle_file),
             [runner.proc_list,runner.res_list],
             runner.model,runner.name,energy=runner.energy)
+    
+    # runner=save_load_object.load_from_file(os.path.join(_pickle_path,"hcr_gg_ttxh_QED.pkl"))  
+    unittest.main() # necessary for unittest
+    ml5ew = ML5EWTest()
         
