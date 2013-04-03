@@ -85,6 +85,10 @@ c For tests
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+
       double precision weight
 c For MINT:
       include "mint.inc"
@@ -170,6 +174,9 @@ c at the NLO)
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
+
+      i_momcmp_count=0
+      xratmax=0.d0
 
       unwgt=.false.
 
@@ -415,7 +422,11 @@ c$$$     &     total_wgt_sum/dble(ncall*itmax)
 c$$$      write (*,*) '----------------------------------------------------'
 c$$$      write (*,*) ''
 
-
+      if(i_momcmp_count.ne.0)then
+        write(*,*)'     '
+        write(*,*)'WARNING: genps_fks code 555555'
+        write(*,*)i_momcmp_count,xratmax
+      endif
 
       if(plotEv.or.plotKin)then
         call mclear
@@ -697,7 +708,7 @@ c From dsample_fks
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
-      double precision vol,sigintR,res,f_tot,rfract
+      double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
@@ -711,6 +722,10 @@ c From dsample_fks
       common/c_unwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save,proc_map
+      
+      integer xBW
+      common /c_xBW/xBW
+
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -971,7 +986,7 @@ c Sum over all j_fks initial (final) state
 c
 c Compute the Born-like contributions with nbody=.true.
 c     
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol)
+         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
          nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
                                                ! because it only matters
                                                ! which parton is j_fks
@@ -1031,7 +1046,7 @@ c
 c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
-               wgt=1d0/vol
+               wgt=1d0/vol1
 c When sum=3, we can compute the nFKSprocesses without soft
 c singularities fewer number of PS points, because their contribution is
 c small. This should save some time, without degrading the uncertainty
@@ -1050,7 +1065,7 @@ c much. Do this by overwrite the 'wgt' variable
                endif
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol*w
+               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
@@ -1064,7 +1079,7 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-2) then
+     $           .gt.1d-1) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1119,6 +1134,7 @@ c reweighting
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
       double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
      $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
      $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
@@ -1177,6 +1193,9 @@ c IRPOC's
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
             call leshouche_inc_chooser()
+c Set Bjorken x's to some random value before calling the dlum() function
+            xbk(1)=0.5d0
+            xbk(2)=0.5d0
             dummy=dlum()
 c 1. First map the IPROC's for this nFKSprocess to the underlying Born
 c to get the unique IPROC's

@@ -117,8 +117,67 @@ class testFKSHelasObjects(unittest.TestCase):
                 {'process_definitions': my_process_definitions})
         my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = True)
 
+        self.assertEqual(my_helas_mp['has_isr'], True)
+        self.assertEqual(my_helas_mp['has_fsr'], False)
+
         for me in my_helas_mp['matrix_elements']:
             self.assertEqual(len(me.born_matrix_element['color_basis']), 1)
+
+
+    def test_fks_ppzz_in_RS(self):
+        """"""
+
+        p = [21, 1, 2, 3, -1, -2, -3 ]
+        z_leg = MG.MultiLeg({'ids':[23], 'state': True})
+        p_leg = MG.MultiLeg({'ids': p, 'state': False});
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
+                    + MG.MultiLegList([z_leg, z_leg]))
+        mymodel = import_ufo.import_model('RS')
+        my_process_definition = MG.ProcessDefinition({ \
+                        'orders': {'WEIGHTED': 4},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions': my_process_definitions})
+        for born in my_multi_process['born_processes']:
+            born_pdg_list = [l['id'] for l in born.born_proc['legs']]
+            if born_pdg_list[0] == 21:
+            # gg initiated
+                self.assertEqual(len(born.born_amp['diagrams']), 1)
+                for amp in born.real_amps:
+                    if amp.pdgs[0] != 21 or amp.pdgs[1] != 21:
+                        self.assertEqual(len(amp.amplitude['diagrams']), 12)
+                    else:
+                        self.assertEqual(len(amp.amplitude['diagrams']), 4)
+            else:
+            # qq initiated
+                self.assertEqual(len(born.born_amp['diagrams']), 4)
+                for amp in born.real_amps:
+                    self.assertEqual(len(amp.amplitude['diagrams']), 12)
+
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = False)
+        for born in my_helas_mp['matrix_elements']:
+            born_pdg_list = [l['id'] for l in born.born_matrix_element['base_amplitude']['process']['legs']]
+            if born_pdg_list[0] == 21:
+            # gg initiated
+                self.assertEqual(len(born.born_matrix_element['diagrams']), 1)
+                for real in born.real_processes:
+                    pdgs = [l['id'] for l in real.matrix_element['base_amplitude']['process']['legs']]
+                    if pdgs[0] != 21 or pdgs[1] != 21:
+                        self.assertEqual(len(real.matrix_element['diagrams']), 12)
+                    else:
+                        self.assertEqual(len(real.matrix_element['diagrams']), 4)
+            else:
+            # qq initiated
+                self.assertEqual(len(born.born_matrix_element['diagrams']), 4)
+                for real in born.real_processes:
+                    self.assertEqual(len(real.matrix_element['diagrams']), 12)
+
 
 
     def test_fks_helas_multi_process_ppwj(self):

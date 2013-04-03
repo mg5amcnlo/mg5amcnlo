@@ -23,6 +23,7 @@ import sys
 import time
 import optparse
 import subprocess
+import shutil
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -118,7 +119,7 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if not args:
             if self._done_export:
                 args.append(self._done_export[0])
-                args.append('aMC@NLO')
+                args.append('auto')
 
                 return
             else:
@@ -131,15 +132,19 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             return self.InvalidCmd, 'Invalid Syntax: Too many argument'
 
         elif len(args) == 2:
-            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO']:
+            if not args[1] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto']:
                 raise self.InvalidCmd, '%s is not a valid mode, please use "LO", "NLO", "aMC@NLO" or "aMC@LO"' % args[1]
         else:
             #check if args[0] is path or mode
-            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO'] and self._done_export:
+            if args[0] in ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'auto'] and self._done_export:
                 args.insert(0, self._done_export[0])
             elif os.path.isdir(args[0]) or os.path.isdir(pjoin(MG5DIR, args[0]))\
                     or os.path.isdir(pjoin(MG4DIR, args[0])):
-                args.append('aMC@NLO')
+                args.append('auto')
+            else:
+                self.help_launch()
+                raise self.InvalidCmd, '%s is not a valid process directory nor run mode' % args[0]
+
         mode = args[1]
         
         # search for a valid path
@@ -275,6 +280,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         """ Special init tasks for the Loop Interface """
 
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
+        misc.sprint(type(self.history))
         self.setup()
 
     def setup(self):
@@ -285,7 +291,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -419,10 +426,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(allow_for_removal = ['output'], keep_switch=True,
-                           remove_bef_last='output')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -443,11 +446,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                and self._export_format in ['NLO']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be cleaned')
+            logger.info('If you continue this directory will be deleted and replaced.')
             answer = self.ask('Do you want to continue?', 'y', ['y','n'], 
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
+            else:
+                shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
         if self._export_format in ['NLO']:
@@ -503,11 +508,26 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
                                   get_matrix_elements()])
-                    # assign a unique id number to all process
+                    # assign a unique id number to all process and
+                    # generate a list of possible PDF combinations
                     uid = 0 
+                    initial_states=[]
                     for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
+                        for fksreal in me.real_processes:
+                        # Pick out all initial state particles for the two beams
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                             p in fksreal.matrix_element.get('processes')))))
+                        
+                    # remove doubles from the list
+                    checked = []
+                    for e in initial_states:
+                        if e not in checked:
+                            checked.append(e)
+                    initial_states=checked
+
+                    self._curr_matrix_elements.set('initial_states',initial_states)
 
             cpu_time2 = time.time()
             return ndiags, cpu_time2 - cpu_time1
@@ -524,6 +544,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
+            proc_characteristics = ''
+            for charac in ['has_isr', 'has_fsr']:
+                if self._curr_matrix_elements[charac]:
+                    proc_characteristics += '%s = .true.\n' % charac
+                else:
+                    proc_characteristics += '%s = .false.\n' % charac
+
+            open(pjoin(path, 'proc_characteristics.dat'),'w').write(proc_characteristics)
+
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
@@ -546,6 +575,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 except Exception:
                     logger.debug('fail to run command \"history cmd\"')
                     pass
+            subproc_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
+                                     'initial_states_map.dat')
+            self._curr_exporter.write_init_map(subproc_path,
+                                               self._curr_matrix_elements.get('initial_states'))
             
         cpu_time1 = time.time()
 
@@ -571,8 +604,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             if hasattr(self, 'do_shell'):
                 ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
             else:
-                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
-                 ME.pass_in_web_mode()
+                ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
+                ME.pass_in_web_mode()
             # transfer interactive configuration
             config_line = [l for l in self.history if l.strip().startswith('set')]
             for line in config_line:
@@ -583,21 +616,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
         ext_program.run()
         
-#        mode = argss[1]
-#        if options['multicore']:
-#            run.cluster_mode = 2
-#        elif options['cluster']:
-#            run.cluster_mode = 1
-#        else:
- #           run.cluster_mode = int(self.options['run_mode'])
-
-
-#        run.ask_run_configuration(mode)
-#        run.compile(mode, options) 
-#        evt_file = run.run(mode, options)
-#        if run.check_mcatnlo_dir():
-#            run.run_mcatnlo(evt_file)
-#        os.chdir(old_cwd)
                     
    
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
@@ -606,7 +624,7 @@ class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
 _launch_usage = "launch [DIRPATH] [MODE] [options]\n" + \
                 "-- execute the aMC@NLO output present in DIRPATH\n" + \
                 "   By default DIRPATH is the latest created directory\n" + \
-                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is set to aMC@NLO)\n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
                 "     computation of the total cross-section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \

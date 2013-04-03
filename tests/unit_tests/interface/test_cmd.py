@@ -17,8 +17,10 @@
 import unittest
 import madgraph
 import madgraph.interface.master_interface as cmd
+import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
 import os
+import logging
 
 import tests.unit_tests.various.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
@@ -69,8 +71,8 @@ class TestValidCmd(unittest.TestCase):
         display particles
         generate p p > go go"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history
-        self.cmd.clean_history(remove_bef_last='generate', keep_switch=True,
+        self.cmd.history[:] = history
+        self.cmd.history.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
 
         goal = """set cluster_queue 2
@@ -95,9 +97,9 @@ class TestValidCmd(unittest.TestCase):
         generate p p > go go
         import heft"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history        
+        self.cmd.history[:] = history        
         
-        self.cmd.clean_history(remove_bef_last='import', keep_switch=True,
+        self.cmd.history.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'output'])
 
         # Test the call present in do_import model
@@ -123,9 +125,9 @@ class TestValidCmd(unittest.TestCase):
         launch
         output"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history         
+        self.cmd.history[:] = history         
         
-        self.cmd.clean_history(allow_for_removal = ['output'], keep_switch=True,
+        self.cmd.history.clean(allow_for_removal = ['output'], keep_switch=True,
                            remove_bef_last='output')
 
         goal="""set cluster_queue 2
@@ -138,9 +140,35 @@ class TestValidCmd(unittest.TestCase):
         goal = [l.strip() for l in  goal.split('\n')]
         self.assertEqual(self.cmd.history, goal)
     
-    
-    
-    
+    def test_InvalidCmd(self):
+        """test that the Invalid Command are dealt with correctly"""
+        
+        master = cmd.MasterCmd()
+        self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
+        try:
+            master.run_cmd('aa')
+        except Exception, error:
+            print error
+            self.assertTrue(False, 'error are not treated correctly')
+        
+        # Madspin
+        master = ms_cmd.MadSpinInterface()
+        self.assertRaises(Exception, master.do_define,('aa'))
+        
+        import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
+        tmp = cmd_madloop.TestCmdLoop
+        tmp.setup_logFile_for_logger('fatalerror', level=logging.WARNING)
+        try:
+            master.run_cmd('define aa')
+        except Exception:
+            self.assertTrue(False, 'error are not treated correctly')
+        
+        text = open('/tmp/fatalerror.log').read()
+        self.assertTrue('{' not in text)
+        self.assertTrue('MS_debug' in text)
+        tmp.setup_logFile_for_logger('fatalerror', restore=True, \
+                                                  level=logging.WARNING)
+
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of

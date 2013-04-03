@@ -81,6 +81,9 @@ c Ellis-Sexton scale)
           call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found)
       else
           tolerance=run_tolerance
+c         Just set the accuracy found to a positive value as it is not
+c         specified once the initial pole check is performed.
+          acc_found=1.0d0
           call sloopmatrix(p, virt_wgts)
       endif
       virt_wgt= virt_wgts(1)/dble(ngluons)

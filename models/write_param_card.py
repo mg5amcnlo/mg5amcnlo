@@ -85,7 +85,7 @@ class ParamCardWriter(object):
         
         # 
         self.dep_mass, self.dep_width = [] , []
-        self.duplicate_mass, self.duplicate_width =[], [] 
+        self.duplicate_mass, self.duplicate_width = [], [] 
 
         def_param = [] 
         # one loop for the mass
@@ -220,7 +220,7 @@ class ParamCardWriter(object):
         """writing the requested LHA parameter"""
 
         if lhablock == 'MASS':
-            data = self.dep_mass 
+            data = self.dep_mass
             prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width
@@ -263,9 +263,9 @@ class ParamCardWriter(object):
         if not text:
             return
          
-        pretext = "##  Not dependent paramater.\n"
+        pretext =  "## Dependent parameters, given by model restrictions.\n"
         pretext += "## Those values should be edited following the \n"
-        pretext += "## analytical expression. MG5 ignore those values \n"
+        pretext += "## analytical expression. MG5 ignores those values \n"
         pretext += "## but they are important for interfacing the output of MG5\n"
         pretext += "## to external program such as Pythia.\n"
         self.fsock.write(pretext + text)                

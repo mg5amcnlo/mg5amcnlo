@@ -473,9 +473,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         if not matrix_element.get('processes')[0].get('has_born'):
             # There is a specific check_sa.f for loop induced processes
-            shutil.copy(os.path.join(self.loop_dir,'StandAlone','Subprocesses',
+            shutil.copy(os.path.join(self.loop_dir,'StandAlone','SubProcesses',
                                      'check_sa_loop_induced.f'),
-                        os.path.join(self.dir_path, 'Subprocesses','check_sa.f'))
+                        os.path.join(self.dir_path, 'SubProcesses','check_sa.f'))
 
         self.link_files_from_Subprocesses(proc_name=\
                               matrix_element.get('processes')[0].shell_string())

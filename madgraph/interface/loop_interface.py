@@ -287,6 +287,12 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         """ Upgrade the model sm to loop_sm if needed """
     # HSS
 	# HSS, 13/11/2012 
+
+        if not self._curr_model:
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+            #import model with correct treatment of the history
+            return
+
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or (coupling_type not in self._curr_model['perturbation_couplings']):
 	# HSS
@@ -300,7 +306,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
-                model_path = self._curr_model.get('version_tag').split('##')[0]
+                model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
 		        # HSS, 13/11/2012
                 if model_name.split('-')[0]=='loop_sm':
@@ -325,16 +331,27 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                          " loop processes. MG5 now loads 'loop_qcd_qed_sm' instead.")
                         mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
                                                             'loop_qcd_qed_'+model_name)
+                        model_name = 'qcd_qed_'+model_name
                     else:
 			            raise MadGraph5Error(
                           "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
         # HSS
-                    self.do_import("model %s"%str(mpath))
+                    #self.do_import("model %s"%str(mpath))
+                    # Once the loop_sm model will support Feynman gauge, please
+                    # uncomment below.
+#                    if self.options['gauge']!='Feynman':
+#                        self._curr_model = None
+#                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+                    #import model with correct treatment of the history
+                    self.history.move_to_last('generate')
+                    last_command = self.history[-1]
+                    self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
+                    self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
                     
-        if not loop_type.startswith('real') and \
+        if loop_type and not loop_type.startswith('real') and \
                  not self.options['gauge']=='Feynman' and \
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
@@ -361,7 +378,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.clean_history(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -402,10 +420,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
-
-        # Remove previous outputs from history
-        self.clean_history(to_remove=['display','open','history','launch','output'],
-                           remove_bef_last='generate')
         
         noclean = '-noclean' in args
         force = '-f' in args 
@@ -654,7 +668,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
         # Now make sure the process is acceptable
-        proc = " ".join(argss[1:])
+        proc = " ".join(argss[1:-1])
         myprocdef = self.extract_process(proc)
 	# HSS, 13/11/2012
 	# Is it useless ?

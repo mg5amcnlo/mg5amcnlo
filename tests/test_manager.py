@@ -139,11 +139,9 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
 #===============================================================================
 # runIOTests
 #===============================================================================
-def runIOTests(arg=[''],update=True,force=False,synchronize=False):
+def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     """ running the IOtests associated to expression. By default, this launch all 
-    the tests created in classes inheriting IOTests. 
-    Expression is of this form:
-    
+    the tests created in classes inheriting IOTests.     
     """
     
     # Update the tarball, while removing the .backups.
@@ -656,8 +654,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                   help="position to start the search (from root)  [%default]")
     parser.add_option("-l", "--logging", default='CRITICAL',
         help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-    parser.add_option("-f", "--force", action="store_true", default=False,
+    parser.add_option("-F", "--force", action="store_true", default=False,
         help="Force the update, bypassing its monitoring by the user")
+    parser.add_option("-f", "--semiForce", action="store_true", default=False,
+        help="Bypass monitoring of ref. file only if another ref. file with "+\
+                                    "the same name has already been monitored.")
     parser.add_option("-i", "--IOTests", default='No',
           help="Process the IOTests to run (R) or updated (U) them.")
     parser.add_option("-s", "--synchronize", action="store_true", default=False,
@@ -699,7 +700,13 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
     else:
-        runIOTests(args,update=options.IOTests=='U',force=options.force,
+        if options.force:
+            force = 10
+        elif options.semiForce:
+            force = 1
+        else:
+            force = 0                        
+        runIOTests(args,update=options.IOTests=='U',force=force,
                                                 synchronize=options.synchronize)
     
 #some example

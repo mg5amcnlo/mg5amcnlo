@@ -141,6 +141,7 @@ if '__main__' == __name__:
     # points will be used
     #my_comp.set_me_runners(ML5_opt,GoSam)
     my_comp.set_me_runners(HCRvalue,ML5_opt)
+
     # Run the actual comparison
     # energy=1000
     energy = HCRvalue.energy

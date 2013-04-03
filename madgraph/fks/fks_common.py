@@ -181,10 +181,11 @@ def find_orders(amp): #test_written
     orders = {}
     for diag in amp.get('diagrams'):
         for order, value in diag.get('orders').items():
-            try:
-                orders[order] = max(orders[order], value)
-            except KeyError:
-                orders[order] = value
+            if value != 0 or order in amp['process']['orders'].keys():
+                try:
+                    orders[order] = max(orders[order], value)
+                except KeyError:
+                    orders[order] = value
     return orders
 
 
@@ -384,7 +385,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     --pert_particles : pdgs of particles taking part to interactions
     --soft_particles : pdgs of massless particles in pert_particles
     """
-    ghost_list = [-100033, 100033]
+    ghost_list = [82, -82]
     ghost_list += [ p['get_pdg_code'] for p in model.get('particles') if p.get('spin') < 0]
     qcd_inter = MG.InteractionList()
     pert_parts = []

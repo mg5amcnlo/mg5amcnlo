@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 186 #186 #146 corresponds to 1.3.3 
+    reference_number = 237 #1.5.6
     nb_test = 0
     
     
@@ -241,6 +241,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Store list of non-zero processes and results in file
         pickle_file = os.path.join(_pickle_path, "mg5_short_paralleltest_sm.pkl")
         self.compare_processes(my_proc_list,
+                               model='sm',
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_sm.log",
                              pickle_file = pickle_file)

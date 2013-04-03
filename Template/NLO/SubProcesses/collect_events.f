@@ -9,18 +9,23 @@
       common /c_i_orig/i_orig
       integer ioutput
       parameter(ioutput=99)
+      integer nevents_file(80)
+      common /to_nevents_file/nevents_file
 
-      write (*,*) 'Keep the original weights from the event files, '
-      write (*,*) 'or overwrite them by the (total Xsec)/(# events)?'
-      write (*,*)
-     &     "give '0' for original or '1' for overwrite (default is '1')"
+      write (*,*) "Overwrite the event weights?"
+      write (*,*) "give '0' to keep original weights;"
+      write (*,*) "give '1' to overwrite the weights"/
+     $     /" to sum to the Xsec;"
+      write (*,*) "give '2' to overwrite the weights"/
+     $     /" to average to the Xsec (=default)"
       read (*,*) i_orig
-      if (i_orig.ne.0 .and. i_orig.ne.1) stop
+      if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2) stop
       write(*,*) i_orig
 
+
       istep=0
-      write (*,*) 'step #',istep
  1    continue
+      write (*,*) 'step #',istep
       outputfile='allevents_X_000'
       if(istep.eq.0) then
          basicfile='nevents_unweighted'
@@ -50,6 +55,8 @@
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
          numoffiles=numoffiles+1
+c store here the number of events per file         
+         nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
          junit(numoffiles)=numoffiles+10
          open(unit=junit(numoffiles),file=eventfile,status='old',
@@ -57,7 +64,11 @@
 c Every time we find 80 files, collect the events
          if (numoffiles.eq.80) then
             nbunches=nbunches+1
-            evwgt=xtotal/dfloat(nevents)
+            if (i_orig.eq.1) then
+               evwgt=xtotal/dfloat(nevents)
+            elseif(i_orig.eq.2) then
+               evwgt=xtotal
+            endif
             write (*,*) 'found ',numoffiles,
      &           ' files, bunch number is',nbunches
             if(nbunches.le.9) then
@@ -92,7 +103,11 @@ c Every time we find 80 files, collect the events
 c Also collect events from the rest files
       if(numoffiles.ne.0) then
          nbunches=nbunches+1
-         evwgt=xtotal/dfloat(nevents)
+         if (i_orig.eq.1) then
+            evwgt=xtotal/dfloat(nevents)
+         elseif(i_orig.eq.2) then
+            evwgt=xtotal
+         endif
          write (*,*) 'found ',numoffiles,
      &        ' files, bunch number is',nbunches
          if(nbunches.le.9) then
@@ -144,7 +159,7 @@ c
       common /c_i_orig/i_orig
       integer ioutput,junit(80)
       integer imaxevt,maxevt,ii,numoffiles,nevents,itot,iunit,
-     # mx_of_evt(80),i0
+     # mx_of_evt(80),i0,i,j
       double precision evwgt,evwgt_sign
       integer ione
       parameter (ione=1)
@@ -159,7 +174,7 @@ c
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
       character*140 buff
-      character*10 MonteCarlo,MonteCarlo1
+      character*10 MonteCarlo,MonteCarlo1, MonteCarlo0
       character*100 path
       integer iseed
       data iseed/1/
@@ -167,6 +182,9 @@ c
       external fk88random
       logical debug
       parameter (debug=.false.)
+      integer nevents_file(80)
+      common /to_nevents_file/nevents_file
+      include 'reweight_all.inc'
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -177,21 +195,48 @@ c
       xsecup=0.d0
       xerrup=0.d0
       call read_lhef_header(junit(ione),maxevt,MonteCarlo)
+      if (MonteCarlo .ne. '') MonteCarlo0 = MonteCarlo
       call read_lhef_init(junit(ione),
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
-      mx_of_evt(1)=maxevt
+c if the number of the events is in the header (as for evt files in the
+c     subchannel folders (P*/G*/), the number of events should be in the
+c      header. Check consistency in this case
+      if (maxevt .gt. 0) then
+        mx_of_evt(1)=maxevt
+        if (mx_of_evt(1) .ne. nevents_file(1)) then
+           write(*,*) 'Inconsistent event file 1, unit=', junit(1)
+           write(*,*) 'Expected # of events:', nevents_file(1)
+           write(*,*) 'Found # of events:', mx_of_evt(1)
+           stop
+        endif
+      else
+        mx_of_evt(1)=nevents_file(1)
+      endif
+      maxevt=mx_of_evt(1)
+
       xerrup=xerrup**2
       do ii=2,numoffiles
         call read_lhef_header(junit(ii),nevents,MonteCarlo1)
+        if (nevents .gt. 0) then
+            mx_of_evt(ii)=nevents
+            if (mx_of_evt(ii) .ne. nevents_file(ii)) then
+               write(*,*) 'Inconsistent event file, unit=',junit(ii)
+               write(*,*) 'Expected # of events:', nevents_file(ii)
+               write(*,*) 'Found # of events:', mx_of_evt(ii)
+               stop
+            endif
+        else
+            mx_of_evt(ii)=nevents_file(ii)
+        endif
         if(MonteCarlo.ne.MonteCarlo1)then
           write(*,*)'Error in collect_all_evfiles'
           write(*,*)'Files ',ione,' and ',ii,' are inconsistent'
           write(*,*)'Monte Carlo types are not the same'
+          write(*,*)'1', MonteCarlo, '2', MonteCarlo1
           stop
         endif
-        mx_of_evt(ii)=nevents
-        maxevt=maxevt+nevents
+        maxevt=maxevt+mx_of_evt(ii)
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
@@ -221,10 +266,10 @@ c
       endif
       xerrup=sqrt(xerrup)
       path="../Cards/"
-      call write_lhef_header_banner(ioutput,maxevt,MonteCarlo,path)
+      call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
-     #  XSECUP,XERRUP,XMAXUP,LPRUP)
+     #  XSECUP,XERRUP,abs(evwgt),LPRUP)
       itot=maxevt
       do ii=1,maxevt
         rnd=fk88random(iseed)
@@ -239,16 +284,26 @@ c assigned randomly with a weight according to the contribution of that
 c channel to the total cross section)
         if( ( abs(XWGTUP/evwgt).gt.2.d0.or.
      #        abs(XWGTUP/evwgt).lt.0.5d0 ) .and.
-     #       mx_of_evt(i0).gt.50 )then
-          write(*,*)'Error in collect_all_evfiles'
-          write(*,*)'Events weights appear to be wrong'
-          write(*,*)XWGTUP,evwgt
-          stop
+     #       mx_of_evt(i0).gt.50 .and. i_orig.eq.1)then
+           write(*,*)'Error in collect_all_evfiles'
+           write(*,*)'Events weights appear to be wrong'
+           write(*,*)XWGTUP,evwgt
+           stop
         endif
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
         else
+c Overwrite the weights. Also overwrite the weights used for PDF & scale
+c reweighting
            evwgt_sign=dsign(evwgt,XWGTUP)
+           do i=1,numscales
+              do j=1,numscales
+                 wgtxsecmu(i,j)=wgtxsecmu(i,j)*evwgt_sign/XWGTUP
+              enddo
+           enddo
+           do i=1,numPDFpairs*2
+              wgtxsecPDF(i)=wgtxsecPDF(i)*evwgt_sign/XWGTUP
+          enddo
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,

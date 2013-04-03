@@ -384,6 +384,48 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                                  "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
         file.write(MLParams)
         file.close()
+        
+class LoopMG5Runner_gauge(LoopMG5Runner):
+    
+    #name = 'MG5_gauge'
+    #type = 'ufo_cms'
+    
+    def __init__(self, cms, gauge):
+        self.cms = cms
+        self.gauge = gauge
+        self.type =  '%s_%s' %(self.cms, self.gauge)
+        self.name =  'MG5_%s_%s' %(self.cms, self.gauge)
+    
+    def format_mg5_proc_card(self, proc_list, model):
+        """Create a proc_card.dat string following v5 conventions."""
+
+        v5_string = "set loop_optimized_output %s\n"%str(self.optimized_output) 
+
+        v5_string += "import model %s\n" % os.path.join(self.model_dir, model)
+        v5_string += "set automatic_html_opening False\n"
+        v5_string += 'set complex_mass_scheme %s \n' % self.cms
+        v5_string += 'set gauge %s \n' % self.gauge
+        
+        for i, (proc, born_orders, perturbation_orders, squared_orders) in \
+            enumerate(proc_list):      
+            
+            born_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in born_orders.items()])
+            perturbations = ' '.join([k for k \
+                                   in perturbation_orders])
+
+            squared_couplings = ' '.join(["%s=%i" % (k, v) for k, v \
+                                   in squared_orders.items()])      
+            v5_string += 'add process ' + proc + ' ' + born_couplings + \
+                         ' [virt=' + perturbations + '] ' + squared_couplings + \
+                         (' @%i\n'%i)
+        v5_string += "output standalone %s -f\n"%\
+                     os.path.join(self.mg5_path, self.temp_dir_name)
+                     
+        v5_string += 'set complex_mass_scheme False \n'
+        v5_string += 'set gauge unitary \n'
+        
+        return v5_string
 
 class LoopMG4RunnerError(Exception):
         """class for error in LoopMG4Runner"""
@@ -1478,3 +1520,129 @@ class LoopHardCodedRefRunner(me_comparator.MERunner):
                  "Phase space point is not provided !"
         return self.res_list
 # HSS
+class LoopMEComparatorGauge(LoopMEComparator):
+    """Base object to run comparison tests for loop processes. Take standard 
+    MERunner objects and a list of loop proc as an input and return detailed 
+    comparison tables in various formats."""
+
+    me_runners = []
+    results    = []
+    proc_list  = []
+    orders     = []
+    
+    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+        """Output result as a nicely formated table. If filename is provided,
+        write it to the file, else to the screen. Tolerance can be adjusted."""
+
+        proc_col_size = 20
+
+        for proc in self.proc_list:
+            if len(proc) + 2 > proc_col_size:
+                proc_col_size = len(proc) + 2
+        
+        col_size = 20
+
+        pass_proc = 0
+        fail_proc = 0
+
+        failed_proc_list = []
+        
+        res_str = ""
+        
+        testing_list=['Finite', 'Born', 'Single pole', 'Double pole']
+        for index in range(0,4):
+            res_str +=("\n\n" if index!=0 else "")
+#            res_str +=''.join(['=']*(len(testing_list[index])+8))
+            res_str +="=== "+testing_list[index]+" ==="
+#            res_str +="\n"+''.join(['=']*(len(testing_list[index])+8))
+            res_str += "\n" + self._fixed_string_length("Process", proc_col_size) + \
+                    ''.join([self._fixed_string_length(runner.name, col_size) for \
+                               runner in self.me_runners]) + \
+                      self._fixed_string_length("Diff both unit", col_size) + \
+                      self._fixed_string_length("Diff both cms", col_size) + \
+                      self._fixed_string_length("Diff both fixw", col_size) + \
+                      self._fixed_string_length("Diff both feyn", col_size) + \
+                      "Result"
+    
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+              in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                
+                diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+                diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+                diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+                diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+
+                res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
+                       ''.join([self._fixed_string_length("%1.10e" % res,
+                                               col_size) for res in list_res])
+
+                res_str += self._fixed_string_length("%1.10e" % diff_unit, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_cms, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
+                res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
+                        
+                if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
+                    diff_unit < 1e-2:
+                    pass_proc += 1
+                    res_str += "Pass"
+                else:
+                    if proc not in failed_proc_list:
+                        fail_proc += 1
+                        failed_proc_list.append(proc)
+                    res_str += "Fail"
+                    
+        res_str +="\n\n=== Summary ==="
+
+        res_str += "\n %i/%i passed, %i/%i failed" % \
+                    (pass_proc, pass_proc + fail_proc,
+                     fail_proc, pass_proc + fail_proc)
+
+        if fail_proc != 0:
+            res_str += "\nFailed processes: %s" % ', '.join(failed_proc_list)
+
+        logging.info("\n"+res_str)
+
+        if filename:
+            file = open(filename, 'w')
+            file.write(res_str)
+            if failed_proc_list:
+                file.write('\n'+str(failed_proc_list))
+            file.close()
+
+    def assert_processes(self, test_object, tolerance = 1e-06):
+        """Run assert to check that all processes passed comparison""" 
+
+        col_size = 17
+        fail_proc = 0
+        fail_str = "Failed for processes:"
+        failed_proc_list = []
+
+        for index in range(0,4):        
+            for i, (proc, born_orders, perturbation_orders, squared_orders) \
+                                                 in enumerate(self.proc_list):
+                list_res = [res[i][0][index] for res in self.results]
+                if max(list_res) == 0.0 and min(list_res) == 0.0:
+                    diff = 0.0
+                else:
+                    diff_feyn = abs(list_res[1] - list_res[2]) / \
+                       (list_res[1] + list_res[2] + 1e-99)
+                    diff_unit = abs(list_res[0] - list_res[3]) / \
+                       (list_res[0] + list_res[3] + 1e-99)
+                    diff_cms = abs(list_res[0] - list_res[1]) / \
+                       (list_res[0] + list_res[1] + 1e-99)
+                    diff_fixw = abs(list_res[2] - list_res[3]) / \
+                       (list_res[2] + list_res[3] + 1e-99)
+                
+                if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
+                  diff_unit > 1e-2 and proc not in failed_proc_list:
+                    failed_proc_list.append(proc)
+                    fail_str += self._fixed_string_length(proc, col_size) + \
+                                ''.join([self._fixed_string_length("%1.10e" % res,
+                                         col_size) for res in list_res])
+
+        test_object.assertEqual(fail_str, "Failed for processes:")

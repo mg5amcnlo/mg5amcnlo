@@ -123,6 +123,10 @@ for fname in os.listdir(filepath):
         continue
     os.system('rm -rf %s ' % os.path.join(filepath,fname))
 
+os.mkdir(filepath+'/vendor')
+shutil.copytree(os.path.join(MG5DIR,'vendor','ply'),filepath+'/vendor/ply')
+files_routines.cp(MG5DIR +'/vendor/__init__.py', filepath+'/vendor/__init__.py')
+
 
 # 4. Create the automatic documentation in the apidoc directory
 

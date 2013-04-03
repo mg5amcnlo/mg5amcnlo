@@ -65,11 +65,17 @@ c
       common /to_seed/ iseed
       integer nevents
 
+      character*7 event_norm
 c
 c----------
 c     start
 c----------
       include 'run_card.inc'
+      
+c MZ add the possibility to have shower_MC input lowercase
+      call to_upper(shower_MC)
+
+
 
 
 c*********************************************************************
@@ -234,6 +240,21 @@ c For backward compatibility
       q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
+
+c check that the event normalization input is reasoble
+      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum')
+     $     then
+         write (*,*) 'Do not understand the event_norm parameter'/
+     &        /' in the run_card.dat. Possible options are'/
+     &        /' "average" or "sum". Current input is: ',event_norm
+         open(unit=26,file='../../error',status='unknown')
+         write (26,*) 'Do not understand the event_norm parameter'/
+     &        /' in the run_card.dat. Possible options are'/
+     &        /' "average" or "sum". Current input is: ',event_norm
+         
+         stop 1
+      endif
+
 
 c info for reweight
 

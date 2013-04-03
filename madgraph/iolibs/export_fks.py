@@ -193,25 +193,25 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
          
-         super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
+        super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
                                                wanted_lorentz, wanted_couplings)
          
-         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
-         try:
-             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
-         except OSError as error:
-             pass
-         # Notice that what is below is not safe for path including '-'.
-         shutil.copytree(model.get('version_tag').split('##')[0].split('-')[0], 
+        IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
+        try:
+            shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
+        except OSError as error:
+            pass
+        model_path = model.get('modelpath')
+        shutil.copytree(model_path, 
                                pjoin(self.dir_path,'bin','internal','ufomodel'),
                                ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
-         if hasattr(model, 'restrict_card'):
-             out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+        if hasattr(model, 'restrict_card'):
+            out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
                                                          'restrict_default.dat')
-             if isinstance(model.restrict_card, check_param_card.ParamCard):
-                 model.restrict_card.write(out_path)
-             else:
-                 files.cp(model.restrict_card, out_path)
+            if isinstance(model.restrict_card, check_param_card.ParamCard):
+                model.restrict_card.write(out_path)
+            else:
+                files.cp(model.restrict_card, out_path)
 
 
 
@@ -285,6 +285,27 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         text = proc_card_template.substitute({'process': process_text,
                                             'model': modelname,
                                             'multiparticle':''})
+        ff = open(file_pos, 'w')
+        ff.write(text)
+        ff.close()
+
+
+    #===============================================================================
+    # write a initial states map, useful for the fast PDF NLO interface
+    #===============================================================================
+    def write_init_map(self, file_pos, initial_states):
+        """ Write an initial state process map. Each possible PDF
+        combination gets an unique identifier."""
+        
+        text=''
+        for i,e in enumerate(initial_states):
+            text=text+str(i+1)+' '+str(len(e))
+            for t in e:
+                text=text+'   '
+                for p in t:
+                    text=text+' '+str(p)
+            text=text+'\n'
+        
         ff = open(file_pos, 'w')
         ff.write(text)
         ff.close()
