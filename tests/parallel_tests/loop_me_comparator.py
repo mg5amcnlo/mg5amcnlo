@@ -1418,7 +1418,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                 file.write('\n'+str(failed_proc_list))
             file.close()
 
-    def assert_processes(self, test_object, tolerance = 1e-06):
+    def assert_processes(self, test_object, tolerance = 3e-06):
         """Run assert to check that all processes passed comparison""" 
 
         col_size = 17

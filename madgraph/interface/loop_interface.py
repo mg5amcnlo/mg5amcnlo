@@ -309,6 +309,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
+                        logger.info('Change to the gauge to Feynman because '+\
+                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     if coupling_type == 'QCD':

@@ -3380,7 +3380,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args = self.split_arg(line)
         # Check argument's validity
         self.check_import(args)
-        
         if args[0].startswith('model'):
             self._model_v4_path = None
             # Clear history, amplitudes and matrix elements when a model is imported
@@ -3398,6 +3397,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
+                # HSS, 03/04/2013
+                # avoid loading twice due to its low speed
+                if (args[1].startswith('loop_qcd_qed_sm') or\
+                    args[1].split('/')[-1].startswith('loop_qcd_qed_sm')) and\
+                     self.options['gauge']!='Feynman':
+                    logger.info('Change to the gauge to Feynman because '+\
+                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
+                    self._curr_model = None
+                    self.do_set('gauge Feynman',log=False)
+                # HSS
                 try:
                     self._curr_model = import_ufo.import_model(args[1])
                 except import_ufo.UFOImportError, error:
