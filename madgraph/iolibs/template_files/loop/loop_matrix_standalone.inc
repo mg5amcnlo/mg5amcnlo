@@ -675,11 +675,6 @@ C ----------
       enddo
       do i=length+1,maxstabilitylength
         mask(i)=.FALSE.      
-C For some architectures, it is necessary to initialize all the elements of fulllist(i,j)
-C Beware that if the length provided is incorrect, then this can corrup the fulllist given in argument.
-        do j=1,3
-		  fulllist(j,i)=0.0d0
-		enddo
       enddo
 
 	  do i=1,3

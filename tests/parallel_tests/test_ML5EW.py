@@ -29,6 +29,20 @@ ML5EW_processes_short = []
 
 HCR_processes_long =  [
                        # The process below is for testing the parallel tests only
+                       ('g g > t t~',{'QCD':2,'QED':0},['QED'],{'QCD':4,'QED':2}),
+                       ('a a > t t~',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('a a > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('u u~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('u u~ > z a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('u u~ > z z',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('u u~ > a a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('t t~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('ve ve~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       #('w+ w- > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('h h > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('u u~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('e+ e- > t t~ g',{'QCD':1,'QED':2},['QED'],{'QCD':2,'QED':6}),
+                       ('e+ e- > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2}),
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
@@ -41,6 +55,20 @@ HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0]
 
 
 ML5EW_processes_long =  [
+                         ('g g > t t~',{'QCD':2,'QED':0},['QED'],{'QCD':4,'QED':2}),
+                         ('a a > t t~',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('a a > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('u u~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('u u~ > z a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('u u~ > z z',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('u u~ > a a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('t t~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('ve ve~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         #('w+ w- > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('h h > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('u u~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('e+ e- > t t~ g',{'QCD':1,'QED':2},['QED'],{'QCD':2,'QED':6}),
+                         ('e+ e- > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                          ('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2}),
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QCD'],{'QCD':6,'QED':2}), 
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
@@ -177,7 +205,104 @@ class ML5EWTest(unittest.TestCase):
     #===========================================================================
     # First the long checks against results available in Hard-Coded Reference
     #===========================================================================
+#   ('g g > t t~',{'QCD':2,'QED':0},['QED'],{'QCD':4,'QED':2})
+    def test_long_sm_vs_stored_HCR_gg_ttx_QED(self):
+        proc = 'gg_ttx_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('a a > t t~',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_aa_ttx_QED(self):
+        proc = 'aa_ttx_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('a a > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_aa_wpwm_QED(self):
+        proc = 'aa_wpwm_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_uux_wpwm_QED(self):
+        proc = 'uux_wpwm_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > z a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_uux_za_QED(self):
+        proc = 'uux_za_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > z z',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_uux_zz_QED(self):
+        proc = 'uux_zz_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > a a',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_uux_aa_QED(self):
+        proc = 'uux_aa_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
 
+#   ('t t~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_ttx_wpwm_QED(self):
+        proc = 'ttx_wpwm_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('ve ve~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_vevex_epem_QED(self):
+        proc = 'vevex_epem_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('w+ w- > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+#    def test_long_sm_vs_stored_HCR_wpwm_hh_QED(self):
+#        proc = 'wpwm_hh_QED'
+#        self.compare_processes([HCR_processes_long_dic[proc]], 
+#               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+#               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('h h > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_hh_hh_QED(self):
+        proc = 'hh_hh_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('u u~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_uux_epem_QED(self):
+        proc = 'uux_epem_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('e+ e- > t t~ g',{'QCD':1,'QED':2},['QED'],{'QCD':2,'QED':6})
+    def test_long_sm_vs_stored_HCR_epem_ttxg_QED(self):
+        proc = 'epem_ttxg_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
+#   ('e+ e- > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8})
+    def test_long_sm_vs_stored_HCR_epem_ttxa_QED(self):
+        proc = 'epem_ttxa_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+        
 #   ('g g > t t~ g',{'QCD':3,'QED':0},['QED'],{'QCD':6,'QED':2})
     def test_long_sm_vs_stored_HCR_gg_ttxg_QED(self):
         proc = 'gg_ttxg_QED'
