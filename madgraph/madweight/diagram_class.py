@@ -14,6 +14,7 @@ try:
     import madgraph.madweight.proc_info as proc_info
     import madgraph.madweight.MW_fct as MW_fct
     import madgraph.madweight.MW_info as MW_param
+    import madgraph.various.misc as misc
 except ImportError:
     import internal.madweight.Cards as Cards
     import internal.madweight.particle_class as particle_class
@@ -22,7 +23,7 @@ except ImportError:
     import internal.madweight.proc_info as proc_info
     import internal.madweight.MW_fct as MW_fct   
     import internal.madweight.MW_info as MW_param 
-
+    import internal.misc as misc
 Particle = particle_class.Particle
 propagator = particle_class.propagator
 external_part = particle_class.external_part
@@ -50,7 +51,7 @@ class MG_diagram(diagram):
         self.import_ext_part(dir_file)
         self.set_option(opt)
         self.config=config
-
+        
     def organize_particle_content(self,param_card,tf_file):
         """ define production area and organize all the needed information """
 		
@@ -312,20 +313,11 @@ class MG_diagram(diagram):
                         init_list.append(particle)
 
 # Pierre
-
-        #print 'info init'
-        #for particle in init_list:
-        #    print particle.MG,'/',particle.pid,' ',
-        #print
-
-
         #Step 2
         init_propa=self.check_decay(init_list,proc_decay.decay_diag)
-        #print init_propa
-
         #step 3:
         if not init_propa:
-            sys.exit('No matching between process information and feynman diagram information')
+            raise Exception('No matching between process information and feynman diagram information')
         #print 'firt available propa (MG:PID) : ',
         for particle in init_propa:
             #print '(',particle.MG,':',particle.pid,') ',
@@ -348,7 +340,6 @@ class MG_diagram(diagram):
 
         #step 1:
         if len(particle_list)<len(decay_list):
-            #print 'pass in decay'          
             init_list=list(particle_list)
             for particle in init_list:
                 particle_list=list(init_list)

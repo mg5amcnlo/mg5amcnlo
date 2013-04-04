@@ -15,6 +15,7 @@
 """Methods and classes to export matrix elements to v4 format."""
 
 import copy
+from cStringIO import StringIO
 from distutils import dir_util
 import fractions
 import glob
@@ -195,6 +196,28 @@ class ProcessExporterFortran(object):
         """Function to write a matrix.f file, for inheritance.
         """
         pass
+
+    #===========================================================================
+    # write_maxparticles_file
+    #===========================================================================
+    def write_maxparticles_file(self, writer, matrix_elements):
+        """Write the maxparticles.inc file for MadEvent"""
+
+        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
+            maxparticles = max([me.get_nexternal_ninitial()[0] for me in \
+                              matrix_elements.get('matrix_elements')])
+        else:
+            maxparticles = max([me.get_nexternal_ninitial()[0] \
+                              for me in matrix_elements])
+
+        lines = "integer max_particles\n"
+        lines += "parameter(max_particles=%d)" % maxparticles
+
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
     
     #===========================================================================
     # export the model
@@ -1361,6 +1384,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         
         # Copy the different python file in the Template
         self.copy_python_file()
+        # create the appropriate cuts.f
+        self.get_mw_cuts_version()
 
         # add the makefile in Source directory 
         filename = os.path.join(self.dir_path,'Source','makefile')
@@ -1413,6 +1438,61 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
     #===========================================================================
     # Make the Helas and Model directories for Standalone directory
+    #===========================================================================    
+    def get_mw_cuts_version(self, outpath=None):
+        """create the appropriate cuts.f
+        This is based on the one associated to ME output but:
+        1) No clustering (=> remove initcluster/setclscales)
+        2) Adding the definition of cut_bw at the file.
+        """
+        
+        template = open(pjoin(MG5DIR,'Template','LO','SubProcesses','cuts.f'))
+        
+        text = StringIO()
+        #1) remove all dependencies in ickkw >1:
+        nb_if = 0
+        for line in template:
+            if 'if(xqcut.gt.0d0' in line:
+                nb_if = 1
+            if nb_if == 0:
+                text.write(line)
+                continue
+            if re.search(r'if\(.*\)\s*then', line):
+                nb_if += 1
+            elif 'endif' in line:
+                nb_if -= 1
+            
+        #2) add fake cut_bw (have to put the true one later)
+        text.write("""
+      logical function cut_bw(p)
+      include 'madweight_param.inc'
+      double precision p(*)
+      if (bw_cut) then
+          cut_bw = .true.
+      else
+          stop 1
+      endif
+      return
+      end
+        """)
+            
+        final = text.getvalue()
+        #3) remove the call to initcluster:
+        template = final.replace('call initcluster', '! Remove for MW!call initcluster')
+        template = template.replace('genps.inc', 'maxparticles.inc')
+        #Now we can write it
+        if not outpath:
+            fsock =  open(pjoin(self.dir_path, 'SubProcesses', 'cuts.f'), 'w')
+        elif isinstance(outpath, str):
+            fsock = open(outpath, 'w')
+        else:
+            fsock = outpath
+        fsock.write(template)
+        
+        
+        
+    #===========================================================================
+    # Make the Helas and Model directories for Standalone directory
     #===========================================================================
     def make(self):
         """Run make in the DHELAS, MODEL, PDF and CERNLIB directories, to set up
@@ -1444,6 +1524,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         self.set_compiler(compiler)
         self.make()
+
+        # Write maxparticles.inc based on max of ME's/subprocess groups
+        filename = pjoin(self.dir_path,'Source','maxparticles.inc')
+        self.write_maxparticles_file(writers.FortranWriter(filename),
+                                     matrix_elements)
 
         # Write command history as proc_card_mg5
         if os.path.isdir(os.path.join(self.dir_path, 'Cards')):
@@ -1575,7 +1660,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['driver.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        #import genps.inc and maxconfigs.inc into Subprocesses
+        ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
+        #ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
+
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f', 'genps.inc']
 
         for file in linkfiles:
             ln('../%s' % file, starting_dir=cwd)
@@ -1583,6 +1672,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         ln('nexternal.inc', '../../Source', log=False, cwd=dirpath)
         ln('leshouche.inc', '../../Source', log=False, cwd=dirpath)
         ln('maxamps.inc', '../../Source', log=False, cwd=dirpath)
+
 
         # Return to original PWD
         #os.chdir(cwd)
@@ -2641,28 +2731,8 @@ c           This is dummy particle used in multiparticle vertices
 
         return True
 
-    #===========================================================================
-    # write_maxparticles_file
-    #===========================================================================
-    def write_maxparticles_file(self, writer, matrix_elements):
-        """Write the maxparticles.inc file for MadEvent"""
 
-        if isinstance(matrix_elements, helas_objects.HelasMultiProcess):
-            maxparticles = max([me.get_nexternal_ninitial()[0] for me in \
-                              matrix_elements.get('matrix_elements')])
-        else:
-            maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements])
-
-        lines = "integer max_particles\n"
-        lines += "parameter(max_particles=%d)" % maxparticles
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-                    
-                    
+                                
     #===========================================================================
     # write_config_subproc_map_file
     #===========================================================================
@@ -4654,7 +4724,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
         # Generate jpgs -> pass in make_html
         #os.system(os.path.join('..', '..', 'bin', 'gen_jpeg-pl'))
 
-        linkfiles = ['driver.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
+        linkfiles = ['driver.f', 'cuts.f', 'initialization.f','gen_ps.f','phasespace.inc', 'makefile', 'coupl.inc','madweight_param.inc', 'run.inc', 'setscales.f']
 
         for file in linkfiles:
             ln('../%s' % file, cwd=Ppath)

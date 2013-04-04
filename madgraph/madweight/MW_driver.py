@@ -156,7 +156,7 @@ class Weight(list):
             
         #3 full log
         if self.log_level == 'full':
-             self.log = open('log.txt').read()
+             self.log = open('log.txt').read().replace('<','!>')
         
     def get_details(self):
         """ """
@@ -171,7 +171,7 @@ class Weight(list):
             perm_id, channel_id, value, error = split[:4]
             perm_order = split[4:]
             if perm_id in current:
-                perm_obj = curent[perm_id]
+                perm_obj = current[perm_id]
             else:
                 perm_obj = Permutation(perm_id, perm_order)
                 current[perm_id] = perm_obj

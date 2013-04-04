@@ -40,3 +40,8 @@ c     ISR mode
 c
       integer ISR
       common /to_correct_ISR/ISR
+c
+c     CUTS
+c
+      logical use_cut, bw_cut
+      common /to_use_cut/ use_cut, bw_cut

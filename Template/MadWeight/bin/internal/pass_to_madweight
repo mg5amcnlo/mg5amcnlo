@@ -10,7 +10,6 @@ if [[  ! -d ./bin  ]]; then
 	exit
     fi
 fi
-
 #  Now let shell know where to find important executables
 
 main=`pwd`

@@ -7,9 +7,11 @@ import string
 
 try: 
     import Cards
+    import madgraph.various.misc as misc
 except ImportError:
     import internal.madweight.Cards as Cards
-
+    import internal.misc as misc
+    
 class Decay_info:
     """ all routine linked to the reconaissance of the topology from the proc card
         
@@ -26,26 +28,24 @@ class Decay_info:
 
 
     def __init__(self,current_dir,cond='',ParticlesFile=''):
-# Pierre: we need to read information from leshouche.inc and from configs.inc
+        """we need to read information from leshouche.inc and from configs.inc"""
 
-       mglabel2pid_list=Cards.read_leshouches_file(current_dir+'/leshouche.inc')
-#      create a dict:
+        mglabel2pid_list=Cards.read_leshouches_file(current_dir+'/leshouche.inc')
+        #      create a dict:
 
-       mglabel2pid_dic={}
-       for index, pid in enumerate(mglabel2pid_list):
-         mglabel2pid_dic[index+1]=pid
+        mglabel2pid_dic={}
+        for index, pid in enumerate(mglabel2pid_list):
+            mglabel2pid_dic[index+1]=pid
 
        
-       topology=self.read_config(current_dir+'/configs.inc', mglabel2pid_dic)
+        topology=self.read_config(current_dir+'/configs.inc', mglabel2pid_dic)
 
+        #process_line,multi=self.read_proc_card(proc_card,cond)
+        #self.decay_diag=self.pass_in_pid(process_line,multi)
+        self.decay_diag=self.decay_structure(topology,mglabel2pid_dic)
 
-       #process_line,multi=self.read_proc_card(proc_card,cond)
-       #self.decay_diag=self.pass_in_pid(process_line,multi)
-       self.decay_diag=self.decay_structure(topology,mglabel2pid_dic)
-
-
-       if ParticlesFile is not None:
-           self.ParticlesFile=ParticlesFile #avoid multiple load of this file
+        if ParticlesFile is not None:
+            self.ParticlesFile=ParticlesFile #avoid multiple load of this file
 
     def read_config(self, file_name, mglabel2pid_dic):
        trappe=open(file_name, 'r')
@@ -121,7 +121,7 @@ class Decay_info:
             if topo[leg]['daughters'][1]>2 and topo[leg]['daughters'][1] not in list_external:
                 list_external.append(topo[leg]['daughters'][1])
 
-            if  topo[leg]['mass']=='ZERO': 
+            if  topo[leg]['mass']=='ZERO':
                 decay_item[leg].mother=0  # off-shell gluons/photons/quarks should not be part of the decay chain
                 decay_item[leg].des[0].mother=0
                 decay_item[leg].des[1].mother=0 
@@ -147,11 +147,9 @@ class Decay_info:
                    particles_from_HI.append(leg)
 
         # now check if all external particles have been scanned:
-
         for index in  mglabel2pid_dic.keys():
           if index >2 and index not in list_external:
-            particles_from_HI.append(index) 
-        print particles_from_HI
+              particles_from_HI.append(index) 
         
 
         for leg in particles_from_HI:

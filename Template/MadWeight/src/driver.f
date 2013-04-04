@@ -292,6 +292,7 @@ C*******************************************************************************
         include 'nexternal.inc'
         include 'run.inc'
         include 'coupl.inc'
+        include 'madweight_param.inc'
 c
 c       this is the function which is called by the integrator
 
@@ -319,8 +320,8 @@ c
         common /to_diagram_kin/ momenta, mvir2
 
 
-        logical histo
-        common /to_histo/histo
+c        logical histo
+c        common /to_histo/histo
 c
 c       external
 c
@@ -328,11 +329,21 @@ c
         external dsig
         double precision alphas
         external alphas
+        logical passcuts
+        external passcuts
         include 'data.inc'
+
 
          call get_PS_point(x)
          if (jac.gt.0d0) then
         
+
+         if (use_cut) then
+            if (.not.passcuts(momenta(0,1))) then
+                fct = 0d0
+                return
+            endif
+         else
 c          here we evaluate the scales if running 
            if(.not.fixed_ren_scale) then
              call set_ren_scale(momenta(0,1),scale)
@@ -342,7 +353,7 @@ c          here we evaluate the scales if running
            if(.not.fixed_fac_scale) then
              call set_fac_scale(momenta(0,1),q2fact)
            endif
- 
+         endif
            fct=jac
            xbk(1)=X1
            xbk(2)=X2

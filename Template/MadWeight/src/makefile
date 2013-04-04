@@ -12,7 +12,7 @@ PROG   = comp_madweight
 LINKLIBS =  -L../../lib/ -lmodel -lgeneric  -lcernlib -lpdf -lblocks -ltools -lTF -ldhelas 
 LIBS =  $(LIBDIR)libmodel.a $(LIBDIR)libgeneric.a $(LIBDIR)libcernlib.a $(LIBDIR)libpdf.a $(LIBDIR)libblocks.a $(LIBDIR)libtools.a $(LIBDIR)libTF.a $(LIBDIR)libdhelas.a
 
-PROCESS= driver.o  setscales.o   d_choices.o \
+PROCESS= driver.o  setscales.o   d_choices.o cuts.o\
          $(patsubst %.f,%.o,$(wildcard auto_dsig*.f)) \
          $(patsubst %.f,%.o,$(wildcard matrix*.f))
 
@@ -37,3 +37,8 @@ d_choices.o: d_choices.inc
 multi_channel.o:  coupl.inc d_choices.inc
 permutation.o:  nexternal.inc phasespace.inc
 setscale.o : genps.inc nexternal.inc coupl.inc maxamps.inc leshouche.inc run.inc
+cuts.o: maxparticles.inc nexternal.inc coupl.inc cuts.inc
+maxparticles.inc:
+	ln ../../Source/maxparticles.inc
+cuts.inc:
+	ln ../../Source/cuts.inc
