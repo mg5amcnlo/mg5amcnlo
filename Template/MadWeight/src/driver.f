@@ -213,9 +213,9 @@ c
          write(32,*) perm_pos,chan_val, chan_err
       enddo
 
+      check_value=temp_val * min_prec_cut1
       temp_val=temp_val/dble(normalize_perm)
       temp_err=temp_err/dble(normalize_perm)
-      check_value=temp_val/(nb_sol_config) * min_prec_cut1
       if (loop_index.eq.1) then
         NCALL = nevents
         ITMX = max_it_step2

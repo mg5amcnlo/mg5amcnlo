@@ -90,7 +90,8 @@ class TestMadWeight(unittest.TestCase):
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
                         stdout=devnull, stderr=devnull)
-        print 'tt~ semi takes %s s' % (time.time() - start)
+        run_time =  time.time() - start
+        print 'tt~ semi takes %smin %is' % (run_time//60, run_time % 60)
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod', 'Events', 'fermi', 'weights.out')).read()
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
