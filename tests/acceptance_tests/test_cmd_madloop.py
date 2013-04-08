@@ -97,7 +97,8 @@ class TestCmdLoop(unittest.TestCase):
                 cls.logger_saved_info[logname] = [hdlr,my_logger.level,\
                                                 [h.level for h in my_logger.handlers]]
                 for h in my_logger.handlers:
-                    h.setLevel(logging.CRITICAL)
+                    # This not elegant, but the only way I could find to mute this handlers
+                    h.setLevel(logging.CRITICAL+1)
                 my_logger.addHandler(hdlr)
                 my_logger.setLevel(level)
 
@@ -199,7 +200,6 @@ class TestCmdLoop(unittest.TestCase):
             shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))        
             self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
             res = open('/tmp/madgraph.check_cmd.log').read()
-#            print "I got res=",res            
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue(not 'NA' in res)
