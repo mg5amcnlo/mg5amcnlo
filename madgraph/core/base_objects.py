@@ -382,7 +382,24 @@ class Particle(PhysicsObject):
             return - self['color']
         else:
             return self['color']
+        
+    def get_charge(self):
+        """Return the charge code with a correct minus sign"""
 
+        if not self['is_part']:
+            return - self['charge']
+        else:
+            return self['charge']
+
+    def get_anti_charge(self):
+        """Return the charge code of the antiparticle with a correct minus sign
+        """
+
+        if self['is_part']:
+            return - self['charge']
+        else:
+            return self['charge']
+        
     def get_name(self):
         """Return the name if particle, antiname if antiparticle"""
 

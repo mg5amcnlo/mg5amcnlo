@@ -30,7 +30,6 @@ def read_from_file(filename, myfunct, *args, **opt):
     on its content and return the result. Deals properly with errors and
     returns None if something goes wrong. 
     """
-
     try:
         sock = open(filename, 'r')
         try:

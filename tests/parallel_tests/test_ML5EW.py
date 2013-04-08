@@ -390,10 +390,12 @@ if '__main__' == __name__:
         parse_check_output(file(os.path.join(HCRpath,savefile+'.dat'))))
         runner = loop_me_comparator.LoopHardCodedRefRunner()
         runner.setup(proc_list,res_list,model)
-        loop_me_comparator.LoopPickleRunner.store_comparison( 
-            os.path.join(_pickle_path,pickle_file),
-            [runner.proc_list,runner.res_list],
-            runner.model,runner.name,energy=runner.energy)
+        ML5EWTest.create_pickle(proc_list,pickle_file,runner,ref_runner=None,\
+                                model=runner.model,energy=runner.energy)
+        #loop_me_comparator.LoopPickleRunner.store_comparison( 
+        #    os.path.join(_pickle_path,pickle_file),
+        #    [runner.proc_list,runner.res_list],
+        #    runner.model,runner.name,energy=runner.energy)
     
     # runner=save_load_object.load_from_file(os.path.join(_pickle_path,"hcr_gg_ttxh_QED.pkl"))  
     unittest.main() # necessary for unittest

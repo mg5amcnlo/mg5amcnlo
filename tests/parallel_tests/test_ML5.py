@@ -123,7 +123,7 @@ class ML5Test(unittest.TestCase):
             runner.model,runner.name,energy=runner.energy)
         
     def compare_processes(self, my_proc_list = [], model = 'loop_sm-parallel_test',
-            pickle_file = "", energy = 2000, tolerance = 1e-06, filename = "",
+            pickle_file = "", energy = 2000, tolerance = 3e-06, filename = "",
             chosen_runner = "ML5_opt"):
         """ A helper function to compare processes. 
         Note that the chosen_runner is what runner should to create the reference
