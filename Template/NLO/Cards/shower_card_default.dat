@@ -9,9 +9,10 @@
 #
 nevents    = -1     # number of events to shower. If negative, shower all events
 ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
+pdfcode    = 0      # pdf code: 0 = internal pdf, 1 = same as NLO, other = lhaglue
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
-maxerrs    = 0.1   # maximum tolerated fraction of errors
+maxerrs    = 0.1    # maximum tolerated fraction of errors
 b_stable   = F      # b hadrons are stable
 pi_stable  = T      # pi0's are stable
 wp_stable  = F      # w+'s are stable

@@ -5,17 +5,6 @@
 #                                                                               
 ################################################################################
 #
-################################################################################
-#
-# LHAPDF PATH
-# The following line needs to be set only if showering with LHAPDF (namely, if
-# using pdfcode > 0 below). Use the absolute path to the directory where the
-# package is installed, containing lib/, include/, and share/ subfolders.
-# "None" and an empty value are equivalent
-################################################################################
-LHAPDFPATH =  None  # Path to the dir where LHAPDF is installed
-################################################################################
-#
 # SHOWER SETTINGS:
 #
 nevents    = -1     # number of events to shower. If negative, shower all events
