@@ -17,6 +17,7 @@
 
 import sys
 import os
+pjoin = os.path.join
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
@@ -287,7 +288,7 @@ class TestFKSCommon(unittest.TestCase):
                                                     [mypartlist[5], \
                                                      ep, \
                                                      mypartlist[3]]),
-                              'color': [color.ColorString([color.ColorOne()])],
+                              'color': [color.ColorString([])],
                               'lorentz':['L1'],
                               'couplings':{(0, 0):'Aee'},
                               'orders':{'QED':1}}))
@@ -379,7 +380,7 @@ class TestFKSCommon(unittest.TestCase):
                                                     [mypartlist[5], \
                                                      ep, \
                                                      mypartlist[3]]),
-                              'color': [color.ColorString([color.ColorOne()])],
+                              'color': [color.ColorString([])],
                               'lorentz':['L1'],
                               'couplings':{(0, 0):'Aee'},
                               'orders':{'QED':1}}))
@@ -407,6 +408,7 @@ class TestFKSCommon(unittest.TestCase):
 
     def test_sort_fksleglist(self):
         """tests the correct sorting of a fks_leglist"""
+        # QCD test
         input_pdgs = [ [1,1,21,1,1], [21,1,-1,1,1], [1,21,-1,1,1], [1,2,21,2,1],
                        [1,-2,-2,21,1], [2,21,21,2,21] ]
         sorted_pdgs = [ [1,1,1,1,21], [21,1,1,1,-1], [1,21,1,1,-1], [1,2,1,2,21],
@@ -415,7 +417,18 @@ class TestFKSCommon(unittest.TestCase):
             leglist = fks_common.to_fks_legs(
                     MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
                             for i, id in enumerate(input)]), self.model)
-            leglist.sort()
+            leglist.sort(pert = 'QCD')
+            self.assertEqual([l['id'] for l in leglist], goal)
+            self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
+            
+        # QED test
+        input_pdgs = [ [1,1,22,1,1],[1,2,-2,1,-11],[1,2,2,6,1]]
+        sorted_pdgs = [ [1,1,22,1,1],[1,2,1,-2,-11],[1,2,1,6,2]]
+        for input,goal in zip(input_pdgs, sorted_pdgs):
+            leglist = fks_common.to_fks_legs(
+                    MG.LegList([MG.Leg({'id': id, 'state': i not in [0,1]})\
+                            for i, id in enumerate(input)]), self.model)
+            leglist.sort(pert = 'QED')
             self.assertEqual([l['id'] for l in leglist], goal)
             self.assertEqual([l['state'] for l in leglist], [False, False, True, True, True])
 
@@ -1189,11 +1202,14 @@ class TestFKSCommon(unittest.TestCase):
     
     def test_insert_legs(self):
         """test the correct implementation of the fks_common function"""
-        legs = []
-        splittings = []
-        res_leglists = []
-        
-        leglist_orig = [fks_common.FKSLeg({ 
+        legs_qcd = []
+        splittings_qcd = []
+        res_leglists_qcd = []
+        legs_qed = []
+        splittings_qed = []
+        res_leglists_qed = []
+        # QCD splitting
+        leglist_orig_qcd = [fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 1,
                                     'state': False,
@@ -1236,10 +1252,22 @@ class TestFKSCommon(unittest.TestCase):
                                     'charge':0.,
                                     'is_part':True,
                                     'self_antipart':True
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part':True,
+                                    'self_antipart':True
                                 })
                                 ]
+
         #split initial state u  
-        legs.append(fks_common.FKSLeg({ 
+        legs_qcd.append(fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 1,
                                     'state': False,
@@ -1250,7 +1278,7 @@ class TestFKSCommon(unittest.TestCase):
                                     'is_part': True,
                                     'self_antipart':False
                                 }))
-        splittings.append([fks_common.FKSLeg({ 
+        splittings_qcd.append([fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 1,
                                     'state': False,
@@ -1276,7 +1304,7 @@ class TestFKSCommon(unittest.TestCase):
                                 })
                                 ])
         
-        res_leglists.append([fks_common.FKSLeg({ 
+        res_leglists_qcd.append([fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 1,
                                     'state': False,
@@ -1322,8 +1350,19 @@ class TestFKSCommon(unittest.TestCase):
                                     'self_antipart': True
                                     }),\
                                 fks_common.FKSLeg({
-                                    'id': 21,
+                                    'id': 22,
                                     'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 6,
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
@@ -1333,9 +1372,114 @@ class TestFKSCommon(unittest.TestCase):
                                     'is_part': True,
                                     'self_antipart': True
                                 })])
+        #split initial state d > d g 
+        legs_qcd.append(fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart':True
+                                }))
+        splittings_qcd.append([fks_common.FKSLeg({ 
+                                    'id': 1,
+                                    'number': 1,
+                                    'state': False,
+                                    'fks' :'j',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': 1,
+                                    'number': 3,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                })
+                                ])
         
+        res_leglists_qcd.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge':2./3.,
+                                    'is_part': True,
+                                    'self_antipart':False
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 1,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'j',
+                                    'charge':-1./3.,
+                                    'is_part':True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                    }),\
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 1,
+                                    'number': 6,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'i',
+                                    'charge':-1./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                })])
         #split final state u
-        legs.append(fks_common.FKSLeg({ 
+        legs_qcd.append(fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 3,
                                     'state': True,
@@ -1346,7 +1490,7 @@ class TestFKSCommon(unittest.TestCase):
                                     'is_part': True,
                                     'self_antipart': False
                                 }))
-        splittings.append([fks_common.FKSLeg({ 
+        splittings_qcd.append([fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 3,
                                     'state': True,
@@ -1372,7 +1516,7 @@ class TestFKSCommon(unittest.TestCase):
                                 })
                                 ])
         
-        res_leglists.append([fks_common.FKSLeg({ 
+        res_leglists_qcd.append([fks_common.FKSLeg({ 
                                     'id': 2,
                                     'number': 1,
                                     'state': False,
@@ -1418,8 +1562,19 @@ class TestFKSCommon(unittest.TestCase):
                                     'self_antipart': True
                                 }),\
                                 fks_common.FKSLeg({
-                                    'id': 21,
+                                    'id': 22,
                                     'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 21,
+                                    'number': 6,
                                     'state': True,
                                     'color': 8,
                                     'spin': 3,
@@ -1429,13 +1584,427 @@ class TestFKSCommon(unittest.TestCase):
                                     'is_part': True,
                                     'self_antipart': True
                                 })])
+
+        #split final state g, g > d d~
+        legs_qcd.append(fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }))
+        splittings_qcd.append([fks_common.FKSLeg({ 
+                                    'id': 1,
+                                    'number': 1,
+                                    'state': True,
+                                    'fks' :'j',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': -1,
+                                    'number': 2,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': -3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 1./3.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                })
+                                ])
         
-        for leg, split, res in zip(legs, splittings, res_leglists):
-            self.assertEqual(res, fks_common.insert_legs(leglist_orig, leg, split))
+        res_leglists_qcd.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 21,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 8,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part':True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 1,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks':'j',
+                                    'charge': -1./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': -1,
+                                    'number': 6,
+                                    'state': True,
+                                    'color': -3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'i',
+                                    'charge': 1./3.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                })])
+        
+        # QED splitting
+        leglist_orig_qed = [fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge':2./3.,
+                                    'is_part':True,
+                                    'self_antipart':False
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 22,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part':True,
+                                    'self_antipart':True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge':2./3.,
+                                    'is_part':True,
+                                    'self_antipart':False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge':0.,
+                                    'is_part':True,
+                                    'self_antipart':True
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': -11,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge':1.,
+                                    'is_part':False,
+                                    'self_antipart':False
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 11,
+                                    'number': 6,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge':-1.,
+                                    'is_part':True,
+                                    'self_antipart':False
+                                })
+                                ]
+        
+        #split final state u
+        legs_qed.append(fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }))
+        
+        splittings_qed.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'fks' :'j',
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': 22,
+                                    'number': 4,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                })
+                                ])
+        res_leglists_qed.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 22,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks':'j',
+                                    'charge': 2./3.,
+                                    'is_part':True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': -11,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 1.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 11,
+                                    'number': 6,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 22,
+                                    'number': 7,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'fks': 'i',
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                })])
+        # split final a > e- e+
+        legs_qed.append(fks_common.FKSLeg({ 
+                                    'id': 22,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }))
+        
+        splittings_qed.append([fks_common.FKSLeg({ 
+                                    'id': 11,
+                                    'number': 3,
+                                    'state': True,
+                                    'fks' :'j',
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                           fks_common.FKSLeg({ 
+                                    'id': -11,
+                                    'number': 4,
+                                    'state': True,
+                                    'fks' : 'i',
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 1.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                })
+                                ])
+        res_leglists_qed.append([fks_common.FKSLeg({ 
+                                    'id': 2,
+                                    'number': 1,
+                                    'state': False,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }), \
+                                fks_common.FKSLeg({ 
+                                    'id': 22,
+                                    'number': 2,
+                                    'state': False,
+                                    'color': 1,
+                                    'spin': 3,
+                                    'massless': True,
+                                    'charge': 0.,
+                                    'is_part': True,
+                                    'self_antipart': True
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 2,
+                                    'number': 3,
+                                    'state': True,
+                                    'color': 3,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 2./3.,
+                                    'is_part':True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': 11,
+                                    'number': 4,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks':'j',
+                                    'charge': -1.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),\
+                                fks_common.FKSLeg({
+                                    'id': -11,
+                                    'number': 5,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': 1.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': 11,
+                                    'number': 6,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'charge': -1.,
+                                    'is_part': True,
+                                    'self_antipart': False
+                                }),
+                                fks_common.FKSLeg({
+                                    'id': -11,
+                                    'number': 7,
+                                    'state': True,
+                                    'color': 1,
+                                    'spin': 2,
+                                    'massless': True,
+                                    'fks': 'i',
+                                    'charge': 1.,
+                                    'is_part': False,
+                                    'self_antipart': False
+                                })])
+        for leg, split, res in zip(legs_qcd, splittings_qcd, res_leglists_qcd):
+            self.assertEqual(res, fks_common.insert_legs(leglist_orig_qcd, leg, split,pert='QCD'))
+            
+        for leg, split, res in zip(legs_qed, splittings_qed, res_leglists_qed):
+            self.assertEqual(res, fks_common.insert_legs(leglist_orig_qed, leg, split,pert='QED'))
     
     
     def test_combine_ij(self):
         """tests if legs i/j are correctly combined into leg ij"""
+        # QCD combination
         legs_i = []
         legs_j = []
         legs_ij = []
@@ -1514,13 +2083,89 @@ class TestFKSCommon(unittest.TestCase):
                                     fks_common.to_fks_leg(j, self.model), 
                                     self.model, dict, 'QCD'), 
                                     fks_common.to_fks_legs(ij, self.model))
+        # QED combination
+        legs_i = []
+        legs_j = []
+        legs_ij = []
+        #i,j final u~ u pair
+        legs_i.append(MG.Leg({'id' : -2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 2, 'state' : True, 'number': 4}))
+        legs_ij.append([MG.Leg({'id' : 22, 'state' : True , 'number' : 3})
+                        ])
+        #i,j final u u~ pair ->NO COMBINATION
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : -2, 'state' : True, 'number': 4}))
+        legs_ij.append([])
+        #i,j final u d~ pair ->NO COMBINATION
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : -1, 'state' : True, 'number': 4}))
+        legs_ij.append([])
+        #i,j initial/final u quark
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 2, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : 22, 'state' : False , 'number' : 1})
+                        ])
+        #i,j initial/final u~ quark
+        legs_i.append(MG.Leg({'id' : -2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : -2, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : 22, 'state' : False , 'number' : 1})
+                        ])
+        #i,j initial/final u quark, i initial ->NO COMBINATION
+        legs_i.append(MG.Leg({'id' : 2, 'state' : False, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 2, 'state' : True, 'number': 1}))
+        legs_ij.append([])
+        #i, j final pho /quark
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 2, 'state' : True, 'number': 4}))
+        legs_ij.append([MG.Leg({'id' : 2, 'state' : True , 'number' : 3})
+                        ])
+        #i, j final pho /anti quark
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : -2, 'state' : True, 'number': 4}))
+        legs_ij.append([MG.Leg({'id' : -2, 'state' : True , 'number' : 3})
+                        ])
+        #i, j final pho /initial quark
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 2, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : 2, 'state' : False , 'number' : 1})
+                        ])
+        #i, j final pho /initial anti quark
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : -2, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : -2, 'state' : False , 'number' : 1})
+                        ])
+        #i, j final: j pho, i quark -> NO COMBINATION
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 22, 'state' : True, 'number': 4}))
+        legs_ij.append([])
+        # i, j final final photons -> NO COMBINATION 
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 22, 'state' : True, 'number': 4}))
+        legs_ij.append([])
+        # i, j final final/initial photon -> NO COMBINATION
+        legs_i.append(MG.Leg({'id' : 22, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 22, 'state' : False, 'number': 1}))
+        legs_ij.append([])
+        # i, j initial photon/final quark 
+        legs_i.append(MG.Leg({'id' : 2, 'state' : True, 'number': 3}))
+        legs_j.append(MG.Leg({'id' : 22, 'state' : False, 'number': 1}))
+        legs_ij.append([MG.Leg({'id' : -2, 'state' : False , 'number' : 1})
+                        ])
         
+        dict = {}
+ 
+        for i, j, ij in zip(legs_i, legs_j, legs_ij):
+            self.assertEqual(fks_common.combine_ij(
+                                    fks_common.to_fks_leg(i, self.model), 
+                                    fks_common.to_fks_leg(j, self.model), 
+                                    self.model, dict, 'QED'), 
+                                    fks_common.to_fks_legs(ij, self.model))
 
 
     def test_find_pert_particles_interactions(self):
         """test if interactions, particles and massless particles corresponding
         to the perturbative expansion are correctly extracted from the model"""
-        
+        # QCD
         dict = fks_common.find_pert_particles_interactions(self.model, 'QCD')
         res_int = self.expected_qcd_inter
         res_part = [-6,-2,-1,1,2,6,21]
@@ -1528,14 +2173,29 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(dict['pert_particles'], res_part)
         self.assertEqual(dict['soft_particles'], res_soft)
         self.assertEqual(dict['interactions'], res_int)
+        # QED
+        dict = fks_common.find_pert_particles_interactions(self.model, 'QED')
+        res_int = self.expected_qed_inter
+        res_part = [-11,-6,-2,-1,1,2,6,11,22]
+        res_soft = [-11,-2,-1,1,2,11,22]
+        self.assertEqual(dict['pert_particles'], res_part)
+        self.assertEqual(dict['soft_particles'], res_soft)
+        self.assertEqual(dict['interactions'], res_int)
 
 
     def test_find_pert_particles_interactionsi_mssm(self):
         """ for the mssm, the soft_particles should be the same as for the sm"""
+        # QCD
         dict_mssm = fks_common.find_pert_particles_interactions(\
-                import_ufo.import_model('mssm'))
+                import_ufo.import_model('mssm'),'QCD')
         dict_sm = fks_common.find_pert_particles_interactions(\
-                import_ufo.import_model('mssm'))
+                import_ufo.import_model('sm'),'QCD')
+        self.assertEqual(dict_sm['soft_particles'], dict_mssm['soft_particles'])
+        # QED
+        dict_mssm = fks_common.find_pert_particles_interactions(\
+                import_ufo.import_model('mssm'),'QED')
+        dict_sm = fks_common.find_pert_particles_interactions(\
+                import_ufo.import_model('sm'),'QED')
         self.assertEqual(dict_sm['soft_particles'], dict_mssm['soft_particles'])
 
 
@@ -1549,7 +2209,11 @@ class TestFKSCommon(unittest.TestCase):
         for inte  in dict['interactions']:
             self.assertTrue(not 'gh' in [p['name'] for p in inte['particles']])
 
-
+        dict = fks_common.find_pert_particles_interactions(\
+                  import_ufo.import_model(pjoin(root_path,'../input_files','LoopSMEWTest')),'QED')
+        
+        for inte in dict['interactions']:
+            self.assertTrue(not any([p['name'].startswith('gh') for p in inte['particles']]))
     
     
     def test_to_fks_leg_s(self):
@@ -1626,6 +2290,7 @@ class TestFKSCommon(unittest.TestCase):
 
     def test_find_color_links(self): 
         """tests if all the correct color links are found for a given born process"""
+        # QCD splitting
         myleglist = MG.LegList()
         # PROCESS: u u~ > g t t~ a 
         mylegs = [{ \
@@ -1670,7 +2335,7 @@ class TestFKSCommon(unittest.TestCase):
             myleglist.append(MG.Leg(i))   
 
         fkslegs = fks_common.to_fks_legs(myleglist, self.model)
-        color_links = fks_common.find_color_links(fkslegs)
+        color_links = fks_common.find_color_links(fkslegs,pert='QCD')
 
         links = []
         links.append([fkslegs[0], fkslegs[1]])
@@ -1704,6 +2369,82 @@ class TestFKSCommon(unittest.TestCase):
         for l1, l2 in zip (links, color_links):
             self.assertEqual(l1,l2['legs'])
             
+        # QED splitting
+        myleglist = MG.LegList()
+        # PROCESS: e- e+ > ve ve~ t t~ a 
+        mylegs = [{ \
+        'id': 11,\
+        'number': 1,\
+        'state': False,\
+     #   'from_group': True \
+    }, \
+    { \
+        'id': -11,\
+        'number': 2,\
+        'state': False,\
+        #'from_group': True\
+    },\
+    {\
+        'id': 12,\
+        'number': 3,\
+        'state': True,\
+      #  'from_group': True\
+    },\
+    {\
+        'id': -12,\
+        'number': 4,\
+        'state': True,\
+       # 'from_group': True\
+    },\
+    {\
+        'id': 6,\
+        'number': 5,\
+        'state': True,\
+       # 'from_group': True\
+    },\
+    {\
+        'id': -6,\
+        'number': 6,\
+        'state': True,\
+       # 'from_group': True\
+    },\
+    {\
+        'id': 22,\
+        'number': 7,\
+        'state': True,\
+       # 'from_group': True\
+    }
+    ]
+
+        for i in mylegs:
+            myleglist.append(MG.Leg(i))   
+
+        fkslegs = fks_common.to_fks_legs(myleglist, self.model)
+        color_links = fks_common.find_color_links(fkslegs,pert='QED')
+
+        links = []
+        links.append([fkslegs[0], fkslegs[1]])
+        links.append([fkslegs[0], fkslegs[4]])
+        links.append([fkslegs[0], fkslegs[5]])
+        
+        links.append([fkslegs[1], fkslegs[0]])
+        links.append([fkslegs[1], fkslegs[4]])
+        links.append([fkslegs[1], fkslegs[5]])
+        
+        links.append([fkslegs[4], fkslegs[0]])
+        links.append([fkslegs[4], fkslegs[1]])
+        links.append([fkslegs[4], fkslegs[4]])
+        links.append([fkslegs[4], fkslegs[5]])
+        
+        links.append([fkslegs[5], fkslegs[0]])
+        links.append([fkslegs[5], fkslegs[1]])
+        links.append([fkslegs[5], fkslegs[4]])
+        links.append([fkslegs[5], fkslegs[5]])
+        
+        self.assertEqual(len(links), len(color_links))
+        for l1, l2 in zip (links, color_links):
+            self.assertEqual(l1,l2['legs'])
+            
     def test_insert_color_links(self):
         """given a list of color links, tests if the insert color link works, ie 
         if a list of dictionaries is returned. Each dict has the following entries:
@@ -1731,13 +2472,14 @@ class TestFKSCommon(unittest.TestCase):
                         diagram_generation.Amplitude(myproc))
         
         basis_orig = copy.deepcopy(helas['color_basis'])
-        
+        # begin of QCD splitting
         links = fks_common.find_color_links(
-                                    fks_common.to_fks_legs(leglist, self.model))
+                                    fks_common.to_fks_legs(leglist, self.model),\
+                                    pert = 'QCD')
+
         dicts = fks_common.insert_color_links(
                     helas['color_basis'],
-                    helas['color_basis'].create_color_dict_list(helas['base_amplitude']),
-                    links)
+                    helas['color_basis'].create_color_dict_list(helas['base_amplitude']),links)
         #color_string for link 1-3 (dicts[1])
         linkstring = color.ColorString([
                         color.T(-1000,2,-3001), color.T(-1000,-3002,4),
@@ -1745,16 +2487,36 @@ class TestFKSCommon(unittest.TestCase):
         linkstring.coeff = linkstring.coeff * (-1)
         
         linkdicts = [{(0,0) : linkstring}]
+        # end of QCD splitting
+        # begin of QED splitting
+        links_qed = fks_common.find_color_links(
+                                    fks_common.to_fks_legs(leglist, self.model),\
+                                    pert = 'QED')
+        dicts_qed = fks_common.insert_color_links(
+                    helas['color_basis'],
+                    helas['color_basis'].create_color_dict_list(helas['base_amplitude']),links_qed)
+        linkstring_qed = color.ColorString([
+                        color.T(-1000,2,1), color.T(-1000,3,4)])
+        #color_string for link 1-3 (dicts[1])
+        linkstring_qed.coeff = linkstring_qed.coeff * fractions.Fraction(-2,9)
         
+        linkdicts_qed = [{(0,0) : linkstring_qed}]
+        # end of QED splitting
         link_basis = color_amp.ColorBasis()
         for i, dict in enumerate(linkdicts):
             link_basis.update_color_basis(dict, i)
+        link_basis_qed = color_amp.ColorBasis()
+        for i, dict in enumerate(linkdicts_qed):
+            link_basis_qed.update_color_basis(dict, i)
         
         matrix = color_amp.ColorMatrix(basis_orig, link_basis)
-        
+        matrix_qed = color_amp.ColorMatrix(basis_orig,link_basis_qed)
         self.assertEqual(len(dicts), 12)
         self.assertEqual(link_basis, dicts[1]['link_basis'])
         self.assertEqual(matrix, dicts[1]['link_matrix'])
+        self.assertEqual(len(dicts_qed), 12)
+        self.assertEqual(link_basis_qed, dicts_qed[1]['link_basis'])
+        self.assertEqual(matrix_qed, dicts_qed[1]['link_matrix'])
         
 
     def test_legs_to_color_link_string(self):
@@ -1763,6 +2525,10 @@ class TestFKSCommon(unittest.TestCase):
         pairs = []
         strings = []
         replacs = []
+        pairs_qed = []
+        strings_qed = []
+        replacs_qed = []
+        # QCD splitting
         ###MASSIVE
         #FINAL t with itself
         pairs.append([MG.Leg({'id' : 6, 'state' : True, 'number' : 5 }),
@@ -1953,12 +2719,49 @@ class TestFKSCommon(unittest.TestCase):
                        color.f(-3001,-6000, 1),color.f(-3002,-6000, 2)],
                        coeff = fractions.Fraction(-1,1),
                        is_imaginary = False))
-        
+        # QED splitting
+        #FINAL t with itself
+        pairs_qed.append([MG.Leg({'id' : 6, 'state' : True, 'number' : 5 }),
+                      MG.Leg({'id' : 6, 'state' : True, 'number' : 5 })])
+        replacs_qed.append([])
+        strings_qed.append(color.ColorString(init_list = [],
+                       coeff = fractions.Fraction(4,9)))
+        ####INITIAL-INITIAL
+        #INITIAL state quark with INITIAL state fermion
+        pairs_qed.append([MG.Leg({'id' : 1, 'state' : False, 'number' : 1 }),
+                      MG.Leg({'id' : 2, 'state' : False, 'number' : 2 })])
+        replacs_qed.append([])
+        strings_qed.append(color.ColorString(init_list = [],
+                       coeff = fractions.Fraction(-2,9)))
+        pairs_qed.append([MG.Leg({'id' : 11, 'state' : False, 'number' : 1 }),
+                      MG.Leg({'id' : 2, 'state' : False, 'number' : 2 })])
+        replacs_qed.append([])
+        strings_qed.append(color.ColorString(init_list = [],
+                       coeff = fractions.Fraction(-2,3)))
+        pairs_qed.append([MG.Leg({'id' : 11, 'state' : False, 'number' : 1 }),
+                      MG.Leg({'id' : -11, 'state' : False, 'number' : 2 })])
+        replacs_qed.append([])
+        strings_qed.append(color.ColorString(init_list = [],
+                       coeff = fractions.Fraction(-1,1)))
+        #INITIAL state fermion with INITIAL state photon -> NO COMBINATION
+        pairs_qed.append([MG.Leg({'id' : 1, 'state' : False, 'number' : 1 }),
+                      MG.Leg({'id' : 22, 'state' : False, 'number' : 2 })])
+        replacs_qed.append([])
+        strings_qed.append(color.ColorString(init_list = [],
+                       coeff = fractions.Fraction(0,1)))                        
         for pair, string, replac in zip(pairs, strings, replacs):
             dict = fks_common.legs_to_color_link_string(\
-                fks_common.to_fks_leg(pair[0],self.model), 
-                fks_common.to_fks_leg(pair[1],self.model)
-                                                    )
+                fks_common.to_fks_leg(pair[0],self.model),\
+                fks_common.to_fks_leg(pair[1],self.model),\
+                pert='QCD')
+            self.assertEqual(string, dict['string'])
+            self.assertEqual(replac, dict['replacements'])
+            
+        for pair, string, replac in zip(pairs_qed, strings_qed, replacs_qed):
+            dict = fks_common.legs_to_color_link_string(\
+                fks_common.to_fks_leg(pair[0],self.model),\
+                fks_common.to_fks_leg(pair[1],self.model),\
+                pert='QED')
             self.assertEqual(string, dict['string'])
             self.assertEqual(replac, dict['replacements'])
             
