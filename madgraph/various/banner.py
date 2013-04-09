@@ -155,6 +155,26 @@ class Banner(dict):
             ff.close()
 
     ############################################################################
+    #  SPLIT BANNER
+    ############################################################################
+    def charge_card(self, tag):
+        """Build the python object associated to the card"""
+        
+        if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        
+        assert tag in ['mgruncard'], 'invalid card %s' % tag
+        
+        if tag == 'mgruncard':
+            run_card = self[tag].split('\n') 
+            self.run_card = RunCard(run_card)
+            return self.run_card
+
+    ############################################################################
     #  WRITE BANNER
     ############################################################################
     def check_pid(self, pid2label):
@@ -320,22 +340,27 @@ def split_banner(banner_path, me_dir, proc_card=True):
     banner = Banner(banner_path)
     banner.split(me_dir, proc_card)
     
-def recover_banner(results_object, level):
+def recover_banner(results_object, level, run=None, tag=None):
     """as input we receive a gen_crossxhtml.AllResults object.
        This define the current banner and load it
     """
-    try:  
-        run = results_object.current['run_name']    
-        tag = results_object.current['tag'] 
-    except Exception:
-        return Banner()                                  
+    
+    if not run:
+        try:    
+            tag = results_object.current['tag'] 
+        except Exception:
+            return Banner()
+    if not tag:
+        try:    
+            tag = results_object[run].tags[-1] 
+        except Exception,error:
+            return Banner()                                        
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
-    
     banner = Banner(banner_path)
     
     
