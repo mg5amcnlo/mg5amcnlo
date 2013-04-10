@@ -1542,6 +1542,7 @@ C
 #        new_pdg = model.get_first_non_pdg()
     
         base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+        model = matrix_element.get('base_amplitude').get('process').get('model')
         minvert = min([max([len(vert.get('legs')) for vert in \
                             diag.get('vertices')]) for diag in base_diagrams])
     
@@ -1562,7 +1563,7 @@ C
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial, 990)
+                                         get_s_and_t_channels(ninitial, model, 990)
     
             s_and_t_channels.append([schannels, tchannels])
     
