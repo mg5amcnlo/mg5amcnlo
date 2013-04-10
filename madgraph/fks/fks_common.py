@@ -315,14 +315,13 @@ def insert_legs(leglist_orig, leg, split,pert='QCD'):
             if abs(col) > abs(split[1][color]):
                 del mass_col_maxindex[col]
     #also remove antiquarks if i is a quark or a fermion
-    if split[1]['is_part']:
+    if split[1]['is_part'] and not split[1]['self_antipart']:
     #if split[1][color] > 0:
         try:
             del col_maxindex[-split[1][color]]
         except KeyError:
             pass
     #so now the maximum of the max_col entries should be the position to insert leg i
-
     leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
 #        leglist.insert(i, sleg)
@@ -577,12 +576,12 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
     return dict
 
 
-def sort_proc(process):
+def sort_proc(process,pert = 'QCD'):
     """Given a process, this function returns the same process 
     but with sorted FKSLegs.
     """
     leglist = to_fks_legs(process.get('legs'), process.get('model'))
-    leglist.sort()
+    leglist.sort(pert = pert)
     for n, leg in enumerate(leglist):
         leg['number'] = n + 1
     process['legs'] = leglist

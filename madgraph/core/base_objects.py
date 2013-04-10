@@ -92,7 +92,6 @@ class PhysicsObject(dict):
         """Set the value of the property name. First check if value
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
-
         if not __debug__ or force:
             self[name] = value
             return True
@@ -1776,6 +1775,10 @@ class LegList(PhysicsObjectList):
                 res.append(leg.get('id'))
 
         return res
+    
+    def sort(self,pert='QCD'):
+        """Match with FKSLegList"""
+        return super(LegList,self).sort()
 
 
 #===============================================================================
