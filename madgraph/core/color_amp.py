@@ -73,8 +73,8 @@ class ColorBasis(dict):
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             # res_dict = {}
-	    for key in res_dict.keys():
-		res_dict[key]= color_algebra.ColorString([color_algebra.ColorOne()]) 
+            for key in res_dict.keys():
+                res_dict[key]= color_algebra.ColorString([color_algebra.ColorOne()]) 
 	# HSS
                     
         return res_dict

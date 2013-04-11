@@ -73,6 +73,18 @@ class testFKSHelasObjects(unittest.TestCase):
                                'perturbation_couplings' : ['QCD'],
                                'decay_chains': MG.ProcessList(),
                                'overall_orders': {}}
+            
+            dict1_qed = {'legs' : myleglist1, 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'orders': {'QED': 0, 'WEIGHTED':2},
+                               'perturbation_couplings' : ['QED'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
 
             dict3 = {'legs' : myleglist3, 'orders':{'QCD':10, 'QED':0},
                                'model': mymodel,
@@ -86,10 +98,24 @@ class testFKSHelasObjects(unittest.TestCase):
                                'decay_chains': MG.ProcessList(),
                                'overall_orders': {}}
             
+            dict3_qed = {'legs' : myleglist3, 'orders':{'QCD':10, 'QED':0},
+                               'model': mymodel,
+                               'id': 1,
+                               'required_s_channels':[],
+                               'forbidden_s_channels':[],
+                               'forbidden_particles':[],
+                               'is_decay_chain': False,
+                               'orders': {'QED': 0, 'WEIGHTED':2 },
+                               'perturbation_couplings' : ['QED'],
+                               'decay_chains': MG.ProcessList(),
+                               'overall_orders': {}}
+            
             testFKSHelasObjects.mymodel = mymodel
             testFKSHelasObjects.myleglist3 = myleglist3
             testFKSHelasObjects.myproc1 = MG.Process(dict1)
             testFKSHelasObjects.myproc3 = MG.Process(dict3)
+            testFKSHelasObjects.myproc1_qed = MG.Process(dict1_qed)
+            testFKSHelasObjects.myproc3_qed = MG.Process(dict3_qed)
 
 
     def test_fks_helas_multi_process_ppz(self):
@@ -268,6 +294,7 @@ class testFKSHelasObjects(unittest.TestCase):
                   
         #each born correspond to 2 partonic processes
         for i, me in enumerate(my_helas_mp.get('matrix_elements')):
+            # gu and gc
             self.assertEqual(len(me.get('processes')),2)
             self.assertEqual(len(me.real_processes), n_real_processes[i])
             for j,real in enumerate(me.real_processes):
@@ -345,42 +372,69 @@ class testFKSHelasObjects(unittest.TestCase):
     def test_fks_helas_real_process_init(self):
         """tests the correct initialization of an FKSHelasRealProcess, from a 
         FKSRealProc. The process uu~>dd~ is used as born.
-        For the real we use uu~>dd~(j) g(i).
+        For the real we use dd~>uu~(j) g(i) and dd~>uu~(j)a(i).
         We test The correct initialization of:
         --i/j fks
         --permutation
         --matrix element
         """         
-        #uu~> dd~
+        #dd~> uu~
         fks3 = fks_base.FKSProcess(self.myproc3)
- 
+        fks3_qed = fks_base.FKSProcess(self.myproc3_qed)
         fksleglist = copy.copy(fks_common.to_fks_legs(self.myleglist3,
                                                       self.mymodel))
+        fksleglist_qed = copy.copy(fksleglist)
         amplist = []
         amp_id_list = []
         me_list=[]
         me_id_list=[]
+        amplist_qed = []
+        amp_id_list_qed = []
+        me_list_qed = []
+        me_id_list_qed = []
         
         fksleglist.append(fks_common.to_fks_leg(MG.Leg({'id' : 21,
                                                  'state' : True,
                                                  'number' : 5,
                                                  'from_group' : True}),
                                                  self.mymodel))
+        fksleglist_qed.append(fks_common.to_fks_leg(MG.Leg({'id' : 22,
+                                                 'state' : True,
+                                                 'number' : 5,
+                                                 'from_group' : True}),
+                                                 self.mymodel))
+        
         fksleglist[0]['fks']='n'
         fksleglist[1]['fks']='n'
         fksleglist[2]['fks']='n'
         fksleglist[3]['fks']='j'
         fksleglist[4]['fks']='i'
+        fksleglist_qed[0]['fks']='n'
+        fksleglist_qed[1]['fks']='n'
+        fksleglist_qed[2]['fks']='n'
+        fksleglist_qed[3]['fks']='j'
+        fksleglist_qed[4]['fks']='i'
         
-        real_proc = fks_base.FKSRealProcess(fks3.born_proc, fksleglist, 4, 0)
+        real_proc = fks_base.FKSRealProcess(fks3.born_proc, fksleglist, 4, 0,\
+                                            perturbed_orders = ['QCD'])
         real_proc.generate_real_amplitude()
         helas_real_proc = fks_helas.FKSHelasRealProcess(real_proc, me_list, me_id_list)
+        real_proc_qed = fks_base.FKSRealProcess(fks3_qed.born_proc, fksleglist_qed, 4, 0,\
+                                            perturbed_orders = ['QED'])
+        real_proc_qed.generate_real_amplitude()
+        helas_real_proc_qed = fks_helas.FKSHelasRealProcess(real_proc_qed, me_list_qed, me_id_list_qed)
         self.assertEqual(helas_real_proc.fks_infos,
                 [{'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links': True}])
+        self.assertEqual(helas_real_proc_qed.fks_infos,
+                [{'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links': True}])
         target_me = helas_objects.HelasMatrixElement(real_proc.amplitude)
+        target_me_qed = helas_objects.HelasMatrixElement(real_proc_qed.amplitude)
         self.assertEqual(helas_real_proc.matrix_element, target_me)
         self.assertEqual(helas_real_proc.matrix_element.get('color_matrix'), 
                          target_me.get('color_matrix'))
+        self.assertEqual(helas_real_proc_qed.matrix_element, target_me_qed)
+        self.assertEqual(helas_real_proc_qed.matrix_element.get('color_matrix'), 
+                         target_me_qed.get('color_matrix'))
         
         
     def test_fks_helas_process_init(self):
@@ -393,18 +447,25 @@ class testFKSHelasObjects(unittest.TestCase):
         """
         #ug> ug
         fks1 = fks_base.FKSProcess(self.myproc1)
-        #uu~> dd~
+        #ug>gu
+        fks1_qed = fks_base.FKSProcess(self.myproc1_qed)
+        #dd~> uu~
         fks3 = fks_base.FKSProcess(self.myproc3)
         
         pdg_list1 = []
         real_amp_list1 = diagram_generation.AmplitudeList()
+        pdg_list1_qed = []
+        real_amp_list1_qed = diagram_generation.AmplitudeList()
         pdg_list3 = [] 
         real_amp_list3 = diagram_generation.AmplitudeList()
         fks1.generate_reals(pdg_list1, real_amp_list1)
+        fks1_qed.generate_reals(pdg_list1_qed, real_amp_list1_qed)
         fks3.generate_reals(pdg_list3, real_amp_list3)
 
         me_list=[]
         me_id_list=[]
+        me_list_qed=[]
+        me_id_list_qed=[]
         me_list3=[]
         me_id_list3=[]
         res_me_list=[]
@@ -412,17 +473,23 @@ class testFKSHelasObjects(unittest.TestCase):
 
         helas_born_proc = fks_helas.FKSHelasProcess(
                                     fks1, me_list, me_id_list)
+        helas_born_proc_qed = fks_helas.FKSHelasProcess(
+                                    fks1_qed, me_list_qed, me_id_list_qed)
         helas_born_proc3 = fks_helas.FKSHelasProcess(
                                     fks3, me_list3, me_id_list3)
         
         self.assertEqual(helas_born_proc.born_matrix_element,
                           helas_objects.HelasMatrixElement(
                                     fks1.born_amp))
+        self.assertEqual(helas_born_proc_qed.born_matrix_element,
+                          helas_objects.HelasMatrixElement(
+                                    fks1_qed.born_amp))
         res_reals = []
         for real in fks1.real_amps:
             res_reals.append(fks_helas.FKSHelasRealProcess(
                                 real,res_me_list, res_me_id_list))
             # the process u g > u g g corresponds to 4 fks configs
+            # it is testing fks_base.FKSProcess.combine_real_amplitudes
             if real.pdgs == array.array('i', [2,21,2,21,21]):
                 self.assertEqual(len(real.fks_infos), 4)
             else:
@@ -434,11 +501,42 @@ class testFKSHelasObjects(unittest.TestCase):
         self.assertEqual(8, len(helas_born_proc.real_processes))
         self.assertNotEqual(helas_born_proc.born_matrix_element,
                             helas_born_proc3.born_matrix_element)
+        self.assertNotEqual(helas_born_proc.born_matrix_element,\
+                            helas_born_proc_qed.born_matrix_element)
         for a,b in zip(helas_born_proc3.real_processes, 
                     helas_born_proc.real_processes):
             self.assertNotEqual(a,b)
 
-
+    def test_set_color_links(self):
+        """tests that the set_color_links of a FKSHelasProcess
+        returns the correct list of color_links."""
+        #ug> ug
+        fks1 = fks_base.FKSProcess(self.myproc1)
+        #ug>gu
+        fks1_qed = fks_base.FKSProcess(self.myproc1_qed)
+        me_list=[]
+        me_list_qed = []
+        me_id_list=[]
+        me_id_list_qed = []
+        pdg_list1 = []
+        pdg_list1_qed = []
+        real_amp_list1 = diagram_generation.AmplitudeList()
+        real_amp_list1_qed = diagram_generation.AmplitudeList()
+        fks1.generate_reals(pdg_list1, real_amp_list1)
+        fks1_qed.generate_reals(pdg_list1_qed,real_amp_list1_qed)
+        helas_born_proc = fks_helas.FKSHelasProcess(
+                                    fks1, me_list, me_id_list)
+        helas_born_proc_qed = fks_helas.FKSHelasProcess(\
+                                    fks1_qed,me_list_qed,me_id_list_qed)
+        helas_born_proc.set_color_links()
+        helas_born_proc_qed.set_color_links()
+        legpair = [link['link'] for link in helas_born_proc.color_links]
+        legpair_qed = [link['link'] for link in helas_born_proc_qed.color_links]
+        tar_legpair = [[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]
+        tar_legpair_qed = [[1,4]]
+        self.assertEqual(legpair,tar_legpair)
+        self.assertEqual(legpair_qed,tar_legpair_qed)
+        
     def test_get_fks_info_list(self):
         """tests that the get_fks_info_list of a FKSHelasProcess 
         returns the correct list of configurations/fks_configs"""

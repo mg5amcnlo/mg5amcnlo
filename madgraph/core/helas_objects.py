@@ -4863,6 +4863,9 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         
         colorize_obj = col_basis.create_color_dict_list(\
                          matrix_element.get('base_amplitude'))
+        #list_colorize = []
+        #list_color_basis = []
+        #list_color_matrices = []
         
         try:
             # If the color configuration of the ME has

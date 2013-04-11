@@ -371,7 +371,8 @@ class FKSProcess(object):
                     self.perturbation = sorted(pertur)[0]
                 self.born_proc = fks_common.sort_proc(start_proc,pert = self.perturbation)
                 # filter in Amplitude will legs sorted in bornproc
-                bornproc = copy.deepcopy(self.born_proc)
+                bornproc = copy.copy(self.born_proc) # deepcopy might let T -> array
+                assert bornproc==self.born_proc
                 self.born_amp = diagram_generation.Amplitude(bornproc)
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 pertur = start_proc.get('process')['perturbation_couplings']
@@ -380,7 +381,8 @@ class FKSProcess(object):
                 self.born_proc = fks_common.sort_proc(start_proc.get('process'),\
                                                       pert = self.perturbation)
                 # filter in Amplitude will legs sorted in bornproc
-                bornproc = copy.deepcopy(self.born_proc)
+                bornproc = copy.copy(self.born_proc)
+                assert bornproc == self.born_proc
                 self.born_amp = diagram_generation.Amplitude(bornproc)
             else:
                 raise fks_common.FKSProcessError(\
