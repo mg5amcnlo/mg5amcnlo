@@ -977,9 +977,11 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(amp,realproc.amplitude)
         self.assertEqual(array.array('i',[2,21,2,21,21]), realproc.pdgs)
         self.assertEqual([3,8,3,8,8], realproc.colors)
+        self.assertEqual([0.,0.,0.,0.,0.],realproc.charges) # charge is irrelevant in QCD
         self.assertEqual(amp_qed,realproc_qed.amplitude)
         self.assertEqual(array.array('i',[2,21,21,2,22]), realproc_qed.pdgs)
-        self.assertEqual([2./3.,0.,0.,2./3.,0.], realproc_qed.colors)
+        self.assertEqual([3,8,8,3,1],realproc_qed.colors)
+        self.assertEqual([2./3.,0.,0.,2./3.,0.], realproc_qed.charges)
  ##       self.assertEqual(realproc.permutation, [1,2,4,5,3])
 
 

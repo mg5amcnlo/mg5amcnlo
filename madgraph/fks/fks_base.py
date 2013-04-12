@@ -260,11 +260,14 @@ class FKSRealProcess(object):
 
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
-        if 'QCD' in perturbed_orders: 
+        if 'QCD' in perturbed_orders:
             self.colors = [leg['color'] for leg in leglist]
+            # in QCD, charges are irrelevant !
+            self.charges = [0. for leg in leglist]
             self.perturbation = 'QCD'
         else:
-            self.colors = [leg['charge'] for leg in leglist]
+            self.colors = [leg['color'] for leg in leglist]
+            self.charges = [leg['charge'] for leg in leglist]
             self.perturbation = 'QED'
         self.process.set('legs', MG.LegList(leglist))
         self.process.set('legs_with_decays', MG.LegList())
@@ -349,7 +352,8 @@ class FKSProcess(object):
         self.leglist = []
         self.myorders = {}
         self.pdg_codes = []
-        self.colors = [] # charge or color
+        self.colors = [] # color
+        self.charges = [] # charge
         self.nlegs = 0
         self.fks_ipos = []
         self.fks_j_from_i = {}
@@ -399,12 +403,16 @@ class FKSProcess(object):
             self.nlegs = len(self.leglist)
             self.pdg_codes = [leg.get('id') for leg in self.leglist]
             if self.perturbation == 'QCD':
+                self.colors = [leg.get('color') for leg in self.leglist]
+                # in QCD, charge is irrelevant but impact the combine process !
+                self.charges = [0. for leg in self.leglist]
                 color = 'color'
                 zero = 1
             elif self.perturbation == 'QED':
+                self.colors = [leg.get('color') for leg in self.leglist]
+                self.charges = [leg.get('charge') for leg in self.leglist]
                 color = 'charge'
                 zero = 0.
-            self.colors = [leg.get(color) for leg in self.leglist]
             # special treatment of photon is needed !
             self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
             self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])

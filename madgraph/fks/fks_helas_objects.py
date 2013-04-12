@@ -370,6 +370,7 @@ class FKSHelasRealProcess(object): #test written
     """class to generate the Helas calls for a FKSRealProcess
     contains:
     -- colors
+    -- charges
     -- i/j/ij fks, ij refers to the born leglist
     -- ijglu
     -- need_color_links
@@ -388,6 +389,7 @@ class FKSHelasRealProcess(object): #test written
         if fksrealproc != None:
             self.isfinite = False
             self.colors = fksrealproc.colors
+            self.charges = fksrealproc.charges
             self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
 
