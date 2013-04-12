@@ -394,10 +394,25 @@ c For tests
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
 
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero,enhanceS,enhanceH
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
       vegas_weight=vegaswgt
+
+c FxFx merging
+      ickkw=3
+      ktscheme=1
+      rewgt_mohdr_calculated=.false.
+      rewgt_izero_calculated=.false.
+
 
       if (fold.eq.0) then
          calculatedBorn=.false.
@@ -494,6 +509,15 @@ c Set the ybst_til_tolab before applying the cuts.
         wgtxbj(2,1)=xbk(2)
       endif
       if (passcuts(pp,rwgt)) then
+c       Compute the scales and sudakov-reweighting for the FxFx merging
+        if (ickkw.eq.3) then
+           if (.not. setclscales(pp)) then
+               write (*,*) 'ERROR in setclscales mohdr'
+              stop
+           endif
+           rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+           rewgt_mohdr_calculated=.true.
+        endif
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
         ffact = f_damp(x)
@@ -522,6 +546,15 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
 
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         rewgt_izero_calculated=.true.
+      endif
       call set_alphaS(p1_cnt(0,1,0))
       if(doNLOreweight)then
         wgtqes2(2)=QES2
@@ -611,6 +644,10 @@ c Soft subtraction term:
      #             rwgt
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
+c For FxFx merging, include the compensation term
+              if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                 bsv_wgt=bsv_wgt-g**2/(4d0*Pi)*rewgt_exp_izero*born_wgt
+              endif
               if(doNLOreweight)then
                 if(wgtbpower.gt.0)then
                   wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -618,6 +655,10 @@ c Soft subtraction term:
                   wgtwborn(2)=born_wgt*xsec
                 endif
                 wgtwns(2)=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                 if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                    wgtwns(2)=wgtwns(2)-rewgt_exp_izero*wgtwborn(2)
+     $                   /(4d0*pi)
+                 endif
                 wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
      &               +2.d0))
                 wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
@@ -740,13 +781,40 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance
-      cnt_wgt = cnt_wgt * enhance
-      cnt_swgt = cnt_swgt * enhance
-      bsv_wgt = bsv_wgt * enhance
-      born_wgt = born_wgt * enhance
-      deg_wgt = deg_wgt * enhance
-      deg_swgt = deg_swgt * enhance
+c Apply the FxFx Sudakov damping on the H events
+      if (ev_wgt.ne.0d0 .and. ickkw.eq.3..and.
+     $     .not.rewgt_mohdr_calculated) then
+         write (*,*) 'Error rewgt_mohdr_calculated'
+         stop
+      elseif(rewgt_mohdr_calculated) then
+         if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
+         enhanceH=enhance*rewgt_mohdr
+      else
+         enhanceH=enhance
+      endif
+
+      ev_wgt = ev_wgt * enhanceH
+
+c Apply the FxFx Sudakov damping on the S events
+      if(.not.(cnt_wgt.eq.0d0 .and. cnt_swgt.eq.0d0 .and. bsv_wgt.eq.0d0
+     $     .and. born_wgt.eq.0d0 .and. deg_wgt.eq.0d0 .and.
+     $     deg_swgt.eq.0d0 )
+     $     .and. ickkw.eq.3 .and. .not.rewgt_izero_calculated) then
+         write (*,*) 'Error rewgt_izero_calculated'
+         stop
+      elseif(rewgt_izero_calculated) then
+         if (rewgt_izero.gt.1d0) rewgt_izero=1d0
+         enhanceS=enhance*rewgt_izero
+      else
+         enhanceS=enhance
+      endif
+
+      cnt_wgt = cnt_wgt * enhanceS
+      cnt_swgt = cnt_swgt * enhanceS
+      bsv_wgt = bsv_wgt * enhanceS
+      born_wgt = born_wgt * enhanceS
+      deg_wgt = deg_wgt * enhanceS
+      deg_swgt = deg_swgt * enhanceS
 
       if(iminmax.eq.0) then
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
@@ -773,9 +841,13 @@ c
              stop
            endif
            wgtref = dsig
-           xsec = enhance*unwgtfun
+           xsec = enhanceS*unwgtfun
            do i=1,4
-             wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+              if (i.eq.1) then
+                 wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor*enhanceH/enhanceS
+              else
+                 wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+              endif
              wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
              wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
              if(i.eq.2)then

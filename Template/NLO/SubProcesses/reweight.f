@@ -340,7 +340,8 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
             ipart(1,imo)=ipart(1,ida2)
             ipart(2,imo)=ipart(2,ida2)
          endif
-      else if(idmo.eq.21)then
+      else if(idmo.eq.21 .and. abs(idda1).le.6 .and.
+     $        abs(idda2).le.6)then
 c     gluon -> quark anti-quark: use both, but take hardest as 1
          if ( p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $        p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2 ) then
@@ -349,6 +350,19 @@ c     gluon -> quark anti-quark: use both, but take hardest as 1
          else
             ipart(1,imo)=ipart(1,ida2)
             ipart(2,imo)=ipart(1,ida1)
+         endif
+      else if(idmo.eq.21)then
+c     gluon -> higgs gluon
+         if ( idda1.eq.21 ) then
+            ipart(1,imo)=ipart(1,ida1)
+            ipart(2,imo)=ipart(2,ida1)
+         elseif ( idda2.eq.21 ) then
+            ipart(1,imo)=ipart(1,ida2)
+            ipart(2,imo)=ipart(2,ida2)
+         else
+            write (*,*) "ERROR in ipartupdate: unknown coupling",idmo
+     $           ,idda1,idda2
+            stop
          endif
       else if(idmo.eq.idda1.or.idmo.eq.idda1+sign(1,idda2))then
 c     quark -> quark-gluon or quark-Z or quark-h or quark-W
@@ -388,7 +402,6 @@ c***************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
-
 c     Check QCD vertex
       if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
@@ -410,7 +423,6 @@ c     Check if ida1 is outgoing parton or ida2 is outgoing parton
         endif
         return
       endif        
-
 c     Final State clustering
       if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
      $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1)) then
@@ -779,13 +791,15 @@ c           Check QCD jet, take care so not a decay
 c     Remove non-gluon jets that lead up to non-jet vertices
                if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c     The ishft gives the FS particle corresponding to imocl
-                  if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),nFKSprocess).ne.21)
-     $                 iqjets(ipart(1,imocl(n)))=0
+                  if(.not.isjet(ipdgcl(ishft(1,ipart(1,imocl(n))-1)
+     $                 ,igraphs(1),nFKSprocess)))
+     &                 iqjets(ipart(1,imocl(n)))=0
                endif
-               if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+               if(ipart(2,imocl(n)).gt.2)then ! ipart(2) set and not IS line
 c     The ishft gives the FS particle corresponding to imocl
-                  if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),nFKSprocess).ne.21)
-     $                 iqjets(ipart(2,imocl(n)))=0
+                  if(.not.isjet(ipdgcl(ishft(1,ipart(2,imocl(n))-1)
+     $                 ,igraphs(1),nFKSprocess))) 
+     &                 iqjets(ipart(2,imocl(n)))=0
                endif
 c     Set goodjet to false for mother
                goodjet(imocl(n))=.false.
@@ -795,14 +809,10 @@ c     This is a jet vertex, so set jet flag for final-state jets ifsno
 c     gives leg number if daughter is FS particle, otherwise 0
             fsnum(1)=ifsno(idacl(n,1),ipart)
             if(isjet(ipdgcl(idacl(n,1),igraphs(1),nFKSprocess)).and.
-     $           fsnum(1).gt.0) then
-               iqjets(fsnum(1))=1
-            endif
+     $           fsnum(1).gt.0)  iqjets(fsnum(1))=1
             fsnum(1)=ifsno(idacl(n,2),ipart)
             if(isjet(ipdgcl(idacl(n,2),igraphs(1),nFKSprocess)).and.
-     $           fsnum(1).gt.0) then
-               iqjets(fsnum(1))=1
-            endif
+     $           fsnum(1).gt.0) iqjets(fsnum(1))=1
 c     Flag mother as good jet if PDG is jet and both daughters are jets
             goodjet(imocl(n))=
      $           (isjet(ipdgcl(imocl(n),igraphs(1),nFKSprocess)).and.
@@ -821,9 +831,7 @@ c     case accept all jets with final jcode)
          if(partonline(1).or.partonline(2)) jcode=jcode-1
 c     There parton emissions with code <= jcode are not jets
          do i=3,nexternal
-            if(iqjets(i).gt.1.and.iqjets(i).le.jcode)then
-               iqjets(i)=0
-            endif
+            if(iqjets(i).gt.1.and.iqjets(i).le.jcode) iqjets(i)=0
          enddo
       endif
 
@@ -872,13 +880,15 @@ c     if not, recluster according to iconf
             if (igraphs(1).eq.iconf) then
                open(unit=26,file='../../../error',status='unknown',err=999)
                write(*,*) 'Error: Failed despite same graph: ',iconf
+     $              ,nFKSprocess
                write(*,*) 'Have jets (>0)',(iqjets(i),i=1,nexternal)
                write(*,*) 'Should be ', (iqjetstore(i,nFKSprocess,iconf)
      $              ,i=1,njetstore(nFKSprocess,iconf))
-               write(26,*) 'Error: Failed despite same graph: ',iconf,
-     $              '. Have jets (>0)',(iqjets(i),i=1,nexternal),
-     $              ', should be ', (iqjetstore(i,nFKSprocess,iconf),i=1
-     $              ,njetstore(nFKSprocess,iconf))
+               write(26,*) 'Error: Failed despite same graph: ',iconf
+     $              ,nFKSprocess,'. Have jets (>0)',(iqjets(i),i=1
+     $              ,nexternal),', should be ', (iqjetstore(i
+     $              ,nFKSprocess,iconf),i=1,njetstore(nFKSprocess
+     $              ,iconf))
                
                stop
             endif
@@ -889,7 +899,6 @@ c     if not, recluster according to iconf
             goto 100
          endif
       endif
-
 c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
 c     (i.e. geom. average of transverse mass of t and t~)
       if(mt2last.gt.4d0 .and. nexternal.gt.3) then
@@ -1057,9 +1066,9 @@ c     Take care of case when jcentral are zero
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
+         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
-         if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
+         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
