@@ -1850,6 +1850,9 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     tags.append('L')
                 else:
                     tags.append('L%d'%wa.get_loop_index())
+            if isinstance(wa,helas_objects.HelasWavefunction) and \
+                                      wa.get('particle').get('propagator') !='':
+                 tags.append('P%s' % str(wa.get('particle').get('propagator')))
 
             output.append((tuple(wa.get('lorentz')), tuple(tags), 
                                                      wa.find_outgoing_number()))

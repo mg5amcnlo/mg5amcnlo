@@ -208,3 +208,18 @@ The following reference files have been updated :
    short_ML_SMQCD_default/gg_ttx/loop_matrix.f
    short_ML_SMQCD_default/gg_ttx/loop_num.f
    short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f
+ 
+Modifications performed on 2013-04-12 at 16h33 in
+   MadGraph 5 v. 2.0.0.beta4, 2013-04-01
+The following reference files have been updated :
+   short_ML_SMQCD_optimized/gg_ttx/loop_matrix.f
+   short_ML_SMQCD_optimized/gg_ttx/mp_compute_loop_coefs.f
+   long_ML_SMQCD_optimized/gg_wmtbx/helas_calls_ampb_1.f
+   long_ML_SMQCD_optimized/gg_wmtbx/mp_helas_calls_ampb_1.f
+   short_ML_SMQCD_optimized/ddx_ttx/loop_matrix.f
+   short_ML_SMQCD_optimized/ddx_ttx/mp_compute_loop_coefs.f
+The following reference files have been removed :
+   long_ML_SMQCD_default/gg_wmtbx/loop_matrix.f.tmp
+   long_ML_SMQCD_default/gg_wmtbx/mp_born_amps_and_wfs.f.tmp
+   short_ML_SMQCD_default/gg_ttx/loop_matrix.f.tmp
+   short_ML_SMQCD_default/gg_ttx/mp_born_amps_and_wfs.f.tmp

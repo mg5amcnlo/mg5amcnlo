@@ -1060,7 +1060,6 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if argument.needs_hermitian_conjugate():
             flag = ['C%d' % i for i in \
                                   argument.get_conjugate_index()]
-
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop') or \
            (isinstance(argument, helas_objects.HelasAmplitude) and \
@@ -1373,8 +1372,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         l = [str(l) for l in argument.get('lorentz')]
         flag = []
         if argument.needs_hermitian_conjugate():
-            flag = ['C%d' % i for i in \
-                                  argument.get_conjugate_index()]
+            flag = ['C%d' % i for i in argument.get_conjugate_index()]
         
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
@@ -1384,7 +1382,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
-                                        '%s' % l[0], l[1:], outgoing, flag),
+                                        '%s' % l[0], l[1:], outgoing, flag, True),
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))                                            
                }

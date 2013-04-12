@@ -638,7 +638,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     If you prepend '+' to the folder or test name, then you will include all 
     items in this category which starts with what follows '+'.
     > Ex. '+short' includes all IOTests starting with 'short'
-    To bypass the monitoring of the modification, you can use -f.
+    To bypass the monitoring of the modifications of the files with a name of
+    a file already reviewed, you can use -f. To bypass ALL monitoring, use -F
+    (this is not recommended).
     
     Finally, you can run the test only from here too. Same synthax as above,
     but use the option -i R.

@@ -4280,7 +4280,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         out = [(tuple(wa.get('lorentz')),  
                 tuple(['C%s' % w for w in wa.get('conjugate_indices')] + \
                   [] if wa.get('particle').get('propagator') =='' else \
-                  ['P%s' % wa.get('particle').get('propagator')]),
+                  ['P%s' % str(wa.get('particle').get('propagator'))]),
                  wa.find_outgoing_number()) for wa in \
                 self.get_all_wavefunctions()\
                 if wa.get('interaction_id') not in [0,-1]]  

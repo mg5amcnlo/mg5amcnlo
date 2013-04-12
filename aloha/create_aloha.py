@@ -719,7 +719,7 @@ class AbstractALOHAModel(dict):
     # To emulate the behavior without the quick fix, simply replace the default
     # value of byPassFix by True.
     # == START AD-HOC QUICK FIX ==
-    def compute_subset(self, data, byPassFix=False, forceLoop=False):
+    def compute_subset(self, data, byPassFix=True, forceLoop=False):
     # == END AD-HOC QUICK FIX ==
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
@@ -736,7 +736,6 @@ class AbstractALOHAModel(dict):
         # quick fix which consists in calling twice aloha (rather compute_subset)
         # with only the loop routines (then in feynman gauge not matter what)
         # and a second time with the rest as usual.
-
         if not byPassFix: 
             
             data_loop = [d for d in data if any((t.startswith('L') for t in d[1]))]
