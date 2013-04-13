@@ -9,6 +9,7 @@ try:
     import madgraph.madweight.diagram_class as diagram_class
     import madgraph.madweight.mod_file as mod_file
     import madgraph.madweight.Cards as Cards
+    import madgraph.various.misc as misc
 except ImportError:
     from internal.madweight.MW_fct import *
     import internal.madweight.diagram_class as diagram_class
@@ -579,7 +580,9 @@ class MG_diagram(diagram_class.MG_diagram):
         text += ' parameter (nb_vis_part=' + str(len(self.ext_content) - self.num_neut) + ')\n'        
         text += ' integer nb_sol_config\n'                    
         text += ' parameter (nb_sol_config=' + str(len(self.code)) + ')\n'
-        text += ' integer dim_phase_space\n parameter (dim_phase_space=%i)\n' % ((3*len(self.ext_content))+2) 
+        text += ' integer dim_phase_space\n parameter (dim_phase_space=%i)\n' % ((3*len(self.ext_content))+2)
+        text += ' integer nb_channel\n'
+        text += ' parameter (nb_channel=%i)\n' % len(self.code)
 #        text+=' integer max_branch\n'                    
 #        text+=' parameter (max_branch='+str(len(self.ext_content))+')\n'        
         text = put_in_fortran_format(text)
@@ -650,7 +653,9 @@ class MG_diagram(diagram_class.MG_diagram):
         # sanity check ensure that no identical permutation are presnt
         check = set([tuple(i) for i in permutations])
         assert len(check) == len(permutations)
-        
+        if not self.MWparam['mw_perm']['permutation']:
+            permutations = permutations[0:1]
+            
         text = open(self.directory + '/../permutation_template.f', 'r').read()
         
         text += '\n      subroutine get_perm(nb, perm)\n'
@@ -659,8 +664,7 @@ class MG_diagram(diagram_class.MG_diagram):
         text += '      include \'nexternal.inc\'\n'
         text += '      INTEGER    NB\n'
         text += '      INTEGER    PERM(NEXTERNAL-2)\n'        
-        text += '      INTEGER    NPERM\n'
-        text += '      PARAMETER (NPERM=%s)\n' % len(permutations)
+        text += '      include \'permutation.inc\'\n'
         text += '      INTEGER PERMS(NPERM, NEXTERNAL-2)\n'
         for i, perm in enumerate(permutations):
             text += "      DATA (PERMS(%s,I),I=1,%s) /%s/\n" % (i+1, len(perm),
@@ -670,21 +674,146 @@ class MG_diagram(diagram_class.MG_diagram):
         text += '        enddo\n'   
         text += '        return\n' 
         text += '        end\n\n'
-        text += '''      subroutine get_num_per(num_per)
-c
-c    compute the total number of permutations    
-      implicit none
-      include 'nexternal.inc'
-
-      integer num_per 
-      num_per = %i
-      write(*,*) "The number of parton-jet assignements is", num_per
-      return
-      end
-      '''  % len(permutations)
-      
+        text = put_in_fortran_format(text)
         open(self.directory + '/permutation.f', 'w').write(text)
+        
+        
+        text = '        INTEGER    NPERM\n'
+        text += '       PARAMETER (NPERM=%s)\n' % len(permutations)
+        text += ' integer nb_channel2\n'
+        text += ' parameter (nb_channel2=%i)\n' % len(self.code)
+        text += '''        double precision perm_value(NPERM)
+        double precision perm_error(NPERM)
+        integer curr_perm, nb_point_by_perm(NPERM), perm_order(NPERM,nb_channel2)
+        common/mw_perm_value/ perm_order,perm_value, perm_error, nb_point_by_perm, curr_perm'''
+        text = put_in_fortran_format(text)
+        open(self.directory + '/permutation.inc', 'w').write(text)
 
+        #Update main_code.f
+        template = """
+C*********************************************************************
+        double precision function fct(x,wgt)
+        implicit none
+
+        include 'phasespace.inc'
+        include 'nexternal.inc'
+        include 'run.inc'
+        include 'coupl.inc'
+        include 'madweight_param.inc'
+
+c
+c       this is the function which is called by the integrator
+
+c
+c       parameter
+c
+        double precision pi
+        parameter (pi=3.141592653589793d0)
+c
+c       arguments
+c
+        double precision x(20),wgt
+c
+c       local
+c
+c        integer i,j ! debug mode
+        double precision twgt
+        integer new_perm
+c
+c       global
+c
+        double precision              S,X1,X2,PSWGT,JAC
+        common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+        double precision momenta(0:3,-max_branches:2*max_particles)  ! momenta of external/intermediate legs     (MG order)
+        double precision mvir2(-max_branches:2*max_particles)        ! squared invariant masses of intermediate particles (MG order)
+        common /to_diagram_kin/ momenta, mvir2
+
+        include 'permutation.inc'
+
+        DOUBLE PRECISION Xl(20),XU(20),ACC
+        INTEGER NDIM,NCALL,ITMX,NPRN
+        COMMON/BVEG1/XL,XU,ACC, NDIM,NCALL,ITMX,NPRN
+        integer perm_id(nexternal-2) !permutation of 1,2,...,nexternal-2
+
+c
+c       external
+c
+        double precision dsig
+        external dsig
+        double precision alphas
+        external alphas
+        logical passcuts
+        external passcuts
+        include 'data.inc'
+
+c       choose the permutation (point by point in the ps)
+        %(perm_init)s
+         call get_PS_point(x)
+
+         if (jac.gt.0d0) then
+         %(use_cuts)s
+         
+           fct=jac
+           xbk(1)=X1
+           xbk(2)=X2
+           fct=fct*dsig(momenta(0,1),wgt)
+           call transfer_fct(momenta(0,1),TWGT)
+           fct=fct*twgt
+
+         %(histo)s
+        perm_value(curr_perm) = perm_value(curr_perm) + fct
+        perm_error(curr_perm) = perm_error(curr_perm) + fct**2
+        nb_point_by_perm(curr_perm) = nb_point_by_perm(curr_perm) + 1
+
+         else
+           fct=0d0
+         endif
+         
+         end
+         """
+        
+        data = {'perm_init': '', 'perm_storing':'',
+                'histo':'', 'use_cuts':''}
+        
+        if self.MWparam['mw_perm']['permutation'] and len(permutations) >1:
+            data['perm_init'] = """
+        new_perm = perm_order(1 + int((NPERM * x(NDIM))), config_pos)
+        if (new_perm.ne.curr_perm) then
+           call get_perm(new_perm, perm_id)
+           call assign_perm(perm_id)
+           curr_perm = new_perm
+           call get_central_point
+        endif
+    """
+                
+        if self.MWparam['mw_run']['histo']:
+            data['histo'] = """
+        if (histo)  then
+           call FILL_plot(fct,wgt,perm_pos*nb_sol_config+config_pos,nexternal)
+        endif
+            """
+            
+        if self.MWparam['mw_run']['use_cut']:
+            data['use_cuts'] = """
+        if (.not.passcuts(momenta(0,1))) then
+            fct = 0d0
+            return
+        endif
+            """
+        else:
+            data['use_cuts'] = """
+        if(.not.fixed_ren_scale) then
+          call set_ren_scale(momenta(0,1),scale)
+          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
+          call UPDATE_AS_PARAM()
+        endif
+        if(.not.fixed_fac_scale) then
+          call set_fac_scale(momenta(0,1),q2fact)
+        endif
+         """
+         
+        text = put_in_fortran_format(template % data)
+        open(self.directory + '/main_code.f', 'a').write(text)
         
  
     def init_d_choices_file(self):

@@ -1,5 +1,5 @@
 mw_run  nb_exp_events   integer  10                     # number of experimental events         
-mw_run  MW_int_points   integer 10000                  # number of points for MadWeight integration 
+mw_run  MW_int_points   integer 10000                  # number of points for MadWeight integration
 mw_run  use_cut         logical  F                      # use the cut defined in run_card.dat for weight computation
 mw_run  22              logical  0                      # put on 1 to add a new events in the analysis (for step 5)
 mw_run  bw_cut          logical  T

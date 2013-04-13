@@ -280,12 +280,16 @@ c     var_num=2 means that we generate a phi (note that phi is a cyclic variable
 
 c     var_num=3 means that we generate a rho
        elseif (var_num.eq.3) then
-      point_max=dble(min(c_point +5d0*gam,Emax))
-      point_min=dble(max(c_point -5d0*gam,0.d0))
-      if (point_max.le.point_min) then
-      jac=-1d0
-      return
-      endif
+            if (gam.ge.100) then
+               point_max = 1d3
+               point_min = 0
+            else
+                point_max=dble(min(c_point +5d0*gam,Emax))
+                point_min=dble(max(c_point -5d0*gam,0.d0))
+c                if (point_max.le.point_min) then
+c                    jac=-1d0
+c                return
+            endif
        gen_point=(point_max-point_min)*x+point_min
 
       endif

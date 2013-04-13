@@ -48,6 +48,9 @@ c     experimental event
 
       double precision alphas
       external alphas
+
+      include 'permutation.inc'
+
 c
 c     set parameters of the run
 
@@ -91,6 +94,13 @@ c     set parameters for the transfer functions
       include 'transfer_card.inc'
 
       call init_d_assignement()
+
+c     set permutation info
+      do i = 1, NPERM
+         perm_value(i) = 0d0
+         perm_error(i) = 0d0
+         nb_point_by_perm(i) = 0
+      enddo
 
       CALL PRINTOUT
       CALL RUN_PRINTOUT
@@ -304,7 +314,8 @@ c
           if (c_point(i,1,2).lt.-0.5)  num_inv=num_inv+1
         do j=1,3
           if (c_point(i,j,2).ne.zero) temp=temp+1
-          write(*,*) 'exp. uncertainty on ',variable(j),'of particle',i,': ' ,c_point(i,j,2)
+          write(*,*) 'exp. uncertainty on ',variable(j),'of particle',i,': ' ,
+     &     c_point(i,j,2),'[',c_point(i,j,1),']'
         enddo
       enddo
 

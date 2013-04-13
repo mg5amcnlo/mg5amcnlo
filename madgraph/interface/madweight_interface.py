@@ -449,7 +449,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         # expected args: card_nb, first_event, nb_event, evt, mw_int_points, log_level
         args = [str(nb_card), str(first_event),
                 str(self.MWparam['mw_run']['nb_event_by_node']) ,evt, 
-                str(self.MWparam['mw_run']['MW_int_points']),
+                str(self.MWparam['mw_run']['mw_int_points']),
                 self.MWparam['mw_run']['log_level'], str(sample_nb)]
         cwd = pjoin(self.me_dir, 'SubProcesses', dirname, name)
         # Ensure that the code is working ONLY if TEMP_CLUSTER_PATH is define

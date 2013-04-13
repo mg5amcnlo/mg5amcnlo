@@ -36,6 +36,9 @@ import re
 import os
 import math
 import sys
+import logging
+
+logger = logging.getLogger('madgraph.madweight')
 
 class FileInputException(Exception): pass
 
@@ -157,6 +160,7 @@ class Card(dict):
             else:
                 line_content = line_content.split()
             #treat decay anomaly
+            line_content[0] = line_content[0].lower()
             if line_content[0].lower()=='decay':
                 name_block='decay'
                 line_content=line_content[1:]
@@ -253,7 +257,7 @@ class Card(dict):
         """
         
         
-        print 'create file', output
+        logger.debug('create file %s' % output)
         out=file(output,'w')
         out.writelines('C automatic include file for card '+self.file+' and '+card.file+'\n\n')
 
@@ -263,7 +267,7 @@ class Card(dict):
         elif self.type=='ident':
             info=card.info
             ident=self.info
-                                    
+        
         for block in info.keys(): 
             if ident.has_key(block):
                 for tag in ident[block].keys():

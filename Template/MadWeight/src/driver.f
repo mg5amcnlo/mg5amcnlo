@@ -22,6 +22,7 @@ C
       include 'phasespace.inc'
       include 'nexternal.inc'
       include 'data.inc'
+      include 'permutation.inc'
       include 'madweight_param.inc'
 C
 C     PARAMETERS
@@ -32,17 +33,18 @@ C
 C     LOCAL (Variable of integration)
 C
       DOUBLE PRECISION SD,CHI,CROSS
-      INTEGER I,convergence_status
+      INTEGER I,J,convergence_status
       integer pos,channel_pos,ll
       double precision temp_err, temp_val
-      double precision order_value(max_channel)
-      double precision order_error(max_channel)
+      double precision order_value(nb_channel)
+      double precision order_error(nb_channel)
+      double precision xi_by_channel(50, 20, nb_channel)
+
       double precision normalize_perm
 c
 c     variable for permutation, channel
 c
       integer perm_id(nexternal-2)     !permutation of 1,2,...,nexternal-2
-      integer num_per                  !total number of permutations
       double precision weight,weight_error,final
       integer matching_type_part(3:max_particles) !modif/link between our order by type for permutation
       integer inv_matching_type_part(3:max_particles)
@@ -53,7 +55,7 @@ c
       double precision minimal_value1,minimal_value2
       double precision best_precision, chan_val, chan_err
       double precision check_value
-      integer loop_index,counter
+      integer loop_index
 c      integer best_config
 c
 c     logical
@@ -71,6 +73,8 @@ C
       Double precision ALPH
       integer NDMX,MDS
       COMMON/BVEG3/ALPH,NDMX,MDS
+
+
 
 C
 C     Global  number of dimensions
@@ -107,22 +111,22 @@ c
       double precision permutation_weight
       common /to_permutation_weight/permutation_weight
 
+      integer loc_perm(nexternal-2)
+      double precision value, error
+
+      integer*4 it,ndo
+      double precision xi(50,20),si,si2,swgt,schi
+      common/bveg2/xi,si,si2,swgt,schi,ndo,it
 
 C**************************************************************************
 C    step 1: initialisation     
 C**************************************************************************
       call global_init
       store=0d0
-      if(use_perm) then
-         call get_num_per(num_per) !calculate the number of permutations.
-      else
-         num_per=1
-      endif
+c      need to have everything initialize including perm at some point
+      call get_perm(1, perm_id)
+      call assign_perm(perm_id)
 
-      if (num_per*nb_sol_config.gt.max_channel) then
-        write(*,*) "warning: too many channels => increase max_channel"
-        stop
-      endif
 
 c     VEGAS parameters for the first loop
       ACC = final_prec
@@ -136,241 +140,239 @@ c     VEGAS parameters for the first loop
 c     initialization of the variables in the loops
       check_value=0d0
       loop_index=0
-      counter=0
-      do perm_pos=1,num_per
        do ll=1,nb_sol_config
-       counter=counter+1
-       order_value(counter)=1d5
+       order_value(ll)=1d5
        enddo
-      enddo
+      OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
 C
 C     initialization of the permutation
 C
  1    normalize_perm=0d0
-
       loop_index=loop_index+1
-      counter=0
       temp_err=0d0
       temp_val=0d0
-      do perm_pos=1,num_per
-         call get_perm(perm_pos, perm_id)
-         call assign_perm(perm_id)
-         chan_val=0d0
-         chan_err=0d0
 
-         permutation_weight=1d0
-         call initialize
-         normalize_perm =normalize_perm+permutation_weight
+      permutation_weight=1d0
+      call initialize
+      normalize_perm = NPERM
 
-         do ll=1,nb_sol_config
-            counter=counter+1
-            config_pos=ll
-            write(*,*) "Current channel of integration: ",config_pos
-            write(*,*) "Current parton-jet assignement: ",perm_pos
-            write(*,*) "weight of this assignement:     ",permutation_weight
+      chan_val=0d0
+      chan_err=0d0
 
-      iseed = iseed + 1 ! avoid to have the same seed
-      if (.not. NWA) then
-        NDIM=Ndimens
-      else
-        NDIM=Ndimens-num_propa(config_pos)
-      endif
-      if(ISR.eq.3) NDIM=NDIM+2
+      do ll=1,nb_sol_config
+          write(*,*) 'config', ll,'/',nb_sol_config
+
+
+          config_pos=ll
+          iseed = iseed + 1 ! avoid to have the same seed
+          if (.not. NWA) then
+              NDIM=Ndimens
+          else
+              NDIM=Ndimens-num_propa(config_pos)
+          endif
+          if(ISR.eq.3) NDIM=NDIM+2
+          if(NPERM.ne.1) NDIM = NDIM + 1
 c
-            if(order_value(counter).gt.check_value) then
-              if (integrator.eq.'v') then
-                ITMX=4
-                CALL VEGAS(fct,CROSS,SD,CHI)
-                if (loop_index.eq.1) ITMX=max_it_step1 
-                if (loop_index.eq.2) ITMX=max_it_step2
-                CALL VEGAS1(fct,CROSS,SD,CHI)
-
-              elseif (integrator.eq.'m') then
-                nitmax=4
-                call mint(fct_mint,ndim,ncalls0,nitmax,imode,
-     .          xgrid,xint,ymax,cross,SD,.false.,acc)
-                if (loop_index.eq.1) nitmax=max_it_step1 
-                if (loop_index.eq.2) nitmax=max_it_step2
-                call mint(fct_mint,ndim,ncalls0,nitmax,imode,
-     .          xgrid,xint,ymax,cross,SD,.true.,acc)
-              else
-                write(*,*) "problem: unknown integrator "
-                stop
-              endif
-              if (CROSS.lt.1d99) then
-               temp_val=temp_val+cross
-               chan_val=chan_val+cross
-               temp_err=temp_err+SD
-               chan_err=chan_err+SD
-               order_value(counter) = cross
-               order_error(counter) = sd
-               if (histo) call histo_combine_iteration(counter)
-              else
-               order_value(counter)=0d0
-              endif
+          if(order_value(ll).gt.check_value) then
+             write(*,*) "Current channel of integration: ",config_pos
+             if (loop_index.eq.1) then
+                do i = 1, NPERM
+                    perm_order(i,ll) = i
+                enddo
+            else
+                do i = 1, 50
+                    do j = 1, 20
+                        xi(i,j) = xi_by_channel(i, j, ll)
+                    enddo
+                enddo
             endif
-         enddo
-         write(32,*) perm_pos,chan_val, chan_err
-      enddo
+            if (loop_index.eq.1) then
+                ITMX=2
+                CALL VEGAS(fct,CROSS,SD,CHI)
+c                See if this is require to continue to update this
+                 if (sd/cross.le.final_prec) goto 2
+                 if (ll.ne.1) then
+                    if ((cross+3*SD).lt.(check_value)) then
+                       write(*,*) 'Do not refine it too low', cross+3*SD,
+     &                            '<', check_value
+                       goto 2
+                    endif
+                endif
+             call sort_perm
+             call get_new_perm_grid(NDIM)
+             endif
+             if (loop_index.eq.1) ITMX=2
+             if (loop_index.eq.2) ITMX=4
+             do i= 1, ndo
+                xi(i,NDIM) = i*1d0/ndo
+             enddo
+             CALL VEGAS1(fct,CROSS,SD,CHI)
+c            See if this is require to continue to update this
+             if (sd/cross.le.final_prec) goto 2
 
-      check_value=temp_val * min_prec_cut1
-      temp_val=temp_val/dble(normalize_perm)
-      temp_err=temp_err/dble(normalize_perm)
-      if (loop_index.eq.1) then
-        NCALL = nevents
-        ITMX = max_it_step2
-        goto 1
-      endif
+             if (loop_index.eq.1) then
+                ITMX=max_it_step1
+             else
+                ITMX = max_it_step2
+                acc = max(0.25*check_value/order_value(ll), final_prec)
+             endif
+             CALL VEGAS2(fct,CROSS,SD,CHI)
+ 2           if (CROSS.lt.1d99) then
+                temp_val=temp_val+cross
+                chan_val=chan_val+cross
+                temp_err=temp_err+SD
+                chan_err=chan_err+SD
+                order_value(ll) = cross
+                order_error(ll) = sd
+                if (histo) call histo_combine_iteration(ll)
+                if (loop_index.eq.1) then
+                  if (ll.eq.1)then
+                     check_value = (cross + 3*SD) * min_prec_cut1 * 0.01
+                  else
+                     check_value = max(
+     &                  (cross + SD)* min_prec_cut1 * 0.01, check_value)
+                  endif
+                endif
+                do i = 1, 50
+                    do j=1,20
+                        xi_by_channel(i, j, ll) = xi(i,j)
+                    enddo
+                enddo
+             else
+                order_value(ll)=0d0
+             endif
+              if (nb_point_by_perm(1).ne.0)then
+                  DO I =1,NPERM
+                    value = perm_value(I) / (nb_point_by_perm(I))
+                    error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
+     &                             * value**2 )/(nb_point_by_perm(I)-1))
+                    call get_perm(I, loc_perm)
+                    write(23,*) I,' ',ll,' ',value,' ', error,
+     &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
+                    nb_point_by_perm(I) = 0
+                    perm_value(I) = 0
+                    perm_error(I) = 0
+                  ENDDO
+              ENDIF
+          endif
+       enddo
+       check_value = temp_val * min_prec_cut1 
+       if (loop_index.eq.1) then
+          NCALL = nevents
+          ITMX = max_it_step2
+          goto 1 ! refine the integration
+       endif
 
-      write(*,*) "the weight is",temp_val,"+/-",temp_err
+       write(*,*) "the weight is",temp_val,"+/-",temp_err
 
       OPEN(UNIT=21,FILE='./weights.out',STATUS='UNKNOWN')
       write(21,*) temp_val,'  ',temp_err
       close(21)
 
 c      write(23,*) ' permutation channel   value      error'
-      OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
-      counter=0
-      do perm_pos=1,num_per
-         call get_perm(perm_pos, perm_id)
-c         write(23,*) "======================================"
-c         write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
 
-         do ll=1,nb_sol_config
-            counter=counter+1
-            write(23,*) perm_pos,' ',ll,' ',
-     & order_value(counter),
-     &           ' ', order_error(counter),
-     & '1   2', (2+perm_id(i-2), i=3,nexternal)
-         enddo
+      do perm_pos=1, NPERM
+         call get_perm(perm_pos, perm_id)
+      write(23,*) "======================================"
+      write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
+
       enddo
-c      write(23,*) "======================================"
-c      write(23,*)'Weight: ',temp_val,'+-', temp_err
-c      write(23,*) "======================================"
+      write(23,*) "======================================"
+      write(23,*)'Weight: ',temp_val,'+-', temp_err
+      write(23,*) "======================================"
 
 C**************************************************************************
 C     write histogram file (not activated in the standard mode)           *
 C************************************************************************** 
-      if (histo)   call histo_final(num_per*nb_sol_config)  
+      if (histo)   call histo_final(NPERM*nb_sol_config)
 
-      close(21)
-      OPEN(UNIT=21,FILE='./stop',STATUS='UNKNOWN')
       close(21)
 
       END
-
-
-
-      double precision function fct_mint(x,w,ifirst)
-
+C**************************************************************************************
+c     ==================================
+      subroutine get_new_perm_grid(NDIM)
       implicit none
-      double precision x(20),w
-      integer ifirst
+      integer i, j, step,NDIM
+      double precision cross, total, prev_total, value
+      include 'permutation.inc'
+      include 'phasespace.inc'
+      integer*4 it,ndo
+      double precision xi(50,20),si,si2,swgt,schi
+      common/bveg2/xi,si,si2,swgt,schi,ndo,it
 
-      double precision store
-      common /to_storage/store
+      step = 1
+      total = 0d0
+      cross = 0d0
+      DO I =1,NPERM
+         cross = cross + perm_value(i)/(nb_point_by_perm(i)+1e-99)
+      ENDDO
+      prev_total = 0d0
+      do i=1,NPERM
+           value = perm_value(perm_order(i, config_pos))/
+     &                (nb_point_by_perm(perm_order(i,config_pos))+1e-99)
+           total = total + value
+c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
+           do while (total.gt.((step)*cross/ndo))
+              xi(step, NDIM) = ((i-1)*1d0/NPERM + (step*cross/(1d0*ndo)
+     &          -prev_total)/(value*NPERM))
+               step = step + 1
+           enddo
+           prev_total = total
+      enddo
+      write(*,*) (xi(i, NDIM), i=1,50)
+      return
+      end
 
-      double precision fct
-      external fct
+C**************************************************************************************
+c     ==================================
+      subroutine sort_perm()
+      implicit none
+      include 'permutation.inc'
+      double precision data(NPERM)
+      integer i,j
+      data(1) = perm_value(1)/nb_point_by_perm(1)
+      do i=2,NPERM
+         data(i) = perm_value(i)/nb_point_by_perm(i)
+ 2       do j=1, i-1
+            if (data(i).ge.data(i-j)) then
+                if (j.ne.1) then
+                     call move_pos(i,i-j+1, data)
+                endif
+                goto 1
+            endif
+         enddo
+         call move_pos(i,1,data)
+ 1       enddo
+c       write(*,*) perm_order
+      end
 
+c     ==================================
+C**************************************************************************************
+      subroutine move_pos(old,new, data)
+      implicit none
+      integer i, j, old, new, next, id_old
+      include 'permutation.inc'
+      include 'phasespace.inc'
+      double precision data(NPERM), new_data(NPERM), data_old
 
-      store=store+fct(x,w)*w
-      if(ifirst.eq.2) then
-      fct_mint=store
-      else
-      fct_mint=fct(x,w)*w
-      endif
+      data_old = data(old)
+      id_old = perm_order(old, config_pos)
+      do j = old, new+1,-1
+        data(j) = data(j-1)
+        perm_order(j,config_pos) = perm_order(j-1,config_pos)
+      enddo
+      data(new) = data_old
+      perm_order(new, config_pos) = id_old
 
+c      write(*,*) (data(i), i=1,old)
+c      write(*,*) (perm_order(i), i=1,old)
+c      pause
+      return
       end
 
 
-C**************************************************************************************
-        double precision function fct(x,wgt)
-        implicit none
 
-        include 'phasespace.inc'
-        include 'nexternal.inc'
-        include 'run.inc'
-        include 'coupl.inc'
-        include 'madweight_param.inc'
-c
-c       this is the function which is called by the integrator
-
-c
-c       parameter
-c
-        double precision pi
-        parameter (pi=3.141592653589793d0)
-c
-c       arguments
-c
-        double precision x(20),wgt
-c
-c       local
-c
-c        integer i,j ! debug mode
-        double precision twgt
-c
-c       global
-c
-        double precision              S,X1,X2,PSWGT,JAC
-        common /PHASESPACE/ S,X1,X2,PSWGT,JAC
-        double precision momenta(0:3,-max_branches:2*max_particles)  ! momenta of external/intermediate legs     (MG order)
-        double precision mvir2(-max_branches:2*max_particles)        ! squared invariant masses of intermediate particles (MG order)
-        common /to_diagram_kin/ momenta, mvir2
-
-
-c        logical histo
-c        common /to_histo/histo
-c
-c       external
-c
-        double precision dsig
-        external dsig
-        double precision alphas
-        external alphas
-        logical passcuts
-        external passcuts
-        include 'data.inc'
-
-
-         call get_PS_point(x)
-         if (jac.gt.0d0) then
-        
-
-         if (use_cut) then
-            if (.not.passcuts(momenta(0,1))) then
-                fct = 0d0
-                return
-            endif
-         else
-c          here we evaluate the scales if running 
-           if(.not.fixed_ren_scale) then
-             call set_ren_scale(momenta(0,1),scale)
-             if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
-             call UPDATE_AS_PARAM()
-           endif
-           if(.not.fixed_fac_scale) then
-             call set_fac_scale(momenta(0,1),q2fact)
-           endif
-         endif
-           fct=jac
-           xbk(1)=X1
-           xbk(2)=X2
-           fct=fct*dsig(momenta(0,1),wgt)
-           call transfer_fct(momenta(0,1),TWGT)
-           fct=fct*twgt
-
-         if (histo)  then
-            call FILL_plot(fct,wgt,perm_pos*nb_sol_config+config_pos,nexternal)
-         endif
-
-         else
-           fct=0d0
-           return
-         endif
-         
-         end
 
 
 

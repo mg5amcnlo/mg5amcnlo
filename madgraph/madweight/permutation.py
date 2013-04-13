@@ -57,8 +57,9 @@ def get_all_permutations(cat_list):
 				break
 				
 	return permutations
-		
-print get_all_permutations(['s','s','s'])
-print get_all_permutations(['b','b','j','j'])		
-print get_all_permutations(['b','b','j','j','c','c'])		
+
+if __name__ == '__main__':
+	print get_all_permutations(['s','s','s'])
+	print get_all_permutations(['b','b','j','j'])		
+	print get_all_permutations(['b','b','j','j','c','c'])		
 print get_all_permutations(['b','b','j','b'])		

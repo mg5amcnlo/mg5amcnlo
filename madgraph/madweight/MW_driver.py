@@ -30,6 +30,11 @@ class RunningMW(object):
         self.nb_events = int(nb_events) # number of events to run
         self.mw_int_points = int(mw_int_points)
         self.log_level = log_level # weight | permutation | channel | iteration | full_log
+        if log_level == 'debug':
+            self.log_level = 'iteration'
+            self.debug = True
+        else:
+            self.debug = False
         self.sample_nb = int(sample_nb)
         
         self.current_event = -1
@@ -55,7 +60,13 @@ class RunningMW(object):
         self.fsock.write('<card id=\'%s\'>' % self.card_nb)
         while self.get_next_event(create=True):
             
-            subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
+            if not self.debug:
+                subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
+            else:
+                print 'submit in debug mode'
+                
+                os.system('echo "./comp_madweight" > log.txt')
+                os.system('bash log.txt')
             self.get_one_job_result()
         self.fsock.write('</card>')
     
@@ -254,7 +265,7 @@ class Channel(object):
 if __name__ == '__main__':
     
     card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb = sys.argv[1:]
-    fsock = open('MW_input','w')
+    fsock = open('argurments', 'w')
     fsock.write(' '.join(sys.argv[1:]))
     fsock.close()
     running_mw = RunningMW(card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb)
