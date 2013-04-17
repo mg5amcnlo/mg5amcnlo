@@ -72,6 +72,10 @@ c For tests
       integer itotalpoints
       common/ctotalpoints/itotalpoints
 
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+
 c For tests of virtuals
       double precision vobmax,vobmin
       common/cvirt0test/vobmax,vobmin
@@ -170,6 +174,9 @@ c at the NLO)
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
 
+      i_momcmp_count=0
+      xratmax=0.d0
+
       if(savegrid)then
          call integrate(initplot,sigint,idstring,itmax,irestart,ndim
      &        ,ncall,res,err,chi2a,savegrid)
@@ -267,6 +274,12 @@ c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
       open(unit=99,file='MADatNLO.top',status='unknown')
       call topout
       close(99)
+
+      if(i_momcmp_count.ne.0)then
+        write(*,*)'     '
+        write(*,*)'WARNING: genps_fks code 555555'
+        write(*,*)i_momcmp_count,xratmax
+      endif
 
       end
 

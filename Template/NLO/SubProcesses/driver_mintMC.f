@@ -85,6 +85,10 @@ c For tests
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+
       double precision weight
 c For MINT:
       include "mint.inc"
@@ -171,6 +175,9 @@ c at the NLO)
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
+
+      i_momcmp_count=0
+      xratmax=0.d0
 
       unwgt=.false.
 
@@ -416,7 +423,11 @@ c$$$     &     total_wgt_sum/dble(ncall*itmax)
 c$$$      write (*,*) '----------------------------------------------------'
 c$$$      write (*,*) ''
 
-
+      if(i_momcmp_count.ne.0)then
+        write(*,*)'     '
+        write(*,*)'WARNING: genps_fks code 555555'
+        write(*,*)i_momcmp_count,xratmax
+      endif
 
       if(plotEv.or.plotKin)then
         call mclear

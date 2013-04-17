@@ -71,6 +71,11 @@ c----------
 c     start
 c----------
       include 'run_card.inc'
+      
+c MZ add the possibility to have shower_MC input lowercase
+      call to_upper(shower_MC)
+
+
 
 
 c*********************************************************************
