@@ -2592,6 +2592,7 @@ class decay_all_events:
                 if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                     running_time = misc.format_timer(time.time()-starttime)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
+                if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
             mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
             tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
