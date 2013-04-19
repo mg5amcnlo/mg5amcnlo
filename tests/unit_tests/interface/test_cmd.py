@@ -143,8 +143,6 @@ class TestValidCmd(unittest.TestCase):
     def test_InvalidCmd(self):
         """test that the Invalid Command are dealt with correctly"""
         
-
-        
         master = cmd.MasterCmd()
         self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
         try:
@@ -160,7 +158,6 @@ class TestValidCmd(unittest.TestCase):
         import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
         tmp = cmd_madloop.TestCmdLoop
         tmp.setup_logFile_for_logger('fatalerror', level=logging.WARNING)
-
         try:
             master.run_cmd('define aa')
         except Exception:
@@ -169,7 +166,9 @@ class TestValidCmd(unittest.TestCase):
         text = open('/tmp/fatalerror.log').read()
         self.assertTrue('{' not in text)
         self.assertTrue('MS_debug' in text)
-        
+        tmp.setup_logFile_for_logger('fatalerror', restore=True, \
+                                                  level=logging.WARNING)
+
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of
