@@ -724,12 +724,13 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
+
         for list_l_name, tag, outgoing in data:
             #allow tag to have integer for retro-compatibility
             conjugate = [i for i in tag if isinstance(i, int)]
-            tag =  [i for i in tag if isinstance(i, str)]
+            tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
             tag = tag + ['C%s'%i for i in conjugate] 
-            #
+            tag = tag + [i for i in tag if isinstance(i, str) and  i.startswith('P')] 
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
@@ -784,8 +785,9 @@ class AbstractALOHAModel(dict):
                 continue
             #allow tag to have integer for retrocompatibility
             conjugate = [i for i in tag if isinstance(i, int)]
-            tag =  [i for i in tag if isinstance(i, str)]
+            tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
             tag = tag + ['C%s'%i for i in conjugate] 
+            tag = tag + [i for i in tag if isinstance(i, str) and  i.startswith('P')] 
             
             if not self.explicit_combine:
                 lorentzname = list_l_name[0]
