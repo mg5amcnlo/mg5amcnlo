@@ -3697,12 +3697,12 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         all lorentz structures used by this HelasMatrixElement."""
 
         out = [(tuple(wa.get('lorentz')),  
-                tuple(([] if wa.get('particle').get('propagator') =='' else \
-                           ['P%s' % wa.get('particle').get('propagator')]) + \
-                           list(wa.get('conjugate_indices'))), \
-                wa.find_outgoing_number()) 
-                for wa in self.get_all_wavefunctions() \
-                                               if wa.get('interaction_id') != 0] 
+                 tuple(list(wa.get('conjugate_indices')) + \
+                  [] if wa.get('particle').get('propagator') =='' else \
+                  ['P%s' % wa.get('particle').get('propagator')]),
+                 wa.find_outgoing_number()) for wa in \
+                self.get_all_wavefunctions()\
+                if wa.get('interaction_id') != 0]  
         out += [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
                  wa.find_outgoing_number()) for wa in  self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
