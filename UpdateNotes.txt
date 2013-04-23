@@ -1,5 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.10 (xx/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
+                      massless propagator. (introduce in 1.5.9)
+                  OM: Fix question #226810: checking that patch program exists before
+                      trying to update MG5 code.
+                  OM: Fix Bug #1171049: an error in the order of wavefuntions 
+                      making the code to crash (introduce in 1.5.7)
+
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
                       processes (such as p p > z z j, z > l+ l-). Apart from the 

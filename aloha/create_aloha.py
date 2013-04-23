@@ -787,7 +787,7 @@ class AbstractALOHAModel(dict):
             #allow tag to have integer for retrocompatibility
             conjugate = [i for i in tag if isinstance(i, int)]
             all_tag = tag[:]
-            tag =  [i for i in tag if isinstance(i, str)] #and not i.startswith('P')]
+            tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
             tag = tag + ['C%s'%i for i in conjugate] 
             tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
