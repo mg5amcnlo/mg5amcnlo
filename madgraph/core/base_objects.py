@@ -1499,7 +1499,7 @@ class Model(PhysicsObject):
                               isinstance(param, ParamCardVariable):
                     continue
                 param.type = 'complex'
-                print param.expr,  to_change
+#                print param.expr,  to_change
                 
                 param.expr = pat.sub(replace, param.expr)
         
