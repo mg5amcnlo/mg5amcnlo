@@ -6,18 +6,22 @@ c With some work on finalizeprocesses(), it should work also for
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
       implicit none
-      integer maxevt,ifile,efile,jfile,kfile,rfile,i,npart,iuseres_1
-      double precision chtot,xint,xinterr
+      integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
+     # iuseres_1,iwhmass,ilepmass,idec
+      double precision chtot,xint,xinterr,qtiny
+      parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
-      integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,
+      double precision remcmass(-5:21)
+      common/cremcmass/remcmass
+      integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
      # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
       logical wrong
-      integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
       integer idups_Sproc_HW6(401:499,-1:10),
      #        idups_Hproc_HW6(401:499,-1:10)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
-      integer icolups_proc(1000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,10)
       common/ccolconn/icolups_proc
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -62,14 +66,17 @@ c negative number of events
       call setcharges(charges)
       call setmasses(zmasses)
       mxlproc=0
-      minnp=1000
+      minnp=10000
       maxnp=-1
-      do i=1,1000
+      do i=1,10000
         icolups_proc(i,0,1,1)=0
       enddo
       do i=401,499
         idups_Sproc_HW6(i,-1)=0
         idups_Hproc_HW6(i,-1)=0
+      enddo
+      do i=-5,21
+         remcmass(i)=0.d0
       enddo
 
       write (*,*) 'Enter event file name'
@@ -79,10 +86,27 @@ c negative number of events
       write (*,*) '      1 otherwise'
       read (*,*) iuseres_1
 
+c Mass of particles other than partons and leptons always to be
+c read from events
+      write (*,*) 'Enter 0 to use MC masses as written in the header'
+      write (*,*) '      1 to use MC masses as written in events'
+      write (*,*) '      2 to enter them'
+      read (*,*) iwhmass
+
+      if(iwhmass.eq.0.or.iwhmass.eq.2)then
+        write (*,*) 'Enter 0 to use physical lepton masses'
+        write (*,*) '      2 to enter them'
+        read (*,*) ilepmass
+      endif
+
+      write (*,*) 'Enter 0 to study decays'
+      write (*,*) '      1 othewise'
+      read (*,*) idec
+      if(idec.eq.0)call setdecmat()
+
       ifile=34
       open (unit=ifile,file=event_file,status='old')
       if(iuseres_1.eq.0)then
-c
         jfile=50
         open (unit=jfile,file='res_1_tot.txt',status='old')
         do while(buff(1:6).ne.'Total:')
@@ -102,6 +126,8 @@ c
       endif
       efile=44
       open (unit=efile,file='LHEF.errors',status='unknown')
+      mfile=45
+      open (unit=mfile,file='LHEF.mass_errors',status='unknown')
       kfile=54
       open (unit=kfile,file='LHEF.stats',status='unknown')
       AddInfoLHE=.false.
@@ -110,7 +136,7 @@ c
       keepevent=.true.
       shower=.false.
 
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
 c Showered LH files have maxevt<0; in that case, it is not the number of
 c events, but its upper bound
       if(maxevt.lt.0)then
@@ -118,6 +144,43 @@ c events, but its upper bound
         shower=.true.
       endif
       maxevt=abs(maxevt)
+c Fill quark/antiquark masses if not already in header
+      do i=-5,5
+        if(remcmass(i).eq.0.d0)remcmass(i)=remcmass(-i)
+      enddo
+c
+      if(iwhmass.eq.0)then
+        do i=1,21
+          if(remcmass(i).ne.0.d0)zmasses(i)=remcmass(i)
+        enddo
+      elseif(iwhmass.eq.2)then
+        do i=1,21
+          if((i.ge.1.and.i.le.5).or.i.eq.21)then
+            write(*,*)'Enter mass #',i
+            read(*,*)zmasses(i)
+          endif
+        enddo
+      endif
+      if(iwhmass.eq.0.or.iwhmass.eq.2)then
+        if(ilepmass.eq.0)then
+          zmasses(11)=0.510998928d-3
+          zmasses(12)=0.d0
+          zmasses(13)=0.1056583715d0
+          zmasses(14)=0.d0
+          zmasses(15)=1.77682d0
+          zmasses(16)=0.d0
+        elseif(ilepmass.eq.2)then
+          do i=11,16
+            if(mod(i,2).eq.1)then
+              write(*,*)'Enter mass #',i
+              read(*,*)zmasses(i)
+            else
+              zmasses(i)=0.d0
+            endif
+          enddo
+        endif
+      endif
+
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
@@ -153,9 +216,12 @@ c events, but its upper bound
      #               abs(1.d0-abs(XWGTUP)/saved_weight).lt.1.d-5
           endif
         endif
+        if(idec.eq.0)call findmothers(NUP,IDUP,ISTUP)
 
       enddo
       close(34)
+
+      if(idec.eq.0)call checkmothers()
 
       write(*,*)'  '
       if(unweighted)then
@@ -182,7 +248,7 @@ c events, but its upper bound
 
       open (unit=ifile,file=event_file,status='old')
 
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
       maxevt=abs(maxevt)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
@@ -195,6 +261,7 @@ c events, but its upper bound
       nevH_lhe=0
       npartH_lhe=0
       itoterr=0
+      mtoterr=0
       if(jwgtinfo.eq.8)then
         do kr=1,maxscales
           do kf=1,maxscales
@@ -220,16 +287,19 @@ c events, but its upper bound
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
 
+c Note: with pre-beta2 convention, the reweighting cross sections were
+c normalized such that one needed to compute e.g. 
+c XWGTUP*wgtxsecmu(kr,kf)/wgtref
          if(jwgtinfo.eq.8)then
            do kr=1,numscales
              do kf=1,numscales
                sum_wgt_resc_scale(kr,kf)=sum_wgt_resc_scale(kr,kf)+
-     #                               XWGTUP*wgtxsecmu(kr,kf)/wgtref
+     #                                   wgtxsecmu(kr,kf)
              enddo
            enddo
            do kpdf=1,2*numPDFpairs
              sum_wgt_resc_pdf(kpdf)=sum_wgt_resc_pdf(kpdf)+
-     #                       XWGTUP*wgtxsecPDF(kpdf)/wgtref
+     #                              wgtxsecPDF(kpdf)
            enddo
          endif
 
@@ -263,15 +333,17 @@ c events, but its upper bound
              icolup_eff(1,npart)=ICOLUP(1,k)
              icolup_eff(2,npart)=ICOLUP(2,k)
              chtot=chtot+ISTUP(k)*charges(IDUP(k))
-             if(zmasses(abs(IDUP(k))).eq.-1.d0)then
+             if( ( abs(IDUP(k)).eq.6.or.abs(IDUP(k)).gt.21.or.
+     #             iwhmass.eq.1 ).and.
+     #           zmasses(abs(IDUP(k))).eq.-1.d0 )then
                zmasses(abs(IDUP(k)))=xmass(npart)
              else
-               if(zmasses(abs(IDUP(k))).ne.xmass(npart))then
-                 write(44,*)'####event:',i
-                 write(44,*)' wrong mass shell',xmass(npart)
-                 write(44,*)' for particle',k,
+               if(abs(zmasses(abs(IDUP(k)))-xmass(npart)).gt.qtiny)then
+                 write(45,*)'####event:',i
+                 write(45,*)' Wrong mass shell',xmass(npart)
+                 write(45,*)' for particle',k,
      #                      ' Must be:',zmasses(abs(IDUP(k)))
-                 itoterr=itoterr+1
+                 mtoterr=mtoterr+1
                endif
              endif
            endif
@@ -354,6 +426,8 @@ c events, but its upper bound
            endif
          endif
 
+         if(idec.eq.0)call finddaughters(NUP,IDUP,ISTUP,MOTHUP)
+
 c Showered LH files only contain final-state particles.
 c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
@@ -420,26 +494,41 @@ c Error if more that 1sigma away
           write(64,*)'Sums of rescaled weights'
           do kr=1,numscales
             do kf=1,numscales
-              write(64,*)'scales',kr,kf,' ->',
-     #                   sum_wgt_resc_scale(kr,kf)
+              if(event_norm.eq.'ave')then
+                write(64,*)'scales',kr,kf,' ->',
+     #                     sum_wgt_resc_scale(kr,kf)/maxevt
+              else
+                write(64,*)'scales',kr,kf,' ->',
+     #                     sum_wgt_resc_scale(kr,kf)
+              endif
             enddo
           enddo
-          do kpdf=1,2*numPDFpairs
-            write(64,*)'PDF',kpdf,' ->',
-     #                 sum_wgt_resc_pdf(kpdf)
-          enddo
+          if(event_norm.eq.'ave')then
+            do kpdf=1,2*numPDFpairs
+              write(64,*)'PDF',kpdf,' ->',
+     #                   sum_wgt_resc_pdf(kpdf)/maxevt
+            enddo
+          else
+            do kpdf=1,2*numPDFpairs
+              write(64,*)'PDF',kpdf,' ->',
+     #                   sum_wgt_resc_pdf(kpdf)
+            enddo
+          endif
         endif
 
       endif
 
       write (*,*) ' '
-      write (*,*) 'Total number of errors found:',itoterr
+      write (*,*) 'Total number of errors found:',itoterr+mtoterr
+      write (*,*) '         Of which mass shell:',mtoterr
 
       close(34)
       close(44)
       close(50)
       close(54)
       if(rwgtinfo)close(64)
+
+      if(idec.eq.0)call finalizedecays()
 
  200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
@@ -469,6 +558,7 @@ c
       charges(15)=-1.d0
       charges(16)=0.d0
       charges(21)=0.d0
+      charges(22)=0.d0
       charges(23)=0.d0
       charges(24)=1.d0
       charges(25)=0.d0
@@ -500,7 +590,7 @@ c process in the list of processes idups_proc
       integer npart,numproc,idup_eff(10)
       integer i,j
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
 c mxlproc=current maximum number of different processes
 c idups_proc(n,-1)=number of identical processes identified by n
@@ -527,7 +617,7 @@ c
 c
       if(.not.exists)then
         mxlproc=mxlproc+1
-        if(mxlproc.gt.1000)then
+        if(mxlproc.gt.10000)then
           write(*,*)'Error in storeprocesses: too many processes'
           stop
         endif
@@ -553,7 +643,7 @@ c
       integer iunit
       integer maxevt,iprocsum,iHW6procsum,nevS,nevH,i,id1,id2,ihpro
       logical isalquark,isagluon
-      integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
       integer idups_Sproc_HW6(401:499,-1:10),
      #        idups_Hproc_HW6(401:499,-1:10)
@@ -687,9 +777,9 @@ c This routine works at fixed process number numproc
       integer npart,numproc,numconn,icolup_eff(2,10)
       integer i,j,ic,newline,jline(501:510),jcolup(2,10)
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(1000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,10)
       common/ccolconn/icolups_proc
 c icolups_proc(numproc,0,1,1)=total number of colour connections
 c icolups_proc(numproc,n,0,1)=number of identical connections identified by n
@@ -769,9 +859,9 @@ c
       integer iev,numproc,numconn
       logical wrong
       integer npart,i,j,icol,iacl,iid,ncol1,ncol2,nacl1,nacl2,nneg
-      integer mxlproc,minnp,maxnp,idups_proc(1000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(1000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,10)
       common/ccolconn/icolups_proc
 c
       npart=idups_proc(numproc,0)
@@ -851,6 +941,450 @@ c Initial(final) state anticolour is connected to final(initial) state colour
       enddo
       return
       end
+
+
+      subroutine setdecmat()
+c Assume up to 20 intermediate states (called mothers) will be present in 
+c the LH file, each with up to 40 decay channels, each with up to 5 decay
+c products (called daughters). Maximum PDG code is 25
+c  nmothers(0) = number of mothers (<=20)
+c  nmothers(PDG) = number of mothers with PDG code = PDG
+c  nch(i) = number of decay channels of mother #i (<=40)
+c  ndec(j,i) = number of daughters in decay channel #j of mother #i (<=5)
+c  jmo(i) = PDG code of mother #i
+c  jda(k,j,i) = PDG code of daughter #k in decay channel #j of mother #i
+c  ndecev(j,i) = number of events in decay channel #j of mother #i
+c  ndecev(0,i) = total number of decays for mother #i
+c  ndeccor(j,j1,i,i1) = number of events in decay channels #j and #j1
+c                       of mothers #i and #i1 (for correlations)
+      implicit none
+      integer i,j,k,i1,j1
+      integer nmothers(-25:25),nch(20),ndec(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
+      integer ndeccor(0:40,0:40,20,20)
+      common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
+c
+      nmothers(0)=0
+      do i=1,20
+        jmo(i)=0
+        nch(i)=0
+        do j=1,40
+          ndec(j,i)=0
+          ndecev(j,i)=0
+          do k=-25,25
+            if(i.eq.1.and.j.eq.1)nmothers(k)=0
+            if(k.ge.1.and.k.le.5)jda(k,j,i)=0
+          enddo
+        enddo
+      enddo
+      do j=0,40
+        do j1=0,40
+          do i=1,20
+            do i1=1,20
+              ndeccor(j,j1,i,i1)=0
+            enddo
+          enddo
+        enddo
+      enddo
+      return
+      end
+
+
+      subroutine findmothers(NUP,IDUP,ISTUP)
+      implicit none
+      integer i,k,itot,ipart,nmotmp(-25:25)
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDUP(MAXNUP),ISTUP(MAXNUP)
+      integer nmothers(-25:25),nch(20),ndec(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
+      integer ndeccor(0:40,0:40,20,20)
+      common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
+c
+      itot=0
+      do k=-25,25
+        nmotmp(k)=0
+      enddo
+      do ipart=1,NUP
+        if(ISTUP(ipart).eq.2)then
+          if(nmothers(0).eq.0)then
+c First event on record: save all those found
+            itot=itot+1
+            jmo(itot)=IDUP(ipart)
+            nmothers(IDUP(ipart))=nmothers(IDUP(ipart))+1
+          else
+c Other events: save temporary variable, check later if overlap
+            nmotmp(IDUP(ipart))=nmotmp(IDUP(ipart))+1
+          endif
+        endif
+      enddo
+c
+      if(nmothers(0).eq.0)then
+        nmothers(0)=itot
+        return
+      endif
+c
+      do k=-25,25
+        if(k.ne.0.and.nmotmp(k).gt.nmothers(k))then
+          nmothers(0)=nmothers(0)+(nmotmp(k)-nmothers(k))
+          nmothers(k)=nmotmp(k)
+          do i=nmothers(k)+1,nmotmp(k)
+            jmo(i)=k
+          enddo
+        endif
+      enddo
+c
+      return
+      end
+
+
+      subroutine finddaughters(NUP,IDUP,ISTUP,MOTHUP)
+c Assumes decay products in an LH file have identical MOTHUP
+      implicit none
+      integer ipart,nmax,i,imo,jch,k,itmp,itot,imo1,imo2
+      integer ipos0(50),ipos1(50),imotmp(50),idatmp(50),
+     # jdatmp(5),nset(20,0:6),jchcor(20)
+      logical found,kept(20)
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDUP(MAXNUP),ISTUP(MAXNUP),MOTHUP(2,MAXNUP)
+      integer nmothers(-25:25),nch(20),ndec(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
+      integer ndeccor(0:40,0:40,20,20)
+      common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
+c
+      itot=0
+c Assumes up to 50 particles in LH file
+      do ipart=1,50
+        ipos0(ipart)=0
+        imotmp(ipart)=0
+        ipos1(ipart)=0
+        idatmp(ipart)=0
+      enddo
+      do ipart=1,NUP
+        if( ISTUP(ipart).gt.0 .and.
+     #      MOTHUP(1,ipart).eq.MOTHUP(2,ipart) )then
+          if(ISTUP(MOTHUP(1,ipart)).ne.2)then
+            write(*,*)'Error #1 in finddaughters'
+            write(*,*)ipart,MOTHUP(1,ipart),MOTHUP(2,ipart),
+     #                ISTUP(MOTHUP(1,ipart))
+            stop
+          endif
+          itot=itot+1
+          ipos0(itot)=MOTHUP(1,ipart)
+          imotmp(itot)=IDUP(ipos0(itot))
+          ipos1(itot)=ipart
+          idatmp(itot)=IDUP(ipos1(itot))
+        endif
+      enddo
+c Sanity check: all mothers types must have been found before
+      if(itot.eq.0)then
+        write(*,*)'Error #2 in finddaughters',itot
+        stop
+      endif
+      do i=1,itot
+        if(nmothers(imotmp(i)).eq.0)then
+          write(*,*)'Error #3 in finddaughters'
+          write(*,*)i,imotmp(i),nmothers(imotmp(i))
+          stop
+        endif
+      enddo
+c Collect sets of daughters with same mother. Conventions:
+c  nset(*,0)   = # of decay products
+c  nset(*,1)   = position of mother
+c  nset(*,k+1) = position of daughter #k, 1<=k<=nset(*,0)
+c Hence, each line of nset will describe a decay chain in the form
+c  (#daughters,pos_of_mother,pos_of_daughter1,..,pos_of_daughtern)
+c where the positions are those in the original event.
+c At the end of the day, nmax will therefore be the total number
+c of decays in the event under analysis
+      nmax=1
+      nset(nmax,0)=1
+      nset(nmax,1)=ipos0(1)
+      nset(nmax,2)=ipos1(1)
+      do ipart=2,itot
+        found=.false.
+        imo=0
+        dowhile(imo.lt.nmax.and.(.not.found))
+          imo=imo+1
+          if(nset(imo,1).eq.ipos0(ipart))found=.true.
+        enddo
+        if(found)then
+          nset(imo,0)=nset(imo,0)+1
+          nset(imo,nset(imo,0)+1)=ipos1(ipart)
+        else
+          nmax=nmax+1
+          nset(nmax,0)=1
+          nset(nmax,1)=ipos0(ipart)
+          nset(nmax,2)=ipos1(ipart)
+        endif
+      enddo
+c Sanity check: no more mothers than found before (can be more stringent,
+c and impose equality if mothers are always written on file, and are
+c always the same)
+      if(nmax.gt.nmothers(0))then
+        write(*,*)'Error #4 in finddaughters'
+        write(*,*)nmax,nmothers(0)
+        stop
+      endif
+c
+      do i=1,nmothers(0)
+        kept(i)=.false.
+      enddo
+      do imo=1,nmax
+        i=0
+        found=.false.
+        dowhile( i.lt.nmothers(0).and.(.not.found) )
+          i=i+1
+          if(IDUP(nset(imo,1)).eq.jmo(i).and.(.not.kept(i)))then
+            kept(i)=.true.
+            found=.true.
+          endif
+        enddo
+        if(.not.found)then
+          write(*,*)'Error #5 in finddaughters'
+          write(*,*)imo,i
+          stop
+        endif
+c Now nset(imo,1) matches jmo(i). Fill nch, ndec, jda and ndecev, or 
+c find match and fill what appropriate
+        do k=1,nset(imo,0)
+          jdatmp(k)=IDUP(nset(imo,k+1))
+        enddo
+        call intorder(jdatmp,nset(imo,0))
+        if(nch(i).eq.0)then
+          nch(i)=1
+          ndec(nch(i),i)=nset(imo,0)
+          do k=1,ndec(nch(i),i)
+            jda(k,nch(i),i)=jdatmp(k)
+          enddo
+          ndecev(nch(i),i)=ndecev(nch(i),i)+1
+          jchcor(imo)=nch(i)
+        else
+          jch=0
+          found=.false.
+          dowhile(jch.lt.nch(i).and.(.not.found))
+            jch=jch+1
+            if(ndec(jch,i).eq.nset(imo,0))then
+              found=.true.
+              do k=1,ndec(jch,i)
+                found=found.and.jda(k,jch,i).eq.jdatmp(k)
+              enddo
+            endif
+          enddo
+          if(found)then
+            ndecev(jch,i)=ndecev(jch,i)+1
+            jchcor(imo)=jch
+          else
+            nch(i)=nch(i)+1
+            ndec(nch(i),i)=nset(imo,0)
+            do k=1,ndec(nch(i),i)
+              jda(k,nch(i),i)=jdatmp(k)
+            enddo
+            ndecev(nch(i),i)=ndecev(nch(i),i)+1
+            jchcor(imo)=nch(i)
+          endif
+        endif
+      enddo
+c
+      do imo1=1,nmax
+        do imo2=1,nmax
+          ndeccor(jchcor(imo1),jchcor(imo2),imo1,imo2)=
+     #      ndeccor(jchcor(imo1),jchcor(imo2),imo1,imo2)+1
+        enddo
+      enddo
+c
+      return
+      end
+
+
+      subroutine finalizedecays()
+      implicit none
+      integer dfile,i,j,k,i1,j1,isum
+      integer j0,idecch(40),isorted0(40),isorted(40,20),jdatmp(5)
+c Sort array of results: ismode<0 for integer, isway=0 for ascending order
+      integer ismode,isway,izero
+      parameter (ismode=-1)
+      parameter (isway=0)
+      parameter (izero=0)
+      integer nmothers(-25:25),nch(20),ndec(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
+      integer ndeccor(0:40,0:40,20,20)
+      common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
+c
+      dfile=74
+      open (unit=dfile,file='LHEF.decays',status='unknown')
+c
+      write(74,'(a)')' mother #      PDG code'
+      do i=1,nmothers(0)
+        write(74,100)i,jmo(i)
+      enddo
+c 
+      do i=1,nmothers(0)
+        ndecev(0,i)=0
+        do j=1,nch(i)
+          ndecev(0,i)=ndecev(0,i)+ndecev(j,i)
+        enddo
+c Use the following in order to avoid divisions by zero
+        ndecev(0,i)=max(ndecev(0,i),1)
+c Sort decay channels
+        if(nch(i).gt.1)then
+          do j=1,nch(i)
+            idecch(j)=0
+            do k=1,ndec(j,i)
+              jdatmp(k)=abs(jda(k,j,i))
+            enddo
+            call intorder(jdatmp,ndec(j,i))
+            do k=1,ndec(j,i)
+              idecch(j)=idecch(j)+10**(2*(k-1))*jdatmp(k)
+            enddo
+          enddo
+          call sortzv(idecch,isorted0,nch(i),ismode,isway,izero)
+          do j=1,nch(i)
+            isorted(j,i)=isorted0(j)
+          enddo
+        else
+            isorted(1,i)=1
+        endif
+        write(74,'(a)')' '
+        write(74,'(a)')'-------------------------------------------'
+        write(74,101)' mother #',i,jmo(i)
+        write(74,'(a)')' decay channel   decay products'
+        do j=1,nch(i)
+          j0=isorted(j,i)
+          if(ndec(j,i).eq.2)then
+            write(74,112)j,(jda(k,j0,i),k=1,ndec(j,i)),ndecev(j0,i),
+     #                   dfloat(ndecev(j0,i))/dfloat(ndecev(0,i))
+          elseif(ndec(j,i).eq.3)then
+            write(74,113)j,(jda(k,j0,i),k=1,ndec(j,i)),ndecev(j0,i),
+     #                   dfloat(ndecev(j0,i))/dfloat(ndecev(0,i))
+          elseif(ndec(j,i).eq.4)then
+            write(74,114)j,(jda(k,j0,i),k=1,ndec(j,i)),ndecev(j0,i),
+     #                   dfloat(ndecev(j0,i))/dfloat(ndecev(0,i))
+          elseif(ndec(j,i).eq.5)then
+            write(74,115)j,(jda(k,j0,i),k=1,ndec(j,i)),ndecev(j0,i),
+     #                   dfloat(ndecev(j0,i))/dfloat(ndecev(0,i))
+          else
+            write(*,*)'Error in #1 finalizedecays()',
+     #                i,j,nch(i),ndec(j,i)
+            stop
+          endif
+        enddo
+      enddo
+c Correlations
+      write(74,'(a)')' '
+      write(74,'(a)')' '
+      write(74,'(a)')' '
+      write(74,'(a)')'*******************************************'
+      write(74,'(a)')'   CORRELATIONS'
+      write(74,'(a)')'*******************************************'
+      write(74,'(a)')' '
+      do i=1,nmothers(0)
+        do i1=1,nmothers(0)
+          if(i.eq.i1)goto 999
+c
+          do j=1,nch(i)
+            ndeccor(j,0,i,i1)=0
+            do j1=1,nch(i1)
+              ndeccor(j,0,i,i1)=ndeccor(j,0,i,i1)+ndeccor(j,j1,i,i1)
+            enddo
+          enddo
+c Sanity check (perhaps fragile if some decays are missing)
+          isum=0
+          do j=1,nch(i)
+            isum=isum+ndeccor(j,0,i,i1)
+          enddo
+          isum=max(isum,1)
+          if(isum.ne.ndecev(0,i))then
+            write(*,*)'Error in #2 finalizedecays()',
+     #                i,i1,isum,ndecev(0,i)
+            stop
+          endif
+c
+          write(74,'(a)')' '
+          write(74,'(a)')'-------------------------------------------'
+          write(74,301)' mothers #',i,i1,jmo(i),jmo(i1)
+          write(74,'(a)')' '
+          write(74,302)(j1,j1=1,nch(i1))
+          do j=1,nch(i)
+            write(74,303)j,(ndeccor(isorted(j,i),isorted(j1,i1),i,i1),
+     #                      j1=1,nch(i1))
+          enddo
+          write(74,'(a)')' '
+          write(74,'(a)')' Normalized to total '
+          write(74,302)(j1,j1=1,nch(i1))
+          do j=1,nch(i)
+            write(74,304)j,
+     #        (dfloat(ndeccor(isorted(j,i),isorted(j1,i1),i,i1))/
+     #         dfloat(isum),j1=1,nch(i1))
+          enddo
+          write(74,'(a)')' '
+          write(74,'(a)')' Normalized to rows '
+          write(74,302)(j1,j1=1,nch(i1))
+          do j=1,nch(i)
+            write(74,304)j,
+     #        (dfloat(ndeccor(isorted(j,i),isorted(j1,i1),i,i1))/
+     #         dfloat(ndeccor(isorted(j,i),0,i,i1)),j1=1,nch(i1))
+          enddo
+c
+ 999      continue
+        enddo
+      enddo
+
+
+c
+ 100  format(3x,i2,12x,i3)
+ 101  format((a),i2,4x,i3)
+ 112  format(5x,i2,10x,2(1x,i3),10x,i9,2x,f10.6)
+ 113  format(5x,i2,10x,3(1x,i3),10x,i9,2x,f10.6)
+ 114  format(5x,i2,10x,4(1x,i3),10x,i9,2x,f10.6)
+ 115  format(5x,i2,10x,5(1x,i3),10x,i9,2x,f10.6)
+ 301  format((a),i2,1x,i2,4x,i3,1x,i3)
+ 302  format(1x,2x,20(2x,i9))
+ 303  format(1x,i2,20(2x,i9))
+ 304  format(1x,i2,20(2x,f9.5))
+      return
+      end
+
+
+      subroutine intorder(iset,imax)
+c Orders the first imax entries of iset
+      implicit none
+      integer imax,iset(5)
+      integer i,j,itmp
+c
+      do i=imax,2,-1
+        do j=1,i-1
+          if(iset(j).gt.iset(j+1))then
+            itmp=iset(j+1)
+            iset(j+1)=iset(j)
+            iset(j)=itmp
+          endif
+        enddo
+      enddo
+      return
+      end
+
+
+      subroutine checkmothers()
+      implicit none
+      integer k,itmp
+      integer nmothers(-25:25),nch(20),ndec(40,20)
+      integer jmo(20),jda(5,40,20),ndecev(0:40,20)
+      integer ndeccor(0:40,0:40,20,20)
+      common/cdec/nmothers,nch,ndec,jmo,jda,ndecev,ndeccor
+c
+      itmp=0
+      do k=-25,25
+        if(k.ne.0)itmp=itmp+nmothers(k)
+      enddo
+      if(nmothers(0).ne.itmp)then
+        write(*,*)'Error in checkmothers:',nmothers(0),itmp
+        stop
+      endif
+      return
+      end
+
 
 
       subroutine phspncheck_nocms2(nev,npart,xmass,xmom)
@@ -946,3 +1480,191 @@ c
       xlen4=sign(1.d0,tmp)*sqrt(abs(tmp))
       return
       end
+
+
+*
+* $Id: sortzv.F,v 1.1.1.1 1996/02/15 17:49:50 mclareni Exp $
+*
+* $Log: sortzv.F,v $
+* Revision 1.1.1.1  1996/02/15 17:49:50  mclareni
+* Kernlib
+*
+*
+c$$$#include "kerngen/pilot.h"
+      SUBROUTINE SORTZV (A,INDEX,N1,MODE,NWAY,NSORT)
+C
+C CERN PROGLIB# M101    SORTZV          .VERSION KERNFOR  3.15  820113
+C ORIG. 02/10/75
+C
+      DIMENSION A(N1),INDEX(N1)
+C
+C
+      N = N1
+      IF (N.LE.0)            RETURN
+      IF (NSORT.NE.0) GO TO 2
+      DO 1 I=1,N
+    1 INDEX(I)=I
+C
+    2 IF (N.EQ.1)            RETURN
+      IF (MODE)    10,20,30
+   10 CALL SORTTI (A,INDEX,N)
+      GO TO 40
+C
+   20 CALL SORTTC(A,INDEX,N)
+      GO TO 40
+C
+   30 CALL SORTTF (A,INDEX,N)
+C
+   40 IF (NWAY.EQ.0) GO TO 50
+      N2 = N/2
+      DO 41 I=1,N2
+      ISWAP = INDEX(I)
+      K = N+1-I
+      INDEX(I) = INDEX(K)
+   41 INDEX(K) = ISWAP
+   50 RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTF (A,INDEX,N1)
+C
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF (AI.LE.A (I22)) GO TO 3
+      INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (A(I22)-A(I222)) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (AI-A(I22)) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTI (A,INDEX,N1)
+C
+      INTEGER A,AI
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF (AI.LE.A (I22)) GO TO 3
+      INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (A(I22)-A(I222)) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (AI-A(I22)) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTC (A,INDEX,N1)
+C
+      INTEGER A,AI
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF(ICMPCH(AI,A(I22)))3,3,21
+   21 INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (ICMPCH(A(I22),A(I222))) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (ICMPCH(AI,A(I22))) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      FUNCTION ICMPCH(IC1,IC2)
+C     FUNCTION TO COMPARE TWO 4 CHARACTER EBCDIC STRINGS - IC1,IC2
+C     ICMPCH=-1 IF HEX VALUE OF IC1 IS LESS THAN IC2
+C     ICMPCH=0  IF HEX VALUES OF IC1 AND IC2 ARE THE SAME
+C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
+      I1=IC1
+      I2=IC2
+      IF(I1.GE.0.AND.I2.GE.0)GOTO 40
+      IF(I1.GE.0)GOTO 60
+      IF(I2.GE.0)GOTO 80
+      I1=-I1
+      I2=-I2
+      IF(I1-I2)80,70,60
+ 40   IF(I1-I2)60,70,80
+ 60   ICMPCH=-1
+      RETURN
+ 70   ICMPCH=0
+      RETURN
+ 80   ICMPCH=1
+      RETURN
+      END

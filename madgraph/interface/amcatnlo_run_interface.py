@@ -1279,7 +1279,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
-            shower = self.run_card['parton_shower']
+            shower = self.run_card['parton_shower'].upper()
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
             #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
@@ -1667,7 +1667,7 @@ Integrated cross-section
             pass
 
         self.banner = banner_mod.Banner(evt_file)
-        shower = self.banner.get_detail('run_card', 'parton_shower')
+        shower = self.banner.get_detail('run_card', 'parton_shower').upper()
         self.banner_to_mcatnlo(evt_file)
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
 
@@ -1894,7 +1894,7 @@ Integrated cross-section
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
-        shower = self.banner.get('run_card', 'parton_shower')
+        shower = self.banner.get('run_card', 'parton_shower').upper()
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
         nevents = self.shower_card['nevents']

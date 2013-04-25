@@ -747,7 +747,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                         "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
         if mu_r > 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
-                                        (("%.17e"%f).replace('e','d')),check_sa)
+                                        (("%.17e"%mu_r).replace('e','d')),check_sa)
         elif mu_r < 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
             
@@ -1773,7 +1773,7 @@ def evaluate_helicities(process, param_card = None, mg_root="",
     N_eval=50
     
     evaluator = MatrixElementEvaluator(process.get('model'), param_card,
-               auth_skipping = False, reuse = True, cmd = cmd)
+                                            auth_skipping = False, reuse = True)
     
     amplitude = diagram_generation.Amplitude(process)
     matrix_element = helas_objects.HelasMatrixElement(amplitude,gen_color=False)

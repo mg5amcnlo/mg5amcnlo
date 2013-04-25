@@ -4454,6 +4454,9 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
+      integer isqrtneg
+      save isqrtneg
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
@@ -4587,9 +4590,12 @@ c since they never enter isr formulae in MC functions
      #                 ( (sh-w1)*beta2*(2*sh-(sh-w1)*eps2+(sh-w1)*beta2) )
                qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif
@@ -4629,9 +4635,12 @@ c since they never enter isr formulae in MC functions
      #                 ( (sh-w2)*beta1*(2*sh-(sh-w2)*eps1+(sh-w2)*beta1) )
                qMCarg=zeta2*((1-zeta2)*w2)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif

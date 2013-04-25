@@ -54,7 +54,7 @@ for p in P* ; do
         fi
 	fi
     done
-    if [[ $counter != 0 ]] ; then
+    if [[ $(($counter % 40)) != 0 ]] ; then
     echo $(($counter % 40)) > dir2
     cat dir >> dir2
     while [[ $(($counter % 40)) -ne 0 ]]; do
