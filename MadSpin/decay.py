@@ -160,19 +160,13 @@ class Event:
                 
         p=[]
         string=""
-        for id in range(len(self.particle)):
-            part = map_event[id] + 1
-            if self.particle[part]["istup"]<2:
-                mom=[self.particle[part]["momentum"].E, \
-                     self.particle[part]["momentum"].px,\
-                     self.particle[part]["momentum"].py,\
-                     self.particle[part]["momentum"].pz]
+        for id in xrange(len(self.particle)):
+            particle = self.particle[map_event[id] + 1]
+            if particle["istup"] < 2:
                 mom = self.particle[part]["momentum"]
                 p.append(mom)
-                string+=str(self.particle[part]["momentum"].E)+" "+\
-                        str(self.particle[part]["momentum"].px)\
-                         +" "+str(self.particle[part]["momentum"].py)+\
-                         " "+str(self.particle[part]["momentum"].pz)+"\n"
+                string+= '%s %s %s %s \n' % (mom.E, mom.px, mom.py, mom.pz)
+
         return p, string 
 
     def string_event_compact(self):
