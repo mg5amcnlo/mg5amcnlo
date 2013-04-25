@@ -2166,7 +2166,8 @@ Integrated cross-section
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
-                     pjoin(cwd, 'iproc.dat')]
+                     pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'FKS_params.dat')]
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):

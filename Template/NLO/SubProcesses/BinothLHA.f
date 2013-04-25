@@ -22,6 +22,8 @@ c
       include "nexternal.inc"
       include "coupl.inc"
       include 'born_nhel.inc'
+c general MadFKS parameters
+      include 'FKSParams.inc'
       double precision pi, zero,mone
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0d0)
@@ -49,8 +51,7 @@ c
       parameter (fksprefact=.true.)
       integer ret_code
       double precision madfks_single, madfks_double
-      double precision tolerance,acc_found,pole_tolerance
-      parameter (pole_tolerance = 1d-4)
+      double precision tolerance,prec_found
       integer i,j
       integer nbad, nbadmax
 c statistics for MadLoop
@@ -69,8 +70,6 @@ c statistics for MadLoop
 c masses
       include 'pmass.inc'
       data nbad / 0 /
-      
-      tolerance = -1d0
 c update the ren_scale for MadLoop and the couplings (should be the
 c Ellis-Sexton scale)
       mu_r = sqrt(QES2)
@@ -80,20 +79,22 @@ c Ellis-Sexton scale)
       virt_wgt= 0d0
       single  = 0d0
       double  = 0d0
+      prec_found = 1.0d0
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=1d-5         ! use a specific tolerance for initialization
-         call sloopmatrix_thres(p, virt_wgts, tolerance, acc_found,
+         tolerance=IRPoleCheckThreshold
+         call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
       else
+         tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
-            call sloopmatrix_thres(p,virt_wgts,tolerance,acc_found
+            call sloopmatrix_thres(p,virt_wgts,tolerance,prec_found
      $           ,ret_code)
             virt_wgt= virt_wgts(1)/dble(ngluons)
             single  = virt_wgts(2)/dble(ngluons)
@@ -106,7 +107,7 @@ c include the phase-space jacobians and all that)
             fillh=.true.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
                call sloopmatrixhel_thres(p,hel(i),virt_wgts,tolerance
-     $              ,acc_found,ret_code)
+     $              ,prec_found,ret_code)
                virt_wgt= virt_wgt +
      &              virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
                single  = single   +
@@ -152,9 +153,12 @@ c MadLoop initialization PS points.
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           pole_tolerance)
+     $           tolerance)
          else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.pole_tolerance)
+            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
+         endif
+         if (tolerance.lt.0.0d0) then
+            cpol = .false.
          endif
          if (.not. cpol .and. firsttime) then
             write(*,*) "---- POLES CANCELLED ----"
@@ -174,9 +178,9 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                   endif
                enddo
-c Only do MC over helicities if there are 5 or more non-zero
-c (independent) helicities
-               if (hel(0).lt.5) then
+c Only do MC over helicities if there are NHelForMCoverHels
+c or more non-zero (independent) helicities
+               if (hel(0).lt.NHelForMCoverHels) then
                   write (*,'(a,i3,a)') 'Only ',hel(0)
      $                 ,' independent helicities:'/
      $                 /' switching to explicitly summing over them'
@@ -186,7 +190,7 @@ c (independent) helicities
             endif
          elseif(cpol .and. firsttime) then
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     &           pole_tolerance
+     &           tolerance
             write(*,*) " COEFFICIENT DOUBLE POLE:"
             write(*,*) "       MadFKS: ", madfks_double,
      &           "          OLP: ", double
@@ -242,7 +246,7 @@ c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole
 c check (only available when not doing MC over hels)
       if (.not.firsttime .and. (ret_code/100.eq.4 .or. cpol .or.
-     $     acc_found.gt.0.05d0)) then
+     $     prec_found.gt.0.05d0)) then
          if (neps.lt.10) then
             if (neps.eq.1) then
                open(unit=78, file='UPS.log')
@@ -253,7 +257,7 @@ c check (only available when not doing MC over hels)
             write(78,*) 'mu_r    =',mu_r           
             write(78,*) 'alpha_S =',alpha_S
             write(78,*) 'MadLoop return code, pole check and'/
-     $           /' accuracy reported',ret_code,cpol,acc_found
+     $           /' accuracy reported',ret_code,cpol,prec_found
             if (mc_hel.ne.0) then
                write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
             endif
@@ -262,13 +266,14 @@ c check (only available when not doing MC over hels)
             write(78,*) '1/eps    expected from MadFKS=',madfks_single
             write(78,*) '1/eps    obtained in MadLoop =',single
             write(78,*) 'finite   obtained in MadLoop =',virt_wgt
+            write(78,*) 'Accuracy estimated by MadLop =',prec_found
             do i = 1, nexternal-1
                write(78,'(i2,1x,5e25.15)') 
      &              i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
             enddo
             close(78)
          endif
-         if (acc_found.gt.0.05d0) then
+         if (prec_found.gt.0.05d0) then
             write (*,*) 'WARNING: unstable non-rescued phase-space'/
      $           /' found for which the accuracy reported by MadLoop'/
      $           /' is worse than 5%. Setting virtual to zero for this'/

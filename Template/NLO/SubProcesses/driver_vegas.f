@@ -98,9 +98,16 @@ c statistics for MadLoop
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
+c general MadFKS parameters
+      include "FKSParams.inc"
+
 C-----
 C  BEGIN CODE
-C-----  
+C-----
+c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
 c
 c     Read process number
 c
