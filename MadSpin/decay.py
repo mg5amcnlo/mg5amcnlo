@@ -163,7 +163,7 @@ class Event:
         for id in xrange(len(self.particle)):
             particle = self.particle[map_event[id] + 1]
             if particle["istup"] < 2:
-                mom = self.particle[part]["momentum"]
+                mom = particle["momentum"]
                 p.append(mom)
                 string+= '%s %s %s %s \n' % (mom.E, mom.px, mom.py, mom.pz)
 
@@ -1361,13 +1361,14 @@ class AllMatrixElement(dict):
        This contains the routine to add a production topologies if needed.
     """
     
-    def __init__(self, banner, options, decay_ids):
+    def __init__(self, banner, options, decay_ids, model):
         
         dict.__init__(self)
         self.banner = banner
         self.options = options
         self.decay_ids = set([abs(id) for id in decay_ids])
         self.has_particles_ambiguity = False
+        self.model = model
         
     def add(self, topologies, keys):
         """Adding one element to the list of production_topo"""
@@ -1389,13 +1390,8 @@ class AllMatrixElement(dict):
                 br *= self.get_br(decay)
             else:
                 init = -init[0]
-                lhaid=[]
-                for x in final:
-                    this_part=self.model.get_particle(x)
-                    if this_part['self_antipart']:  
-                       lhaid.append(x)
-                    else:
-                       lhaid.append(-x)
+                lhaid=[x if self.model.get_particle(x)['self_antipart'] else -x
+                       for x in final]
                 lhaid.sort()
                 lhaid = tuple([len(final)] + lhaid)
                 br *= self.banner.param_card['decay'].decay_table[init].get(lhaid).value
@@ -2476,7 +2472,7 @@ class decay_all_events:
         for multi in self.mgcmd._multiparticles:
             if multi in self.list_branches:
                 decay_ids += self.mgcmd._multiparticles[multi]
-        self.all_ME = AllMatrixElement(banner, self.options, decay_ids)
+        self.all_ME = AllMatrixElement(banner, self.options, decay_ids, self.model)
         self.all_decay = {}
 
 
@@ -2527,7 +2523,6 @@ class decay_all_events:
         # add probability of not writting events (for multi production with 
         # different decay
         self.add_loose_decay()
-        
         # launch the decay and reweighting
         efficiency = self.decaying_events()
         if  efficiency != 1:
@@ -2553,8 +2548,6 @@ class decay_all_events:
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
  
-        
-    
     def decaying_events(self):
         """perform the decay of each events"""
 
@@ -2956,6 +2949,7 @@ class decay_all_events:
                 commandline+="add process %s ;" % proc
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
+                print process
                 commandline+="add process %s;" % (process)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
@@ -2966,7 +2960,6 @@ class decay_all_events:
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
-                
         commandline = 'output standalone_ms %s %s' % \
             (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)        
@@ -3031,7 +3024,6 @@ class decay_all_events:
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.
         mgcmd.remove_pointless_decay(self.banner.param_card)
-
         commandline = 'output standalone_ms %s %s' % (pjoin(path_me,'full_me'),
                                                       ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -3353,7 +3345,9 @@ class decay_all_events:
                     break
             probe_weight[decaying].append(max_decay)
 
-                    
+            self.terminate_fortran_executables()
+            self.calculator = {}
+            self.calculator_nbcall = {}
             if ev % 5 == 0:
                 running_time = misc.format_timer(time.time()-starttime)
                 info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
@@ -3472,8 +3466,8 @@ class decay_all_events:
         prod_values=prod_values.replace("\n", "")
         prod_values=prod_values.split()
         mg5_me_prod = float(prod_values[0])
-        return mg5_me_prod, prod_values    
-    
+        return mg5_me_prod, prod_values
+        
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
 
@@ -3916,12 +3910,19 @@ class decay_all_events:
         if not path_to_decay:
             for (mode, production) in self.calculator:
                 external = self.calculator[(mode, production)]
+                external.stdin.close()
+                external.stdout.close()
                 external.terminate()
+                del external
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]
             except Exception:
                 pass
             else:
+                external.stdin.close()
+                external.stdout.close()
                 external.terminate()       
-    
+                del external
+
+        self.calculator = {}

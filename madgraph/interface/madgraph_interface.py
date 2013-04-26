@@ -3655,7 +3655,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]
                 if not mother[0] > 0:
-                    child = [-id for id in child]
+                    child = [x if self._curr_model.get_particle(x)['self_antipart'] 
+                             else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
 
@@ -3672,6 +3673,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     for decay in amp.get('decay_chains'):
                         remove_amp(decay.get('amplitudes'))
         remove_amp(self._curr_amps) 
+        
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -4591,14 +4593,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # They are a valid model
             able_to_mod = True
             if args[1] == 'unitary':
-                if 1 in self._curr_model.get('gauge'):		   
+                if 0 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = True
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             else:
-                if 0 in self._curr_model.get('gauge'):		   
+                if 1 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = False
                 else:
                     able_to_mod = False

@@ -44,13 +44,13 @@ C ----------
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
-c             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
+             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
                  T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
                ANS=ANS+T
-c               IF (T .NE. 0D0) THEN
-c                   GOODHEL(IHEL)=.TRUE.
-c               ENDIF
-c             ENDIF
+               IF (T .NE. 0D0) THEN
+                   GOODHEL(IHEL)=.TRUE.
+               ENDIF
+             ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)
       END
