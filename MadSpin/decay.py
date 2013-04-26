@@ -1389,7 +1389,13 @@ class AllMatrixElement(dict):
                 br *= self.get_br(decay)
             else:
                 init = -init[0]
-                lhaid = [-x for x in final]
+                lhaid=[]
+                for x in final:
+                    this_part=self.model.get_particle(x)
+                    if this_part['self_antipart']:  
+                       lhaid.append(x)
+                    else:
+                       lhaid.append(-x)
                 lhaid.sort()
                 lhaid = tuple([len(final)] + lhaid)
                 br *= self.banner.param_card['decay'].decay_table[init].get(lhaid).value
@@ -1792,8 +1798,8 @@ class width_estimate(object):
         for decays in decay_processes.values():
             for decay in decays:
                 if ',' in decay:
-                    to_decay.update(set([l.split('>')[0].strip() 
-                                                    for l in decay.split(',')]))
+                    to_decay.update(set([l.split('>')[0].strip()
+                                                    for l in decay.replace('(','').replace(')','').split(',')]))
 
         # Maybe the branching fractions are already given in the banner:
         self.extract_br_from_banner(self.banner)
