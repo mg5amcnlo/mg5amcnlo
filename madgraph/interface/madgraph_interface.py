@@ -873,6 +873,9 @@ This will take effect only in a NEW terminal
 
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
