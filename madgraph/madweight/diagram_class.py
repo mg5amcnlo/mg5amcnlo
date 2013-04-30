@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import sys
+import logging
 import os
 import stat
 import re
 
+logger = logging.getLogger('madweight.diagram_class')
 
 try: 
     import madgraph.madweight.Cards as Cards
@@ -200,7 +202,11 @@ class MG_diagram(diagram):
 
         #put information in external particle
         for part in self.ext_content:
-            label=dico_pid_to_label[abs(part.pid)]
+            try:
+                label=dico_pid_to_label[abs(part.pid)]
+            except KeyError:
+                logger.info('particle with pdg %s has no transfer function define: Treated as missing energy')
+                label = None
             if not part.neutrino:
                 if dico_type_to_tflevel.has_key(label):
                     part.tf_level=dico_type_to_tflevel[label]
