@@ -117,7 +117,7 @@ class ML5EWTest(unittest.TestCase):
         
         # Print out progress if it is a run for an individual process
         if len(my_proc_list)==1:
-            print "\n== %s =="%my_proc_list[0][0]
+            print "\n== %s %s =="%(my_proc_list[0][0],my_proc_list[0][2])
         else:
             print "\n== %s =="%filename
         

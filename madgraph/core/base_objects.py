@@ -1495,7 +1495,8 @@ class Model(PhysicsObject):
             param_depend = self.get_parameter(expr)
             self.add_param(New_param, [param_depend])
             
-            
+        if not to_change:
+            return
             
             
         # So at this stage we still need to modify all parameters depending of
@@ -1514,6 +1515,8 @@ class Model(PhysicsObject):
                               isinstance(param, ParamCardVariable):
                     continue
                 param.type = 'complex'
+#                print param.expr,  to_change
+                
                 param.expr = pat.sub(replace, param.expr)
         
         # Modify the couplings        
