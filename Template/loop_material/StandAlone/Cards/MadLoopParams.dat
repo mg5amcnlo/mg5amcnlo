@@ -53,13 +53,27 @@
 !     By default, MadLoop is allowed to slightly deform the Phase-Space point in input
 !     so to insure perfect onshellness of the external particles and perfect energy-momentum
 !     conservation. The deformation is minimal and such that it leaves the input PS point 
-!     unchanged if it already satisfies the physical condiditions mentionned above.
-!     Notice that this controls only the double precision behavior. For multiple precision,
-!     this slight deformation is applied anyway (Otherwise multiple precision is pointless.)
+!     unchanged if it already satisfies the physical condiditions mentioned above.
+!     This integer values select what is the method to be employed preferably to restore this
+!     precision. It can take the following values:
+!
+!     -1 :: No method is used for double precision computations, and method 2 will be used
+!           preferentially when quadruple precision (for which this precision improvement
+!           is mandatory, otherwise quadruple precision is pointless)
+!      1 :: This methods imitates what is done in PSMC, namely 
+!           a) Set the space-like momentum of the last external particle to be the
+!              opposite of the sum of the others (with a minus sign for the initial states).
+!           b) Rescale all final state space-like momenta by a fixed value x computed such
+!              that energy is conserved when particles are put exactly onshell. This value 
+!              is determined numericaly via Ralph-Newton's method.
+!           c) Set all energies to have particles exactly onshell.           
+!      2  :: This method applies a shift to the energy and the x and y components of the first 
+!            initial state momentum in order to restore exact energy momentum conservation after
+!            particles have been put exactly onshell via a shift of the z component of their 
+!            momenta.
 #ImprovePSPoint
-.TRUE.
-! Default :: .TRUE.
-
+2
+! Default :: 2
 !     =================================================================================
 !     The parameters below set two CutTools internal parameters accessible to the user. 
 !     =================================================================================
@@ -97,7 +111,7 @@
 !       6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               
 !
 #CTModeInit
-0
+1
 ! Default :: 0
 
 !     CheckCycle sets on how many PS points trials the initialization filters must be 
