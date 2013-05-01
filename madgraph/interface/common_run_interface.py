@@ -1089,7 +1089,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.cluster = cluster.from_name[opt['cluster_type']](\
                                  opt['cluster_queue'], opt['cluster_temp_path'])
             elif opt['run_mode'] == 2:
-                self.cluster = cluster.MultiCore(cluster_temp_path=opt['cluster_temp_path'])
+                if not self.nb_core:
+                    import multiprocessing
+                    self.nb_core = multiprocessing.cpu_count()
+                    self.options['nb_core'] = self.nb_core
+                self.cluster = cluster.MultiCore(self.nb_core, cluster_temp_path=opt['cluster_temp_path'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
