@@ -104,8 +104,9 @@ $B$ START_CENTRAL_POINT $B$
 C+-----------------------------------------------------------------------+
 C|     Subroutine: GET_CENTRAL_POINT                                     |
 C|                                                                       |
-C|     purpose: Define the central point of integration c_point(I,J,1)   |
-C|              and the width associated c_point(I,J,2)                  |
+C|     purpose: Define the central point of integration c_point(P,I,J,1) |
+C|              and the width associated c_point(P,I,J,2)                |
+C|                 P: Permutation                                        | 
 C|                 I: MadGraph Position                                  |
 C|                 J: 1,2,3 for THETA,PHI,RHO variable                   |
 C+-----------------------------------------------------------------------+
@@ -117,22 +118,26 @@ c
       include 'run.inc'
       include 'nexternal.inc'
       include 'TF_param.inc'
-
+      include 'permutation.inc'
 c                                                                        
 c     global                                                             
 c                                                                        
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
 c                                                                        
-      double precision p_exp(0:3,nexternal)
-      common /to_pexp/p_exp
+c      double precision p_exp(0:3,nexternal)
+c      common /to_pexp/p_exp
+      double precision pexp_init(0:3,nexternal)  !impulsion in original configuration
+      common/to_pexp_init/pexp_init
       integer tag_lhco(3:nexternal)
       common/lhco_order/tag_lhco
 c                                                                        
 c     local                                                              
 c                                                                       
-      integer i
+      integer perm_id(nexternal-2)
+      integer i,perm
       integer n_lhco
+
 ##************************************************************************
 $E$ START_CENTRAL_POINT $E$
 ##************************************************************************

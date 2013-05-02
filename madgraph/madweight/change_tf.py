@@ -438,12 +438,12 @@ class TF_in_SubProcesses:
             else:
                 continue
             
-            #avoiding to redefine the same tihing twice
+            #avoiding to redefine the same thing twice
             if block not in external_done:
                 text+=' external '+name_list+'\n'
                 text+=' double precision '+name_list+'\n'
                 external_done.append(block)
-        
+        text+= '      do perm =1,NPERM\n call get_perm(perm, perm_id)\n write(*,*) \'perm\',perm_id\n'
         #start the definition
         text+='\n$b$ S-COMMENT_C $b$ Start the definition $e$ S-COMMENT_C $e$\n'
         for i in range(0,len(self.blockname_list)):
@@ -451,22 +451,24 @@ class TF_in_SubProcesses:
             
             #define central point
             if blockname != -1: #particle is visible
-                text+=' c_point(%s,1,1)=theta(p_exp(0,%s))\n' % (i+1,i+1)
-                text+=' c_point(%s,2,1)=phi(p_exp(0,%s))\n' % (i+1,i+1)
-                text+=' c_point(%s,3,1)=rho(p_exp(0,%s))\n' %(i+1,i+1)
+                text+=' c_point(perm, %s,1,1)=theta(pexp_init(0,2+perm_id(%s)))\n' % (i+1,i-1)
+                text+=' c_point(perm, %s,2,1)=phi(pexp_init(0,2+perm_id(%s)))\n' % (i+1,i-1)
+                text+=' c_point(perm, %s,3,1)=rho(pexp_init(0,2+perm_id(%s)))\n' %(i+1,i-1)
+                text+=' write(*,*) c_point(perm, %s,1,1), c_point(perm, %s,2,1),c_point(perm, %s,3,1)\n' % (i+1,i+1,i+1)
             
             #define width
             variable=['THETA','PHI','E']
             for j in range(1,4):
                 if blockname == -1: #particle is invisible 
-                    text+=' c_point(%s,%s,2)=-1d0\n' % (i+1,j)    
+                    text+=' c_point(perm,%s,%s,2)=-1d0\n' % (i+1,j)    
                 elif blockname == 0: # in delta mode
-                    text+=' c_point(%s,%s,2)=0d0\n' % (i+1,j)
+                    text+=' c_point(perm,%s,%s,2)=0d0\n' % (i+1,j)
                 else: #visible particles with TF define
-                    text+=' c_point(%s,%s,2)=width_%s_%s(p_exp(0,%s),tag_lhco(%s))\n' % (i+1,j,variable[j-1],blockname,i+1,i+1)
+                    text+=' c_point(perm,%s,%s,2)=width_%s_%s(pexp_init(0,2+perm_id(%s)),tag_lhco(%s))\n' % (i+1,j,variable[j-1],blockname,i-1,i+1)
             text+='\n' #space between particles definition
+            text+=' write(*,*) c_point(perm, %s,1,2), c_point(perm, %s,2,2),c_point(perm, %s,3,2)\n' % (i+1,i+1,i+1)
                  
-        text+='\n return\n end\n'
+        text+='\n enddo \n return\n end\n'
         return text
 
     #2 #############################################################################     

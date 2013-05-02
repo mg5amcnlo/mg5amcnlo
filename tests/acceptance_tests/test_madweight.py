@@ -210,7 +210,7 @@ class TestMadWeight(unittest.TestCase):
                  ./tests/input_files/mw_wjjprod.lhco.gz
                  set madweight_card mw_parameter 13 175
                  set nb_exp_events 4
-                 set log_level weight
+                 set log_level debug
                  set nb_event_by_node 1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
@@ -219,13 +219,9 @@ class TestMadWeight(unittest.TestCase):
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR))#,
-                        #stdout=devnull, stderr=devnull)
+                       # stdout=devnull, stderr=devnull)
 
         data = open(pjoin(MG5DIR, 'TEST_MW_W2J_prod', 'Events', 'fermi', 'weights.out')).read() 
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W2J_prod'))
-        except Exception, error:
-            pass
 
         solution = self.get_result(data)
         expected = """# Weight (un-normalize) for each card/event
@@ -244,3 +240,8 @@ class TestMadWeight(unittest.TestCase):
             self.assertTrue(abs(value-value2) < 5* abs(error+error2), '%s != %s' % (value, value2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
             self.assertTrue(abs(error2)/abs(value2) < 0.02)          
+
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W2J_prod'))
+        except Exception, error:
+            pass

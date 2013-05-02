@@ -385,7 +385,7 @@ class MG_diagram(diagram_class.MG_diagram):
         blob_sol_list=full_sol_obj[1]
         mapping = [0] * ((3*len(self.ext_content))+2)
         m_random, p_random = 0, 0
-        var2mrandom = {'a':0,'b':1,'c':2,'d':4,'e':3,'f':2,
+        var2mrandom = {'a':0,'b':1,'c':2,'d':4,'e':3,'f':2, 'g':2,
                        'A':3,'B':2,'C':1,'D':1,'E':2,
                        '0':0,'1':0,'2':0}
         
@@ -781,7 +781,6 @@ c       choose the permutation (point by point in the ps)
            call get_perm(new_perm, perm_id)
            call assign_perm(perm_id)
            curr_perm = new_perm
-           call get_central_point
         endif
     """
                 

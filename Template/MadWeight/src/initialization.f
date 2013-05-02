@@ -93,8 +93,6 @@ c     set parameters for the transfer functions
       call Init_MET_LHCO
       include 'transfer_card.inc'
 
-      call init_d_assignement()
-
 c     set permutation info
       curr_perm = 1
       do i = 1, NPERM
@@ -160,6 +158,12 @@ c     call graph_init
       do i=3,nexternal
          mvir2(i)=pmass(i)**2
       enddo
+      write(*,*) "GET CENTRAL POINT ###################################"
+      call get_central_point()
+
+
+      call init_d_assignement()
+
 c      write(*,*) 'pmass ok'
       return
  48   stop
@@ -180,13 +184,14 @@ cc               p2 is mapped
 cc
 cc    COMMON
 cc      
-        double precision c_point(1:max_particles,3,2)
+      include 'permutation.inc'
+        double precision c_point(NPERM,1:max_particles,3,2)
         common/ph_sp_init/c_point
 cc
 cc    Begin of the code
 cc
         if (parg1.gt.0.and.parg2.gt.0) then 
-           if (c_point(parg1,3,2).gt.c_point(parg2,3,2)) then
+           if (c_point(1,parg1,3,2).gt.c_point(1,parg2,3,2)) then
               p1=parg1
               p2=parg2
            else
@@ -249,7 +254,7 @@ c
 c**********************************************************************************
 c     This subroutine initializes the phase space integration
 c     It determines
-c     c_point(J,I,K) : * central variables of integration + width 
+c     c_point(L,J,I,K) : * central variables of integration + width
 c                    J -> number of final particle (madgraph notation ) start from 3 !!!
 c                    I -> component : I=1 : y
 c                                     I=2 : phi
@@ -257,7 +262,7 @@ c                                     I=3 : PT
 c                    K ->     K = 1 : variable
 c                             K = 2 : associated width   (0 if transfert function : delta function)
 c                                                        (-1 if the variable is "fixed" by tranverse momentum conservation)
-c
+c                    L -> PERMUTATION NUMBER
 c***********************************************************************************
       implicit none
 c
@@ -267,6 +272,7 @@ c
       parameter (zero=0d0)
       include 'nexternal.inc'
       include 'phasespace.inc'
+      include 'permutation.inc'
 c
 c      local
 c
@@ -276,7 +282,7 @@ c
 c
 c      global
 c
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
 c
       logical pass_event
@@ -302,8 +308,6 @@ c------
 c
 c      define the central point
 c
-       call get_central_point
-
       variable(1)="theta"
       variable(2)="phi"
       variable(3)="|p|"
@@ -312,16 +316,16 @@ c      counting the number of dimensions
 c
       temp=-2 ! conservation of PT
       do i=3,nexternal
-          if (c_point(i,1,2).lt.-0.5)  num_inv=num_inv+1
+          if (c_point(1,i,1,2).lt.-0.5)  num_inv=num_inv+1
         do j=1,3
-          if (c_point(i,j,2).ne.zero) temp=temp+1
+          if (c_point(1,i,j,2).ne.zero) temp=temp+1
           write(*,*) 'exp. uncertainty on ',variable(j),'of particle',i,': ' ,
-     &     c_point(i,j,2),'[',c_point(i,j,1),']'
+     &     c_point(1,i,j,2),'[',c_point(1,i,j,1),']'
         enddo
       enddo
 
-      if (c_point(1,1,2).eq.zero) temp=temp-1
-      if (c_point(2,1,2).eq.zero) temp=temp-1
+      if (c_point(1,1,1,2).eq.zero) temp=temp-1
+      if (c_point(1,2,1,2).eq.zero) temp=temp-1
 
 c      write(*,*) 'the number of dimension is ', temp
 

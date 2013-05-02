@@ -103,7 +103,7 @@ c
       double precision Etot,pztot,misspx,misspy
       common /to_missingP/Etot,pztot,misspx,misspy
 
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
       double precision pmass(1:max_particles)
       common / to_mass/pmass
@@ -140,16 +140,16 @@ c              phi     (j=2),
 c      and     rho     (j=3).
         do j=1,3
 c
-c         write(*,*) "c_point ",i,j,c_point(i,j,2)
+c         write(*,*) "c_point ",i,j,c_point(curr_perm,i,j,2)
 c         if width is zero, just take the exp. component (TF=delta function)
-          if(c_point(i,j,2).lt.1d-6) then
-            gen_var(i,j)=c_point(i,j,1)
+          if(c_point(curr_perm,i,j,2).lt.1d-6) then
+            gen_var(i,j)=c_point(curr_perm,i,j,1)
 c
 c         if width is positive, generate the component
-          elseif(c_point(i,j,2).gt.0d0) then
+          elseif(c_point(curr_perm,i,j,2).gt.0d0) then
              local_var = var2random(3*i-j-3,config_pos)
              n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(i,j,1),c_point(i,j,2),
+            call get_component(c_point(curr_perm,i,j,1),c_point(curr_perm,i,j,2),
      &       x(local_var), gen_var(i,j),jac_temp,j,Emax)
 
             jac_visible=jac_visible*jac_temp
@@ -589,7 +589,7 @@ c      local
       include 'phasespace.inc'
       include 'data.inc'
 
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
 
       double precision    S,X1,X2,PSWGT,JAC
@@ -597,12 +597,12 @@ c      local
 
 
 
-      if(c_point(mgid,varnb,2).eq.0d0) then
-            out=c_point(mgid,varnb,1)
-      elseif(c_point(mgid,varnb,2).gt.0d0) then
+      if(c_point(curr_perm,mgid,varnb,2).eq.0d0) then
+            out=c_point(curr_perm,mgid,varnb,1)
+      elseif(c_point(curr_perm,mgid,varnb,2).gt.0d0) then
             local_var = var2random(3*mgid-varnb-3,config_pos)
-            call get_component(c_point(mgid,varnb,1),
-     &                         c_point(mgid,varnb,2),
+            call get_component(c_point(curr_perm,mgid,varnb,1),
+     &                         c_point(curr_perm,mgid,varnb,2),
      &                         x(local_var),
      &                         out,
      &                         jac_temp,
@@ -625,21 +625,21 @@ ccccccccccccccccc
       include 'phasespace.inc'
       include 'data.inc'
 
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
 
       double precision x(20)
 
 
 
-      if (c_point(POS,1,2).gt.0d0) then
-        call  get_bjk_fraction(c_point(POS,1,1),
-     &  c_point(1,1,2),x(var2random(POS,config_pos)),
+      if (c_point(curr_perm,POS,1,2).gt.0d0) then
+        call  get_bjk_fraction(c_point(curr_perm,POS,1,1),
+     &  c_point(curr_perm,1,1,2),x(var2random(POS,config_pos)),
      &                  bjk,jac_temp)
         jac=jac*jac_temp
-      elseif(c_point(POS,1,2).eq.0d0) then
-        bjk=c_point(POS,1,1)
-      elseif (c_point(POS,1,2).lt.0d0) then
+      elseif(c_point(curr_perm,POS,1,2).eq.0d0) then
+        bjk=c_point(curr_perm,POS,1,1)
+      elseif (c_point(curr_perm,POS,1,2).lt.0d0) then
         bjk=x(var2random(1,config_pos))
       endif
       return
@@ -656,7 +656,7 @@ ccccccccccccccccc
       include 'phasespace.inc'
       include 'data.inc'
 
-      double precision c_point(1:max_particles,3,2)
+      double precision c_point(NPERM,1:max_particles,3,2)
       common/ph_sp_init/c_point
 
       double precision x(20)
