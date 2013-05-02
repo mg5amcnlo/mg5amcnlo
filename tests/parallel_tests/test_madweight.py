@@ -85,7 +85,7 @@ class TestMadWeight(unittest.TestCase):
         
         devnull =open(os.devnull,'w')
         start = time.time()
-        print 'this mw test is expected to take 10 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print 'this mw test is expected to take 3 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
@@ -93,10 +93,7 @@ class TestMadWeight(unittest.TestCase):
         run_time =  time.time() - start
         print 'tt~ semi takes %smin %is' % (run_time//60, run_time % 60)
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod', 'Events', 'fermi', 'weights.out')).read()
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
-        except Exception, error:
-            pass
+
 
         solution = self.get_result(data)
         expected = """# Weight (un-normalize) for each card/event
@@ -105,13 +102,15 @@ class TestMadWeight(unittest.TestCase):
 2 2 1.10783659513e-23 1.45410120216e-25
 """
         expected = self.get_result(expected)
-
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
             
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
-            self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
+            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
-
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
+        except Exception, error:
+            pass
   
