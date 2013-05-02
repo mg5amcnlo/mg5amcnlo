@@ -176,7 +176,6 @@ c
                     perm_order(i,config_pos) = i
                 enddo
              else
-               write(*,*) 'reinit grid'
                 do i = 1, 50
                     do j = 1, 20
                         xi(i,j) = xi_by_channel(i, j, config_pos)
@@ -315,7 +314,6 @@ c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
            enddo
            prev_total = total
       enddo
-      write(*,*) (xi(i, NDIM), i=1,50)
       return
       end
 
