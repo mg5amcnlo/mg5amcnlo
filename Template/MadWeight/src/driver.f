@@ -34,7 +34,7 @@ C     LOCAL (Variable of integration)
 C
       DOUBLE PRECISION SD,CHI,CROSS
       INTEGER I,J,convergence_status
-      integer pos,channel_pos,ll
+      integer pos,channel_pos
       double precision temp_err, temp_val
       double precision order_value(nb_channel)
       double precision order_error(nb_channel)
@@ -140,8 +140,8 @@ c     VEGAS parameters for the first loop
 c     initialization of the variables in the loops
       check_value=0d0
       loop_index=0
-       do ll=1,nb_sol_config
-       order_value(ll)=1d5
+       do config_pos=1,nb_sol_config
+       order_value(config_pos)=1d99
        enddo
       OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
 C
@@ -159,11 +159,7 @@ C
       chan_val=0d0
       chan_err=0d0
 
-      do ll=1,nb_sol_config
-          write(*,*) 'config', ll,'/',nb_sol_config
-
-
-          config_pos=ll
+      do config_pos=1,nb_sol_config
           iseed = iseed + 1 ! avoid to have the same seed
           if (.not. NWA) then
               NDIM=Ndimens
@@ -173,16 +169,17 @@ C
           if(ISR.eq.3) NDIM=NDIM+2
           if(NPERM.ne.1) NDIM = NDIM + 1
 c
-          if(order_value(ll).gt.check_value) then
+          if(order_value(config_pos).gt.check_value) then
              write(*,*) "Current channel of integration: ",config_pos
              if (loop_index.eq.1) then
                 do i = 1, NPERM
-                    perm_order(i,ll) = i
+                    perm_order(i,config_pos) = i
                 enddo
-            else
+             else
+               write(*,*) 'reinit grid'
                 do i = 1, 50
                     do j = 1, 20
-                        xi(i,j) = xi_by_channel(i, j, ll)
+                        xi(i,j) = xi_by_channel(i, j, config_pos)
                     enddo
                 enddo
             endif
@@ -191,21 +188,18 @@ c
                 CALL VEGAS(fct,CROSS,SD,CHI)
 c                See if this is require to continue to update this
                  if (sd/cross.le.final_prec) goto 2
-                 if (ll.ne.1) then
+                 if (config_pos.ne.1) then
                     if ((cross+3*SD).lt.(check_value)) then
                        write(*,*) 'Do not refine it too low', cross+3*SD,
      &                            '<', check_value
                        goto 2
                     endif
                 endif
-             call sort_perm
-             call get_new_perm_grid(NDIM)
+                call sort_perm
+                call get_new_perm_grid(NDIM)
              endif
              if (loop_index.eq.1) ITMX=2
              if (loop_index.eq.2) ITMX=4
-             do i= 1, ndo
-                xi(i,NDIM) = i*1d0/ndo
-             enddo
              CALL VEGAS1(fct,CROSS,SD,CHI)
 c            See if this is require to continue to update this
              if (sd/cross.le.final_prec) goto 2
@@ -214,7 +208,8 @@ c            See if this is require to continue to update this
                 ITMX=max_it_step1
              else
                 ITMX = max_it_step2
-                acc = max(0.25*check_value/order_value(ll), final_prec)
+                acc = max(0.25*check_value/order_value(config_pos),
+     &                 final_prec)
              endif
              CALL VEGAS2(fct,CROSS,SD,CHI)
  2           if (CROSS.lt.1d99) then
@@ -222,11 +217,11 @@ c            See if this is require to continue to update this
                 chan_val=chan_val+cross
                 temp_err=temp_err+SD
                 chan_err=chan_err+SD
-                order_value(ll) = cross
-                order_error(ll) = sd
-                if (histo) call histo_combine_iteration(ll)
+                order_value(config_pos) = cross
+                order_error(config_pos) = sd
+                if (histo) call histo_combine_iteration(config_pos)
                 if (loop_index.eq.1) then
-                  if (ll.eq.1)then
+                  if (config_pos.eq.1)then
                      check_value = (cross + 3*SD) * min_prec_cut1 * 0.01
                   else
                      check_value = max(
@@ -235,11 +230,11 @@ c            See if this is require to continue to update this
                 endif
                 do i = 1, 50
                     do j=1,20
-                        xi_by_channel(i, j, ll) = xi(i,j)
+                        xi_by_channel(i, j, config_pos) = xi(i,j)
                     enddo
                 enddo
              else
-                order_value(ll)=0d0
+                order_value(config_pos)=0d0
              endif
               if (nb_point_by_perm(1).ne.0)then
                   DO I =1,NPERM
@@ -247,7 +242,7 @@ c            See if this is require to continue to update this
                     error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
      &                             * value**2 )/(nb_point_by_perm(I)-1))
                     call get_perm(I, loc_perm)
-                    write(23,*) I,' ',ll,' ',value,' ', error,
+                    write(23,*) I,' ',config_pos,' ',value,' ', error,
      &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
                     nb_point_by_perm(I) = 0
                     perm_value(I) = 0
@@ -274,8 +269,8 @@ c      write(23,*) ' permutation channel   value      error'
       do perm_pos=1, NPERM
          call get_perm(perm_pos, perm_id)
       write(23,*) "======================================"
-      write(23,*) '1   2', (2+perm_id(i-2), i=3,8)
 
+      write(23,*) '1   2', (2+perm_id(i-2), i=3,nexternal)
       enddo
       write(23,*) "======================================"
       write(23,*)'Weight: ',temp_val,'+-', temp_err

@@ -78,7 +78,7 @@ class TestMadWeight(unittest.TestCase):
                  change_tf dbl_gauss_pt_jet
                  ./tests/input_files/mw_ttprod.lhco.gz
                  set nb_exp_events 1
-                 set log_level weight
+                 set log_level debug
                  set nb_event_by_node 1
                  """
         open('/tmp/mg5_cmd','w').write(cmd)

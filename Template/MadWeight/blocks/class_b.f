@@ -1,4 +1,4 @@
-      subroutine class_b(p1,p2,r1)
+      subroutine class_b(x,p1,p2,r1)
 c***************************************************************************
 c
 c             *  p2 (visible)
@@ -20,6 +20,7 @@ c
 c
 c     local
 c
+      double precision x(20)
       INTEGER IDUM
       DATA IDUM/0/
       SAVE IDUM

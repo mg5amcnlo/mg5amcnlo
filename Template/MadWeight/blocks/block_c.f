@@ -1,4 +1,4 @@
-      subroutine block_c(x,n_var,var2random,p1,p2,r1)
+      subroutine block_c(x,p1,p2,r1)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -18,12 +18,10 @@ c
 c     argument
 c
       integer p1,p2,r1,n_var, local_var, config
-      integer var2random(*)
-
-      double precision x(20)
 c
 c     local
 c
+      double precision x(20)
       INTEGER IDUM
       DATA IDUM/0/
       SAVE IDUM
@@ -53,17 +51,10 @@ c---
 c
 c     First generate theta and phi of the missing particle
 c
-      n_var=n_var+1     ! update the component of random variable
-      local_var = var2random(3*p1-4)
-      call get_component(0d0,7d0,x(local_var),theta_miss,jac_temp,1,S)
-      jac_loc=jac_temp 
+      jac_loc =1d0
+      call  generate_variable(x,1,p1, theta_miss, jac_loc)
+      call  generate_variable(x,2,p1, phi_miss, jac_loc)
 
-c      write(*,*) 'theta, x,nvar',theta_miss,x(n_var),n_var
-c
-      n_var=n_var+1     ! update the component of random variable
-      local_var = var2random(3*p1-5)
-      call get_component(0d0,7d0,x(local_var),phi_miss,jac_temp,2,S) !phi
-      jac_loc=jac_loc*jac_temp 
 c      write(*,*) 'phi, x,nvar',phi_miss,x(n_var),n_var
 c
 c      theta_miss=dacos(momenta(3,p1)/dsqrt(momenta(1,p1)**2

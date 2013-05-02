@@ -1,4 +1,4 @@
-      subroutine class_d(p1,p2,p3,p4,p5,p6,r1,r3,r2,r4)
+      subroutine class_d(x,p1,p2,p3,p4,p5,p6,r1,r3,r2,r4)
 c***************************************************************************
 c
 c
@@ -21,6 +21,7 @@ c
 c
 c     parameters
 c
+      double precision x(20)
       double precision thres
       parameter (thres=1000d0)
       double complex i_num

@@ -1,4 +1,4 @@
-      subroutine block_b(x,n_var,var2random,p1,p2,p3,r1,r2)
+      subroutine block_b(x,p1,p2,p3,r1,r2)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -20,8 +20,6 @@ c
 c     argument
 c
       integer p1,p2,p3,r1,r2,n_var,config, local_var
-      integer var2random(*)
-      double precision x(20)
 c
 c     local
 c
@@ -35,6 +33,7 @@ c
       double precision pz2,pz3,pt2,pt3,E2,E3,cphi13,cphi12
       double precision Ma(2),Mc(2),MinvB(2,2),detB
       double precision sol(2),PT1sol(2),jac_loc
+      double precision x(20)
       integer nu,index_sol
 c
 c     global
@@ -59,10 +58,8 @@ c---
 c
 c     First generate  phi of the missing particle
 c
-      n_var=n_var+1     ! update the component of random variable
-      local_var = var2random(3*p1-5)
-      call get_component(0d0,7d0,x(local_var),phi_miss,jac_temp,2,S) !phi
-      jac_loc=jac_temp
+      jac_loc = 1d0
+      call generate_variable(x,2,p1, phi_miss, jac_loc)
 c      write(*,*) 'phi, x,nvar',phi_miss,x(n_var),n_var
 c
       cphi13=dcos(phi_miss-phi(momenta(0,p3)))

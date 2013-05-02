@@ -1,4 +1,4 @@
-      subroutine block_e(x,n_var,var2random,p1,p2,p3,r1,r2)
+      subroutine block_e(x,p1,p2,p3,r1,r2)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -24,9 +24,8 @@ c      parameter (thres=1000d0)
 c
 c     argument
 c
-      integer p1,p2,p3,r1,r2,n_var,local_var
-      integer var2random(*)
       double precision x(20)
+      integer p1,p2,p3,r1,r2,n_var,local_var
 c
 c     local
 c
@@ -50,8 +49,6 @@ c
       double precision momenta(0:3,-max_branches:2*max_particles)  ! records the momenta of external/intermediate legs     (MG order)
       double precision mvir2(-max_branches:2*max_particles)        ! records the sq invariant masses of intermediate particles (MG order)
       common /to_diagram_kin/ momenta, mvir2
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
       double precision pmass(max_particles)     ! records the pole mass of any particle of the diagram  (MG order)
       common / to_mass/pmass
       double precision Etot,pztot,misspx,misspy
@@ -70,16 +67,7 @@ c----------------------------------------------
 c     generate  p1 angles
 c----------------------------------------------
       do j=1,2
-         if(c_point(p1,j,2).eq.0d0) then
-            gen_var(j)=c_point(p1,j,1)
-         elseif(c_point(p1,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p1-j-3)
-            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(local_var),
-     &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
-c            write(*,*) "gen_var",j,gen_var(j)
-            jac_loc=jac_loc*jac_temp
-         endif
+        call  generate_variable(x,j,p1, gen_var(j), jac_loc)
       enddo
 c            write(*,*) "C_point(p1,3,2)",C_point(p1,3,2)
         call four_momentum(gen_var(1),gen_var(2),1d0,
@@ -94,16 +82,7 @@ c----------------------------------------------
 c     generate  p2
 c----------------------------------------------
       do j=1,2
-         if(c_point(p2,j,2).eq.0d0) then
-            gen_var(j)=c_point(p2,j,1)
-         elseif(c_point(p2,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p2-j-3)
-            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(local_var),
-     &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
-c            write(*,*) "gen_var",j,gen_var(j)
-            jac_loc=jac_loc*jac_temp
-         endif
+        call  generate_variable(x,j,p2, gen_var(j), jac_loc)
       enddo
 
 c            write(*,*) "C_point(p2,3,2)",C_point(p2,3,2)

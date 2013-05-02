@@ -1,4 +1,4 @@
-      subroutine class_f(x,n_var,var2random,p1,p2,p3,p4,r1,r2)
+      subroutine class_f(x,p1,p2,p3,p4,r1,r2)
 c********************************************************************
 c     This subroutine gets the two missing momenta for 
 c     the following topology:
@@ -21,7 +21,6 @@ c     arguments
 c
       double precision x(20)
       integer p1,p2,p3,p4,r1,r2,n_var,local_var
-      integer var2random(*)
 
 c
 c     local
@@ -72,8 +71,6 @@ c
       common /to_missingP/Etot,pztot,miss_px,miss_py
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
       integer ISR_mode
       common /to_correct_ISR/ISR_mode
       REAL XRAN1
@@ -94,30 +91,8 @@ c---
 c
 c      generate Bjorken fractions
 c   
-   
-      if (c_point(1,1,2).gt.0d0) then
-        n_var=n_var+1
-        call  get_bjk_fraction(c_point(1,1,1),
-     &  c_point(1,1,2),x(var2random(1)),x1,jac_temp)
-        jac_loc=jac_loc*jac_temp
-      elseif(c_point(1,1,2).eq.0d0) then
-        x1=c_point(1,1,1)
-      elseif (c_point(1,1,2).lt.0d0) then
-        n_var=n_var+1
-        x1=x(var2random(1))
-      endif
-
-      if (c_point(2,1,2).gt.0d0) then
-        n_var=n_var+1
-        call  get_bjk_fraction(c_point(2,1,1),
-     &  c_point(2,1,2),x(var2random(2)),x2,jac_temp)
-        jac_loc=jac_loc*jac_temp
-      elseif (c_point(2,1,2).eq.0d0) then
-        x2=c_point(2,1,1)
-      elseif (c_point(2,1,2).lt.0d0) then
-        n_var=n_var+1
-        x2=x(var2random(2))
-      endif
+      call  generate_bjk_fraction(x,1, x1, jac_loc)
+      call  generate_bjk_fraction(x,2, x2, jac_loc)
 
       miss_px=0d0
       miss_py=0d0

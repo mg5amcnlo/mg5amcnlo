@@ -278,10 +278,10 @@ class MG_diagram(diagram_class.MG_diagram):
                     block_name=' call fuse('
                 elif block.chgt_var == '0':                  
                     continue #this is already done by MadWeight
-                elif block.chgt_var in ['A']:
-                    block_name=' call block_' + block.chgt_var.lower() + '('
-                else:
-                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
+                else:#if block.chgt_var in ['A']:
+                    block_name=' call block_' + block.chgt_var.lower() + '(x,'
+#                else:
+#                    block_name=' call block_' + block.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
                 line=block_name
                 for particle in block.order_content:
                     if particle.MG < 0:
@@ -321,10 +321,10 @@ class MG_diagram(diagram_class.MG_diagram):
             step += 1           
             if block.chgt_var == '2':
                 line=' call fuse('
-            elif block.chgt_var in ['a', 'c', 'e', 'f', 'g']:
-                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
+#            elif block.chgt_var in ['a', 'c', 'e', 'f', 'g']:
+#                line=' call class_' + ECS.chgt_var.lower() + '(x,n_var,var2random(1,config_pos),'
             else:
-                line=' call class_' + ECS.chgt_var.lower() + '('
+                line=' call class_' + ECS.chgt_var.lower() + '(x,'
             for particle in block.order_content:
                 if particle.MG < 0:
                     self.use_propa.add(particle.MG)
@@ -752,7 +752,6 @@ c       choose the permutation (point by point in the ps)
 
          if (jac.gt.0d0) then
          %(use_cuts)s
-         
            fct=jac
            xbk(1)=X1
            xbk(2)=X2

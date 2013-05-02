@@ -1,4 +1,4 @@
-      subroutine class_c(x,n_var,var2random,p1,p2,p3,r1,r2)
+      subroutine class_c(x,p1,p2,p3,r1,r2)
 c
 c     this subroutine catches the momenta p1 and p3 for the topology
 c
@@ -43,11 +43,10 @@ c
 c      arguments
 c
       integer p1,p2,p3,r1,r2,n_var,local_var
-      integer var2random(*)
-      double precision x(20)
 c
 c     parameters
 c
+      double precision x(20)
       double precision thres
       parameter (thres=1d0)
       double complex i_num
@@ -55,6 +54,7 @@ c
 c
 c     local
 c
+
       INTEGER IDUM
       DATA IDUM/0/
       SAVE IDUM
@@ -94,8 +94,6 @@ c
       common /to_missingP/Etot,pztot,misspx,misspy
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
       integer matching_type_part(3:max_particles)
       integer inv_matching_type_part(3:max_particles)
       common/madgraph_order_type/matching_type_part,
@@ -129,27 +127,8 @@ c
       endif
 c
 c     generate theta3, phi3
-         if(c_point(p3,1,2).eq.0d0) then
-            theta3=c_point(p3,1,1)
-         elseif(c_point(p3,1,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p3-1-3)
-c            write(*,*) 'n_var',n_var
-            call get_component(c_point(p3,1,1),c_point(p3,1,2),x(local_var),
-     &                          theta3,jac_temp,1,S)
-            jac_loc=jac_loc*jac_temp
-         endif
-c
-         if(c_point(p3,2,2).eq.0d0) then
-            phi3=c_point(p3,2,1)
-         elseif(c_point(p3,2,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p3-5)
-c            write(*,*) 'n_var',n_var
-            call get_component(c_point(p3,2,1),c_point(p3,2,2),x(local_var),
-     &                          phi3,jac_temp,2,S)
-            jac_loc=jac_loc*jac_temp
-         endif
+      call  generate_variable(x,1, p3, theta3, jac_loc)
+      call  generate_variable(x,2, p3, phi3, jac_loc)
 c
 c      theta3=dacos(momenta(3,p3)/
 c     & (dsqrt(momenta(1,p3)**2+momenta(2,p3)**2+momenta(3,p3)**2)))

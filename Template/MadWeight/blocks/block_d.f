@@ -1,4 +1,4 @@
-      subroutine block_d(x,n_var,var2random,p1,p2,r1)
+      subroutine block_d(x,p1,p2,r1)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -20,11 +20,10 @@ c     argument
 c
 c      integer parg1,parg2 !old variable
       integer p1,p2,r1,n_var, local_var
-      integer var2random(*)
-      double precision x(20)
 c
 c     local
 c
+      double precision x(20)
       INTEGER IDUM
       DATA IDUM/0/
       SAVE IDUM
@@ -43,8 +42,6 @@ c
       double precision momenta(0:3,-max_branches:2*max_particles)  ! records the momenta of external/intermediate legs     (MG order)
       double precision mvir2(-max_branches:2*max_particles)        ! records the sq invariant masses of intermediate particles (MG order)
       common /to_diagram_kin/ momenta, mvir2
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
       double precision pmass(max_particles)     ! records the  mass of external particles   (MG order)
       common / to_mass/pmass
       double precision Etot,pztot,misspx,misspy
@@ -61,9 +58,9 @@ c
 c     First decide which |p| is left unfactorized.
 c
 cccccccccccccccccccc NOW this is done in the init step p2 is always factorized  
-
-c      if (parg1.gt.0.and.parg2.gt.0) then 
-c        if (c_point(parg1,3,2).gt.c_point(parg2,3,2)) then
+c
+c      if (p1.gt.0.and.p2.gt.0) then
+c        if (c_point(p1,3,2).gt.c_point(p2,3,2)) then
 c          p1=parg1
 c          p2=parg2
 c        else
@@ -75,7 +72,7 @@ c        p1=parg1
 c        p2=parg2
 c      elseif (parg1.lt.0.and.parg2.gt.0) then
 c        p1=parg2
-c        p2=parg1 
+c        p2=parg1
 c      else 
 c        write(*,*) 'Warning: wrong phase space parametrization'
 c        stop
@@ -92,18 +89,7 @@ c     generate  p2
 c----------------------------------------------
       if (p2.gt.0) then
       do j=1,3
-         if(c_point(p2,j,2).eq.0d0) then
-            gen_var(j)=c_point(p2,j,1)
-         elseif(c_point(p2,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p2-j-3)
-            if (local_var.eq.0) local_var = var2random(3*p1-j-3)
-            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(local_var),
-     &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
-c            write(*,*) "gen_var",c_point(p2,j,1),c_point(p2,j,2),x(n_var),
-c     &                          gen_var(j),jac_temp,j,n_var
-            jac_loc=jac_loc*jac_temp
-         endif
+        call  generate_variable(x,j,p2, gen_var(j),jac_loc)
       enddo
 
 c            write(*,*) "C_point(p2,3,2)",C_point(p2,3,2)
@@ -138,14 +124,7 @@ c----------------------------------------------
 c     generate angles associated to p1
 c----------------------------------------------
       do j=1,2
-         if(c_point(p1,j,2).eq.0d0) then
-            gen_var(j)=c_point(p1,j,1)
-         elseif(c_point(p1,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(n_var),
-     &                          gen_var(j),jac_temp,j,(sqrt(S)-Etot))
-            jac_loc=jac_loc*jac_temp
-         endif
+         call  generate_variable(x,j,p1, gen_var(j),jac_loc)
       enddo
 
         call four_momentum(gen_var(1),gen_var(2),1d0,

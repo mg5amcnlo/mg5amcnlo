@@ -1,4 +1,4 @@
-      subroutine class_h(x,n_var,var2random,p1,p2)
+      subroutine class_h(x,p1,p2)
 c***************************************************************************
 c     ECS in CLASS H
 c  
@@ -9,9 +9,8 @@ c***************************************************************************
 c
 c     argument
 c
-      double precision x(20) 
+      double precision x(20)
       integer n_var, p1, p2,local_var
-      integer var2random(*)
 c
 c     local
 c
@@ -25,9 +24,6 @@ c
       integer vis(2)
 c
 c     global
-c
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
 c
       double precision momenta(0:3,-max_branches:2*max_particles)  ! records the momenta of external/intermediate legs     (MG order)
       double precision mvir2(-max_branches:2*max_particles)        ! records the sq invariant masses of intermediate particles (MG order)
@@ -70,28 +66,12 @@ c              theta   (j=1),
 c              phi     (j=2),
 c      and     rho     (j=3).
         do j=1,3
-c
-c         write(*,*) "c_point ",i,j,c_point(i,j,2)
-c         if width is zero, just take the exp. component (TF=delta function)
-          if(c_point(vis(i),j,2).lt.1d-6) then
-            gen_var(i,j)=c_point(vis(i),j,1)
-c
-c         if width is positive, generate the component
-          elseif(c_point(vis(i),j,2).gt.0d0) then
-
-             n_var=n_var+1     ! update the component of random variable
-             local_var = var2random(3*vis(i)-j-3)
-            call get_component(c_point(vis(i),j,1),c_point(vis(i),j,2),
-     &           x(local_var), gen_var(i,j),jac_temp,j,sqrts-Etot)
-
-            jac_loc=jac_loc*jac_temp
-            if (jac_temp.le.0d0) then
-              jac=-1d0
-              return
-            endif
-          endif
+           call  generate_variable(x,j,vis(i), gen_var(i,j), jac_loc)
         enddo
-
+        if (jac_loc.eq.0d0) then
+          jac=-1d0
+          return
+        endif
 c-----------------------------------------------------------------
 c       Now theta,phi and |p| of particle i (MG label) are defined.
 c       define the momentum in a Lorentz fashion,

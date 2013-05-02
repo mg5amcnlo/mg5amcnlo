@@ -80,6 +80,7 @@ c*************************************************************************
       include 'phasespace.inc'
       include 'nexternal.inc'
       include 'data.inc'
+      include 'permutation.inc'
 c
 c     arguments
 c
@@ -148,9 +149,9 @@ c         if width is positive, generate the component
           elseif(c_point(i,j,2).gt.0d0) then
              local_var = var2random(3*i-j-3,config_pos)
              n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(i,j,1),c_point(i,j,2),x(local_var),
-     &                          gen_var(i,j),jac_temp,j,Emax)
- 
+            call get_component(c_point(i,j,1),c_point(i,j,2),
+     &       x(local_var), gen_var(i,j),jac_temp,j,Emax)
+
             jac_visible=jac_visible*jac_temp
             if (jac_temp.le.0d0) then
               jac=-1d0 
@@ -561,6 +562,107 @@ c         Note that [ sum (pT of visible particles) ] = (-misspx, -misspy)
 c         in the code
       misspx=misspx-pxISR
       misspy=misspy-pyISR
+
+      return
+      end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      subroutine generate_variable(x,varnb, mgid, out, jac_loc)
+ccccccccccccccccc
+c
+c     varnb: variable type: 1 if the variable is a rapidity
+c                           2 if the variable is a phi
+c                           3 if the variable is a PT
+c     mgid : mg number associated to the particle
+c     out: output variable
+c     jac: this variable is going to be updated with the local jac factor
+c
+cccccccccccccccccc
+      double precision x(20)
+      integer varnb, mgid
+      double precision out, jac_loc
+c      local
+      integer local_var
+      double precision jac_temp
+
+      include 'permutation.inc'
+      include 'phasespace.inc'
+      include 'data.inc'
+
+      double precision c_point(1:max_particles,3,2)
+      common/ph_sp_init/c_point
+
+      double precision    S,X1,X2,PSWGT,JAC
+      common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+
+
+
+      if(c_point(mgid,varnb,2).eq.0d0) then
+            out=c_point(mgid,varnb,1)
+      elseif(c_point(mgid,varnb,2).gt.0d0) then
+            local_var = var2random(3*mgid-varnb-3,config_pos)
+            call get_component(c_point(mgid,varnb,1),
+     &                         c_point(mgid,varnb,2),
+     &                         x(local_var),
+     &                         out,
+     &                         jac_temp,
+     &                         varnb,
+     &                         sqrt(S))
+
+      jac_loc=jac_loc*jac_temp
+      endif
+      return
+      end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      subroutine generate_bjk_fraction(x,POS, bjk, jac)
+ccccccccccccccccc
+
+      integer POS
+      double precision bjk,jac_temp, jac
+
+      include 'permutation.inc'
+      include 'phasespace.inc'
+      include 'data.inc'
+
+      double precision c_point(1:max_particles,3,2)
+      common/ph_sp_init/c_point
+
+      double precision x(20)
+
+
+
+      if (c_point(POS,1,2).gt.0d0) then
+        call  get_bjk_fraction(c_point(POS,1,1),
+     &  c_point(1,1,2),x(var2random(POS,config_pos)),
+     &                  bjk,jac_temp)
+        jac=jac*jac_temp
+      elseif(c_point(POS,1,2).eq.0d0) then
+        bjk=c_point(POS,1,1)
+      elseif (c_point(POS,1,2).lt.0d0) then
+        bjk=x(var2random(1,config_pos))
+      endif
+      return
+      end
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      subroutine generate_flat(x,varnb, vmin, vmax, out, jac_loc)
+ccccccccccccccccc
+
+      integer varnb
+      double precision vmin, vmax, out, jac_loc
+
+      include 'permutation.inc'
+      include 'phasespace.inc'
+      include 'data.inc'
+
+      double precision c_point(1:max_particles,3,2)
+      common/ph_sp_init/c_point
+
+      double precision x(20)
+
+      out     = (VMAX-VMIN)*x(var2random(varnb,config_pos))+VMIN
+      jac_loc = jac_loc * (VMAX-VMIN)
 
       return
       end

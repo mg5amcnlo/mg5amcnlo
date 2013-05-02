@@ -1,4 +1,4 @@
-      subroutine block_a(p1,p2,p3,p4,r1,r2,r3)
+      subroutine block_a(x,p1,p2,p3,p4,r1,r2,r3)
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     This block corresponds to the reduced diagram
@@ -32,6 +32,7 @@ c
       double precision E1,E2,E3,E4
       double precision Ma(3),Mc(3),MinvB(3,3),detB
       integer nu
+      double precision x(20)
 c
 c     global
 c

@@ -1,4 +1,4 @@
-      subroutine class_a(x,n_var,var2random,p1,p2)
+      subroutine class_a(x,p1,p2)
 c***************************************************************************
 c     ECS in CLASS A
 c  
@@ -9,9 +9,7 @@ c***************************************************************************
 c
 c     arguments
 c      
-      double precision x(20)
       integer p1,p2,n_var,local_var
-      integer var2random(*)
 c
 c     local
 c
@@ -24,6 +22,7 @@ c
 c
 c     global
 c
+      double precision x(20)
       double precision momenta(0:3,-max_branches:2*max_particles)  ! records the momenta of external/intermediate legs     (MG order)
       double precision mvir2(-max_branches:2*max_particles)        ! records the sq invariant masses of intermediate particles (MG order)
       common /to_diagram_kin/ momenta, mvir2
@@ -33,8 +32,6 @@ c
       common /to_missingP/Etot,pztot,misspx,misspy
       double precision              S,X1,X2,PSWGT,JAC
       common /PHASESPACE/ S,X1,X2,PSWGT,JAC
-      double precision c_point(1:max_particles,3,2)
-      common/ph_sp_init/c_point
       double precision pxISR, pyISR
       common /to_ISR/  pxISR, pyISR
       integer matching_type_part(3:max_particles)
@@ -58,7 +55,7 @@ c if pTmiss reconstructed is NOT used,
 c the boost is defined by the pT balancing the visible particles
 c in class_h 
        if (ISR_mode.eq.3) then
-         call class_h(x,n_var,var2random,p1,p2)
+         call class_h(x,p1,p2)
          return
        endif
 
@@ -72,38 +69,11 @@ c
       endif
 
       do j=1,2
-c
-c     generate angles associated to p1
-         if(c_point(p1,j,2).eq.0d0) then
-            angles(1,j)=c_point(p1,j,1)
-         elseif(c_point(p1,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            local_var = var2random(3*p1-j-3)
-            call get_component(c_point(p1,j,1),c_point(p1,j,2),x(local_var),
-     &                          angles(1,j),jac_temp,j,S)
-            jac_loc=jac_loc*jac_temp
-         endif
-c
-c     generate angles associated to p2
-         if(c_point(p2,j,2).eq.0d0) then
-            angles(2,j)=c_point(p2,j,1)
-         elseif(c_point(p2,j,2).gt.0d0) then
-            n_var=n_var+1     ! update the component of random variable
-            call get_component(c_point(p2,j,1),c_point(p2,j,2),x(n_var),
-     &                          angles(2,j),jac_temp,j,S)
-            jac_loc=jac_loc*jac_temp
-         endif
-c
+c       generate angles associated to p1
+        call  generate_variable(x,j,p1, angles(1,j), jac_loc)
+c       generate angles associated to p2
+        call  generate_variable(x,j,p2, angles(2,j), jac_loc)
       enddo
-
-
-c      angles(1,1)=dacos(momenta(3,p1)/
-c     & (dsqrt(momenta(1,p1)**2+momenta(2,p1)**2+momenta(3,p1)**2)))
-c      angles(2,1)=dacos(momenta(3,p2)/
-c     & (dsqrt(momenta(1,p2)**2+momenta(2,p2)**2+momenta(3,p2)**2)))
-c      angles(1,2)=phi(momenta(0,p1))
-c      angles(2,2)=phi(momenta(0,p2))
-
 
 c-------------------------------------------------------------------------
 c    determine the momentum of the 2 particle fixed by PT conservation
