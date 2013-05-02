@@ -168,10 +168,7 @@ class TestMadWeight(unittest.TestCase):
                         stdout=devnull, stderr=devnull)
 
         data = open(pjoin(MG5DIR, 'TEST_MW_W_prod', 'Events', 'fermi', 'weights.out')).read() 
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W_prod'))
-        except Exception, error:
-            pass
+
 
         solution = self.get_result(data)
         expected = """# Weight (un-normalize) for each card/event
@@ -187,9 +184,14 @@ class TestMadWeight(unittest.TestCase):
             assert key in solution
             value2, error2 = solution[key]
             
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2),'%s != %s' % (value, value2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
+            
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_W_prod'))
+        except Exception, error:
+            pass
 
     def test_mw_wjjproduction(self):
         """checking that the weight for p p > w+ jj,w+ > e+ ve is working"""
@@ -239,6 +241,6 @@ class TestMadWeight(unittest.TestCase):
             assert key in solution
             value2, error2 = solution[key]
             
-            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2), '%s != %s' % (value, value2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 0.01)
             self.assertTrue(abs(error2)/abs(value2) < 0.02)          

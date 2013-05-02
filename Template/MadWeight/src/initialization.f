@@ -96,6 +96,7 @@ c     set parameters for the transfer functions
       call init_d_assignement()
 
 c     set permutation info
+      curr_perm = 1
       do i = 1, NPERM
          perm_value(i) = 0d0
          perm_error(i) = 0d0
