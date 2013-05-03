@@ -172,19 +172,31 @@ c
           if(order_value(config_pos).gt.check_value) then
              write(*,*) "Current channel of integration: ",config_pos
              if (loop_index.eq.1) then
+                ndo=100
                 do i = 1, NPERM
                     perm_order(i,config_pos) = i
                 enddo
+                do i =1, NDIM
+                    do j =1, 100
+                       xi(j,i) = j*1d0/100d0
+                    enddo
+                enddo
+                do i =1, dim_phase_space
+                  if (var2random(i,config_pos).ne.0) then
+                    call prepare_tf_grid(var2random(i,config_pos))
+                  endif
+                enddo
+
              else
-                do i = 1, 100
-                    do j = 1, 20
+                do i = 1, ndo
+                    do j = 1, NDIM
                         xi(i,j) = xi_by_channel(i, j, config_pos)
                     enddo
                 enddo
             endif
             if (loop_index.eq.1) then
                 ITMX=2
-                CALL VEGAS(fct,CROSS,SD,CHI)
+                CALL VEGAS1(fct,CROSS,SD,CHI)
 c                See if this is require to continue to update this
                  if (sd/cross.le.final_prec) goto 2
                  if (config_pos.ne.1) then
@@ -197,20 +209,24 @@ c                See if this is require to continue to update this
                 call sort_perm
                 call get_new_perm_grid(NDIM)
              endif
-             if (loop_index.eq.1) ITMX=2
-             if (loop_index.eq.2) ITMX=4
+             if (loop_index.eq.1) then
+                 ITMX = max_it_step1
+                 acc = max(final_prec, 0.9* check_value/(cross+3*SD))
+             else
+                 ITMX = 2
+                 acc = max(0.9*check_value/order_value(config_pos),
+     &                                                       final_prec)
+             endif
              CALL VEGAS1(fct,CROSS,SD,CHI)
 c            See if this is require to continue to update this
              if (sd/cross.le.final_prec) goto 2
 
-             if (loop_index.eq.1) then
-                ITMX=max_it_step1
-             else
+             if (loop_index.eq.2) then
                 ITMX = max_it_step2
-                acc = max(0.25*check_value/order_value(config_pos),
-     &                 final_prec)
+                acc = max(0.9*check_value/(cross+3*SD), final_prec)
+                CALL VEGAS2(fct,CROSS,SD,CHI)
              endif
-             CALL VEGAS2(fct,CROSS,SD,CHI)
+
  2           if (CROSS.lt.1d99) then
                 temp_val=temp_val+cross
                 chan_val=chan_val+cross
@@ -221,14 +237,14 @@ c            See if this is require to continue to update this
                 if (histo) call histo_combine_iteration(config_pos)
                 if (loop_index.eq.1) then
                   if (config_pos.eq.1)then
-                     check_value = (cross + 3*SD) * min_prec_cut1 * 0.01
+                     check_value = (cross + 3*SD) * min_prec_cut1
                   else
                      check_value = max(
-     &                  (cross + SD)* min_prec_cut1 * 0.01, check_value)
+     &                  (cross + SD)* min_prec_cut1, check_value)
                   endif
                 endif
                 do i = 1, 100
-                    do j=1,20
+                    do j=1,NDIM
                         xi_by_channel(i, j, config_pos) = xi(i,j)
                     enddo
                 enddo
@@ -364,7 +380,117 @@ c      pause
       return
       end
 
+c     ==================================
+C**************************************************************************************
+      subroutine prepare_tf_grid(var)
 
+      integer var
+      integer*4 it,ndo
+      double precision xi(100,20),si,si2,swgt,schi
+      common/bveg2/xi,si,si2,swgt,schi,ndo,it
+
+        xi(1, var) = 0.26202870173391102
+        xi(2, var) = 0.29627919469260666
+        xi(3, var) = 0.31499038866628032
+        xi(4, var) = 0.32765648935273894
+        xi(5, var) = 0.33759486510935055
+        xi(6, var) = 0.34577322735126004
+        xi(7, var) = 0.35284416094523846
+        xi(8, var) = 0.35924883571260102
+        xi(9, var) = 0.36473559783805265
+        xi(10, var) = 0.36967692843521249
+        xi(11, var) = 0.37437312339719947
+        xi(12, var) = 0.37882057530130681
+        xi(13, var) = 0.38302435431944371
+        xi(14, var) = 0.38692806832412335
+        xi(15, var) = 0.39078365837111473
+        xi(16, var) = 0.39443885419206620
+        xi(17, var) = 0.39811533662198700
+        xi(18, var) = 0.40156681122162508
+        xi(19, var) = 0.40491010227563923
+        xi(20, var) = 0.40818200369537122
+        xi(21, var) = 0.41138356922904956
+        xi(22, var) = 0.41453292219292942
+        xi(23, var) = 0.41772005705536408
+        xi(24, var) = 0.42088581400299130
+        xi(25, var) = 0.42402420250952866
+        xi(26, var) = 0.42713014443146680
+        xi(27, var) = 0.43017871888363235
+        xi(28, var) = 0.43313830428681271
+        xi(29, var) = 0.43597872090369233
+        xi(30, var) = 0.43881328519549234
+        xi(31, var) = 0.44152742598930816
+        xi(32, var) = 0.44423236714791764
+        xi(33, var) = 0.44699571093981794
+        xi(34, var) = 0.44974198364516216
+        xi(35, var) = 0.45243196043904776
+        xi(36, var) = 0.45511140219859592
+        xi(37, var) = 0.45778427053265852
+        xi(38, var) = 0.46044763794587357
+        xi(39, var) = 0.46311055953600111
+        xi(40, var) = 0.46580147058860472
+        xi(41, var) = 0.46847589083720942
+        xi(42, var) = 0.47118533852524436
+        xi(43, var) = 0.47386033214596757
+        xi(44, var) = 0.47650782585773122
+        xi(45, var) = 0.47913937456217742
+        xi(46, var) = 0.48172957159232704
+        xi(47, var) = 0.48425707330124140
+        xi(48, var) = 0.48680305366265453
+        xi(49, var) = 0.48935741086756696
+        xi(50, var) = 0.49190779017513964
+        xi(51, var) = 0.49445075033624031
+        xi(52, var) = 0.49698410897494982
+        xi(53, var) = 0.49949247023900117
+        xi(54, var) = 0.50203323690138346
+        xi(55, var) = 0.50460212881414868
+        xi(56, var) = 0.50717115079005592
+        xi(57, var) = 0.50972312741975834
+        xi(58, var) = 0.51239184585293929
+        xi(59, var) = 0.51505220112364436
+        xi(60, var) = 0.51768921296817161
+        xi(61, var) = 0.52032324890300241
+        xi(62, var) = 0.52306024406848717
+        xi(63, var) = 0.52579002073412406
+        xi(64, var) = 0.52854998647908269
+        xi(65, var) = 0.53136335347286601
+        xi(66, var) = 0.53425384859378400
+        xi(67, var) = 0.53713629635349125
+        xi(68, var) = 0.54010688964160236
+        xi(69, var) = 0.54318794102497969
+        xi(70, var) = 0.54639066313612672
+        xi(71, var) = 0.54965439635960123
+        xi(72, var) = 0.55303432289209986
+        xi(73, var) = 0.55642840039224628
+        xi(74, var) = 0.55988079309654537
+        xi(75, var) = 0.56347832620429206
+        xi(76, var) = 0.56719793056059142
+        xi(77, var) = 0.57113488403650758
+        xi(78, var) = 0.57520408498802678
+        xi(79, var) = 0.57941659109901023
+        xi(80, var) = 0.58380548335999183
+        xi(81, var) = 0.58839287284612785
+        xi(82, var) = 0.59318106149777727
+        xi(83, var) = 0.59820224821080226
+        xi(84, var) = 0.60374524721006018
+        xi(85, var) = 0.60968724613431557
+        xi(86, var) = 0.61618805855633685
+        xi(87, var) = 0.62381426194961553
+        xi(88, var) = 0.63245595088132800
+        xi(89, var) = 0.64194814028290437
+        xi(90, var) = 0.65255065423407199
+        xi(91, var) = 0.66490189208356287
+        xi(92, var) = 0.67967463147755103
+        xi(93, var) = 0.69666374930629316
+        xi(94, var) = 0.71697617102631228
+        xi(95, var) = 0.74188445172370854
+        xi(96, var) = 0.77167890678720286
+        xi(97, var) = 0.80852455039619509
+        xi(98, var) = 0.85502370883528123
+        xi(99, var) = 0.91616841891459222
+        xi(100, var) = 1.0000000000000000
+        return
+        end
 
 
 
