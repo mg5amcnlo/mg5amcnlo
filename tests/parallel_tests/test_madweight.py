@@ -60,6 +60,60 @@ class TestMadWeight(unittest.TestCase):
             
             solution[(event_nb,card_nb)] = (weight,error)
         return solution
+
+    def test_short_mw_tt_full_lept(self):
+        """checking that the weight for p p > t t~ fulllept is working"""
+
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
+        except Exception, error:
+            pass
+        
+        cmd = """set automatic_html_opening False --no-save
+                 set cluster_temp_path /tmp --no-save
+                 generate p p > t t~, (t > w+ b, w+ > e+ ve), (t~ > w- b~, w- > e- ve~)
+                 output madweight TEST_MW_TT_prod_full
+                 launch
+                 change_tf dbl_gauss_pt_jet
+                 ./tests/input_files/mw_ttprod.lhco.gz
+                 set nb_exp_events 2
+                 set log_level debug
+                 set nb_event_by_node 1
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        
+        devnull =open(os.devnull,'w')
+        start = time.time()
+        print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
+                         '/tmp/mg5_cmd'],
+                         cwd=pjoin(MG5DIR),
+                        stdout=devnull, stderr=devnull)
+        run_time =  time.time() - start
+        print 'tt~ full takes %smin %is' % (run_time//60, run_time % 60)
+        data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod_full', 'Events', 'fermi', 'weights.out')).read()
+
+        solution = self.get_result(data)
+        expected = """# Weight (un-normalize) for each card/event
+# format: LHCO_event_number card_id value integration_error
+24 1 7.13353274182e-22 3.48595541497e-24 
+24 2 4.48106063562e-22 2.23501639194e-24 
+28 1 1.22526200347e-23 5.8955444892e-26 
+28 2 5.53271960779e-23 2.59251688524e-25 
+"""
+    
+        expected = self.get_result(expected)
+        for key, (value,error) in expected.items():
+            assert key in solution
+            value2, error2 = solution[key]
+            
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
+            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
+            self.assertTrue(abs(error2)/abs(value2) < 0.02)
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
+        except Exception, error:
+            pass
             
             
     def test_short_mw_tt_semi(self):

@@ -17,14 +17,14 @@ c
       implicit double precision (a-h,o-z)
       implicit integer*4 (i-n)
       common/bveg1/xl(20),xu(20),acc,ndim,ncall,itmx,nprn
-      common/bveg2/xi(50,20),si,si2,swgt,schi,ndo,it
+      common/bveg2/xi(100,20),si,si2,swgt,schi,ndo,it
       common/bveg3/alph,ndmx,mds
       common/bveg4/calls,ti,tsi
       COMMON/SEED/NUM,NUM2
-      dimension d(50,20),di(50,20),xin(50),r(50),dx(20),dt(20),
+      dimension d(100,20),di(100,20),xin(100),r(100),dx(20),dt(20),
      1     x(20),kg(20),ia(20)
       dimension RAND(20)
-      DATA NPRN/0/,NDMX/50/,ALPH/1.5D0/,ONE/1.D0/,MDS/1/
+      DATA NPRN/0/,NDMX/100/,ALPH/1.5D0/,ONE/1.D0/,MDS/1/
       DATA XL/20*0.d0/,XU/20*1.d0/
 
 c      integer          iseed
@@ -248,7 +248,7 @@ c
 c        subroutine save(ndim)
 c        implicit double precision (a-h,o-z)
 c       implicit integer*4 (i-n)
-c        common/bveg2/xi(50,10),si,si2,swgt,schi,ndo,it
+c        common/bveg2/xi(100,10),si,si2,swgt,schi,ndo,it
 c
 c      stores vegas data   (unit 7) for later initialisation
 c

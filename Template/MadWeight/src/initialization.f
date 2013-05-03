@@ -158,7 +158,6 @@ c     call graph_init
       do i=3,nexternal
          mvir2(i)=pmass(i)**2
       enddo
-      write(*,*) "GET CENTRAL POINT ###################################"
       call get_central_point()
 
 

@@ -38,7 +38,7 @@ C
       double precision temp_err, temp_val
       double precision order_value(nb_channel)
       double precision order_error(nb_channel)
-      double precision xi_by_channel(50, 20, nb_channel)
+      double precision xi_by_channel(100, 20, nb_channel)
 
       double precision normalize_perm
 c
@@ -102,8 +102,8 @@ c
       double precision fun,random,fun_vegas
       external fun,random,fun_vegas
 
-      integer ifold(ndimmax)
-      common/cifold/ifold
+c      integer ifold(ndimmax)
+c      common/cifold/ifold
 
       double precision store
       common /to_storage/store
@@ -115,7 +115,7 @@ c
       double precision value, error
 
       integer*4 it,ndo
-      double precision xi(50,20),si,si2,swgt,schi
+      double precision xi(100,20),si,si2,swgt,schi
       common/bveg2/xi,si,si2,swgt,schi,ndo,it
 
 C**************************************************************************
@@ -176,7 +176,7 @@ c
                     perm_order(i,config_pos) = i
                 enddo
              else
-                do i = 1, 50
+                do i = 1, 100
                     do j = 1, 20
                         xi(i,j) = xi_by_channel(i, j, config_pos)
                     enddo
@@ -227,7 +227,7 @@ c            See if this is require to continue to update this
      &                  (cross + SD)* min_prec_cut1 * 0.01, check_value)
                   endif
                 endif
-                do i = 1, 50
+                do i = 1, 100
                     do j=1,20
                         xi_by_channel(i, j, config_pos) = xi(i,j)
                     enddo
@@ -292,7 +292,7 @@ c     ==================================
       include 'permutation.inc'
       include 'phasespace.inc'
       integer*4 it,ndo
-      double precision xi(50,20),si,si2,swgt,schi
+      double precision xi(100,20),si,si2,swgt,schi
       common/bveg2/xi,si,si2,swgt,schi,ndo,it
 
       step = 1
@@ -386,7 +386,7 @@ C      COMMON/BVEG1/XL,XU,ACC, NDIM,NCALL,ITMX,NPRN
 C      DOUBLE PRECISION              S,X1,X2,PSWGT,JAC
 C      COMMON /PHASESPACE/ S,X1,X2,PSWGT,JAC
 C      integer*4 it,ndo
-C      double precision xi(50,20),si,si2,swgt,schi
+C      double precision xi(100,20),si,si2,swgt,schi
 C      common/bveg2/xi,si,si2,swgt,schi,ndo,it   
 
 C      buffer='grid_00_000'
@@ -438,7 +438,7 @@ C      COMMON/BVEG1/XL,XU,ACC, NDIM,NCALL,ITMX,NPRN
 C      DOUBLE PRECISION              S,X1,X2,PSWGT,JAC
 C      COMMON /PHASESPACE/ S,X1,X2,PSWGT,JAC
 C      integer*4 it,ndo
-C      double precision xi(50,20),si,si2,swgt,schi
+C      double precision xi(100,20),si,si2,swgt,schi
 C      common/bveg2/xi,si,si2,swgt,schi,ndo,it   
 
 C      buffer='grid_00_000'
