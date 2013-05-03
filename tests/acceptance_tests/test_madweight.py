@@ -218,7 +218,7 @@ class TestMadWeight(unittest.TestCase):
         devnull =open(os.devnull,'w')
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
-                         cwd=pjoin(MG5DIR)),
+                         cwd=pjoin(MG5DIR),
                         stdout=devnull, stderr=devnull)
 
         data = open(pjoin(MG5DIR, 'TEST_MW_W2J_prod', 'Events', 'fermi', 'weights.out')).read() 
