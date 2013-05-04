@@ -3160,7 +3160,13 @@ class UFO_model_to_mg4(object):
                                             self.p_to_f.parse(param.expr)))
 
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
-        fsock.writelines(""" gal(1) = 1d0
+        if ('aEWM1',) in self.model['parameters']:
+            fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                                 gal(2) = 1d0
+                         """)            
+        else:
+            logger.warning('$RED aEWM1 not define in MODEL. AQED will not be written correcty in LHE FILE')
+            fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
                          """)
 
