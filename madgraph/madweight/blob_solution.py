@@ -425,6 +425,9 @@ class Blob_solution(Level_generation):
         #find  blok 'E*,D-> pass to '1'
         all_block=list(self.step)
         for block in all_block:
+            if self.blob_sec.content[0].width < self.opt.force_nwa:
+                continue
+                    
             if block.chgt_var in ['E*','D']:
                 block.change_chgt_var(self,'1')
                 

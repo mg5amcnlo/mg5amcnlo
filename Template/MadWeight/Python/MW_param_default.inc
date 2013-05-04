@@ -7,7 +7,8 @@ mw_run  histo           logical F                       # put one creates histog
 mw_run  histo_by_events logical F                       # decide if we create the histograms for each events
 mw_run  nb_event_by_node integer  10                    # decide how many events weight are computed in a single cluster submission
 mw_run  event_packing    integer  20                    # the input event files will be splitted in event_packing*nb_event_by_node 
-mw_run  log_level        string   'channel'             # from low level of log to extensive log: weight, permutation, channel, iteration, full
+mw_run  log_level        string   'channel'             # from low level of log to extensive log: weight, permutation, channel, iteration, full     
+
 
 mw_parameter mode logical 1                         
 mw_parameter 1    logical mw_parameter@@mode # choose the mode for the generation of the param_card.dat
@@ -37,3 +38,4 @@ mw_gen     12        logical T            # Authorizes ECS C  (1neut+1 visible(m
 mw_gen     13        logical T            # Authorizes ECS D  (2 neut ttbar-like)
 mw_gen     14        logical T            # Authorizes ECS E  (2 neut HWW-like)
 mw_gen     15        logical T            # Authorizes ECS F  (2 neut [WW in T-channel]-like)
+mw_gen     force_nwa float   0.1          # width below the mass should ALWAYS be align.

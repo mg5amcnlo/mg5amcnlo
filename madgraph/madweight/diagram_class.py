@@ -801,6 +801,7 @@ class Option:
        self.use_ecs_d=1
        self.use_ecs_e=1
        self.use_ecs_f=1
+       self.foce_nwa = 1e-9
 
        if info=='default':
            return
@@ -816,7 +817,8 @@ class Option:
                       '12':'self.use_ecs_c',
                       '13':'self.use_ecs_d',
                       '14':'self.use_ecs_e',
-                      '15':'self.use_ecs_f'}
+                      '15':'self.use_ecs_f',
+                      'force_nwa':'self.force_nwa'}
 
        #replace defined value:
        for key, value in info['mw_gen'].items():
