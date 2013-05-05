@@ -33,7 +33,7 @@ C
 c
 c   narrow width approximation
 c
-      logical NWA
+      double precision NWA
       common /to_NWA/NWA
 c
 c     ISR mode

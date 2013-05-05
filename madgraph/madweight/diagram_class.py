@@ -830,6 +830,9 @@ class Option:
            cond='self.use_ecs_'+letter
            if eval(cond):
                self.ecs_on.append(letter)
+               
+       #
+       self.force_nwa = max(self.force_nwa, float(info['mw_run']['nwa']))
 
 
 

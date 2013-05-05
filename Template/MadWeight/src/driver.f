@@ -161,16 +161,13 @@ C
 
       do config_pos=1,nb_sol_config
           iseed = iseed + 1 ! avoid to have the same seed
-          if (.not. NWA) then
-              NDIM=Ndimens
-          else
-              NDIM=Ndimens-num_propa(config_pos)
-          endif
+          NDIM=Ndimens
           if(ISR.eq.3) NDIM=NDIM+2
           if(NPERM.ne.1) NDIM = NDIM + 1
 c
           if(order_value(config_pos).gt.check_value) then
-             write(*,*) "Current channel of integration: ",config_pos
+             write(*,*) "** Current channel of integration: ",config_pos,
+     &                  "/", nb_sol_config, ' **'
              if (loop_index.eq.1) then
                 ndo=100
                 do i = 1, NPERM

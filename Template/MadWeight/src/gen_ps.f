@@ -406,15 +406,14 @@ c Begin code
 c---
       local_var = 0
       include 'props.inc'
-      if (NWA) then
-        do i=1,num_propa(config_pos)
+      do i=1,num_propa(config_pos)
+        if (prwidth(propa_cont(i,config_pos),1).le.nwa) then
           mvir2(propa_cont(i,config_pos))=prmass(propa_cont(i,config_pos),1)**2
           jac=jac*prmass(propa_cont(i,config_pos),1)
      .    *prwidth(propa_cont(i,config_pos),1)*pi
-        enddo
-      else
+          goto 15
+        endif
 c     below we do not use the narrow width approximation
-      do i=1,num_propa(config_pos)
 c     upper bound
         if (propa_max(i,1,config_pos).lt.0) then
           upper_bound=dsqrt(mvir2(propa_max(i,1,config_pos)))
@@ -461,8 +460,8 @@ c     lower bound
         jac=jac*(upper_bound-lower_bound)
         mvir2(propa_cont(i,config_pos))=y*(upper_bound-lower_bound)
      & +lower_bound
+ 15   continue
       enddo
-      endif
 
       return
       end

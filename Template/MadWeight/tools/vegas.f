@@ -95,7 +95,7 @@ c
       ndo=nd
 c
  8    if(nprn.ne.0)write(6,200)ndim,calls,it,itmx,acc
-     1     ,mds,nd,(xl(j),xu(j),j=1,ndim)
+     1     ,mds,nd
 c
       entry vegas3(fxn,avgi,sd,chi2a)
 c     change seed
@@ -223,10 +223,10 @@ c
  28   xi(nd,j)=one
 c
       if(it.lt.itmx.and.acc*dabs(avgi).lt.sd)go to 9
- 200  format(1X,'0input parameters for vegas:  ndim=',i3,
+ 200  format(1X,'input parameters for vegas:  ndim=',i3,
      1     '   ncall=',f8.0/28x,'  it=',i5,'    itmx=',i5/28x,
-     2     '  acc=',g9.3/28x,'  mds=',i3,'     nd=',i4/28x,
-     3     '  (xl,xu)=',(t40,'( ',g12.6,' , ',g12.6,' )'))
+     2     '  acc=',g9.3/28x,'  mds=',i3,'     nd=',i4/28x)
+c     3     '  (xl,xu)=',(t40,'( ',g12.6,' , ',g12.6,' )'))
  201  format(///' integration by vegas' / '0iteration no.',i5,
      1     ':  integral=',g14.8/21x,'std dev =',g10.4 /
      2     ' accumulated results:   integral=',g14.8/
