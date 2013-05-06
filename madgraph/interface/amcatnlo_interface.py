@@ -67,6 +67,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             if args[1] == 'virt':
                 args[1] = 'loop' 
 
+    def check_add(self, args):
+        
+        super(CheckFKS, self).check_add(args)        
+        if '$' in args:
+            raise self.InvalidCmd('$ syntax not valid for aMC@NLO. $$ syntax is on the other hand a valid syntax.')
+
     def check_tutorial(self, args):
         """check the validity of the line"""
         if len(args) == 0:
@@ -396,7 +402,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self.validate_model(proc_type[1])
 
         #now generate the amplitudes as usual
-        self.options['group_subprocesses'] = 'False'
+        #self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
         ignore_six_quark_processes = self.options['ignore_six_quark_processes']
         if ',' in line:
