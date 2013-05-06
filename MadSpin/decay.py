@@ -477,7 +477,7 @@ class dc_branch_from_me(dict):
         # launch the recursive loop
         add_decay(process)
 
-    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,BW_cut, sol_nb=None):
+    def generate_momenta(self,mom_init,ran, pid2width,pid2mass,BW_cut,E_collider, sol_nb=None):
         """Generate the momenta in each decay branch 
              If ran=1: the generation is random, with 
                                      a. p^2 of each resonance generated according to a BW distribution 
@@ -539,9 +539,19 @@ class dc_branch_from_me(dict):
                     # NOTE: here pole and width are normalized by 4.0*mB**2,
                     # Just a convention
                     pole=0.25         #pid2mass[pid]**2/mA**2
+                    w=pid2width(pid)
+                    mpole=pid2mass(pid)
                     width=pid2width(pid)*pid2mass(pid)/(4.0*pid2mass(pid)**2)     #/mA**2
-                    m, jac=self.transpole(pole,width, BW_cut)
-                    m = math.sqrt(m * 4.0 * pid2mass(pid)**2)
+
+                    m_min=max(mpole-BW_cut*w, 0.5)
+                    m_max=mpole+BW_cut*w 
+                    if E_collider>0: m_max=min(m_max,0.99*E_collider)
+
+                    zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
+                    zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
+
+                    m, jac=self.transpole(pole,width, zmin,zmax)
+                    m = math.sqrt(m * 4.0 * mpole**2)
                     # record the mass for the reshuffling phase, 
                     # in case the point passes the reweighting creteria
                     tree[tag]["mass"] = m
@@ -553,7 +563,7 @@ class dc_branch_from_me(dict):
                 if mass_sum < 0:
                     logger.debug('mA<mB+mC in generate_momenta')
                     logger.debug('mA = %s' % mA)
-                    return 0, 0 # If that happens, throw away the DC phase-space point ...
+                    return 0, 0, 0 # If that happens, throw away the DC phase-space point ...
                     # I don't expect this to be inefficient, since there is a BW cut                                    
 
             if tree["nbody"] > 2:
@@ -608,16 +618,13 @@ class dc_branch_from_me(dict):
 
         return index2mom, weight, sol_nb
         
-    def transpole(self,pole,width, BW_cut):
+    def transpole(self,pole,width, zmin, zmax):
 
         """ routine for the generation of a p^2 according to 
             a Breit Wigner distribution
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-        
-        zmin = math.atan(-2*BW_cut)/width
-        zmax = math.atan(2*BW_cut)/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -882,7 +889,7 @@ class production_topo(dict):
                     logger.debug('Decaying particle with a mass of less than 1 MeV in topo2event')
 
 
-    def generate_BW_masses (self, pid2width, pid2mass,s):
+    def generate_BW_masses (self, pid2width, pid2mass,s,E_collider):
         """Generate the BW masses of the particles to be decayed in the production event    """    
         # topo, to_decay, pid2name
 
@@ -893,9 +900,22 @@ class production_topo(dict):
             if pid in self.production['decaying']:
                 mass=0.25
                 width=pid2width(pid)*pid2mass(pid)/(2.0*pid2mass(pid))**2
-                virtualmass2, jac=self.transpole(mass,width)
-                virtualmass2=virtualmass2*(2.0*pid2mass(pid))**2
+            
+                mpole=pid2mass(pid)
+                w=pid2width(pid)
+                BW_cut = float(self.options['BW_cut'])
+
+                m_min=max(mpole-BW_cut*w, 0.5)
+                m_max=mpole+BW_cut*w 
+                if E_collider>0:m_max=min(m_max,0.99*E_collider)
+
+                zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
+                zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
+                
+                virtualmass2, jac=self.transpole(mass,width, zmin, zmax)
+                virtualmass2=virtualmass2*(2.0*mpole)**2
                 weight=weight*jac
+
                 self.max_bw = max(self.max_bw, abs(math.sqrt(virtualmass2) - pid2mass(pid)) / abs(pid2width(pid)))
                 #print "need to generate BW mass of "+str(part)
                 ##print "mass: "+str(pid2mass[pid])
@@ -943,18 +963,13 @@ class production_topo(dict):
 
         return weight
 
-    def transpole(self,pole,width):
+    def transpole(self,pole,width, zmin, zmax):
 
         """ routine for the generation of a p^2 according to 
             a Breit Wigner distribution
             the generation window is 
             [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
         """
-
-        gap = 2 * float(self.options['BW_cut'])
-
-        zmin = math.atan(-gap)/width
-        zmax = math.atan(gap)/width
 
         z=zmin+(zmax-zmin)*random.random()
         y = pole+width*math.tan(width*z)
@@ -1920,7 +1935,8 @@ class width_estimate(object):
 
         for res in self.br.keys():
             logger.info('  ')
-            logger.info('decay channels for '+res+' :')
+            logger.info('decay channels for '+res+' : ( width = ' 
+                        +str(self.width_value[res])+' GeV )')
             logger.info('       BR                 d1  d2' )
             for decay in self.br[res]:
                 bran = decay['br']
@@ -2026,6 +2042,7 @@ class width_estimate(object):
                 continue
             anti_res=pid2label[-label2pid[res]]
             self.br[anti_res] = []
+            self.width_value[anti_res]=self.width_value[res]
             for chan, decay in enumerate(self.br[res]):
                 self.br[anti_res].append({})
                 bran=decay['br']
@@ -2099,7 +2116,16 @@ class width_estimate(object):
         if 'decay' not in param_card or not hasattr(param_card['decay'], 'decay_table'):
             return self.br
 
+        self.width_value={}
         for id, data in param_card['decay'].decay_table.items():
+#           check is the new width is close to the one originally in the banner
+            recalculated_width=param_card['decay'].param_dict[(id,)].value
+            width_in_the_banner=self.banner.get('param_card', 'decay', abs(id)).value
+            relative_diff=abs(recalculated_width-width_in_the_banner)/recalculated_width
+            if (relative_diff > 0.05):
+               logger.warning('The LO estimate for the width of particle %s ' % id)
+               logger.warning('differs from the one in the banner by %d percent ' % (relative_diff*100))
+
             label = self.pid2label[id]
             current = [] # tmp name for  self.br[label]
             for parameter in data:
@@ -2107,7 +2133,8 @@ class width_estimate(object):
                     d = [self.pid2label[pid] for pid in  parameter.lhacode[1:]]
                     current.append({'daughters':d, 'br': parameter.value})
             self.br[label] = current
-        
+            self.width_value[label]=recalculated_width  
+
         #update the banner:
         self.banner['slha'] = param_card.write(None)
         self.banner.param_card = param_card
@@ -2394,7 +2421,6 @@ class decay_all_events:
         self.curr_event = Event(self.evtfile) 
                
         self.curr_dir = os.getcwd()
-    
         # dictionary to fortan evaluator
         self.calculator = {}
         self.calculator_nbcall = {}
@@ -2420,6 +2446,11 @@ class decay_all_events:
         self.pid2label.update(label2pid(self.model))
         # dictionary pid > color_rep
         self.pid2color = pid2color(self.model)
+
+        # energy of the collider
+        self.Ecollider=float(self.banner.get('run_card', 'ebeam1'))\
+                       +float(self.banner.get('run_card', 'ebeam2'))
+
         
         # width and mass information will be filled up later
         self.pid2width = lambda pid: self.banner.get('param_card', 'decay', abs(pid)).value
@@ -2447,9 +2478,28 @@ class decay_all_events:
                 decay_ids += self.mgcmd._multiparticles[multi]
         self.all_ME = AllMatrixElement(banner, self.options, decay_ids)
         self.all_decay = {}
-        
+
+
+ 
         # generate BR and all the square matrix element based on the banner.
         self.generate_all_matrix_element()
+
+        resonances = self.width_estimator.resonances
+        logger.debug('List of resonances: %s' % resonances)
+        self.extract_resonances_mass_width(resonances) 
+
+        # now overwrite the param_card.dat in Cards:
+        param_card=self.banner['slha']
+        #param_card=decay_tools.check_param_card( param_card)
+
+        # now we can write the param_card.dat:
+        # Note that the width of each resonance in the    
+        # decay chain should be >0 , we will check that later on
+        param=open(pjoin(self.path_me,'param_card.dat'),"w")
+        param.write(param_card)
+        param.close()
+
+
         self.compile()
         
     def run(self):
@@ -2458,9 +2508,6 @@ class decay_all_events:
         max_weight_arg = self.options['max_weight']  
         BW_effects = self.options['BW_effect']
         decay_tools=decay_misc()
-        resonances = self.width_estimator.resonances
-        logger.debug('List of resonances: %s' % resonances)
-        self.extract_resonances_mass_width(resonances) 
         
         #Next step: we need to determine which matrix elements are really necessary
         #==========================================================================
@@ -2542,9 +2589,10 @@ class decay_all_events:
             else:
                 event_nb+=1
                 report[decay['decay_tag']] += 1 
-                if (event_nb % max(int(10**int(math.log10(float(event_nb)))),10)==0): 
+                if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                     running_time = misc.format_timer(time.time()-starttime)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
+                if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
             mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
             tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
@@ -2581,7 +2629,7 @@ class decay_all_events:
                                     BW_cut)
                                     
                 if decayed_event==0:
-                    logger.warning('failed to decay event properly')
+                    #logger.warning('failed to decay event properly') this is not a problem, we just had mA<mB+mC
                     continue
                 mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                 #     then decayed weight:
@@ -2744,7 +2792,7 @@ class decay_all_events:
                 
             for nb in range(125):
                 tree, jac, nb_sol = decays[0]['dc_branch'].generate_momenta(mom_init,\
-                                        True, self.pid2width, self.pid2mass, BW_cut)
+                                        True, self.pid2width, self.pid2mass, BW_cut,self.Ecollider)
 
                 p_str = '%s\n%s\n'% (tree[-1]['momentum'],
                     '\n'.join(str(tree[i]['momentum']) for i in range(1, len(tree))
@@ -2776,14 +2824,14 @@ class decay_all_events:
                 
             if __debug__:    
                 for i in range(len(decays)):
-                    print "|  ",
+                    comment= "| "
                     for j in range(len(decays)):
                         if i == j:
-                            print "%4e " % 1,
+                            comment+= "%4e " % 1
                             continue
-                        print  "%4e " % valid[(i,j)],
-                    print "|", os.path.basename(decays[i]['path'])                     
-                
+                        comment+=  "%4e " % valid[(i,j)]
+                    comment+= "|"+ os.path.basename(decays[i]['path'])                     
+                    logger.debug(comment)
             
             # store the result in the relation object. (using tag as key)
             for i in range(len(decays)):
@@ -3281,7 +3329,7 @@ class decay_all_events:
                                         BW_cut)
                                         
                     if decayed_event==0:
-                        logger.warning('failed to decay event properly')
+                        #logger.warning('failed to decay event properly') unnecessary warning
                         continue
                     mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                     #     then decayed weight:
@@ -3299,7 +3347,7 @@ class decay_all_events:
                     #raise Exception   
                 if not atleastonedecay:
                     # NO decay [one possibility is all decay are identical to their particle]
-                    logger.info('No independant decay for one type of final states -> skip those events')
+                    logger.info('No independent decay for one type of final states -> skip those events')
                     nb_decay[decaying] = numberev
                     ev += numberev -1
                     break
@@ -3309,9 +3357,9 @@ class decay_all_events:
             if ev % 5 == 0:
                 running_time = misc.format_timer(time.time()-starttime)
                 info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
-                for  index,tag_decay in enumerate(max_decay):
-                    info_text += '            decay_config %s [%s] : %s\n' % \
-                       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
+                #for  index,tag_decay in enumerate(max_decay):
+                #    info_text += '            decay_config %s [%s] : %s\n' % \
+                #       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
                 logger.info(info_text[:-1])
         
         
@@ -3363,10 +3411,10 @@ class decay_all_events:
                                 nb_finals = len(mi['finals'])
 
                     if decay_tag == associated_decay:                
-                        logger.info('Decay channel %s :Using maximum weight %s [%s] (BR: %s)' % \
+                        logger.debug('Decay channel %s :Using maximum weight %s [%s] (BR: %s)' % \
                                (','.join(decay_tag), base_max_weight, max(weights), br/nb_finals))
                     else:  
-                        logger.info('Decay channel %s :Using maximum weight %s (BR: %s)' % \
+                        logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
  
         # sanity check that all decay have a max_weight
@@ -3497,7 +3545,7 @@ class decay_all_events:
             topology = self.all_ME[production_tag][tag_topo]
             
             BW_weight_prod = topology.generate_BW_masses(self.pid2width,self.pid2mass, \
-                                                           self.curr_event.shat)
+                                                           self.curr_event.shat, self.Ecollider)
 
             # end sanity check
             if topology.reshuffle_momenta():
@@ -3578,7 +3626,7 @@ class decay_all_events:
                     #choose which final state to take
                                         
                     decay_products, jac, sol_nb=decay_struct[part].generate_momenta(mom_init,\
-                                        ran, pid2width,pid2mass,BW_cut, sol_nb)
+                                        ran, pid2width,pid2mass,BW_cut,self.Ecollider, sol_nb)
 
                     if ran==1:
                         if decay_products==0: return 0, 0
@@ -3827,7 +3875,7 @@ class decay_all_events:
         self.branching_ratio = max(total_br) * eff
         
         
-        self.banner['madspin'] += ms_banner
+        #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
             mg_info = self.banner['mggenerationinfo'].split('\n')
