@@ -10,7 +10,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       set gauge = Feynman is now valid. (Was not valid before due to the '=')
                   OM: Fix By Arian Abrahantes. Fix SGE cluster which was not working when
                       running full simulation.
- 
+                  OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
+                      written the routine) 
+
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
                       processes (such as p p > z z j, z > l+ l-). Apart from the 
