@@ -4,7 +4,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       massless propagator. (introduce in 1.5.9)
                   OM: Fix question #226810: checking that patch program exists before
                       trying to update MG5 code.
-                  OM: Fix Bug #1171049: an error in the order of wavefuntions 
+                  OM: Fix Bug #1171049: an error in the order of wavefunctions 
                       making the code to crash (introduce in 1.5.7)
 		  OM: Allow to use an additional syntax for the set command.
                       set gauge = Feynman is now valid. (Was not valid before due to the '=')
