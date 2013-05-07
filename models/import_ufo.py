@@ -1221,13 +1221,20 @@ class RestrictModel(model_reader.ModelReader):
         if simplify:
             # check if the parameters is still usefull:
             re_str = '|'.join(special_parameters)
-            re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-            used = set()
-            # check in coupling
-            for name, coupling_list in self['couplings'].items():
-                for coupling in coupling_list:
-                    for use in  re_pat.findall(coupling.expr):
-                        used.add(use)
+            if len(re_str) > 25000: # size limit on mac
+                split = len(special_parameters) // 2
+                re_str = ['|'.join(special_parameters[:split]),
+                          '|'.join(special_parameters[split:])]
+            else:
+                re_str = [ re_str ]
+            for expr in re_str:
+                re_pat = re.compile(r'''\b(%s)\b''' % expr)
+                used = set()
+                # check in coupling
+                for name, coupling_list in self['couplings'].items():
+                    for coupling in coupling_list:
+                        for use in  re_pat.findall(coupling.expr):
+                            used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         

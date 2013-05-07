@@ -12,6 +12,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       running full simulation.
                   OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
                       written the routine) 
+                  OM: Fix Bug #1177442. This crash occurs only for very large model. 
+                      None of the model shipped with MG5 are impacted.
 
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
