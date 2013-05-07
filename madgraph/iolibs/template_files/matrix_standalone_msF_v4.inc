@@ -98,8 +98,6 @@ C
 C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
-      Double Precision amp2(NGRAPHS)
-      common/to_amps/  amp2
 C  
 C COLOR DATA
 C  
@@ -118,5 +116,5 @@ C ----------
           ENDDO
           MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
-%(amp2_lines)s
+
       END

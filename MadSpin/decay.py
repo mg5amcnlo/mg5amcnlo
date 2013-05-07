@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
 from __future__ import division
 
@@ -1513,7 +1513,7 @@ class AllMatrixElement(dict):
         for i, proc in enumerate(me.get('decay_chains')):
             pid =  proc.get('legs')[0].get('id')
             to_decay[pid].append((i,proc))
-       
+                  
                 
         for leg in me.get('legs'):
             pid =  leg.get('id')
@@ -1523,7 +1523,7 @@ class AllMatrixElement(dict):
                 decay_struct[nb] = dc_branch_from_me(proc)
                 identical = [me.get('decay_chains')[i] for me in me_list[1:]]
                 decay_struct[nb].add_decay_ids(identical)
-              
+            
         return decay_struct
 
     def get_topologies(self, matrix_element):
@@ -1651,10 +1651,6 @@ class AllMatrixElement(dict):
                 return decay
 
             
-
-
-        
-    
     def adding_me(self, matrix_elements, path):
         """Adding one element to the list based on the matrix element"""
         
@@ -1673,7 +1669,7 @@ class AllMatrixElement(dict):
             tags = []
             topo['tag2order'] = {}
              
-            for proc in me.get('processes'):
+            for proc in me.get('processes'): # set of processes accounted by the me
                 initial = []
                 final = [l.get('id') for l in proc.get('legs')\
                       if l.get('state') or initial.append(l.get('id'))]
@@ -1687,7 +1683,7 @@ class AllMatrixElement(dict):
                 topo['tag2order'][tags[-1]] = (initial , final)
             
             if tags[0] not in self:
-                self.add(topo, tags)
+                self.add(topo, tags)  # mens self[tag]=topo for each tag in tags
             topo['path'] = pjoin(path, 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
             topo['decays'] = []
@@ -2440,6 +2436,12 @@ class decay_all_events:
         self.pid2label=pid2label(self.model)
         self.banner.check_pid(self.pid2label)
         self.pid2label.update(label2pid(self.model))
+        self.pid2massvar={}
+        self.pid2widthvar={}
+        for part in self.model['particles']:
+            self.pid2massvar[int(part['pdg_code'])]=part['mass']    
+            self.pid2widthvar[int(part['pdg_code'])]=part['width']    
+
         # dictionary pid > color_rep
         self.pid2color = pid2color(self.model)
 
@@ -2587,122 +2589,124 @@ class decay_all_events:
                     logger.info('Event nb %s %s' % (event_nb, running_time))
                 if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
-            tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
-            topology = self.all_ME[production_tag][tag_topo]            
-
-            topology.dress_topo_from_event(self.curr_event)
-            topology.extract_angles()
-            if self.options['BW_effect']:
-                decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])            
+            p, p_str=self.curr_event.give_momenta(event_map)
+            stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay['max_weight'])
+            stdin_text+=p_str
+#            here apply the reweighting procedure in fortran
+            trial_nb, BWvalue, weight, momenta = self.loadfortran( 'unweighting', decay['path'], stdin_text)
             
-            trial_nb=0
-            while 1: # loop untill find a valid decay
-                trial_nb += 1
-                if trial_nb > 1000:
-                    logger.warning('fail to find valid decay -> remove events')
-                    nb_skip += 1
-                    event_nb -= 1
-                    break
+            # next: need to fill all intermediate momenta
+            
+            ext_mom=self.get_mom(momenta)
+            # fill all momenta in the decay branches
+            momenta_in_decay=self.get_int_mom_in_decay(decay['decay_struct'],ext_mom)
+            # reset extrenal momenta in the production event
+            self.reset_mom_in_prod_event(decay['decay_struct'],event_map,momenta_in_decay,ext_mom)
+            # reset intermediate momenta in prod event
+            self.curr_event.reset_resonances()
+            
+            #
+            decayed_event = self.decay_one_event_new(self.curr_event,decay['decay_struct'], event_map, momenta_in_decay)
+            
+            
+            #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
+            #tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
+            #topology = self.all_ME[production_tag][tag_topo]            
+
+            #topology.dress_topo_from_event(self.curr_event)
+            #topology.extract_angles()
+            #if self.options['BW_effect']:
+            #    decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])            
+            
+            #trial_nb=0
+            #while 1: # loop untill find a valid decay
+            #    trial_nb += 1
+            #    if trial_nb > 1000:
+            #        logger.warning('fail to find valid decay -> remove events')
+            #        nb_skip += 1
+            #        event_nb -= 1
+            #        break
                     
-                if self.options['BW_effect']:
-                    BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
-                                                        event_map, prod_values)
-                else:
-                    BW_weight_prod = 1
+            #    if self.options['BW_effect']:
+            #        BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
+            #                                            event_map, prod_values)
+            #    else:
+            #        BW_weight_prod = 1
                 #BW_weight_prod = 1
-                topology.topo2event(self.curr_event)
-                name =  ','.join([m.nice_string() for m  in decay['matrix_element'].get('decay_chains')])
-                BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
+            #    topology.topo2event(self.curr_event)
+            #    name =  ','.join([m.nice_string() for m  in decay['matrix_element'].get('decay_chains')])
+            #    BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
                 
-                decayed_event, BW_weight_decay = self.decay_one_event(\
-                                    self.curr_event, 
-                                    decay['decay_struct'],
-                                    event_map,
-                                    BW_cut)
+            #    decayed_event, BW_weight_decay = self.decay_one_event(\
+            #                        self.curr_event, 
+            #                        decay['decay_struct'],
+            #                        event_map,
+            #                        BW_cut)
                                     
-                if decayed_event==0:
-                    #logger.warning('failed to decay event properly') this is not a problem, we just had mA<mB+mC
-                    continue
-                mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
-                #     then decayed weight:
-                p_full, p_full_str=decayed_event.give_momenta()
-                #print p_full_str
-                mg5_me_full = self.calculate_matrix_element('full',
-                                                  decay['path'], p_full_str)
-                #print dec, mg5_me_full, mg5_me_prod, BW_weight_prod,BW_weight_decay,
-                weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
+            #    if decayed_event==0:
+            #        #logger.warning('failed to decay event properly') this is not a problem, we just had mA<mB+mC
+            #        continue
+            #    mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
+            #    #     then decayed weight:
+            #    p_full, p_full_str=decayed_event.give_momenta()
+            #    #print p_full_str
+            #    mg5_me_full = self.calculate_matrix_element('full',
+            #                                      decay['path'], p_full_str)
+            #    #print dec, mg5_me_full, mg5_me_prod, BW_weight_prod,BW_weight_decay,
+            #    weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
 
                 # Treat the case that we ge too many overweight.
-                if weight > decay['max_weight']:
-                    report['over_weight'] += 1
-                    report['%s_f' % (decay['decay_tag'],)] +=1
-                    if __debug__:               
-                        misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
-                        production_tag:%s [%s], decay:%s [%s], BW_cut: %1g\n
-                        ''' %\
-                        (weight/decay['max_weight'], decay['decay_tag'], 
-                        100 * report['over_weight']/event_nb,
-                        100 * report['%s_f' % (decay['decay_tag'],)] / report[decay['decay_tag']],
-                        os.path.basename(self.all_ME[production_tag]['path']),
-                        production_tag,
-                        os.path.basename(decay['path']),
-                        decay['decay_tag'],
-                        self.all_ME[production_tag][tag_topo].max_bw))
+            if weight > decay['max_weight']:
+                report['over_weight'] += 1
+                report['%s_f' % (decay['decay_tag'],)] +=1
+                if __debug__:               
+                    misc.sprint('''over_weight: %s %s, occurence: %s%%, occurence_channel: %s%%
+                    production_tag:%s [%s], decay:%s [%s], BW_cut: %1g\n
+                    ''' %\
+                    (weight/decay['max_weight'], decay['decay_tag'], 
+                    100 * report['over_weight']/event_nb,
+                    100 * report['%s_f' % (decay['decay_tag'],)] / report[decay['decay_tag']],
+                    os.path.basename(self.all_ME[production_tag]['path']),
+                    production_tag,
+                    os.path.basename(decay['path']),
+                    decay['decay_tag'],BWvalue))
                         
-                     
-                    if weight > 10.0 * decay['max_weight']:
-                        topology = self.all_ME[production_tag][tag_topo]
-                        BW_value = topology.max_bw
-                        error = """Found a weight MUCH larger than the computed max_weight (ratio: %s). 
+                
+                if weight > 10.0 * decay['max_weight']:
+                    error = """Found a weight MUCH larger than the computed max_weight (ratio: %s). 
     This usually means that the Narrow width approximation reaches it's limit on part of the Phase-Space.
     Do not trust too much the tale of the distribution and/or relaunch the code with smaller BW_cut.
     This is for channel %s with current BW_value at : %g'""" \
-                        % (weight/decay['max_weight'], decay['decay_tag'], BW_value)  
-                        logger.error(error)
-                    elif report['over_weight'] > max(0.005*event_nb,3):
-                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
+                    % (weight/decay['max_weight'], decay['decay_tag'], BWvalue)  
+                    logger.error(error)
+                elif report['over_weight'] > max(0.005*event_nb,3):
+                    error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
-                        """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
-                        raise MadSpinError, error
+                    """ % (report['over_weight'], event_nb, 100 * report['over_weight']/event_nb )  
+                    raise MadSpinError, error
                         
-                        error = True
-                    elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
-                        error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
+                    error = True
+                elif report['%s_f' % (decay['decay_tag'],)] > max(0.01*report[decay['decay_tag']],3):
+                    error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%),
     for channel %s. Please relaunch MS with more events/PS point by event in the
     computation of the maximum_weight.
-                        """ % (report['%s_f' % (decay['decay_tag'],)],\
-                               report['%s' % (decay['decay_tag'],)],\
-                               100 * report['%s_f' % (decay['decay_tag'],)] / report[ decay['decay_tag']] ,\
-                               decay['decay_tag'])  
-                        raise MadSpinError, error
+                    """ % (report['%s_f' % (decay['decay_tag'],)],\
+                            report['%s' % (decay['decay_tag'],)],\
+                            100 * report['%s_f' % (decay['decay_tag'],)] / report[ decay['decay_tag']] ,\
+                            decay['decay_tag'])  
+                    raise MadSpinError, error
                     
-                if (weight/decay['max_weight'] > random.random()):
-                    # Here we need to restore the masses of the light partons 
-                    # initially found in the lhe production event
-                    if self.options['BW_effect']:
-                        decay_tools.restore_light_parton_masses(topology, self.curr_event)
-                        succeed = topology.reshuffle_momenta()
-                        if not succeed:
-                            logger.info('Warning: unable to restore masses of light partons')
-                        else:
-                            topology.topo2event(self.curr_event)
-                            self.curr_event.reset_resonances() # re-evaluate the momentum of each resonance in prod. event
-                    BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
-                    decayed_event, BW_weight_decay = self.decay_one_event(\
-                                    self.curr_event, 
-                                    decay['decay_struct'],
-                                    event_map,
-                                    BW_cut,
-                                    ran=0, write=1)
+             
+             
+            decayed_event.wgt = decayed_event.wgt * self.branching_ratio
                     
-                    decayed_event.wgt = decayed_event.wgt * self.branching_ratio
-                    
-                    self.outputfile.write(decayed_event.string_event())
+            self.outputfile.write(decayed_event.string_event())
                 #print "number of trials: "+str(trial_nb)
-                    trial_nb_all_events+=trial_nb
-                    break # pass to next event.
+            trial_nb_all_events+=trial_nb
+            
+             
+                    
  
         self.outputfile.write('</LesHouchesEvents>\n')
         self.evtfile.close()
@@ -2730,11 +2734,54 @@ class decay_all_events:
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
         
-        
-        
-        
         return  event_nb/(event_nb+nb_skip)       
 
+    def get_int_mom_in_decay(self,decay_struct,ext_mom):
+        """  fill  """
+        momenta_in_decay={}
+        for part in decay_struct.keys():
+            branch=decay_struct[part]['mg_tree']
+            nb_splitting=len(branch)
+            for split in range(nb_splitting-1,-1,-1): 
+                mother=branch[split][0]
+                d1=branch[split][1]
+                d2=branch[split][2]
+                if d1>0:
+                    momenta_in_decay[d1]=ext_mom[d1-1]  # list_momenta is ordered according to ME
+                if d2>0:
+                    momenta_in_decay[d2]=ext_mom[d2-1]  # list_momenta is ordered according to ME
+                momenta_in_decay[mother]=momenta_in_decay[d1].add(momenta_in_decay[d2])
+                
+        return momenta_in_decay
+    
+    def reset_mom_in_prod_event(self, decay_struct, event_map, momenta_in_decay,ext_mom):
+
+        """ Reset the external momenta in the production event, since
+            the virtuality of decaying particles has slightly changed the kinematics
+        """
+        
+        for index in self.curr_event.event2mg.keys():
+            if self.curr_event.event2mg[index]>0:
+                part=self.curr_event.event2mg[index]       # index for production ME
+                part_for_curr_evt=event_map[part-1]+1 # index for curr event
+                if part in decay_struct:
+                    id_res=decay_struct[part]['mg_tree'][0][0]
+                    self.curr_event.particle[part_for_curr_evt]['momentum']=momenta_in_decay[id_res].copy()
+                else:
+                    self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[part-1]
+                
+
+
+    def get_mom(self,momenta):
+        """ input: list of momenta in a string format 
+            output: list of momenta in a 'momentum' format
+        """
+        output=[]
+        for item in momenta:
+            comps=item.split()
+            mom=momentum(float(comps[0]),float(comps[1]),float(comps[2]),float(comps[3]))
+            output.append(mom)
+        return output
         
     def get_identical_decay(self):
         """identify the various decay which are identical to each other"""
@@ -2757,7 +2804,7 @@ class decay_all_events:
             decay_mapping = self.get_process_identical_ratio(relation)
             return decay_mapping
         
-        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0        
+        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 1e-6        
         
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
@@ -2960,7 +3007,7 @@ class decay_all_events:
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
-        commandline = 'output standalone_ms %s %s' % \
+        commandline = 'output standalone_msP %s %s' % \
             (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
@@ -3008,7 +3055,7 @@ class decay_all_events:
                     before, after = proc.split(',')
                     commandline+="add process %s, %s, (%s, %s);" % (before, decay_text, after, decay_text)
                 else:
-                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'
+                    raise Exception, 'too much decay at MG level. This can not be done for the moment)'
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s, %s;" % (process, decay_text)
@@ -3024,16 +3071,32 @@ class decay_all_events:
         mgcmd.exec_cmd(commandline, precmd=True)
         # remove decay with 0 branching ratio.
         mgcmd.remove_pointless_decay(self.banner.param_card)
-        commandline = 'output standalone_ms %s %s' % (pjoin(path_me,'full_me'),
+        commandline = 'output standalone_msF %s %s' % (pjoin(path_me,'full_me'),
                                                       ' '.join(self.list_branches.keys()))
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))
+
 
         # 5. add the decay information to the all_topology object --------------                        
         for matrix_element in mgcmd._curr_matrix_elements.get_matrix_elements():
             me_path = pjoin(path_me,'full_me', 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
             self.all_ME.add_decay(matrix_element, me_path)
+
+        # 5.b import production matrix elements (+ related info) in the full process directory
+        list_prodfiles=['matrix_prod.f','configs_production.inc','props_production.inc','nexternal_prod.inc']
+        for tag in self.all_ME:
+            prod_path=self.all_ME[tag]['path']
+            nfinal=len(self.all_ME[tag]['base_order'][1])
+            for dico in self.all_ME[tag]['decays']:
+                full_path=dico['path']
+                for item in list_prodfiles:
+                     prodfile=pjoin(prod_path,item)
+                     destination=pjoin(full_path,item)
+                     shutil.copyfile(prodfile, destination)  
+                # we need to write the file config_decays.inc
+                self.generate_configs_file(nfinal,dico['decay_struct'],full_path)
+                
 
         # 6. generate decay only part ------------------------------------------
         logger.info('generate matrix element for decay only (1 - > N).')
@@ -3049,7 +3112,7 @@ class decay_all_events:
         # remove decay with 0 branching ratio.
         mgcmd.remove_pointless_decay(self.banner.param_card)
         #
-        commandline = 'output standalone_ms %s' % pjoin(path_me,'decay_me')
+        commandline = 'output standalone_msF %s' % pjoin(path_me,'decay_me')
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
         logger.info('Done %.4g' % (time.time()-start))        
@@ -3123,13 +3186,32 @@ class decay_all_events:
             if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
                 new_path = pjoin(base_dir, direc)
 
-                if mode == 'production_me':
+                if mode == 'full_me':
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver.f')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"driver.f")) 
+                elif mode == 'production_me':
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_prod.f')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"check_sa.f")) 
                 else:
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_full.f')
-                shutil.copyfile(file_madspin, pjoin(new_path,"check_sa.f"))  
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver_decay.f')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"check_sa.f")) 
+                     
                 
-                file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_ms')
+                if mode=='full_me':
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'htuple.f')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"htuple.f"))  
+                    
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"seeds.dat"))  
+                
+                
+                if mode == 'full_me':
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_full')
+                elif mode == 'production_me':
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_prod')
+                else:
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'makefile_decay')
+                    
                 shutil.copyfile(file_madspin, pjoin(new_path,"makefile") )
 
                 # files to produce the parameters:
@@ -3234,11 +3316,6 @@ class decay_all_events:
 #            
             
             
-                
-            
-            
-
-
     def get_max_weight_from_event(self, decay_mapping):
         """ """
 
@@ -3272,6 +3349,7 @@ class decay_all_events:
         
         while ev+1 < len(decay_set) * numberev: 
             production_tag, event_map = self.load_event()
+
             if production_tag == 0 == event_map: #end of file
                 logger.info('Not enough events for at least one production mode.')
                 logger.info('This is ok as long as you don\'t reuse the max weight for other generations.')
@@ -3283,66 +3361,65 @@ class decay_all_events:
                 continue 
             ev += 1
             nb_decay[decaying] += 1 
-            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
-            tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
-            topology = self.all_ME[production_tag][tag_topo]
+
+#            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
+
+            # we should remove the tag_topo stuff
+            #tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
+            #topology = self.all_ME[production_tag][tag_topo]
     
             logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
-            logger.debug('Selected topology               : '+str(tag_topo))
+            #logger.debug('Selected topology               : '+str(tag_topo))
 
-            topology.dress_topo_from_event(self.curr_event)
-            topology.extract_angles()
-
-            if self.options['BW_effect']:
-                decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])
+#            topology.dress_topo_from_event(self.curr_event)
+#            topology.extract_angles()
+#            if self.options['BW_effect']:
+#                decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])
             
             max_decay = {}
-            for dec in range(numberps):
-                if self.options['BW_effect']:
-                    BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
-                                                        event_map, prod_values)
-                else:
-                    BW_weight_prod = 1
+            mean_decay= {}
+            std_decay = {}
+            #for dec in range(numberps):
+            #    if self.options['BW_effect']:
+            #        BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
+            #                                            event_map, prod_values)
+            #    else:
+            #        BW_weight_prod = 1
                 #BW_weight_prod = 1
-                topology.topo2event(self.curr_event)
-                atleastonedecay = False
-                for decay in topology.production['decays']:
-                    tag = decay['decay_tag']
-                    if decay_mapping and not tag in decay_mapping:
-                        continue
-                    if not tag:
-                        continue # No decay for this process
-                    atleastonedecay = True
-                    BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
-                    decayed_event, BW_weight_decay = self.decay_one_event(\
-                                        self.curr_event, 
-                                        decay['decay_struct'],
-                                        event_map,
-                                        BW_cut)
-                                        
-                    if decayed_event==0:
-                        #logger.warning('failed to decay event properly') unnecessary warning
-                        continue
-                    mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
+            #topology.topo2event(self.curr_event)
+            #atleastonedecay = False
+
+            for decay in self.all_ME[production_tag]['decays']:
+                #print decay
+                #print decay['decay_struct'] 
+                tag = decay['decay_tag']
+                if decay_mapping and not tag in decay_mapping:
+                    continue
+                if not tag:
+                    continue # No decay for this process
+                atleastonedecay = True
+                max_decay[tag] = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
+                
+                    #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                     #     then decayed weight:
-                    p_full, p_full_str =decayed_event.give_momenta()
+                    #p_full, p_full_str =decayed_event.give_momenta()
                     #print p_full_str
-                    mg5_me_full = self.calculate_matrix_element('full',
-                                                      decay['path'], p_full_str)
+                    #mg5_me_full = self.calculate_matrix_element('full',
+                    #                                  decay['path'], p_full_str)
                     
-                    weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
-                    if tag in max_decay:
-                        max_decay[tag] = max([max_decay[tag], weight])
-                    else:
-                        max_decay[tag] = weight
+                    #weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
+                #if tag in max_decay:
+                #    max_decay[tag] = max([max_decay[tag], weight])
+                #else:
+                #    max_decay[tag] = weight
                     #print weight, max_decay[name]
                     #raise Exception   
-                if not atleastonedecay:
-                    # NO decay [one possibility is all decay are identical to their particle]
-                    logger.info('No independent decay for one type of final states -> skip those events')
-                    nb_decay[decaying] = numberev
-                    ev += numberev -1
-                    break
+            if not atleastonedecay:
+                # NO decay [one possibility is all decay are identical to their particle]
+                logger.info('No independent decay for one type of final states -> skip those events')
+                nb_decay[decaying] = numberev
+                ev += numberev -1
+                break
             probe_weight[decaying].append(max_decay)
 
             self.terminate_fortran_executables()
@@ -3431,6 +3508,7 @@ class decay_all_events:
             return 0, 0
         production_tag, order = self.curr_event.get_tag()
         P_order = self.all_ME[production_tag]['tag2order'][production_tag]
+
         event_map = {}
         evt_order = list(order[0])+list(order[1])
         for i, id in enumerate(P_order[0] + P_order[1]):
@@ -3456,6 +3534,18 @@ class decay_all_events:
         
         return production_tag, event_map
     
+    def get_max_weight_from_fortran(self, path, event_map,nbpoints,BWcut):
+        """return the max. weight associated with me decay['path']"""
+
+        p, p_str=self.curr_event.give_momenta(event_map)
+
+        std_in=" %s  %s %s %s  \n" % ("1",BWcut, self.Ecollider, nbpoints)
+        std_in+=p_str
+        max_weight = self.loadfortran('maxweight',
+                               path, std_in)
+
+        return max_weight
+
         
     def evaluate_me_production(self, production_tag, map_event):
         """return the numerical value of the matrix element"""
@@ -3468,6 +3558,40 @@ class decay_all_events:
         mg5_me_prod = float(prod_values[0])
         return mg5_me_prod, prod_values
         
+    def loadfortran(self, mode, path, stdin_text):
+        """ call the fortran executable """
+
+        tmpdir = ''
+        if ('full',path) in self.calculator:
+            external = self.calculator[('full',path)]
+            self.calculator_nbcall[('full',path)] += 1
+        else:
+            logger.debug('we have %s calculator ready' % len(self.calculator))
+            tmpdir = path
+
+            executable_prod="./check"
+            external = Popen(executable_prod, stdout=PIPE, stdin=PIPE, 
+                                                      stderr=STDOUT, cwd=tmpdir)
+            self.calculator[('full',path,)] = external 
+            self.calculator_nbcall[('full',path)] = 1 
+
+        external.stdin.write(stdin_text)
+
+        if mode == 'maxweight':
+            maxweight=float(external.stdout.readline())
+            return maxweight
+        elif mode == 'full_me':
+            me_value=float(external.stdout.readline())
+            return me_value
+        elif mode == 'unweighting':
+            firstline=external.stdout.readline().split()
+            nexternal=int(firstline[0])
+            trials= int(firstline[1])
+            BWvalue= float(firstline[2])
+            weight= float(firstline[3])
+            momenta=[external.stdout.readline() for i in range(nexternal)]
+            return trials, BWvalue, weight, momenta
+
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
 
@@ -3565,6 +3689,71 @@ class decay_all_events:
                     break
  
         return BW_weight_prod, topology
+      
+    def generate_configs_file(self,nfinal,decay_struct, path):
+        """ write the file configs_decay.inc
+            also record the itree information in a python variable, 
+            this will be needed to write down the event
+            
+            decay_struct['mg_tree'] = [(d1,d2, mother), (d1,d2,mother), ...]
+                with - BACKWARD ORDER, 
+                     - me indices
+        """
+    
+        me_index=2 # should match the particle index in the full matrix element 
+        count_res=0 # count number of resonances
+        iforest=[] 
+        pmasswidth=[]
+        
+#              data (map_external2res(i), i=1,4)/1,2,-2,-4/
+ 
+        map_external='      data (map_external2res(i), i=1,%s)/1,2,' %(nfinal+2)    
+        for part in range(3,nfinal+3):
+            if part in decay_struct:  # particle in the prod. event to be decayed
+                #print part
+                decay_struct[part]['mg_tree']=[]
+
+                nb_res=len(decay_struct[part]["tree"].keys())
+                for res in range(-1,-nb_res-1,-1):
+                    label=abs(decay_struct[part]["tree"][res]['label'])
+                    mass=self.pid2massvar[label]
+                    width=self.pid2widthvar[label] 
+                    me_res=-nb_res-res-count_res-1
+                    indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
+                    if indexd1>0:
+                        me_index+=1
+                        me_d1=me_index
+                    else: 
+                        # need to label resonances backward
+                        me_d1 = -nb_res-indexd1-count_res-1
+                    indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
+                    if indexd2>0:
+                        me_index+=1
+                        me_d2=me_index
+                    else: 
+                        # need to label resonances backward
+                        me_d2 = -nb_res-indexd2-count_res-1
+                    iforest.append("      DATA (IDECAY(I, %s ),I=1,2)/  %s ,  %s / \n" % (me_res, me_d1, me_d2))
+                    decay_struct[part]['mg_tree'].append((me_res,me_d1,me_d2))
+                    pmasswidth.append("      PRMASS(%s)=%s \n" %(me_res,mass) )
+                    pmasswidth.append("      PRWIDTH(%s)=%s \n" %(me_res,width) )
+
+                count_res=count_res+nb_res
+                map_external+='%s ,' % (-count_res)
+            else:
+                me_index+=1
+                map_external+='%s ,' % me_index
+   
+        map_external=map_external[:-1]+'/ \n'
+        
+        trappe=open(pjoin(path,'configs_decay.inc'),'w')
+        trappe.write(map_external)
+        for item in iforest:
+            trappe.write(item)
+        trappe.write('      ns_channel_decay= %s \n' % count_res)
+        for item in pmasswidth:
+            trappe.write(item)
+        trappe.close()
         
     def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1, write=0):
         """Consider the production event recorded in "curr_event", and decay it
@@ -3606,8 +3795,8 @@ class decay_all_events:
         for index in curr_event.event2mg.keys():
             if curr_event.event2mg[index]>0:
                 if write==0:
-                    part=curr_event.event2mg[index]
-                    part_for_curr_evt=event_map[part-1]+1                 
+                    part=curr_event.event2mg[index] # index for production ME
+                    part_for_curr_evt=event_map[part-1]+1 # index for curr event                
                 else:
                     part=inv_event_map[curr_event.event2mg[index]-1]+1
                     part_for_curr_evt=curr_event.event2mg[index]
@@ -3814,6 +4003,236 @@ class decay_all_events:
         decayed_event.nexternal=part_number        
         return decayed_event, weight        
 
+    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay):
+        """Write down the event 
+           momenta is the list of momenta ordered according to the productin ME
+        """
+
+        pid2color = self.pid2color
+        decayed_event=Event()
+        decayed_event.event2mg={}
+
+        decayed_event.ievent=curr_event.ievent
+        decayed_event.wgt=curr_event.wgt
+        decayed_event.scale=curr_event.scale
+        decayed_event.aqed=curr_event.aqed
+        decayed_event.aqcd=curr_event.aqcd
+        decayed_event.diese=curr_event.diese
+        decayed_event.rwgt=curr_event.rwgt
+
+        part_number=0
+        external=0
+        maxcol=curr_event.max_col
+
+        # in order to preserve the natural order in lhe file,
+        # we need the inverse of the dico event_map
+        inv_event_map={}
+        for i in event_map.keys():
+            inv_event_map[event_map[i]]=i
+        sol_nb = None
+        
+        for index in curr_event.event2mg.keys():
+            if curr_event.event2mg[index]>0:
+                part=inv_event_map[curr_event.event2mg[index]-1]+1 # index for prod. matrix element
+                part_for_curr_evt=curr_event.event2mg[index]       # index for event file
+                
+                if part not in decay_struct:
+                    external+=1 
+                    part_number+=1
+                    decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
+                    decayed_event.event2mg[part_number]=part_number
+                
+                else:
+                    # now we need to write the decay products in the event
+                    # follow the decay chain order, so that we can easily keep track of the mother index
+                        
+                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
+                        index_res_for_mom=decay_struct[part]['mg_tree'][-res-1][0]
+                        if (res==-1):
+                            part_number+=1
+                            mom=momenta_in_decay[index_res_for_mom].copy()
+                            pid=decay_struct[part]["tree"][res]['label'] 
+                            istup=2
+                            mothup1=1
+                            mothup2=2
+                            colup1=curr_event.particle[part_for_curr_evt]["colup1"]
+                            colup2=curr_event.particle[part_for_curr_evt]["colup2"]
+                            decay_struct[part]["tree"][res]["colup1"]=colup1
+                            decay_struct[part]["tree"][res]["colup2"]=colup2
+                            mass=mom.m
+                            helicity=0.
+                            decayed_event.particle[part_number]={"pid":pid,\
+                                "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
+                                "colup1":colup1,"colup2":colup2,"momentum":mom,\
+                                "mass":mass,"helicity":helicity}
+                            decayed_event.event2mg[part_number]=part_number
+                    #print part_number
+                    #print pid
+                    #print " "
+                        mothup1=part_number
+                        mothup2=part_number
+#
+#             Extract color information so that we can write the color flow
+#
+                        colormother=pid2color[decay_struct[part]["tree"][res]["label"]]
+                        colord1=pid2color[decay_struct[part]\
+                                            ["tree"][res]["d1"]["label"]]
+                        colord2=pid2color[decay_struct[part]\
+                                            ["tree"][res]["d2"]["label"]]
+                
+                        colup1=decay_struct[part]["tree"][res]["colup1"]
+                        colup2=decay_struct[part]["tree"][res]["colup2"]
+
+#            now figure out what is the correct color flow informatio
+#            Only consider 1,3, 3-bar and 8 color rep.
+#            Normally, the color flow needs to be determined only
+#            during the reshuffling phase, but it is currenlty assigned 
+#            for each "trial event"
+                        if abs(colord1)==1:
+                            d2colup1=colup1
+                            d2colup2=colup2
+                            d1colup1=0
+                            d1colup2=0
+                        elif abs(colord2)==1:
+                            d1colup1=colup1
+                            d1colup2=colup2
+                            d2colup1=0
+                            d2colup2=0
+                        elif colord1==3 and colord2==-3 and colormother ==1:
+                            maxcol+=1
+                            d1colup1=maxcol
+                            d1colup2=0
+                            d2colup1=0
+                            d2colup2=maxcol
+                     
+                        elif colord1==3 and colord2==-3 and colormother ==8:
+                            d1colup1=colup1
+                            d1colup2=0
+                            d2colup1=0
+                            d2colup2=colup2
+                        elif colord1==-3 and colord2==3 and colormother ==8:
+                            d1colup1=0
+                            d1colup2=colup2
+                            d2colup1=colup1
+                            d2colup2=0
+                        elif colord1==-3 and colord2==3 and colormother ==1:
+                            maxcol+=1
+                            d1colup1=0
+                            d1colup2=maxcol
+                            d2colup1=maxcol
+                            d2colup2=0
+                        elif colord1==3 and colord2==8 and colormother ==3:
+                            maxcol+=1
+                            d2colup1=colup1
+                            d2colup2=maxcol
+                            d1colup1=maxcol
+                            d1colup2=0
+
+                        elif colord2==3 and colord1==8 and colormother ==3:
+                            maxcol+=1
+                            d1colup1=colup1
+                            d1colup2=maxcol
+                            d2colup1=maxcol
+                            d2colup2=0
+
+                        elif colord1==-3 and colord2==8 and colormother ==-3:
+                            maxcol+=1
+                            d2colup2=colup2
+                            d2colup1=maxcol
+                            d1colup2=maxcol
+                            d1colup1=0
+
+                        elif colord2==-3 and colord1==8 and colormother ==-3:
+                            maxcol+=1
+                            d1colup2=colup2
+                            d1colup1=maxcol
+                            d2colup2=maxcol
+                            d2colup1=0
+                        else:
+                            raise Exception, 'color combination not treated by MadSpin (yet). (%s,%s,%s)' \
+                                % (colord1,colord2,colormother)
+                        part_number+=1
+                        index_d1_for_mom=decay_struct[part]['mg_tree'][-res-1][1]
+                        mom=momenta_in_decay[index_d1_for_mom].copy()
+                        #mom=decay_products[decay_struct[part]\
+                        #            ["tree"][res]["d1"]["index"]]["momentum"]
+                        pid=decay_struct[part]\
+                                    ["tree"][res]["d1"]["label"]
+
+
+                        indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
+                        if ( indexd1>0):
+                            istup=1
+                            external+=1
+                        else:
+                            decay_struct[part]["tree"][indexd1]["colup1"]=d1colup1
+                            decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
+                            istup=2
+                    
+                        mass=mom.m
+                        helicity=0.
+                        decayed_event.particle[part_number]={"pid":pid,\
+                                "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
+                                "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
+                                "mass":mass,"helicity":helicity}
+                        decayed_event.event2mg[part_number]=part_number
+
+                        part_number+=1
+                        index_d2_for_mom=decay_struct[part]['mg_tree'][-res-1][2]
+                        mom=momenta_in_decay[index_d2_for_mom].copy()
+
+                        #mom=decay_products[decay_struct[part]["tree"][res]["d2"]\
+                        #                   ["index"]]["momentum"]
+                        pid=decay_struct[part]["tree"][res]["d2"]\
+                                           ["label"]
+
+                        indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
+                        if ( indexd2>0):
+                            istup=1
+                            external+=1
+                        else:
+                            istup=2
+                            decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
+                            decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
+
+                        mothup1=part_number-2
+                        mothup2=part_number-2
+                        mass=mom.m
+                        helicity=0.
+                        decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
+                           "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
+                           "colup2":d2colup2,\
+                           "momentum":mom,"mass":mass,"helicity":helicity}
+
+                        decayed_event.event2mg[part_number]=part_number
+
+                
+            
+            else: # resonance in the production event
+                part=curr_event.event2mg[index]
+                part_number+=1
+                decayed_event.particle[part_number]=curr_event.resonance[part]
+                decayed_event.event2mg[part_number]=part_number
+#        Here I need to check that the daughters still have the correct mothup1 and mothup2
+                for part in curr_event.resonance.keys():
+                    mothup1=curr_event.resonance[part]["mothup1"]         
+                    mothup2=curr_event.resonance[part]["mothup2"] 
+                    if mothup1==index:
+                        if mothup2!=index: print "Warning: mothup1!=mothup2"
+                        curr_event.resonance[part]["mothup1"]=part_number
+                        curr_event.resonance[part]["mothup2"]=part_number
+                for part in curr_event.particle.keys():
+                    mothup1=curr_event.particle[part]["mothup1"]         
+                    mothup2=curr_event.particle[part]["mothup2"] 
+                    if mothup1==index:
+                        if mothup2!=index: print "Warning: mothup1!=mothup2"
+                        curr_event.particle[part]["mothup1"]=part_number
+                        curr_event.particle[part]["mothup2"]=part_number
+
+        decayed_event.nexternal=part_number        
+        return decayed_event       
+
+
     def add_loose_decay(self):
         """ in presence of multiprocess with multiple decay options all the 
         BR might not be identical. In such case, the total number of events should
@@ -3908,18 +4327,27 @@ class decay_all_events:
         """routine to terminate all fortran executables"""
 
         if not path_to_decay:
-            for (mode, production) in self.calculator:
-                external = self.calculator[(mode, production)]
-                external.stdin.close()
-                external.stdout.close()
-                external.terminate()
-                del external
+            for (mode, path) in self.calculator:
+                if mode=='decay':
+                    external = self.calculator[(mode, path)]
+                    external.terminate()
+                    del external
+                elif mode=='full':
+                    stdin_text="5 0 0"  # before closing, write down the seed 
+                    external = self.calculator[('full',path)]
+                    external.stdin.write(stdin_text)
+                    external.stdin.close()
+                    external.stdout.close()
+                    external.terminate()
+                    del external
         else:
             try:
                 external = self.calculator[('full', path_to_decay)]
             except Exception:
                 pass
             else:
+                stdin_text="5 0 0"
+                external.stdin.write(stdin_text)
                 external.stdin.close()
                 external.stdout.close()
                 external.terminate()       
