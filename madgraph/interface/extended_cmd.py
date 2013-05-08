@@ -1373,7 +1373,38 @@ class SmartQuestion(BasicCmd):
     def get_names(self):
         # This method used to pull in base class attributes
         # at a time dir() didn't do it yet.
-        return dir(self)            
+        return dir(self)  
+    
+    def onecmd(self, line, **opt):
+        """catch all error and stop properly command accordingly
+        Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+        
+        This allow to pass extra argument for internal call.
+        """
+        try:
+            if '~/' in line and os.environ.has_key('HOME'):
+                line = line.replace('~/', '%s/' % os.environ['HOME'])
+            line = os.path.expandvars(line)
+            cmd, arg, line = self.parseline(line)
+            if not line:
+                return self.emptyline()
+            if cmd is None:
+                return self.default(line)
+            self.lastcmd = line
+            if cmd == '':
+                return self.default(line)
+            else:
+                try:
+                    func = getattr(self, 'do_' + cmd)
+                except AttributeError:
+                    return self.default(line)
+                return func(arg, **opt)        
+        except Exception as error:
+            logger.warning(error)  
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1458,6 +1489,7 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
+        
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)

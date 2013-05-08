@@ -1002,6 +1002,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_quit(self, line):
         """Not in help: exit """
   
+  
         try:
             os.remove(pjoin(self.me_dir,'RunWeb'))
         except Exception, error:
@@ -1027,7 +1028,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             devnull.close()
         except Exception:
             pass
-        return True
+        
+        return super(CommonRunCmd, self).do_quit(line)
 
     
     # Aliases
@@ -1988,13 +1990,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
-        if not '.dat' in answer:
+        if 'madweight' in answer:
+            answer = answer.replace('madweight', 'MadWeight')
+                
+        if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
             else:
                 path = pjoin(me_dir,'Cards','delphes_trigger.dat')
         else:
             path = pjoin(me_dir, 'Cards', answer)
-        self.mother_interface.exec_cmd('open %s' % path)
- 
+        try:
+            self.mother_interface.exec_cmd('open %s' % path)
+        except InvalidCmd, error:
+            print answer, dir(error)
+            if str(error) != 'No default path for this file':
+                raise
+            if answer == 'transfer_card.dat':
+                logger.warning('You have to specify a transfer function first!')
+            if answer == 'input.lhco':
+                ff = open(path,'w')
+                ff.write('''No LHCO information imported at current time.
+To import a lhco file: Close this file and type the path of your file.
+You can also copy/paste, your event file here.''')
+                ff.close()
+                self.open_file(answer)
+                  
+                
 

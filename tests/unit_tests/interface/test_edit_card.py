@@ -60,7 +60,7 @@ class TestEditCardCmd(unittest.TestCase):
         files.cp(pjoin(template_path, 'LO/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         card = 'MadWeight_card'
         files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards')
-        files.cp(pjoin(template_path, 'MadWeight/Cards/%s_default.dat' % card), '/tmp/edit_card/Cards')
+        files.cp(pjoin(template_path, 'MadWeight/Cards/%s.dat' % card), '/tmp/edit_card/Cards/%s_default.dat' % card)
         
         fakemother = FakeInterface('/tmp/edit_card/')
         self.cmd = runcmd.AskforEditCard('', cards=['run_card.dat', 'param_card.dat', 'madweight_card.dat'],

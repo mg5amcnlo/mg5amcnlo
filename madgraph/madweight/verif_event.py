@@ -294,7 +294,6 @@ class Lhco_filter:
                 list_part=[]
                 nb_part={}			
 
-        assert len(lhco_id_tag) == self.event_position 
         #check last data to be sure that we don't forget the last event
         if self.check_valid(nb_part):
             if nb_accepted < self.MWparam.info['mw_run']['nb_exp_events']:
