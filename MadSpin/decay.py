@@ -2679,6 +2679,13 @@ class decay_all_events:
     This is for channel %s with current BW_value at : %g'""" \
                     % (weight/decay['max_weight'], decay['decay_tag'], BWvalue)  
                     logger.error(error)
+                    print stdin_text
+                    print 'weight'
+                    print weight
+                    print 'decay[max_weight]'
+                    print decay['max_weight']
+                    print 'path'
+                    print decay['path'] 
                 elif report['over_weight'] > max(0.005*event_nb,3):
                     error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the

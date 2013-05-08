@@ -99,6 +99,12 @@ c      enddo
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
 
+
+c      write(*,*) sqrt(dot(P(0,3),P(0,3)))
+c      write(*,*) sqrt(dot(P(0,4),P(0,4)))
+c      write(*,*) dot(P(0,5),P(0,5))
+c      write(*,*) 'shat', sqrt(2d0*dot(P(0,1),P(0,2)))
+c      write(*,*) 'pt2g', sqrt(2d0*dot(P(0,4),P(0,5))+dot(P(0,4),P(0,4)))
 cccccccccccccccccccccccccccccccccccccccccccccccccccc      
 c    II. initialization of masses and widths        c
 c       also load production topology information  c
@@ -134,7 +140,6 @@ c   IV. select one topology                        c
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       call get_config(iconfig)
-
       do i=-nexternal_prod+2,-1
          do j=1,2
             itree(j,i)=iforest(j,i,iconfig)
@@ -160,11 +165,14 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   VIa. Calculate the max. weight                                      c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
+
       if (mode.eq.1) then
 
         mean=0d0
         variance=0d0
         maxweight=0d0
+c        max_m=0d0
+c        max_jac=0d0
 
         do i=1,nbpoints
            jac=1d0
@@ -188,14 +196,49 @@ c           write(*,*) 'M_full ', M_full
 c           write(*,*) 'jac',jac
 
            weight=M_full*jac/M_prod
-           if (weight.gt.maxweight) maxweight=weight
-           !mean=mean+weight
-           !variance=variance+weight**2
+           if (weight.gt.maxweight) then
+            maxweight=weight
+c            max_m=M_full
+c            max_jac=jac
+c            do k =1,nexternal
+c            do j=0,3
+c            max_mom(j,k)=pfull(j,k)
+c            enddo
+c            enddo
+           endif
+c           mean=mean+weight
+c           variance=variance+weight**2
         enddo
-        !mean=mean/real(nbpoints)   
-        !variance=variance/real(nbpoints)-mean**2
-        !std=sqrt(variance)
+c        mean=mean/real(nbpoints)   
+c        variance=variance/real(nbpoints)-mean**2
+c        std=sqrt(variance)
         write (*,*) maxweight   ! ,mean,std  
+c        write (*,*) 'max_m',max_m 
+c        write (*,*) 'max_jac', jac
+c        write (*,*) 'Extrenal masses'
+c        do k=1,nexternal
+c        write(*,*) dot(max_mom(0,k), max_mom(0,k))
+c        enddo
+c        do j=0,3
+c          pw1(j)=max_mom(j,4)+max_mom(j,5)
+c          pt1(j)=pw1(j)+max_mom(j,3)
+c          pw2(j)=max_mom(j,7)+max_mom(j,8)
+c          pt2(j)=pw2(j)+max_mom(j,6)
+c          pt2g(j)=pt2(j)+max_mom(j,9)
+c        enddo
+ 
+c        write (*,*) 'm45', sqrt(2D0*dot(max_mom(0,4),max_mom(0,5))) 
+c        write (*,*) 'm78', sqrt(2d0*dot(max_mom(0,7),max_mom(0,8))) 
+c        write (*,*) 'mt1', sqrt(dot(pt1,pt1)) 
+c        write (*,*) 'mt2', sqrt(dot(pt2,pt2)) 
+c        write (*,*) 'mt2g', sqrt(dot(pt2g,pt2g)) 
+c        write (*,*) 'm9', sqrt(dot(max_mom(0,9),max_mom(0,9))) 
+c        write (*,*) 'shat', sqrt(2D0*dot(max_mom(0,2),max_mom(0,1))) 
+c        write(*,*)  (max_mom(j,1), j=0,3)
+c        write(*,*)  (max_mom(j,2), j=0,3)
+c        write(*,*)  (pt1(j), j=0,3)
+c        write(*,*)  (pt2(j), j=0,3)
+c        write(*,*)  (max_mom(j,9), j=0,3)
         call flush()
         goto 1
       endif
@@ -325,10 +368,10 @@ c     local
        ! variables associate with the PS generation
        double precision totmassin, totmass
        double precision shat, sqrtshat, stot, y, m(-nexternal:nexternal)
-       integer nbranch, ns_channel,nt_channel
+       integer nbranch, ns_channel,nt_channel, pos_pz
        common /to_topo/
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
-     & nbranch, ns_channel,nt_channel
+     & nbranch, ns_channel,nt_channel, pos_pz
 
 c Masses of particles. Should be filled in setcuts.f
       double precision pmass(nexternal)
@@ -347,13 +390,21 @@ c Masses of particles. Should be filled in setcuts.f
             m(i)=pmass(i)
       enddo
 
+      if (p(3,1).gt.p(3,2)) then
+         pos_pz=1
+      else 
+         pos_pz=2
+      endif
       do j = 0,3
         ptot(j)=p(j,1)+p(j,2)
       enddo
       shat=dot(ptot,ptot)
       sqrtshat=sqrt(shat)
+      y = 0.5*log((ptot(0)+ptot(3))/(ptot(0)-ptot(3)))
 c      write(*,*) shat
 c      write(*,*) sqrtshat
+c      write(*,*) 'y',y
+c      write(*,*) (ptot(j), j=0,3)
 
 
 c Make sure have enough mass for external particles
@@ -417,10 +468,10 @@ c     common
        ! variables associate with the PS generation
        double precision totmassin, totmass
        double precision shat, sqrtshat, stot, y, m(-nexternal:nexternal)
-       integer nbranch, ns_channel,nt_channel
+       integer nbranch, ns_channel,nt_channel, pos_pz
        common /to_topo/
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
-     & nbranch, ns_channel,nt_channel
+     & nbranch, ns_channel,nt_channel, pos_pz
 
       double precision phi
       external phi
@@ -498,12 +549,18 @@ c      write(*,*) qwidth_full(-4)
 
       ! fill the new itree with the kinematics associated with the production
       do i=-1,-(ns_channel+nt_channel)-1,-1
+c         write(*,*) 'i prod',i
+c         write(*,*) 'i full',i-ns_channel_decay
+c         write(*,*) 'd1 prod',itree(1,i)
+c         write(*,*) 'd2 prod',itree(2,i)
          if (itree(1,i).lt.0 ) then
+c            write(*,*) 'd1 full',itree(1,i)-ns_channel_decay
             itree_full(1,i-ns_channel_decay) = itree(1,i)-ns_channel_decay
          else 
              itree_full(1,i-ns_channel_decay) = map_external2res(itree(1,i))
          endif 
          if (itree(2,i).lt.0 ) then
+c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
              itree_full(2,i-ns_channel_decay) = itree(2,i)-ns_channel_decay
          else 
              itree_full(2,i-ns_channel_decay) = map_external2res(itree(2,i))
@@ -543,8 +600,8 @@ c      write(*,*) (itree_full(i,-2), i=1,2)
 c      write(*,*) (itree_full(i,-3), i=1,2)
 c      write(*,*) (itree_full(i,-4), i=1,2)
 c      write(*,*) (itree_full(i,-5), i=1,2)
-c      !write(*,*) (itree_full(i,-6), i=1,2)
-c      write(*,*) qmass_full(-1)
+c c     write(*,*) (itree_full(i,-6), i=1,2)
+c c     write(*,*) qmass_full(-1)
 c      write(*,*) qmass_full(-2)
 c      write(*,*) qmass_full(-3)
 c      write(*,*) qmass_full(-4)
@@ -555,8 +612,10 @@ c      write(*,*) qwidth_full(-3)
 c      write(*,*) qwidth_full(-4)
 c      write(*,*) qwidth_full(-5)
 
-
-      !overwrite the previous information
+c       write(*,*) 'p -2', (p(j,-2), j=0,3)
+c       write(*,*) 'p -4', (p(j,-4), j=0,3)
+c       write(*,*) 'p  9', (p(j,9), j=0,3)
+c      !overwrite the previous information
       nbranch=nexternal-2
       ns_channel= ns_channel+ns_channel_decay
 c      write(*,*) 'ns_channel ',ns_channel 
@@ -614,6 +673,9 @@ c        rotate such that pb is aligned with z axis
                pboost(j)=-p(j,i)
             enddo
             call boostx(p(0,itree(1,i)),pboost,p1)
+            call boostx(p(0,itree(2,i)),pboost,p2)
+c            write(*,*) 'p1 ', (p1(j), j=0,3)
+c            write(*,*) 'p2 ', (p2(j), j=0,3)
             normp=sqrt(p1(1)**2+p1(2)**2+p1(3)**2)
             cosphi_schan(i)=p1(3)/normp
             phi_schan(i)=phi(p1) 
@@ -648,10 +710,10 @@ c
        ! variables associate with the PS generation
        double precision totmassin, totmass
        double precision shat, sqrtshat, stot, y, m(-nexternal:nexternal)
-       integer nbranch, ns_channel,nt_channel
+       integer nbranch, ns_channel,nt_channel,pos_pz
        common /to_topo/
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
-     & nbranch, ns_channel,nt_channel
+     & nbranch, ns_channel,nt_channel, pos_pz
 
 
 c Masses of particles. Should be filled in setcuts.f
@@ -664,7 +726,7 @@ c local
       double precision pb(0:3,-nexternal:nexternal)
      &     ,S(-nexternal:nexternal)
      &     ,xjac,xpswgt
-     &     ,pwgt,p_born_CHECK(0:3,nexternal)
+     &     ,pwgt,p_born_CHECK(0:3,nexternal), ptot(0:3)
       logical pass
 c external
       double precision lambda
@@ -699,14 +761,26 @@ c     STEP 1: generate the initial momenta
       pb(3,-nbranch)= 0d0
 
       if(nincoming.eq.2) then
+        if (pos_pz.eq.1)then
         call mom2cx(sqrtshat,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+        else
+        call mom2cx(sqrtshat,m(2),m(1),1d0,0d0,pb(0,2),pb(0,1))
+        endif
       else
          pb(0,1)=sqrtshat
          do i=1,2
             pb(0,1)=0d0
          enddo
       endif
+
+       ptot(0)=sqrtshat*cosh(y)
+       ptot(1)=0d0
+       ptot(2)=0d0
+       ptot(3)=sqrtshat*sinh(y)
+       call boostx(pb(0,1),ptot,pb(0,1))
+       call boostx(pb(0,2),ptot,pb(0,2))
 c
+
 c    STEP 2:  generate all the invariant masses of the s-channels
       call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat
      &     ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac,pass)
@@ -722,10 +796,10 @@ c If only s-channels, also set the p1+p2 s-channel
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          s(-nbranch+1)=s(-nbranch) 
          m(-nbranch+1)=m(-nbranch)       !Basic s-channel has s_hat 
-         pb(0,-nbranch+1) = m(-nbranch+1)!and 0 momentum
+         pb(0,-nbranch+1) = m(-nbranch+1)*cosh(y)!and 0 momentum
          pb(1,-nbranch+1) = 0d0
          pb(2,-nbranch+1) = 0d0
-         pb(3,-nbranch+1) = 0d0
+         pb(3,-nbranch+1) = m(-nbranch+1)*sinh(y)
       endif
 
 c
@@ -835,11 +909,11 @@ c         write(*,*)  xpswgt0
 
          call mom2cx(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
      &        pb(0,itree(1,i)),pb(0,itree(2,i)))
-c         write(*,*) 'i ', i
+c          write(*,*) 'i ', i
 c         write(*,*) 'costh, phi ', costh,phi
 c         write(*,*) 'm init ', m(i)
-c         write(*,*) (pb(j,itree(1,i)), j=0,3)
-c         write(*,*) (pb(j,itree(2,i)), j=0,3)
+c          write(*,*) (pb(j,itree(1,i)), j=0,3)
+c          write(*,*) (pb(j,itree(2,i)), j=0,3)
 c If there is an extremely large boost needed here, skip the phase-space point
 c because of numerical stabilities.
          if (dsqrt(abs(dot(pb(0,i),pb(0,i))))/pb(0,i) 
@@ -850,6 +924,8 @@ c because of numerical stabilities.
          else
             call boostx(pb(0,itree(1,i)),pb(0,i),pb(0,itree(1,i)))
             call boostx(pb(0,itree(2,i)),pb(0,i),pb(0,itree(2,i)))
+c          write(*,*) (pb(j,itree(1,i)), j=0,3)
+c          write(*,*) (pb(j,itree(2,i)), j=0,3)
          endif
       enddo
 c
@@ -1014,7 +1090,7 @@ c     normal BW
                s(i)=xbwmass3(x(ivar),xm02,qwidth(i),bwdelf
      &              ,bwfmmn)
                xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
-
+               !write(*,*) i , sqrt(s(i))
             endif
          else
 c not a Breit Wigner
@@ -1039,8 +1115,10 @@ c     fill masses, update totalmass
 c
 503      continue
          m(i) = sqrt(s(i))
-         BWshift=abs(m(i)-qmass(i))/qwidth(i)
-         if (BWshift.gt.maxBW) maxBW=BWshift
+         if (.not.keep_inv(i)) then
+           BWshift=abs(m(i)-qmass(i))/qwidth(i)
+           if (BWshift.gt.maxBW) maxBW=BWshift
+         endif
          totalmass=totalmass+m(i)-
      &        m(itree(1,i))-m(itree(2,i))
          if ( totalmass.gt.sqrtshat )then
