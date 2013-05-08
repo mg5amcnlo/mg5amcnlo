@@ -1253,7 +1253,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         self.options[key] = os.path.realpath(path)
                         continue
                 self.options[key] = None
-            elif key.startswith('cluster'):
+            elif key.startswith('cluster') and key != 'cluster_status_update':
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
