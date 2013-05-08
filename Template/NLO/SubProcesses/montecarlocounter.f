@@ -497,9 +497,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1209,9 +1209,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1915,9 +1915,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -2710,9 +2710,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3438,9 +3438,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
