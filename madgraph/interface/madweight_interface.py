@@ -403,11 +403,15 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         self.check_launch_jobs(args)
         # now args is of the type [True True]
         create_dir, launch_jobs = args[0], args[1]
-        
+
         for nb_card in self.MWparam.actif_param:
             for dirname in self.MWparam.MW_listdir:
-                for event_sample in range(self.MWparam.nb_event_MW[dirname]//self.MWparam['mw_run']['nb_event_by_node']):
-                    self.submit_job(dirname, nb_card, event_sample)
+                nb_job = self.MWparam.nb_event_MW[dirname]
+                if self.MWparam['mw_run']['nb_event_by_node'] > 1:
+                    nb_job = (nb_job+1) // self.MWparam['mw_run']['nb_event_by_node']
+                
+                for event_sample in range(nb_job):
+                    self.submit_job(dirname, nb_card, event_sample)        
     
         starttime = time.time()
         #logger.info('     Waiting for submitted jobs to complete')

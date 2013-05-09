@@ -273,8 +273,28 @@ cases are handled, but never can be sure..."""
 #      except:
 #          pass
 
-
-
+def get_perms_from_id(pid_list, bjet_is_jet):
+    """ """
+    
+    assert isinstance(pid_list, list)
+    assert isinstance(bjet_is_jet, bool)
+    
+    list_id = []
+    for i,pid in enumerate(pid_list):
+        if abs(pid) in [1,2,3,4]:
+            list_id.append('j')
+        elif abs(pid) == 5:
+            if bjet_is_jet:
+                list_id.append('j')
+            else:
+                list_id.append('b')
+        elif abs(pid) in [12,14,16,18,1000022,1000023,1000025,1000035]:
+            list_id.append('%s_%s' % (i, pid))
+        else:
+            list_id.append(pid)
+    
+    #get the id permutations
+    return  get_all_permutations(list_id)
 
 def get_all_permutations(cat_list):
     """ """
