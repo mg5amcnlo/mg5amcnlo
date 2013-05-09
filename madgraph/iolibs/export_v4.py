@@ -121,7 +121,7 @@ class ProcessExporterFortran(object):
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([pjoin('bin', 'internal', 'clean_template')], \
+                    misc.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \

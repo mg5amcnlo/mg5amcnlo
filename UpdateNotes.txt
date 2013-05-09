@@ -9,11 +9,14 @@ Update notes for MadGraph 5 (in reverse time order)
 		  OM: Allow to use an additional syntax for the set command.
                       set gauge = Feynman is now valid. (Was not valid before due to the '=')
                   OM: Fix By Arian Abrahantes. Fix SGE cluster which was not working when
-                      running full simulation.
+                      running full simulation (PGS/Delphes).
                   OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
                       written the routine) 
                   OM: Fix Bug #1177442. This crash occurs only for very large model. 
                       None of the model shipped with MG5 are impacted.
+                  OM Fix Question #228315. On some filesystem, some of the executable 
+                     loose the permission to be executable. Recover those errors 
+                     automatically.
 
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
