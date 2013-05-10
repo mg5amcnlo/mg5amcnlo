@@ -9,8 +9,7 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-#NLOLIBS=$(libmadloop) $(libcuttools)
-NLOLIBS=
+NLOLIBS=$(libmadloop) $(libcuttools)
 # Uncomment the line below to compile 'by hand'
 # NLOLIBS= -L. -lmadloop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
