@@ -1229,23 +1229,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.update_status('Setting up grid', level=None)
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 0, npoints, niters,'0.05') 
-                self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
-                p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters,'0.05') 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 0, npoints, niters,'0.05') 
+                self.run_all(job_dict, [['0', 'born', '0'],['0', 'novB', '0']], 'Setting up grids')
+                p = misc.Popen(['./combine_results_FO.sh', 'born_G*', 'novB_G*'], \
                                     stdout=subprocess.PIPE, 
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
-                npoints = self.run_card['npoints_FO_grid']
-                niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 0, npoints, niters,'0.05') 
-                self.update_status('Improving grid using NLO', level=None)
-                self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
-                                 'Improving grids using NLO')
-                p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
-                                   stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
@@ -1257,7 +1246,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 niters = self.run_card['niters_FO_virt']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', -1, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
+                self.run_all(job_dict, [['0', 'viSB', '0', 'born'], ['0', 'novB', '0', 'novB']], \
                         'Computing cross-section')
 
             p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
