@@ -205,7 +205,7 @@ class MG_diagram(diagram):
             try:
                 label=dico_pid_to_label[abs(part.pid)]
             except KeyError:
-                logger.info('particle with pdg %s has no transfer function define: Treated as missing energy')
+                logger.info('particle with pdg %s has no transfer function define: Treated as missing energy' % part.pid)
                 label = None
             if not part.neutrino:
                 if dico_type_to_tflevel.has_key(label):
