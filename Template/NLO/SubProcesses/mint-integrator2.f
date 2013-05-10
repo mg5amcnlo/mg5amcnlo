@@ -89,7 +89,7 @@ c reached.
             ncalls0=80*ndim
          endif
          double_events=.true.
-         if (imode.eq.1) then
+         if (imode.eq.1 .or. imode.eq.-1) then
             nint_used=nintervals
          else
             nint_used=min_inter
@@ -155,6 +155,7 @@ c We did enough iterations, update arguments and return
             chi2=0d0
          endif
          write (*,*) '-------'
+         ncalls0=ncalls*kpoint_iter ! return number of points used in last iteration
          return
       endif
       nit=nit+1
