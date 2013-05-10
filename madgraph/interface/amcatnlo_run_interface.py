@@ -1210,7 +1210,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             if mode == 'LO':
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters,'0.05') 
                 self.update_status('Setting up grids', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
@@ -1222,14 +1222,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
                 self.update_status('Setting up grid', level=None)
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 0, npoints, niters,'0.05') 
                 self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
                 p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
                                     stdout=subprocess.PIPE, 
@@ -1240,7 +1240,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                 npoints = self.run_card['npoints_FO_grid']
                 niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 0, npoints, niters,'0.05') 
                 self.update_status('Improving grid using NLO', level=None)
                 self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
                                  'Improving grids using NLO')
@@ -1252,10 +1252,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', -1, npoints, niters) 
                 npoints = self.run_card['npoints_FO_virt']
                 niters = self.run_card['niters_FO_virt']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', -1, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
                         'Computing cross-section')
@@ -2124,7 +2124,8 @@ Integrated cross-section
                
         if args[0] == '0':
             # MADEVENT VEGAS MODE
-            input_files.append(pjoin(cwd, 'madevent_vegas'))
+#            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            input_files.append(pjoin(cwd, 'madevent_mintFO'))
             input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
             #j=$2\_G$i
             for i in subdir:
@@ -2136,9 +2137,10 @@ Integrated cross-section
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
-                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-                                                      if n.endswith('.sv1')]
-                        to_move.append('grid.MC_integer')
+#                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
+#                                                      if n.endswith('.sv1')]
+#                        to_move.append('mint_grids')
+                        to_move = ['grid.MC_integer','mint_grids']
                     elif args[0] == '1':
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
@@ -2220,7 +2222,7 @@ Integrated cross-section
         file.write(content)
         file.close()
 
-    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters, accuracy='0'):
         """writes the madin.run_mode file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
@@ -2231,7 +2233,7 @@ Integrated cross-section
 
         content = \
 """%s %s  ! points, iterations
-0 ! accuracy
+%s ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
 0 ! 0 for exact hel sum
@@ -2241,7 +2243,7 @@ Integrated cross-section
 %s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
 %s        ! all, born, real, virt
 """ \
-                    % (npoints,niters,vegas_mode,run_mode)
+                    % (npoints,niters,accuracy,vegas_mode,run_mode)
         file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
         file.write(content)
         file.close()
@@ -2268,7 +2270,8 @@ Integrated cross-section
         if '+' in mode:
             mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
-            exe = 'madevent_vegas'
+#            exe = 'madevent_vegas'
+            exe = 'madevent_mintFO'
             tests = ['test_ME']
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'

@@ -32,8 +32,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 5000   = npoints_FO_grid  ! number of points to set-up int. grids
- 5      = niters_FO_grid   ! number of iterations to set-up int. grids
+ -1     = npoints_FO_grid  ! number of points to set-up int. grids
+ 12     = niters_FO_grid   ! number of iterations to set-up int. grids
  6000   = npoints_FO_virt  ! number of points to compute Xsec (virt)
  2      = niters_FO_virt   ! number of iter. to compute Xsec (virt)
  10000  = npoints_FO       ! number of points to compute Xsec (no virt)

@@ -101,7 +101,7 @@ c For MINT:
       integer ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
-      integer imode
+      integer imode,dummy
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -206,7 +206,11 @@ c to restore grids:
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
-            read (12,*) xint,ncall
+            if (ncall.gt.0) then
+               read (12,*) xint,ncall
+            else
+               read (12,*) xint,dummy
+            endif
             close (12)
          endif
 c
@@ -246,13 +250,13 @@ c Finialize plots
       close(99)
 
 
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      write(*,*)'Final result:',resS,'+/-',errS
-      write(*,*)'Maximum weight found:',fksmaxwgt
-      write(*,*)'Found for:',xisave,ysave
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
+c$$$      write (*,*) ''
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write(*,*)'Final result:',resS,'+/-',errS
+c$$$      write(*,*)'Maximum weight found:',fksmaxwgt
+c$$$      write(*,*)'Found for:',xisave,ysave
+c$$$      write (*,*) '----------------------------------------------------'
+c$$$      write (*,*) ''
 
       if(doVirtTest)then
         write(*,*)'  '
