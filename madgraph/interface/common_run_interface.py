@@ -1253,7 +1253,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         self.options[key] = os.path.realpath(path)
                         continue
                 self.options[key] = None
-            elif key.startswith('cluster'):
+            elif key.startswith('cluster') and key != 'cluster_status_update':
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
@@ -1530,7 +1530,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args = self.split_arg(line.lower())
         start = 0
         if len(args) < 2:
-            logger.warning('invalid set command %s' % line)
+            logger.warning('Invalid set command %s (need two arguments)' % line)
             return
 
         card = '' #store which card need to be modify (for name conflict)
@@ -1544,11 +1544,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                logger.warning('invalid set command: %s' % line)
+                logger.warning('Invalid set command: %s (not enough arguments)' % line)
                 return
 
         #### RUN CARD
-        if args[start] in self.run_card.keys() and card != 'param_card':
+        if args[start] in [l.lower() for l in self.run_card.keys()] and card != 'param_card':
+            if args[start] not in self.run_card.keys():
+                args[start] = [l for l in self.run_card.keys() \
+                                                 if l.lower() == args[start]][0]
+            
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -1598,7 +1602,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    logger.warning('invalid set command %s' % line)
+                    logger.warning('invalid set command %s (failed to identify LHA information)' % line)
                     return 
 
             if key in self.param_card[args[start]].param_dict:
@@ -1638,7 +1642,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('all listed variables have been modified')
         #INVALID
         else:
-            logger.warning('invalid set command %s' % line)
+            logger.warning('invalid set command %s ' % line)
             return            
     
     def setR(self, name, value):
