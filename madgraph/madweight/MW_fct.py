@@ -277,7 +277,8 @@ def get_perms_from_id(pid_list, bjet_is_jet):
     """ """
     
     assert isinstance(pid_list, list)
-    assert isinstance(bjet_is_jet, bool)
+
+    assert isinstance(bjet_is_jet, bool) or bjet_is_jet in [0,1]
     
     list_id = []
     for i,pid in enumerate(pid_list):

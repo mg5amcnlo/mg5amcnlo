@@ -637,7 +637,7 @@ class MG_diagram(diagram_class.MG_diagram):
             pid_list.append(self.content[i].pid)        
 
         # assign each particles to a class of identical/equivalent particles
-        permutation = get_perms_from_id(pid_list, self.MWparam['mw_perm']['bjet_is_jet'])
+        permutations = get_perms_from_id(pid_list, self.MWparam['mw_perm']['bjet_is_jet'])
 
 
         # sanity check ensure that no identical permutation are presnt
