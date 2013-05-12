@@ -467,14 +467,19 @@ def read_leshouches_file(filepos):
     ff=open(filepos,'r')
     while 1:
         line=ff.readline()
+        #print line, [line[4],line[5], line[6]]
+
         if line=='':
-            raise FileInputException, 'incorect leshouche.inc at position '+filepos
-                 
+            raise FileInputException, 'incorrect leshouche.inc at position '+filepos
+        if line[5] != ' ':
+            line = old_line.rstrip() + line[6:]
+            print line
         if pid_pat.search(line):
             pid_list=pid_pat.search(line).group('pid')
             pid_list=pid_list.replace(',',' ').split() #pass to a list of pid
             ff.close()
             break
+        old_line = line
     
     return pid_list
 

@@ -72,6 +72,8 @@ mv ./temp/PDF ./Source/
 mv ./temp/CERNLIB ./Source/
 mv ./temp/MadWeight ./Source/
 mv ./Source/MadWeight/Cards/* Cards/.
+cp Cards/run_card.dat Cards/run_card_default.dat
+cp Cards/MadWeight_card.dat Cards/MadWeight_card_default.dat
 mv ./Source/MadWeight/src/* ./SubProcesses/
 
 mv ./temp/alfas.inc ./Source/alfas.inc

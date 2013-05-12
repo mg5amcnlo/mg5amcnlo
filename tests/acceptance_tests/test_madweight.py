@@ -93,7 +93,8 @@ class Testmadweight(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/props.inc'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/run.inc'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/setscales.f'))
-
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/run_card_default.dat'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/MadWeight_card_default.dat'))
 
         # test that all libraries have been compiled
 

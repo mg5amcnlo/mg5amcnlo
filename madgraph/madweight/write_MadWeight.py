@@ -631,25 +631,18 @@ class MG_diagram(diagram_class.MG_diagram):
  
     def write_permutations_file(self):
         """ write the permutations.inc file """
+
         
-        # assign each particles to a class of identical/equivalent particles
-        list_id = []
+        pid_list = []
         for i in range(3, 100):
             if i not in self.content:
                 break
-            id = self.content[i].pid
-            if abs(id) in [1,2,3,4]:
-                list_id.append('j')
-            elif abs(id) == 5:
-                if self.MWparam['mw_perm']['bjet_is_jet']:
-                    list_id.append('j')
-                else:
-                    list_id.append('b')
-            else:
-                list_id.append(self.content[i].pid)
-        
-        #get the id permutations
-        permutations = get_all_permutations(list_id)
+            pid_list.append(self.content[i].pid)        
+
+        # assign each particles to a class of identical/equivalent particles
+        permutations = get_perms_from_id(pid_list, self.MWparam['mw_perm']['bjet_is_jet'])
+
+
         # sanity check ensure that no identical permutation are presnt
         check = set([tuple(i) for i in permutations])
         assert len(check) == len(permutations)
