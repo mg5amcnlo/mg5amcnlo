@@ -558,6 +558,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                   sum([diagrams[idiag].get('amplitudes') for \
                                        idiag in config_to_diag_dict[config]], [])])
                 
+                # Not using \sum |M|^2 anymore since this creates troubles
+                # when ckm is not diagonal due to the JIM mechanism.
                 if '+' in amp:
                     line += "(%s)*dconjg(%s)" % (amp, amp)
                 else:
