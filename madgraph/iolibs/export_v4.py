@@ -557,8 +557,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
                                        idiag in config_to_diag_dict[config]], [])])
-
-                line += "(%s)*dconjg(%s)" % (amp, amp) 
+                
+                if '+' in amp:
+                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                else:
+                    line += "%s*dconjg(%s)" % (amp, amp)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
