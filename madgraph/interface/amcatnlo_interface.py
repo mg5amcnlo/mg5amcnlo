@@ -253,7 +253,7 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
 
-            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-p', '-o'
+            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-p', '-o',
                     '--force', '--cluster', '--multicore', '--interactive',
                     '--nocompile', '--reweightonly', '--parton', '--only_generation']
             out['Options'] = self.list_completion(text, opt, line)
