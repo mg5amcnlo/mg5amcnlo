@@ -14,9 +14,14 @@ Update notes for MadGraph 5 (in reverse time order)
                       written the routine) 
                   OM: Fix Bug #1177442. This crash occurs only for very large model. 
                       None of the model shipped with MG5 are impacted.
-                  OM Fix Question #228315. On some filesystem, some of the executable 
-                     loose the permission to be executable. Recover those errors 
-                     automatically.
+                  OM: Fix Question #228315. On some filesystem, some of the executable 
+                      loose the permission to be executable. Recover those errors 
+                      automatically.
+                  OM: Modify the diagram enhancement technique. When more diagram have 
+                      the same propagator structure we still combine them but we now include
+                      the interference term in the enhancement technique for those diagrams.
+                      This fix a crash for some multi-jet process in presence of non diagonal
+                      ckm matrices.
 
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain
