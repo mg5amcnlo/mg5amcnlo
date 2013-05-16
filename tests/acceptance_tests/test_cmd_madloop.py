@@ -73,7 +73,7 @@ class TestCmdLoop(unittest.TestCase):
         self.interface.onecmd(line)
     
     @classmethod
-    def setup_logFile_for_logger(cls,full_logname,restore=False,level='DEBUG'):
+    def setup_logFile_for_logger(cls,full_logname,restore=False,level=logging.DEBUG):
         """ Setup the logger by redirecting them all to logfiles in tmp """
         
         logs = full_logname.split('.')
@@ -85,24 +85,26 @@ class TestCmdLoop(unittest.TestCase):
             except Exception, error:
                 pass
             my_logger = logging.getLogger(logname)
+            hdlr = logging.FileHandler('/tmp/%s.log'%logname)            
             if restore:
+                my_logger.removeHandler(cls.logger_saved_info[logname][0])
                 my_logger.setLevel(cls.logger_saved_info[logname][1])
+                for i, h in enumerate(my_logger.handlers):
+                    h.setLevel(cls.logger_saved_info[logname][2][i])
             else:
-                cls.logger_saved_info[logname] = (copy.copy(my_logger.handlers),\
-                                                                my_logger.level)
-                my_logger.setLevel(level)
-            allHandlers = copy.copy(my_logger.handlers)
-            for h in allHandlers:
-                my_logger.removeHandler(h)
-            if restore:
-                for h in cls.logger_saved_info[logname][0]:
-                    my_logger.addHandler(h)
-            else:
-                hdlr = logging.FileHandler('/tmp/%s.log'%logname)
+                # I assume below that the orders of the handlers in my_logger.handlers
+                # remains the same after having added/removed the FileHandler
+                cls.logger_saved_info[logname] = [hdlr,my_logger.level,\
+                                                [h.level for h in my_logger.handlers]]
+                for h in my_logger.handlers:
+                    # This not elegant, but the only way I could find to mute this handlers
+                    h.setLevel(logging.CRITICAL+1)
                 my_logger.addHandler(hdlr)
+                my_logger.setLevel(level)
+
         if not restore:
             for logname in lognames:
-                logging.getLogger(logname).info('Log of %s'%logname)
+                logging.getLogger(logname).debug('Log of %s'%logname)
     
     def notest_ML_launch_gg_ddx(self):
         """test that the output works fine for g g > d d~ [virt=QCD]"""

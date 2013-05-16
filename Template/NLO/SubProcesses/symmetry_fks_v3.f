@@ -222,6 +222,7 @@ c Set-up helicities
          do j=1,ndim
             x(j)=ran2()
          enddo
+         wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          ntry=ntry+1
       enddo

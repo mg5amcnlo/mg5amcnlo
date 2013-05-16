@@ -3340,7 +3340,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
         # NO DECAY CHAIN
         final = set()
-        final_states = re.search(r'> ([^\/\$\=\@>]*)(\s\S+\=|\$|\/|\@|$)', procline)
+        final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
             if particle in pids:
