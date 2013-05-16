@@ -121,7 +121,7 @@ class ProcessExporterFortran(object):
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([pjoin('bin', 'internal', 'clean_template')], \
+                    misc.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -554,10 +554,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                        {"num": (config_to_diag_dict[config][0] + 1)}
 
-                line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
-                                  {"num": a.get('number')} for a in \
+                amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
                                        idiag in config_to_diag_dict[config]], [])])
+                
+                # Not using \sum |M|^2 anymore since this creates troubles
+                # when ckm is not diagonal due to the JIM mechanism.
+                if '+' in amp:
+                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                else:
+                    line += "%s*dconjg(%s)" % (amp, amp)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
@@ -3160,7 +3166,13 @@ class UFO_model_to_mg4(object):
                                             self.p_to_f.parse(param.expr)))
 
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
-        fsock.writelines(""" gal(1) = 1d0
+        if ('aEWM1',) in self.model['parameters']:
+            fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                                 gal(2) = 1d0
+                         """)            
+        else:
+            logger.warning('$RED aEWM1 not define in MODEL. AQED will not be written correcty in LHE FILE')
+            fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
                          """)
 

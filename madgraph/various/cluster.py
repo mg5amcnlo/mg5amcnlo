@@ -559,6 +559,9 @@ class SGECluster(Cluster):
             stderr = '/dev/null'
         elif stderr == -2: # -2 is subprocess.STDOUT
             stderr = stdout
+        else:
+            stderr = self.def_get_path(stderr)
+            
         if log is None:
             log = '/dev/null'
         else:
