@@ -76,6 +76,7 @@ class Banner(dict):
       'init': '',
       'mggenerationinfo':'',
       'montecarlomasses':'',
+      'initrwgt':'',
       'madspin':'madspin_card.dat' 
       }
     
