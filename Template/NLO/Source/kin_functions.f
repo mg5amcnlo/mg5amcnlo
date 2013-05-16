@@ -244,9 +244,6 @@ c-----
             dj = 2d0*min(p1(0)**2,p2(0)**2)*(1d0-costh) !Durham
 c            dj = 2d0*p1(0)*p2(0)*(1d0-costh)    !JADE
          else
-            print*,'Warning 0 momentum in Durham algorythm'
-            write(*,'(4e15.5)') (p1(j),j=0,3)
-            write(*,'(4e15.5)') (p2(j),j=0,3)
             dj = 0d0
          endif
       else
@@ -342,9 +339,6 @@ c-----
          dj1 = 2d0*p1(0)**2*(1d0-costh)   !Durham
 c         dj = 2d0*p1(0)*p2(0)*(1d0-costh)    !JADE
       else
-         print*,'Warning 0 momentum in Durham algorythm'
-         write(*,'(4e15.5)') (p1(j),j=0,3)
-         write(*,'(4e15.5)') (p2(j),j=0,3)
          dj1 = 0d0
       endif
       else

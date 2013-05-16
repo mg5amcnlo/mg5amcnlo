@@ -657,14 +657,15 @@ c Should cause the code to crash if used
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,1))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
            endif
-          call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_NLO',kwgtinfo
           stop
@@ -698,14 +699,15 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,2))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_izero=rewgt(wgtkin(0,1,2),rewgt_exp_izero)
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
            endif
-          call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_NLO',kwgtinfo
           stop
@@ -860,14 +862,15 @@ c Should cause the code to crash if used
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
           if (ickkw.eq.3) then
-             nFKSprocess=nFKSprocess_used
-             if (.not. setclscales(wgtkin(0,1,1))) then
-                write (*,*) 'ERROR in setclscales mohdr'
-                stop
-             endif
-             rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
-          endif
-          call set_alphaS(wgtkin(0,1,1))
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -890,6 +893,10 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+
+      if (wgtwreal(2).eq.0d0 .and. wgtwreal(3).eq.0d0 .and.
+     $     wgtwreal(4).eq.0d0) goto 543
+
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
      #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5).and.
@@ -903,14 +910,15 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,2))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_izero=rewgt(wgtkin(0,1,2),rewgt_exp_izero)
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
            endif
-          call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -933,6 +941,8 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+ 543  continue
+
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
@@ -946,14 +956,15 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then 
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,1))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
            endif
-          call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0c in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -1054,16 +1065,17 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
-          call set_cms_stuff(mohdr)
+           call set_cms_stuff(mohdr)
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,1))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
            endif
-          call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1100,14 +1112,16 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,2))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_izero=rewgt(wgtkin(0,1,2),rewgt_exp_izero)
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+              qes2=wgtqes2(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
            endif
-          call set_alphaS(wgtkin(0,1,2))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1192,14 +1206,15 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
            if (ickkw.eq.3) then
-              nFKSprocess=nFKSprocess_used
-              if (.not. setclscales(wgtkin(0,1,1))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_mohdr=rewgt(wgtkin(0,1,1),rewgt_exp_mohdr)
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
            endif
-          call set_alphaS(wgtkin(0,1,1))
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1292,14 +1307,17 @@ c
       call set_cms_stuff(izero)
 
       if( passcuts(wgtkin_all(0,1,2,0),rwgt) )then
-           if (ickkw.eq.3) then
-              if (.not. setclscales(wgtkin_all(0,1,2,0))) then
-                 write (*,*) 'ERROR in setclscales mohdr'
-                 stop
-              endif
-              rewgt_izero=rewgt(wgtkin_all(0,1,2,0),rewgt_exp_izero)
-           endif
-         call set_alphaS(wgtkin_all(0,1,2,0))
+         if (ickkw.eq.3) then
+            mu_r=sqrt(wgtmuR2_all(2,0))*muR_over_ref
+            scale=mu_r
+            g=sqrt(4d0*pi*alphas(scale))
+            call update_as_param()
+            q2fact(1)=muF1_over_ref**2*wgtmuF12_all(2,0)
+            q2fact(2)=muF2_over_ref**2*wgtmuF22_all(2,0)
+            qes2=wgtqes2_all(2,0)
+         else
+            call set_alphaS(wgtkin_all(0,1,2,0))
+         endif
          QES2_local=wgtqes2_all(2,0)
          if(abs(QES2/QES2_local-1.d0).gt.tiny)then
             write(*,*)'Error in compute_rwgt_wgt_Sev_nbody'

@@ -51,6 +51,11 @@ c Compile with makefile_rwgt
 c
       call setrun                !Sets up run parameters
 
+
+c FxFx Merging
+      ickkw=3
+
+
       write(*,*) 'Enter event file name'
       read(*,*) event_file
 
