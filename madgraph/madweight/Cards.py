@@ -469,7 +469,6 @@ def read_leshouches_file(filepos):
             raise FileInputException, 'incorrect leshouche.inc at position '+filepos
         if line[5] != ' ':
             line = old_line.rstrip() + line[6:]
-            print line
         if pid_pat.search(line):
             pid_list=pid_pat.search(line).group('pid')
             pid_list=pid_list.replace(',',' ').split() #pass to a list of pid

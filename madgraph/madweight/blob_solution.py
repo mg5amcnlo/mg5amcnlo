@@ -2,9 +2,10 @@
 
 try:
     import madgraph.madweight.particle_class as particle_class
+    import madgraph.various.misc as misc
 except ImportError:
     import internal.madweight.particle_class as particle_class
-
+    import internal.various.misc as misc
 Particle = particle_class.Particle
 
 import sys

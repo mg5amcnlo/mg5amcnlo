@@ -9,6 +9,7 @@ try:
     import madgraph.madweight.diagram_class as diagram_class
     import madgraph.madweight.mod_file as mod_file
     import madgraph.madweight.Cards as Cards
+    import madgraph.various.misc as misc   
 except ImportError:
     from internal.madweight.MW_fct import *
     import internal.madweight.diagram_class as diagram_class
@@ -426,6 +427,17 @@ class MG_diagram(diagram_class.MG_diagram):
                 mapping[1] = p_random+2            
                 p_random += 2
                  
+            # treat ONLY NEUTRINO for block B/C
+            if block.chgt_var == 'B':
+                neut = block.neut_content[0]
+                mapping[3*particle.MG-6] = p_random + 1
+                p_random +=1 
+            elif block.chgt_var == 'C':
+                neut = block.neut_content[0]
+                mapping[3*particle.MG-6] = p_random + 1
+                mapping[3*particle.MG-5] = p_random + 3
+                p_random += 2                
+                 
             if block.chgt_var not in ['D', 'E', 'a', 'c']:
                 for particle in block.in_part:
                     if particle.external and not particle.neutrino:
@@ -492,19 +504,19 @@ class MG_diagram(diagram_class.MG_diagram):
         #
         # 1) collect all generated propagator (in croissant order)
         # 2) write the code
-        list=self.collect_generated_propa(ECS, blob_sol_list)
+        propa_list=self.collect_generated_propa(ECS, blob_sol_list)
         #text=' integer num_propa\n'
-        text=' data num_propa(' + str(num_sol) + ') /' + str(len(list)) + '/ \n'        
-        if list:
-            text += ' data (propa_cont(label,' + str(num_sol) + '),label=1,' + str(len(list)) + ') /'
-            for particle in list:
+        text=' data num_propa(' + str(num_sol) + ') /' + str(len(propa_list)) + '/ \n'        
+        if propa_list:
+            text += ' data (propa_cont(label,' + str(num_sol) + '),label=1,' + str(len(propa_list)) + ') /'
+            for particle in propa_list:
                 text += str(particle.MG) + ','
             text=text[:-1] + '/\n'
         else:
             text += '\n$B$ S-COMMENT_C $B$\n No propagator aligned\n$E$ S-COMMENT_C $E$\n'
 
-        for i in range(0, len(list)):
-            text += self.return_propa_generation(list, i, num_sol)
+        for i in range(0, len(propa_list)):
+            text += self.return_propa_generation(propa_list, i, num_sol)
         text=put_in_fortran_format(text)
         write_text += text
 
@@ -711,24 +723,28 @@ c    compute the total number of permutations
     def collect_generated_propa(self, ECS, blob_sol_list):
         """ return all the propagator that must be generated following BW distibution """
 
+        def id_from_plist(plist):
+            return [particle.MG for particle in plist]
 
-        list = []
+        plist = []
         for particle in ECS.step[-1].order_content:
-            if not particle.external and type(particle.MG) == int and particle not in list:
-                list.append(particle)
-
+            if not particle.external and type(particle.MG) == int and \
+            particle not in plist:
+                if not particle in [b.main  for b in ECS.blob_content if hasattr(b, 'main')]:
+                    plist.append(particle)
         for blob_sol in blob_sol_list:
             for block in blob_sol.step:
                 if block.chgt_var in ['A', 'B', 'C', 'D', 'E']:
                     for particle in block.order_content:
-                        if not particle.external and type(particle.MG) == int and particle not in list:
-                            list.append(particle)
-#        list.reverse()
+                        if not particle.external and type(particle.MG) == int and \
+                            particle not in plist and particle not in block.in_part:
+                            plist.append(particle)
+#        plist.reverse()
 
         list2 = []
         list3 = []
-        while list:
-            propa = list.pop()
+        while plist:
+            propa = plist.pop()
             if propa.channel == 'S':
                 list2.append(propa)
             else:
@@ -741,8 +757,7 @@ c    compute the total number of permutations
 ##                         gen=0
 ##                         break
 ##                 if gen:
-##                    list2.append(propa) 
-                    
+##                    list2.append(propa)                 
         return list2 + list3
     
     def collect_unaligned_peaks(self):
