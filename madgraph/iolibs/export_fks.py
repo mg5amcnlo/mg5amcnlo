@@ -454,6 +454,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
+                     'iproc_map.f',
                      'run.inc',
                      'setcuts.f',
                      'setscales.f',

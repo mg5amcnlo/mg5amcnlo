@@ -388,6 +388,8 @@ c
       common /crwgt_skip/ rwgt_skip
       integer event_id
       common /c_event_id/ event_id
+      integer i_process
+      common/c_addwrite/i_process
       include 'reweight_all.inc'
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
@@ -477,9 +479,10 @@ c
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
-              write(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              write(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+     $             ,i_process
               write(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
-     &             ,wgtref_nbody
+     &             ,wgtref_nbody_all(i_process)
               do i=1,mexternal
                  write(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
@@ -492,7 +495,7 @@ c
                  write(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
                  write(ifile,'(1x,e14.8,1x,i4)')
-     &                wgtref_all(iFKS),iwgtnumpartn_all(iFKS)
+     &                wgtref_all(iFKS,i_process),iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
                  enddo
@@ -516,10 +519,10 @@ c$$$                 enddo
                  
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              write(ifile,'(1x,e14.8)') wgtbpower
+              write(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
               iFKS=nFKSprocess_used*2
               write(ifile,'(1x,i4)') nFKSprocess_used
-              write(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
+              write(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
      &             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  write(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
@@ -609,6 +612,8 @@ c
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      integer i_process
+      common/c_addwrite/i_process
       include 'reweight_all.inc'
 c
       read(ifile,'(a)')string
@@ -667,9 +672,10 @@ c
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+     $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
-     &             ,wgtref_nbody
+     &             ,wgtref_nbody_all(i_process)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
@@ -681,8 +687,8 @@ c
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
-                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
-     &                ,iwgtnumpartn_all(iFKS)
+                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS
+     $                ,i_process),iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
                  enddo
@@ -708,11 +714,11 @@ c
               
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8)') wgtbpower
+              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
-              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
-     &             ,iwgtnumpartn_all(iFKS)
+              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
+     $             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
               enddo
@@ -804,6 +810,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      integer i_process
+      common/c_addwrite/i_process
       include 'reweight_all.inc'
 c
       read(ifile,'(a)')string
@@ -872,9 +880,10 @@ c
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+     $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
-     &             ,wgtref_nbody
+     &             ,wgtref_nbody_all(i_process)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,2,0),j=0,3)
               enddo
@@ -886,8 +895,8 @@ c
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
-                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
-     &                ,iwgtnumpartn_all(iFKS)
+                 read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS
+     $                ,i_process),iwgtnumpartn_all(iFKS)
                  do i=1,mexternal
                     read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
                  enddo
@@ -913,10 +922,10 @@ c
                  
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8)') wgtbpower
+              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
-              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS)
+              read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
      &             ,iwgtnumpartn_all(iFKS)
               do i=1,mexternal
                  read(ifile,405)(wgtkin_all(j,i,1,iFKS),j=0,3)
