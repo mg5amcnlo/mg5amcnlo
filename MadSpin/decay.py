@@ -2959,7 +2959,12 @@ class decay_all_events:
                 commandline+="add process %s;" % (process)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        commandline+="add process %s j ;" % (process)
+                        result = re.split('([/$])', process, 1)
+                        if len(result) ==3:
+                            process, split, rest = result
+                            commandline+="add process %s j %s%s ;" % (process, split, rest)
+                        else:
+                            commandline +='add process %s j;' % process
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
         
@@ -3021,7 +3026,12 @@ class decay_all_events:
                 commandline+="add process %s, %s;" % (process, decay_text)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        commandline+="add process %s j, %s ;" % (process, decay_text)
+                        result = re.split('([/$])', process, 1)
+                        if len(result) ==3:
+                            process, split, rest = result
+                            commandline+="add process %s j %s%s , %s ;" % (process, split, rest, decay_text)
+                        else:
+                            commandline +='add process %s j, %s;' % (process, decay_text)
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')        
         

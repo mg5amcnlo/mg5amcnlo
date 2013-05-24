@@ -602,7 +602,7 @@ def loadLoopModel():
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     # 4 gluon vertex CT
     myinterlist.append(base_objects.Interaction({
@@ -615,7 +615,7 @@ def loadLoopModel():
                   'orders':{'QCD':4},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     # Gluon and photon couplings to quarks CT
     myinterlist.append(base_objects.Interaction({
@@ -630,7 +630,7 @@ def loadLoopModel():
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
     
     # this is the CT for the renormalization of the QED corrections to alpha_QCD
     myinterlist.append(base_objects.Interaction({
@@ -645,7 +645,7 @@ def loadLoopModel():
                   'orders':{'QED':2,'QCD':1},
                   'loop_particles':[[]],
                   'perturbation_type':'QED',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 37,
@@ -659,7 +659,7 @@ def loadLoopModel():
                   'orders':{'QCD':2,'QED':1},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 38,
@@ -673,7 +673,7 @@ def loadLoopModel():
                   'orders':{'QED':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QED',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 39,
@@ -687,7 +687,7 @@ def loadLoopModel():
                   'orders':{'QCD':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 40,
@@ -701,7 +701,7 @@ def loadLoopModel():
                   'orders':{'QED':2,'QCD':1},
                   'loop_particles':[[]],
                   'perturbation_type':'QED',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 41,
@@ -715,7 +715,7 @@ def loadLoopModel():
                   'orders':{'QCD':2,'QED':1},
                   'loop_particles':[[]],
                   'perturbation_type':'QCD',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
 
     myinterlist.append(base_objects.Interaction({
                   'id': 42,
@@ -729,7 +729,7 @@ def loadLoopModel():
                   'orders':{'QED':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QED',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
     
     # alpha_QED to electron CT
 
@@ -745,7 +745,7 @@ def loadLoopModel():
                   'orders':{'QED':3},
                   'loop_particles':[[]],
                   'perturbation_type':'QED',
-                  'type':'UV1eps'}))
+                  'type':'UVtree1eps'}))
       
     # The mass renormalization of the up and down quark granted
     # a mass for the occasion
@@ -1224,7 +1224,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude['process']['model']=newLoopModel
             for diag in myloopamplitude.get('loop_diagrams'):
                 diag['CT_vertices']=base_objects.VertexList()
-            myloopamplitude.setLoopCT_vertices()            
+            myloopamplitude.set_LoopCT_vertices()            
             sumR2=0
             for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
                 sumR2+=len(diag.get_CT(newLoopModel,'R2'))
@@ -1295,7 +1295,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             myloopamplitude['process']['model']=newLoopModel
             for diag in myloopamplitude.get('loop_diagrams'):
                 diag['CT_vertices']=base_objects.VertexList()
-            myloopamplitude.setLoopCT_vertices()            
+            myloopamplitude.set_LoopCT_vertices()            
             sumR2=0
             for i, diag in enumerate(myloopamplitude.get('loop_diagrams')):
                 sumR2+=len(diag.get_CT(newLoopModel,'R2'))
