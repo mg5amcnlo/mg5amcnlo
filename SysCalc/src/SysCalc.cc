@@ -225,6 +225,11 @@ SysCalc::SysCalc(istream& conffile,
     int start = _header_text.find("<header");
     _xml_document.Parse(_header_text.substr(start).c_str());
     XMLElement* header = _xml_document.FirstChildElement("header");
+    if (! header) {
+      cout << "Critical Error: header not well formed" << endl;
+      cout << "  Please check for unmatched XML <tags>" << endl;
+      exit(1);
+    }
     XMLElement* orgpdf = header->FirstChildElement("orgpdf");
     if(orgpdf){
       tokenize(orgpdf->GetText(), tokens);
