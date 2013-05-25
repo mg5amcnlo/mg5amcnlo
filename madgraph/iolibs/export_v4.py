@@ -3897,7 +3897,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                 group_subprocesses = True
             else:
                 group_subprocesses = False
-    
+
         assert group_subprocesses in [True, False]
         
         opt = {'clean': not noclean,

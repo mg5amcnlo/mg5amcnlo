@@ -453,17 +453,24 @@ class UFOMG5Converter(object):
         interaction_info=copy.copy(interaction)
         
         intType=''
-        if interaction_info.type not in ['UV','UVmass','R2']:
+        if interaction_info.type not in ['UV','UVloop','UVtree','UVmass','R2']:
             raise MadGraph5Error, 'MG5 only supports the following types of'+\
               ' vertices, R2, UV and UVmass. %s is not in this list.'%interaction_info.type
         else:
             intType=interaction_info.type
-            
+            # If not specified and simply set to UV, guess the appropriate type
+            if interaction_info.type=='UV':
+                if len(interaction_info.particles)==2 and interaction_info.\
+                          particles[0].name==interaction_info.particles[1].name:
+                    intType='UVmass'
+                else:
+                    intType='UVloop'
+        
         # Make sure that if it is a UV mass renromalization counterterm it is
         # defined as such.
-        if len(intType)>2 and intType[:2]=='UV' and len(interaction_info.particles)==2 \
-           and interaction_info.particles[0].name==interaction_info.particles[1].name:
-            intType='UVmass'
+#        if len(intType)>2 and intType[:2]=='UV' and len(interaction_info.particles)==2 \
+#           and interaction_info.particles[0].name==interaction_info.particles[1].name:
+#            intType='UVmass'
 
         # Now we create a couplings dictionary for each element of the loop_particles list
         # and for each expansion order of the laurent serie in the coupling.

@@ -748,6 +748,26 @@ class Interaction(PhysicsObject):
         else:
             return False
         
+    def is_UVloop(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVloop')
+        else:
+            return False
+        
+    def is_UVtree(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVtree')
+        else:
+            return False
+        
     def is_UVCT(self):
         """ Returns if the interaction is of the UVCT type which means that 
         it has been selected as a possible UV counterterm interaction for this
@@ -912,7 +932,15 @@ class InteractionList(PhysicsObjectList):
 
     def get_UVmass(self):
         """ return all interactions in the list of type UVmass """
-        return InteractionList([int for int in self if int.is_UVmass()])    
+        return InteractionList([int for int in self if int.is_UVmass()])
+
+    def get_UVtree(self):
+        """ return all interactions in the list of type UVtree """
+        return InteractionList([int for int in self if int.is_UVtree()])
+    
+    def get_UVloop(self):
+        """ return all interactions in the list of type UVloop """
+        return InteractionList([int for int in self if int.is_UVloop()])
 
 #===============================================================================
 # Model
