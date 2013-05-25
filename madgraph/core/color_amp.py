@@ -374,7 +374,6 @@ class ColorBasis(dict):
         indices) associated to my_color_string. Take a list of the external leg
         color octet state indices as an input. Returns only the leading N 
         contribution!"""
-
         # Create a new color factor to allow for simplification
         my_cf = color_algebra.ColorFactor([my_color_string])
 
@@ -458,7 +457,6 @@ class ColorBasis(dict):
             # Rebuild a color string from a CB entry
             col_str = color_algebra.ColorString()
             col_str.from_immutable(col_basis_entry)
-
             for (leg_num, leg_repr) in repr_dict.items():
                 # By default, assign a (0,0) color flow
                 res_dict[leg_num] = [0, 0]

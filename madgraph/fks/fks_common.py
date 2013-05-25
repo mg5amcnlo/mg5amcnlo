@@ -585,6 +585,8 @@ def sort_proc(process,pert = 'QCD'):
     for n, leg in enumerate(leglist):
         leg['number'] = n + 1
     process['legs'] = leglist
+    # add this line to pass ./test_managers.py -p A test_check_ppzjj
+    process['legs_with_decays']=MG.LegList()
 
     return process
 
