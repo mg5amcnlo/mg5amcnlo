@@ -651,18 +651,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         mass_list=matrix_element.get_external_masses()[:-2]
         mp_variable_prefix = check_param_card.ParamCard.mp_prefix
 
-        # First the double precision version of it
-        replace_dict['real_format']=replace_dict['real_dp_format']
-        replace_dict['mp_prefix']=''
-        replace_dict['exp_letter']='d'
-        replace_dict['mp_specifier']=''
-        replace_dict['coupl_inc_name']='coupl.inc'
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
-        
-        file_dp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
-        file_dp=file_dp%replace_dict
-        # Now the mp version of it
+        # Write the quadruple precision version of this routine only.
         replace_dict['real_format']=replace_dict['real_mp_format']
         replace_dict['mp_prefix']='MP_'
         replace_dict['exp_letter']='e'
@@ -673,10 +662,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                   i, m in enumerate(mass_list)])
         file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
         file_mp=file_mp%replace_dict
-        file = file_dp + \
-              '\n\nC Now the multiple precision version of IMPROVE_PS(P)\n\n' +\
-               file_mp
-        writer.writelines(file)
+        #
+        writer.writelines(file_mp)
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools

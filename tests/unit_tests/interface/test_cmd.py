@@ -268,6 +268,47 @@ class TestExtendedCmd(unittest.TestCase):
         self.assertEqual(main.child, None)
         #ret = main.do_quit('')
         #self.assertEqual(ret, True)        
-         
-    
 
+class TestMadSpinFCT_in_interface(unittest.TestCase):
+    """ check if the ValidCmd works correctly """
+    
+    def setUp(self):
+        if not hasattr(self, 'cmd'):
+            TestMadSpinFCT_in_interface.cmd = cmd.MasterCmd()
+            TestMadSpinFCT_in_interface.cmd.exec_cmd('import model sm')
+            
+            
+    def test_get_final_part(self):
+        """ """
+        
+        output = self.cmd.get_final_part(' p p > e+ e-')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > e+ e- QED=2')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e-')
+        self.assertEqual(output, set([-11, 11]))        
+          
+        output = self.cmd.get_final_part(' p p > z > e+ e- / a')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > z > e+ e- [QCD]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13]))
+        
+        output = self.cmd.get_final_part(' p p > z j, z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
+        
+        output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
+        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
+        
+        
