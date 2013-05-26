@@ -1205,6 +1205,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
+            req_acc = self.run_card['req_acc']
             if mode == 'LO':
                 if not options['only_generation']:
                     npoints = self.run_card['npoints_FO_grid']
@@ -1212,7 +1213,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters,'0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO_test.sh', 'born_G*'], \
+                p = misc.Popen(['./combine_results_FO_test.sh', 'req_acc', 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
@@ -1231,7 +1232,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     niters = self.run_card['niters_FO_grid']
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters,'0.10') 
                     self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO_test.sh', 'all_G*'], \
+                p = misc.Popen(['./combine_results_FO_test.sh', 'req_acc', 'all_G*'], \
                                     stdout=subprocess.PIPE, 
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
