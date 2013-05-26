@@ -94,6 +94,7 @@ c For tests of virtuals
 c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
+     $     ,xerr,itmax_fl
       real * 8 x(ndimmax)
       integer ixi_i,iphi_i,iy_ij
       integer ifold(ndimmax) 
@@ -105,6 +106,8 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      double precision    accuracy
+      common /to_accuracy/accuracy
 
       logical SHsep
       logical Hevents
@@ -207,9 +210,21 @@ c to restore grids:
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
             if (ncall.gt.0) then
-               read (12,*) xint,ncall
+               read (12,*) xint,xerr,ncall
+c Update the number of PS points based on xerr, ncall and accuracy
+               itmax_fl=(accuracy/xerr)**2
+               if (itmax_fl.le.4d0) then
+                  itmax=max(nint(itmax_fl),itmax)
+               elseif (itmax_fl.gt.4d0 .and. itmax_fl.le.16d0) then
+                  ncall=nint(ncall*itmax_fl/4d0)
+                  itmax=4
+               else
+                  itmax=nint(sqrt(itmax_fl))
+                  ncall=nint(ncall*itmax_fl/nint(sqrt(itmax_fl)))
+               endif
+               accuracy=0d0
             else
-               read (12,*) xint,dummy
+               read (12,*) xint,xerr,dummy
             endif
             close (12)
          endif
@@ -236,7 +251,7 @@ c to save grids:
          do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
          enddo
-         write (12,*) xint,ncall
+         write (12,*) ans_abs,err_abs,ncall
          close (12)
       else
          write (*,*) 'Unknown imode',imode
@@ -508,7 +523,7 @@ c     account this Jacobian
       endif
 
       f_abs=abs(sigint)
-      
+
       if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
       end

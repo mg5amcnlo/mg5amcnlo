@@ -86,11 +86,15 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 #   check where is the basic file for the creation of input_app.txt
 #       
  	if [[ $1 == '0' ]]; then
+	    if [[ $3 == '0' && $2 == $4 ]] ; then
+		input_template=/madinM1
+	    else
  		if  [[  -e ../madin.$2 ]] ; then
  			input_template=../madin.$2
  		else
  			input_template=../../madin.$2
  		fi 
+	    fi
     elif [[ $1 == '2' ]]; then
     	if [[ $3 == '0' || $3 == '2' ]]; then
     		if  [[  -e ../madinMMC_$2.2 ]] ; then
