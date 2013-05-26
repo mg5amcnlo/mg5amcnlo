@@ -106,8 +106,6 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      double precision    accuracy
-      common /to_accuracy/accuracy
 
       logical SHsep
       logical Hevents
@@ -209,12 +207,12 @@ c to restore grids:
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
-            if (ncall.gt.0) then
+            if (ncall.gt.0 .and. accuracy.ne.0d0) then
                read (12,*) xint,xerr,ncall
 c Update the number of PS points based on xerr, ncall and accuracy
-               itmax_fl=(accuracy/xerr)**2
+               itmax_fl=2d0*(xerr/accuracy)**2
                if (itmax_fl.le.4d0) then
-                  itmax=max(nint(itmax_fl),itmax)
+                  itmax=max(nint(itmax_fl),2)
                elseif (itmax_fl.gt.4d0 .and. itmax_fl.le.16d0) then
                   ncall=nint(ncall*itmax_fl/4d0)
                   itmax=4
@@ -228,6 +226,7 @@ c Update the number of PS points based on xerr, ncall and accuracy
             endif
             close (12)
          endif
+
 c
 c$$$         open(unit=99,file='MADatNLO.top',status='unknown')
          call initplot
@@ -251,7 +250,7 @@ c to save grids:
          do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
          enddo
-         write (12,*) ans_abs,err_abs,ncall
+         write (12,*) resA,errA,ncall
          close (12)
       else
          write (*,*) 'Unknown imode',imode

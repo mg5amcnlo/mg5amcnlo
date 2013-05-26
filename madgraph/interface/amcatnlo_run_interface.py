@@ -1213,16 +1213,16 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters,'0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO_test.sh', 'req_acc', 'born_G*'], \
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO_test.sh', req_acc, 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
 
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
@@ -1232,15 +1232,15 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     niters = self.run_card['niters_FO_grid']
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters,'0.10') 
                     self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO_test.sh', 'req_acc', 'all_G*'], \
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO_test.sh', req_acc, 'all_G*'], \
                                     stdout=subprocess.PIPE, 
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
@@ -2126,6 +2126,7 @@ Integrated cross-section
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
                 if len(args) == 4:
+                    args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
