@@ -83,7 +83,6 @@ c     Minimum pt's                                                   *
 c*********************************************************************
       ptb     = 0d0
       pta     = 0d0
-      ptl     = 0d0
       misset  = 0d0
       ptonium = 0d0
       
@@ -101,7 +100,6 @@ c     Maximum rapidity (absolute value)                              *
 c*********************************************************************
       etab=1d2
       etaa=1d2
-      etal=1d2
       etaonium=1d2
       etajmin=0d0
       etabmin=0d0
@@ -126,7 +124,6 @@ c     Minimum DeltaR distance                                        *
 c*********************************************************************
       drjj=0d0
       drbb=0d0
-      drll=0d0
       draa=0d0
       drbj=0d0
       draj=0d0

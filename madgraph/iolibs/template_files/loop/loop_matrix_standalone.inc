@@ -374,7 +374,7 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-IF (ImprovePSPoint) THEN
+IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
   CALL IMPROVE_PS_POINT_PRECISION(PS)
 ENDIF

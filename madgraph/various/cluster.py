@@ -155,7 +155,10 @@ class Cluster(object):
     def wait(self, me_dir, fct):
         """Wait that all job are finish"""
         
+        nb_iter = 0
+        change_at = 5 # number of iteration from which we wait longer between update.
         while 1: 
+            nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
@@ -164,8 +167,12 @@ class Cluster(object):
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            if idle < run:
+            if idle < run or nb_iter < change_at:
                 time.sleep(self.options['cluster_status_update'][1])
+            elif nb_iter == change_at:
+                logger.info('''Start to wait %ss between checking status.
+Note that you can change this time in the configuration file.''' % self.options['cluster_status_update'][0])
+                time.sleep(self.options['cluster_status_update'][0])
             else:
                 time.sleep(self.options['cluster_status_update'][0])
         self.submitted = 0
