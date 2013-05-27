@@ -65,17 +65,13 @@ class TestMECmdShell(unittest.TestCase):
         interface = MGCmd.MasterCmd()
         
         run_cmd('import model %s' % model)
-        print "cmd=",'import model %s' % model
         for multi in multiparticles:
             run_cmd('define %s' % multi)
-            print "cmd=",'define %s' % multi            
         if isinstance(process, str):
             run_cmd('generate %s' % process)
-            print "cmd=",'generate %s' % process
         else:
             for p in process:
                 run_cmd('add process %s' % p)
-                print "cmd=",'add process %s' % p
         if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
