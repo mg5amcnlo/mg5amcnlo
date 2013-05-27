@@ -164,6 +164,41 @@ class Tr(ColorObject):
 
         return None
 
+# HSS, 24/10/2012
+#===============================================================================
+# ColorOne
+#===============================================================================
+
+class ColorOne(ColorObject):
+    """The one of the color object"""
+
+    def __init__(self, *args):
+        """Check for no index"""
+        
+        assert len(args) == 0 , "ColorOne objects must have no index!"
+        
+        super(ColorOne, self).__init__()
+
+    def simplify(self):
+        """"""
+	assert len(self)==0,"There is argument(s) in color object ColorOne."
+            
+	col_str = ColorString()
+        col_str.coeff = fractions.Fraction(1, 1)
+        return ColorFactor([col_str])
+
+
+    def pair_simplify(self, col_obj):
+        """Implement ColorOne product simplification"""
+
+        if isinstance(col_obj, Tr) or isinstance(col_obj,T) or isinstance(col_obj,f) or isinstance(col_obj,d) or isinstance(col_obj,ColorOne):
+           col_str = ColorString([col_obj])
+           return ColorFactor([col_str])
+
+	return None
+# HSS
+
+
 #===============================================================================
 # T
 #===============================================================================
@@ -705,6 +740,9 @@ class ColorString(list):
 
         ret_list = [(col_obj.__class__.__name__, tuple(col_obj)) \
                         for col_obj in self]
+	# HSS,24/10/2012
+	if not ret_list and self.coeff:ret_list=[("ColorOne",tuple([]))]
+	# HSS
         ret_list.sort()
         self.immutable = tuple(ret_list)
 

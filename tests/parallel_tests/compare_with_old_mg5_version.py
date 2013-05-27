@@ -167,7 +167,6 @@ class OLDMG5Comparator(unittest.TestCase):
                 # Store output to a pickle file in the input_files directory
         if print_result:
             print my_comp.results[0]
-
         # Assert that all process comparisons passed the tolerance cut
         my_comp.assert_processes(self, tolerance)
             

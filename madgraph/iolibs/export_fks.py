@@ -616,7 +616,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         firstlines = ['integer maxproc_used, maxflow_used',
                       'parameter (maxproc_used = %d)' % maxproc,
                       'parameter (maxflow_used = %d)' % maxflow ]
-
         writer.writelines(firstlines + lines)
 
 
@@ -713,7 +712,7 @@ end
                                             fortran_model)
 
     def write_pdf_calls(self, matrix_element, fortran_model):
-        """writes the matrix_i.f files which contain the real matrix elements""" 
+        """writes the parton_lum_i.f files which contain the real matrix elements""" 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'parton_lum_%d.f' % (n + 1)
             self.write_pdf_file(writers.FortranWriter(filename),
@@ -722,7 +721,7 @@ end
 
 
     def generate_born_fks_files(self, matrix_element, fortran_model, me_number, path):
-        """generates the files needed for the born applitude in the P* directory, which will
+        """generates the files needed for the born amplitude in the P* directory, which will
         be needed by the P* directories"""
         pathdir = os.getcwd()
 
@@ -919,7 +918,7 @@ end
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHsummed'
-        replace_dict['corr'] = 'QCD'
+        replace_dict['corr'] = fksborn.perturbation
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED
@@ -1264,6 +1263,7 @@ c     this subdir has no soft singularities
 
         col_lines = []
         pdg_lines = []
+        charge_lines = []
         fks_j_from_i_lines = []
         for i, info in enumerate(fks_info_list):
             col_lines.append( \
@@ -1272,10 +1272,18 @@ c     this subdir has no soft singularities
             pdg_lines.append( \
                 'DATA (PDG_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
                 % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
-            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1], i + 1))
+            charge_lines.append(\
+                'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
+                % (i + 1, ', '.join('%dd0' % int(fractions.Fraction(charg))\
+                                    if int(fractions.Fraction(charg*3.))%3 == 0 else\
+                                    '%dd0/3d0' % int(fractions.Fraction(charg*3.))\
+                                    for charg in fksborn.real_processes[info['n_me']-1].charges) ))
+            fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
+                                                                   i + 1))
 
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
+        replace_dict['charge_lines'] = '\n'.join(charge_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
 
         content = \
@@ -1283,7 +1291,8 @@ c     this subdir has no soft singularities
       INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
       INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
-
+      REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
+      
 data fks_i_D / %(fks_i_values)s /
 data fks_j_D / %(fks_j_values)s /
 
@@ -1299,8 +1308,11 @@ C     Particle type according to PDG:
 C     
 %(pdg_lines)s
 
+C
+C     Particle charge:
+C     charge is set 0. with QCD corrections, which is irrelevant
+%(charge_lines)s
 """   % replace_dict
-
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
@@ -1388,13 +1400,13 @@ C
     
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
-        file = open(os.path.join(_file_path, \
+        realfile = open(os.path.join(_file_path, \
                           'iolibs/template_files/realmatrix_fks_born.inc')).read()
 
-        file = file % replace_dict
+        realfile = realfile % replace_dict
         
         # Write the file
-        writer.writelines(file)
+        writer.writelines(realfile)
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
 
@@ -1712,7 +1724,7 @@ C
                                  (ime, i, nexternal,
                                   ",".join([ "%3r" % 0 ] * nexternal)))
                     color_flow_list = []
-                    nflows = 1
+                    nflow = 1
     
                 else:
                     # First build a color representation dictionnary
@@ -1976,7 +1988,8 @@ C
 #=================================================================================
 # Class for using the optimized Loop process
 #=================================================================================
-class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,ProcessExporterFortranFKS):
+class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExporterFortranSA,\
+                                         ProcessExporterFortranFKS):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 

@@ -37,7 +37,7 @@ void trapfpe()
 static void __attribute__ ((constructor)) trapfpe(void)
 {
   /* Enable some exceptions. At startup all exceptions are masked. */
-  feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW|FE_UNDERFLOW);
+  /*feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW|FE_UNDERFLOW);*/
 }
 #endif
 

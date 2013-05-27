@@ -91,9 +91,9 @@ class FeynmanLine(object):
 
         assert isinstance(vertex, VertexPoint), 'The begin point should be a ' + \
                  'Vertex_Point object'
-
-        assert vertex is not self.end
-
+	# HSS, 24/10/2012
+        # assert vertex is not self.end
+	# HSS
         self.begin = vertex
         vertex.add_line(self)
         return
@@ -103,9 +103,9 @@ class FeynmanLine(object):
 
         assert isinstance(vertex, VertexPoint), 'The end point should be a ' + \
                  'Vertex_Point object'
-
-        assert vertex is not self.begin
-                 
+	# HSS, 24/10/2012
+        # assert vertex is not self.begin
+        # HSS         
         self.end = vertex
         vertex.add_line(self)
         return
@@ -1797,19 +1797,29 @@ class DiagramDrawer(object):
 
         # check if we need curved loop particles
         curved_for_loop = False
+	# HSS, 22/10/2012
+	circled_for_loop = False
+	# HSS
         if isinstance(diagram, LoopFeynmanDiagram):
             # If only 2 particle in the loop require that those lines are
             # curved
             if len([l for l in diagram.lineList if l.loop_line]) == 2:
                 curved_for_loop = True
                 self.curved_part_start = (0, 0)
-        
+        # HSS, 22/10/2012
+	    # for tagpole
+	    elif len([l for l in diagram.lineList if l.loop_line]) == 1:
+		circled_for_loop = True
+		self.curved_part_start = (0, 0)
         # drawing the particles
         for line in diagram.lineList:    
-            if not curved_for_loop or not line.loop_line:
+            if (not curved_for_loop and not circled_for_loop) or not line.loop_line:
                 self.draw_line(line)
+	    elif circled_for_loop:
+		self.draw_circled_line(line)
             else:
-                self.draw_curved_line(line)
+                self.draw_curved_line(line) 
+	# HSS   
                 
         # Finalize information related to the graph. First, associate a diagram
         #position to the diagram representation.
@@ -1854,6 +1864,36 @@ class DiagramDrawer(object):
         if line.is_external():
             number = line.number
             self.associate_number(line, number)
+
+    # HSS , 22/10/2012
+    def draw_circled_line(self, line):
+        """Draw the line information.
+        First, call the method associate the line type [draw_circled_XXXXXX]
+        Then finalize line representation by adding his name."""
+
+
+        # if 4 point (or more interaction at the beginning/end of the loop
+        # need to reduce curvature
+        if len(line.begin.lines) > 3 or len(line.end.lines) > 3 :
+            cercle = False
+        else:
+            cercle = True
+
+        # Find the type line of the particle [straight, wavy, ...]
+        line_type = line.get_info('line')
+        # Call the routine associate to this type [self.draw_straight, ...]
+        if hasattr(self, 'draw_circled_' + line_type):
+            getattr(self, 'draw_circled_' + line_type)(line, cercle)
+        else:
+            self.draw_circled_straight(line, reduce)
+            
+        # Finalize the line representation with adding the name of the particle
+        name = line.get_name()
+        self.associate_name(line, name)
+        
+        #store begin for helping future curving
+        self.curved_part_start = (line.begin.pos_x, line.begin.pos_y*1.2)
+    # HSS
 
     def draw_curved_line(self, line):
         """Draw the line information.

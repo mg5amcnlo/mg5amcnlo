@@ -2777,9 +2777,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
+	# HSS, 13/11/2012
+        if args[0]=='gauge' and 'QED' in myprocdef.get('perturbation_couplings') and not self.options['gauge']=='Feynman':
+	# HSS
+            raise self.InvalidCmd("Processes involving loops with QED corrections can only be"+
+                                                 " evaluated in Feynman gauge.")
 
-        if args[0] in ['timing','stability', 'profile'] and \
-                                    myprocdef.get('perturbation_couplings')==[]:
+        if args[0] in ['timing','stability', 'profile'] and not \
+                                        myprocdef.get('perturbation_couplings'):
             raise self.InvalidCmd("Only loop processes can have their "+
                                   " timings or stability checked.")
         
@@ -2859,6 +2864,29 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   options = options,
                                                   cmd = self)
 
+
+    #if args[0] in  ['permutation', 'full']:
+    #        comparisons = process_checks.check_processes(myprocdef,
+    #                                        param_card = param_card,
+    #                                        quick = True,
+    #                                        cuttools=CT_dir,
+    #                                        cmd = self)
+    #        nb_processes += len(comparisons[0])
+    #
+    #    if args[0] in ['lorentz', 'full']:
+    #        lorentz_result = process_checks.check_lorentz(myprocdef,
+    #                                      param_card = param_card,
+    #                                      cuttools=CT_dir,
+    #                                      cmd = self)
+    #        nb_processes += len(lorentz_result)
+    #
+    #    if args[0] in  ['brs', 'full']:
+    #        gauge_result = process_checks.check_gauge(myprocdef,
+    #                                      param_card = param_card,
+    #                                      cuttools=CT_dir,
+    #                                      cmd = self)
+    #        nb_processes += len(gauge_result)
+
         if args[0] in  ['gauge', 'full'] and \
           len(self._curr_model.get('gauge')) == 2 and\
                         myprocdef.get('perturbation_couplings') in [[],['QCD']]:
@@ -2888,6 +2916,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
+            # HSS, 20/03/2013
+            opt_loop_output=self.options["loop_optimized_output"]
+            # HSS
+            self.do_set('loop_optimized_output %s' % opt_loop_output, log=False)
             
             nb_processes += len(gauge_result_no_brs)
 
@@ -2921,7 +2953,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
-
         logger.info("%i checked performed in %0.3f s" \
                     % (nb_processes,
                       (cpu_time2 - cpu_time1)))
@@ -2937,6 +2968,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             text ="\n"
         
+
         if timings:
             text += 'Timing result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
@@ -3008,7 +3040,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Call add process
         args = self.split_arg(line)
         args.insert(0, 'process')
-        
+       
         self.do_add(" ".join(args))
 
     def extract_process(self, line, proc_number = 0, overall_orders = {}):
@@ -3525,6 +3557,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
+                # HSS, 03/04/2013
+                # avoid loading twice due to its low speed
+                if (args[1].startswith('loop_qcd_qed_sm') or\
+                    args[1].split('/')[-1].startswith('loop_qcd_qed_sm')) and\
+                     self.options['gauge']!='Feynman':
+                    logger.info('Change to the gauge to Feynman because '+\
+                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
+                    self._curr_model = None
+                    self.do_set('gauge Feynman',log=False)
+                # HSS
                 try:
                     self._curr_model = import_ufo.import_model(args[1])
                 except import_ufo.UFOImportError, error:

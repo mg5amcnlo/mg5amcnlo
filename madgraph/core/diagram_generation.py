@@ -274,7 +274,6 @@ class Amplitude(base_objects.PhysicsObject):
 
     def __init__(self, argument=None):
         """Allow initialization with Process"""
-
         if isinstance(argument, base_objects.Process):
             super(Amplitude, self).__init__()
             self.set('process', argument)
@@ -394,7 +393,6 @@ class Amplitude(base_objects.PhysicsObject):
         DiagramList by the function. This is controlled by the argument
         returndiag.
         """
-
         process = self.get('process')
         model = process.get('model')
         legs = process.get('legs')
@@ -639,7 +637,10 @@ class Amplitude(base_objects.PhysicsObject):
         self.trim_diagrams(diaglist=res)
 
         # Sort process legs according to leg number
-        self.get('process').get('legs').sort()
+        pertur = 'QCD'
+        if self.get('process')['perturbation_couplings']:
+            pertur = sorted(self.get('process')['perturbation_couplings'])[0]
+        self.get('process').get('legs').sort(pert=pertur)
 
         # Set diagrams to res if not asked to be returned
         if not returndiag:

@@ -57,7 +57,6 @@ class TestMECmdShell(unittest.TestCase):
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
             pass
-
         interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
@@ -448,7 +447,7 @@ class TestMEfromPdirectory(unittest.TestCase):
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
             pass
-
+        
         interface = MGCmd.MasterCmd()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):

@@ -92,7 +92,6 @@ class PhysicsObject(dict):
         """Set the value of the property name. First check if value
         is a valid value for the considered property. Return True if the
         value has been correctly set, False otherwise."""
-
         if not __debug__ or force:
             self[name] = value
             return True
@@ -382,7 +381,24 @@ class Particle(PhysicsObject):
             return - self['color']
         else:
             return self['color']
+        
+    def get_charge(self):
+        """Return the charge code with a correct minus sign"""
 
+        if not self['is_part']:
+            return - self['charge']
+        else:
+            return self['charge']
+
+    def get_anti_charge(self):
+        """Return the charge code of the antiparticle with a correct minus sign
+        """
+
+        if self['is_part']:
+            return - self['charge']
+        else:
+            return self['charge']
+        
     def get_name(self):
         """Return the name if particle, antiname if antiparticle"""
 
@@ -732,6 +748,26 @@ class Interaction(PhysicsObject):
         else:
             return False
         
+    def is_UVloop(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVloop')
+        else:
+            return False
+        
+    def is_UVtree(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVtree')
+        else:
+            return False
+        
     def is_UVCT(self):
         """ Returns if the interaction is of the UVCT type which means that 
         it has been selected as a possible UV counterterm interaction for this
@@ -896,7 +932,15 @@ class InteractionList(PhysicsObjectList):
 
     def get_UVmass(self):
         """ return all interactions in the list of type UVmass """
-        return InteractionList([int for int in self if int.is_UVmass()])    
+        return InteractionList([int for int in self if int.is_UVmass()])
+
+    def get_UVtree(self):
+        """ return all interactions in the list of type UVtree """
+        return InteractionList([int for int in self if int.is_UVtree()])
+    
+    def get_UVloop(self):
+        """ return all interactions in the list of type UVloop """
+        return InteractionList([int for int in self if int.is_UVloop()])
 
 #===============================================================================
 # Model
@@ -1762,6 +1806,10 @@ class LegList(PhysicsObjectList):
                 res.append(leg.get('id'))
 
         return res
+    
+    def sort(self,pert='QCD'):
+        """Match with FKSLegList"""
+        return super(LegList,self).sort()
 
 
 #===============================================================================

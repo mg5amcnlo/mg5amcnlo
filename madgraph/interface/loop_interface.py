@@ -20,6 +20,9 @@ import os
 import shutil
 import time
 import logging
+# HSS, 13/11/2012
+import re
+# HSS
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -263,8 +266,27 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-    def validate_model(self, loop_type='virtual', stop=True):
+
+    def do_set(self, line, log=True):
+        """Set the loop optimized output while correctly switching to the
+        Feynman gauge if necessary.
+        """
+
+        mg_interface.MadGraphCmd.do_set(self,line,log)
+        
+        args = self.split_arg(line)
+        self.check_set(args)
+
+        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
+                                           not self.options['gauge']=='Feynman':
+            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+
+    # HSS, 13/11/2012
+    # add a line 'coupling_type = 'QCD''
+    def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
+    # HSS
+	# HSS, 13/11/2012 
 
         if not self._curr_model:
             mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
@@ -272,7 +294,8 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             return
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
-           self._curr_model['perturbation_couplings']==[]:
+           self._curr_model['perturbation_couplings']==[] or (coupling_type not in self._curr_model['perturbation_couplings']):
+	# HSS
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\
@@ -285,21 +308,45 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
             else:
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
+		        # HSS, 13/11/2012
+                if model_name.split('-')[0]=='loop_sm':
+		           model_name = model_name[5:]
+                # HSS
                 if model_name.split('-')[0]=='sm':
+                    # So that we don't load the model twice
+                    if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
+                        logger.info('Change to the gauge to Feynman because '+\
+                          'model loop_qcd_qed_sm is still restricted only to Feynman gauge.')
+                        self._curr_model = None
+                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+                    if coupling_type == 'QCD':
+                        logger.info(\
+                         "The default sm model does not allow to generate"+
+                         " loop processes. MG5 now loads 'loop_sm' instead.")
+                        mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
+                                                            'loop_'+model_name)
+                    elif coupling_type == 'QED':
+                        logger.info(\
+                         "The default sm model does not allow to generate"+
+                         " loop processes. MG5 now loads 'loop_qcd_qed_sm' instead.")
+                        mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
+                                                            'loop_qcd_qed_'+model_name)
+                        model_name = 'qcd_qed_'+model_name
+                    else:
+			            raise MadGraph5Error(
+                          "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
+        # HSS
+                    #self.do_import("model %s"%str(mpath))
                     # Once the loop_sm model will support Feynman gauge, please
                     # uncomment below.
 #                    if self.options['gauge']!='Feynman':
 #                        self._curr_model = None
 #                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-                    logger.info(\
-                      "The default sm model does not allow to generate"+
-                      " loop processes. MG5 now loads 'loop_sm' instead.")
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
                     self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
                     self.history.append(last_command)
-                    
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -599,7 +646,19 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         argss = self.split_arg(line, *args,**opt)
         # Check args validity
-        self.validate_model()
+	# HSS,13/11/2012
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        args2=re.search("QED",perturbation_couplings)
+        if args2:
+            self.validate_model(coupling_type='QED')
+        else:
+       	    self.validate_model()
+	# HSS
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   
         argss = argss[:1]+argss[2:]
@@ -611,7 +670,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:-1])
         myprocdef = self.extract_process(proc)
-        self.validate_model('virtual')
+	# HSS, 13/11/2012
+	# Is it useless ?
+        if args2:
+            self.validate_model(loop_type='virtual',coupling_type='QED')
+        else:
+            self.validate_model(loop_type='virtual')
+	# HSS
         self.proc_validity(myprocdef,'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
@@ -621,10 +686,21 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         existing amplitudes
         """
         args = self.split_arg(line)
-        
         # Check the validity of the arguments
         self.check_add(args)
-        self.validate_model()
+	# HSS, 13/11/2012
+        perturbation_couplings_pattern = \
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+        perturbation_couplings_re = perturbation_couplings_pattern.match(line)
+        perturbation_couplings=""
+        if perturbation_couplings_re:
+            perturbation_couplings = perturbation_couplings_re.group("pertOrders")
+        args2=re.search('QED',perturbation_couplings)
+        if args2:
+            self.validate_model(coupling_type='QED')
+        else:
+            self.validate_model()
+	# HSS
 
         if args[0] == 'process':            
             # Rejoin line
@@ -638,7 +714,13 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
             # Extract process from process definition
-            self.validate_model('virtual')
+	    # HSS, 13/11/2012
+	    # Is it useless ?
+	    if args2:
+		self.validate_model(loop_type='virtual',coupling_type='QED')
+            else:
+            	self.validate_model(loop_type='virtual')
+	    # HSS
             if ',' in line:
                 myprocdef, line = self.extract_decay_chain_process(line)
             else:

@@ -67,10 +67,15 @@ class ColorBasis(dict):
             min_index, res_dict = self.add_vertex(vertex, diagram, model,
                             repl_dict, res_dict, min_index)
 
+	# HSS,24/10/2012
+	# if the process has no QCD particles
         # Return an empty list if all entries are empty
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
-            res_dict = {}
+            # res_dict = {}
+            for key in res_dict.keys():
+                res_dict[key]= color_algebra.ColorString([color_algebra.ColorOne()]) 
+	# HSS
                     
         return res_dict
 
@@ -369,7 +374,6 @@ class ColorBasis(dict):
         indices) associated to my_color_string. Take a list of the external leg
         color octet state indices as an input. Returns only the leading N 
         contribution!"""
-
         # Create a new color factor to allow for simplification
         my_cf = color_algebra.ColorFactor([my_color_string])
 
@@ -453,7 +457,6 @@ class ColorBasis(dict):
             # Rebuild a color string from a CB entry
             col_str = color_algebra.ColorString()
             col_str.from_immutable(col_basis_entry)
-
             for (leg_num, leg_repr) in repr_dict.items():
                 # By default, assign a (0,0) color flow
                 res_dict[leg_num] = [0, 0]
@@ -697,15 +700,22 @@ class ColorMatrix(dict):
         """Returns a copy of the immutable Color String representation struct2 
         where summed indices are modified to avoid duplicates with those
         appearing in struct1. Assumes internal summed indices are negative."""
-
-        # First, determines what is the smallest index appearing in struct1
-        min_index = min(reduce(operator.add,
-                                [list(elem[1]) for elem in struct1])) - 1
+	# HSS, 23/10/2012
+	#list2 = []
+	#if struct1:
+        list2 = reduce(operator.add,
+                       [list(elem[1]) for elem in struct1])
+	if not list2: 
+	   min_index = -1
+	else:
+           # First, determines what is the smallest index appearing in struct1
+           min_index = min(list2) - 1
+	# HSS
         # Second, determines the summed indices in struct2 and create a 
         # replacement dictionary
         repl_dict = {}
-        list2 = reduce(operator.add,
-                       [list(elem[1]) for elem in struct1])
+        #list2 = reduce(operator.add,
+        #               [list(elem[1]) for elem in struct1])
         for summed_index in list(set([i for i in list2 \
                                       if list2.count(i) == 2])):
             repl_dict[summed_index] = min_index
@@ -732,5 +742,10 @@ class ColorMatrix(dict):
     @staticmethod
     def lcmm(*args):
         """Return lcm of args."""
-        return reduce(ColorMatrix.lcm, args)
+	# HSS , 5/11/2012
+	if args:
+           return reduce(ColorMatrix.lcm, args)
+        else:
+           return 1
+        # HSS
 

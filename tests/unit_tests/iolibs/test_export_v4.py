@@ -287,7 +287,8 @@ C
 C     COLOR DATA
 C     
       DATA DENOM(1)/1/
-      DATA (CF(I,1),I=1,1) /1/
+      DATA (CF(I,  1),I=  1,  1) /    1/
+C     1 ColorOne()
 C     ----------
 C     BEGIN CODE
 C     ----------

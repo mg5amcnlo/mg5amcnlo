@@ -298,35 +298,45 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
         return
-
+        
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
-        for diag in self['loop_diagrams']:
+        for i,diag in enumerate(self['loop_diagrams']):
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            
+            if i not in [16,26] :valid_diag=False
+            if valid_diag :
+                print i, diag.get('tag')
+                #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
+            #if 22 in diag.get_loop_lines_pdgs():
+            #     valid_diag=False
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-#            if len(diag.get_loop_lines_pdgs())!=4:
-#                valid_diag=False
+            #if len(diag.get_loop_lines_pdgs())!=4:
+            #    valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-#            if 23 in diag.get_pdgs_attached_to_loop(structs):
-#                valid_diag=False
+            # if 23 in diag.get_pdgs_attached_to_loop(structs)
+            #    valid_diag=False
+            #if set([abs(pdg) for pdg in diag.get_loop_lines_pdgs()]).intersection(set([23,24,250,251,25,9000002,9000003,9000004])):
+            #    valid_diag=False
+            #if set(diag.get_pdgs_attached_to_loop(structs)).intersection(set([23,250,251,25,-251,24,-24,9000002,-9000002,9000003,-9000003,9000004,-9000004])):
+            #    valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
             #        the PDG. 
             #        In this example, only massive parts. are allowed in the loop.
+
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-                valid_diag=False
+            #if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
+            #    valid_diag=False
             
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
@@ -353,13 +363,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if part.is_perturbating(order,self['process']['model']):
                     allowedpart.append(part.get_pdg_code())
                     break
+        
         newloopselection=base_objects.DiagramList()
         warned=False
         warning_msg = ("Some loop diagrams contributing to this process"+\
           " are discarded because they are not pure (%s)-perturbation.\nMake sure"+\
           " you did not want to include them.")%\
                            ('+'.join(self['process']['perturbation_couplings']))
-        for diag in self['loop_diagrams']:
+        for i,diag in enumerate(self['loop_diagrams']):
             # Now collect what are the coupling orders building the loop which
             # are also perturbed order.        
             loop_orders=diag.get_loop_orders(self['process']['model'])
@@ -375,8 +386,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
-            if sum([loop_orders[order] for order in pert_loop_order])<2:
+            # HSS, 17/03/2013
+            if len([col for col in [self['process'].get('model').get_particle(pdg).get('color') \
+                                                      for pdg in diag.get_pdgs_attached_to_loop(\
+                                                    self['structure_repository'])] if col!=1])==1:
                 valid_diag=False
+            # HSS        
+            # HSS, 13/12/2012
+            #if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
+            # HSS
+#            if sum([loop_orders[order] for order in pert_loop_order])< 2:
+#                valid_diag=False
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection
@@ -487,7 +507,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if self['process']['squared_orders']=={} and \
                   self['process']['orders']=={} and self['process']['has_born']:
             chosen_order_config = self.choose_order_config()           
-    
+        
         discarded_configurations = []
         # The born diagrams are now filtered according to the chose configuration
         if chosen_order_config != {}:
@@ -504,7 +524,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Now if the user specified some squared order, we can use them as an 
         # upper bound for the loop diagram generation.
         self.guess_loop_orders_from_squared()
-        
+    
         # If the user had not specified any fixed squared order other than 
         # WEIGHTED, we will use the guessed weighted order to assign a bound to
         # the loop diagram order. Later we will check if the order deduced from
@@ -528,9 +548,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
             self['process']['orders']['WEIGHTED']=user_orders['WEIGHTED']+\
                                      2*min([hierarchy[order] for order in \
                                      self['process']['perturbation_couplings']])
-                
+        
         ldg_debug_info("Orders used for loop generation",\
                                                       self['process']['orders'])
+    
         # Make sure to warn the user if we already possibly excluded mixed order
         # loops by smartly setting up the orders
         warning_msg = ("Some loop diagrams contributing to this process might "+\
@@ -540,6 +561,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if self['process']['has_born']:
             for order in self['process']['model']['coupling_orders']:
                 if order not in self['process']['perturbation_couplings']:
+                    # HSS, 13/12/2012
+                    if order not in self['process']['orders'].keys():continue
+                    # HSS
                     if self['process']['orders'][order]< \
                                      self['born_diagrams'].get_max_order(order):
                         logger.warning(warning_msg)
@@ -556,7 +580,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # LoopUVCTDiagram. It is done before the square order selection because
         # it is possible that some UV-renorm. diagrams are removed as well.
         if self['process']['has_born']:
-            self.setUVCT()
+            self.set_Born_CT()
             
         ldg_debug_info("#UVCTDiags generated",len(self['loop_UVCT_diagrams']))
 
@@ -630,10 +654,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for diag in self['loop_diagrams']:
             diag.tag(self['structure_repository'],len(self['process']['legs'])+1\
                                 ,len(self['process']['legs'])+2,self['process'])
-            # Make sure not to consider wave-function renormalization, tadpoles, 
+            # Make sure not to consider wave-function renormalization, vanishing tadpoles, 
             # or redundant diagrams
+	    # HSS 19/09/2012
+	    # is_tadpole()-> is_vanishing_tadpole(self['process']['model'])
             if not diag.is_wf_correction(self['structure_repository'], \
-                       self['process']['model']) and not diag.is_tadpole() and \
+                       self['process']['model']) and not diag.is_vanishing_tadpole(self['process']['model']) and \
                                       diag['canonical_tag'] not in tag_selected:
                 loop_basis.append(diag)
                 tag_selected.append(diag['canonical_tag'])
@@ -648,7 +674,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             return False
 
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
-        self.setLoopCT_vertices()
+        self.set_LoopCT_vertices()
         
         # Apply here some user-defined filter.
         # For expert only, you can edit your own filter by modifying the
@@ -669,7 +695,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         logger.info("Contributing diagrams generated: "+\
                      "%d born, %d loop, %d R2, %d UV"%\
                      (len(self['born_diagrams']),nLoopDiag,nCT['R2'],nCT['UV']))
-
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
                                               len(self['structure_repository']))
@@ -756,9 +781,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
 
-        return loopsuccessful
+        # HSS 19/09/2012
+        return totloopsuccessful
+        # return loopsuccessful
+        # HSS
 
-    def setUVCT(self):
+
+    def set_Born_CT(self):
         """ Scan all born diagrams and add for each all the corresponding UV 
         counterterms. It creates one LoopUVCTDiagram per born diagram and set
         of possible coupling_order (so that QCD and QED wavefunction corrections
@@ -767,16 +796,16 @@ class LoopAmplitude(diagram_generation.Amplitude):
         other contributions like the UV mass renormalization are added in the
         function setLoopCTVertices"""
 
-
+#        return True #debug
         #  ============================================
-        #     Vertex renormalization
+        #     Including the UVtree contributions
         #  ============================================
 
         # The following lists the UV interactions potentially giving UV counterterms
         # (The UVmass interactions is accounted for like the R2s)
         UVCTvertex_interactions = base_objects.InteractionList()
         for inter in self['process']['model']['interactions'].get_UV():
-            if not inter.is_UVmass() and len(inter['particles'])>1 and \
+            if inter.is_UVtree() and len(inter['particles'])>1 and \
               inter.is_perturbating(self['process']['perturbation_couplings']) \
               and (set(inter['orders'].keys()).intersection(\
                set(self['process']['perturbation_couplings'])))!=set([]) and \
@@ -884,10 +913,10 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         return UVCTsuccessful
 
-    def setLoopCT_vertices(self):
+    def set_LoopCT_vertices(self):
         """ Scan each loop diagram and recognizes what are the R2/UVmass 
             CounterTerms associated to them """
-
+        #return # debug
         # We first create a base dictionary with as a key (tupleA,tupleB). For 
         # each R2/UV interaction, tuple B is the ordered tuple of the loop 
         # particles (not anti-particles, so that the PDG is always positive!) 
@@ -897,37 +926,78 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # above.
         CT_interactions = {}
         for inter in self['process']['model']['interactions']:
-            if inter.is_UVmass() or inter.is_R2() and len(inter['particles'])>1 \
-               and inter.is_perturbating(self['process']['perturbation_couplings']):
+            if inter.is_UVmass() or inter.is_UVloop() or inter.is_R2() and \
+                len(inter['particles'])>1 and inter.is_perturbating(\
+                                     self['process']['perturbation_couplings']):
                 # This interaction might have several possible loop particles 
-                # yielding the same counterterm. So we add this interaction ID 
+                # yielding the same CT. So we add this interaction ID 
                 # for each entry in the list loop_particles.
-                for lparts in inter['loop_particles']:      
+                for i, lparts in enumerate(inter['loop_particles']):
                     keya=copy.copy(lparts)
-                    keya.sort()
+                    keya.sort()           
+                    if inter.is_UVloop():
+                        # If it is a CT of type UVloop, then do not specify the
+                        # keya (leave it empty) but make sure the particles
+                        # specified as loop particles are not forbidden before
+                        # adding this CT to CT_interactions 
+                        if (set(self['process']['forbidden_particles']) & \
+                                                        set(lparts)) != set([]):
+                            continue
+                        else:
+                            keya=[]        
                     keyb=[part.get_pdg_code() for part in inter['particles']]
                     keyb.sort()
                     key=(tuple(keyb),tuple(keya))
+                    # We keep track of 'i' (i.e. the position of the 
+                    # loop_particle list in the inter['loop_particles']) so
+                    # that each coupling in a vertex of type 'UVloop' is
+                    # correctly accounted for since the keya is always replaced
+                    # by an empty list since the constraint on the loop particles
+                    # is simply that there is not corresponding forbidden
+                    # particles in the process definition and not that the 
+                    # actual particle content of the loop generate matches.
+                    #
+                    # This can also happen with the type 'UVmass' or 'R2'
+                    # CTvertex ex1(
+                    #        type='UVmass'
+                    #        [...]
+                    #        loop_particles=[[[d,g],[d,g]]])
+                    # Which is a bit silly but can happen and would mean that
+                    # we must account twice for the coupling associated to each
+                    # of these loop_particles.
+                    # One might imagine someone doing it with 
+                    # loop_particles=[[[],[]]], for example, because he wanted
+                    # to get rid of the loop particle constraint for some reason.
                     try:
-                        CT_interactions[key].append(inter['id'])
+                        CT_interactions[key].append((inter['id'],i))
                     except KeyError:
-                        CT_interactions[key]=[inter['id'],]
+                        CT_interactions[key]=[(inter['id'],i),]
         
-        # The dictionary CT_added keeps track of what are the CounterTerms already
-        # added and prevents us from adding them again. For instance, the fermion
-        # boxes with four external gluons exist in 6 copies (with different 
-        # crossings of the external legs each time) and the corresponding R2 must
-        # be added only once. The key of this dictionary characterizing the loop
-        # is (tupleA,tupleB). Tuple A is made from the list of the ID of the external
-        # structures attached to this loop and tuple B from list of the pdg of the
-        # particles building this loop.
+        # The dictionary CTmass_added keeps track of what are the CounterTerms of
+        # type UVmass or R2 already added and prevents us from adding them again. 
+        # For instance, the fermion boxes with four external gluons exists in 6 copies
+        # (with different crossings of the external legs each time) and the 
+        # corresponding R2 must be added only once. The key of this dictionary 
+        # characterizing the loop is (tupleA,tupleB). Tuple A is made from the 
+        # list of the ID of the external structures attached to this loop and
+        # tuple B from list of the pdg of the particles building this loop.
         
+        # Notice that when a CT of type UVmass is specified with an empty 
+        # loop_particles attribute, then it means it must be added once for each
+        # particle with a matching topology, irrespectively of the loop content.
+        # Whenever added, such a CT is put in the dictionary CT_added with a key
+        # having an empty tupleB.
+        # Finally, because CT interactions of type UVloop do specify a
+        # loop_particles attribute, but which serves only to be filtered against
+        # particles forbidden in the process definition, they will also be added
+        # with an empty tupleB.
         CT_added = {}
 
         for diag in self['loop_diagrams']:
             # First build the key from this loop for the CT_interaction dictionary 
             # (Searching Key) and the key for the CT_added dictionary (tracking Key)
             searchingKeyA=[]
+            # Notice that searchingKeyB below also serves as trackingKeyB
             searchingKeyB=[]
             trackingKeyA=[]
             for tagElement in diag['canonical_tag']:
@@ -943,8 +1013,25 @@ class LoopAmplitude(diagram_generation.Amplitude):
             searchingKeyB=list(set(searchingKeyB))
             searchingKeyB.sort()
             trackingKeyA.sort()
-            # There are two kind of keys, the ones defining the loop
-            # particles and the ones only specifying the external legs.
+            # I repeat, they are two kinds of keys:
+            # searchingKey:
+            #    This serves to scan the CT interactions defined and then find
+            #    which ones match a given loop topology and particle.
+            # trackingKey:
+            #    Once some CT vertices are identified to be a match for a loop,
+            #    the trackingKey is used in conjunction with the dictionary
+            #    CT_added to make sure that this CT has not already been included.
+            
+            # Each of these two keys above, has the format 
+            #    (tupleA, tupleB)
+            # with tupleB being the loop_content and either contains the set of 
+            # loop particles PDGs of the interaction (for the searchingKey) 
+            # or of the loops already scanned (trackingKey). It can also be 
+            # empty when considering interactions of type UVmass or R2 which
+            # have an empty loop_particle attribute or those of type UVloop.
+            # TupleA is the set of external particle PDG (for the searchingKey)
+            # and the unordered list of structID attached to the loop (for the
+            # trackingKey)           
             searchingKeySimple=(tuple(searchingKeyA),())
             searchingKeyLoopPart=(tuple(searchingKeyA),tuple(searchingKeyB))
             trackingKeySimple=(tuple(trackingKeyA),())
@@ -979,7 +1066,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 # orders match
                 if CTID not in usedIDs and diag.get_loop_orders(\
                   self['process']['model'])==\
-                   self['process']['model']['interaction_dict'][CTID]['orders']:
+                   self['process']['model']['interaction_dict'][CTID[0]]['orders']:
                     # Create the amplitude vertex corresponding to this CT
                     # and add it to the LoopDiagram treated.
                     CTleglist = base_objects.LegList()
@@ -987,13 +1074,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         for structID in tagElement[1]:
                             CTleglist.append(\
                           self['structure_repository'][structID]['binding_leg'])
-                    CTVertex = base_objects.Vertex({'id':CTID, \
+                    CTVertex = base_objects.Vertex({'id':CTID[0], \
                                                     'legs':CTleglist})
                     diag['CT_vertices'].append(CTVertex)
                     # Now add this CT vertex to the CT_added dictionary so that
                     # we are sure it will not be double counted
-                    if self['process']['model']['interaction_dict'][CTID]\
-                                                       ['loop_particles']==[[]]:
+                    if self['process']['model']['interaction_dict'][CTID[0]]\
+                                            ['loop_particles'][CTID[1]]==[] or \
+                       self['process']['model']['interaction_dict'][CTID[0]].\
+                                                                    is_UVloop():
                         try:
                             CT_added[trackingKeySimple].append(CTID)
                         except KeyError:
@@ -1033,16 +1122,20 @@ class LoopAmplitude(diagram_generation.Amplitude):
       
         looplegs=[leg for leg in legs if leg['loop_line']]
         
-        # Get rid of all tadpoles
-        if(len([1 for leg in looplegs if leg['depth']==0])==2):
-            return []
+        # Get rid of all vanishing tadpoles
+        # HSS 19/09/2012
+        #Ease the access to the model
+        model=self['process']['model']
+        exlegs=[leg for leg in looplegs if leg['depth']==0]
+        if(len(exlegs)==2):
+            if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            	return []
+        #if(len([1 for leg in looplegs if leg['depth']==0])==2):
+        #    return []
+        # HSS
 
         # Correctly propagate the loopflow
         loopline=(len(looplegs)==1)    
-
-        #Ease the access to the model
-        model=self['process']['model']
-
         mylegs = []
         for i, (leg_id, vert_id) in enumerate(leg_vert_ids):
             # We can now create the set of possible merged legs.
@@ -1061,7 +1154,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         # Check that the PDG of the outter particle in the 
                         # wavefunction renormalization bubble is equal to the
                         # one of the inner particle.
-                        if leg_id in depths:
+			# HSS 19/09/2012
+                        #if leg_id in depths:
+			# HSS
                             continue
                 
                 # If depth is not 0 because of being an external leg and not 
@@ -1100,16 +1195,26 @@ class LoopAmplitude(diagram_generation.Amplitude):
         looplegs=[leg for leg in legs if leg['loop_line']]
         nonlooplegs=[leg for leg in legs if not leg['loop_line']] 
 
-        # Get rid of all tadpoles
-        if(len([1 for leg in looplegs if leg['depth']==0])==2):
-            return []
+        # Get rid of all vanishing tadpoles
+	# HSS 19/09/2012
+        model=self['process']['model']
+        exlegs=[leg for leg in looplegs if leg['depth']==0]
+        if(len(exlegs)==2):
+            if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
+            	return []
+        #if(len([1 for leg in looplegs if leg['depth']==0])==2):
+        #    return []
+	# HSS
+
 
         # Get rid of some wave-function renormalization diagrams already during
         # diagram generation already.In a similar manner as in get_combined_legs.
         if(len(legs)==3 and len(looplegs)==2):
             depths=(looplegs[0]['depth'],looplegs[1]['depth'])                    
             if (0 in depths) and (-1 not in depths) and depths!=(0,0):
-                if nonlooplegs[0]['id'] in depths:
+		# HSS 19/09/2012
+                # if nonlooplegs[0]['id'] in depths:
+		# HSS
                     return []
 
         return vert_ids

@@ -451,6 +451,31 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
 
         return self.get_final_loop_wavefunction().get('rank')
 
+    # old get_rank
+    #def get_rank(self):
+    #    """ Returns the rank of the loop numerator, i.e. the maximum power to which
+    #    the loop momentum is elevated in the loop numerator. The way of returning it
+    #    here is only valid for the interactions of the SM. The completely
+    #    general approach needs to use aloha to gather the information of the
+    #    'lorentz' object stored in each loop vertex and it will be implemented later."""
+    #    
+    #    rank=0
+    #    # First add one power for each fermion propagator
+    #    rank=rank+len([ wf for wf in self.get('wavefunctions') if \
+    #                   wf.get('mothers') and wf.is_fermion()])
+    #    # Add one if the L-cut particle is a fermion
+    #    if True in [ wf.is_fermion() for wf in self.get('wavefunctions') if \
+    #                   not wf.get('mothers')]:
+    #        rank=rank+1
+    #	# HSS 28/09/2012
+    #    # Add one for each three-boson vertex, except VVS,UUS and SSS in the SM
+    #    rank=rank+len([ wf for wf in self.get('wavefunctions') if wf.incr_rank()])
+    #    # Counting the amplitude as well (there is only one normally)
+    #    rank=rank+len([ amp for amp in self.get('amplitudes') if amp.incr_rank()])
+    #	# HSS
+    #    return rank
+
+
     def calculate_fermionfactor(self):
         """ The fermion factor is not implemented for this object but in the
         subamplitude"""
@@ -463,11 +488,24 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         for the SM only where all symmetry factors are 1 except for the gluon bubble which
         exhibits a factor 2."""
         
-        if len(self.get('wavefunctions'))==4 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:
+        # HSS 27/09/2012
+        #print len(self.get('wavefunctions'))
+        #print len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])
+        #print [wf.get('pdg_code') for wf in self.get('wavefunctions')]
+        #print len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))
+        if ((len(self.get('wavefunctions'))==3 and \
+           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3) or\
+	   (len(self.get('wavefunctions'))==4 and \
+	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==4)) and\
+	   len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1:
+        #if len(self.get('wavefunctions'))==4 and \
+        #   len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:
+	# HSS        
             self['loopsymmetryfactor']=2
         else:
             self['loopsymmetryfactor']=1
+        #print self['loopsymmetryfactor']
+        #raise TypeError,"haha"
         
 #===============================================================================
 # LoopHelasDiagram

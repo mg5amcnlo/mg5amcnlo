@@ -212,6 +212,17 @@ class LoopDiagram(base_objects.Diagram):
         else:
             return None
 
+    # HSS 19/09/2012
+    def is_vanishing_tadpole(self,model):
+	"""Return None if there is no loop or if a tag has not yet been set and returns True if this graph contains a vanishing tadpole loop and False if not. """
+	if not self.is_tadpole():return self.is_tadpole()
+	# absorbed by renormalization of vev
+	if(len(self['tag'][0][1])<=1):return True
+	# massless tadpole
+       	return any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items()\
+	 if pdg==abs(self['tag'][0][0]['id'])])
+     # HSS
+
     def is_wf_correction(self, struct_rep, model):
         """ Return None if there is no loop or if a tag has not yet been set and
         returns True if this graph contains a wave-function correction and False
@@ -227,14 +238,35 @@ class LoopDiagram(base_objects.Diagram):
                     # Check that the two binding legs are of the same nature
                     inLegID=struct_rep[self['tag'][0][1][0]]['binding_leg']['id']
                     outLegID=struct_rep[self['tag'][1][1][0]]['binding_leg']['id']
-                    if not model.get('particle_dict')[inLegID]['self_antipart']:
-                        inLegID=model.get('particle_dict')[inLegID].\
-                                                             get_anti_pdg_code()
-                    if inLegID==outLegID:
-                        return True
+		    # HSS,19/09/2012
+		    # remove the following
+                    #if not model.get('particle_dict')[inLegID]['self_antipart']:
+                    #    inLegID=model.get('particle_dict')[inLegID].\
+                    #                                         get_anti_pdg_code()
+                    #if inLegID==outLegID:
+		            #          return True
+                    return True
+		    # HSS
+	    # HSS 19/09/2012
+	    # check a wf correction with tadpole (massive)	
+	    if(len(self['tag'])==1):
+		if(len(self['tag'][0][1])==2):
+		    if(struct_rep[self['tag'][0][1][0]].is_external() or struct_rep[self['tag'][0][1][1]].is_external()):
+			return True
+	    # HSS
+
             return False
         else:
             return None
+
+    # HSS, 22/10/2012
+    def get_nloopline(self):
+	"""Return the number of loop lines. """
+	if(self['tag']):
+	    return len(self['tag'])
+	else:
+	    return None
+    # HSS
 
     @classmethod
     def compute_weight(cls, FD_ids_list, struct_rep, number_legs):
@@ -278,7 +310,11 @@ class LoopDiagram(base_objects.Diagram):
         if len(tag)==1:
             return tag
         elif len(tag)==2:
-            if tag[0][0]['id']>tag[1][0]['id']:
+            # HSS, 14/02/2013
+            # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
+            #if tag[0][0]['id']>tag[1][0]['id']:
+            if abs(tag[0][0]['id'])>abs(tag[1][0]['id']):
+            # HSS
                 return rev_tag
             else:
                 return tag
@@ -316,9 +352,13 @@ class LoopDiagram(base_objects.Diagram):
         # of the same particle. If these bubbles are not made of the same
         # two particle, the tag chosen is the one starting from the biggest 
         # particle id.
-        if((len(tag)==2 and canonical_mirrored_tag[0][0]['id']>\
-          canonical_tag[0][0]['id']) or (len(tag)>2 and \
+        # HSS, 14/02/2013
+        # Remove the redundant bubble diagrams, like [a W- a] and [W+ a W-]
+        # add abs when it is a bubble,i.e. len(tag)==2
+        if((len(tag)==2 and abs(canonical_mirrored_tag[0][0]['id'])>\
+         abs(canonical_tag[0][0]['id'])) or (len(tag)>2 and \
           canonical_mirrored_tag[1][1]<canonical_tag[1][1])):
+        # HSS
             canonical_tag=canonical_mirrored_tag
         return canonical_tag        
 
@@ -954,6 +994,7 @@ class LoopDiagram(base_objects.Diagram):
                         loop_orders[order]=vertex_orders[order]
         return loop_orders
     
+
     @classmethod
     def make_canonical_cyclic(cls,atag):
         """ Perform cyclic permutations on the tag given in parameter such that 
@@ -1248,6 +1289,18 @@ class FDStructure(base_objects.PhysicsObject):
             return True
         else:
             return False
+
+    # HSS 19/09/2012
+    def is_external_massless(self,model):
+	"""Returns whether the structure is simply made of an external massless particle only"""
+	if not self.is_external():return False
+	exleg = [ leg for leg in self['external_legs'] if leg['number']==self['canonical'][0][0][0] ]
+	if not exleg: return False
+	exleg = exleg[0]
+	return any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() \
+	if pdg == abs(exleg['id'])])
+    # HSS
+
 
     def filter(self, name, value):
         """Filter for valid FDStructure property values."""

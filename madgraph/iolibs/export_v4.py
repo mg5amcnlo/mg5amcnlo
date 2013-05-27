@@ -395,13 +395,13 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
-
+	
         # Make final link in the Process
         self.make_model_symbolic_link()
-        
+    
         # Re-establish original aloha mode
         aloha.mp_precision=old_aloha_mp
-
+    
     #===========================================================================
     # Helper functions
     #===========================================================================
@@ -874,6 +874,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         if not root_dir:
             root_dir = self.dir_path
+	
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
@@ -981,6 +982,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False, compiler='g77'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
+	# HSS,13/11/2012
+	mg5_configuration=pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+        lines = open(mg5_configuration).read().split('\n')
+        FC_re = re.compile('^\s*fortran_compiler\s*=\s*(.+)\s*$')
+        for iline, line in enumerate(lines):
+            FC_result = FC_re.match(line)
+            if FC_result:
+		compiler=FC_result.group(1)
+	# HSS
         self.compiler_choice(compiler)
         self.make()
 
@@ -3587,19 +3597,22 @@ class UFO_model_to_mg4(object):
     def create_model_functions_inc(self):
         """ Create model_functions.inc which contains the various declarations
         of auxiliary functions which might be used in the couplings expressions"""
-        
+        # HSS, 5/11/2012
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
-          double complex reglog""")
+          double complex reglog
+          double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
-          %(complex_mp_format)s mp_reglog"""\
+          %(complex_mp_format)s mp_reglog
+          %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
+	# HSS
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
         of auxiliary functions which might be used in the couplings expressions"""
-
+	# HSS, 5/11/2012
         fsock = self.open('model_functions.f', format='fortran')
         fsock.writelines("""double complex function cond(condition,truecase,falsecase)
           implicit none
@@ -3618,6 +3631,18 @@ class UFO_model_to_mg4(object):
              reglog=(0.0d0,0.0d0)
           else
              reglog=log(arg)
+          endif
+          end
+          
+          double complex function arg(comnum)
+          implicit none
+          double complex comnum
+          double complex iim 
+          iim = (0.0d0,1.0d0)
+          if(comnum.eq.(0.0d0,0.0d0)) then
+             arg=(0.0d0,0.0d0)
+          else
+             arg=log(comnum/abs(comnum))/iim
           endif
           end""")
         if self.opt['mp']:
@@ -3641,8 +3666,20 @@ class UFO_model_to_mg4(object):
               else
                  mp_reglog=log(arg)
               endif
+              end
+              
+              %(complex_mp_format)s function mp_arg(comnum)
+              implicit none
+              %(complex_mp_format)s comnum
+              %(complex_mp_format)s imm
+              imm = (0.0e0_16,1.0e0_16)
+              if(comnum.eq.(0.0e0_16,0.0e0_16)) then
+                 mp_arg=(0.0e0_16,0.0e0_16)
+              else
+                 mp_arg=log(comnum/abs(comnum))/imm
+              endif
               end"""%{'complex_mp_format':self.mp_complex_format})            
-
+        # HSS   
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
         

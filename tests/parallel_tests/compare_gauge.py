@@ -271,7 +271,7 @@ class GaugeComparator(unittest.TestCase):
                              tolerance = 1e-3)          
 
 class GaugeComparatorLoop(unittest.TestCase):
-    """A class to compare the values of unitary and Feynman gauge in complex and fix width schemes"""
+    """A class to compare the values of unitary and Feynman gauge in complex and fixed width schemes"""
     
     nb_test = 0
     
