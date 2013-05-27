@@ -1224,7 +1224,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.print_summary(options, 0, mode)
 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
+                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
                 if not options['only_generation']:
                     self.update_status('Setting up grid', level=None)

@@ -208,7 +208,7 @@ if nevents>=0:
 # if nevents = -1 and req_acc >= 0, we need to determine the required
 # accuracy in each of the channels: this is for fixed order running!
 elif req_acc>=0 and nevents==-1:
-    req_accABS=req_acc*totABS/tot
+    req_accABS=req_acc*tot/totABS
     content_evts = ''
     for proc in processes:
         if proc['channel'][0:3] == 'all':

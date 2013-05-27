@@ -155,7 +155,12 @@ c We did enough iterations, update arguments and return
             chi2=0d0
          endif
          write (*,*) '-------'
-         ncalls0=ncalls*kpoint_iter ! return number of points used in last iteration
+         ncalls0=ncalls*kpoint_iter ! return number of points used
+         if (double_events) then
+            nitmax=nit_included/2
+         else
+            nitmax=nit_included
+         endif
          return
       endif
       nit=nit+1
