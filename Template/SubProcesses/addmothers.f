@@ -117,6 +117,14 @@ c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
           targetamp(ic)=targetamp(ic-1)
         endif
       enddo
+      if (targetamp(nc).eq.0)then
+       targetamp(1)=jamp2(1)
+       do ic =2,nc
+           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
+       enddo
+      endif
+
+
       xtarget=ran1(iseed)*targetamp(nc)
 
       ic = 1
