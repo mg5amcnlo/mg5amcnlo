@@ -1064,7 +1064,7 @@ class CheckValidForCmd(object):
         if tag: 
             args.remove(tag[0])
             tag = tag[0][6:]
-        
+
         if len(args) == 0 and not self.run_name:
             if self.results.lastrun:
                 args.insert(0, self.results.lastrun)
@@ -2954,11 +2954,15 @@ calculator."""
             args.remove('--no_default')
         else:
             no_default = False
+            
+        if not self.run_name:
+            self.check_pythia(args)
+            self.configure_directory()
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory()
+            self.check_pythia(args)        
         
-        # initialize / remove lhapdf mode        
-        self.configure_directory()
-                               
-        self.check_pythia(args)        
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])

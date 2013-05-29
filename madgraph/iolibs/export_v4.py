@@ -1346,7 +1346,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
@@ -2585,7 +2585,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
