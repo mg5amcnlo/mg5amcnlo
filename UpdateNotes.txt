@@ -1,5 +1,12 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.11 (xx/xx/13) OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                      LINUX computer only)
+                  OM: Fix a bug with the detection of the compiler when user specifiy a specific
+                      compiler.
+                  OM: Fix a problem that MG5 fails to compute the cross-section/width after that 
+                      a first computation fails to integrate due to a wrong mass spectrum. 
+
 1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
                       massless propagator. (introduce in 1.5.9)
                   OM: Fix question #226810: checking that patch program exists before
