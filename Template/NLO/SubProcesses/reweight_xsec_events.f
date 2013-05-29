@@ -325,14 +325,19 @@ c
 
              if(iSorH_lhe.eq.1)then
 c The nbody contributions
-                if (kwgtinfo.eq.5) wgtxsecPDF(n)=wgtxsecPDF(n)
-     &               +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
-     &               ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
-     &               kwgtinfo)
+                if (kwgtinfo.eq.5) then
+                   call fill_reweight0inc_nbody(i_process)
+                   wgtxsecPDF(n)=wgtxsecPDF(n)
+     $                  +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
+     $                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
+     $                  kwgtinfo)
+                   call reweight_settozero()
+                endif
                 do ii=1,nScontributions
                    nFKSprocess_used=nFKSprocess_reweight(ii)
                    if (kwgtinfo.eq.5)
-     &                  call fill_reweight0inc(nFKSprocess_used*2-1)
+     &                  call fill_reweight0inc(nFKSprocess_used*2-1
+     $                   ,i_process)
                    wgtxsecPDF(n)=wgtxsecPDF(n)+
      &                  compute_rwgt_wgt_Sev(xmuR_over_ref
      &                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
@@ -341,7 +346,8 @@ c The nbody contributions
                 enddo
              elseif(iSorH_lhe.eq.2)then
                 if (kwgtinfo.eq.5)
-     &               call fill_reweight0inc(nFKSprocess_used*2)
+     &               call fill_reweight0inc(nFKSprocess_used*2,
+     &               i_process)
                 wgtxsecPDF(n)=wgtxsecPDF(n)+
      &               compute_rwgt_wgt_Hev(xmuR_over_ref ,xmuF1_over_ref,
      &               xmuF2_over_ref ,xQES_over_ref, kwgtinfo)
