@@ -124,7 +124,7 @@ def compile_dir(arguments):
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and not options['noreweight']:
+    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
         misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
             raise aMCatNLOError('reweight_xsec_events compilation failed')
@@ -599,9 +599,6 @@ class CheckValidForCmd(object):
         if options['multicore'] and options['cluster']:
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
-        if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
-                    ' are not compatible. Please choose one.'
 
 
     def check_launch(self, args, options):
@@ -630,9 +627,6 @@ class CheckValidForCmd(object):
         # check for incompatible options/modes
         if options['multicore'] and options['cluster']:
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
-                    ' are not compatible. Please choose one.'
-        if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -r (--reweightonly)' + \
                     ' are not compatible. Please choose one.'
         if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
@@ -966,7 +960,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         (options, argss) = _generate_events_parser.parse_args(argss)
         options = options.__dict__
         options['reweightonly'] = False
-        options['noreweight'] = False
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
         
@@ -1057,6 +1050,11 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         
+        if int(self.run_card['nevents']) == 0:
+            logger.info('No event file generated: grids have been set-up with a '\
+                            'relative precision of %s' % self.run_card['req_acc'])
+            return
+
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
             self.exec_cmd('decay_events -from_cards', postcmd=False)
@@ -1208,11 +1206,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
-                npoints = self.run_card['npoints_FO_grid']
-                niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
-                self.update_status('Setting up grids', level=None)
-                self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
+                if not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                    self.update_status('Setting up grids', level=None)
+                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -1226,11 +1225,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
             elif mode == 'NLO':
-                self.update_status('Setting up grid', level=None)
-                npoints = self.run_card['npoints_FO_grid']
-                niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
-                self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
+                if not options['only_generation']:
+                    self.update_status('Setting up grid', level=None)
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
+                    self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
                 p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
                                     stdout=subprocess.PIPE, 
                                     cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -1238,12 +1238,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
 
-                npoints = self.run_card['npoints_FO_grid']
-                niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                self.update_status('Improving grid using NLO', level=None)
-                self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
-                                 'Improving grids using NLO')
+                if not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
+                    self.update_status('Improving grid using NLO', level=None)
+                    self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
+                                     'Improving grids using NLO')
                 p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
                                    stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
                 output = p.communicate()
@@ -1282,7 +1283,17 @@ Please, shower the Les Houches events before using them for physics analyses."""
             shower = self.run_card['parton_shower'].upper()
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
+            if nevents == 0 and float(req_acc) < 0 :
+                raise aMCatNLOError('Cannot determine the required accuracy from the number '\
+                                        'of events, because 0 events requested. Please set '\
+                                        'the "req_acc" parameter in the run_card to a value between 0 and 1')
+            elif float(req_acc) >1 or float(req_acc) == 0 :
+                raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
+                                        'be between larger than 0 and smaller than 1, '\
+                                        'or set to -1 for automatic determination. Current value is %s' % req_acc)
+
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
+
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
                     % (shower, ', '.join(shower_list)))
@@ -1468,8 +1479,7 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' \
-                        and not options['noreweight']:
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
@@ -1556,7 +1566,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if not options['noreweight']:
+        if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton')
@@ -2659,9 +2669,6 @@ _compile_usage = "compile [MODE] [options]\n" + \
 _compile_parser = misc.OptionParser(usage=_compile_usage)
 _compile_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the card present in the directory for the launch, without editing them")
-_compile_parser.add_option("-R", "--noreweight", default=False, action='store_true',
-                            help="Skip compiling reweight executable")
-
 
 _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
@@ -2685,11 +2692,12 @@ _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
-_launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
-                            help="Skip file reweighting")
 _launch_parser.add_option("-p", "--parton", default=False, action='store_true',
                             help="Stop the run after the parton level file generation (you need " + \
                                     "to shower the file in order to get physical results)")
+_launch_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -2735,8 +2743,6 @@ _generate_events_parser.add_option("-n", "--nocompile", default=False, action='s
 _generate_events_parser.add_option("-o", "--only-generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from" + \
                             "the last available results")
-_generate_events_parser.add_option("-R", "--noreweight", default=False, action='store_true',
-                            help="Skip file reweighting")
 _generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
                             help="Stop the run after the parton level file generation (you need " + \
                                     "to shower the file in order to get physical results)")

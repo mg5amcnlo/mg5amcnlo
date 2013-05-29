@@ -55,18 +55,19 @@ for p in P* ; do
 	fi
     done
     if [[ $(($counter % 40)) != 0 ]] ; then
-    echo $(($counter % 40)) > dir2
-    cat dir >> dir2
-    while [[ $(($counter % 40)) -ne 0 ]]; do
-	counter=$[$counter-1]
-    done
-    $EXENAME < dir2
-    teststatus Failure in step 2
-    rm -f dir
-    rm -f dir2
-    mv fort.88 MADatNLO$i\.top 
-    mv read40.out "S2read40_"$i\.out
-
+	echo $(($counter % 40)) > dir2
+	cat dir >> dir2
+	while [[ $(($counter % 40)) -ne 0 ]]; do
+	    counter=$[$counter-1]
+	done
+	$EXENAME < dir2
+	teststatus Failure in step 2
+	rm -f dir
+	rm -f dir2
+	mv fort.88 MADatNLO$i\.top 
+	mv read40.out "S2read40_"$i\.out
+    fi
+	
     counter=0
     for m in MADatNLO*.top ; do
 	counter=$[$counter+1]
@@ -76,10 +77,10 @@ for p in P* ; do
 	echo $counter > dir2
 	cat dir >> dir2
 	$EXENAME < dir2
-        teststatus Failure in step 3
+	teststatus Failure in step 3
 	rm -f dir2
 	mv fort.88 MADatNLO.top 
-        mv read40.out S3read40.out
+	mv read40.out S3read40.out
     else
 	mv MADatNLO1.top MADatNLO.top
     fi
@@ -88,7 +89,6 @@ for p in P* ; do
     counterp=$(($counterp + 1))
     echo $p"/MADatNLO.top" >> dir
     echo $counterp $p "done"
-    fi
 done
 
 cd $thisdir
