@@ -430,12 +430,13 @@ class MG_diagram(diagram_class.MG_diagram):
             # treat ONLY NEUTRINO for block B/C
             if block.chgt_var == 'B':
                 neut = block.neut_content[0]
-                mapping[3*particle.MG-6] = p_random + 1
+                mapping[3*neut.MG-6] = p_random + 1
                 p_random +=1 
             elif block.chgt_var == 'C':
                 neut = block.neut_content[0]
-                mapping[3*particle.MG-6] = p_random + 1
-                mapping[3*particle.MG-5] = p_random + 3
+                misc.sprint( particle.MG, 3*particle.MG-5,3*particle.MG-6)
+                mapping[3*neut.MG-6] = p_random + 1
+                mapping[3*neut.MG-5] = p_random + 2
                 p_random += 2                
                  
             if block.chgt_var not in ['D', 'E', 'a', 'c']:

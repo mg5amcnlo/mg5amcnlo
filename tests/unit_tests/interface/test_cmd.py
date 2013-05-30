@@ -19,6 +19,7 @@ import madgraph
 import madgraph.interface.master_interface as cmd
 import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
+import madgraph.various.misc as misc
 import os
 
 import tests.unit_tests.various.test_aloha as test_aloha
@@ -166,6 +167,7 @@ class TestValidCmd(unittest.TestCase):
             self.assertTrue(False, 'error are not treated correctly')
         
         text = open('/tmp/fatalerror.log').read()
+        misc.sprint(text)
         self.assertTrue('{' not in text)
         self.assertTrue('MS_debug' in text)
         
