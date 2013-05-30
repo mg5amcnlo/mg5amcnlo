@@ -95,7 +95,7 @@ c
          buffer_lc=buffer
          call case_trap3(72,buffer_lc)
 c Replace the random number seed with the one used...
-         if (index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
+         if(index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#')then
             open (unit=93,file="randinit",status="old",err=96)
             read(93,'(a)') buffer2
             if (index(buffer2,'=').eq.0) goto 96
@@ -269,9 +269,10 @@ c if the file is a partial file the header is non-standard
 
 c Same as read_lhef_header, except that more parameters are read.
 c Avoid overloading read_lhef_header, meant to be used in utilities
-      subroutine read_lhef_header_full(ifile,nevents,MonteCarlo)
+      subroutine read_lhef_header_full(ifile,nevents,itempsc,itempPDF,
+     #                                 MonteCarlo)
       implicit none 
-      integer ifile,nevents,i,ii,iistr,ipart
+      integer ifile,nevents,i,ii,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
       character*80 string,string0
       character*3 event_norm
@@ -281,6 +282,8 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       ipart=-1000000
       nevents = -1
       MonteCarlo = ''
+      itempsc=0
+      itempPDF=0
 c
       string='  '
       dowhile(string.ne.'  -->')
@@ -311,6 +314,24 @@ c
             remcmass(ipart)=temp
             read(ifile,'(a)')string
           enddo
+        endif
+        if( index(string,'scale_variation').ne.0 )then
+          read(ifile,'(a)')string
+          itempsc=1
+          dowhile( index(string,'</weightgroup>').eq.0 )
+            read(ifile,'(a)')string
+            itempsc=itempsc+1
+          enddo
+          itempsc=itempsc-1
+        endif
+        if( index(string,'PDF_variation').ne.0 )then
+          read(ifile,'(a)')string
+          itempPDF=1
+          dowhile( index(string,'</weightgroup>').eq.0 )
+            read(ifile,'(a)')string
+            itempPDF=itempPDF+1
+          enddo
+          itempPDF=itempPDF-1
         endif
       enddo
 c Works only if the name of the MC is the last line of the comments
@@ -741,7 +762,6 @@ c
               stop
            endif
            read(ifile,'(a)')string
-
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
@@ -949,7 +969,6 @@ c
               stop
            endif
            read(ifile,'(a)')string
-
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
