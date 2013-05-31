@@ -202,11 +202,11 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
         if mode == 'fortran' and  not (which('g77') or which('gfortran')):
-            error_msg = 'A fortran compilator (g77 or gfortran) is required to create this output.\n'
+            error_msg = 'A fortran compiler (g77 or gfortran) is required to create this output.\n'
             error_msg += 'Please install g77 or gfortran on your computer and retry.'
             raise MadGraph5Error, error_msg
         elif mode == 'cpp' and not which('g++'):            
-            error_msg ='A C++ compilator (g++) is required to create this output.\n'
+            error_msg ='A C++ compiler (g++) is required to create this output.\n'
             error_msg += 'Please install g++ (which is part of the gcc package)  on your computer and retry.'
             raise MadGraph5Error, error_msg
 

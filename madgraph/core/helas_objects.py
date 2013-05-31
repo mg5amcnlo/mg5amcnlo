@@ -272,7 +272,7 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         # Look for final leg numbers in all links
         done = [l for l in self.tag.links if \
-                l.end_link and l.links[0][1][0] == ninitial]
+                l.end_link and l.links[0][1][0] == final_leg]
         while not done:
             # Identify the chain closest to final_leg
             right_num = -1
