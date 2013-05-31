@@ -239,9 +239,9 @@ class TestDiagramSymmetry(unittest.TestCase):
         new_me_val, new_amp2 = evaluator.evaluate_matrix_element(\
                                           matrix_element, p)
 
-        self.assertAlmostEqual(me_val, new_me_val, 12)
+        self.assertAlmostEqual(me_val, new_me_val, 10)
 
         for amp, new_amp in zip(amp2, new_amp2):
-            self.assertAlmostEqual(amp, new_amp, 12)
+            self.assertAlmostEqual(amp, new_amp, 10)
             
         
