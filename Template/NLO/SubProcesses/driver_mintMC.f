@@ -730,8 +730,7 @@ c From dsample_fks
       COMMON /SUBPROC/ PD, IPROC
       double precision unwgt_table(0:fks_configs,2,maxproc)
       common/c_unwgt_table/unwgt_table
-      integer maxproc_save
-      save maxproc_save,proc_map
+      save proc_map
       logical fillh
       integer mc_hel,ihel
       double precision volh
