@@ -1032,7 +1032,7 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
+                          'iolibs/template_files/born_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -1204,7 +1204,7 @@ c     this subdir has no soft singularities
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/b_sf_xxx_fks_from_born.inc')).read()
+                          'iolibs/template_files/b_sf_xxx_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -1389,7 +1389,7 @@ C
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/realmatrix_fks_born.inc')).read()
+                          'iolibs/template_files/realmatrix_fks.inc')).read()
 
         file = file % replace_dict
         
