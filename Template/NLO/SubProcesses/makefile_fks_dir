@@ -36,10 +36,10 @@ VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 
 # Files for mintMC
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
-	handling_lhe_events.o
+	handling_lhe_events.o iproc_map.o
 
 # Files for Born reweighting
-BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
+BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
 	write_event.o
 
 # Files for check_poles
@@ -56,7 +56,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o fastjetfortran_madfks.o boostwdir2.o			\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
-	reweight.o get_color.o
+	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
+	leshouche_inc_chooser.o
 
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<

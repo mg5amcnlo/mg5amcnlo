@@ -7,6 +7,7 @@ Update notes for MadGraph 5 (in reverse time order)
                            only). Turned off by default.
 		       VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
+                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 

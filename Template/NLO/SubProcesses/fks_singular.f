@@ -1158,6 +1158,11 @@ c
       COMMON /SUBPROC/ PD, IPROC
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
+      integer i_process
+      common/c_addwrite/i_process
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
@@ -1523,16 +1528,6 @@ c Collinear subtraction term:
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
             enddo
-            if(doreweight) then
-               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
-     &              .and.pmass(j_fks).eq.0.d0)
-     &              wgtwreal_all(3,nFKSprocess*2)=
-     &              xsec/g**(nint(2*wgtbpower+2.d0))
-               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
-     &              g**(nint(2*wgtbpower+2.d0))
-            endif
-
-
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
                HxmcME=HxmcME+xlum_c*xsec
@@ -1540,6 +1535,13 @@ c Collinear subtraction term:
                   unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
      &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
                enddo
+            endif
+            if(doreweight) then
+               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(nint(2*wgtbpower+2.d0))
+               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     $              .and.pmass(j_fks).eq.0.d0) wgtwreal_all(3
+     $              ,nFKSprocess*2)= xsec/g**(nint(2*wgtbpower+2.d0))
             endif
             if( y_ij_fks_ev.gt.1d0-deltaS )then
                xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
@@ -2003,7 +2005,7 @@ c Update the shower starting scale with the shape from montecarlocounter
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
-            do j=1,IPROC
+            do j=1,iproc_save(nFKSprocess)
                if (.not.nbody) then
                   unwgt_table(nFKSprocess,1,j)=0d0
                else
@@ -2017,7 +2019,7 @@ c Update the shower starting scale with the shape from montecarlocounter
      $           ,fkssymmetryfactorDeg,fkssymmetryfactor
             stop
          endif
-         do j=1,IPROC
+         do j=1,iproc_save(nFKSprocess)
             if (.not.nbody) then
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      $              *enhanceS*fkssymmetryfactor*unwgtfun*vegaswgt
@@ -2062,10 +2064,28 @@ c
             endif
 
             if (nbody) then
-               wgtref_nbody = dsigS
+c$$$               wgtref_nbody = dsigS
+               do i_process=1,iproc_save(nFKSprocess) 
+                  wgtref_nbody_all(i_process)=0d0
+                  do j=1,iproc_save(nFKSprocess)
+                     if (eto(j,nFKSprocess).eq.i_process)
+     $                    wgtref_nbody_all(i_process)
+     $                    =wgtref_nbody_all(i_process)+unwgt_table(0,1
+     $                    ,j)/vegaswgt
+                  enddo
+               enddo
             endif
-            wgtref_all(nFKSprocess*2-1) = dsigS
-            xsec = enhanceS*unwgtfun
+c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
+            do i_process=1,iproc_save(nFKSprocess) 
+               wgtref_all(nFKSprocess*2-1,i_process)=0d0
+               do j=1,iproc_save(nFKSprocess)
+                  if (eto(j,nFKSprocess).eq.i_process)
+     $                 wgtref_all(nFKSprocess*2-1,i_process)
+     $                 =wgtref_all(nFKSprocess*2-1,i_process)
+     $                 +unwgt_table(nFKSprocess,1,j)/vegaswgt
+               enddo
+            enddo
+            xsec = enhance*unwgtfun
             do i=1,4
                if (.not.nbody) then
                   wgtwreal_all(i,nFKSprocess*2-1)=wgtwreal_all(i
@@ -2089,13 +2109,16 @@ c
                enddo
             endif
             if(check_reweight.and.doreweight) then
-               if (nbody) then
-                  call check_rwgt_wgt("nbd")
-               else
-                  call fill_reweight0inc(nFKSprocess*2-1)
-                  call check_rwgt_wgt("Sev")
-               endif
-               call reweight_settozero()
+               do i_process=1,iproc_save(nFKSprocess)
+                  if (nbody) then
+                     call fill_reweight0inc_nbody(i_process)
+                     call check_rwgt_wgt("nbd")
+                  else
+                     call fill_reweight0inc(nFKSprocess*2-1,i_process)
+                     call check_rwgt_wgt("Sev")
+                  endif
+                  call reweight_settozero()
+               enddo
             endif
 c Example of reweighted cross section (scale changed)
 c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
@@ -2132,7 +2155,7 @@ c Plot observables for counterevents and Born
      &           ' found for dsigH, setting dsigH to 0 for this event'
             dsigH=0
             if (.not.nbody) then
-               do j=1,IPROC
+               do j=1,iproc_save(nFKSprocess)
                   unwgt_table(nFKSprocess,2,j)=0d0
                enddo
          endif
@@ -2145,7 +2168,7 @@ c Plot observables for counterevents and Born
          endif
 
          if (.not.nbody) then
-            do j=1,IPROC
+            do j=1,iproc_save(nFKSprocess)
                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
      $              *enhanceH*fkssymmetryfactor*unwgtfun*vegaswgt
             enddo
@@ -2157,8 +2180,12 @@ c Plot observables for counterevents and Born
                stop
             endif
             if (.not.nbody) then
-               wgtref_all(nFKSprocess*2) = dsigH
-               xsec = enhanceH*unwgtfun*fkssymmetryfactor
+c$$$               wgtref_all(nFKSprocess*2) = dsigH
+               do j=1,iproc_save(nFKSprocess)
+                  wgtref_all(nFKSprocess*2,j)=unwgt_table(nFKSprocess,2
+     $                 ,j)/vegaswgt
+               enddo
+               xsec = enhance*unwgtfun*fkssymmetryfactor
                do i=1,4
                   wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
      &                 ,nFKSprocess*2) * xsec
@@ -2168,16 +2195,20 @@ c Plot observables for counterevents and Born
      &                 ,nFKSprocess*2) * xsec
                enddo
                if(check_reweight.and.doreweight) then
-                  call fill_reweight0inc(nFKSprocess*2)
-                  call check_rwgt_wgt("Hev")
-                  call reweight_settozero()
+                  do i_process=1,iproc_save(nFKSprocess)
+                     call fill_reweight0inc(nFKSprocess*2,i_process)
+                     call check_rwgt_wgt("Hev")
+                     call reweight_settozero()
+                  enddo
                endif
             else
-               if (wgtref_all(nFKSprocess*2).ne.0d0) then
-                  write (*,*) 'wgtref not zero',
-     &                 wgtref_all(nFKSprocess*2)
-                  stop
-               endif
+               do j=1,iproc_save(nFKSprocess)
+                  if (wgtref_all(nFKSprocess*2,j).ne.0d0) then
+                     write (*,*) 'wgtref not zero',j,
+     &                    wgtref_all(nFKSprocess*2,j)
+                     stop
+                  endif
+               enddo
                do i=1,4
                   if (wgtwreal_all(i,nFKSprocess*2).ne.0d0) then
                      write (*,*) 'wgtwreal not zero',i,
