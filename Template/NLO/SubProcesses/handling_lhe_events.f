@@ -10,6 +10,15 @@ c and the dimensions of the latter are typically defined by nexternal.
 c Hence, one may need an explicit copy of one onto the other
 c
 
+      block data
+      integer event_id
+      common /c_event_id/ event_id
+      data event_id /-99/
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
+      data rwgt_skip /.false./
+      end
+
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
       integer ifile,nevents
@@ -35,11 +44,22 @@ c
 
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
-      integer ifile,nevents,iseed,i
-      double precision mcmass(-5:21)
+      integer ifile,nevents,iseed,i,pdf_set_min,pdf_set_max,idwgt
+      double precision mcmass(-5:21),rw_Rscale_down,rw_Rscale_up
+     $     ,rw_Fscale_down,rw_Fscale_up
       character*10 MonteCarlo
       character*100 path
-      character*72 buffer,buffer2
+      character*72 buffer,buffer_lc,buffer2
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
+      logical rwgt_skip_pdf,rwgt_skip_scales
+      integer event_id
+      common /c_event_id/ event_id
+      include 'reweight_all.inc'
+c     Set the event_id to 0. If 0 or positive, this value will be update
+c     in write_lhe_event. It is set to -99 through a block data
+c     statement.
+      event_id=0
 c
       write(ifile,'(a)') '<LesHouchesEvents version="1.0">'
       write(ifile,'(a)') '  <header>'
@@ -64,10 +84,18 @@ c
       write(ifile,'(a)') '  <MGRunCard>'
       open (unit=92,file=path(1:index(path," ")-1)//'run_card.dat'
      &     ,err=97)
+      rwgt_skip_pdf=.true.
+      rwgt_skip_scales=.true.
+      rwgt_skip=.true.
+      pdf_set_min=-1
+      pdf_set_max=-1
+      numscales=0
       do
          read(92,'(a)',err=87,end=87) buffer
+         buffer_lc=buffer
+         call case_trap3(72,buffer_lc)
 c Replace the random number seed with the one used...
-         if (index(buffer,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
+         if (index(buffer_lc,'iseed').ne.0 .and. buffer(1:1).ne.'#') then
             open (unit=93,file="randinit",status="old",err=96)
             read(93,'(a)') buffer2
             if (index(buffer2,'=').eq.0) goto 96
@@ -76,9 +104,38 @@ c Replace the random number seed with the one used...
             close(93)
             write(buffer,'(i11,a)')iseed,' =  iseed'
 c Update the number of events
-         elseif (index(buffer,'nevents').ne.0 .and.
+         elseif (index(buffer_lc,'nevents').ne.0 .and.
      &           buffer(1:1).ne.'#') then
             write(buffer,'(i11,a)')nevents,' = nevents'
+         elseif (index(buffer_lc,'reweight_pdf').ne.0 .and.
+     $           index(buffer_lc,'.true.').ne.0 .and.
+     $           buffer(1:1).ne.'#') then
+            rwgt_skip=.false.
+            rwgt_skip_pdf=.false.
+         elseif (index(buffer_lc,'pdf_set_min').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) pdf_set_min
+         elseif (index(buffer_lc,'pdf_set_max').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) pdf_set_max
+         elseif (index(buffer_lc,'reweight_scale').ne.0 .and.
+     $           index(buffer_lc,'.true.').ne.0 .and.
+     $           buffer(1:1).ne.'#') then
+            rwgt_skip=.false.
+            rwgt_skip_scales=.false.
+            numscales=3
+         elseif (index(buffer_lc,'rw_rscale_down').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_down
+         elseif (index(buffer_lc,'rw_rscale_up').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) rw_Rscale_up
+         elseif (index(buffer_lc,'rw_fscale_down').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_down
+         elseif (index(buffer_lc,'rw_fscale_up').ne.0 .and.
+     &           buffer(1:1).ne.'#') then
+            read(buffer(1:index(buffer,'=')-1),*) rw_Fscale_up
          endif
          goto 95
  96      write (*,*) '"randinit" file not found in write_lhef_header_'/
@@ -86,6 +143,13 @@ c Update the number of events
  95      write(ifile,'(a)') buffer
       enddo
  87   close(92)
+      if ( (pdf_set_min.ne.-1 .and. pdf_set_max.eq.-1) .or.
+     &     (pdf_set_min.eq.-1 .and. pdf_set_max.ne.-1)) then
+         write (*,*) 'Not consistent PDF reweigthing parameters'/
+     $        /' found in the run_card.',pdf_set_min,pdf_set_max
+         stop
+      endif
+      if (.not.rwgt_skip_pdf) numPDFpairs=(pdf_set_max-pdf_set_min+1)/2
       write(ifile,'(a)') '  </MGRunCard>'
       write(ifile,'(a)') '  <MonteCarloMasses>'
       call fill_MC_mshell_wrap(MonteCarlo,mcmass)
@@ -94,6 +158,55 @@ c Update the number of events
       enddo
       write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
       write(ifile,'(a)') '  </MonteCarloMasses>'
+c Write here the reweight information if need be
+      if (.not.rwgt_skip) then
+         write(ifile,'(a)') '  <initrwgt>'
+         if (numscales.ne.0) then
+            if (numscales.ne.3) then
+               write (*,*) 'Error in handling_lhe_events.f:'
+               write (*,*) 'number of scale not equal to three'
+     $              ,numscales
+               stop
+            endif
+            write(ifile,'(a)') "    <weightgroup "/
+     &           /"type='scale_variation' combine='envelope'>"
+            write(ifile,602) "      <weight id='1001'>"/
+     $           /" muR=",1d0," muF=",1d0," </weight>"
+            write(ifile,602) "      <weight id='1002'>"/
+     $           /" muR=",1d0," muF=",rw_Fscale_up," </weight>"
+            write(ifile,602) "      <weight id='1003'>"/
+     $           /" muR=",1d0," muF=",rw_Fscale_down," </weight>"
+            write(ifile,602) "      <weight id='1004'>"/
+     $           /" muR=",rw_Rscale_up," muF=",1d0," </weight>"
+            write(ifile,602) "      <weight id='1005'> muR="
+     $           ,rw_Rscale_up," muF=",rw_Fscale_up," </weight>"
+            write(ifile,602) "      <weight id='1006'> muR="
+     $           ,rw_Rscale_up," muF=",rw_Fscale_down," </weight>"
+            write(ifile,602) "      <weight id='1007'> muR="
+     $           ,rw_Rscale_down," muF=",1d0," </weight>"
+            write(ifile,602) "      <weight id='1008'> muR="
+     $           ,rw_Rscale_down," muF=",rw_Fscale_up," </weight>"
+            write(ifile,602) "      <weight id='1009'> muR="
+     $           ,rw_Rscale_down," muF=",rw_Fscale_down," </weight>"
+            write(ifile,'(a)') "    </weightgroup>"
+         endif
+         if (numPDFpairs.ne.0) then
+            if (pdf_set_min.lt.90000) then    ! MSTW & CTEQ
+               write(ifile,'(a)') "    <weightgroup "/
+     &              /"type='PDF_variation' combine='hessian'>"
+            else                              ! NNPDF
+               write(ifile,'(a)') "    <weightgroup "/
+     &              /"type='PDF_variation' combine='gaussian'>"
+            endif
+            do i=1,numPDFpairs*2
+               idwgt=2000+i
+               write(ifile,'(a,i4,a,i6,a)') "      <weight id='",idwgt,
+     $              "'> pdfset=",pdf_set_min+(i-1)," </weight>"
+            enddo
+            write(ifile,'(a)') "    </weightgroup>"
+         endif
+         write(ifile,'(a)') '  </initrwgt>'
+      endif
       write(ifile,'(a)') '  </header>'
  250  format(1x,i8)
       return
@@ -109,6 +222,7 @@ c Update the number of events
      &     /' run_card.dat not found   :',path(1:index(path," ")-1)
      &     //'run_card.dat'
       stop
+ 602  format(a,e11.5,a,e11.5,a)
       end
 
 
@@ -256,7 +370,6 @@ c
       return
       end
 
-
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -269,12 +382,46 @@ c
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS
+      integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+      logical rwgt_skip
+      common /crwgt_skip/ rwgt_skip
+      integer event_id
+      common /c_event_id/ event_id
       include 'reweight_all.inc'
+c     if event_id is zero or positive (that means that there was a call
+c     to write_lhef_header_banner) update it and write it
+c RF: don't use the event_id:
+      event_id = -99
 c
-      write(ifile,'(a)')
-     # '  <event>'
+      if (event_id.ge.0) then
+         event_id=event_id+1
+         if (event_id.le.9) then
+            write(ifile,'(a,i1,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.99) then
+            write(ifile,'(a,i2,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.999) then
+            write(ifile,'(a,i3,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.9999) then
+            write(ifile,'(a,i4,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.99999) then
+            write(ifile,'(a,i5,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.999999) then
+            write(ifile,'(a,i6,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.9999999) then
+            write(ifile,'(a,i7,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.99999999) then
+            write(ifile,'(a,i8,a)') "  <event id='",event_id,"'>"
+         elseif(event_id.le.999999999) then
+            write(ifile,'(a,i9,a)') "  <event id='",event_id,"'>"
+         else
+            write (ifile,*) "ERROR: EVENT ID TOO LARGE",event_id
+            write (*,*) "ERROR: EVENT ID TOO LARGE",event_id
+            stop
+         endif
+      else
+         write(ifile,'(a)') '  <event>'
+      endif
       write(ifile,503)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
       do i=1,nup
         write(ifile,504)IDUP(I),ISTUP(I),MOTHUP(1,I),MOTHUP(2,I),
@@ -282,7 +429,7 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#') then
+      if(buff(1:1).eq.'#' .and. .not.rwgt_skip) then
         write(ifile,'(a)') buff(1:len_trim(buff))
         read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -290,8 +437,7 @@ c
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
         if(jwgtinfo.ge.1.and.jwgtinfo.le.4)then
-          write(ifile,'(a)')
-     # '  <rwgt>'
+           write(ifile,'(a)') '  <rwgt>'
           write(ifile,401)wgtref,wgtqes2(2)
           write(ifile,402)wgtxbj(1,1),wgtxbj(2,1),
      #                    wgtxbj(1,2),wgtxbj(2,2),
@@ -327,8 +473,7 @@ c
           enddo
           if(jwgtinfo.eq.4) write(ifile,'(1x,e14.8,1x,i4,1x,i4)')
      &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
-          write(ifile,'(a)')
-     # '  </rwgt>'
+          write(ifile,'(a)') '  </rwgt>'
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
@@ -408,8 +553,7 @@ c$$$                 enddo
            write(ifile,'(a)')'  </rwgt>'
 
         elseif(jwgtinfo.eq.8)then
-          write(ifile,'(a)')
-     # '  <rwgt>'
+           write(ifile,'(a)') '  <rwgt>'
           write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
           do i=1,numscales
             write(ifile,404)(wgtxsecmu(i,j),j=1,numscales)
@@ -419,12 +563,26 @@ c$$$                 enddo
             nng=2*i
             write(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
-          write(ifile,'(a)')
-     # '  </rwgt>'
+          write(ifile,'(a)') '  </rwgt>'
+
+        elseif(jwgtinfo.eq.9)then
+           write(ifile,'(a)') '  <rwgt>'
+           do i=1,numscales
+              do j=1,numscales
+                 idwgt=1000+(i-1)*numscales+j
+                 write(ifile,601) "   <wgt id='",idwgt,"'>",wgtxsecmu(i
+     $                ,j)," </wgt>"
+              enddo
+           enddo
+           do i=1,2*numPDFpairs
+              idwgt=2000+i
+              write(ifile,601) "   <wgt id='",idwgt,"'>",wgtxsecPDF(i)
+     $             ," </wgt>"
+           enddo
+           write(ifile,'(a)') '  </rwgt>'
         endif
       endif
-      write(ifile,'(a)')
-     # '  </event>'
+      write(ifile,'(a)') '  </event>'
  200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -436,6 +594,7 @@ c$$$                 enddo
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
+ 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -451,10 +610,12 @@ c
       integer ifile,i
       character*140 buff
       character*80 string
+      character*12 dummy12
+      character*2 dummy2
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS
+      integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       include 'reweight_all.inc'
 c
@@ -603,6 +764,21 @@ c
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           read(ifile,'(a)')string
+        elseif(jwgtinfo.eq.9)then
+           read(ifile,'(a)')string
+           wgtref=XWGTUP
+           do i=1,numscales
+              do j=1,numscales
+                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+              enddo
+           enddo
+           do i=1,2*numPDFpairs
+              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+           enddo
+           if (numscales.eq.0 .and. numPDFpairs.ne.0) then
+              wgtxsecmu(1,1)=XWGTUP
+           endif
+           read(ifile,'(a)')string
         endif
         read(ifile,'(a)')string
       else
@@ -620,6 +796,7 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
+ 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -636,15 +813,17 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer ifile,i
       character*140 buff
       character*80 string
+      character*12 dummy12
+      character*2 dummy2
       character*1 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
-      integer ii,j,nps,nng,iFKS
+      integer ii,j,nps,nng,iFKS,idwgt
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
       include 'reweight_all.inc'
 c
       read(ifile,'(a)')string
-      if(index(string,'<event>').eq.0)then
+      if(index(string,'<event').eq.0)then
         if(index(string,'</LesHouchesEvents>').ne.0)then
           buff='endoffile'
           return
@@ -798,6 +977,21 @@ c
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           read(ifile,'(a)')string
+        elseif(jwgtinfo.eq.9)then
+           read(ifile,'(a)')string
+           wgtref=XWGTUP
+           do i=1,numscales
+              do j=1,numscales
+                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+              enddo
+           enddo
+           do i=1,2*numPDFpairs
+              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+           enddo
+           if (numscales.eq.0 .and. numPDFpairs.ne.0) then
+              wgtxsecmu(1,1)=XWGTUP
+           endif
+           read(ifile,'(a)')string
         endif
         read(ifile,'(a)')string
       else
@@ -815,6 +1009,7 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
+ 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -876,3 +1071,31 @@ c
 
       return
       end
+
+
+      subroutine case_trap3(ilength,name)
+c**********************************************************    
+c change the string to lowercase if the input is not
+c**********************************************************
+      implicit none
+c
+c     ARGUMENT
+c      
+      character*(*) name
+c
+c     LOCAL
+c
+      integer i,k,ilength
+
+      do i=1,ilength
+         k=ichar(name(i:i))
+         if(k.ge.65.and.k.le.90) then  !upper case A-Z
+            k=ichar(name(i:i))+32   
+            name(i:i)=char(k)        
+         endif
+      enddo
+
+      return
+      end
+
+

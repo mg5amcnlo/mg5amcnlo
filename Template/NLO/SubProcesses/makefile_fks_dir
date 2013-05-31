@@ -25,7 +25,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o		\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
-	 reweight.o get_color.o
+	 reweight.o get_color.o FKSParamReader.o
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
@@ -43,7 +43,7 @@ BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
 	write_event.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o check_poles.o BinothLHA.o
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o MC_integer.o
 
 # Files for tests
 TEST= $(FILES) BinothLHADummy.o cuts.o

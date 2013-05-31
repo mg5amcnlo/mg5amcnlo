@@ -291,7 +291,8 @@ c the abs is to avoid tiny negative values
       write(*,*) '|int|=',vtot_abs,' +/- ',etot_abs,
      &     ' (',efrac_abs*100d0,'%)'
       write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
-      if (efrac_abs.gt.0.3d0.and.nit.gt.3) then
+      if (double_events .and. efrac_abs.gt.0.3d0 .and. nit.gt.3)
+     $     then
          write (*,*) 'Large fluctuation ( >30 % ).'
      &        //'Not including iteration in results.'
 c double the number of points for the next iteration

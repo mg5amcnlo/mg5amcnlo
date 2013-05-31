@@ -63,7 +63,7 @@ c FxFx Merging
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        isave=8
+        isave=9
       else
         isave=0
       endif

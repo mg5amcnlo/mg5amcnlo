@@ -82,6 +82,9 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     if  [[ ! -e ColorNumFactors.dat ]] ; then
 	ln -sf ../ColorNumFactors.dat .
     fi
+	if  [[ ! -e FKS_params.dat ]] ; then
+	ln -sf ../FKS_params.dat .
+    fi
     
 #   check where is the basic file for the creation of input_app.txt
 #       

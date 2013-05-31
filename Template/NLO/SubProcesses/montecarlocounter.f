@@ -501,9 +501,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1218,9 +1218,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1924,9 +1924,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -2719,9 +2719,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3447,9 +3447,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3584,14 +3584,13 @@ c Implementation of a maximum scale for the shower if the shape is not active.
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             if(sqrt(xi(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
-c z limits, following  pages 14-16 of hep-ph/0408302
+c z limits, following pages 11 and 14-16 of hep-ph/0408302
          if(ileg.le.2)then
             zplus=1-sqrt(xi(npartner)/z(npartner)/shat)*
      &           (sqrt(1+xi(npartner)/(4*z(npartner)*shat))-sqrt(xi(npartner)/(4*z(npartner)*shat)))
             if(z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
-c z limits for the 'constrained' definition, following
-c strictly page 354 of hep-ph/0603175
+c
          if(ileg.gt.2)then
             if(ileg.eq.3)then
                xmm2=xm12
@@ -3617,7 +3616,7 @@ c
                ma2=0d0
             endif
             ma=sqrt(ma2)
-            mbeff=sqrt(xmm2)
+            mbeff=0d0
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
