@@ -2302,6 +2302,9 @@ Integrated cross-section
             except KeyError:
                 pass
 
+
+        os.putenv('fastjet_config', self.options['fastjet'])
+        
         # make Source
         self.update_status('Compiling source...', level=None)
         misc.compile(['clean4pdf'], cwd = sourcedir)
@@ -2422,7 +2425,8 @@ Integrated cross-section
             os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
+        os.putenv('lhapdf', 'True')
+        os.putenv('lhapdf_config', self.options['lhapdf'])
 
 
     def write_test_input(self, test):

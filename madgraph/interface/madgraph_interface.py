@@ -5097,7 +5097,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
 
             try:
                 p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
@@ -5138,12 +5137,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            fj_lhapdf_lines = \
-                 ['fastjet_config=%s' % self.options['fastjet'],
-                  'lhapdf_config=%s' % self.options['lhapdf']]
-            text = '\n'.join(fj_lhapdf_lines) + '\n'
-            fj_lhapdf_file.write(text)
-            fj_lhapdf_file.close()
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
