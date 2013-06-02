@@ -1907,7 +1907,7 @@ class UFOModelConverterCPP(object):
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
-            aloha_model.compute_all(save=False)
+            aloha_model.compute_all(save=False, custom_propa=True)
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
@@ -2083,14 +2083,14 @@ def generate_example_file_pythia8(path,
 # Routines to export/output UFO models in Pythia8 format
 #===============================================================================
 
-def convert_model_to_pythia8(model, pythia_dir, wanted_lorentz):
+def convert_model_to_pythia8(model, pythia_dir):
     """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
 
     if not os.path.isfile(os.path.join(pythia_dir, 'include', 'Pythia.h')):
         logger.warning('Directory %s is not a valid Pythia 8 main dir.' % pythia_dir)
 
     # create the model parameter files
-    model_builder = UFOModelConverterPythia8(model, pythia_dir, wanted_lorentz=wanted_lorentz)
+    model_builder = UFOModelConverterPythia8(model, pythia_dir)
     model_builder.cc_file_dir = "Processes_" + model_builder.model_name
     model_builder.include_dir = model_builder.cc_file_dir
 

@@ -646,9 +646,8 @@ class AbstractALOHAModel(dict):
     
         self[(lorentzname, outgoing)] = abstract_routine
     
-    def compute_all(self, save=True, wanted_lorentz = []):
+    def compute_all(self, save=True, wanted_lorentz = [], custom_propa=False):
         """ define all the AbstractRoutine linked to a model """
-
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
@@ -672,8 +671,23 @@ class AbstractALOHAModel(dict):
                     self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
+            #standard routines
+            routines = [(i,[]) for i in range(len(lorentz.spins)+1)]
+            # search for special propagators
+            if custom_propa:
+                for vertex in self.model.all_vertices:
+                    if lorentz in vertex.lorentz:
+                        for i,part in enumerate(vertex.particles):
+                            new_prop = False
+                            if hasattr(part, 'propagator') and part.propagator:
+                                new_prop = ['P%s' % part.propagator.name]
+                            elif part.mass.name.lower() == 'zero':
+                                new_prop = ['P0'] 
+                            if new_prop and (i+1, new_prop) not in routines:
+                                routines.append((i+1, new_prop))
+            
             builder = AbstractRoutineBuilder(lorentz, self.model)
-            self.compute_aloha(builder)
+            self.compute_aloha(builder, routines=routines)
 
             if lorentz.name in self.multiple_lor:
                 for m in self.multiple_lor[lorentz.name]:
@@ -836,7 +850,11 @@ class AbstractALOHAModel(dict):
         if not symmetry:
             symmetry = name
         if not routines:
-            tag = ['C%s' % i for i in builder.conjg]
+            if not tag:
+                tag = ['C%s' % i for i in builder.conjg]
+            else:
+                addon = ['C%s' % i for i in builder.conjg]
+                tag = [(i,addon +onetag) for i,onetag in tag]
             routines = [ tuple([i,tag]) for i in range(len(builder.spins) + 1 )]
 
         # Create the routines

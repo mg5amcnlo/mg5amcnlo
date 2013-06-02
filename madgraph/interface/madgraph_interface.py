@@ -4168,9 +4168,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 process_names.append(exporter.process_file_name)
 
             # Output the model parameter and ALOHA files
-            wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             model_name, model_path = export_cpp.convert_model_to_pythia8(\
-                            self._curr_model, self._export_dir, wanted_lorentz)
+                            self._curr_model, self._export_dir)
 
             # Generate the main program file
             filename, make_filename = \
