@@ -112,12 +112,12 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       include 'configs_production.inc'
 
+      ! set masses 
+      call set_parameters(p,Ecollider)
       call coup()
 
       include 'props_production.inc'
 
-      ! set masses 
-      call set_parameters(p,Ecollider)
 
       ! do not consider the case of conflicting BW
       do i = -nexternal, -1
@@ -187,7 +187,7 @@ c              write (*,*) (p(k,j), k=0,3)
 c           enddo
 
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
-
+           if (jac.lt.0d0) cycle
            !do j=1,nexternal
            !   write (*,*) (pfull(k,j), k=0,3)  
            !enddo
@@ -261,7 +261,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            enddo
 
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
-
+           if (jac.lt.0d0) cycle
            call SMATRIX(pfull,M_full)
 
            if (M_full*jac/M_prod.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
@@ -286,16 +286,20 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            ivar=0
            no_gen=.false.
 
+         notpass=.true.
+         do while (notpass)
+
            do i = 1, 3*(nexternal-nexternal_prod)+1
               call  ntuple(x(i),0d0,1d0,i,0)
            enddo
 
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
-
+           if (jac.lt.0d0) cycle
+           notpass=.false.
            call SMATRIX(pfull,M_full)
 
            write(*,*) M_full
-
+        enddo
         call flush()
         goto 1
       endif

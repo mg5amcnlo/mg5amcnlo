@@ -3405,7 +3405,7 @@ class decay_all_events:
                 if not tag:
                     continue # No decay for this process
                 atleastonedecay = True
-                max_decay[tag] = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
+                weight = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
                 
                     #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
                     #     then decayed weight:
@@ -3415,10 +3415,10 @@ class decay_all_events:
                     #                                  decay['path'], p_full_str)
                     
                     #weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
-                #if tag in max_decay:
-                #    max_decay[tag] = max([max_decay[tag], weight])
-                #else:
-                #    max_decay[tag] = weight
+                if tag in max_decay:
+                    max_decay[tag] = max([max_decay[tag], weight])
+                else:
+                    max_decay[tag] = weight
                     #print weight, max_decay[name]
                     #raise Exception   
             if not atleastonedecay:
