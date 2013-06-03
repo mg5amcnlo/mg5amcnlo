@@ -55,13 +55,15 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None, cluster_temp_path=None, **opts):
+    def __init__(self,*args, **opts):
         """Init the cluster"""
+
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
-        self.cluster_queue = cluster_queue
-        self.temp_dir = cluster_temp_path
+        
+        self.cluster_queue = opts['cluster_queue']
+        self.temp_dir = opts['cluster_temp_path']
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
@@ -224,16 +226,15 @@ class MultiCore(Cluster):
     
     job_id = '$'
     
-    def __init__(self, nb_core, *args, **opt):
+    def __init__(self, *args, **opt):
         """Init the cluster"""
         import thread
-        
         super(MultiCore, self).__init__(self, *args, **opt)
         
         
         self.submitted = 0
         self.finish = 0
-        self.nb_core = nb_core
+        self.nb_core = opt['nb_core']
         self.update_fct = None
 
         # initialize the thread controler

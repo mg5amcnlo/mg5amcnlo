@@ -330,6 +330,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
+                         'cluster_time':None,
+                         'cluster_memory':None,
                          'nb_core': None,
                          'cluster_temp_path':None}
     
@@ -1073,7 +1075,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 else:
                     raise self.InvalidCmd('Not a valid path: keep previous value: \'%s\'' % self.options[args[0]])
             else:
-                self.options[args[0]] = args[1]             
+                self.options[args[0]] = args[1]
+                
+        if 'cluster' in args[0] or args[0] == 'run_mode':
+            self.configure_run_mode(self.options['run_mode'])             
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
@@ -1087,10 +1092,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             nb_core =self.nb_core
         elif run_mode == 0:
             nb_core = 1 
-            
+        
+        
+        
         if run_mode in [0, 2]:
-            self.cluster = cluster.MultiCore(nb_core, 
-                             cluster_temp_path=self.options['cluster_temp_path'])
+            self.cluster = cluster.MultiCore( 
+                             **self.options)
+                             #cluster_temp_path=self.options['cluster_temp_path'],
             
         if self.cluster_mode == 1:
             opt = self.options
@@ -1268,6 +1276,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
+        self.configure_run_mode(self.options['run_mode'])
           
         return self.options
 
