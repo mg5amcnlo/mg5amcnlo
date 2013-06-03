@@ -311,9 +311,11 @@ class UFOMG5Converter(object):
 	          or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
-            if hasattr(particle_info, 'GoldstoneBoson'):
-                if particle_info.GoldstoneBoson:
-                    return              
+            if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+                    return 
+            elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
+                    return                               
+                
         # Initialize a particles
         particle = base_objects.Particle()
 

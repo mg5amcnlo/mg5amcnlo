@@ -8,6 +8,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       a first computation fails to integrate due to a wrong mass spectrum. 
                   OM: Fix a wrong output (impossible to compile) for pythia in presence of photon/gluon
                       propagator (introduce in 1.5.8)
+                  OM: Allow to have UFO model with "goldstone" attribute instead of "GoldstoneBoson", since
+                      FR change convention in order to match the UFO paper.
 
 1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
                       massless propagator. (introduce in 1.5.9)
