@@ -65,6 +65,12 @@ C
 C
 C     SPECIAL CUTS
 C
+C      Frixione Isolation cut
+       REAL*8 PTGMIN,R0GAMMA,XN,EPSGAMMA ! photon cuts
+       LOGICAL ISOEM ! photon cuts
+       COMMON /TO_ISOGAMMA_CUTS/PTGMIN,R0GAMMA,XN,EPSGAMMA
+       COMMON /TO_ISOGAMMA_EM/ISOEM
+
 C-- this are somewhat old kind of cuts that where used for specific
 c   purposes
 c

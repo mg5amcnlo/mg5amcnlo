@@ -435,6 +435,20 @@ class RunCard(dict):
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################
+        # Frixione photon isolation
+        self.add_line('ptgmin', 'float', 0.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
+        # Cut that need to be deactivated in presence of isolation
+        if 'ptgmin' in self and float(self['ptgmin'])>0:
+            if float(self['pta']) > 0:
+                logger.warning('pta cut discarded since photon isolation is used')
+                self['pta'] = '0'
+            if float(self['draj']) > 0:
+                logger.warning('draj cut discarded since photon isolation is used')
+                self['draj'] = '0' 
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
@@ -478,7 +492,7 @@ class RunCard(dict):
         self.add_line('drbb', 'float', 0.4)     
         self.add_line('drll', 'float', 0.4)     
         self.add_line('draa', 'float', 0.4)     
-        self.add_line('drbj', 'float', 0.4)     
+        self.add_line('drbj', 'float', 0.4)  
         self.add_line('draj', 'float', 0.4)     
         self.add_line('drjl', 'float', 0.4)     
         self.add_line('drab', 'float', 0.4)     
@@ -555,6 +569,8 @@ class RunCard(dict):
         self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
+        
+        
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
