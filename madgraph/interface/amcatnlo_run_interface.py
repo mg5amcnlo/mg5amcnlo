@@ -1149,8 +1149,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
-                                              self.options['cluster_temp_path'])
+            self.cluster = cluster.from_name[cluster_name](**self.options)
         if self.cluster_mode == 2:
             try:
                 import multiprocessing
@@ -1166,8 +1165,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         'Use set nb_core X in order to set this number and be able to'+
                         'run in multicore.')
 
-            self.cluster = cluster.MultiCore(self.nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
+            self.cluster = cluster.MultiCore(**self.options)
         self.update_random_seed()
         #find and keep track of all the jobs
         folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
@@ -1418,24 +1416,43 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
+        if mode in ['aMC@NLO', 'noshower']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','GV*','log_MINT*.txt'))
+            all_log_files = sum([glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*',\
+                                    'G%s*'%foldname,'log*.txt')) for foldname in ['V','F']],[])
+        elif mode in ['aMC@LO', 'noshowerLO']: 
+            log_GV_files = ''
             all_log_files = glob.glob(pjoin(self.me_dir, \
-                                          'SubProcesses', 'P*','G*','log*.txt'))
-        elif mode in ['NLO', 'LO']:
+                                          'SubProcesses', 'P*','GB*','log*.txt'))
+        elif mode == 'NLO':
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','viSB_G*','log*.txt'))
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
               '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
                                                                    'viSB_']],[])
+        elif mode == 'LO':
+            log_GV_files = ''
+            all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
+              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
         # Recuperate the fraction of unstable PS points found in the runs for the
         # virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
-                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
-                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
+#        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
+#                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
+#                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
         for gv_log in log_GV_files:
             logfile=open(gv_log,'r')             
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
@@ -1443,11 +1460,24 @@ Integrated cross-section
             if not UPS_stats is None:
                 channel_name = '/'.join(gv_log.split('/')[-5:-1])
                 try:
-                    stats['UPS'][channel_name][0] += int(UPS_stats.group('nPS'))
-                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nUPS'))
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
+                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
+                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
+                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
+                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
+                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
+                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
+                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
+                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
+                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
                 except KeyError:
-                    stats['UPS'][channel_name] = [int(UPS_stats.group('nPS')),
-                                                   int(UPS_stats.group('nUPS'))]
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
+                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
+                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
+                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
+                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
+                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         # Find the number of potential errors found in all log files
         # This re is a simple match on a case-insensitve 'error' but there is 
         # also some veto added for excluding the sentence 
@@ -1521,15 +1551,37 @@ Integrated cross-section
         # Now display the general statistics
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
-            nTotUPS = sum([chan[1] for chan in stats['UPS'].values()],0)
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
+            nTotsun = sum([chan[1] for chan in stats['UPS'].values()],0)
+            nTotsps = sum([chan[2] for chan in stats['UPS'].values()],0)
+            nTotups = sum([chan[3] for chan in stats['UPS'].values()],0)
+            nToteps = sum([chan[4] for chan in stats['UPS'].values()],0)
+            nTotddp = sum([chan[5] for chan in stats['UPS'].values()],0)
+            nTotqdp = sum([chan[6] for chan in stats['UPS'].values()],0)
+            nTotini = sum([chan[7] for chan in stats['UPS'].values()],0)
+            nTot100 = sum([chan[8] for chan in stats['UPS'].values()],0)
+            nTot10  = sum([chan[9] for chan in stats['UPS'].values()],0)
+            nTot1  = sum([chan[10] for chan in stats['UPS'].values()],0)
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
-                 float(chan[1][1]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+                 float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
-            if maxUPS[1]>0.1:
-                message += '\n      Number of loop ME evaluations: %d'%nTotPS
+            if maxUPS[1]>0.001:
+                message += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+                message += '\n          Stability unknown:                   %d'%nTotsun
+                message += '\n          Stable PS point:                     %d'%nTotsps
+                message += '\n          Unstable PS point (and rescued):     %d'%nTotups
+                message += '\n          Unstable PS point (and not rescued): %d'%nToteps
+                message += '\n          Only double precision used:          %d'%nTotddp
+                message += '\n          Quadruple precision used:            %d'%nTotqdp
+                message += '\n          Initialization phase-space points:   %d'%nTotini
+                if nTot100 != 0:
+                    message += '\n          Unknown return code (100):           %d'%nTot100
+                if nTot10 != 0:
+                    message += '\n          Unknown return code (10):            %d'%nTot10
+                if nTot1 != 0:
+                    message += '\n          Unknown return code (1):             %d'%nTot1
                 message += '\n      Total number of unstable PS point detected:'+\
-                                 ' %d (%4.2f%%)'%(nTotUPS,float(100*nTotUPS)/nTotPS)
+                                 ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
                 message += '\n      Maximum fraction of UPS points in '+\
                           'channel %s (%4.2f%%)'%maxUPS
                 message += '\n      Please report this to the authors while '+\
@@ -1537,7 +1589,20 @@ Integrated cross-section
                 message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n      Number of loop ME evaluations: %d'%nTotPS
+                debug_msg += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+                debug_msg += '\n          Stability unknown:                   %d'%nTotsun
+                debug_msg += '\n          Stable PS point:                     %d'%nTotsps
+                debug_msg += '\n          Unstable PS point (and rescued):     %d'%nTotups
+                debug_msg += '\n          Unstable PS point (and not rescued): %d'%nToteps
+                debug_msg += '\n          Only double precision used:          %d'%nTotddp
+                debug_msg += '\n          Quadruple precision used:            %d'%nTotqdp
+                debug_msg += '\n          Initialization phase-space points:   %d'%nTotini
+                if nTot100 != 0:
+                    debug_msg += '\n          Unknown return code (100):           %d'%nTot100
+                if nTot10 != 0:
+                    debug_msg += '\n          Unknown return code (10):            %d'%nTot10
+                if nTot1 != 0:
+                    debug_msg += '\n          Unknown return code (1):             %d'%nTot1
         logger.info(message+'\n')
                  
         nErrors = sum([err[1] for err in stats['Errors']],0)
@@ -2140,7 +2205,8 @@ Integrated cross-section
         input_files = [pjoin(self.me_dir, 'MGMEVersion.txt'),
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
-                     pjoin(cwd, 'iproc.dat')]
+                     pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'FKS_params.dat')]
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2250,7 +2316,7 @@ Integrated cross-section
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
-0          ! Exact helicity sum (0 yes, n = number/event)?
+1          ! Exact helicity sum (0 yes, n = number/event)?
 1          ! Enter Configuration Number:
 %1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
 1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
@@ -2275,7 +2341,7 @@ Integrated cross-section
 0 ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
-0 ! 0 for exact hel sum
+1 ! 0 for exact hel sum
 1 ! hel configuration numb
 'test'
 1 ! 1 to save grids
