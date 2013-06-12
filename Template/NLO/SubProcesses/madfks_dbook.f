@@ -392,7 +392,6 @@ c the average value of I to K and will put in J the quadratic dispersion.
             IHIS(J,L) = IHIS(J,L) + IHIS(I,L)
             HIST(K,L) = HIST(K,L) + HIST(I,L)**2
             IHIS(K,L) = IHIS(K,L) + 1
-            IENT(K) = IENT(K)+1
             HIST(I,L) = 0
             IHIS(I,L) = 0
          ENDDO
@@ -401,10 +400,21 @@ c the average value of I to K and will put in J the quadratic dispersion.
          USCORE(J) = USCORE(J) + USCORE(I)
          IOSCORE(J) = IOSCORE(J) + IOSCORE(I)
          OSCORE(J) = OSCORE(J) + OSCORE(I)
+         IENT(K) = IENT(K)+1
          IUSCORE(K) = IUSCORE(K) + 1
          USCORE(K) = USCORE(K) + USCORE(I)**2
          IOSCORE(K) = IOSCORE(K) + 1
          OSCORE(K) = OSCORE(K) + OSCORE(I)**2
+         IENT(I) = 0
+         IUSCORE(I) = 0
+         IOSCORE(I) = 0
+         USCORE(I) = 0
+         OSCORE(I) = 0
+      ELSEIF(OPER.EQ.'X') THEN
+         DO L=1,NBIN(I)
+            HIST(I,L) = 0
+            IHIS(I,L) = 0
+         ENDDO
          IENT(I) = 0
          IUSCORE(I) = 0
          IOSCORE(I) = 0
@@ -1005,6 +1015,7 @@ C*******************************************************************
       character*(*) string1,string2,string3
       n_by4=4*(n-1)+1
       m_by4=n_by4+3
+c write the 'n' plots with the 'n+3' error bars
       call mtop4(n_by4,m_by4,string1,string2,string3)
       return
       end
@@ -1015,6 +1026,7 @@ C*******************************************************************
       character*(*) string1,string2,string3
       n_by4=4*(n-1)+1
       m_by4=n_by4+3
+c write the 'n' plots with the 'n+3' error bars
       call multitop4(n_by4,m_by4,lr,lh,string1,string2,string3)
       return
       end
@@ -1048,11 +1060,12 @@ c
       return
       end
 
-      subroutine accum
+      subroutine accum(inclde)
       implicit real * 8 (a-h,o-z)
       include 'dbook.inc'
       PARAMETER (NMB=NPLOTS)
       character * 3 tag
+      logical inclde
 c
 c     Accumula i valori e i valori al quadrato per l'analisi statistica,
 c     e svuota l'istogramma di accumulo.
@@ -1060,7 +1073,14 @@ c
       do j=1,nmb-3
          call gettag(j,tag)
          if(tag.eq.'YST') then
-             call mopera(j,'A',j+1,j+2,dum,dum)
+             if (inclde) then
+c Sum the results in histos 'j' onto 'j+1' and the squares to 'j+2'
+c This also empties histograms 'j'
+                call mopera(j,'A',j+1,j+2,dum,dum)
+             else
+c Only empty the histograms 'j'.
+                call mopera(j,'X',j,j,dum,dum)
+             endif
          endif
       enddo
       return

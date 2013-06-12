@@ -69,7 +69,7 @@ c others: same as 1 (for now)
       real * 8 rand(ndimmax)
       real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
      &     ,etot_sgn,prod,f1,chi2,efrac_abs
-      integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
+      integer kdim,kint,kpoint,nit,ncalls,iret,nintcurr,ifirst
      &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls,nint_used
       real * 8 ran3
       external ran3,fun
@@ -219,11 +219,11 @@ c compute jacobian ('vol') for the PS point
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
             icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
-            ibin=icell(kdim)
             dx(kdim)=xgrid(icell(kdim),kdim)-xgrid(icell(kdim)-1,kdim)
             vol=vol*dx(kdim)*nintcurr
             x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
-            if(imode.eq.0) nhits(ibin,kdim)=nhits(ibin,kdim)+1
+            if(imode.eq.0)
+     &           nhits(icell(kdim),kdim)=nhits(icell(kdim),kdim)+1
          enddo
 c contribution to integral
          if(imode.eq.0) then
@@ -297,25 +297,61 @@ c the abs is to avoid tiny negative values
       write(*,*) '|int|=',vtot_abs,' +/- ',etot_abs,
      &     ' (',efrac_abs*100d0,'%)'
       write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
-      if (double_events .and. efrac_abs.gt.0.3d0 .and. nit.gt.3) then
+
+C If there was a large fluctation in this iteration, be careful with
+C including it in the accumalated results and plots.
+      if (efrac_abs.gt.0.3d0) then
+c Do not include the results in the plots
+         call accum(.false.)
+      endif
+      if (efrac_abs.gt.0.3d0 .and. nit.gt.3) then
+c Do not include the results in the updating of the grids.
          write (*,*) 'Large fluctuation ( >30 % ).'
      &        //'Not including iteration in results.'
+c empty the accumulated results in the MC over integers
+         call empty_MC_integer
+c empty the accumalated results for the MINT grids
+         if (imode.eq.0) then
+            do kdim=1,ndim
+               xacc(icell(kdim),kdim)=0d0
+               nhits(icell(kdim),kdim)=0
+            enddo
+         elseif (imode.eq.1) then
+c Cannot really skip the increase of the upper bounding envelope. So,
+c simply continue here. Note that no matter how large the integrand for
+c the PS point, the upper bounding envelope is only increased by 10%, so
+c this should be fine.
+            continue
+         endif
 c double the number of points for the next iteration
          if (double_events) ncalls0=ncalls0*2
          if (bad_iteration .and. imode.eq.0) then
 c 2nd bad iteration is a row. Reset grids
             write (*,*)'2nd bad iteration in a row. '/
      &           /'Resetting grids and starting from scratch...'
-            nint_used=min_inter ! reset number of intervals
-            ncalls0=ncalls0/8 ! we did at least 5 iterations. Reduce a bit
+            if (double_events) then
+               if (imode.eq.0) nint_used=min_inter ! reset number of intervals
+               ncalls0=ncalls0/8   ! Start with larger number
+            endif
             nit=0
             nit_included=0
-            do kdim=1,ndim
-               do kint=0,nint_used
-                  xgrid(kint,kdim)=dble(kint)/nint_used
+c Reset the MINT grids
+            if (imode.eq.0) then
+               do kdim=1,ndim
+                  do kint=0,nint_used
+                     xgrid(kint,kdim)=dble(kint)/nint_used
+                  enddo
                enddo
-            enddo
-            call reset_MC_grid
+            elseif (imode.eq.1) then
+               do kdim=1,ndim
+                  nintcurr=nint_used/ifold(kdim)
+                  do kint=1,nintcurr
+                     ymax(kint,kdim)=xint**(1d0/ndim)
+                  enddo
+               enddo
+            endif
+            call reset_MC_grid  ! reset the grid for the integers
+            call initplot       ! Also reset all the plots
             ans_abs=0d0
             err_abs=0d0
             ans_sgn=0d0
@@ -460,18 +496,18 @@ c Double the number of intervals in the grids if not yet reach the maximum
 c double the number of points for the next iteration
       if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
-      call accum
+      call accum(.true.)
 c Do next iteration
       goto 10
       end
 
-      subroutine double_grid(xgrid,nint)
+      subroutine double_grid(xgrid,ninter)
       implicit none
       include "mint.inc"
-      integer  nint
+      integer  ninter
       real * 8 xgrid(0:nintervals)
       integer i
-      do i=nint,1,-1
+      do i=ninter,1,-1
          xgrid(i*2)=xgrid(i)
          xgrid(i*2-1)=(xgrid(i)+xgrid(i-1))/2d0
       enddo
@@ -479,12 +515,12 @@ c Do next iteration
       end
 
 
-      subroutine regrid(xacc,xgrid,nhits,nint)
+      subroutine regrid(xacc,xgrid,nhits,ninter)
       implicit none
       include "mint.inc"
-      integer  nint,nhits(nintervals)
+      integer  ninter,nhits(nintervals)
       real * 8 xacc(0:nintervals),xgrid(0:nintervals)
-      real * 8 xn(nintervals),r,tiny,xl,xu
+      real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu
       parameter ( tiny=1d-8 )
       integer kint,jint
       logical plot_grid
@@ -494,16 +530,24 @@ c average of the central and the two neighbouring grid points):
       xl=xacc(1)
       xu=xacc(2)
       xacc(1)=(xl+xu)/2d0
-      do kint=2,nint-1
+      nl=nhits(1)
+      nu=nhits(2)
+      nhits(1)=nint((nl+nu)/2d0)
+      do kint=2,ninter-1
          xacc(kint)=xl+xu
          xl=xu
          xu=xacc(kint+1)
          xacc(kint)=(xacc(kint)+xu)/3d0
+         nhits(kint)=nl+nu
+         nl=nu
+         nu=nhits(kint+1)
+         nhits(kint)=nint((nhits(kint)+nu)/3d0)
       enddo
-      xacc(nint)=(xu+xl)/2d0
+      xacc(ninter)=(xu+xl)/2d0
+      nhits(ninter)=nint((nu+nl)/2d0)
 c
-      do kint=1,nint
-c xacc (xerr) already containe a factor equal to the interval size
+      do kint=1,ninter
+c xacc (xerr) already contains a factor equal to the interval size
 c Thus the integral of rho is performed by summing up
          if(nhits(kint).ne.0) then
             xacc(kint)= xacc(kint-1)
@@ -512,12 +556,12 @@ c Thus the integral of rho is performed by summing up
             xacc(kint)=xacc(kint-1)
          endif
       enddo
-      do kint=1,nint
-         xacc(kint)=xacc(kint)/xacc(nint)
+      do kint=1,ninter
+         xacc(kint)=xacc(kint)/xacc(ninter)
       enddo
 cRF: Check that we have a reasonable result and update the accumulated
 c results if need be
-      do kint=1,nint
+      do kint=1,ninter
          if (xacc(kint).lt.(xacc(kint-1)+tiny)) then
 c            write (*,*) 'Accumulated results need adaptation #1:'
 c            write (*,*) xacc(kint),xacc(kint-1),' become'
@@ -527,13 +571,13 @@ c            write (*,*) xacc(kint),xacc(kint-1)
       enddo
 c it could happen that the change above yielded xacc() values greater
 c than 1; should be fixed once more.
-      xacc(nint)=1d0
-      do kint=1,nint
-         if (xacc(nint-kint).gt.(xacc(nint-kint+1)-tiny)) then
+      xacc(ninter)=1d0
+      do kint=1,ninter
+         if (xacc(ninter-kint).gt.(xacc(ninter-kint+1)-tiny)) then
 c            write (*,*) 'Accumulated results need adaptation #2:'
-c            write (*,*) xacc(nint-kint),xacc(nint-kint+1),' become'
-            xacc(nint-kint)=1d0-dble(kint)*tiny
-c            write (*,*) xacc(nint-kint),xacc(nint-kint+1)
+c            write (*,*) xacc(ninter-kint),xacc(ninter-kint+1),' become'
+            xacc(ninter-kint)=1d0-dble(kint)*tiny
+c            write (*,*) xacc(ninter-kint),xacc(ninter-kint+1)
          else
             exit
          endif
@@ -543,14 +587,14 @@ cend RF
       if (plot_grid) then
          write(11,*) 'set limits x 0 1 y 0 1'
          write(11,*) 0, 0
-         do kint=1,nint
+         do kint=1,ninter
             write(11,*) xgrid(kint),xacc(kint)
          enddo
          write(11,*) 'join 1'
       endif
 
-      do kint=1,nint
-         r=dble(kint)/dble(nint)
+      do kint=1,ninter
+         r=dble(kint)/dble(ninter)
 
          if (plot_grid) then
             write(11,*) 0, r
@@ -558,21 +602,21 @@ cend RF
             write(11,*) ' join'
          endif
 
-         do jint=1,nint
+         do jint=1,ninter
             if(r.lt.xacc(jint)) then
                xn(kint)=xgrid(jint-1)+(r-xacc(jint-1))
      #        /(xacc(jint)-xacc(jint-1))*(xgrid(jint)-xgrid(jint-1))
                goto 11
             endif
          enddo
-         if(jint.ne.nint+1.and.kint.ne.nint) then
-            write(*,*) ' error',jint,nint
+         if(jint.ne.ninter+1.and.kint.ne.ninter) then
+            write(*,*) ' error',jint,ninter
             stop
          endif
-         xn(nint)=1
+         xn(ninter)=1
  11      continue
       enddo
-      do kint=1,nint
+      do kint=1,ninter
          xgrid(kint)=xn(kint)
          if (plot_grid) then
             write(11,*) xgrid(kint), 0
