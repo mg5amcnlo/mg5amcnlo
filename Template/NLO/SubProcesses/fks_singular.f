@@ -2085,7 +2085,7 @@ c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
      $                 +unwgt_table(nFKSprocess,1,j)/vegaswgt
                enddo
             enddo
-            xsec = enhance*unwgtfun
+            xsec = enhanceS*unwgtfun
             do i=1,4
                if (.not.nbody) then
                   wgtwreal_all(i,nFKSprocess*2-1)=wgtwreal_all(i
@@ -2185,7 +2185,7 @@ c$$$               wgtref_all(nFKSprocess*2) = dsigH
                   wgtref_all(nFKSprocess*2,j)=unwgt_table(nFKSprocess,2
      $                 ,j)/vegaswgt
                enddo
-               xsec = enhance*unwgtfun*fkssymmetryfactor
+               xsec = enhanceH*unwgtfun*fkssymmetryfactor
                do i=1,4
                   wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
      &                 ,nFKSprocess*2) * xsec
