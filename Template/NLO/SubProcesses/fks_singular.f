@@ -408,7 +408,6 @@ c FxFx merging
       vegas_weight=vegaswgt
 
 c FxFx merging
-      ickkw=3
       ktscheme=1
       rewgt_mohdr_calculated=.false.
       rewgt_izero_calculated=.false.
@@ -1214,7 +1213,6 @@ c
       MCcntcalled=.false.
 c
 c FxFx merging
-      ickkw=3
       ktscheme=1
       rewgt_mohdr_calculated=.false.
       rewgt_izero_calculated=.false.
