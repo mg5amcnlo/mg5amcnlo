@@ -254,7 +254,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         # To store the result
         res_list = [[] for i in range(n_amps)]
-        
         for i, coeff_list in enumerate(color_amplitudes):
                 for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
@@ -324,6 +323,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 progress_bar.update(i+1)
             line_num=[]
             line_denom=[]
+
+            # Treat the special case where this specific amplitude contributes to no
+            # color flow at all. So it is zero because of color but not even due to
+            # an accidental cancellation among color flows, but simply because of its
+            # projection to each individual color flow is zero. In such case, the 
+            # corresponding jampl_list is empty and all color coefficients must then
+            # be zero. This happens for example in the Higgs Effective Theory model
+            # for the bubble made of a 4-gluon vertex and the effective ggH vertex.
+            if len(jampl_list)==0:
+                line_num=[0]*len(ampb_to_jampb)
+                line_denom=[1]*len(ampb_to_jampb)
+                ColorMatrixNumOutput.append(line_num)
+                ColorMatrixDenomOutput.append(line_denom)
+                continue
+
             for jampb_list in ampb_to_jampb:
                 real_num=0
                 imag_num=0
@@ -372,7 +386,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                               "%d-%m-%Y %H:%M"))            
         if progress_bar!=None:
             progress_bar.finish()
-
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 

@@ -1149,8 +1149,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
-                                              self.options['cluster_temp_path'])
+            self.cluster = cluster.from_name[cluster_name](**self.options)
         if self.cluster_mode == 2:
             try:
                 import multiprocessing
@@ -1166,8 +1165,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         'Use set nb_core X in order to set this number and be able to'+
                         'run in multicore.')
 
-            self.cluster = cluster.MultiCore(self.nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
+            self.cluster = cluster.MultiCore(**self.options)
         self.update_random_seed()
         #find and keep track of all the jobs
         folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
