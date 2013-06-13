@@ -300,7 +300,6 @@ class MultiCore(Cluster):
                         (' '.join([exe]+argument), proc.returncode)
                 #self.fail_msg = fail_msg
                 logger.warning(fail_msg)
-                print glob.glob(pjoin(cwd,'*','log.txt'))
                 try:
                     log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
                     logger.warning('Last 15 lines of lofgile %s:\n%s\n' % \
