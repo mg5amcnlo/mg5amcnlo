@@ -325,7 +325,7 @@ c this should be fine.
          endif
 c double the number of points for the next iteration
          if (double_events) ncalls0=ncalls0*2
-         if (bad_iteration .and. imode.eq.0) then
+         if (bad_iteration .and. imode.eq.0 .and. double_events) then
 c 2nd bad iteration is a row. Reset grids
             write (*,*)'2nd bad iteration in a row. '/
      &           /'Resetting grids and starting from scratch...'
