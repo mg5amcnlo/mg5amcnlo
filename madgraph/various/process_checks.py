@@ -740,11 +740,11 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                                       else '.FALSE.'), check_sa)
         check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
         if hel_config != -1:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIXHEL(P,%d,MATELEM)"\
-                                                          %hel_config, check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
         else:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
-                                                                       check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
         if mu_r > 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
                                         (("%.17e"%mu_r).replace('e','d')),check_sa)
@@ -835,7 +835,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     '1eps':0.0,
                     '2eps':0.0,
                     'gev_pow':0,
-                    'export_format':'Default'}
+                    'export_format':'Default',
+                    'accuracy':0.0,
+                    'return_code':0}
         res_p = []
         
         # output is supposed to be a file, if it is its content directly then
@@ -865,6 +867,10 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['gev_pow']=int(splitline[1])
             elif splitline[0]=='Export_Format':
                 res_dict['export_format']=splitline[1]
+            elif splitline[0]=='RETCODE':
+                res_dict['return_code']=int(splitline[1])
+            elif splitline[0]=='ACC':
+                res_dict['accuracy']=float(splitline[1])                
 
         res_dict['res_p'] = res_p
 
@@ -1011,7 +1017,42 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         except IndexError:
             raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
                                                            'not well formatted.'
+
+    @classmethod
+    def set_MadLoop_Params(cls,MLCardPath,params):
+        """ Set the parameters in MadLoopParamCard to the values specified in
+        the dictionary params.
+        The key is the name of the parameter and the value is the corresponding
+        string to write in the card."""
         
+        # Not elegant, but the file is small anyway, so no big deal.
+        MLCard_lines = open(MLCardPath).readlines()
+        newCard_lines = []
+        modified_Params = []
+        param_to_modify=None
+        for i, line in enumerate(MLCard_lines):
+            if not param_to_modify is None:
+                modified_Params.append(param_to_modify)
+                newCard_lines.append(params[param_to_modify]+'\n')
+                param_to_modify = None
+            else:
+                if line.startswith('#') and \
+                   line.split()[0][1:] in params.keys():
+                    param_to_modify = line.split()[0][1:]
+                newCard_lines.append(line)
+        if not param_to_modify is None:
+            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
+                                                           'not well formatted.'
+        
+        left_over = set(params.keys())-set(modified_Params)
+        if left_over != set([]):
+            raise MadGraph5Error, 'The following parameters could not be '+\
+                             'accessed in MadLoopParams.dat : %s'%str(left_over)
+
+        newCard=open(MLCardPath,'w')
+        newCard.writelines(newCard_lines)
+        newCard.close()
+
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
