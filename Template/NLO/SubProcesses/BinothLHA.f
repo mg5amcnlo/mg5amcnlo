@@ -29,6 +29,7 @@ c general MadFKS parameters
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
+     $     ,virt_wgts_hel(3)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -104,16 +105,26 @@ c Get random integer from importance sampling (the return value is
 c filled in driver_mintMC.f; we cannot do it here, because we need to
 c include the phase-space jacobians and all that)
             call get_MC_integer(2,hel(0),ihel,volh)
-            fillh=.true.
+c$$$            fillh=.true.
+            fillh=.false.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
-               call sloopmatrixhel_thres(p,hel(i),virt_wgts,tolerance
-     $              ,prec_found,ret_code)
-               virt_wgt= virt_wgt +
-     &              virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
+               call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
+     $              ,tolerance,prec_found,ret_code)
+
+               virt_wgt=virt_wgt+virt_wgts_hel(1)/(-virt_wgts_hel(3)
+     $              /(ao2pi*2d0*4d0/3d0))*born_wgt/volh/dble(hel(0))
+     &              *4d0
+
+c$$$               write (*,*) virt_wgts(1),virt_wgts_hel(1)/(virt_wgts(3)
+c$$$     $              /ao2pi)*born_wgt,virt_wgts_hel(1)/volh*dble(mc_hel),i
+
+
+c$$$               virt_wgt= virt_wgt +
+c$$$     &              virt_wgts_hel(1)*dble(goodhel(i))/(volh*dble(mc_hel))
                single  = single   +
-     &              virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
+     &              virt_wgts_hel(2)*dble(goodhel(i))/(volh*dble(mc_hel))
                double  = double   +
-     &              virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+     &              virt_wgts_hel(3)*dble(goodhel(i))/(volh*dble(mc_hel))
             enddo
 c Average over initial state helicities (and take the ngluon factor into
 c account)

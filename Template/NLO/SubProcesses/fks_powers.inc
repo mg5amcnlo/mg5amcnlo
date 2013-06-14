@@ -35,7 +35,7 @@ c Should be kept to .true. for FKS from Born
 c Fraction of events for which to include the finite part of
 c the virtual correction
       double precision virt_fraction
-      parameter (virt_fraction = 1d0)
+      parameter (virt_fraction = 0.1d0)
 
       double precision deltaminY,skewY,alphaY
       parameter (alphaY=2.0d0)

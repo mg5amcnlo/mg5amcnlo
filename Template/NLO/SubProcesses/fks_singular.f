@@ -3991,6 +3991,9 @@ c      include "fks.inc"
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
+      double precision virt_fraction_inc
+      data virt_fraction_inc /1d0/
+
 c For tests of virtuals
       double precision vobmax,vobmin
       common/cvirt0test/vobmax,vobmin
@@ -4172,17 +4175,15 @@ c
  548     continue
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
-         if (ran2().le.1d0/virt_fraction .and. abrv(1:3).ne.'nov') then
-            if (fold.eq.0) then
+         if (ran2().le.virt_fraction_inc .and. abrv(1:3).ne.'nov' .and.
+     $        fold.eq.0) then
                Call BinothLHA(p_born,born_wgt,virt_wgt)
 c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               virt_wgt_save = virt_wgt
-            elseif (fold.eq.1) then
-               virt_wgt=virt_wgt_save
-            else
-               write (*,*) 'Error with fold (bornsoftvirtual)',fold
-            endif
-            bsv_wgt=bsv_wgt+virt_wgt*virt_fraction
+               virt_wgt_save = virt_wgt/born_wgt
+               bsv_wgt=bsv_wgt+virt_wgt
+               virt_fraction_inc=virt_fraction
+         else
+            bsv_wgt=bsv_wgt+virt_wgt_save*born_wgt
          endif
 
 c eq.(MadFKS.C.13)
