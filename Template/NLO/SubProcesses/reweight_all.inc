@@ -9,11 +9,18 @@ c Second argument specifies the nFKSprocess:
 c 2 ... nFKSprocess*2 (in steps of 2) for the H-events,
 c 1 ... nFKSprocess*2-1 (in steps of 2) for the S-events
 
+c Maximum of flavor structures combined in the parton_lum_*.f files for the array sizes
+      integer mproc
+      parameter (mproc=100)
+c The actual maximum used in the code
+      integer maxproc_save
+      common/cwgtmaxproc_save/maxproc_save
 
 c Reference weight and Ellis-Sexton scales
-      double precision wgtref_all(2*maxFKSconfigs),
+      double precision wgtref_all(2*maxFKSconfigs,mproc),
+     &	               wgtref_nbody_all(mproc),
      &                 wgtqes2_all(4,0:2*maxFKSconfigs)
-      common/cwgt0_all/wgtref_all,wgtqes2_all
+      common/cwgt0_all/wgtref_all,wgtref_nbody_all,wgtqes2_all
 
 c Bjorken x's
       double precision wgtxbj_all(2,4,0:2*maxFKSconfigs)
