@@ -17,6 +17,7 @@
 """
 
 import atexit
+import collections
 import logging
 import optparse
 import os
@@ -433,12 +434,12 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition",'$MG:color:BLUE')
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]",'$MG:color:BLUE')
         logger.info("-- check a process or set of processes.",'$MG:color:BLACK')
         logger.info("General options:",'$MG:color:BLACK')
         logger.info("o full:",'$MG:color:GREEN')
         logger.info("   Perform all four checks described below:")
-        logger.info("   permutation, gauge and lorentz_invariance.")
+        logger.info("   permutation, brs, gauge and lorentz_invariance.")
         logger.info("o permutation:",'$MG:color:GREEN')
         logger.info("   Check that the model and MG5 are working properly")
         logger.info("   by generating permutations of the process and checking")
@@ -448,7 +449,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   gauge invariant (comparing Feynman and unitary gauges)")
         logger.info("   This check if for now not available for loop processes.")
         logger.info("o brs:",'$MG:color:GREEN')
-        logger.info("   Check that the ward identities are satisfied if the ")
+        logger.info("   Check that the Ward identities are satisfied if the ")
         logger.info("   process has at least one massless gauge boson as an")
         logger.info("   external particle.")
         logger.info("o lorentz_invariance:",'$MG:color:GREEN')
@@ -457,6 +458,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("Comments",'$MG:color:GREEN')         
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
+        logger.info("   If that file is an (LHE) event file. The param_card of the banner")
+        logger.info("   is used and the first event compatible with the requested process")
+        logger.info("   is used for the computation of the square matrix elements")
+        logger.info(" > \"--energy=\" allows to change the default value of sqrt(S).")
         logger.info(" > Except for the 'gauge' test, all checks above are also")
         logger.info("   available for loop processes with ML5 ('virt=' mode)")
         logger.info("Example: check full p p > j j",'$MG:color:GREEN')
@@ -627,7 +632,7 @@ class CheckValidForCmd(cmd.CheckCmd):
         if not self._curr_model:
             logger.info("No model currently active, so we import the Standard Model")
             self.do_import('model sm')
-    
+        
         self.check_process_format(' '.join(args[1:]))
 
     def check_define(self, args):
@@ -722,10 +727,10 @@ class CheckValidForCmd(cmd.CheckCmd):
                 args.insert(1, '-no_reuse')
         else:
             args.append('-no_reuse')
-
+            
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
-
+            misc.sprint(param_card)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -741,7 +746,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -1202,6 +1210,8 @@ This will take effect only in a NEW terminal
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
+                if '-noclean' not in args and os.path.exists(self._export_dir):
+                    args.append('-noclean')
             elif path != 'auto':
                 self._export_dir = path
             elif path == 'auto':
@@ -1213,12 +1223,14 @@ This will take effect only in a NEW terminal
             if self._export_format != 'pythia8':
                 # No valid path
                 self.get_default_path()
+                if '-noclean' not in args and os.path.exists(self._export_dir):
+                    args.append('-noclean')
             else:
                 if self.options['pythia8_path']:
                     self._export_dir = self.options['pythia8_path']
                 else:
                     self._export_dir = '.'
-                    
+
         self._export_dir = os.path.realpath(self._export_dir)
 
     def get_default_path(self):
@@ -1584,6 +1596,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1601,7 +1614,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp_and_path = self.deal_multiple_categories(\
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']), 
-          'Param_card.dat path completion:':self.path_completion(text)})
+          'Param_card.dat path completion:':self.path_completion(text),
+          'options': self.list_completion(text, ['--energy='])})
 
         if len(args) == 2:
             return model_comp_and_path
@@ -2089,7 +2103,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation', 
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 'MCatNLO-utilities','update']
+    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
+                     'MCatNLO-utilities','update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -2119,6 +2134,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None
@@ -2133,7 +2149,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'nb_core': None,
+                         'nb_core': None
                          }
 
 
@@ -2200,7 +2216,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.history.clean(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',keep_switch=True)
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -2230,6 +2246,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """
 
         args = self.split_arg(line)
+        
+        warning_duplicate = True
+        if '--no_warning=duplicate' in args:
+            warning_duplicate = False
+            args.remove('--no_warning=duplicate')
         
         # Check the validity of the arguments
         self.check_add(args)
@@ -2290,7 +2311,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             for amp in myproc.get('amplitudes'):
                 if amp not in self._curr_amps:
                     self._curr_amps.append(amp)
-                else:
+                elif warning_duplicate:
                     raise self.InvalidCmd, "Duplicate process %s found. Please check your processes." % \
                                                 amp.nice_string_processes()
 
@@ -2308,7 +2329,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))                
+                  (len(self._curr_amps), ndiags))        
+                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -2723,21 +2745,32 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-        args = self.split_arg(line)
+        
+        args = self.split_arg(line)        
         # Check args validity
         param_card = self.check_check(args)
-        
+        options= {'events':None} # If the momentum needs to be picked from a event file
+        if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
+            logger.info("Will use the param_card contained in the banner and  the events associated")
+            import madgraph.various.banner as banner
+            options['events'] = param_card
+            mybanner = banner.Banner(param_card)
+            param_card = mybanner.charge_card('param_card')
+ 
+
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        reuse = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"       
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
         if args[0] in ['stability', 'profile']:
-            stab_statistics = int(args[1])
+            options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-        
+
+        options['energy'] = float(args[-1].split('=')[1])
+        args = args[:-1]        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
@@ -2771,9 +2804,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    logging.getLogger('cmdprint'),
                    logging.getLogger('madgraph.model'),
                    logging.getLogger('madgraph.base_objects')]
-        old_levels = [logger.level for logger in loggers]
-        for logger in loggers:
-            logger.setLevel(logging.WARNING)
+        old_levels = [log.level for log in loggers]
+        for log in loggers:
+            log.setLevel(logging.WARNING)
         
         # run the check
         cpu_time1 = time.time()
@@ -2806,15 +2839,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  reuse = reuse,
-                                                  cmd = self)        
+                                                  options = options,
+                                                  cmd = self,
+                                                  )        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -2823,13 +2856,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
-                                                  nPoints=stab_statistics,
-                                                  reuse = reuse,
+                                                  options = options,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
           len(self._curr_model.get('gauge')) == 2 and\
                         myprocdef.get('perturbation_couplings') in [[],['QCD']]:
+
             line = " ".join(args[1:])
             myprocdef = self.extract_process(line)
             if gauge == 'unitary':
@@ -2848,10 +2881,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
+                                                options=options,
                                                 cuttools=CT_dir,
-                                                reuse = reuse,
+                                                reuse = options['reuse'],
                                                 cmd = self)
-            
             
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
@@ -2863,8 +2896,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
-                                            reuse = reuse,
-                                            cmd = self)
+                                            reuse = options['reuse'],
+                                            cmd = self,
+                                            options=options)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz', 'full']:
@@ -2872,16 +2906,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
-                                          cmd = self)
+                                          reuse = options['reuse'],
+                                          cmd = self,
+                                          options=options)
             nb_processes += len(lorentz_result)
         
         if args[0] in  ['brs', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
-                                          reuse = reuse,
-                                          cmd = self)
+                                          reuse = options['reuse'],
+                                          cmd = self,
+                                          options=options)
             nb_processes += len(gauge_result)     
             
         cpu_time2 = time.time()
@@ -2916,7 +2952,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,reuse) + '\n'
+                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
@@ -2933,16 +2969,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._comparisons = comparisons
 
         # We use the reuse tag for an alternative way of skipping the pager.
-        if len(text.split('\n'))>20 and not reuse and text!='':
-            pydoc.pager(text)
+        if len(text.split('\n'))>20 and not '-reuse' in line and text!='':
+            if 'test_manager' not in sys.argv[0]:
+                pydoc.pager(text)
             
         # Restore diagram logger
-        for i, logger in enumerate(loggers):
-            logger.setLevel(old_levels[i])
+        for i, log in enumerate(loggers):
+            log.setLevel(old_levels[i])
             
         # Output the result to the interface directly if short enough or if it
         # was anyway not output to the pager
-        if len(text.split('\n'))<=20 or reuse:
+        if len(text.split('\n'))<=20 or options['reuse']:
             # Useful to really specify what logger is used for ML acceptance tests
             logging.getLogger('madgraph.check_cmd').info(text)
         else:
@@ -2950,7 +2987,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # clean the globals created.
         process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
-        if not reuse:
+        if not options['reuse']:
             process_checks.clean_up(self._mgme_dir)
     
     # Generate a new amplitude
@@ -3247,7 +3284,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Takes a valid process and return
            a set of id of final states particles. [Used by MadSpin]
         """
-                
+
         if not self._curr_model['case_sensitive']:
             procline = procline.lower()
         pids = self._curr_model.get('name2pdg')
@@ -3303,7 +3340,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
         # NO DECAY CHAIN
         final = set()
-        final_states = re.search(r'> ([^\/\$\=\@>]*)(\s\S+\=|\$|\/|\@|$)', procline)
+        final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
             if particle in pids:
@@ -3507,7 +3544,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                          self._curr_model.get('perturbation_couplings') not in \
                                                                    [[],['QCD']]:
                         if 1 not in self._curr_model.get('gauge') :
-                            logger.warning('This model does not allow Feynman '+\
+                            logger_stderr.warning('This model does not allow Feynman '+\
                               'gauge. You will only be able to do tree level '+\
                                                 'QCD loop cmputations with it.')
                         else:
@@ -3517,13 +3554,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             self.do_set('gauge Feynman', log=False)
                             return
                     if 0 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to Feynman since '+\
+                        logger_stderr.warning('Change the gauge to Feynman since '+\
                                        'the model does not allow unitary gauge') 
                         self.do_set('gauge Feynman', log=False)
                         return                        
                 else:
                     if 1 not in self._curr_model.get('gauge') :
-                        logger.warning('Change the gauge to unitary since the'+\
+                        logger_stderr.warning('Change the gauge to unitary since the'+\
                           ' model does not allow Feynman gauge.'+\
                                                   ' Please re-import the model')
                         self._curr_model = None
@@ -3596,6 +3633,45 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
  
             #convert and excecute the card
             self.import_mg4_proc_card(proc_card)
+
+    def remove_pointless_decay(self, param_card):
+        """ For simple decay chain: remove diagram that are not in the BR.
+            param_card should be a ParamCard instance."""
+            
+        assert isinstance(param_card, check_param_card.ParamCard)
+        
+        # Collect amplitudes
+        amplitudes = diagram_generation.AmplitudeList()
+        for amp in self._curr_amps:
+            amplitudes.extend(amp.get_amplitudes())
+
+        to_remove = []        
+        for amp in amplitudes:
+            mother = [l.get('id') for l in amp['process'].get('legs') \
+                                                        if not l.get('state')]
+            if 1 == len(mother):
+                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                # create the tuple associate to the decay mode
+                child = [l.get('id') for l in amp['process'].get('legs') \
+                                                              if l.get('state')]
+                if not mother[0] > 0:
+                    child = [-id for id in child]
+                child.sort()
+                child.insert(0, len(child))
+
+                #check if the decay is present or not:
+                if tuple(child) not in decay_table.keys():
+                    to_remove.append(amp)
+                    
+        def remove_amp(amps):
+            for amp in amps[:]:
+                if amp in to_remove:
+                    amps.remove(amp)
+                if isinstance(amp, diagram_generation.DecayChainAmplitude):
+                    remove_amp(amp.get('decay_chains'))
+                    for decay in amp.get('decay_chains'):
+                        remove_amp(decay.get('amplitudes'))
+        remove_amp(self._curr_amps) 
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -3646,7 +3722,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Now that we have the model we can split the information
         lines = reader.extract_command_lines(self._curr_model)
-
         for line in lines:
             self.exec_cmd(line, precmd=True)
     
@@ -3726,11 +3801,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        
 
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
-                'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis', 'MCatNLO-utilities':'MCatNLO-utilities'}
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+        
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes', 
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis', 
+                'MCatNLO-utilities':'MCatNLO-utilities'}
         name = name[args[0]]
 
         try:
@@ -3755,11 +3833,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
 
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
 
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -3785,6 +3864,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+            to_copy = [os.path.join('SubProcesses', 'reweight0.inc')]
+            for f in to_copy:
+                files.cp(os.path.join(MG5DIR, 'Template', 'NLO', f), \
+                        os.path.join(MG5DIR, 'MCatNLO-utilities', 'MCatNLO', 'srcCommon'))
             
         # Compile the file
         # Check for F77 compiler
@@ -3867,7 +3950,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     
             if args[0] == 'MCatNLO-utilities':
                 self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
-
+            
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template','Common', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))  
+        
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
@@ -4292,21 +4384,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         args = self.split_arg(line)
         self.check_customize_model(args)
 
-        try:
-            model_path = import_ufo.find_ufo_path(self._curr_model.get('name'))
-        except import_ufo.UFOImportError:
-            name = self._curr_model.get('name').rsplit('-',1)[0]
-            try:
-                model_path = import_ufo.find_ufo_path(name)
-            except import_ufo.UFOImportError:
-                print name
-                raise self.InvalidCmd('''Invalid model.''')
-                
+        model_path = self._curr_model.get('modelpath')  
         if not os.path.exists(pjoin(model_path,'build_restrict.py')):
             raise self.InvalidCmd('''Model not compatible with this option.''')
         
         # (re)import the full model (get rid of the default restriction)
-        self._curr_model = import_ufo.import_full_model(model_path)
+        self._curr_model = import_ufo.import_model(model_path, restrict=False)
         
         #1) create the full param_card
         out_path = StringIO.StringIO()
@@ -4314,39 +4397,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # and load it to a python object
         param_card = check_param_card.ParamCard(out_path.getvalue().split('\n'))
         
-        #2) Import the option available in the model
-        ufo_model = ufomodels.load_model(model_path)
-        all_categories = ufo_model.build_restrict.all_categories
-        
-        #3) making the options
-        def change_options(name, all_categories):
-            for category in all_categories:
-                for options in category:            
-                    if options.name == name:
-                        options.status = not options.status
 
-        # asking the question to the user                        
-        while 1:
-            question = ''
-            answers = ['0']
-            cat = {} 
-            for category in all_categories:
-                question += category.name + ':\n'
-                for options in category:
-                    if not options.first:
-                        continue
-                    question += '    %s: %s [%s]\n' % (len(answers), options.name, 
-                                options.display(options.status))
-                    cat[str(len(answers))] = options.name
-                    answers.append(len(answers))
-            question += 'Enter a number to change it\'s status or press enter to validate'
-            answers.append('done')
-            value = self.ask(question,'0',answers)
-            if value not in ['0','done']:
-                change_options(cat[value], all_categories)
-            else:
-                break
-
+        all_categories = self.ask('','0',[], ask_class=AskforCustomize)
+        misc.sprint(all_categories)
         ## Make a Temaplate for  the restriction card. (card with no restrict)
         for block in param_card:
             value_dict = {}
@@ -4364,6 +4417,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         for category in all_categories:
             for options in category:
+                print options
                 if not options.status:
                     continue
                 param = param_card[options.lhablock].get(options.lhaid)
@@ -4372,7 +4426,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]
@@ -4574,7 +4633,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             elif log:
                 logger.info('Note that you have to reload the model') 
 
-		
         elif args[0] == 'fortran_compiler':
             if args[1] != 'None':
                 if log:
@@ -4604,8 +4662,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
             elif int(output.split('.')[0]) < 3:
-                logger.warning('%s is not ' + \
-                        'v3 or greater. Please install FastJet v3+.' % args[1] + \
+                logger.warning('%s is not ' % args[1] + \
+                        'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
 
         elif args[0] == 'lhapdf':
@@ -4624,6 +4682,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif args[0] in ['timeout', 'auto_update']:
                 self.options[args[0]] = int(args[1]) 
         
+        elif args[0] == 'cluster_status_update':
+            if '(' in args[1]:
+                data = ' '.join([a for a in args[1:] if not a.startswith('-')])
+                data = data.replace('(','').replace(')','').replace(',',' ').split()
+                first, second = data[:2]
+            else: 
+                first, second = args[1:3]            
+            
+            self.options[args[0]] = (int(first), int(second))
+             
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -4718,12 +4786,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #################
         ## Other Output #
         #################
-        if not force and not noclean and os.path.isdir(self._export_dir)\
+        if not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['madevent', 'standalone']:
-            # Don't ask if user already specified force or noclean
-            logger.info('INFO: directory %s already exists.' % self._export_dir)
-            logger.info('If you continue this directory will be deleted and replaced.')
-            answer = self.ask('Do you want to continue?', 'y', ['y','n'])
+            if not force:
+                # Don't ask if user already specified force or noclean
+                logger.info('INFO: directory %s already exists.' % self._export_dir)
+                logger.info('If you continue this directory will be deleted and replaced.')
+                answer = self.ask('Do you want to continue?', 'y', ['y','n'])
+            else:
+                answer = 'y'
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
             else:
@@ -4734,7 +4805,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp', 'standalone_ms'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
@@ -4744,7 +4817,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name)
+        self.export(nojpeg, main_file_name, args)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -4756,13 +4829,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_dir = None
 
     # Export a matrix element
-    def export(self, nojpeg = False, main_file_name = ""):
+    def export(self, nojpeg = False, main_file_name = "", args=[]):
         """Export a generated amplitude to file"""
 
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before
             exporting"""
 
+            if self._export_format == 'standalone_ms':
+                to_distinguish = []
+                for part in self._curr_model.get('particles'):
+                    if part.get('name') in args and part.get('antiname') in args and\
+                       part.get('name') != part.get('antiname'):
+                        to_distinguish.append(abs(part.get('pdg_code'))) 
             # Sort amplitudes according to number of diagrams,
             # to get most efficient multichannel output
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
@@ -4774,7 +4853,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
+                group = False 
 
 
 
@@ -4813,14 +4892,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         for me in group.get('matrix_elements'):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
+                    mode = {}
+                    if self._export_format == 'standalone_ms':
+                        mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
-                        helas_objects.HelasMultiProcess(self._curr_amps)
+                       helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
                     ndiags = sum([len(me.get('diagrams')) for \
                                   me in self._curr_matrix_elements.\
-                                  get_matrix_elements()])
+                                  get_matrix_elements()])                    
                     # assign a unique id number to all process
                     uid = 0 
-                    for me in self._curr_matrix_elements.get_matrix_elements():
+                    for me in self._curr_matrix_elements.get_matrix_elements()[:]:
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
 
@@ -4906,10 +4988,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Fortran MadGraph Standalone
         if self._export_format in ['standalone', 'standalone_ms']:
-            for me in matrix_elements:
-                calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
+            for me in matrix_elements[:]:
+                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
+                if not new_calls:
+                    matrix_elements.remove(me)
+                calls = calls + new_calls
 
         # Just the matrix.f files
         if self._export_format == 'matrix':
@@ -5160,7 +5244,141 @@ _launch_parser.add_option("-i", "--interactive", default=False, action='store_tr
 _launch_parser.add_option("-s", "--laststep", default='', 
                                 help="last program run in MadEvent run. [auto|parton|pythia|pgs|delphes]")
     
+#===============================================================================
+# Interface for customize question.
+#===============================================================================    
+class AskforCustomize(cmd.SmartQuestion):
+    """A class for asking a question where in addition you can have the 
+    set command define and modifying the param_card/run_card correctly"""
     
+    def __init__(self, question, allow_arg=[], default=None, 
+                                            mother_interface=None, *arg, **opt):
+        
+        model_path = mother_interface._curr_model.get('modelpath')
+        #2) Import the option available in the model
+        ufo_model = ufomodels.load_model(model_path)
+        self.all_categories = ufo_model.build_restrict.all_categories
+        
+        question = self.get_question()
+        # determine the possible value and how they are linked to the restriction
+        #options.
+        allow_arg = ['0']
+        self.name2options = {} 
+        for category in self.all_categories:
+            for options in category:
+                if not options.first:
+                    continue
+                self.name2options[str(len(allow_arg))] = options
+                self.name2options[options.name.replace(' ','')] = options
+                allow_arg.append(len(allow_arg))
+        allow_arg.append('done')
+        
+        cmd.SmartQuestion.__init__(self, question, allow_arg, default, mother_interface)
+
+
+
+    def default(self, line):
+        """Default action if line is not recognized"""
+
+        line = line.strip()
+        args = line.split()
+        if line == '' and self.default_value is not None:
+            self.value = self.default_value        
+        # check if input is a file
+        elif hasattr(self, 'do_%s' % args[0]):
+            self.do_set(' '.join(args[1:]))
+        elif line.strip() != '0' and line.strip() != 'done' and \
+            str(line) != 'EOF' and line.strip() in self.allow_arg:
+            option = self.name2options[line.strip()]
+            option.status = not option.status
+            self.value = 'repeat'
+        else:
+            self.value = line
+        
+        return self.all_categories
+    
+    def reask(self, reprint_opt=True):
+        """ """
+        reprint_opt = True
+        self.question = self.get_question()
+        cmd.SmartQuestion.reask(self, reprint_opt)
+           
+    def do_set(self, line):
+        """ """
+        
+        args = line.split()
+        if len(args) != 2 or args[0] not in self.name2options:
+            logger.warning('Invalid set command. (type \'help set\' for more information')
+        
+        if args[1] in ['True','1','.true.','T',1,True,'true','TRUE']:
+            self.name2options[args[0]].status = True
+        elif args[1] in ['False','0','.false.','F',0,False,'false','FALSE']:
+            self.name2options[args[0]].status = False
+        else:
+            logger.warning('%s is not True/False. Didn\'t do anything.' % args[1])
+        
+        self.value = 'repeat'
+        
+    def get_question(self):
+        """define the current question."""
+        question = ''
+        i=0
+        for category in self.all_categories:
+            question += category.name + ':\n'
+            for options in category:
+                if not options.first:
+                    continue
+                i+=1
+                question += '    %s: %s [%s]\n' % (i, options.name, 
+                                options.display(options.status))
+            question += 'Enter a number to change it\'s status or press enter to validate.\n'
+            question += 'For scripting this function, please type: \'help\''
+        return question
+
+    
+    def complete_set(self, text, line, begidx, endidx):
+        """ Complete the set command"""
+        signal.alarm(0) # avoid timer if any
+        args = self.split_arg(line[0:begidx])
+
+        if len(args) == 1:
+            possibilities = [x for x in self.name2options if not x.isdigit()]
+            return self.list_completion(text, possibilities, line)
+        else:
+            return self.list_completion(text,['True', 'False'], line)
+        
+
+    def do_help(self, line):
+        '''help message'''
+        
+        print 'This allows you to optimize your model to your needs.'
+        print 'Enter the number associate to the possible restriction/add-on'
+        print ' to change the status of this restriction/add-on.'
+        print ''
+        print 'In order to allow scripting of this function you can use the '
+        print 'function \'set\'. This function takes two argument:'
+        print 'set NAME VALUE'
+        print '   NAME is the description of the option where you remove all spaces'
+        print '   VALUE is either True or False'
+        print ' Example: For the question'
+        print '''     sm customization:
+        1: diagonal ckm [True]
+        2: c mass = 0 [True]
+        3: b mass = 0 [False]
+        4: tau mass = 0 [False]
+        5: muon mass = 0 [True]
+        6: electron mass = 0 [True]
+    Enter a number to change it's status or press enter to validate.'''
+        print ''' you can answer by'''
+        print '   set diagonalckm False'
+        print '   set taumass=0 True'  
+        
+    def cmdloop(self, intro=None):
+        cmd.SmartQuestion.cmdloop(self, intro)
+        return self.all_categories
+
+
+
 #===============================================================================
 # __main__
 #===============================================================================

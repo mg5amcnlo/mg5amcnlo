@@ -3253,7 +3253,7 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
 
       subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
      #                        p_i_fks_ev,p_i_fks_cnt,
-     #                        xi_i_fks_ev,y_ij_fks_ev)
+     #                        xi_i_fks_ev,y_ij_fks_ev,pass)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -3264,17 +3264,21 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       double precision xi_i_fks_ev,y_ij_fks_ev
       integer izero,ione,itwo,iunit,isum
-      logical verbose
+      logical verbose,pass,pass0
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
       parameter (iunit=6)
       parameter (verbose=.false.)
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
 c
       isum=0
       if(jac_cnt(0).gt.0.d0)isum=isum+1
       if(jac_cnt(1).gt.0.d0)isum=isum+2
       if(jac_cnt(2).gt.0.d0)isum=isum+4
+      pass=.true.
 c
       if(isum.eq.0.or.isum.eq.1.or.isum.eq.2.or.isum.eq.4)then
 c Nothing to be done: 0 or 1 configurations computed
@@ -3287,26 +3291,30 @@ c Soft is taken as reference
             write(iunit,*)'    '
             write(iunit,*)'C/S'
           endif
-          call xmcompare(verbose,ione,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,ione,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
           if(verbose)then
             write(iunit,*)'    '
             write(iunit,*)'SC/S'
           endif
-          call xmcompare(verbose,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         elseif(isum.eq.3)then
           if(verbose)then
             write(iunit,*)'C+S'
             write(iunit,*)'    '
             write(iunit,*)'C/S'
           endif
-          call xmcompare(verbose,ione,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,ione,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         elseif(isum.eq.5)then
           if(verbose)then
             write(iunit,*)'SC+S'
             write(iunit,*)'    '
             write(iunit,*)'SC/S'
           endif
-          call xmcompare(verbose,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         endif
       elseif(isum.eq.6)then
 c Collinear is taken as reference
@@ -3315,11 +3323,13 @@ c Collinear is taken as reference
           write(iunit,*)'    '
           write(iunit,*)'SC/C'
         endif
-        call xmcompare(verbose,itwo,ione,i_fks,j_fks,p,p1_cnt)
+        call xmcompare(verbose,pass0,itwo,ione,i_fks,j_fks,p,p1_cnt)
+        pass=pass.and.pass0
       else
         write(6,*)'Fatal error in xmom_compare',isum
         stop
       endif
+      if(.not.pass)i_momcmp_count=i_momcmp_count +1
 c
       if(jac_cnt(0).gt.0.d0.and.jac.gt.0.d0)
      #  call p_ev_vs_cnt(izero,i_fks,j_fks,p,p1_cnt,
@@ -3334,12 +3344,12 @@ c
       end
 
 
-      subroutine xmcompare(verbose,inum,iden,i_fks,j_fks,p,p1_cnt)
+      subroutine xmcompare(verbose,pass0,inum,iden,i_fks,j_fks,p,p1_cnt)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
-      logical verbose
+      logical verbose,pass0
       integer inum,iden,i_fks,j_fks,iunit,ipart,i,j,k
       double precision tiny,vtiny,xnum,xden,xrat
       double precision p(0:3,-max_branch:max_particles)
@@ -3349,8 +3359,12 @@ c
       parameter (vtiny=1.d-10)
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
       include "pmass.inc"
 c
+      pass0=.true.
       do ipart=1,nexternal
         do i=0,3
           xnum=p1_cnt(i,ipart,inum)
@@ -3371,20 +3385,21 @@ c
               if(abs(xnum).eq.0d0.and.abs(xden).le.vtiny)xrat=0d0
 c The following line solves some problem as well, but before putting
 c it as the standard, one should think a bit about it
-c              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
+              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
               if(xrat.gt.tiny .and.
      &          (pmass(ipart).eq.0d0.or.xnum/pmass(ipart).gt.vtiny))then
                  write(*,*)'Kinematics of counterevents'
                  write(*,*)inum,iden
                  write(*,*)'is different. Particle:',ipart
                  write(*,*) xrat,xnum,xden
-                 do j=1,6
-                    write(*,*) j,(p1_cnt(k,j,0),k=0,3)
+                 do j=1,nexternal
+                    write(*,*) j,(p1_cnt(k,j,inum),k=0,3)
                  enddo
-                 do j=1,6
-                    write(*,*) j,(p1_cnt(k,j,1),k=0,3)
+                 do j=1,nexternal
+                    write(*,*) j,(p1_cnt(k,j,iden),k=0,3)
                  enddo
-                 stop
+                 xratmax=max(xratmax,xrat)
+                 pass0=.false.
               endif
             endif
           endif
@@ -3414,7 +3429,8 @@ c              if(abs(xnum).le.vtiny.and.abs(xden).le.vtiny)xrat=0d0
             write(*,*)'Kinematics of counterevents'
             write(*,*)inum,iden
             write(*,*)'is different. Particle i+j'
-            stop
+            xratmax=max(xratmax,xrat)
+            pass0=.false.
           endif
         endif
       enddo
@@ -3621,7 +3637,7 @@ c
       endif
 c
       i=1
-      dowhile(ckc(i).gt.0.1d0)
+      do while(ckc(i).gt.0.1d0 .and. xseclvc.ne.0d0)
         i=i+1
       enddo
       imin=i
@@ -3634,7 +3650,7 @@ c
       enddo
       icount=0
       i=imin
-      dowhile(icount.lt.ithrs.and.i.lt.imax)
+      do while(icount.lt.ithrs.and.i.lt.imax)
         if(rckc(i).gt.rat)then
           icount=icount+1
         else

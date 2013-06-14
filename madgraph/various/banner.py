@@ -75,7 +75,9 @@ class Banner(dict):
       'mgproccard': 'proc_card.dat',
       'init': '',
       'mggenerationinfo':'',
-      'montecarlomasses':''
+      'montecarlomasses':'',
+      'initrwgt':'',
+      'madspin':'madspin_card.dat' 
       }
     
     def read_banner(self, input_path):
@@ -146,6 +148,8 @@ class Banner(dict):
             if tag == 'mgversion':
                 continue
             if not proc_card and tag in ['mg5proccard','mgproccard']:
+                continue
+            if not self.tag_to_file[tag]:
                 continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
@@ -646,6 +650,7 @@ class RunCardNLO(RunCard):
         self.add_line('iseed', 'int', 0)
         self.add_line('parton_shower', 'str', 'HERWIG6', fortran_name='shower_mc')
         self.add_line('nevents', 'int', 10000)
+        self.add_line('event_norm', 'str', 'average', fortran_name='event_norm')
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
         self.add_line('fixed_fac_scale', 'bool', True)
@@ -716,7 +721,8 @@ class ProcCard(list):
     
     def append(self, line):
         """"add a line in the proc_card perform automatically cleaning"""
-
+        
+        line = line.strip()
         cmds = line.split()
         if len(cmds) == 0:
             return

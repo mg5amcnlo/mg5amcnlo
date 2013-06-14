@@ -209,9 +209,19 @@ C     Typically, the hel_offset is 10000
 	  DATA USER_STAB_PREC/-1.0d0/	  
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
+C     Return codes H,T,U correspond to the hundreds, tens and units
+C     building returncode, i.e.
+C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
+	  
+      INTEGER RET_CODE_H,RET_CODE_T,RET_CODE_U
 	  %(real_dp_format)s ACCURACY
-	  DATA ACCURACY/1.0d0/	  
-	  common/ACC/ACCURACY
+	  DATA ACCURACY/1.0d0/
+	  DATA RET_CODE_H,RET_CODE_T,RET_CODE_U/1,1,0/
+	  common/ACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
+	  
+	  LOGICAL MP_DONE_ONCE
+	  DATA MP_DONE_ONCE/.FALSE./
+	  common/MP_DONE_ONCE/MP_DONE_ONCE
 
 C ----------
 C BEGIN CODE
@@ -296,6 +306,7 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
 ENDIF
 
 MP_DONE=.FALSE.
+MP_DONE_ONCE=.FALSE.
 MP_PS_SET=.FALSE.
 STAB_INDEX=0
 DOING_QP_EVALS=.FALSE.
@@ -369,7 +380,7 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-IF (ImprovePSPoint) THEN
+IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
   CALL IMPROVE_PS_POINT_PRECISION(PS)
 ENDIF
@@ -412,6 +423,8 @@ C Check if we directly go to multiple precision
 IF (CTMODE.GE.4) THEN
   IF (.NOT.MP_DONE) THEN
     CALL MP_COMPUTE_LOOP_COEFS(MP_P,BUFFR_BIS)
+C   It should be safe to directly set MP_DONE to true already here. But maybe I overlooked something.
+    MP_DONE=.TRUE.
   ENDIF
 C Even if MP_DONE is .TRUE. we should anyway skip the
 C double precision evaluation as it as already been
@@ -648,7 +661,7 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(.NOT.EVAL_DONE(2)) THEN
 	EVAL_DONE(2)=.TRUE. 
 	CTMODE=BASIC_CT_MODE+1
-	goto 200
+	goto 300
   ENDIF
 
   CTMODE=BASIC_CT_MODE
@@ -675,10 +688,12 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(DOING_QP_EVALS) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
 	ACCURACY=ACC
+	RET_CODE_H=3
 	IF(ACC.GE.MLSTABTHRES) THEN
+	  RET_CODE_H=4
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
-      WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+      WRITE(*,*) '##W03 WARNING An exceptional PS point was',       ' detected.'
 	  WRITE(*,*) '(DP,QP) accuracies : (',TEMP1,',',ACC,')'
 	  WRITE(*,*) 'Best estimate (fin,1eps,2eps) :',(ANS(I),I=1,3)
 	  IF(NEPS.LE.10) THEN
@@ -706,13 +721,29 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  CTMODE=4
 	  goto 200
     ELSE
+      RET_CODE_H=2	
 	  ACCURACY=ACC
 	ENDIF	
   ENDIF
-
+ELSE
+  RET_CODE_H=1
+  ACCURACY=-1.0d0
 ENDIF
 
  9999 CONTINUE
+
+C Finalize the return code
+IF (MP_DONE_ONCE) THEN
+  RET_CODE_T=2
+ELSE
+  RET_CODE_T=1
+ENDIF
+IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
+  RET_CODE_H=1
+  RET_CODE_T=RET_CODE_T+2
+  ACCURACY=-1.0d0
+ENDIF
+RET_CODE_U=0
 
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN
@@ -932,8 +963,8 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
-      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND)
-      IMPLICIT NONE
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+	  IMPLICIT NONE
 C  
 C CONSTANTS
 C
@@ -944,7 +975,7 @@ C ARGUMENTS
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
-	  INTEGER HEL
+	  INTEGER HEL,RET_CODE
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
 C
 C GLOBAL VARIABLES
@@ -952,12 +983,9 @@ C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
-	  LOGICAL CHECKPHASE
-	  LOGICAL HELDOUBLECHECKED
-      common/INIT/CHECKPHASE, HELDOUBLECHECKED
-
+	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY
-	  common/ACC/ACCURACY
+	  common/ACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
@@ -967,16 +995,49 @@ C ----------
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
-	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	     PREC_FOUND=ACCURACY
-	  ELSE
-C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-	     PREC_FOUND=-1.0d0
-	  ENDIF
+	  PREC_FOUND=ACCURACY
+      RET_CODE=100*H+10*T+U
 
 	  END
 
-      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND)
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+C
+C     Inputs are:
+C     P(0:3, Nexternal)  double  :: Kinematic configuration (E,px,py,pz)
+C     PEC_ASKED          double  :: Target relative accuracy, -1 for default
+C
+C     Outputs are:
+C     ANS(3)             double  :: Result (finite, single pole, double pole) 
+C     PREC_FOUND         double  :: Relative accuracy estimated for the result
+C                                   Returns -1 if no stab test could be performed.
+C	  RET_CODE			 integer :: Return code. See below for details
+C
+C     Return code conventions: RET_CODE = H*100 + T*10 + U
+C
+C     H == 1
+C         Stability unknown.
+C     H == 2
+C         Stable PS (SPS) point.
+C         No stability rescue was necessary.
+C     H == 3
+C         Unstable PS (UPS) point.
+C         Stability rescue necessary, and successful.
+C     H == 4
+C         Exceptional PS (EPS) point.
+C         Stability rescue attempted, but unsuccessful.
+C
+C     T == 1
+C         Default computation (double prec.) was performed.
+C     T == 2
+C         Quadruple precision was used for this PS point.
+C     T == 3
+C         MadLoop in initialization phase. Only double precision used.
+C     T == 4
+C         MadLoop in initialization phase. Quadruple precision used.
+C
+C     U is a number left for future use (always set to 0 for now).
+C     example: TIR vs OPP usage.
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -989,18 +1050,16 @@ C
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(3)
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+	  INTEGER RET_CODE
 C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
-	  LOGICAL CHECKPHASE
-	  LOGICAL HELDOUBLECHECKED
-      common/INIT/CHECKPHASE, HELDOUBLECHECKED
-
+	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY
-	  common/ACC/ACCURACY
+	  common/ACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
@@ -1010,11 +1069,7 @@ C ----------
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 
-	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	     PREC_FOUND=ACCURACY
-	  ELSE
-C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-	     PREC_FOUND=-1.0d0
-	  ENDIF
+	  PREC_FOUND=ACCURACY
+	  RET_CODE=100*H+10*T+U		 
 	  
 	  END

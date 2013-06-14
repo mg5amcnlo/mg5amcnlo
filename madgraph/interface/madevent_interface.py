@@ -349,6 +349,14 @@ class HelpToCmd(object):
         self.run_options_help([('-f', 'Use default for all questions.'),
                                ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
 
+    
+    def help_add_time_of_flight(self):
+        logger.info("syntax: add_time_of_flight [run_name|path_to_file] [--treshold=]")
+        logger.info('-- Add in the lhe files the information')
+        logger.info('   of how long it takes to a particle to decay.')
+        logger.info('   threshold option allows to change the minimal value required to')
+        logger.info('   a non zero value for the particle (default:1e-12s)')
+
     def help_calculate_decay_widths(self):
         
         if self.ninitial != 1:
@@ -616,6 +624,43 @@ class CheckValidForCmd(object):
                     
         return run
 
+    def check_add_time_of_flight(self, args):
+        """check that the argument are correct"""
+        
+        
+        if len(args) >2:
+            self.help_time_of_flight()
+            raise self.InvalidCmd('Too many arguments')
+        
+        # check if the threshold is define. and keep it's value
+        if args and args[-1].startswith('--threshold='):
+            try:
+                threshold = float(args[-1].split('=')[1])
+            except ValueError:
+                raise self.InvalidCmd('threshold options require a number.')
+            args.remove(args[-1])
+        else:
+            threshold = 1e-12
+            
+        if len(args) == 1 and  os.path.exists(args[0]): 
+                event_path = args[0]
+        else:
+            if len(args) and self.run_name != args[0]:
+                self.set_run_name(args.pop(0))
+            elif not self.run_name:            
+                self.help_add_time_of_flight()
+                raise self.InvalidCmd('Need a run_name to process')            
+            event_path = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz')
+            if not os.path.exists(event_path):
+                event_path = event_path[:-3]
+                if not os.path.exists(event_path):    
+                    raise self.InvalidCmd('No unweighted events associate to this run.')
+
+
+        
+        #reformat the data
+        args[:] = [event_path, threshold]
+
     def check_calculate_decay_widths(self, args):
         """check that the argument for calculate_decay_widths are valid"""
         
@@ -721,14 +766,30 @@ class CheckValidForCmd(object):
         except ImportError:
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
-            
+        
+        ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            model = import_ufo.import_model(modelname, decay=True)
+            restrict_file = None
+            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            model = import_ufo.import_model(modelname, decay=True, 
+                        restrict_file=restrict_file)
+            if self.mother.options['complex_mass_scheme']:
+                model.change_mass_to_complex_scheme()
+            
+            
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
+            #pattern for checking complex mass scheme.
+            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
+                                   ).read()):
+                model.change_mass_to_complex_scheme()
+   
+        
             
         if not hasattr(model.get('particles')[0], 'partial_widths'):
             raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
@@ -1086,6 +1147,24 @@ class CheckValidForCmd(object):
 class CompleteForCmd(CheckValidForCmd):
     """ The Series of help routine for the MadGraphCmd"""
     
+    
+    def complete_add_time_of_flight(self, text, line, begidx, endidx):
+        "Complete command"
+       
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data + ['--threshold='], line)
+        elif args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        else:
+            return self.list_completion(text, ['--threshold='], line)
+    
     def complete_banner_run(self, text, line, begidx, endidx):
        "Complete the banner run command"
        try:
@@ -1392,31 +1471,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         'delphes' : ['generate_events [OPTIONS]', 'multi_run [OPTIONS]']
     }
     
-    # The three options categories are treated on a different footage when a 
-    # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
-                       'madanalysis_path': './MadAnalysis',
-                       'pythia-pgs_path':'./pythia-pgs',
-                       'td_path':'./td',
-                       'delphes_path':'./Delphes',
-                       'exrootanalysis_path':'./ExRootAnalysis',
-                       'timeout': 60,
-                       'web_browser':None,
-                       'eps_viewer':None,
-                       'text_editor':None,
-                       'fortran_compiler':None,
-                       'auto_update':7,
-                       'cluster_type': 'condor'}
-    
-    options_madgraph= {'stdout_level':None}
-    
-    options_madevent = {'automatic_html_opening':True,
-                         'run_mode':2,
-                         'cluster_queue':'madgraph',
-                         'nb_core': None,
-                         'cluster_temp_path':None}
-    
-    
     ############################################################################
     def __init__(self, me_dir = None, options={}, *completekey, **stdin):
         """ add information to the cmd """
@@ -1460,6 +1514,60 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         else: 
             return False
             
+    ############################################################################
+    def do_add_time_of_flight(self, line):
+
+        args = self.split_arg(line)
+        #check the validity of the arguments and reformat args
+        self.check_add_time_of_flight(args)
+        
+        event_path, threshold = args
+        #gunzip the file
+        if event_path.endswith('.gz'):
+            need_zip = True
+            subprocess.call(['gunzip', event_path])
+            event_path = event_path[:-3]
+        else:
+            need_zip = False
+            
+        import random
+        try:
+            import madgraph.various.lhe_parser as lhe_parser
+        except:
+            import internal.lhe_parser as lhe_parser 
+            
+        logger.info('Add time of flight information on file %s' % event_path)
+        lhe = lhe_parser.EventFile(event_path)
+        output = open('%s_2vertex.lhe' % event_path, 'w')
+        #write the banner to the output file
+        output.write(lhe.banner)
+
+        # get the associate param_card
+        begin_param = lhe.banner.find('<slha>')
+        end_param = lhe.banner.find('</slha>')
+        param_card = lhe.banner[begin_param+6:end_param].split('\n')
+        param_card = check_param_card.ParamCard(param_card)
+
+        cst = 6.58211915e-25
+        # Loop over all events
+        for event in lhe:
+            for particle in event:
+                id = particle.pid
+                width = param_card['decay'].get((abs(id),)).value
+                if width:
+                    vtim = random.expovariate(width/cst)
+                    if vtim > threshold:
+                        particle.vtim = vtim
+            #write this modify event
+            output.write(str(event))
+        output.write('</LesHouchesEvents>\n')
+        output.close()
+        
+        files.mv('%s_2vertex.lhe' % event_path, event_path)
+        
+        if need_zip:
+            subprocess.call(['gzip', event_path])
+        
     ############################################################################
     def do_banner_run(self, line): 
         """Make a run from the banner file"""
@@ -1531,7 +1639,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             outstr += "                         MadEvent Options    \n"
             outstr += "                         ----------------    \n"
             for key, default in self.options_madevent.items():
-                value = self.options[key]
+                if key in self.options:
+                    value = self.options[key]
+                else:
+                    default = ''
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:
@@ -2832,7 +2943,7 @@ calculator."""
             except Exception, error:
                 logger.info(error)
                 if not self.force:
-                    ans = self.ask('Error detected. Do you want to clean the queue?',
+                    ans = self.ask('Cluster Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
@@ -3103,16 +3214,13 @@ calculator."""
             self.update_status('', level=None)
         except Exception, error:        
             pass
+        devnull = open(os.devnull, 'w')
         try:
-            devnull = open(os.devnull, 'w') 
             misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
                         stdout=devnull, stderr=devnull)
         except Exception:
             pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
+        devnull.close()
 
         return super(MadEventCmd, self).do_quit(line)
     
@@ -3189,7 +3297,6 @@ calculator."""
                             cwd=pjoin(self.me_dir, 'Events'))
         except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
-    
 
     ############################################################################
     def ask_run_configuration(self, mode=None):
@@ -3269,18 +3376,21 @@ calculator."""
             cards.append('pgs_card.dat')
         elif mode == 'delphes':
             cards.append('delphes_card.dat')
-            cards.append('delphes_trigger.dat')
-        
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
         self.keep_cards(cards)
         if self.force:
+            self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
             return
+
         if auto:
             self.ask_edit_cards(cards, mode='auto')
         else:
             self.ask_edit_cards(cards)
-        
         return
-
+    
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None):
         """Ask the question when launching pythia"""
@@ -3295,7 +3405,7 @@ calculator."""
     1 / pythia  : Pythia 
     2 / pgs     : Pythia + PGS\n"""
         if '3' in available_mode:
-            question += """  3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia + Delphes.\n"""
 
         if not self.force:
             if not mode:
@@ -3324,7 +3434,10 @@ calculator."""
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             cards.append('delphes_card.dat')
-            cards.append('delphes_trigger.dat')
+            delphes3 = True
+            if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
+                delphes3 = False
+                cards.append('delphes_trigger.dat')
         self.keep_cards(cards)
         
         if self.force:
@@ -3336,7 +3449,9 @@ calculator."""
             self.ask_edit_cards(cards)
         
         return mode
-
+                
+  
+            
     def check_param_card(self, path):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
@@ -3507,6 +3622,7 @@ class GridPackCmd(MadEventCmd):
         self.total_jobs = 0
         subproc = [P for P in os.listdir(pjoin(self.me_dir,'SubProcesses')) if 
                    P.startswith('P') and os.path.isdir(pjoin(self.me_dir,'SubProcesses', P))]
+        devnull = open(os.devnull, 'w')
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
@@ -3518,7 +3634,7 @@ class GridPackCmd(MadEventCmd):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
-            devnull = os.open(os.devnull, os.O_RDWR)
+
             logfile = pjoin(Pdir, 'gen_ximprove.log')
             proc = misc.Popen([pjoin(bindir, 'gen_ximprove')],
                                     stdin=subprocess.PIPE,
@@ -3559,10 +3675,10 @@ class GridPackCmd(MadEventCmd):
         
         
         self.update_status('finish refine', 'parton', makehtml=False)
+        devnull.close()
+
 
 
 AskforEditCard = common_run.AskforEditCard
-    
-    
 
 

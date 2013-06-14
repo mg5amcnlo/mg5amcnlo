@@ -99,7 +99,7 @@ def is_uptodate(picklefile, path_list=None, min_time=1343682423):
     if not os.path.exists(picklefile):
         return False
     
-    if not path_list:
+    if path_list is None:
         dirpath = os.path.dirname(picklefile)
         path_list = [ os.path.join(dirpath, file) for file in \
                                                             os.listdir(dirpath)]

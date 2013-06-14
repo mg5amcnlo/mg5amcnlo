@@ -497,9 +497,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1209,9 +1209,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1814,6 +1814,7 @@ c      include "fks.inc"
 
       integer i,j,npartner,cflows,ileg,N_p
       common/cileg/ileg
+      common/cxm12/xm12
       double precision tk,uk,q1q,q2q,E0sq(nexternal),dE0sqdx(nexternal),
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),xifake(nexternal),zPY6Q,xiPY6Q,xjacPY6Q_xiztoxy,
@@ -1822,7 +1823,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2
+     # xmrec2,www,massmax,massmin,ma2,xma2
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1914,9 +1915,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1956,6 +1957,11 @@ c variable, not yet defined) will not be needed in the computation of probne
         scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.etot)scalemax=etot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(ileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xm12))
+           scalemax=max(scalemin,scalemax)
+        endif
+
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2061,9 +2067,12 @@ c Compute deadzones:
             endif
          endif
          if(mstj50.eq.2)then
-c This is ok for massless ileg=4. For ileg=3 even the
-c authors of Pythia don't know 
             if(ileg.gt.2.and.ipartners(npartner).le.2)then
+c$$$            if(ileg.eq.4.and.ipartners(npartner).le.2)then
+c$$$ uncomment the line above if one can establish angular constraints
+c$$$ do not apply to resonance branchings (for sure it does not to t->bW,
+c$$$ but to t->tg I'm not yet sure). If this is the case then xma2 below
+c$$$ is useless
                do i=0,3
                   p_born_partner(i)=p_born(i,ipartners(npartner))
                   p_born_fksfather(i)=p_born(i,fksfather)
@@ -2072,8 +2081,9 @@ c authors of Pythia don't know
                theta2_cc=theta2_cc**2
                en_fks=sqrt(s)*(1-x)/2.d0
                en_mother=en_fks/(1-z(npartner))
+               xma2=xm12*(4-ileg)
                theta2=max(z(npartner)/(1-z(npartner)),(1-z(npartner))/z(npartner))*
-     &                xi(npartner)/en_mother**2
+     &                (xi(npartner)+xma2)/en_mother**2
                if(theta2.ge.theta2_cc)lzone(npartner)=.false.
             endif
          endif
@@ -2081,7 +2091,10 @@ c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(ileg.eq.3)then
+               xifake(npartner)=xi(npartner)+xm12
+               upper_scale=max(upper_scale,sqrt(xm12))
+            endif
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
 c z limits for the 'constrained' definition, following
@@ -2697,9 +2710,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -2756,6 +2769,10 @@ c Distinguish initial or final state radiation
         isr=.true.
         delta=min(1.d0,deltaI)
       elseif(ileg.eq.3.or.ileg.eq.4)then
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        stop
         fsr=.true.
         delta=min(1.d0,deltaO)
       else
@@ -3421,9 +3438,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3552,23 +3569,19 @@ c xmcsubt note
          xjac(npartner)=xjactmp
 c
 c Compute deadzones:
-c COLOUR COHERENCE!!!
+         lzone(npartner)=.true.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
-            xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
-            if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
+            if(sqrt(xi(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
-c z limits, following  pages 14-16 of hep-ph/0408302
-         lzone(npartner)=.true.
+c z limits, following pages 11 and 14-16 of hep-ph/0408302
          if(ileg.le.2)then
             zplus=1-sqrt(xi(npartner)/z(npartner)/shat)*
      &           (sqrt(1+xi(npartner)/(4*z(npartner)*shat))-sqrt(xi(npartner)/(4*z(npartner)*shat)))
             if(z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
-c z limits for the 'constrained' definition, following
-c strictly page 354 of hep-ph/0603175
+c
          if(ileg.gt.2)then
             if(ileg.eq.3)then
                xmm2=xm12
@@ -3594,7 +3607,7 @@ c
                ma2=0d0
             endif
             ma=sqrt(ma2)
-            mbeff=sqrt(xmm2)
+            mbeff=0d0
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
@@ -4415,8 +4428,8 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       parameter (zero=0.d0)
 
       double precision pp(0:3,nexternal)
-      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij
-      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
+      double precision sh,xi_i_fks,y_ij_fks,yitmp,xij,xx,yi,yj
+      double precision xm12,xm22,xtk,xuk,xq1q,xq2q,qMC,zPY8
       double precision beta1,beta2,eps1,eps2,w1,w2,zeta1,zeta2
       double precision en_fks,en_fks_sister,z,qMCarg
       integer ileg,j,i,nfinal
@@ -4439,6 +4452,9 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
+
+      integer isqrtneg
+      save isqrtneg
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -4573,9 +4589,12 @@ c since they never enter isr formulae in MC functions
      #                 ( (sh-w1)*beta2*(2*sh-(sh-w1)*eps2+(sh-w1)*beta2) )
                qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif
@@ -4586,9 +4605,11 @@ c since they never enter isr formulae in MC functions
                write(*,*)'no such MonteCarlo yet'
                stop
             elseif(MonteCarlo.eq.'PYTHIA8')then
-c$$$               z=zPY8(ileg,xm12,xm22,sh,x,yi,yj,xtk,xuk,xq1q,xq2q)
-c$$$               qMC=sqrt(z*(1-z)*w1)
-c$$$c do !!
+               xx=1-xi_i_fks
+               yi=0d0
+               yj=y_ij_fks
+               z=zPY8(ileg,xm12,xm22,sh,xx,yi,yj,xtk,xuk,xq1q,xq2q)
+               qMC=sqrt(z*(1-z)*w1)
             endif
          endif
       elseif(ileg.eq.4)then
@@ -4613,9 +4634,12 @@ c$$$c do !!
      #                 ( (sh-w2)*beta1*(2*sh-(sh-w2)*eps1+(sh-w2)*beta1) )
                qMCarg=zeta2*((1-zeta2)*w2)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif
@@ -4630,7 +4654,6 @@ c$$$c do !!
                en_fks_sister=sqrt(sh)*(1-xi_i_fks-xm12/sh)/(2-xi_i_fks*(1-y_ij_fks))
                z=en_fks_sister/(en_fks + en_fks_sister)
                qMC=sqrt(z*(1-z)*w2)
-c check that indeed the variable cut by SCALUP be the evolution variable
             endif
          endif
       else
@@ -5991,16 +6014,15 @@ c outgoing parton #3 (massive)
          endif
 c outgoing parton #4 (massless)
       elseif(ileg.eq.4)then
+         w1=-xq1q+xq2q-xtk
+         w2=-xq2q+xq1q-xuk
          if(1-x.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)/2
          elseif(1-yj.lt.tiny)then
             xiPY8=s*(1-x)**2*(1-yj)*(s*x-xm12)**2/(2*(s-xm12)**2)
          else
-            en_fks=sqrt(s)*(1-x)/2.d0
-            en_fks_sister=sqrt(s)*(x-xm12/s)/(2-(1-x)*(1-yj))
             z=zPY8(ileg,xm12,xm22,s,x,yi,yj,xtk,xuk,xq1q,xq2q)
-            xt=2*en_fks*en_fks_sister*(1-yj)
-            xiPY8=z*(1-z)*xt
+            xiPY8=z*(1-z)*w2
          endif
       endif
 
@@ -6292,6 +6314,10 @@ c entering this function
         if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
         if(scalemax.ge.eetot)scalemax=eetot
         if(scalemin.ge.scalemax)scalemin=scalemax
+        if(MonteCarlo(1:7).eq.'PYTHIA6'.and.iileg.eq.3)then
+           scalemin=max(scalemin,sqrt(xxm12))
+           scalemax=max(scalemin,scalemax)
+        endif
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -6330,8 +6356,12 @@ c entering this function
       include "madfks_mcatnlo.inc"
       include "run.inc"
 
-      integer i
-      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot
+      integer i,ileg
+      double precision sh,xi,ref_scale,xxscalemax,xxscalemin,eetot,xm12
+      common/cileg/ileg
+      common/cxm12/xm12
+      character*4 abrv
+      common /to_abrv/ abrv
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -6343,6 +6373,17 @@ c
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
       if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)
       if(xxscalemax.ge.eetot)xxscalemax=eetot
+      if(xxscalemin.ge.xxscalemax)xxscalemin=xxscalemax
+c
+      if(abrv.ne.'born'.and.MonteCarlo(1:7).eq.'PYTHIA6'.and.ileg.eq.3)then
+         if((ileg.ne.3.and.xm12.ne.0d0).or.
+     &      (ileg.eq.3.and.xm12.eq.0d0))then
+            write(*,*)'Wrong ileg or xm12 in assign_scalemax',ileg,xm12
+            stop
+         endif
+         xxscalemin=max(xxscalemin,sqrt(xm12))
+         xxscalemax=max(xxscalemin,xxscalemax)
+      endif
 
       return
       end

@@ -609,7 +609,7 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
       integer k,izero,mohdr
@@ -953,7 +953,7 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
       integer i,k,izero,mohdr
@@ -1168,7 +1168,7 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
       integer i,k,izero,mohdr
@@ -1245,7 +1245,7 @@ c
       double precision compute_rwgt_wgt_NLO,compute_rwgt_wgt_Hev,
      #                 compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
       double precision wgtnew,tiny
-      parameter (tiny=1.d-3)
+      parameter (tiny=1.d-2)
 c
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)

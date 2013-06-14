@@ -58,7 +58,7 @@ c
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        isave=8
+        isave=9
       else
         isave=0
       endif
@@ -412,6 +412,21 @@ c Keep track of the accumulated results:
            enddo
         endif
 
+c renormalize all the scale & PDF weights to have the same normalization
+c as XWGTUP
+        if(do_rwgt_scale)then
+           do kr=1,3
+              do kf=1,3
+                 wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)/wgtref*XWGTUP
+              enddo
+           enddo
+        endif
+        if(do_rwgt_pdf)then
+           do n=0,nsets
+              wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+           enddo
+        endif
+
 c Write event to disk:
         write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
      #                     fksfather_lhe,ipartner_lhe,
@@ -422,7 +437,6 @@ c Write event to disk:
         call write_lhef_event(ofile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
 
       enddo
 

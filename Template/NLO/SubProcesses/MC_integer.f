@@ -89,14 +89,19 @@ c Flat grid for this dimension
 c Read the grid for 'this_dim' from file
             open(unit=52,file='grid.MC_integer',status='old',err=999)
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
-               read(52,*) cdum
+               read(52,*,end=999,err=999) cdum
             enddo
-            read(52,*) (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            read(52,*,end=999,err=999)
+     &           (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            do i=this_dim+1,maxdim ! make sure that there are enough lines in this file
+               read(52,*,end=999,err=999) cdum
+            enddo
             close(52)
             goto 998
 c If file not found, give warning and use flat grids for this dimension
  999        write (*,*) 'WARNING: File "grid.MC_integer" not found.'/
-     &           /' Using flat grid to start.'
+     &           /' Using flat grid to start for',this_dim
+            close(52)
             do i=0,nintervals(this_dim)
                grid(i,this_dim)=dble(i)/nintervals(this_dim)
             enddo
@@ -182,18 +187,8 @@ c (for 'this_dim') has been picked.
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
-c
-c Give a nice printout of the grids used for the current iteration
       do this_dim=1,maxdim
          if (nintervals(this_dim).eq.0) cycle
-         do i=1,101
-            buff(i:i)=' '
-         enddo
-         do i=0,nintervals(this_dim)
-            ib=1+int(grid(i,this_dim)*100)
-            write (buff(ib:ib),'(i1)') mod(i,10)
-         enddo
-         write (*,*) 'nFKSprocess ',buff
 c
 c Compute the accumulated cross section
          ncall(0,this_dim)=0
@@ -246,9 +241,22 @@ c Write grid to a file
       enddo
       open(unit=52,file='grid.MC_integer',status='unknown',err=999)
       do this_dim=1,maxdim
-         write(52,*) ' ',(grid(i,this_dim),i=0,nintervals(this_dim))
+         write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
+c
+c Give a nice printout of the grids after the current iteration
+      do this_dim=1,maxdim
+         if (nintervals(this_dim).eq.0) cycle
+         do i=1,101
+            buff(i:i)=' '
+         enddo
+         do i=0,nintervals(this_dim)
+            ib=1+int(grid(i,this_dim)*100)
+            write (buff(ib:ib),'(i1)') mod(i,10)
+         enddo
+         write (*,'(i3,a,a)') this_dim,':  ',buff
+      enddo
 c
 c Reset the accumulated results because we start new iteration.
       do this_dim=1,maxdim

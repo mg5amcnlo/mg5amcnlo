@@ -85,6 +85,10 @@ c For tests
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+
       double precision weight
 c For MINT:
       include "mint.inc"
@@ -106,17 +110,35 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer nunst, ntot
-      common/ups_stats/nunst, ntot
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+
+c general MadFKS parameters
+      include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
 C-----  
 c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+c
+c
 c     Read process number
 c
-      nunst=0
       ntot=0
+      nsun=0
+      nsps=0
+      nups=0
+      neps=0
+      n100=0
+      nddp=0
+      nqdp=0
+      nini=0
+      n10=0
+      n1=0
+      
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -170,6 +192,9 @@ c at the NLO)
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
+
+      i_momcmp_count=0
+      xratmax=0.d0
 
       unwgt=.false.
 
@@ -234,15 +259,6 @@ c to save grids:
          close (12)
 
       elseif(imode.eq.1) then
-c$$$         open (unit=99,file='nevts',status='old',err=999)
-c$$$         read (99,*) nevts
-c$$$         close(99)
-c$$$         if(nevts.eq.0) then
-c$$$            write (*,*)
-c$$$     &           'No events needed for this channel...skipping it'
-c$$$            stop
-c$$$         endif
-c
          if(plotKin)then
             open(unit=99,file='MADatNLO.top',status='unknown')
             call initplot
@@ -394,33 +410,11 @@ c to restore grids:
       write(*,*)'Maximum weight found:',fksmaxwgt
       write(*,*)'Found for:',xisave,ysave
 
-
-c$$$ THIS INFORMATION IS NO LONGER UP-TO-DATE
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'Total points tried:                   ',
-c$$$     &     ncall*itmax
-c$$$      write (*,*) 'Total points passing generation cuts: ',
-c$$$     &     itotalpoints
-c$$$      write (*,*) 'Efficiency of events passing cuts:    ',
-c$$$     &     dble(itotalpoints)/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'number of except PS points:',ivirtpointsExcept,
-c$$$     &     'out of',ivirtpoints,'points'
-c$$$      write (*,*) '   treatment of exceptional PS points:'
-c$$$      write (*,*) '      maximum approximation:',
-c$$$     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
-c$$$      write (*,*) '      minimum approximation:',
-c$$$     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
-c$$$      write (*,*) '      taking the max/min average:',
-c$$$     &     total_wgt_sum/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-
-
+      if(i_momcmp_count.ne.0)then
+        write(*,*)'     '
+        write(*,*)'WARNING: genps_fks code 555555'
+        write(*,*)i_momcmp_count,xratmax
+      endif
 
       if(plotEv.or.plotKin)then
         call mclear
@@ -428,10 +422,31 @@ c$$$      write (*,*) ''
         close(99)
       endif
 
-      write(*,*) "Satisctics from MadLoop:"
-      write(*,*) "Total points tried: ", ntot
-      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
-     1 nunst
+      if (ntot.ne.0) then
+         write(*,*) "Satistics from MadLoop:"
+         write(*,*)
+     &        "  Total points tried:                              ",ntot
+         write(*,*)
+     &        "  Stability unknown:                               ",nsun
+         write(*,*)
+     &        "  Stable PS point:                                 ",nsps
+         write(*,*)
+     &        "  Unstable PS point (and rescued):                 ",nups
+         write(*,*)
+     &        "  Exceptional PS point (unstable and not rescued): ",neps
+         write(*,*)
+     &        "  Double precision used:                           ",nddp
+         write(*,*)
+     &        "  Quadruple precision used:                        ",nqdp
+         write(*,*)
+     &        "  Initialization phase-space points:               ",nini
+         write(*,*)
+     &        "  Unknown return code (100):                       ",n100
+         write(*,*)
+     &        "  Unknown return code (10):                        ",n10
+         write(*,*)
+     &        "  Unknown return code (1):                         ",n1
+      endif
       return
  999  write (*,*) 'nevts file not found'
       stop
@@ -464,6 +479,10 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           use_cut
       common /to_weight/use_cut
 
@@ -562,12 +581,13 @@ c These should be ignored (but kept for 'historical reasons')
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel= 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
+      isum_hel = 0
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
@@ -702,7 +722,7 @@ c From dsample_fks
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
-      double precision vol,sigintR,res,f_tot,rfract
+      double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
@@ -716,6 +736,10 @@ c From dsample_fks
       common/c_unwgt_table/unwgt_table
       integer maxproc_save
       save maxproc_save,proc_map
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -976,7 +1000,7 @@ c Sum over all j_fks initial (final) state
 c
 c Compute the Born-like contributions with nbody=.true.
 c     
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol)
+         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
          nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
                                                ! because it only matters
                                                ! which parton is j_fks
@@ -1001,6 +1025,7 @@ c
             nFKSprocess=nFKSprocessBorn(2)
          endif
          nbody=.true.
+         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
          nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
@@ -1015,6 +1040,11 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f(1) = f(1)+result(0,1)
          f(2) = f(2)+result(0,2)
+         if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+            call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
+         endif
+
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
@@ -1036,7 +1066,7 @@ c
 c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
-               wgt=1d0/vol
+               wgt=1d0/vol1
 c When sum=3, we can compute the nFKSprocesses without soft
 c singularities fewer number of PS points, because their contribution is
 c small. This should save some time, without degrading the uncertainty
@@ -1055,7 +1085,7 @@ c much. Do this by overwrite the 'wgt' variable
                endif
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol*w
+               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
@@ -1069,7 +1099,7 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-2) then
+     $           .gt.1d-1) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1124,6 +1154,7 @@ c reweighting
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
       double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
      $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
      $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
@@ -1182,6 +1213,9 @@ c IRPOC's
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
             call leshouche_inc_chooser()
+c Set Bjorken x's to some random value before calling the dlum() function
+            xbk(1)=0.5d0
+            xbk(2)=0.5d0
             dummy=dlum()
 c 1. First map the IPROC's for this nFKSprocess to the underlying Born
 c to get the unique IPROC's

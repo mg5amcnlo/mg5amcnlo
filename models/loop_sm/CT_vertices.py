@@ -30,27 +30,42 @@ V_R23G = CTVertex(name = 'V_R23G',
 #  4-gluon R2 vertex
 #=============================================================================================
 
+# The CT Vertex below is the one written by hand from the expression in the QCD R2 paper
+# This implementation seems to yield correct result for g g > g g g but not for g g > g g g g
+# or anytime one of the outter gluon of the vertex is offshell.
+
 # Keep in mind that Delta8(a,b) is 2 Tr(a,b)
 
-V_R24G = CTVertex(name = 'V_R24G',
-              particles = [ P.G, P.G, P.G,  P.G ],
-              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
-                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
-              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
-              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s],[P.b],[P.t]] ],
-              couplings = {(0,0,0):C.GC_4GR2_Gluon_delta5,(0,1,0):C.GC_4GR2_Gluon_delta7,(0,2,0):C.GC_4GR2_Gluon_delta7, \
-                           (1,0,0):C.GC_4GR2_Gluon_delta7,(1,1,0):C.GC_4GR2_Gluon_delta5,(1,2,0):C.GC_4GR2_Gluon_delta7, \
-                           (2,0,0):C.GC_4GR2_Gluon_delta7,(2,1,0):C.GC_4GR2_Gluon_delta7,(2,2,0):C.GC_4GR2_Gluon_delta5, \
-                           (3,0,0):C.GC_4GR2_4Struct,(3,1,0):C.GC_4GR2_2Struct,(3,2,0):C.GC_4GR2_2Struct, \
-                           (4,0,0):C.GC_4GR2_2Struct,(4,1,0):C.GC_4GR2_4Struct,(4,2,0):C.GC_4GR2_2Struct, \
-                           (5,0,0):C.GC_4GR2_2Struct,(5,1,0):C.GC_4GR2_2Struct,(5,2,0):C.GC_4GR2_4Struct , \
-                           (0,0,1):C.GC_4GR2_Fermion_delta11,(0,1,1):C.GC_4GR2_Fermion_delta5,(0,2,1):C.GC_4GR2_Fermion_delta5, \
-                           (1,0,1):C.GC_4GR2_Fermion_delta5,(1,1,1):C.GC_4GR2_Fermion_delta11,(1,2,1):C.GC_4GR2_Fermion_delta5, \
-                           (2,0,1):C.GC_4GR2_Fermion_delta5,(2,1,1):C.GC_4GR2_Fermion_delta5,(2,2,1):C.GC_4GR2_Fermion_delta11, \
-                           (3,0,1):C.GC_4GR2_11Struct,(3,1,1):C.GC_4GR2_5Struct,(3,2,1):C.GC_4GR2_5Struct, \
-                           (4,0,1):C.GC_4GR2_5Struct,(4,1,1):C.GC_4GR2_11Struct,(4,2,1):C.GC_4GR2_5Struct, \
-                           (5,0,1):C.GC_4GR2_5Struct,(5,1,1):C.GC_4GR2_5Struct,(5,2,1):C.GC_4GR2_11Struct },
-              type = 'R2')
+#V_R24G = CTVertex(name = 'V_R24G',
+#              particles = [ P.G, P.G, P.G,  P.G ],
+#              color = [ 'Tr(1,2)*Tr(3,4)' , 'Tr(1,3)*Tr(2,4)' , 'Tr(1,4)*Tr(2,3)', \
+#                        'd(-1,1,2)*d(-1,3,4)' , 'd(-1,1,3)*d(-1,2,4)' , 'd(-1,1,4)*d(-1,2,3)'],
+#              lorentz = [  L.R2_4G_1234, L.R2_4G_1324, L.R2_4G_1423 ],
+#              loop_particles = [ [[P.G]], [[P.u],[P.d],[P.c],[P.s],[P.b],[P.t]] ],
+#              couplings = {(0,0,0):C.GC_4GR2_Gluon_delta5,(0,1,0):C.GC_4GR2_Gluon_delta7,(0,2,0):C.GC_4GR2_Gluon_delta7, \
+#                           (1,0,0):C.GC_4GR2_Gluon_delta7,(1,1,0):C.GC_4GR2_Gluon_delta5,(1,2,0):C.GC_4GR2_Gluon_delta7, \
+#                           (2,0,0):C.GC_4GR2_Gluon_delta7,(2,1,0):C.GC_4GR2_Gluon_delta7,(2,2,0):C.GC_4GR2_Gluon_delta5, \
+#                           (3,0,0):C.GC_4GR2_4Struct,(3,1,0):C.GC_4GR2_2Struct,(3,2,0):C.GC_4GR2_2Struct, \
+#                           (4,0,0):C.GC_4GR2_2Struct,(4,1,0):C.GC_4GR2_4Struct,(4,2,0):C.GC_4GR2_2Struct, \
+#                           (5,0,0):C.GC_4GR2_2Struct,(5,1,0):C.GC_4GR2_2Struct,(5,2,0):C.GC_4GR2_4Struct , \
+#                           (0,0,1):C.GC_4GR2_Fermion_delta11,(0,1,1):C.GC_4GR2_Fermion_delta5,(0,2,1):C.GC_4GR2_Fermion_delta5, \
+#                           (1,0,1):C.GC_4GR2_Fermion_delta5,(1,1,1):C.GC_4GR2_Fermion_delta11,(1,2,1):C.GC_4GR2_Fermion_delta5, \
+#                           (2,0,1):C.GC_4GR2_Fermion_delta5,(2,1,1):C.GC_4GR2_Fermion_delta5,(2,2,1):C.GC_4GR2_Fermion_delta11, \
+#                           (3,0,1):C.GC_4GR2_11Struct,(3,1,1):C.GC_4GR2_5Struct,(3,2,1):C.GC_4GR2_5Struct, \
+#                           (4,0,1):C.GC_4GR2_5Struct,(4,1,1):C.GC_4GR2_11Struct,(4,2,1):C.GC_4GR2_5Struct, \
+#                           (5,0,1):C.GC_4GR2_5Struct,(5,1,1):C.GC_4GR2_5Struct,(5,2,1):C.GC_4GR2_11Struct },
+#              type = 'R2')
+
+# The CT Vertex below is the one written automatically by FR
+# Gives the same result as above for g g > g g but not as soon as one of the outter gluon is offshell.
+
+V_R2RGA = CTVertex(name = 'V_R2RGA',
+               type = 'R2',
+               particles = [ P.G, P.G, P.G, P.G ],
+               color = [ 'd(-1,1,3)*d(-1,2,4)', 'd(-1,1,3)*f(-1,2,4)', 'd(-1,1,4)*d(-1,2,3)', 'd(-1,1,4)*f(-1,2,3)', 'd(-1,2,3)*f(-1,1,4)', 'd(-1,2,4)*f(-1,1,3)', 'f(-1,1,2)*f(-1,3,4)', 'f(-1,1,3)*f(-1,2,4)', 'f(-1,1,4)*f(-1,2,3)', 'Identity(1,2)*Identity(3,4)', 'Identity(1,3)*Identity(2,4)', 'Identity(1,4)*Identity(2,3)' ],
+               lorentz = [ L.R2RGA_VVVV10, L.R2RGA_VVVV2, L.R2RGA_VVVV3, L.R2RGA_VVVV5 ],
+               loop_particles = [ [ [P.b], [P.c], [P.d], [P.s], [P.t], [P.u] ], [ [P.G] ] ],
+               couplings = {(2,1,0):C.R2GC_137_43,(2,1,1):C.R2GC_137_44,(0,1,0):C.R2GC_137_43,(0,1,1):C.R2GC_137_44,(4,1,0):C.R2GC_145_58,(4,1,1):C.R2GC_145_59,(3,1,0):C.R2GC_145_58,(3,1,1):C.R2GC_145_59,(8,1,0):C.R2GC_138_45,(8,1,1):C.R2GC_138_46,(7,1,0):C.R2GC_144_56,(7,1,1):C.R2GC_144_57,(6,1,0):C.R2GC_141_50,(6,1,1):C.R2GC_141_51,(5,1,0):C.R2GC_145_58,(5,1,1):C.R2GC_145_59,(1,1,0):C.R2GC_145_58,(1,1,1):C.R2GC_145_59,(11,0,0):C.R2GC_140_48,(11,0,1):C.R2GC_140_49,(10,0,0):C.R2GC_140_48,(10,0,1):C.R2GC_140_49,(9,0,1):C.R2GC_139_47,(2,2,0):C.R2GC_137_43,(2,2,1):C.R2GC_137_44,(0,2,0):C.R2GC_137_43,(0,2,1):C.R2GC_137_44,(6,2,0):C.R2GC_142_52,(6,2,1):C.R2GC_142_53,(4,2,0):C.R2GC_145_58,(4,2,1):C.R2GC_145_59,(3,2,0):C.R2GC_145_58,(3,2,1):C.R2GC_145_59,(8,2,0):C.R2GC_144_56,(8,2,1):C.R2GC_144_57,(5,2,0):C.R2GC_145_58,(5,2,1):C.R2GC_145_59,(1,2,0):C.R2GC_145_58,(1,2,1):C.R2GC_145_59,(7,2,0):C.R2GC_138_45,(7,2,1):C.R2GC_138_46,(2,3,0):C.R2GC_137_43,(2,3,1):C.R2GC_137_44,(0,3,0):C.R2GC_137_43,(0,3,1):C.R2GC_137_44,(4,3,0):C.R2GC_145_58,(4,3,1):C.R2GC_145_59,(3,3,0):C.R2GC_145_58,(3,3,1):C.R2GC_145_59,(8,3,0):C.R2GC_143_54,(8,3,1):C.R2GC_143_55,(7,3,0):C.R2GC_143_54,(7,3,1):C.R2GC_143_55,(5,3,0):C.R2GC_145_58,(5,3,1):C.R2GC_145_59,(1,3,0):C.R2GC_145_58,(1,3,1):C.R2GC_145_59})
 
 #=============================================================================================
 
@@ -553,8 +568,8 @@ V_UV1eps3G = CTVertex(name = 'V_UV1eps3G',
               particles = [ P.G, P.G, P.G ],
               color = [ 'f(1,2,3)' ],
               lorentz = [ L.VVV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_3Gq,(0,0,1):C.UV_3Gb,(0,0,2):C.UV_3Gt,(0,0,3):C.UV_3Gg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_3Gq,(0,0,1):C.UV_3Gc,(0,0,2):C.UV_3Gb,(0,0,3):C.UV_3Gt,(0,0,4):C.UV_3Gg},
               type = 'UV')
 
 # gggg
@@ -562,10 +577,10 @@ V_UV4G = CTVertex(name = 'V_UV1eps4G',
               particles = [ P.G, P.G, P.G, P.G ],
               color = [ 'f(-1,1,2)*f(3,4,-1)', 'f(-1,1,3)*f(2,4,-1)', 'f(-1,1,4)*f(2,3,-1)' ],
               lorentz = [ L.VVVV1, L.VVVV3, L.VVVV4 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_4Gq,(0,0,1):C.UV_4Gb,(0,0,2):C.UV_4Gt,(0,0,3):C.UV_4Gg,
-                           (1,1,0):C.UV_4Gq,(1,1,1):C.UV_4Gb,(1,1,2):C.UV_4Gt,(1,1,3):C.UV_4Gg,
-                           (2,2,0):C.UV_4Gq,(2,2,1):C.UV_4Gb,(2,2,2):C.UV_4Gt,(2,2,3):C.UV_4Gg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_4Gq,(0,0,1):C.UV_4Gc,(0,0,2):C.UV_4Gb,(0,0,3):C.UV_4Gt,(0,0,4):C.UV_4Gg,
+                           (1,1,0):C.UV_4Gq,(1,1,1):C.UV_4Gc,(1,1,2):C.UV_4Gb,(1,1,3):C.UV_4Gt,(1,1,4):C.UV_4Gg,
+                           (2,2,0):C.UV_4Gq,(2,2,1):C.UV_4Gc,(2,2,2):C.UV_4Gb,(2,2,3):C.UV_4Gt,(2,2,4):C.UV_4Gg},
               type = 'UV')
 
 # gdd~
@@ -573,8 +588,8 @@ V_UVGDD = CTVertex(name = 'V_UVGDD',
               particles = [ P.d__tilde__, P.d, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # guu~
@@ -582,8 +597,8 @@ V_UVGUU = CTVertex(name = 'V_UVGUU',
               particles = [ P.u__tilde__, P.u, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # gcc~
@@ -591,8 +606,8 @@ V_UVGCC = CTVertex(name = 'V_UVGCC',
               particles = [ P.c__tilde__, P.c, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # gss~
@@ -600,8 +615,8 @@ V_UVGSS = CTVertex(name = 'V_UVGSS',
               particles = [ P.s__tilde__, P.s, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # gbb~
@@ -609,8 +624,8 @@ V_UVGBB = CTVertex(name = 'V_UVGBB',
               particles = [ P.b__tilde__, P.b, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # gtt~
@@ -618,11 +633,20 @@ V_UVGTT = CTVertex(name = 'V_UVGTT',
               particles = [ P.t__tilde__, P.t, P.G ],
               color = [ 'T(3,2,1)' ],
               lorentz = [ L.FFV1 ],
-              loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
-              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
+              loop_particles = [[[P.u],[P.d],[P.s]],[[P.c]],[[P.b]],[[P.t]],[[P.G]]],
+              couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQc,(0,0,2):C.UV_GQQb,(0,0,3):C.UV_GQQt,(0,0,4):C.UV_GQQg},
               type = 'UV')
 
 # These are the mass renormalization vertices.
+
+# c~c         
+V_UVcMass = CTVertex(name = 'V_UVcMass',
+               particles = [ P.c__tilde__, P.c ],
+               color = [ 'Identity(1,2)' ],
+               lorentz = [ L.R2_QQ_2 ],
+               loop_particles = [[[P.G,P.c]]],                   
+               couplings = {(0,0,0):C.UV_cMass},
+               type = 'UVmass')
 
 # b~b         
 V_UVbMass = CTVertex(name = 'V_UVbMass',
