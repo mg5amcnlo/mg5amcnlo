@@ -39,8 +39,8 @@
 ! this to '-1' if you want to forbid the use of this method
 ! altogether.
 #NHelForMCoverHels
-10000
-! Default :: 10000  (which is large enough to never use MC over helicities)
+5
+! Default :: 5
 !
 ! This parameter sets for which fraction of the events the virtual
 ! matrix elements should be included. If set to -1, it is based on the

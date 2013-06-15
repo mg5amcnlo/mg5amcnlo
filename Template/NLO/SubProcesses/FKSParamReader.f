@@ -79,6 +79,7 @@ C     a non existing or malformed parameter file
      & '==============================================================='
       write(*,*) ' > IRPoleCheckThreshold      = ',IRPoleCheckThreshold
       write(*,*) ' > NHelForMCoverHels         = ',NHelForMCoverHels
+      write(*,*) ' > VirtualFraction           = ',Virt_fraction
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
