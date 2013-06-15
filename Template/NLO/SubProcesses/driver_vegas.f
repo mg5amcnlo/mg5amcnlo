@@ -65,6 +65,9 @@ c Vegas stuff
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
 
+      integer current_ncalls
+      common /to_virt_fraction/current_ncalls
+
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
@@ -192,6 +195,9 @@ c at the NLO)
 
       i_momcmp_count=0
       xratmax=0.d0
+
+c for the computation of virt_fraction (in fks_singular)
+      current_ncalls=ncall
 
       if(savegrid)then
          call integrate(initplot,sigint,idstring,itmax,irestart,ndim

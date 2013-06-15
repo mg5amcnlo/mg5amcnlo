@@ -794,6 +794,8 @@ c Recompute the number of calls. Uses the algorithm from VEGAS
       integer ncalls0,ndim,ncalls,i
       integer dim,ng,npg,k
       common /even_ran/dim,ng,npg,k
+      integer current_ncalls
+      common /to_virt_fraction/current_ncalls
 c Number of dimension of the integral
       dim=ndim
 c Number of elements in which we can split one dimension
@@ -804,6 +806,8 @@ c Number of PS points in each hypercube (at least 2)
       npg=max(ncalls0/k,2)
 c Number of PS points for this iteration
       ncalls=npg*k
+c For the computation of the virt_fraction (in fks_singular)
+      current_ncalls=ncalls
       return
       end
 

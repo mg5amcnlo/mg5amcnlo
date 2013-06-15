@@ -60,6 +60,9 @@ c Vegas stuff
       character * 70 idstring
       logical savegrid
 
+      integer current_ncalls
+      common /to_virt_fraction/current_ncalls
+
       external initplot
 c Set plotKin=.true. to plot H and S event kinematics (integration steps)
 c Set plotEv=.true. to use events for plotting (unweighting phase)
@@ -185,6 +188,8 @@ c at the NLO)
       endif
 
       write(*,*) "about to integrate ", ndim,ncall,itmax,nconfigs
+c for the computation of virt_fraction (in fks_singular)
+      current_ncalls=ncall
 
       itotalpoints=0
       ivirtpoints=0

@@ -3956,6 +3956,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
+      include 'FKSParams.inc'
       double precision p(0:3,nexternal),bsv_wgt,born_wgt
       double precision pp(0:3,nexternal)
       
@@ -3993,6 +3994,9 @@ c      include "fks.inc"
 
       double precision virt_fraction_inc
       data virt_fraction_inc /1d0/
+
+      integer current_ncalls
+      common /to_virt_fraction/current_ncalls
 
 c For tests of virtuals
       double precision vobmax,vobmin
@@ -4177,11 +4181,15 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
          if (ran2().le.virt_fraction_inc .and. abrv(1:3).ne.'nov' .and.
      $        fold.eq.0) then
-               Call BinothLHA(p_born,born_wgt,virt_wgt)
-c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               virt_wgt_save = virt_wgt/born_wgt
-               bsv_wgt=bsv_wgt+virt_wgt
+            Call BinothLHA(p_born,born_wgt,virt_wgt)
+c$$$            virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
+            virt_wgt_save = virt_wgt/born_wgt
+            bsv_wgt=bsv_wgt+virt_wgt
+            if (virt_fraction.eq.-1) then
+               virt_fraction_inc=1d0/dble(current_ncalls**(1d0/3d0))
+            else
                virt_fraction_inc=virt_fraction
+            endif
          else
             bsv_wgt=bsv_wgt+virt_wgt_save*born_wgt
          endif

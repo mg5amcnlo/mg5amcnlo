@@ -34,6 +34,13 @@
              if (NHelForMCoverHels .lt. -1) then
                stop 'NHelForMCoverHels must be >= -1.'
              endif 
+           else if (buff .eq. '#VirtualFraction') then
+             read(666,*,end=999) Virt_fraction
+             if ((Virt_fraction .lt. 0 .or. virt_fraction .gt.1) .and.
+     $            virt_fraction.ne.-1) then
+                stop 'VirtualFraction should be a fraction'/
+     $               /' between 0 and 1 (or equal to -1)'
+             endif 
            else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
