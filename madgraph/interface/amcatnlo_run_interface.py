@@ -1168,8 +1168,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             self.cluster = cluster.MultiCore(**self.options)
         self.update_random_seed()
         #find and keep track of all the jobs
-        folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
-                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
+        folder_names = {'LO': ['born_G*'], 'NLO': ['all_G*'],
+                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
@@ -1221,7 +1221,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 niters = self.run_card['niters_FO']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
+                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
                 if not options['only_generation']:
                     self.update_status('Setting up grid', level=None)
@@ -1235,28 +1235,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
-
-                if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                    self.update_status('Improving grid using NLO', level=None)
-                    self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
-                                     'Improving grids using NLO')
-                p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
-                                   stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                npoints = self.run_card['npoints_FO_virt']
-                niters = self.run_card['niters_FO_virt']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
+                self.run_all(job_dict, [['0', 'all', '0', 'grid']], \
                         'Computing cross-section')
 
             p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
@@ -1320,9 +1300,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'all', i) 
+                        self.run_all(job_dict, [['2', 'F', '%d' % i]], status)
                         
                     elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
@@ -1417,25 +1396,20 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'noshower']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','GV*','log_MINT*.txt'))
-            all_log_files = sum([glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*',\
-                                    'G%s*'%foldname,'log*.txt')) for foldname in ['V','F']],[])
-        elif mode in ['aMC@LO', 'noshowerLO']: 
-            log_GV_files = ''
+                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
-                                          'SubProcesses', 'P*','GB*','log*.txt'))
+                                          'SubProcesses', 'P*','G*','log*.txt'))
         elif mode == 'NLO':
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','viSB_G*','log*.txt'))
+                                    'SubProcesses', 'P*','all_G*','log*.txt'))
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
-                                                                   'viSB_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['all_','grid_']],[])
         elif mode == 'LO':
             log_GV_files = ''
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','born_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
         # Recuperate the fraction of unstable PS points found in the runs for the
@@ -2280,7 +2254,7 @@ Integrated cross-section
 
         content = \
 """-1 12      ! points, iterations
-0.05       ! desired fractional accuracy
+0.02       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?

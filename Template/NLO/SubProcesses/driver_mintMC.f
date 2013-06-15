@@ -260,6 +260,7 @@ c to save grids:
          enddo
          write (12,*) xint
          write (12,*) ifold_energy,ifold_phi,ifold_yij
+         write (12,*) current_ncalls
          close (12)
 
       elseif(imode.eq.1) then
@@ -275,6 +276,7 @@ c to restore grids:
          enddo
          read (12,*) xint
          read (12,*) ifold_energy,ifold_phi,ifold_yij
+         read (12,*) current_ncalls
          close (12)
 
 c Prepare the MINT folding
@@ -318,6 +320,7 @@ c to save grids:
          enddo
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) resS,errS
+         write (12,*) current_ncalls
          close (12)
 
 
@@ -349,6 +352,7 @@ c to restore grids:
          enddo
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) resS,errS
+         read (12,*) current_ncalls
          close (12)
 
          open(unit=58,file='res_1',status='old')
