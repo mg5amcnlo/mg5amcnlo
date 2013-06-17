@@ -68,6 +68,8 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
+      double precision average_virtual
+      common /c_avg_virt/average_virtual
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -90,6 +92,7 @@ c Ellis-Sexton scale)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
+         average_virtual=virt_wgt
       else
          tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
 c Just set the accuracy found to a positive value as it is not specified
@@ -110,10 +113,11 @@ c$$$            fillh=.true.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
                call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
      $              ,tolerance,prec_found,ret_code)
+               
+               call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
 
-               virt_wgt=virt_wgt+virt_wgts_hel(1)/(-virt_wgts_hel(3)
-     $              /(ao2pi*2d0*4d0/3d0))*born_wgt/volh/dble(hel(0))
-     &              *4d0
+               virt_wgt=virt_wgt+virt_wgts_hel(1)*madfks_double
+     $              /virt_wgts_hel(3)/volh/dble(hel(0))*4d0
 
 c$$$               write (*,*) virt_wgts(1),virt_wgts_hel(1)/(virt_wgts(3)
 c$$$     $              /ao2pi)*born_wgt,virt_wgts_hel(1)/volh*dble(mc_hel),i
@@ -126,6 +130,9 @@ c$$$     &              virt_wgts_hel(1)*dble(goodhel(i))/(volh*dble(mc_hel))
                double  = double   +
      &              virt_wgts_hel(3)*dble(goodhel(i))/(volh*dble(mc_hel))
             enddo
+
+            call fill_MC_integer(2,ihel,abs(virt_wgt*volh))
+
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then
@@ -137,6 +144,7 @@ c account)
             single  = single/4d0/dble(ngluons)
             double  = double/4d0/dble(ngluons)
          endif
+         average_virtual=(average_virtual*ntot+virt_wgt)/(ntot+1)
       endif
       
 c======================================================================

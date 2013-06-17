@@ -1047,11 +1047,6 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f(1) = f(1)+result(0,1)
          f(2) = f(2)+result(0,2)
-         if (mc_hel.ne.0 .and. fillh) then
-c Fill the importance sampling array
-            call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
-         endif
-
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination

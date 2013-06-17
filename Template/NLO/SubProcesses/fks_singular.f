@@ -3995,6 +3995,8 @@ c      include "fks.inc"
       double precision virt_fraction_inc
       data virt_fraction_inc /1d0/
 
+      integer include_virt
+      double precision vol3
       integer current_ncalls
       common /to_virt_fraction/current_ncalls
 
@@ -4019,6 +4021,9 @@ c For tests of virtuals
       logical ExceptPSpoint
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
+
+      double precision average_virtual
+      common /c_avg_virt/average_virtual
 
 c For the MINT folding
       integer fold
@@ -4179,19 +4184,25 @@ c
  548     continue
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
-         if (ran2().le.virt_fraction_inc .and. abrv(1:3).ne.'nov' .and.
-     $        fold.eq.0) then
-            Call BinothLHA(p_born,born_wgt,virt_wgt)
-c$$$            virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-            virt_wgt_save = virt_wgt/born_wgt
-            bsv_wgt=bsv_wgt+virt_wgt
-            if (virt_fraction.eq.-1) then
-               virt_fraction_inc=1d0/dble(current_ncalls**(1d0/3d0))
-            else
-               virt_fraction_inc=virt_fraction
+         bsv_wgt=bsv_wgt+average_virtual
+         if (fold.eq.0) then
+            call get_MC_integer(3,2,include_virt,vol3)
+            if (include_virt.eq.1 .and. abrv(1:3).ne.'nov') then
+               Call BinothLHA(p_born,born_wgt,virt_wgt)
+c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
+               call fill_MC_integer(3,1,abs((virt_wgt-average_virtual)
+     $              /born_wgt))
+               call fill_MC_integer(3,2,1d0)
+               virt_wgt_save=(virt_wgt-average_virtual)/vol3
+               bsv_wgt=bsv_wgt+virt_wgt_save
+               if (virt_fraction.eq.-1) then
+                  virt_fraction_inc=1d0/dble(current_ncalls**(1d0/3d0))
+               else
+                  virt_fraction_inc=virt_fraction
+               endif
             endif
-         else
-            bsv_wgt=bsv_wgt+virt_wgt_save*born_wgt
+         elseif(fold.eq.1) then
+            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
 
 c eq.(MadFKS.C.13)
