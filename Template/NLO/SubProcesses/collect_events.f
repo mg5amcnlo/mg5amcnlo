@@ -5,6 +5,8 @@
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
       double precision xtotal,absxsec,evwgt
+      double precision scalefac_array(80), scalefac
+      common /c_scalefac/ scalefac_array
       integer i_orig
       common /c_i_orig/i_orig
       integer ioutput
@@ -48,10 +50,12 @@
       do while (.true.)
          read(10,'(120a)',err=2,end=2) string120
          eventfile=string120(2:index(string120,'   '))
-         read(string120(index(string120,'   '):120),*) ievents,absxsec
+         read(string120(index(string120,'   '):120),*)
+     &          ievents,absxsec,scalefac
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
          numoffiles=numoffiles+1
+         scalefac_array(numoffiles)=scalefac
 c store here the number of events per file         
          nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
@@ -173,6 +177,8 @@ c
       parameter (debug=.false.)
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
+      double precision scalefac_array(80)
+      common /c_scalefac/ scalefac_array
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -187,6 +193,10 @@ c
       call read_lhef_init(junit(ione),
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
+
+      xsecup = scalefac_array(1) * xsecup
+      xerrup = scalefac_array(1) * xerrup
+      xmaxup = scalefac_array(1) * xmaxup
 c if the number of the events is in the header (as for evt files in the
 c     subchannel folders (P*/G*/), the number of events should be in the
 c      header. Check consistency in this case
@@ -228,6 +238,11 @@ c      header. Check consistency in this case
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
+
+        xsecup1 = scalefac_array(ii) * xsecup1
+        xerrup1 = scalefac_array(ii) * xerrup1
+        xmaxup1 = scalefac_array(ii) * xmaxup1
+
         xsecup=xsecup+xsecup1
         xerrup=xerrup+xerrup1**2
         if(
@@ -265,6 +280,7 @@ c      header. Check consistency in this case
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         xwgtup = scalefac_array(i0) * xwgtup
 c Sanity check on weights read and computed a posteriori (check only for
 c event samples that are relatively large, otherwise it could be a
 c statistical fluctuation because the number of events per channel is

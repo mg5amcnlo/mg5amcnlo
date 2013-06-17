@@ -42,6 +42,11 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
                 fi
             else
                 runnumber=$4
+                if [[ ! -e ../${j}_$4 ]]; then
+                    mkdir ../${j}_$4
+                fi
+                cp * ../${j}_$4
+                cd ../${j}_$4
             fi
         fi
     fi
@@ -137,12 +142,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         echo "Time in seconds: ${T}" >>log.txt
         cp -f log.txt log_MINT$3.txt
     fi
-    if [[ $1 == '2' && $runnumber != 0 ]]; then
-        sleep 10
-        mv events.lhe events_$runnumber.lhe
-        mv log.txt log_MINT$3_$runnumber.txt
-    fi
-    cd ../
     exit $status
 done
 

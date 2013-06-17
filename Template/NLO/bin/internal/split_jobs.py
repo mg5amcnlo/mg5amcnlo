@@ -96,11 +96,11 @@ open('max_split.inc', 'w').write(\
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
     if job['nevts'] == 0:
-        splitted_lines.append('%s     %d     %9e' % (os.path.join(dir,'events_1.lhe').ljust(40), job['nevts'], job['xsec']))
+        splitted_lines.append('%s     %d     %9e' % (os.path.join(dir + '_1','events.lhe').ljust(40), job['nevts'], job['xsec']))
         continue
     job_events = 0
     for i in range(job['nsplit']):
-        filename = os.path.join(dir,'events_%d.lhe' % (i+1))
+        filename = os.path.join(dir + ('_%d') % (i+1),'events.lhe')
         if i != (job['nsplit']-1):
             split_nevts = job['nevts']/job['nsplit']
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
@@ -110,7 +110,8 @@ for job in jobs:
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
         tot_events += split_nevts
         job_events += split_nevts
-        splitted_lines.append('%s     %d     %9e' % (filename.ljust(40), split_nevts, split_xsec))
+        splitted_lines.append(' %s     %d     %9e     %9e' \
+                % (filename.ljust(40), split_nevts, split_xsec, split_xsec/job['xsec']))
         nevts_filename = os.path.join(job['dir'],'nevts_%s_%d' % \
                 (job['channel'], i+1))
         nevts_file = open(nevts_filename, 'w')

@@ -1298,7 +1298,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                     split = i == 2 and \
                             int(self.run_card['nevt_job']) > 0 and \
-                            self.cluster_mode == 1 and \
                             any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
                                 for l in nevents_unweighted if l])
 
@@ -1349,8 +1348,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     level='parton')
             time.sleep(10)
          # if splitting the event generation, recombine the event file per integration channel   
+#        if split:
+#            self.combine_jobs(job_dict.keys(), folder_names[mode])
         if split:
-            self.combine_jobs(job_dict.keys(), folder_names[mode])
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
+                     pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+
 
         return self.reweight_and_collect_events(options, mode, nevents)
 
@@ -2084,15 +2087,16 @@ Integrated cross-section
                     if not split_jobs:
                         self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
                     else:
-                        to_split = self.find_jobs_to_split(Pdir, job, args[1])
-                        self.run_exe(job, [args + [n] for n in to_split], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
-                        njob_split += len(to_split)
+                        for n in self.find_jobs_to_split(Pdir, job, args[1]):
+                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                            njob_split += 1
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
         if njob_split > 0:
             self.njobs = njob_split
         self.wait_for_complete(run_type)
+
 
     def find_jobs_to_split(self, pdir, job, arg):
         """looks into the nevents_unweighed_splitted file to check how many
@@ -2103,11 +2107,12 @@ Integrated cross-section
         pattern = re.compile('for i in (\d+) ; do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
+        print 'in find_jobs_to_split', arg, channel
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
-        pattern = re.compile(r"%s_(\d+).lhe" % \
-                         (pjoin(pdir, 'G%s%s' % (arg,channel), 'events')))
+        pattern = re.compile(r"%s_(\d+)/events.lhe" % \
+                          pjoin(pdir, 'G%s%s' % (arg,channel)))
         matches = re.findall(pattern, nevents_file)
         for m in matches:
             splittings.append(m)
@@ -2156,6 +2161,7 @@ Integrated cross-section
         elif 'ajob' in exe:
             # check if args is a list of string or a list of lists
             # in the second case, use the multiple submission function
+            print 'MZ args', args
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
