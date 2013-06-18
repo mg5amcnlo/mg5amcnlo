@@ -60,9 +60,6 @@ c Vegas stuff
       character * 70 idstring
       logical savegrid
 
-      integer current_ncalls
-      common /to_virt_fraction/current_ncalls
-
       external initplot
 c Set plotKin=.true. to plot H and S event kinematics (integration steps)
 c Set plotEv=.true. to use events for plotting (unweighting phase)
@@ -188,8 +185,6 @@ c at the NLO)
       endif
 
       write(*,*) "about to integrate ", ndim,ncall,itmax,nconfigs
-c for the computation of virt_fraction (in fks_singular)
-      current_ncalls=ncall
 
       itotalpoints=0
       ivirtpoints=0
@@ -223,6 +218,7 @@ c to restore grids:
             enddo
             read (12,*) xint
             read (12,*) ifold_energy,ifold_phi,ifold_yij
+            read (12,*) virt_fraction
             close (12)
          endif
 c
@@ -260,7 +256,7 @@ c to save grids:
          enddo
          write (12,*) xint
          write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) current_ncalls
+         write (12,*) virt_fraction
          close (12)
 
       elseif(imode.eq.1) then
@@ -276,7 +272,7 @@ c to restore grids:
          enddo
          read (12,*) xint
          read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) current_ncalls
+         read (12,*) virt_fraction
          close (12)
 
 c Prepare the MINT folding
@@ -320,7 +316,7 @@ c to save grids:
          enddo
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) resS,errS
-         write (12,*) current_ncalls
+         write (12,*) virt_fraction
          close (12)
 
 
@@ -352,7 +348,7 @@ c to restore grids:
          enddo
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) resS,errS
-         read (12,*) current_ncalls
+         read (12,*) virt_fraction
          close (12)
 
          open(unit=58,file='res_1',status='old')
@@ -692,7 +688,7 @@ c From dsample_fks
       real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f_abs,lum,dlum
+      double precision wgt,dsigS,dsigH,f_abs(2),lum,dlum
       external dlum
       logical unwgt
       double precision evtsgn
@@ -736,13 +732,9 @@ c From dsample_fks
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
-      double precision unwgt_table(0:fks_configs,2,maxproc)
+      double precision unwgt_table(0:fks_configs,3,maxproc)
       common/c_unwgt_table/unwgt_table
       save proc_map
-      logical fillh
-      integer mc_hel,ihel
-      double precision volh
-      common/mc_int2/volh,mc_hel,ihel,fillh
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -969,7 +961,7 @@ c IRPOC's
       fold=ifl
       if (ifl.eq.0) then
          do k=1,maxproc_save
-            do j=1,2
+            do j=1,3
                do i=0,fks_configs
                   unwgt_table(i,j,k)=0d0
                enddo
@@ -1032,7 +1024,6 @@ c
             nFKSprocess=nFKSprocessBorn(2)
          endif
          nbody=.true.
-         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
          nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
@@ -1111,7 +1102,7 @@ c much. Do this by overwrite the 'wgt' variable
      $              ,sigintF,f_check
             endif
          endif
-         if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
+         if (f_abs(1).ne.0d0) itotalpoints=itotalpoints+1
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
@@ -1123,7 +1114,7 @@ c The following two are needed when writing events to do NLO/Born
 c reweighting
          sigintF=f_check
          sigintF_without_w=sigintF/w
-         f_abs_without_w=f_abs/w
+         f_abs_without_w=f_abs(1)/w
       endif
       return
       end
@@ -1133,7 +1124,7 @@ c reweighting
       implicit none
       include 'mint.inc'
       integer ifl
-      double precision xx(ndimmax),w,f_abs,sigintS
+      double precision xx(ndimmax),w,f_abs(2),sigintS
       write (*,*) 'Generation of separate S-events no longer supported'
       stop
       end
@@ -1142,7 +1133,7 @@ c reweighting
       implicit none
       include 'mint.inc'
       integer ifl
-      double precision xx(ndimmax),w,f_abs,sigintH
+      double precision xx(ndimmax),w,f_abs(2),sigintH
       write (*,*) 'Generation of separate H-events no longer supported'
       stop
       end
@@ -1157,9 +1148,10 @@ c reweighting
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
       include 'run.inc'
-      double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
-     $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
-     $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
+      double precision unwgt_table(0:fks_configs,3,maxproc),f,f_abs(2)
+     $     ,dummy,dlum,f_abs_H,f_abs_S,f_abs_V,rnd,ran2,current
+     $     ,f_abs_S_un,f_unwgt(fks_configs,maxproc),sum,tot_sum
+     $     ,temp_shower_scale
       external ran2
       external dlum
       integer i,j,ii,jj,k,kk
@@ -1232,6 +1224,7 @@ c scale, this might happen for S-events)
 c     
          f_abs_H=0d0
          f_abs_S=0d0
+         f_abs_V=0d0
 c Nothing to combine for H-events, so need to sum them independently
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
@@ -1271,6 +1264,7 @@ c Add the n-body only once
                      f_unwgt(nFKSprocess_soft,i) =
      &                    f_unwgt(nFKSprocess_soft,i) +
      &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                     f_abs_V=f_abs_V+abs(unwgt_table(0,3,i))
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1321,13 +1315,15 @@ c directories (take the weighted average):
          endif
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs=f_abs_H+f_abs_S
+            f_abs(1)=f_abs_H+f_abs_S
+            f_abs(2)=f_abs_V
          else
 c pick one at random and update reweight info and all that
-            f_abs=f_abs_H+f_abs_S
-            if (f_abs.ne.0d0) then
+            f_abs(1)=f_abs_H+f_abs_S
+            f_abs(2)=f_abs_V
+            if (f_abs(1).ne.0d0) then
                rnd=ran2()
-               if (rnd.le.f_abs_H/f_abs) then
+               if (rnd.le.f_abs_H/f_abs(1)) then
                   Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
                   i_process=1
@@ -1417,22 +1413,26 @@ c and the n-body contributions
          enddo
          f_abs_H=0d0
          f_abs_S=0d0
+         f_abs_V=0d0
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
                   f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
+                  f_abs_V=f_abs_V+abs(unwgt_table(0,3,i))
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))
          enddo
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs=f_abs_H+f_abs_S
+            f_abs(1)=f_abs_H+f_abs_S
+            f_abs(2)=f_abs_V
          else
 c pick one at random and update reweight info and all that
-            f_abs=f_abs_H+f_abs_S
+            f_abs(1)=f_abs_H+f_abs_S
+            f_abs(2)=f_abs_V
             Hevents=.false.
-            if (f_abs.ne.0d0) then
+            if (f_abs(1).ne.0d0) then
                rnd=ran2()
 c Pick one of the IPROC's of the Born
                i_process=1

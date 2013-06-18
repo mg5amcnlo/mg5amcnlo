@@ -55,11 +55,12 @@ c imode=1: frozen grid, compute the integral and the upper bounds
 c others: same as 1 (for now)
       implicit none
       include "mint.inc"
+      include "FKSparams.inc"
       integer i,ncalls0,ndim,nitmax,imode
       real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim)
-     &     ,ans_abs,err_abs,ans_sgn,err_sgn,ans_abs3(3),err_abs3(3)
-     &     ,ans_sgn3(3),err_sgn3(3),ans_abs_l3,err_abs_l3,ans_sgn_l3
-     &     ,err_sgn_l3,chi2_l3
+     $     ,ans_abs,err_abs,ans_sgn,err_sgn,ans_abs3(3)
+     $     ,err_abs3(3),ans_sgn3(3),err_sgn3(3),ans_abs_l3,err_abs_l3
+     $     ,ans_sgn_l3,err_sgn_l3,chi2_l3
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax)
       integer icell(ndimmax),ncell(ndimmax)
@@ -67,15 +68,13 @@ c others: same as 1 (for now)
       common/cifold/ifold
       integer nhits(1:nintervals,ndimmax)
       real * 8 rand(ndimmax)
-      real * 8 dx(ndimmax),f_abs,f_sgn,vtot_abs,etot_abs,vtot_sgn
-     &     ,etot_sgn,prod,f1,chi2,efrac_abs
+      real * 8 dx(ndimmax),f_abs(2),f_sgn,vtot_abs(2),etot_abs(2)
+     $     ,vtot_sgn,etot_sgn,prod,f1(2),chi2,efrac_abs
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
      &     ,nit_included,kpoint_iter,non_zero_point,ntotcalls,nint_used
       real * 8 ran3
       external ran3,fun
       logical even,double_events,bad_iteration
-      integer current_ncalls
-      common /to_virt_fraction/current_ncalls
 c Accuracy defines if we should double events and grid intervals after
 c every iteration and if we should stop if required accuracy has been
 c reached.
@@ -171,8 +170,6 @@ c number of calls
          ncalls=ncalls0
          write (*,*) 'Update # PS points: ',ncalls0,' --> ',ncalls
       endif
-c For the computation of virt_fraction (in fks_singular.f)
-      current_ncalls=ncalls
 c Reset the accumulated results for grid updating
       if(imode.eq.0) then
          do kdim=1,ndim
@@ -184,8 +181,10 @@ c Reset the accumulated results for grid updating
             enddo
          enddo
       endif
-      vtot_abs=0
-      etot_abs=0
+      do i=1,2
+         vtot_abs(i)=0
+         etot_abs(i)=0
+      enddo
       vtot_sgn=0
       etot_sgn=0
       kpoint_iter=0
@@ -208,7 +207,8 @@ c if(even), we should compute the ncell and the rand from the ran3()
                rand(kdim)=ran3(even)
             endif
          enddo
-         f_abs=0
+         f_abs(1)=0
+         f_abs(2)=0
          f_sgn=0
          ifirst=0
  1       continue
@@ -226,22 +226,26 @@ c compute jacobian ('vol') for the PS point
 c contribution to integral
          if(imode.eq.0) then
             f_sgn=f_sgn+fun(x,vol,ifirst,f1)
-            f_abs=f_abs+f1
+            f_abs(1)=f_abs(1)+f1(1)
+            f_abs(2)=f_abs(2)+f1(2)
          else
 c this accumulated value will not be used
             f_sgn=f_sgn+fun(x,vol,ifirst,f1)
-            f_abs=f_abs+f1
+            f_abs(1)=f_abs(1)+f1(1)
+            f_abs(2)=f_abs(2)+f1(2)
             ifirst=1
             call nextlexi(ndim,ifold,kfold,iret)
             if(iret.eq.0) goto 1
 c closing call: accumulated value with correct sign
-            f_sgn=fun(x,vol,2,f_abs)
+            f_sgn=fun(x,vol,2,f1)
+            f_abs(1)=f1(1)
+            f_abs(2)=f1(2)
          endif
 c
          if(imode.eq.0) then
 c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
             do kdim=1,ndim
-               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f_abs
+               xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f_abs(1)
             enddo
          else
 c update the upper bounding envelope
@@ -249,7 +253,7 @@ c update the upper bounding envelope
             do kdim=1,ndim
                prod=prod*ymax(ncell(kdim),kdim)
             enddo
-            prod=(f_abs/prod)
+            prod=(f_abs(1)/prod)
             if(prod.gt.1) then
 c This guarantees a 10% increase of the upper bound in this cell
                prod=1+0.1d0/ndim
@@ -259,12 +263,14 @@ c This guarantees a 10% increase of the upper bound in this cell
                enddo
             endif
          endif
-         if (f_abs.ne.0d0) non_zero_point=non_zero_point+1
+         if (f_abs(1).ne.0d0) non_zero_point=non_zero_point+1
 c Add the PS point to the result of this iteration
-         vtot_abs=vtot_abs+f_abs
-         etot_abs=etot_abs+f_abs**2
+         do i=1,2
+            vtot_abs(i)=vtot_abs(i)+f_abs(i)
+            etot_abs(i)=etot_abs(i)+f_abs(i)**2
+         enddo
          vtot_sgn=vtot_sgn+f_sgn
-         etot_sgn=etot_abs
+         etot_sgn=etot_abs(1)
       enddo
       ntotcalls=ncalls*kpoint_iter
       if (ntotcalls.gt.max_points .and. non_zero_point.lt.25 .and.
@@ -280,21 +286,36 @@ c that pass cuts.
 
 c Iteration done. Update the accumulated results and print them to the
 c screen
-      vtot_abs=vtot_abs/dble(ntotcalls)
-      etot_abs=etot_abs/dble(ntotcalls)
+      do i=1,2
+         vtot_abs(i)=vtot_abs(i)/dble(ntotcalls)
+         etot_abs(i)=etot_abs(i)/dble(ntotcalls)
+      enddo
       vtot_sgn=vtot_sgn/dble(ntotcalls)
       etot_sgn=etot_sgn/dble(ntotcalls)
 c the abs is to avoid tiny negative values
-      etot_abs=sqrt(abs(etot_abs-vtot_abs**2)/dble(ntotcalls))
+      do i=1,2
+         etot_abs(i)=sqrt(abs(etot_abs(i)-vtot_abs(i)**2)
+     $        /dble(ntotcalls))
+      enddo
       etot_sgn=sqrt(abs(etot_sgn-vtot_sgn**2)/dble(ntotcalls))
-      if (vtot_abs.ne.0d0) then
-         efrac_abs=etot_abs/vtot_abs
+      if (vtot_abs(1).ne.0d0) then
+         efrac_abs=etot_abs(1)/vtot_abs(1)
       else
          efrac_abs=0d0
       endif
-      write(*,*) '|int|=',vtot_abs,' +/- ',etot_abs,
-     &     ' (',efrac_abs*100d0,'%)'
-      write(*,*) ' int =',vtot_sgn,' +/- ',etot_sgn
+      write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a,1x,f7.3,1x,a)') '|int|='
+     $     ,vtot_abs(1),' +/- ',etot_abs(1),' (',efrac_abs*100d0,'%)'
+      write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a)') ' int =',vtot_sgn,' +/- '
+     $     ,etot_sgn
+c Update the fraction of the events for which we include the virtual corrections
+c in the calculation
+      if (imode.eq.0) then
+         virt_fraction=virt_fraction*
+     &        max(min(4d0*etot_abs(2)/etot_abs(1),2d0),0.5d0)
+      endif
+      write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a,1x,f7.5)')
+     $     'virt only |int|=',vtot_abs(2),' +/- ',etot_abs(2)
+     $     ,'  virt frac:',virt_fraction
       if (double_events .and. efrac_abs.gt.0.3d0 .and. nit.gt.3)
      $     then
          write (*,*) 'Large fluctuation ( >30 % ).'
@@ -317,8 +338,6 @@ c 2nd bad iteration is a row. Reset grids
             call reset_MC_grid
             ans_abs=0d0
             err_abs=0d0
-            ans_sgn=0d0
-            err_sgn=0d0
             chi2=0d0
             do i=1,3
                ans_abs3(i)=0d0
@@ -335,54 +354,59 @@ c 2nd bad iteration is a row. Reset grids
          bad_iteration=.false.
       endif
       if(nit.eq.1) then
-         ans_abs=vtot_abs
-         err_abs=etot_abs
+         ans_abs=vtot_abs(1)
+         err_abs=etot_abs(1)
          ans_sgn=vtot_sgn
          err_sgn=etot_sgn
-         write (*,*) 'Chi^2 per d.o.f.',0d0
+         write (*,'(a,1x,e9.3)') 'Chi^2 per d.o.f.',0d0
       else
 c prevent annoying division by zero for nearly zero
 c integrands
-         if(etot_abs.eq.0.and.err_abs.eq.0) then
-            if(ans_abs.eq.vtot_abs) then
+         if(etot_abs(1).eq.0.and.err_abs.eq.0) then
+            if(ans_abs.eq.vtot_abs(1)) then
 c double the number of points for the next iteration
                if (double_events) ncalls0=ncalls0*2
                goto 10
             else
-               err_abs=abs(vtot_abs-ans_abs)
-               etot_abs=abs(vtot_abs-ans_abs)
+               err_abs=abs(vtot_abs(1)-ans_abs)
+               etot_abs(1)=abs(vtot_abs(1)-ans_abs)
                err_sgn=err_abs
-               etot_sgn=etot_abs
+               etot_sgn=etot_abs(1)
             endif
-         elseif(etot_abs.eq.0) then
-            etot_abs=err_abs
-            etot_sgn=etot_abs
+         elseif(etot_abs(1).eq.0) then
+            etot_abs(1)=err_abs
+            etot_sgn=etot_abs(1)
          elseif(err_abs.eq.0) then ! 1st iteration; set to a large value
-            err_abs=etot_abs*1d99
+            err_abs=etot_abs(1)*1d99
             err_sgn=err_abs
          endif
-         ans_abs=(ans_abs/err_abs+vtot_abs/etot_abs)/
-     &        (1/err_abs+1/etot_abs)
-         err_abs=1/sqrt(1/err_abs**2+1/etot_abs**2)
+         ans_abs=(ans_abs/err_abs+vtot_abs(1)/etot_abs(1))/
+     &        (1/err_abs+1/etot_abs(1))
+         err_abs=1/sqrt(1/err_abs**2+1/etot_abs(1)**2)
          ans_sgn=(ans_sgn/err_sgn+vtot_sgn/etot_sgn)/
      &        (1/err_sgn+1/etot_sgn)
          err_sgn=1/sqrt(1/err_sgn**2+1/etot_sgn**2)
-         chi2=chi2+(vtot_abs-ans_abs)**2/etot_abs**2
-         write (*,*) 'Chi^2=',(vtot_abs-ans_abs)**2/etot_abs**2
+         chi2=chi2+(vtot_abs(1)-ans_abs)**2/etot_abs(1)**2
+         write (*,'(a,1x,e9.3)') 'Chi^2=',(vtot_abs(1)-ans_abs)**2
+     $        /etot_abs(1)**2
       endif
       nit_included=nit_included+1
       if (ans_abs.ne.0d0) then
-         write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
-     &        ' (',err_abs/ans_abs*100d0,'%)'
+         write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a,1x,f7.3,1x,a)')
+     $        'accumulated result |int|=',ans_abs,' +/- ',err_abs,' ('
+     $        ,err_abs/ans_abs*100d0,'%)'
       else
-         write(*,*) 'accumulated result |int|=',ans_abs,' +/- ',err_abs,
-     &        ' ( ---- %)'
+         write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a)')
+     $        'accumulated result |int|=',ans_abs,' +/- ',err_abs
+     $        ,' ( ---- %)'
       endif
-      write(*,*) 'accumulated result  int =',ans_sgn,' +/- ',err_sgn
+      write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a)')
+     $     'accumulated result  int =',ans_sgn,' +/- ',err_sgn
       if (nit_included.le.1) then
-         write (*,*) 'accumulated result Chi^2 per DoF =',0d0
+         write (*,'(a,1x,e9.3)') 'accumulated result Chi^2 per DoF ='
+     $        ,0d0
       else
-         write (*,*) 'accumulated result Chi^2 per DoF =',
+         write (*,'(a,1x,e9.3)') 'accumulated result Chi^2 per DoF =',
      &        chi2/dble(nit_included-1)
       endif
 c Update the results of the last tree iterations
@@ -392,8 +416,8 @@ c Update the results of the last tree iterations
          ans_sgn3(i)=ans_sgn3(i+1)
          err_sgn3(i)=err_sgn3(i+1)
       enddo
-      ans_abs3(3)=vtot_abs
-      err_abs3(3)=etot_abs
+      ans_abs3(3)=vtot_abs(1)
+      err_abs3(3)=etot_abs(1)
       ans_sgn3(3)=vtot_sgn
       err_sgn3(3)=etot_sgn
 c Compute the results of the last three iterations
@@ -413,12 +437,14 @@ c Compute the results of the last three iterations
             chi2_l3=chi2_l3+(ans_abs3(i)-ans_abs_l3)**2/err_abs3(i)**2
          enddo
          chi2_l3=chi2_l3/2d0    ! three iterations, so 2 degrees of freedom
-         write(*,*) 'accumulated result last 3 iter |int|=',ans_abs_l3
-     &        ,' +/- ',err_abs_l3,' (',err_abs_l3/ans_abs_l3*100d0,'%)'
-         write(*,*) 'accumulated result last 3 iter  int =',ans_sgn_l3
-     &        ,' +/- ',err_sgn_l3
-         write(*,*) 'accumulated result last 3 iter Chi^2 per DoF =',
-     &        chi2_l3
+         write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a,1x,f7.3,1x,a)')
+     $        'accumulated result last 3 iter |int|=',ans_abs_l3,' +/- '
+     $        ,err_abs_l3,' (',err_abs_l3/ans_abs_l3*100d0,'%)'
+         write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a)')
+     $        'accumulated result last 3 iter  int =',ans_sgn_l3,' +/- '
+     $        ,err_sgn_l3
+         write(*,'(a,1x,e9.3)')
+     $        'accumulated result last 3 iter Chi^2 per DoF =',chi2_l3
       endif
       if(imode.eq.0) then
 c Iteration is finished; now rearrange the grid
@@ -635,7 +661,8 @@ c imode=3 store generation efficiency in x(1)
       integer icell(ndimmax),ncell(ndimmax)
       integer ifold(ndimmax),kfold(ndimmax)
       common/cifold/ifold
-      real * 8 r,f_sgn,f_abs,f1,ubound,vol,ran3,xmmm(nintervals,ndimmax)
+      real * 8 r,f_sgn,f_abs,f1(2),ubound,vol,ran3,xmmm(nintervals
+     $     ,ndimmax)
       real * 8 rand(ndimmax)
       external fun,ran3
       integer icalls,mcalls,kdim,kint,nintcurr,iret,ifirst
@@ -698,12 +725,13 @@ c imode=3 store generation efficiency in x(1)
          x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
       enddo
       f_sgn=f_sgn+fun(x,vol,ifirst,f1)
-      f_abs=f_abs+f1
+      f_abs=f_abs+f1(1)
       ifirst=1
       call nextlexi(ndim,ifold,kfold,iret)
       if(iret.eq.0) goto 5
 c get final value (x and vol not used in this call)
-      f_sgn=fun(x,vol,2,f_abs)
+      f_sgn=fun(x,vol,2,f1)
+      f_abs=f1(1)
       call increasecnt('another call to the function',imode)
       if (f_abs.eq.0d0) call increasecnt('failed generation cuts',imode)
       if(f_abs.lt.0) then

@@ -65,9 +65,6 @@ c Vegas stuff
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
 
-      integer current_ncalls
-      common /to_virt_fraction/current_ncalls
-
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
@@ -195,9 +192,6 @@ c at the NLO)
 
       i_momcmp_count=0
       xratmax=0.d0
-
-c for the computation of virt_fraction (in fks_singular)
-      current_ncalls=ncall
 
       if(savegrid)then
          call integrate(initplot,sigint,idstring,itmax,irestart,ndim
@@ -360,10 +354,6 @@ c From dsample_fks
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR
-      logical fillh
-      integer mc_hel,ihel
-      double precision volh
-      common/mc_int2/volh,mc_hel,ihel,fillh
       integer itotalpoints
       common/ctotalpoints/itotalpoints
 c
@@ -446,11 +436,6 @@ c
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
-
-      if (mc_hel.ne.0 .and. fillh) then
-c Fill the importance sampling array
-         call fill_MC_integer(2,ihel,abs(sigint*peso*volh))
-      endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.

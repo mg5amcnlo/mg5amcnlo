@@ -253,7 +253,7 @@ c      include "fks.inc"
      #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
      #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
-     #                 bpower
+     #                 bpower,virt_wgt
       integer i,j,iplot
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
@@ -610,7 +610,8 @@ c Soft subtraction term:
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
      #             rwgt
               xnormsv=xlum_s*xsec
-              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
+              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt
+     $             ,born_wgt)
               if(doNLOreweight)then
                 if(wgtbpower.gt.0)then
                   wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -904,7 +905,7 @@ c      include "fks.inc"
      &     ,gfactcl,xmcMC ,xmcME,SxmcMC,SxmcME,HxmcMC,HxmcME, xlum_c
      &     ,xlum_s,xlum_sc ,xlum_mc,xlum_mc_save, dummy,Sev_wgt,Hev_wgt
      &     ,fx_ev,probne ,sevmc ,xlum_ev,get_ptrel, xlum_mc_fact,xnormsv
-     &     ,xsec,bpower ,dsigS ,dsigH,totH_wgt
+     &     ,xsec,bpower ,dsigS ,dsigH,totH_wgt,virt_wgt
       integer i,j
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
@@ -1079,7 +1080,7 @@ c This is the table that will be used to unweight. (It contains for
 c arguments, 1st argument: nFKSproces; 2nd argument: S or H events; 3rd
 c argument: IPROC (from parton luminosities))
 c
-      double precision unwgt_table(0:fks_configs,2,maxproc)
+      double precision unwgt_table(0:fks_configs,3,maxproc)
       common/c_unwgt_table/unwgt_table
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
@@ -1518,7 +1519,8 @@ c Soft subtraction term:
      #             (min(xiimax_ev,xiBSVcut_used)*shat/(16*pi**2))*
      #             rwgt
               xnormsv=xlum_s*xsec
-              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
+              call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt
+     $             ,born_wgt)
               if(doreweight)then
                  if(wgtbpower.gt.0)then
                     wgtwborn_all=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -1533,6 +1535,8 @@ c Soft subtraction term:
               endif
               do j=1,IPROC
                  unwgt_table(0,1,j)=unwgt_table(0,1,j)+PD(j)*bsv_wgt
+     &                *xsec*CONV
+                 unwgt_table(0,3,j)=unwgt_table(0,3,j)+PD(j)*virt_wgt
      &                *xsec*CONV
               enddo
               bsv_wgt=bsv_wgt*xnormsv
@@ -1823,6 +1827,7 @@ c Update the shower starting scale with the shape from montecarlocounter
                   unwgt_table(nFKSprocess,1,j)=0d0
                else
                   unwgt_table(0,1,j)=0d0
+                  unwgt_table(0,3,j)=0d0
                endif
             enddo
          endif
@@ -1838,6 +1843,8 @@ c Update the shower starting scale with the shape from montecarlocounter
      $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
             else
                unwgt_table(0,1,j)=unwgt_table(0,1,j)
+     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+               unwgt_table(0,3,j)=unwgt_table(0,3,j)
      $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
             endif
          enddo
@@ -3943,7 +3950,7 @@ c
       end
 
 
-      subroutine bornsoftvirtual(p,bsv_wgt,born_wgt)
+      subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -3997,8 +4004,6 @@ c      include "fks.inc"
 
       integer include_virt
       double precision vol3
-      integer current_ncalls
-      common /to_virt_fraction/current_ncalls
 
 c For tests of virtuals
       double precision vobmax,vobmin
@@ -4184,26 +4189,18 @@ c
  548     continue
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
-         bsv_wgt=bsv_wgt+average_virtual
+         virt_wgt=0d0
          if (fold.eq.0) then
-            call get_MC_integer(3,2,include_virt,vol3)
-            if (include_virt.eq.1 .and. abrv(1:3).ne.'nov') then
+            if (ran2().le.virt_fraction .and. abrv(1:3).ne.'nov') then
                Call BinothLHA(p_born,born_wgt,virt_wgt)
-c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
-               call fill_MC_integer(3,1,abs((virt_wgt-average_virtual)
-     $              /born_wgt))
-               call fill_MC_integer(3,2,1d0)
-               virt_wgt_save=(virt_wgt-average_virtual)/vol3
+               virt_wgt=(virt_wgt-average_virtual*born_wgt)/virt_fraction
+               virt_wgt_save=virt_wgt
                bsv_wgt=bsv_wgt+virt_wgt_save
-               if (virt_fraction.eq.-1) then
-                  virt_fraction_inc=1d0/dble(current_ncalls**(1d0/3d0))
-               else
-                  virt_fraction_inc=virt_fraction
-               endif
             endif
          elseif(fold.eq.1) then
             bsv_wgt=bsv_wgt+virt_wgt_save
          endif
+         bsv_wgt=bsv_wgt+average_virtual*born_wgt
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
