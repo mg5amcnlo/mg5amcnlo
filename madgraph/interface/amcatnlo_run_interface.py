@@ -1171,14 +1171,24 @@ Please, shower the Les Houches events before using them for physics analyses."""
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation'] and not options['reweightonly']:
-                for obj in folder_names[mode]:
-                    to_rm = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith(obj[:-1]) and \
-                                (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+            #find old folders to be removed
+            for obj in folder_names[mode]:
+                to_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                #always clean dirs for the splitted event generation
+                to_always_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and
+                             '_' in file and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
+
+                if not options['only_generation'] and not options['reweightonly']:
+                    to_always_rm.extend(to_rm)
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -2107,7 +2117,6 @@ Integrated cross-section
         pattern = re.compile('for i in (\d+) ; do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
-        print 'in find_jobs_to_split', arg, channel
         # then open the nevents_unweighted_splitted file and look for the 
         # number of splittings to be done
         nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
@@ -2161,7 +2170,6 @@ Integrated cross-section
         elif 'ajob' in exe:
             # check if args is a list of string or a list of lists
             # in the second case, use the multiple submission function
-            print 'MZ args', args
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
@@ -2260,7 +2268,8 @@ Integrated cross-section
                                           starting_dir=pjoin(cwd,current))
                 elif len(args) ==4:
                     keep_fourth_arg = True
-               
+                    # this is for the split event generation
+                    output_files.append('G%s%s_%s' % (args[1], i, args[3]))
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))

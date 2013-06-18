@@ -213,6 +213,25 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+
+
+    def test_generate_events_nlo_hw6_split(self):
+        """test the param_card created is correct"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        #change splitevent generation
+        card = open('/tmp/MGPROCESS/Cards/run_card.dat').read()
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card.replace(' -1 = nevt_job', ' 100 = nevt_job'))
+        self.do('generate_events NLO -fp')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         
 
     def test_generate_events_nlo_py6_stdhep(self):

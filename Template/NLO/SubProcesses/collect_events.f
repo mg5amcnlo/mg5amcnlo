@@ -89,7 +89,8 @@ c Every time we find 80 files, collect the events
                endif
             enddo
             close (ioutput)
-            write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal
+            write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal,
+     #       '   ', 1e0
             numoffiles=0
             nevents=0
             xtotal=0.d0
@@ -124,7 +125,8 @@ c Also collect events from the rest files
             endif
          enddo
          close(ioutput)
-         write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal
+         write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal,
+     #       '   ', 1e0
       endif
       close(98)
 c
