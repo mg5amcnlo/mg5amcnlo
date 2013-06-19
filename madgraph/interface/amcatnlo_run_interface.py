@@ -1290,6 +1290,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
             
 
             for i, status in enumerate(mcatnlo_status):
+                #check if need to split jobs (only on a cluster)
+                # at least one channel must have enough events
+                try:
+                    nevents_unweighted = open(pjoin(self.me_dir, 
+                                                'SubProcesses', 
+                                                'nevents_unweighted')).read().split('\n')
+                except IOError:
+                    nevents_unweighted = []
+
+                split = i == 2 and \
+                        int(self.run_card['nevt_job']) > 0 and \
+                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
+                            for l in nevents_unweighted if l])
+
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
                     # skip mint step 2
@@ -1297,19 +1311,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(options, 2,mode)
                         return
 
-                    #check if need to split jobs (only on a cluster)
-                    # at least one channel must have enough events
-                    try:
-                        nevents_unweighted = open(pjoin(self.me_dir, 
-                                                    'SubProcesses', 
-                                                    'nevents_unweighted')).read().split('\n')
-                    except IOError:
-                        nevents_unweighted = []
-
-                    split = i == 2 and \
-                            int(self.run_card['nevt_job']) > 0 and \
-                            any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
-                                for l in nevents_unweighted if l])
 
                     if split:
 
@@ -1350,6 +1351,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(options, i, mode)
+
+                #check that split jobs are all correctly terminated
+                if split:
+                    self.check_event_files()
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -2091,6 +2096,11 @@ Integrated cross-section
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
+
+        #  this is to keep track, if splitting evt generation, of the various 
+        # folders/args in order to resubmit the jobs if some of them fail
+        self.split_folders = {}
+
         for args in arg_list:
             for Pdir, jobs in job_dict.items():
                 for job in jobs:
@@ -2106,6 +2116,42 @@ Integrated cross-section
         if njob_split > 0:
             self.njobs = njob_split
         self.wait_for_complete(run_type)
+
+
+
+    def check_event_files(self):
+        """check the integrity of the event files after splitting, and resubmit 
+        those which are not nicely terminated"""
+        to_resubmit = []
+        for dir in self.split_folders.keys():
+            last_line = ''
+            try:
+                last_line = subprocess.Popen('tail -n1 %s ' % \
+                    pjoin(dir, 'events.lhe'), \
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            except IOError:
+                pass
+
+            if last_line != "</LesHouchesEvents>":
+                to_resubmit.append(dir)
+
+        self.njobs = 0
+        if to_resubmit:
+            logger.info('Some event files are broken, corresponding jobs will be resubmitted.')
+            logger.debug('Resubmitting\n', '\n'.join(to_resubmit) + '\n')
+            for dir in to_resubmit:
+                files.rm([dir])
+                job = self.split_folders[dir][0]
+                args = self.split_folders[dir][1:]
+                run_type = 'monitor'
+                cwd = os.path.split(dir)[0]
+                self.run_exe(job, args, run_type, cwd=cwd )
+                self.njobs +=1
+
+        self.wait_for_complete(run_type)
+
+
+
 
 
     def find_jobs_to_split(self, pdir, job, arg):
@@ -2166,7 +2212,8 @@ Integrated cross-section
                 return self.cluster.submit2(exe, args, cwd=cwd, 
                                  input_files=input_files, output_files=output_files) 
 
-            #this is for the cluster/multicore run
+
+        #this is for the cluster/multicore run
         elif 'ajob' in exe:
             # check if args is a list of string or a list of lists
             # in the second case, use the multiple submission function
@@ -2175,10 +2222,15 @@ Integrated cross-section
                 #submitting
                 self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files)
-            else:
-                input_files, output_files, arg = self.getIO_ajob(exe,cwd, args[0])
-                self.cluster.submit_multi(exe, args, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+
+                # keep track of folders and arguments for splitted evt gen
+                if len(args) == 4 and '_' in output_files[-1]:
+                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
+#            else:
+#                input_files, output_files, arg = self.getIO_ajob(exe,cwd, args[0])
+#                self.cluster.submit_multi(exe, args, cwd=cwd, 
+#                             input_files=input_files, output_files=output_files)
 
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
