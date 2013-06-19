@@ -672,7 +672,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.

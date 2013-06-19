@@ -143,6 +143,8 @@ class IOExportV4Test(unittest.TestCase,
         self.myfortranmodel.downcase = False
 
     tearDown = test_file_writers.CheckFileCreate.clean_files
+    
+    
 
     def test_export_matrix_element_v4_standalone(self):
         """Test the result of exporting a matrix element to file"""

@@ -306,7 +306,12 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
             # Distinguish identical initial state particles
             state = leg.get('number')
 
-        return [((state, part.get('spin'), part.get('color'),
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+        
+        return [((state, part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
                  leg.get('number'))]
         
@@ -377,7 +382,6 @@ def find_symmetry_subproc_group(subproc_group):
         else:
             diagram_classes[ind].append(idiag + 1)
             perms[ind].append(tag.get_external_numbers())
-
     for inum, diag_number in enumerate(diagram_numbers):
         if symmetry[inum] == 0:
             continue

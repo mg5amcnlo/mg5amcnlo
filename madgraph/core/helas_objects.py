@@ -369,7 +369,12 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         part = model.get_particle(leg.get('id'))
 
-        return [((leg.get('number'), part.get('spin'), part.get('color'),
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+
+        return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
                  (leg.get('number'),leg.get('id'),leg.get('state')))]
         
