@@ -304,7 +304,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tgged first."
+                       "make sure that the loop diagrams have been tagged first."
             valid_diag = True
             
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -325,9 +325,27 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        In this example, only massive parts. are allowed in the loop.
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-                valid_diag=False
-            
+#                valid_diag=False
+          
+            # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
+            #        of two vertices being the four gluon vertex and the effective
+            #        glu-glu-Higgs vertex.
+#            if len(diag.get_loop_lines_pdgs())==2:
+#                bubble_lines_pdgs=[abs(diag.get('canonical_tag')[0][0]),
+#                                   abs(diag.get('canonical_tag')[0][0])]
+#                first_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[0][1]]
+#                second_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[1][1]]
+#                first_vertex_pdgs.sort()
+#                second_vertex_pdgs.sort()
+#                bubble_vertices=[first_vertex_pdgs,second_vertex_pdgs]
+#                bubble_vertices.sort()
+#                if bubble_vertices==[[21,21,21,21],[21,21,25]]:
+#                    valid_diag=False
+                
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
 
