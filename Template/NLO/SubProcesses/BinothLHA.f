@@ -83,14 +83,14 @@ c Ellis-Sexton scale)
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=IRPoleCheckThreshold
+         tolerance=IRPoleCheckThreshold/10d0
          call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
       else
-         tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
+         tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
@@ -153,9 +153,9 @@ c MadLoop initialization PS points.
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance)
+     $           tolerance*10d0)
          else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
+            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
          endif
          if (tolerance.lt.0.0d0) then
             cpol = .false.
@@ -190,7 +190,7 @@ c or more non-zero (independent) helicities
             endif
          elseif(cpol .and. firsttime) then
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     &           tolerance
+     &           tolerance*10d0
             write(*,*) " COEFFICIENT DOUBLE POLE:"
             write(*,*) "       MadFKS: ", madfks_double,
      &           "          OLP: ", double

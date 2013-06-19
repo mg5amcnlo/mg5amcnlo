@@ -18,14 +18,27 @@
 ! This threshold sets the limiting value for the comparison of the relative
 ! difference of the IR pole from the OLP and the one computed internaly by MadFKS.
 ! The value below is used for the first PS points to assess the sanity of the
-! computation. A value ten times smaller will be used for the systematic check of
-! IR poles at runtime.
+! computation. 
 ! Notice that the systematic comparison of IR poles at run time is only performed
 ! when the Monte-Carlo over helicity configurations method is not used.
 ! Set this value to '-1.0d0' if you want the check to always pass.
 #IRPoleCheckThreshold
 1.0d-5
 ! Default :: 1.0d-5
+!
+! =================================================================================
+! OLP (virtuals) behavior at run time
+! =================================================================================
+!
+!
+! Set the precision required from the OLP code. The IR poles check
+! will be performed at run time with a threshold ten times loser than
+! the value below. When equal to '-1d0' the default value of the OLP is
+! used, and the poles check is disabled at run time
+!
+#PrecisionVirtualAtRunTime
+1.0d-3
+! Default :: 1.0d-3
 !
 ! =================================================================================
 ! Parameters defining the techniques used for the MC integration
