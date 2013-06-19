@@ -423,6 +423,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'coupl.inc',
                      'cuts.f',
                      'FKS_params.dat',
+                     'OLE_order.olc',
                      'FKSParams.inc',
                      'FKSParamReader.f',
                      'cuts.inc',
