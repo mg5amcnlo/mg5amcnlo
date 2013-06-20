@@ -68,8 +68,8 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
-      double precision average_virtual
-      common /c_avg_virt/average_virtual
+      double precision average_virtual,average_virt
+      common /c_avg_virt/average_virtual,average_virt
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -86,15 +86,14 @@ c Ellis-Sexton scale)
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=IRPoleCheckThreshold
+         tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
          call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
-         average_virtual=virt_wgt
       else
-         tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
+         tolerance=-1d0
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
@@ -112,6 +111,9 @@ c include the phase-space jacobians and all that)
                call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
      $              ,tolerance,prec_found,ret_code)
                
+c Should use the Born here, but don't have it for a given helicity, so
+c use the double pole and fix it by multiplying by the madfks double
+c pole
                call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
 
                virt_wgt=virt_wgt+virt_wgts_hel(1)*madfks_double
@@ -133,9 +135,9 @@ c account)
             single  = single/4d0/dble(ngluons)
             double  = double/4d0/dble(ngluons)
          endif
-         average_virtual=(average_virtual*ntot+
-     &        virt_wgt/born_wgt)/(ntot+1)
       endif
+      average_virtual=(average_virtual*ntot+
+     &                 virt_wgt/(born_wgt*ao2pi))/(ntot+1)
       
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them

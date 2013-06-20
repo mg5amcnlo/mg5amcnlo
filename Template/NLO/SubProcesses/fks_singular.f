@@ -4027,8 +4027,8 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual
-      common /c_avg_virt/average_virtual
+      double precision average_virtual,average_virt
+      common /c_avg_virt/average_virtual,average_virt
 
 c For the MINT folding
       integer fold
@@ -4193,14 +4193,15 @@ c convert to Binoth Les Houches Accord standards
          if (fold.eq.0) then
             if (ran2().le.virt_fraction .and. abrv(1:3).ne.'nov') then
                Call BinothLHA(p_born,born_wgt,virt_wgt)
-               virt_wgt=(virt_wgt-average_virtual*born_wgt)/virt_fraction
+               virt_wgt=(virt_wgt-average_virt*born_wgt*ao2pi)
+     $              /virt_fraction
                virt_wgt_save=virt_wgt
                bsv_wgt=bsv_wgt+virt_wgt_save
             endif
          elseif(fold.eq.1) then
             bsv_wgt=bsv_wgt+virt_wgt_save
          endif
-         bsv_wgt=bsv_wgt+average_virtual*born_wgt
+         bsv_wgt=bsv_wgt+average_virt*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then

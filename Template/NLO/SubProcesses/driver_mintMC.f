@@ -89,6 +89,9 @@ c For tests
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
 
+      double precision average_virtual,average_virt
+      common /c_avg_virt/average_virtual,average_virt
+
       double precision weight
 c For MINT:
       include "mint.inc"
@@ -218,7 +221,7 @@ c to restore grids:
             enddo
             read (12,*) xint
             read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virt_fraction
+            read (12,*) virt_fraction,average_virt
             close (12)
          endif
 c
@@ -256,7 +259,7 @@ c to save grids:
          enddo
          write (12,*) xint
          write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virt_fraction
+         write (12,*) virt_fraction,average_virt
          close (12)
 
       elseif(imode.eq.1) then
@@ -272,7 +275,7 @@ c to restore grids:
          enddo
          read (12,*) xint
          read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virt_fraction
+         read (12,*) virt_fraction,average_virt
          close (12)
 
 c Prepare the MINT folding
@@ -316,7 +319,7 @@ c to save grids:
          enddo
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) resS,errS
-         write (12,*) virt_fraction
+         write (12,*) virt_fraction,average_virt
          close (12)
 
 
@@ -348,7 +351,7 @@ c to restore grids:
          enddo
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) resS,errS
-         read (12,*) virt_fraction
+         read (12,*) virt_fraction,average_virt
          close (12)
 
          open(unit=58,file='res_1',status='old')
