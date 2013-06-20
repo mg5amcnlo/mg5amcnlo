@@ -497,9 +497,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1209,9 +1209,9 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -1915,9 +1915,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -2710,9 +2710,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3438,9 +3438,9 @@ c
 c
 
       if (softtest.or.colltest) then
-         tiny=1d-8
-      else
          tiny=1d-6
+      else
+         tiny=1d-4
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -3575,14 +3575,13 @@ c Implementation of a maximum scale for the shower if the shape is not active.
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             if(sqrt(xi(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
-c z limits, following  pages 14-16 of hep-ph/0408302
+c z limits, following pages 11 and 14-16 of hep-ph/0408302
          if(ileg.le.2)then
             zplus=1-sqrt(xi(npartner)/z(npartner)/shat)*
      &           (sqrt(1+xi(npartner)/(4*z(npartner)*shat))-sqrt(xi(npartner)/(4*z(npartner)*shat)))
             if(z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
-c z limits for the 'constrained' definition, following
-c strictly page 354 of hep-ph/0603175
+c
          if(ileg.gt.2)then
             if(ileg.eq.3)then
                xmm2=xm12
@@ -3608,7 +3607,7 @@ c
                ma2=0d0
             endif
             ma=sqrt(ma2)
-            mbeff=sqrt(xmm2)
+            mbeff=0d0
             mceff=0d0
             en_fks=sqrt(s)*(1-x)/2.d0
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
@@ -4454,6 +4453,9 @@ c OUTPUTS:  ileg,xm12,xm22,xtk,xuk,xq1q,xq2q,qMC
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
+      integer isqrtneg
+      save isqrtneg
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
@@ -4587,9 +4589,12 @@ c since they never enter isr formulae in MC functions
      #                 ( (sh-w1)*beta2*(2*sh-(sh-w1)*eps2+(sh-w1)*beta2) )
                qMCarg=zeta1*((1-zeta1)*w1-zeta1*xm12)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif
@@ -4629,9 +4634,12 @@ c since they never enter isr formulae in MC functions
      #                 ( (sh-w2)*beta1*(2*sh-(sh-w2)*eps1+(sh-w2)*beta1) )
                qMCarg=zeta2*((1-zeta2)*w2)
                if (qMCarg.lt.-tiny) then
-                  write (*,*)
-     $                 'Error in xiz_driver: sqrt of a negative number'
-                  stop
+                  write(*,*)'Error in xiz_driver: sqrt of a neg number',qMCarg
+                  isqrtneg=isqrtneg+1
+                  if(isqrtneg.ge.100)then
+                     write(*,*)'More than 100 sqrt of neg number, stop!'
+                     stop
+                  endif
                elseif (qMCarg.lt.0d0) then
                   qMCarg=0d0
                endif

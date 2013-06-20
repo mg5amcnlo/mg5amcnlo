@@ -89,14 +89,19 @@ c Flat grid for this dimension
 c Read the grid for 'this_dim' from file
             open(unit=52,file='grid.MC_integer',status='old',err=999)
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
-               read(52,*) cdum
+               read(52,*,end=999,err=999) cdum
             enddo
-            read(52,*) (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            read(52,*,end=999,err=999)
+     &           (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            do i=this_dim+1,maxdim ! make sure that there are enough lines in this file
+               read(52,*,end=999,err=999) cdum
+            enddo
             close(52)
             goto 998
 c If file not found, give warning and use flat grids for this dimension
  999        write (*,*) 'WARNING: File "grid.MC_integer" not found.'/
-     &           /' Using flat grid to start.'
+     &           /' Using flat grid to start for',this_dim
+            close(52)
             do i=0,nintervals(this_dim)
                grid(i,this_dim)=dble(i)/nintervals(this_dim)
             enddo
@@ -236,7 +241,7 @@ c Write grid to a file
       enddo
       open(unit=52,file='grid.MC_integer',status='unknown',err=999)
       do this_dim=1,maxdim
-         write(52,*) ' ',(grid(i,this_dim),i=0,nintervals(this_dim))
+         write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
 c
