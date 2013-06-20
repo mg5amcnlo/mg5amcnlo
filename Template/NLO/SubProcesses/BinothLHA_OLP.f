@@ -1,4 +1,4 @@
-      subroutine BinothLHA(p,born_wgt,virt_wgt)
+      subroutine BinothLHA(pin,born_wgt,virt_wgt)
 c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
@@ -22,9 +22,10 @@ c
       include "nexternal.inc"
       include "coupl.inc"
       include "Binoth_proc.inc"
+      include "FKSParams.inc"
       double precision pi
       parameter (pi=3.1415926535897932385d0)
-      double precision p(0:3,nexternal-1)
+      double precision pin(0:3,nexternal-1),p(0:4,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,born,virt_wgts(4)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
@@ -55,8 +56,10 @@ c
       parameter (nbadmax = 5)
       data nbad / 0 /
       character*13 filename
-      integer procnum
-      save procnum
+      integer i,j
+      double precision zero,pmass(nexternal)
+      parameter (zero=0d0)
+      include 'pmass.inc'
       if (isum_hel.ne.0) then
          write (*,*) 'Can only do explicit helicity sum'//
      &        ' for Virtual corrections',
@@ -69,6 +72,13 @@ c Ellis-Sexton scale)
       call update_as_param()
       alpha_S=g**2/(4d0*PI)
       ao2pi= alpha_S/(2d0*PI)
+c get the momenta in the BLHA format
+      do i=1,nexternal-1
+         do j=0,3
+            p(j,i)=pin(j,i)
+         enddo
+         p(4,i)=pmass(i)
+      enddo
 c======================================================================
 c Replace the following line with the call to the one-loop code you wish
 c to use. virt_wgts contains finite part, single and double pole and the
@@ -80,9 +90,9 @@ c
          firsttime_init=.false.
       endif
       call OLP_EvalSubProcess(proc_label,p,mu_r,alpha_S,virt_wgts)
-      virt_wgt= virt_wgts(1)/dble(ngluons)
+      double  = virt_wgts(1)/dble(ngluons)
       single  = virt_wgts(2)/dble(ngluons)
-      double  = virt_wgts(3)/dble(ngluons)
+      virt_wgt= virt_wgts(3)/dble(ngluons)
       born    = virt_wgts(4)/dble(ngluons)
 c======================================================================
 
@@ -101,7 +111,7 @@ c======================================================================
 c example for checking the cancelation of the poles
       if (firsttime_pole) then
          tolerance=IRPoleCheckThreshold  ! set in FKS_params.dat
-         call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+         call getpoles(pin,QES2,madfks_double,madfks_single,fksprefact)
          if ( dabs(single - madfks_single).lt.tolerance .and.
      &        dabs(double - madfks_double).lt.tolerance) then
             write(*,*) "---- POLES CANCELLED ----"
@@ -109,6 +119,9 @@ c example for checking the cancelation of the poles
          else
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
      &           tolerance
+            write(*,*) " BORN:"
+            write(*,*) "       MadFKS: ", born_wgt,
+     &           "          OLP: ", born
             write(*,*) " COEFFICIENT DOUBLE POLE:"
             write(*,*) "       MadFKS: ", madfks_double,
      &           "          OLP: ", double
@@ -147,9 +160,6 @@ c======================================================================
          write (*,*) 'ERROR in the BinothLHAInit process initialization'
          stop
       endif
-c Include here a model and OLP dependent file that sets all the
-c parameters (masses and widths) of the model
-      include 'set_OLP_params.inc'
       return
       end
 

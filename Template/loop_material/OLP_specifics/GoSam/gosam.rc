@@ -8,7 +8,6 @@
 model=smdiag
 
 zero=me,mmu,mU,mD,mC,mS,mB,mBMS,wT,wB
-one=gs,e
 
 symmetries=family,generation
 
