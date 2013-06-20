@@ -432,10 +432,10 @@ c double the number of points for the next iteration
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
       if (imode.eq.0) then
-         virt_fraction=virt_fraction*
-     &        max(min(4d0*etot_abs(2)/etot_abs(1),2d0),0.5d0)
-         average_virt=(average_virt*(nit_included-1)+average_virtual)
-     $        /(nit_included)
+         virt_fraction=min(virt_fraction*
+     &        max(min(4d0*etot_abs(2)/etot_abs(1),2d0),0.5d0),1d0)
+c Give same importance to last average_virtual as compared to all the others
+         average_virt=(average_virt+average_virtual)/2d0
          write (*,'(a,1x,f7.3,1x,e9.3)')
      $        'update virtual fraction and average to:',virt_fraction
      $        ,average_virt
