@@ -115,13 +115,13 @@ c Should use the Born here, but don't have it for a given helicity, so
 c use the double pole and fix it by multiplying by the madfks double
 c pole
                call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-
                virt_wgt=virt_wgt+virt_wgts_hel(1)*madfks_double
-     $              /virt_wgts_hel(3)/volh/dble(hel(0))*4d0
-               single  = single   +
-     &              virt_wgts_hel(2)*dble(goodhel(i))/(volh*dble(mc_hel))
-               double  = double   +
-     &              virt_wgts_hel(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+     $              /virt_wgts_hel(3)/volh/dble(hel(0))
+
+               single  = single   + virt_wgts_hel(2)*dble(goodhel(i))
+     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
+               double  = double   + virt_wgts_hel(3)*dble(goodhel(i))
+     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
             enddo
 c$$$            call fill_MC_integer(2,ihel,abs(virt_wgt))
 c Average over initial state helicities (and take the ngluon factor into
@@ -131,9 +131,11 @@ c account)
      &              'Cannot do MC over helicities for 1->N processes'
                stop
             endif
-            virt_wgt= virt_wgt/4d0/dble(ngluons)
-            single  = single/4d0/dble(ngluons)
-            double  = double/4d0/dble(ngluons)
+c No longer need to devide by ngluons or the factor 4, because we
+c already take a ratio above
+c$$$            virt_wgt= virt_wgt/4d0/dble(ngluons)
+c$$$            single  = single/4d0/dble(ngluons)
+c$$$            double  = double/4d0/dble(ngluons)
          endif
       endif
       average_virtual=(average_virtual*ntot+
