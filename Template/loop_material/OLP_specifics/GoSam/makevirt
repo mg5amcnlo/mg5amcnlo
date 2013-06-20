@@ -12,7 +12,7 @@ printf "%02d:%02d:%02d:%02d sec\n" "$(($1/86400))" "$(($1/3600%24))" "$(($1/60%6
 # paths:
 TIMINGS=timings
 RUNDIR=${PWD}
-VIRDIR=${PWD}/Virtual/
+VIRDIR=${PWD}/Virtuals/
 
 #- time ---------------------------------------
 echo '===============================' >$TIMINGS
@@ -25,7 +25,7 @@ TIME1="$(date +%s)"
 
 
 echo '---> Creating code for virtual part...'
-gosam.py --olp --mc=sherpa --config=gosam.rc --ignore-unknown --destination=$VIRDIR OLE_order.lh
+gosam.py --olp --mc=amcatnlo --config=gosam.rc --ignore-unknown --destination=$VIRDIR OLE_order.lh
 
 # check for error in code generation
 if [ -f gosam.crashed ]
