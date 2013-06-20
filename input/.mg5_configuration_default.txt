@@ -142,7 +142,6 @@
 # relative path starting from main directory
 # MCatNLO-utilities_path = ./MCatNLO-utilities
 
-
-
-
+# Set what OLP to use for the loop ME generation
+# OLP = MadLoop
 

@@ -607,6 +607,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
+        logger.info("OLP ProgramName",'$MG:color:BLACK')
+        logger.info(" > (default 'MadLoop') [Used for virtual generation]")
+        logger.info(" > Chooses what One-Loop Program to use for the virtual")
+        logger.info(" > matrix element generation via the BLAH accord.")
        
 #===============================================================================
 # CheckValidForCmd
@@ -1123,7 +1127,10 @@ This will take effect only in a NEW terminal
         if args[0] in ['timeout']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
-            
+        
+        if args[0] in ['OLP']:
+            if args[1] not in MadGraphCmd._OLP_supported:
+                raise self.InvalidCmd('timeout values should be a integer')    
 
             
     def check_open(self, args):
@@ -1883,9 +1890,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
+            elif args[1] == 'OLP':
+                return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'stdout_level':
-                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL','default'])
-        
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
+                                                          'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'nb_core':
@@ -2115,6 +2124,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _OLP_supported = ['MadLoop', 'GoSam']
 
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
@@ -2137,7 +2147,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
-                       'cluster_temp_path':None
+                       'cluster_temp_path':None,
+                       'OLP': 'MadLoop',
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -4692,6 +4703,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             self.options[args[0]] = (int(first), int(second))
              
+        elif args[0] == 'OLP':
+            # Reset the amplitudes, MatrixElements and exporter as they might
+            # depend on this option
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self._curr_exporter = None
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
