@@ -5171,9 +5171,6 @@ c Set color types of i_fks, j_fks and fks_mother.
          stop
       endif
 
-      filename="contract.file"
-      call BinothLHAInit(filename)
-
 c Set matrices used by MC counterterms
       call set_mc_matrices
 
