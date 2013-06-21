@@ -55,13 +55,15 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None, cluster_temp_path=None, **opts):
+    def __init__(self,*args, **opts):
         """Init the cluster"""
+
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
-        self.cluster_queue = cluster_queue
-        self.temp_dir = cluster_temp_path
+        
+        self.cluster_queue = opts['cluster_queue']
+        self.temp_dir = opts['cluster_temp_path']
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
@@ -155,7 +157,10 @@ class Cluster(object):
     def wait(self, me_dir, fct):
         """Wait that all job are finish"""
         
+        nb_iter = 0
+        change_at = 5 # number of iteration from which we wait longer between update.
         while 1: 
+            nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
@@ -164,8 +169,12 @@ class Cluster(object):
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            if idle < run:
+            if idle < run or nb_iter < change_at:
                 time.sleep(self.options['cluster_status_update'][1])
+            elif nb_iter == change_at:
+                logger.info('''Start to wait %ss between checking status.
+Note that you can change this time in the configuration file.''' % self.options['cluster_status_update'][0])
+                time.sleep(self.options['cluster_status_update'][0])
             else:
                 time.sleep(self.options['cluster_status_update'][0])
         self.submitted = 0
@@ -217,16 +226,15 @@ class MultiCore(Cluster):
     
     job_id = '$'
     
-    def __init__(self, nb_core, *args, **opt):
+    def __init__(self, *args, **opt):
         """Init the cluster"""
         import thread
-        
         super(MultiCore, self).__init__(self, *args, **opt)
         
         
         self.submitted = 0
         self.finish = 0
-        self.nb_core = nb_core
+        self.nb_core = opt['nb_core']
         self.update_fct = None
 
         # initialize the thread controler

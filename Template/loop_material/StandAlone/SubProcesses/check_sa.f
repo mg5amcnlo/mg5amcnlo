@@ -37,6 +37,8 @@
       REAL*8 SQRTS,MATELEM(3),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      REAL*8 PREC_FOUND
+      INTEGER RETURNCODE, HUNDREDS, TENS, UNITS
 !     
 !     EXTERNAL
 !     
@@ -135,16 +137,15 @@
 !     
 !     Now we can call the matrix element!
 !
-      CALL SMATRIX(P,BORNELEM)      
-      CALL SLOOPMATRIX(P,MATELEM)
-
+      CALL SMATRIX(P,BORNELEM)
+      CALL SLOOPMATRIX_THRES(P,MATELEM,
+     &-1.0d0,PREC_FOUND,RETURNCODE)
 !
 !        write the information on the four momenta 
 !
       if (K.eq.NPSPOINTS) then
       write (*,*)
       write (*,*) " Phase space point:"
-      write (*,*)
       write (*,*) "--------------------------------------------------",
      &"---------------------------"
       write (*,*)  "n        E             px             py         ",
@@ -155,8 +156,42 @@
       enddo
       write (*,*) "--------------------------------------------------",
      &"---------------------------"
-
-!
+      UNITS=MOD(RETURNCODE,10)
+      TENS=(MOD(RETURNCODE,100)-UNITS)/10
+      HUNDREDS=(RETURNCODE-TENS*10-UNITS)/100
+      if (HUNDREDS.eq.1) then
+        if (TENS.eq.3.or.TENS.eq.4) then
+          write(*,*) 'Unknown numerical stability because ',
+     &' MadLoop is in the initialization stage.'
+        else
+          write(*,*) 'Unknown numerical stability, check ',
+     &'CTModeRun value in MadLoopParams.dat.'
+        endif
+      elseif (HUNDREDS.eq.2) then
+        write(*,*) 'Stable kinematic configuration (SPS).'
+      elseif (HUNDREDS.eq.3) then
+        write(*,*) 'Unstable kinematic configuration (UPS).'
+        write(*,*) 'Quadruple precision rescue successful.'
+      elseif (HUNDREDS.eq.4) then
+        write(*,*) 'Exceptional kinematic configuration (EPS).'
+        write(*,*) 'Both double an quadruple precision computations',
+     %' are unstable.'
+      endif
+      if (TENS.eq.2.or.TENS.eq.4) then
+        write(*,*) 'Quadruple precision computation used.'
+      endif
+      if (HUNDREDS.ne.1) then
+        if (PREC_FOUND.gt.0.0d0) then
+          write(*,'(1x,a23,1x,1e10.2)') 'Relative accuracy     =',
+     &PREC_FOUND
+        elseif (PREC_FOUND.eq.0.0d0) then
+          write(*,'(1x,a23,1x,1e10.2,1x,a30)') 'Relative accuracy     ='
+     &,PREC_FOUND,'(i.e. beyond double precision)'
+        else
+          write(*,*) 'Estimated accuracy could not be',
+     &' computed for an unknown reason.'
+        endif
+      endif
       write (*,*) "---------------------------------------------------",
      &"--------------------------"
       write (*,*) "Matrix element born   = ", BORNELEM, " GeV^",
@@ -184,6 +219,8 @@
       write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)/BORNELEM/AO2PI
       write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2)/BORNELEM/AO2PI
       write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3)/BORNELEM/AO2PI
+      write (69,'(a3,1x,1e10.2)')  'ACC',PREC_FOUND
+      write (69,'(a7,1x,i3)')     'RETCODE',RETURNCODE
       write (69,*) 'Export_Format Default'      
       close(69)
       else
