@@ -1819,8 +1819,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -1867,7 +1868,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
         print
 
         return value
@@ -3119,7 +3121,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if self.options['fortran_compiler']:
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
-                 compiler = 'gfortran'
+                compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
             else:
@@ -3140,8 +3142,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
-            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
-            status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            self.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
         else:

@@ -191,7 +191,8 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
             
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
+    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model,
+                                  log=False) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 

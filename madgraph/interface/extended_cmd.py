@@ -916,6 +916,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if self.log:
             logger.info("History written to " + output_file.name)
 
+    def compile(self, *args, **opts):
+        """ """
+        
+        return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
+
     def avoid_history_duplicate(self, line, no_break=[]):
         """remove all line in history (but the last) starting with line.
         up to the point when a line didn't start by something in no_break.

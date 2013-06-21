@@ -172,11 +172,11 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
-def compile(arg=[], cwd=None, mode='fortran', **opt):
+def compile(arg=[], cwd=None, mode='fortran', nb_core=1, **opt):
     """compile a given directory"""
 
     try:
-        p = subprocess.Popen(['make','-j2'] + arg, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(['make','-j%s' % nb_core] + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:

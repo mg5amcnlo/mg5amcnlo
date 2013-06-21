@@ -2581,7 +2581,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                     os.remove(pjoin(match, 'results.dat'))
             
             #compile gensym
-            misc.compile(['gensym'], cwd=Pdir)
+            self.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
                 raise MadEventError, 'Error make gensym not successful'
 
@@ -2601,7 +2601,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 raise MadEventError, 'Error gensym run not successful'
 
 
-            misc.compile(['madevent'], cwd=Pdir)
+            self.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
             self.total_jobs += len(alljobs)
@@ -2677,7 +2677,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
             proc.communicate('%s %s T\n' % (precision, max_process))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                misc.compile(['madevent'], cwd=Pdir)
+                self.compile(['madevent'], cwd=Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 
                 #remove associated results.dat (ensure to not mix with all data)
@@ -3410,7 +3410,7 @@ calculator."""
         # Compile pgs if not there       
         if not misc.is_executable(pjoin(pgsdir, 'pgs')):
             logger.info('No PGS executable -- running make')
-            misc.compile(cwd=pgsdir)
+            self.compile(cwd=pgsdir)
         
 
             
@@ -3827,7 +3827,7 @@ calculator."""
             del os.environ['lhapdf']
         self.pdffile = None
         #remove lhapdf stuff
-        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+        self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3857,7 +3857,7 @@ calculator."""
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
-            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
     ############################################################################

@@ -780,21 +780,26 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA'):
+        if not os.environ.has_key('MADGRAPH_DATA') and os.access(MG5DIR, os.W_OK):
             self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
+        mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
+        FC_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
         for iline, line in enumerate(lines):
             FC_result = FC_re.match(line)
             if FC_result:
+                if compiler != FC_result.group(2):
+                    mod = True
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
+        if not mod:
+            return
         try:
             outfile = open(make_opts, 'w')
         except IOError:
