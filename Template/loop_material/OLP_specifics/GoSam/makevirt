@@ -66,6 +66,3 @@ echo "$(date -u)"                     >>$TIMINGS
 echo '* total time:'                  >>$TIMINGS
 echo $(printtime $TOTATIME)           >>$TIMINGS
 #- time ---------------------------------------
-
-ln -s $VIRDIR/lib64/libgolem_olp.so
-#ln -s $VIRDIR Virtual
