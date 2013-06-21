@@ -369,6 +369,8 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         part = model.get_particle(leg.get('id'))
 
+        # use charge to forbid identification of neutrino and lepton
+        # the main reason is that the cuts are different on such particles.
         if part.get('color') != 1:
             charge = 0
         else:
