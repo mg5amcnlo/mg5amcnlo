@@ -9,7 +9,7 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-NLOLIBS=$(libmadloop) $(libcuttools) -L$(LIBDIR) $(libOLP)
+NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # Uncomment the line below to compile with MadLoop without setting the environnement 
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts

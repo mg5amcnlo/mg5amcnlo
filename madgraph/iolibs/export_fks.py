@@ -814,9 +814,10 @@ end
         # Perform some tasks specific to certain OLP's
         if OLP=='GoSam':
             cp(pjoin(self.mgme_dir,'Template','loop_material','OLP_specifics',
-                             'GoSaM','makevirt'),pjoin(virtual_path,'makevirt'))
+                             'GoSam','makevirt'),pjoin(virtual_path,'makevirt'))
             cp(pjoin(self.mgme_dir,'Template','loop_material','OLP_specifics',
-                             'GoSaM','gosam.rc'),pjoin(virtual_path,'gosam.rc'))
+                             'GoSam','gosam.rc'),pjoin(virtual_path,'gosam.rc'))
+            ln(pjoin(export_path,'Cards','param_card.dat'),virtual_path)
             # Now generate the process
             logger.info('Generating the loop matrix elements with %s...'%OLP)
             virt_generation_log = \
@@ -847,11 +848,11 @@ end
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
-            make_opts_content=\
-                       make_opts_content.replace('libOLP=','libOLP=-lgolem_olp')
+            make_opts_content=make_opts_content.replace('libOLP=',
+                                   'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
         make_opts.write(make_opts_content)
         make_opts.close()
-            
+
         # A priori this is generic to all OLP's
         
         # Parse the contract file returned and propagate the process label to
@@ -861,6 +862,9 @@ end
 
         self.write_BinothLHA_inc(FKSHMultiproc,proc_to_label,\
                                               pjoin(export_path,'SubProcesses'))
+        
+        # Link the contract file to within the SubProcess directory
+        ln(pjoin(virtual_path,'OLE_order.olc'),pjoin(export_path,'SubProcesses'))
         
     def write_BinothLHA_inc(self, FKSHMultiproc, proc_to_label, SubProcPath):
         """ Write the file Binoth_proc.inc in each SubProcess directory so as 
@@ -878,8 +882,8 @@ end
             incFile = open(pjoin(SubProcPath, name,'Binoth_proc.inc'),'w')
             try:
                 incFile.write(
-"""INTEGER PROC_LABEL
-PARAMETER (PROC_LABEL=%d)"""%(proc_to_label[proc_pdgs]))
+"""      INTEGER PROC_LABEL
+      PARAMETER (PROC_LABEL=%d)"""%(proc_to_label[proc_pdgs]))
             except KeyError:
                 raise fks_common.FKSProcessError('Could not found the target'+\
                   ' process %s > %s in '%(str(proc_pdgs[0]),str(proc_pdgs[1]))+\
@@ -1079,11 +1083,13 @@ PARAMETER (PROC_LABEL=%d)"""%(proc_to_label[proc_pdgs]))
                     orders['WEIGHTED'])
 
         replace_dict = {}
-        replace_dict['mesq'] = 'CHsummed'
+        replace_dict['mesq'] = 'CHaveraged'
         replace_dict['corr'] = 'QCD'
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED
+        replace_dict['ModelFile'] = './param_card.dat'
+        replace_dict['params'] = 'alpha_s'
         proc_lines=[]
         for fksborn in fksborns:
             proc_lines.append(fksborn.get_lh_pdg_string())
@@ -1098,6 +1104,8 @@ IRregularisation        %(irreg)s\n\
 AlphasPower             %(aspow)d\n\
 AlphaPower              %(aepow)d\n\
 NJetSymmetrizeFinal     %(symfin)s\n\
+ModelFile               %(modelfile)s\n\
+Parameters              %(params)\n\
 \n\
 # process\n\
 %(pdgs)s\n\

@@ -5,7 +5,9 @@
 # physics options #
 ###################
 
-model=smdiag
+model=smdiag_mad
+# Just to specify the EW scheme used by GoSam model
+model.options=GF: 0.0000116639, mZ: 91.1876, alpha_m1: 137.0
 
 zero=me,mmu,mU,mD,mC,mS,mB,mBMS,wT,wB
 
@@ -31,7 +33,7 @@ PSP_chk_threshold2=3
 abbrev.level=diagram
 abbrev.limit=700
 
-extensions=samurai, golem95, autotools
+extensions=samurai, golem95, numpolvec, derive
 
 form.bin=tform
 form.threads=6

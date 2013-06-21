@@ -46,7 +46,7 @@ cp gosam.rc $VIRDIR
 
 cd $VIRDIR
 echo '---> Generating makefiles with autotools...'
-bash autogen.sh --prefix=$VIRDIR
+bash autogen.sh --prefix=$VIRDIR --libdir=$VIRDIR/lib
 
 
 echo '---> Generating code for amplitudes...'

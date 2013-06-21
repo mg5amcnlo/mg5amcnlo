@@ -472,6 +472,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Automatically run finalize
         self.finalize(nojpeg)
             
+        # Generate the virtuals if from OLP
+        if self.options['OLP']!='MadLoop':
+            self._curr_exporter.generate_virtuals_from_OLP(
+              self._curr_matrix_elements,self._export_dir,self.options['OLP'])
+                
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
@@ -567,10 +572,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
-            
-            if self.options['OLP']!='MadLoop':
-                self._curr_exporter.generate_virtuals_from_OLP(
-                  self._curr_matrix_elements,self._export_dir,self.options['OLP'])
             
             if self.options['loop_optimized_output'] and \
                     len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
