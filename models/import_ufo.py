@@ -191,7 +191,8 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
             
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
+    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model,
+                                  log=False) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
@@ -311,9 +312,11 @@ class UFOMG5Converter(object):
 	          or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
-            if hasattr(particle_info, 'GoldstoneBoson'):
-                if particle_info.GoldstoneBoson:
-                    return              
+            if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+                    return 
+            elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
+                    return                               
+                
         # Initialize a particles
         particle = base_objects.Particle()
 

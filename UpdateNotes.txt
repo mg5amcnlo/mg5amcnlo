@@ -1,5 +1,23 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
+                      one W decaying leptonically. For such processes the lepton cuts were also used
+                      on the neutrino particle reducing the cross-section. This bug was present only
+                      for group_subprocesses=True (the default)
+                  OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                      LINUX computer only)
+                  OM: The compilation of madevent is now performed by the number of core specify
+                      in the configuration file. Same for pythia, ...
+                  OM: Improve support for Read-Only system
+                  OM: Fix a bug with the detection of the compiler when user specifiy a specific
+                      compiler.
+                  OM: Fix a problem that MG5 fails to compute the cross-section/width after that 
+                      a first computation fails to integrate due to a wrong mass spectrum. 
+                  OM: Fix a wrong output (impossible to compile) for pythia in presence of photon/gluon
+                      propagator (introduce in 1.5.8)
+                  OM: Allow to have UFO model with "goldstone" attribute instead of "GoldstoneBoson", since
+                      FR change convention in order to match the UFO paper.
+
 1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
                       massless propagator. (introduce in 1.5.9)
                   OM: Fix question #226810: checking that patch program exists before

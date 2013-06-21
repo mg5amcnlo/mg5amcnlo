@@ -1907,7 +1907,7 @@ class UFOModelConverterCPP(object):
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
-            aloha_model.compute_all(save=False)
+            aloha_model.compute_all(save=False, custom_propa=True)
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 

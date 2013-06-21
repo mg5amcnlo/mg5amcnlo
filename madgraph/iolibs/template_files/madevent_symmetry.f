@@ -118,7 +118,7 @@ c     Set stot
 c
 c     Start reading use_config from symfact.dat written by MG5
 c
-      open(unit=25, file='symfact.dat', status='old')
+      open(unit=25, file='symfact_orig.dat', status='old')
       i=0
       do j=1,mapconfig(0)
          do while(i.lt.mapconfig(j))
