@@ -6,6 +6,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       for group_subprocesses=True (the default)
                   OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
                       LINUX computer only)
+                  OM: The compilation of madevent is now performed by the number of core specify
+                      in the configuration file. Same for pythia, ...
+                  OM: Improve support for Read-Only system
                   OM: Fix a bug with the detection of the compiler when user specifiy a specific
                       compiler.
                   OM: Fix a problem that MG5 fails to compute the cross-section/width after that 

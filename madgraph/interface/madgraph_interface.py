@@ -3118,7 +3118,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
                 compiler = 'gfortran'
