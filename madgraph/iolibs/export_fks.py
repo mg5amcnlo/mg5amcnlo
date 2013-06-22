@@ -1088,7 +1088,7 @@ end
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED
-        replace_dict['ModelFile'] = './param_card.dat'
+        replace_dict['modelfile'] = './param_card.dat'
         replace_dict['params'] = 'alpha_s'
         proc_lines=[]
         for fksborn in fksborns:
@@ -1105,7 +1105,7 @@ AlphasPower             %(aspow)d\n\
 AlphaPower              %(aepow)d\n\
 NJetSymmetrizeFinal     %(symfin)s\n\
 ModelFile               %(modelfile)s\n\
-Parameters              %(params)\n\
+Parameters              %(params)s\n\
 \n\
 # process\n\
 %(pdgs)s\n\
