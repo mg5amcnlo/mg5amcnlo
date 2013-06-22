@@ -255,32 +255,58 @@
   end interface!build_l
   contains
 !
-  subroutine dp_build_l(k1,k2,l1,l2,l3,l4,al1,al2,bet,ga)  
+  subroutine dp_build_l(k1,k2in,l1,l2,l3,l4,al1,al2,bet,ga)  
+   use scale
    include 'cts_dpr.h' 
     :: p
    include 'cts_dpr.h'
-    , intent(in), dimension(0:3) :: k1,k2
+    , intent(in), dimension(0:3) :: k1,k2in
+   include 'cts_dpr.h'
+    , dimension(0:3) :: k2
    include 'cts_dpc.h'
     , intent(out), dimension(0:3) :: l1,l2,l3,l4
    include 'cts_dpc.h'
     , intent(out) :: al1,al2,bet,ga 
    include 'cts_dpr.h'
     :: k1k1,k1k2,k2k2
+   include 'cts_dpr.h'
+    :: d12a,d12b,d12c,d12
+   include 'cts_dpr.h'
+    , dimension(1:3) :: s10,s20,d10,d20
    include 'cts_dpc.h' 
-    :: del12,b1p,b1m,b2p,b2m,c1p,c1m,c2p,c2m,ausp,ausm
+    :: del12,rdel12,b1p,b1m,b2p,b2m,c1p,c1m,c2p,c2m,ausp,ausm
    integer :: k
+   k2= k2in
+ 1 do k= 1,3
+    s10(k)= k1(0)+k1(k); d10(k)= k1(0)-k1(k) 
+    s20(k)= k2(0)+k2(k); d20(k)= k2(0)-k2(k) 
+   enddo
+   d12a= (k2(1)*d10(3)-k1(1)*d20(3))*(k2(1)*s10(3)-k1(1)*s20(3))
+   d12b= (k2(2)*s10(1)-k1(2)*s20(1))*(k2(2)*d10(1)-k1(2)*d20(1))
+   d12c= (k2(3)*s10(2)-k1(3)*s20(2))*(k2(3)*d10(2)-k1(3)*d20(2))
+   d12 =  d12a+d12b+d12c
+   if (abs(d12/roots**4).lt.1.d-60) then
+     k2(0)= k2(0)*1.0000000000001d0 
+     goto 1 
+   endif
+   del12= d12*c1(p)
+   rdel12= sqrt(del12)
    call contr(k1,k1,k1k1)
    call contr(k1,k2,k1k2)
    call contr(k2,k2,k2k2)
-   del12= (k1k2*k1k2-k1k1*k2k2)*c1(p)
    if (k1k2.gt.0.d0) then
-    ga= k1k2+sqrt(del12)
+    k = 1 
    else
-    ga= k1k2-sqrt(del12)
+    k =-1 
    endif
+   ga= k1k2+k*rdel12
    al1= k1k1/ga
    al2= k2k2/ga
-   bet= c1(p)/(c1(p)-al1*al2)
+   if (dreal(al1*al2).lt.0.d0) then
+     bet= c1(p)/(c1(p)-al1*al2)
+   else
+     bet= k*ga**2*(c1(p)+al1*al2)/4.d0/k1k2/rdel12
+   endif
    do k= 0,3
     l1(k)= bet*(k1(k)-al1*k2(k))
     l2(k)= bet*(k2(k)-al2*k1(k))
@@ -321,32 +347,59 @@
    l4(3)=     b2m*b1p  - c2m*c1p
   end subroutine dp_build_l
 !
-  subroutine mp_build_l(k1,k2,l1,l2,l3,l4,al1,al2,bet,ga)  
+  subroutine mp_build_l(k1,k2in,l1,l2,l3,l4,al1,al2,bet,ga)  
+   use scale
    include 'cts_mpr.h' 
     :: p
    include 'cts_mpr.h'
-    , intent(in), dimension(0:3) :: k1,k2
+    , intent(in), dimension(0:3) :: k1,k2in
+   include 'cts_mpr.h'
+    , dimension(0:3) :: k2
    include 'cts_mpc.h'
     , intent(out), dimension(0:3) :: l1,l2,l3,l4
    include 'cts_mpc.h'
     , intent(out) :: al1,al2,bet,ga 
    include 'cts_mpr.h'
-    :: k1k1,k1k2,k2k2
+    :: k1k1,k1k2,k2k2,r12
+   include 'cts_mpr.h'
+    :: d12a,d12b,d12c,d12
+   include 'cts_mpr.h'
+    , dimension(1:3) :: s10,s20,d10,d20
    include 'cts_mpc.h' 
-    :: del12,b1p,b1m,b2p,b2m,c1p,c1m,c2p,c2m,ausp,ausm
+    :: del12,rdel12,b1p,b1m,b2p,b2m,c1p,c1m,c2p,c2m,ausp,ausm
    integer :: k
+   k2= k2in
+ 1 do k= 1,3
+    s10(k)= k1(0)+k1(k); d10(k)= k1(0)-k1(k) 
+    s20(k)= k2(0)+k2(k); d20(k)= k2(0)-k2(k) 
+   enddo
+   d12a= (k2(1)*d10(3)-k1(1)*d20(3))*(k2(1)*s10(3)-k1(1)*s20(3))
+   d12b= (k2(2)*s10(1)-k1(2)*s20(1))*(k2(2)*d10(1)-k1(2)*d20(1))
+   d12c= (k2(3)*s10(2)-k1(3)*s20(2))*(k2(3)*d10(2)-k1(3)*d20(2))
+   d12 =  d12a+d12b+d12c
+   if (abs(d12/roots**4).lt.1.d-120) then
+     k2(0)= k2(0)*1.0000000000001d0 
+     goto 1 
+   endif
+   del12= d12*c1(p)
+   rdel12= sqrt(del12)
    call contr(k1,k1,k1k1)
    call contr(k1,k2,k1k2)
    call contr(k2,k2,k2k2)
-   del12= (k1k2*k1k2-k1k1*k2k2)*c1(p)
    if (k1k2.gt.0.d0) then
-    ga= k1k2+sqrt(del12)
+    k = 1
    else
-    ga= k1k2-sqrt(del12)
+    k =-1
    endif
+   ga= k1k2+k*rdel12
    al1= k1k1/ga
    al2= k2k2/ga
-   bet= c1(p)/(c1(p)-al1*al2)
+   r12= (al1*al2+conjg(al1*al2))
+   if (r12.lt.0.d0) then
+     bet= c1(p)/(c1(p)-al1*al2)
+   else
+     bet= k*ga**2*(c1(p)+al1*al2)/4.d0/k1k2/rdel12
+   endif
    do k= 0,3
     l1(k)= bet*(k1(k)-al1*k2(k))
     l2(k)= bet*(k2(k)-al2*k1(k))
@@ -549,6 +602,8 @@
    x10= z*(dd2-al2*dd1-dd0*(1.d0-al2))
    x20= z*(dd1-al1*dd2-dd0*(1.d0-al1))
    cc = 0.25d0*(x10*x20-dd0/gm)
+!  comment: the next line to avoid underflows 
+   if (abs(cc).lt.1.d-60) cc= 0.d0
    cut3%gm= gm
    cut3%cc= cc
    do i= 0,3
@@ -3736,7 +3791,7 @@
        l4vec(k,ib) =  cut3%l4(k)
        p0vecc(k,ib) =  den(bbn3(1,ib))%p(k) 
       enddo
-      cc = cut3%cc; if (abs(cc).lt.1.d-60) cc= 0.d0;! fix 20.12.2012
+      cc = cut3%cc
       tau= cut3%tau
       c34= -2.d0*cut3%gm
       cden1= cc*tau

@@ -433,7 +433,11 @@ class TestMECmdShell(unittest.TestCase):
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
-        self.assertAlmostEqual(4232.0, cross_section,delta=50)
+        try:
+            self.assertAlmostEqual(4232.0, cross_section,delta=50)
+        except TypeError:
+            self.assertTrue(cross_section < 4282. and cross_section > 4182.)
+
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
         

@@ -1086,6 +1086,11 @@ c
       COMMON /SUBPROC/ PD, IPROC
       DOUBLE PRECISION       CONV
       PARAMETER (CONV=389379660d0)  !CONV TO PICOBARNS
+      integer i_process
+      common/c_addwrite/i_process
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -1384,16 +1389,6 @@ c Collinear subtraction term:
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
             enddo
-            if(doreweight) then
-               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
-     &              .and.pmass(j_fks).eq.0.d0)
-     &              wgtwreal_all(3,nFKSprocess*2)=
-     &              xsec/g**(nint(2*wgtbpower+2.d0))
-               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
-     &              g**(nint(2*wgtbpower+2.d0))
-            endif
-
-
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
                HxmcME=HxmcME+xlum_c*xsec
@@ -1401,6 +1396,13 @@ c Collinear subtraction term:
                   unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
      &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
                enddo
+            endif
+            if(doreweight) then
+               wgtwreal_all(3,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
+     &              g**(nint(2*wgtbpower+2.d0))
+               if(gfactsf.lt.1.d0.and.probne.gt.0.d0.and.gfactcl.lt.1.d0
+     $              .and.pmass(j_fks).eq.0.d0) wgtwreal_all(3
+     $              ,nFKSprocess*2)= xsec/g**(nint(2*wgtbpower+2.d0))
             endif
             if( y_ij_fks_ev.gt.1d0-deltaS )then
                xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
@@ -1816,7 +1818,7 @@ c Update the shower starting scale with the shape from montecarlocounter
             write (*,*) 'ERROR, ',dsigS,
      &           ' found for dsigS, setting dsigS to 0 for this event'
             dsigS=0
-            do j=1,IPROC
+            do j=1,iproc_save(nFKSprocess)
                if (.not.nbody) then
                   unwgt_table(nFKSprocess,1,j)=0d0
                else
@@ -1830,7 +1832,7 @@ c Update the shower starting scale with the shape from montecarlocounter
      $           ,fkssymmetryfactorDeg,fkssymmetryfactor
             stop
          endif
-         do j=1,IPROC
+         do j=1,iproc_save(nFKSprocess)
             if (.not.nbody) then
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
@@ -1875,9 +1877,27 @@ c
             endif
 
             if (nbody) then
-               wgtref_nbody = dsigS
+c$$$               wgtref_nbody = dsigS
+               do i_process=1,iproc_save(nFKSprocess) 
+                  wgtref_nbody_all(i_process)=0d0
+                  do j=1,iproc_save(nFKSprocess)
+                     if (eto(j,nFKSprocess).eq.i_process)
+     $                    wgtref_nbody_all(i_process)
+     $                    =wgtref_nbody_all(i_process)+unwgt_table(0,1
+     $                    ,j)/vegaswgt
+                  enddo
+               enddo
             endif
-            wgtref_all(nFKSprocess*2-1) = dsigS
+c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
+            do i_process=1,iproc_save(nFKSprocess) 
+               wgtref_all(nFKSprocess*2-1,i_process)=0d0
+               do j=1,iproc_save(nFKSprocess)
+                  if (eto(j,nFKSprocess).eq.i_process)
+     $                 wgtref_all(nFKSprocess*2-1,i_process)
+     $                 =wgtref_all(nFKSprocess*2-1,i_process)
+     $                 +unwgt_table(nFKSprocess,1,j)/vegaswgt
+               enddo
+            enddo
             xsec = enhance*unwgtfun
             do i=1,4
                if (.not.nbody) then
@@ -1902,13 +1922,16 @@ c
                enddo
             endif
             if(check_reweight.and.doreweight) then
-               if (nbody) then
-                  call check_rwgt_wgt("nbd")
-               else
-                  call fill_reweight0inc(nFKSprocess*2-1)
-                  call check_rwgt_wgt("Sev")
-               endif
-               call reweight_settozero()
+               do i_process=1,iproc_save(nFKSprocess)
+                  if (nbody) then
+                     call fill_reweight0inc_nbody(i_process)
+                     call check_rwgt_wgt("nbd")
+                  else
+                     call fill_reweight0inc(nFKSprocess*2-1,i_process)
+                     call check_rwgt_wgt("Sev")
+                  endif
+                  call reweight_settozero()
+               enddo
             endif
 c Example of reweighted cross section (scale changed)
 c           dsigS_new=compute_rwgt_wgt_Sev(new_muR_fact,new_muF1_fact,
@@ -1945,7 +1968,7 @@ c Plot observables for counterevents and Born
      &           ' found for dsigH, setting dsigH to 0 for this event'
             dsigH=0
             if (.not.nbody) then
-               do j=1,IPROC
+               do j=1,iproc_save(nFKSprocess)
                   unwgt_table(nFKSprocess,2,j)=0d0
                enddo
          endif
@@ -1958,7 +1981,7 @@ c Plot observables for counterevents and Born
          endif
 
          if (.not.nbody) then
-            do j=1,IPROC
+            do j=1,iproc_save(nFKSprocess)
                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
      $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
             enddo
@@ -1970,7 +1993,11 @@ c Plot observables for counterevents and Born
                stop
             endif
             if (.not.nbody) then
-               wgtref_all(nFKSprocess*2) = dsigH
+c$$$               wgtref_all(nFKSprocess*2) = dsigH
+               do j=1,iproc_save(nFKSprocess)
+                  wgtref_all(nFKSprocess*2,j)=unwgt_table(nFKSprocess,2
+     $                 ,j)/vegaswgt
+               enddo
                xsec = enhance*unwgtfun*fkssymmetryfactor
                do i=1,4
                   wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
@@ -1981,16 +2008,20 @@ c Plot observables for counterevents and Born
      &                 ,nFKSprocess*2) * xsec
                enddo
                if(check_reweight.and.doreweight) then
-                  call fill_reweight0inc(nFKSprocess*2)
-                  call check_rwgt_wgt("Hev")
-                  call reweight_settozero()
+                  do i_process=1,iproc_save(nFKSprocess)
+                     call fill_reweight0inc(nFKSprocess*2,i_process)
+                     call check_rwgt_wgt("Hev")
+                     call reweight_settozero()
+                  enddo
                endif
             else
-               if (wgtref_all(nFKSprocess*2).ne.0d0) then
-                  write (*,*) 'wgtref not zero',
-     &                 wgtref_all(nFKSprocess*2)
-                  stop
-               endif
+               do j=1,iproc_save(nFKSprocess)
+                  if (wgtref_all(nFKSprocess*2,j).ne.0d0) then
+                     write (*,*) 'wgtref not zero',j,
+     &                    wgtref_all(nFKSprocess*2,j)
+                     stop
+                  endif
+               enddo
                do i=1,4
                   if (wgtwreal_all(i,nFKSprocess*2).ne.0d0) then
                      write (*,*) 'wgtwreal not zero',i,
@@ -3254,7 +3285,7 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
 
       subroutine xmom_compare(i_fks,j_fks,jac,jac_cnt,p,p1_cnt,
      #                        p_i_fks_ev,p_i_fks_cnt,
-     #                        xi_i_fks_ev,y_ij_fks_ev)
+     #                        xi_i_fks_ev,y_ij_fks_ev,pass)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -3265,17 +3296,21 @@ c multiplied by 1/x (by 1) for the emitting (non emitting) leg
       double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       double precision xi_i_fks_ev,y_ij_fks_ev
       integer izero,ione,itwo,iunit,isum
-      logical verbose
+      logical verbose,pass,pass0
       parameter (izero=0)
       parameter (ione=1)
       parameter (itwo=2)
       parameter (iunit=6)
       parameter (verbose=.false.)
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
 c
       isum=0
       if(jac_cnt(0).gt.0.d0)isum=isum+1
       if(jac_cnt(1).gt.0.d0)isum=isum+2
       if(jac_cnt(2).gt.0.d0)isum=isum+4
+      pass=.true.
 c
       if(isum.eq.0.or.isum.eq.1.or.isum.eq.2.or.isum.eq.4)then
 c Nothing to be done: 0 or 1 configurations computed
@@ -3288,26 +3323,30 @@ c Soft is taken as reference
             write(iunit,*)'    '
             write(iunit,*)'C/S'
           endif
-          call xmcompare(verbose,ione,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,ione,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
           if(verbose)then
             write(iunit,*)'    '
             write(iunit,*)'SC/S'
           endif
-          call xmcompare(verbose,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         elseif(isum.eq.3)then
           if(verbose)then
             write(iunit,*)'C+S'
             write(iunit,*)'    '
             write(iunit,*)'C/S'
           endif
-          call xmcompare(verbose,ione,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,ione,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         elseif(isum.eq.5)then
           if(verbose)then
             write(iunit,*)'SC+S'
             write(iunit,*)'    '
             write(iunit,*)'SC/S'
           endif
-          call xmcompare(verbose,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          call xmcompare(verbose,pass0,itwo,izero,i_fks,j_fks,p,p1_cnt)
+          pass=pass.and.pass0
         endif
       elseif(isum.eq.6)then
 c Collinear is taken as reference
@@ -3316,11 +3355,13 @@ c Collinear is taken as reference
           write(iunit,*)'    '
           write(iunit,*)'SC/C'
         endif
-        call xmcompare(verbose,itwo,ione,i_fks,j_fks,p,p1_cnt)
+        call xmcompare(verbose,pass0,itwo,ione,i_fks,j_fks,p,p1_cnt)
+        pass=pass.and.pass0
       else
         write(6,*)'Fatal error in xmom_compare',isum
         stop
       endif
+      if(.not.pass)i_momcmp_count=i_momcmp_count +1
 c
       if(jac_cnt(0).gt.0.d0.and.jac.gt.0.d0)
      #  call p_ev_vs_cnt(izero,i_fks,j_fks,p,p1_cnt,
@@ -3335,12 +3376,12 @@ c
       end
 
 
-      subroutine xmcompare(verbose,inum,iden,i_fks,j_fks,p,p1_cnt)
+      subroutine xmcompare(verbose,pass0,inum,iden,i_fks,j_fks,p,p1_cnt)
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
-      logical verbose
+      logical verbose,pass0
       integer inum,iden,i_fks,j_fks,iunit,ipart,i,j,k
       double precision tiny,vtiny,xnum,xden,xrat
       double precision p(0:3,-max_branch:max_particles)
@@ -3350,8 +3391,12 @@ c
       parameter (vtiny=1.d-10)
       double precision pmass(nexternal),zero
       parameter (zero=0d0)
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
       include "pmass.inc"
 c
+      pass0=.true.
       do ipart=1,nexternal
         do i=0,3
           xnum=p1_cnt(i,ipart,inum)
@@ -3385,7 +3430,8 @@ c it as the standard, one should think a bit about it
                  do j=1,nexternal
                     write(*,*) j,(p1_cnt(k,j,iden),k=0,3)
                  enddo
-                 stop
+                 xratmax=max(xratmax,xrat)
+                 pass0=.false.
               endif
             endif
           endif
@@ -3415,7 +3461,8 @@ c it as the standard, one should think a bit about it
             write(*,*)'Kinematics of counterevents'
             write(*,*)inum,iden
             write(*,*)'is different. Particle i+j'
-            stop
+            xratmax=max(xratmax,xrat)
+            pass0=.false.
           endif
         endif
       enddo

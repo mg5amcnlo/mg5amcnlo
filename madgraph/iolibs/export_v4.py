@@ -3298,17 +3298,17 @@ class UFO_model_to_mg4(object):
                      ','.join([self.mp_prefix+c for c in coupling_list])+'\n\n')            
         
         # Write complex mass for complex mass scheme (if activated)
-        if self.opt['complex_mass']:
+        if self.opt['complex_mass'] and complex_mass:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
-            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')
+            fsock.writelines('common/complex_mass/ '+', '.join(complex_mass)+'\n')
             if self.opt['mp']:
                 mp_fsock_same_name.writelines(self.mp_complex_format+' '+\
                                                     ','.join(complex_mass)+'\n')
-                mp_fsock_same_name.writelines('common/MP_couplings/ '+\
+                mp_fsock_same_name.writelines('common/MP_complex_mass/ '+\
                                                   ','.join(complex_mass)+'\n\n')                
                 mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                                 self.mp_prefix+cm for cm in complex_mass])+'\n')
-                mp_fsock.writelines('common/MP_couplings/ '+\
+                mp_fsock.writelines('common/MP_complex_mass/ '+\
                     ','.join([self.mp_prefix+cm for cm in complex_mass])+'\n\n')                       
         
     def create_write_couplings(self):
@@ -3860,7 +3860,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                 group_subprocesses = True
             else:
                 group_subprocesses = False
-    
+
         assert group_subprocesses in [True, False]
         
         opt = {'clean': not noclean,
