@@ -89,8 +89,10 @@ c For tests
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
 
-      double precision average_virtual,average_virt
-      common /c_avg_virt/average_virtual,average_virt
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
 
       double precision weight
 c For MINT:
@@ -195,6 +197,9 @@ c at the NLO)
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
+      
+c For the optimization of the number of calls to the virtual
+      virtual_fraction=virt_fraction
 
       i_momcmp_count=0
       xratmax=0.d0
@@ -221,7 +226,7 @@ c to restore grids:
             enddo
             read (12,*) xint
             read (12,*) ifold_energy,ifold_phi,ifold_yij
-            read (12,*) virt_fraction,average_virt
+            read (12,*) virtual_fraction,average_virtual
             close (12)
          endif
 c
@@ -259,7 +264,7 @@ c to save grids:
          enddo
          write (12,*) xint
          write (12,*) ifold_energy,ifold_phi,ifold_yij
-         write (12,*) virt_fraction,average_virt
+         write (12,*) virtual_fraction,average_virtual
          close (12)
 
       elseif(imode.eq.1) then
@@ -275,7 +280,7 @@ c to restore grids:
          enddo
          read (12,*) xint
          read (12,*) ifold_energy,ifold_phi,ifold_yij
-         read (12,*) virt_fraction,average_virt
+         read (12,*) virtual_fraction,average_virtual
          close (12)
 
 c Prepare the MINT folding
@@ -319,7 +324,7 @@ c to save grids:
          enddo
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) resS,errS
-         write (12,*) virt_fraction,average_virt
+         write (12,*) virtual_fraction,average_virtual
          close (12)
 
 
@@ -351,7 +356,7 @@ c to restore grids:
          enddo
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) resS,errS
-         read (12,*) virt_fraction,average_virt
+         read (12,*) virtual_fraction,average_virtual
          close (12)
 
          open(unit=58,file='res_1',status='old')
@@ -671,7 +676,7 @@ c
 
 
 
-      function sigintF(xx,w,ifl,f_abs)
+      function sigintF(xx,w,ifl,f)
 c From dsample_fks
       implicit none
       include 'mint.inc'
@@ -691,7 +696,7 @@ c From dsample_fks
       real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f_abs(2),lum,dlum
+      double precision wgt,dsigS,dsigH,f(nintegrals),lum,dlum
       external dlum
       logical unwgt
       double precision evtsgn
@@ -704,8 +709,8 @@ c From dsample_fks
       double precision f_check
       double precision x(99),sigintF_without_w,f_abs_without_w
       common /c_sigint/ x,sigintF_without_w,f_abs_without_w
-      double precision f(2),result(0:fks_configs,2)
-      save f,result
+      double precision f1(2),result(0:fks_configs,2)
+      save f1,result
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
@@ -738,6 +743,8 @@ c From dsample_fks
       double precision unwgt_table(0:fks_configs,3,maxproc)
       common/c_unwgt_table/unwgt_table
       save proc_map
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -970,14 +977,18 @@ c IRPOC's
                enddo
             enddo
          enddo
-         f(1)=0d0
-         f(2)=0d0
+         f1(1)=0d0
+         f1(2)=0d0
+         virtual_over_born=0d0
          do i=0,fks_configs
             result(i,1)=0d0
             result(i,2)=0d0
          enddo
          dsigS=0d0
          dsigH=0d0
+         do i=1,nintegrals
+            f(i)=0d0
+         enddo
       endif
 
       if (ifl.eq.0)then
@@ -1039,8 +1050,8 @@ c THIS CAN BE OPTIMIZED
          call dsigF(p,wgt,w,dsigS,dsigH)
          result(0,1)= w*dsigS
          result(0,2)= w*dsigH
-         f(1) = f(1)+result(0,1)
-         f(2) = f(2)+result(0,2)
+         f1(1) = f1(1)+result(0,1)
+         f1(2) = f1(2)+result(0,2)
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
@@ -1084,15 +1095,16 @@ c much. Do this by overwrite the 'wgt' variable
                sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
-               f(1) = f(1)+result(nFKSprocess,1)
-               f(2) = f(2)+result(nFKSprocess,2)
+               f1(1) = f1(1)+result(nFKSprocess,1)
+               f1(2) = f1(2)+result(nFKSprocess,2)
             enddo
             call fill_MC_integer(1,proc_map(0,1),sigintR)
          endif
-         sigintF=f(1)+f(2)
+         f(2)=f1(1)+f1(2)
+         sigintF=f(2)
          unwgt=.false.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
-     $        ,f_abs)
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
+         f_check=f(2)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
      $           .gt.1d-1) then
@@ -1105,19 +1117,19 @@ c much. Do this by overwrite the 'wgt' variable
      $              ,sigintF,f_check
             endif
          endif
-         if (f_abs(1).ne.0d0) itotalpoints=itotalpoints+1
+         if (f(1).ne.0d0) itotalpoints=itotalpoints+1
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
       elseif(ifl.eq.2) then
          unwgt=.true.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
-     $        ,f_abs)
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
+         f_check=f(2)
 c The following two are needed when writing events to do NLO/Born
 c reweighting
          sigintF=f_check
          sigintF_without_w=sigintF/w
-         f_abs_without_w=f_abs(1)/w
+         f_abs_without_w=f(1)/w
       endif
       return
       end
@@ -1142,18 +1154,18 @@ c reweighting
       end
 
 
-      subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f
-     $     ,f_abs)
+      subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f)
       implicit none
+      include 'mint.inc'
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
       include 'run.inc'
-      double precision unwgt_table(0:fks_configs,3,maxproc),f,f_abs(2)
-     $     ,dummy,dlum,f_abs_H,f_abs_S,f_abs_V,rnd,ran2,current
-     $     ,f_abs_S_un,f_unwgt(fks_configs,maxproc),sum,tot_sum
+      double precision unwgt_table(0:fks_configs,3,maxproc)
+     $     ,f(nintegrals),dummy,dlum,f_abs_H,f_abs_S,f_V,rnd,ran2
+     $     ,current,f_abs_S_un,f_unwgt(fks_configs,maxproc),sum,tot_sum
      $     ,temp_shower_scale
       external ran2
       external dlum
@@ -1189,6 +1201,8 @@ c reweighting
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
@@ -1204,20 +1218,22 @@ c Trivial check on the Born contribution
 c
 c Compute the total rate. This is simply the sum of all
 c
+      do i=1,nintegrals
+         f(i)=0d0
+      enddo
       if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') ) then
-         f=0d0
 c all the (n+1)-body contributions
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
             do j=1,iproc_save(nFKSprocess)
-               f = f + unwgt_table(nFKSprocess,1,j)+
+               f(2) = f(2) + unwgt_table(nFKSprocess,1,j)+
      &              unwgt_table(nFKSprocess,2,j)
             enddo
          enddo
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
-            f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
+            f(2)=f(2)+unwgt_table(0,1,j)+unwgt_table(0,2,j)
          enddo
 c
 c Compute the abs of the total rate. Need to take ABS of all
@@ -1227,7 +1243,7 @@ c scale, this might happen for S-events)
 c     
          f_abs_H=0d0
          f_abs_S=0d0
-         f_abs_V=0d0
+         f_V=0d0
 c Nothing to combine for H-events, so need to sum them independently
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
@@ -1267,7 +1283,7 @@ c Add the n-body only once
                      f_unwgt(nFKSprocess_soft,i) =
      &                    f_unwgt(nFKSprocess_soft,i) +
      &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
-                     f_abs_V=f_abs_V+abs(unwgt_table(0,3,i))
+                     f_V=f_V+unwgt_table(0,3,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1318,15 +1334,17 @@ c directories (take the weighted average):
          endif
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs(1)=f_abs_H+f_abs_S
-            f_abs(2)=f_abs_V
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(4)=virtual_over_born
          else
 c pick one at random and update reweight info and all that
-            f_abs(1)=f_abs_H+f_abs_S
-            f_abs(2)=f_abs_V
-            if (f_abs(1).ne.0d0) then
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(4)=virtual_over_born
+            if (f(1).ne.0d0) then
                rnd=ran2()
-               if (rnd.le.f_abs_H/f_abs(1)) then
+               if (rnd.le.f_abs_H/f(1)) then
                   Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
                   i_process=1
@@ -1404,7 +1422,6 @@ c contribution
             endif
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
-         f=0d0
          nScontributions=0
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
@@ -1412,30 +1429,32 @@ c and the n-body contributions
                write (*,*) 'Error #4 in unwgt_table',unwgt_table(0,2,j)
                stop
             endif
-            f=f+unwgt_table(0,1,j)
+            f(2)=f(2)+unwgt_table(0,1,j)
          enddo
          f_abs_H=0d0
          f_abs_S=0d0
-         f_abs_V=0d0
+         f_V=0d0
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
                   f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
-                  f_abs_V=f_abs_V+abs(unwgt_table(0,3,i))
+                  f_V=f_V+unwgt_table(0,3,i)
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))
          enddo
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs(1)=f_abs_H+f_abs_S
-            f_abs(2)=f_abs_V
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(4)=virtual_over_born
          else
 c pick one at random and update reweight info and all that
-            f_abs(1)=f_abs_H+f_abs_S
-            f_abs(2)=f_abs_V
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(4)=virtual_over_born
             Hevents=.false.
-            if (f_abs(1).ne.0d0) then
+            if (f(1).ne.0d0) then
                rnd=ran2()
 c Pick one of the IPROC's of the Born
                i_process=1

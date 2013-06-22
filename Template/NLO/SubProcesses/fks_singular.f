@@ -3963,7 +3963,6 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
-      include 'FKSParams.inc'
       double precision p(0:3,nexternal),bsv_wgt,born_wgt
       double precision pp(0:3,nexternal)
       
@@ -4027,8 +4026,10 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual,average_virt
-      common /c_avg_virt/average_virtual,average_virt
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
 
 c For the MINT folding
       integer fold
@@ -4191,17 +4192,18 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
          virt_wgt=0d0
          if (fold.eq.0) then
-            if (ran2().le.virt_fraction .and. abrv(1:3).ne.'nov') then
+            if (ran2().le.virtual_fraction .and. abrv(1:3).ne.'nov') then
                Call BinothLHA(p_born,born_wgt,virt_wgt)
-               virt_wgt=(virt_wgt-average_virt*born_wgt*ao2pi)
-     $              /virt_fraction
+               virtual_over_born=virt_wgt/(born_wgt*ao2pi)
+               virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
+     $              /virtual_fraction
                virt_wgt_save=virt_wgt
                bsv_wgt=bsv_wgt+virt_wgt_save
             endif
          elseif(fold.eq.1) then
             bsv_wgt=bsv_wgt+virt_wgt_save
          endif
-         bsv_wgt=bsv_wgt+average_virt*born_wgt*ao2pi
+         bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then

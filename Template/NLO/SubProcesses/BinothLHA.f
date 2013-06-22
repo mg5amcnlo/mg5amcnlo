@@ -68,8 +68,6 @@ c statistics for MadLoop
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
       logical cpol
-      double precision average_virtual,average_virt
-      common /c_avg_virt/average_virtual,average_virt
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -138,9 +136,6 @@ c$$$            single  = single/4d0/dble(ngluons)
 c$$$            double  = double/4d0/dble(ngluons)
          endif
       endif
-      average_virtual=(average_virtual*ntot+
-     &                 virt_wgt/(born_wgt*ao2pi))/(ntot+1)
-      
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,

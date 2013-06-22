@@ -47,8 +47,8 @@
 ! grid-setup phase, this number will be updated automatically after
 ! each iteration depending on the relative MC uncertainties.
 #VirtualFraction
-0.2d0
-! Default :: 0.2d0
+1.0d0
+! Default :: 1.0d0
 !
 ! ==========================================================================
 ! End of FKS_params.dat file
