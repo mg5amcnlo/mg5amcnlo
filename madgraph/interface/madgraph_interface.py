@@ -2268,9 +2268,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Extract process from process definition
             if ',' in line:
-                myprocdef, line = self.extract_decay_chain_process(line)
-                if myprocdef.are_decays_perturbed():
-                    raise MadGraph5Error("Decay processes cannot be perturbed")
+                if ']' or '[' in line:
+                    error_msg=\
+"""The '[' and ']' syntax cannot be used in cunjunction with decay chains.
+This implies that with decay chains:
+  > Squared coupling order limitations are not available.
+  > Loop corrections cannot be considered."""
+                    raise MadGraph5Error(error_msg)
+                else:
+                    myprocdef, line = self.extract_decay_chain_process(line)
+                    # Redundant with above, but not completely as in the future
+                    # one might think of allowing the core process to be 
+                    # corrected by loops.
+                    if myprocdef.are_decays_perturbed():
+                        raise MadGraph5Error("Decay processes cannot be perturbed.")
+                    if myprocdef.are_negative_orders_present():
+                        raise MadGraph5Error("Decay processes include negative"+\
+                                                " coupling orders constraints.")                    
             else:
                 myprocdef = self.extract_process(line)
 
@@ -2283,6 +2297,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                myprocdef.get_ninitial():
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
             
+            # Negative coupling order contraints can be given on at most one
+            # coupling order (and either in squared orders or orders, not both)
+            if len([1 for val in myprocdef.get('orders').values()+\
+                          myprocdef.get('squared_orders').values() if val<0])>1:
+                raise MadGraph5Error("Negative coupling order constraints"+\
+                  " can only be given on one type of coupling and either on"+\
+                               " squared orders or amplitude orders, not both.")
+
             cpu_time1 = time.time()
 
             # Generate processes
@@ -3074,9 +3096,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Now check for squared orders, specified after the perturbation orders.
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
-        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
+        # The 'split_orders' (i.e. those for which individual matrix element
+        # evalutations must be provided for each corresponding order value) are
+        # defined from the orders specified in between [] and any order for
+        # which there are squared order constraints.
+        split_orders = []
         while squared_order_re:
             squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
             line = squared_order_re.group(1)
@@ -3104,28 +3131,46 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "Valid modes are %s. "%str(self._valid_nlo_modes)
             else:
                 LoopOption='all'
+
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
 
-        # Now if perturbation orders are defined, we will scan for the 
-        # amplitudes orders. If not we will use the squared orders above instead.
+        # Now if perturbation orders placeholders [] have been found,
+        # we will scan for the amplitudes orders. If not we will use the 
+        # squared orders above instead.
         orders = {}
-        if perturbation_couplings == "":
+        if not perturbation_couplings_re:
             for order in squared_orders:
                 orders[order]=squared_orders[order]
             squared_orders={}
         else:
             # We take the coupling orders (identified by "=")
-            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+            # Notice that one can have a negative value of the squared order to
+            # indicate that one should take the N^{n}LO contribution into account.
+            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
                 orders[order_re.group(2)] = int(order_re.group(3))
                 line = order_re.group(1)
                 order_re = order_pattern.match(line)
-        # if the squared orders are defined but not the orders, assume orders=sq_orders
+
+        # if the squared orders are defined but not the orders, assume 
+        # orders=sq_orders. In case the squared order has a negative value,
+        # the the order is correspondingly set to be maximal (99) since there is
+        # no way to knwo, during generation, if the amplitude being contstructed
+        # will be leading or not.
         if not orders and squared_orders:
             for order in squared_orders:
-                orders[order]=squared_orders[order]
+                if squared_orders[order]>=0:
+                    orders[order]=squared_orders[order]
+                else:
+                    orders[order]=99
+        
+        # Now add any order for which there is a squard order constraint to the
+        # 'split_order' list if it was not already present.
+        for sq_order in squared_orders.keys():
+            if sq_order not in split_orders:
+                split_orders.append(sq_order)
 
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
@@ -3206,6 +3251,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             perturbation_couplings_list = perturbation_couplings.split()
             if perturbation_couplings_list==['']:
                 perturbation_couplings_list=[]
+            # Correspondingly set 'split_order' from the squared orders and the
+            # perturbation couplings list
+            split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
+            # If the loopOption is 'tree' then the user used the syntax 
+            # [tree= Orders] for the sole purpose of setting split_orders. We
+            # then empty the perturbation_couplings_list at this stage.
+            if LoopOption=='tree':
+                perturbation_couplings_list = []
             if perturbation_couplings_list and LoopOption!='real':
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
@@ -3259,9 +3312,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'overall_orders': overall_orders,
                               'perturbation_couplings': perturbation_couplings_list,
                               'has_born':HasBorn,
-                              'NLO_mode':LoopOption
+                              'NLO_mode':LoopOption,
+                              'split_orders':split_orders
                               })
         #                       'is_decay_chain': decay_process\
+
 
     @staticmethod
     def split_process_line(procline):

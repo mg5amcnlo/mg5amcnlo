@@ -2237,6 +2237,16 @@ class Process(PhysicsObject):
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
         self['NLO_mode'] = 'tree'
+        # The user might want to have the individual matrix element evaluations
+        # for specific values of the coupling orders. The list below specifies
+        # what are the coupling names which need be individually treated.
+        # For example, for the process p p > j j [] QED=2 (QED=2 is 
+        # then a squared order constraint), then QED will appear in the 
+        # 'split_orders' list so that the subroutine in matrix.f return the
+        # evaluation of the matrix element individually for the pure QCD 
+        # contribution 'QCD=4 QED=0', the pure interference 'QCD=2 QED=2' and
+        # the pure QED contribution of order 'QCD=0 QED=4'.
+        self['split_orders'] = []
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2248,6 +2258,15 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'split_orders':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for order in value:
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid string" % str(value)
 
         if name == 'model':
             if not isinstance(value, Model):
@@ -2366,8 +2385,8 @@ class Process(PhysicsObject):
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
-                'legs_with_decays',
-                'perturbation_couplings', 'has_born', 'NLO_mode']
+                'legs_with_decays', 'perturbation_couplings', 'has_born', 
+                'NLO_mode','split_orders']
 
     def nice_string(self, indent=0, print_weighted = True):
         """Returns a nicely formated string about current process
@@ -2662,6 +2681,20 @@ class Process(PhysicsObject):
         return mystr
 
     # Helper functions
+
+    def are_negative_orders_present(self):
+        """ Check iteratively that no coupling order constraint include negative
+        values."""
+
+        if any(val<0 for val in self.get('orders').values()+\
+                                           self.get('squared_orders').values()):
+            return True
+        
+        for procdef in self['decay_chains']:
+            if procdef.are_negative_orders_present():
+                return True
+
+        return False
 
     def are_decays_perturbed(self):
         """ Check iteratively that the decayed processes are not perturbed """

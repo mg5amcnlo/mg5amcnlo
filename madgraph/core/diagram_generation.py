@@ -597,13 +597,46 @@ class Amplitude(base_objects.PhysicsObject):
                 newleg = copy.copy(vert.get('legs').pop(-1))
                 newleg.set('onshell', False)
                 vert.get('legs').append(newleg)
-                
-        # Set diagrams to res
-        self['diagrams'] = res
 
         # Set actual coupling orders for each diagram
         for diagram in res:
             diagram.calculate_orders(model)
+
+        # Filter the diagrams according to the squared coupling order
+        # constraints and possible the negative one. Remember that OrderName=-n
+        # means that the user wants to include everything up to the N^(n+1)LO
+        # contribution in that order and at most one order can be restricted
+        # in this way. We shall do this only if the diagrams are not asked to
+        # be returned, as it is the case for NLO because it this case the
+        # interference are not necessarily among the diagrams generated here only.
+        if not returndiag:   
+            # Start by checking the positive squared order constraints
+            for order, value in process.get('squared_orders').items():
+                if value >= 0:
+                    # First make sure there are some diagrams left
+                    if len(res)==0: break
+                    # Assuming born amplitude squared (see comment above)
+                    min_amp_order=min(diag.get_order(order) for diag in res)
+                    res = base_objects.DiagramList(filter(lambda diag: \
+                                diag.get_order(order)<=value-min_amp_order,res))
+            # Now check any negative order constraint
+            try:
+                neg_order=[elem for elem in process.get('orders').items()+\
+                          process.get('squared_orders').items() if elem[1]<0][0]
+                # Make sure there still are some diagrams
+                if len(res)==0:
+                    raise IndexError
+                min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
+                # When not including loop corrections, restricting a coupling
+                # order with a negative value at the amplitude level or at the
+                # squared order level does not make a difference.
+                # The expansion is in terms of alpha_x, not g_x, hence the
+                # factor 2.
+                res = base_objects.DiagramList(filter(lambda diag: \
+                                  diag.get_order(neg_order[0])<= min_amp_order+\
+                                                       2*(-neg_order[1]-1),res))           
+            except IndexError:
+                pass
 
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
@@ -764,7 +797,9 @@ class Amplitude(base_objects.PhysicsObject):
         orders subtracted. If coupling_orders is not given, return
         None (which counts as success).
         WEIGHTED is a special order, which corresponds to the sum of
-        order hierarchys for the couplings."""
+        order hierarchies for the couplings.
+        We ignore negative constraints as these cannot be taken into
+        account on the fly but only after generation."""
 
         if not coupling_orders:
             return None
@@ -778,7 +813,8 @@ class Amplitude(base_objects.PhysicsObject):
             for coupling in inter.get('orders').keys():
                 # Note that we don't consider a missing coupling as a
                 # constraint
-                if coupling in present_couplings:
+                if coupling in present_couplings and \
+                                                 present_couplings[coupling]>=0:
                     # Reduce the number of couplings that are left
                     present_couplings[coupling] -= \
                              inter.get('orders')[coupling]
@@ -786,7 +822,8 @@ class Amplitude(base_objects.PhysicsObject):
                         # We have too many couplings of this type
                         return False
             # Now check for WEIGHTED, i.e. the sum of coupling hierarchy values
-            if 'WEIGHTED' in present_couplings:
+            if 'WEIGHTED' in present_couplings and \
+                                               present_couplings['WEIGHTED']>=0:
                 weight = sum([model.get('order_hierarchy')[c]*n for \
                               (c,n) in inter.get('orders').items()])
                 present_couplings['WEIGHTED'] -= weight
@@ -980,7 +1017,7 @@ class Amplitude(base_objects.PhysicsObject):
     def trim_diagrams(self, decay_ids=[], diaglist=None):
         """Reduce the number of legs and vertices used in memory.
         When called by a diagram generation initiated by LoopAmplitude, 
-        this function should no trim the diagrams in the attribute 'diagrams'
+        this function should not trim the diagrams in the attribute 'diagrams'
         but rather a given list in the 'diaglist' argument."""
 
         legs = []
@@ -1020,7 +1057,6 @@ class Amplitude(base_objects.PhysicsObject):
                     diagram.get('vertices')[ivx] = vertices[index]
                 except ValueError:
                     vertices.append(vertex)
-        
 
 #===============================================================================
 # AmplitudeList
@@ -1450,7 +1486,9 @@ class MultiProcess(base_objects.PhysicsObject):
                               'overall_orders': \
                                  process_definition.get('overall_orders'),
                               'has_born': \
-                                 process_definition.get('has_born')
+                                 process_definition.get('has_born'),
+                              'split_orders': \
+                                 process_definition.get('split_orders')                                
                                  })
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
@@ -1681,7 +1719,9 @@ class MultiProcess(base_objects.PhysicsObject):
                               'is_decay_chain': \
                                  process_definition.get('is_decay_chain'),
                               'overall_orders': \
-                                 process_definition.get('overall_orders')})
+                                 process_definition.get('overall_orders'),
+                              'split_orders': \
+                                 process_definition.get('split_orders')})
 
                     # Check for couplings with given expansion orders
                     process.check_expansion_orders()

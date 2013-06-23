@@ -169,14 +169,22 @@ class Switcher(object):
         # Use regular expressions to extract the loop mode (if present) and its
         # option, specified in the line with format [ option = loop_orders ] or
         # [ loop_orders ] which implicitly select the 'all' option.
-        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)\])(.*)$")
+        loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
         res=loopRE.search(line)
         if res:
+            orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:
-                return ('NLO',res.group('option').split()[0],
-                                    res.group('orders').split())
+                if res.group('option').split()[0]=='tree':
+                    return ('tree',res.group('option').split()[0],orders)
+                else:
+                    return ('NLO',res.group('option').split()[0],orders)
             else:
-                return ('NLO','all',res.group('orders').split())
+                # If not option is set the convention is that the mode is 'all'
+                # unless no perturbation orders is defined.
+                if len(orders)>0:
+                    return ('NLO','all',orders)
+                else:
+                    return ('tree',None,[])               
         else:
             return ('tree',None,[])    
     
