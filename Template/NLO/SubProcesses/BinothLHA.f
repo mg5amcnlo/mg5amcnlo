@@ -129,11 +129,6 @@ c account)
      &              'Cannot do MC over helicities for 1->N processes'
                stop
             endif
-c No longer need to devide by ngluons or the factor 4, because we
-c already take a ratio above
-c$$$            virt_wgt= virt_wgt/4d0/dble(ngluons)
-c$$$            single  = single/4d0/dble(ngluons)
-c$$$            double  = double/4d0/dble(ngluons)
          endif
       endif
 c======================================================================

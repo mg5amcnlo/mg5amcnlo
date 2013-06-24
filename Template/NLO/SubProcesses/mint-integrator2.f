@@ -313,7 +313,7 @@ c Special for the computation of the 'computed virtual'
       endif
 c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
-      if (non_zero_point(i).lt.ncalls .and. double_events) goto 2
+      if (non_zero_point(1).lt.ncalls .and. double_events) goto 2
 
 c Iteration done. Update the accumulated results and print them to the
 c screen
@@ -462,8 +462,8 @@ c double the number of points for the next iteration
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
       if (imode.eq.0) then
-         virtual_fraction=min(virtual_fraction*
-     &        max(min(4d0*etot(3)/etot(1),2d0),0.5d0),1d0)
+         virtual_fraction=max(min(virtual_fraction*
+     &        max(min(2d0*etot(3)/etot(1),2d0),0.25d0),1d0),0.01d0)
 c Give same importance to last ave_virtual as compared to all the others
          average_virtual=ans(4)
          write (*,'(a,1x,f7.3)')
