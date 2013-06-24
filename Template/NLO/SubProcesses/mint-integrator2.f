@@ -351,10 +351,8 @@ c empty the accumulated results in the MC over integers
          call empty_MC_integer
 c empty the accumalated results for the MINT grids
          if (imode.eq.0) then
-            do kdim=1,ndim
-               xacc(icell(kdim),kdim)=0d0
-               nhits(icell(kdim),kdim)=0
-            enddo
+c this is done above when the iteration starts
+            continue
          elseif (imode.eq.1) then
 c Cannot really skip the increase of the upper bounding envelope. So,
 c simply continue here. Note that no matter how large the integrand for
