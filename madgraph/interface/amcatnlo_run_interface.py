@@ -2254,7 +2254,7 @@ Integrated cross-section
 
         content = \
 """-1 12      ! points, iterations
-0.02       ! desired fractional accuracy
+0.03       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?

@@ -65,6 +65,9 @@ c Vegas stuff
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
 
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
+
 c For tests
       real*8 fksmaxwgt,xisave,ysave
       common/cfksmaxwgt/fksmaxwgt,xisave,ysave
@@ -108,6 +111,8 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      average_virtual=0d0
+      virtual_fraction=Virt_fraction
 c
 c     Read process number
 c

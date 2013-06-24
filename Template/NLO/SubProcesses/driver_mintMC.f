@@ -128,6 +128,8 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      average_virtual=0d0
+      virtual_fraction=virt_fraction
 c
 c
 c     Read process number
@@ -198,8 +200,6 @@ c at the NLO)
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
       
-c For the optimization of the number of calls to the virtual
-      virtual_fraction=virt_fraction
 
       i_momcmp_count=0
       xratmax=0.d0
