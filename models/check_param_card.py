@@ -317,7 +317,25 @@ class ParamCard(dict):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
-            
+    
+    def create_diff(self, new_card):
+        """return a text file allowing to pass from this card to the new one
+           via the set command"""
+        
+        diff = ''
+        for blockname, block in self.items():
+            for param in block:
+                lhacode = param.lhacode
+                value = param.value
+                new_value = new_card[blockname].get(lhacode).value
+                if value - new_value and abs(value - new_value)/(value +new_value) > 1e-7:
+                    lhacode = ' '.join([str(i) for i in lhacode])
+                    diff += 'set param_card %s %s %s \n' % \
+                                       (blockname, lhacode , new_value)
+        return diff 
+                
+        
+    
             
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""

@@ -568,6 +568,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """ ask a question with some pre-define possibility
             path info is
         """
+
         if path_msg:
             path_msg = [path_msg]
         else:
@@ -850,7 +851,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
-        if printcmd:
+        if printcmd and not line.startswith('#'):
             logger.info(line)
         if self.child:
             current_interface = self.child

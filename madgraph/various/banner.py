@@ -100,7 +100,10 @@ class Banner(dict):
                     text = ''
                     store = False
             if store:
-                text += line
+                if line.endswith('\n'):
+                    text += line
+                else:
+                    text += '%s%s' % (line, '\n')
                 
             #reaching end of the banner in a event file avoid to read full file 
             if "</init>" in line:

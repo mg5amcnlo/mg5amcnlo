@@ -2449,7 +2449,44 @@ calculator."""
                                                                      cwd=O_path) 
         self.update_status('End Parton', level='parton', makehtml=False)
         devnull.close()
+    
+    ############################################################################
+    def do_reweight(self, line):
+        """ Allow to reweight the events generated with a new choices of model
+            parameter.
+        """
+        
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
+            return
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import madgraph.interface.reweight_interface as reweight_interface
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load Reweight module.
+            The variable mg5_path might not be correctly configured.'''
+        
+        if not '-from_cards' in line:
+            self.keep_cards(['reweight_card.dat'])
+            self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
+        # load the name of the event file
+        args = self.split_arg(line) 
+        self.check_decay_events(args) 
+        # args now alway content the path to the valid files
+        reweight_cmd = reweight_interface.ReweightInterface(args[0]) 
+        self.update_status('Running Reweight', level='madspin')
+        
+        
+        path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        reweight_cmd.me_dir = self.me_dir
+        reweight_cmd.import_command_file(path)
+        
     ############################################################################ 
     def do_create_gridpack(self, line):
         """Advanced commands: Create gridpack from present run"""

@@ -199,7 +199,7 @@ class CheckValidForCmd(object):
         elif '_card.dat' in args[0]:   
             name = args[0].replace('_card.dat','_card_default.dat')
             if os.path.isfile(os.path.join(path,'Cards', name)):
-                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
+                files.cp(os.path.join(path,'Cards', name), os.path.join(path,'Cards', args[0]))
                 args[0] = os.path.join(path,'Cards', args[0])
             else:
                 raise self.InvalidCmd('No default path for this file')
@@ -490,7 +490,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True):
         """ """
-        
+        if not self.options['madanalysis_path']:
+            plot = False
+            
+        self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
+                                  self.ask)
+    
+    @staticmethod
+    def ask_edit_card_static(cards, mode='fixed', plot=True, 
+                             timeout=0, ask=None, **opt):
+        if not ask:
+            ask = CommonRunCmd.ask
+
         def path2name(path):
             if '_card' in path:
                 return path.split('_card')[0]
@@ -511,8 +522,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             possible_answer.append(imode)
             question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
-        
-        if plot and self.options['madanalysis_path']:
+        if plot:
             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
@@ -531,9 +541,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         out = 'to_run'
         while out not in ['0', 'done']:
-            out = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+            out = ask(question, '0', possible_answer, timeout=int(1.5*timeout), 
                               path_msg='enter path', ask_class = AskforEditCard,
-                              cards=cards, mode=mode)
+                              cards=cards, mode=mode, **opt)
 
             
     @staticmethod
@@ -1377,10 +1387,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     set command define and modifying the param_card/run_card correctly"""
     
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
-        
+
+        # Initiation
+        if 'pwd' in opt:
+            self.me_dir = opt['pwd']
+            del opt['pwd']
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
-        self.me_dir = self.mother_interface.me_dir
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+
+        if not hasattr(self, 'me_dir') or not self.me_dir:
+            self.me_dir = self.mother_interface.me_dir
+
+        # read the card
+
+        try:
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        except IOError:
+            self.run_card = {}
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
         except check_param_card.InvalidParamCard:
@@ -1634,7 +1657,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.setP(args[start], key, value)
             else:
                 logger.warning('invalid set command %s' % line)
-                return                   
+                return
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
         # PARAM_CARD NO BLOCK NAME
