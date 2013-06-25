@@ -66,7 +66,7 @@ c imode=-1: same as imode=0, but use previously generated grids
 c others: same as 1 (for now)
       implicit none
       include "mint.inc"
-      include "FKSparams.inc"
+      include "FKSParams.inc"
       integer i,j,ncalls0,ndim,nitmax,imode
       real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim)
      $     ,ans(nintegrals),unc(nintegrals),ans3(nintegrals,3)
