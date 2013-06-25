@@ -307,7 +307,7 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb' % cross)
-        
+        self.terminate_fortran_executables(new_card_only=True)
         
 
 
@@ -383,13 +383,16 @@ class ReweightInterface(extended_cmd.Cmd):
         
         return me_value
     
-    def terminate_fortran_executables(self):
+    def terminate_fortran_executables(self, new_card_only=False):
         """routine to terminate all fortran executables"""
 
 
-        for (mode, production) in self.calculator:
+        for (mode, production) in dict(self.calculator):
+            if new_card_only and production == 0:
+                continue
             external = self.calculator[(mode, production)]
             external.terminate()
+            del self.calculator[(mode, production)]
     
     
     
