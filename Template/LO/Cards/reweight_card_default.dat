@@ -15,8 +15,11 @@ launch
 
 
 #* If you want to compute the weight for more than one hyppothesis
-#* you can retype a line with launch and then define your param_card
-#* by using the set command or put the path to a valid card.
-#* You can repeat this as many times as you need.
+#* you need first to uncomment the following line:
+# launch
+# and then use the set command to specify your parameter.
+# All modification will start from the ORIGINAL card not from the 
+# last define one.
+#* You can have as many weight as you want.
 
 

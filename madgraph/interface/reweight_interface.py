@@ -231,7 +231,6 @@ class ReweightInterface(extended_cmd.Cmd):
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
             if 'type=\'mg_reweighting\'' in self.banner['initrwgt']:
-                misc.sprint('FIND IT')
                 blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
@@ -284,6 +283,9 @@ class ReweightInterface(extended_cmd.Cmd):
         tag_name = 'mg_reweight_%s' % rewgtid
         start = time.time()
         cross = 0
+        if self.lhe_input.closed:
+            self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
+        misc.sprint(self.lhe_input.closed)
         for event_nb,event in enumerate(self.lhe_input):
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),1000)==0): 
                     running_time = misc.format_timer(time.time()-start)
