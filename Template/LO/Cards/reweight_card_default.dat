@@ -1,0 +1,17 @@
+#******************************************************************
+#                       Reweight Module                           *
+#******************************************************************
+launch
+#* Use the set command to specify the new set of parameter 
+#* Or specify a path to a valid param_card/banner
+#* Example of valid command:
+#*     set aewm1 137
+#*     set alphas 0.13
+#*     ~/param_card.dat
+
+#* If you want to compute the weight for more than one hyppothesis
+#* you can retype a line with launch and then define your param_card
+#* by using the set command or put the path to a valid card.
+#* You can repeat this as many times as you need.
+
+
