@@ -1,6 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta4 (29.04.13) VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
+
+2.0.0.beta3_iso (29.04.13) VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
                        VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
 		       RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
@@ -8,6 +9,7 @@ Update notes for MadGraph 5 (in reverse time order)
 		       VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
                        RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
+                       OM+SF+RF: Add Frixione Jet isolation
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
