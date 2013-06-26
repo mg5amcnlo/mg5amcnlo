@@ -499,7 +499,12 @@ class HelpToCmd(object):
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
                                ('--tag=', 'define the tag for the pythia run'),
-                               ('--no_default', 'not run if pythia_card not present')])        
+                               ('--no_default', 'not run if pythia_card not present')]) 
+        
+    def help_print_result(self):
+        logger.info("syntax: print_result [RUN] [TAG]")
+        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
+               
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
@@ -1583,6 +1588,23 @@ class CompleteForCmd(CheckValidForCmd):
 
     complete_delphes = complete_pgs        
 
+    def complete_print_results(self,text, line, begidx, endidx):
+        "Complete the print results command"
+        args = self.split_arg(line[0:begidx], error=False) 
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1        
+        else:
+            #return valid tag_name
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
+            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1
+            
 
 class MadEventAlreadyRunning(InvalidCmd):
     pass
@@ -2095,6 +2117,37 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         file_path = args[0]
         
         misc.open_file(file_path)
+
+    ############################################################################ 
+    def do_print_results(self, line):
+        """Print the cross-section/ number of events for a given run"""
+        
+        args = self.split_arg(line)
+        if len(args) > 0:
+            run_name = args[0]
+        else:
+            if not self.results.current:
+                raise self.InvalidCmd('no run currently defined. Please specify one.')
+            else:
+                run_name = self.results.current['run_name']
+        if run_name not in self.results:
+            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
+                                  % run_name)
+        if len(args) == 2:
+            tag = args[1]
+            if tag.isdigit():
+                tag = int(tag) - 1
+                if len(self.results[run_name]) < tag:
+                    raise self.InvalidCmd('Only %s different tag available' % \
+                                                    len(self.results[run_name]))
+                data = self.results[run_name][tag]
+            else:
+                data = self.results[run_name].return_tag(tag)
+        else:
+            data = self.results[run_name].return_tag(None) # return the last
+        
+        self.print_results_in_shell(data)
+        
 
     ############################################################################
     def do_set(self, line, log=True):

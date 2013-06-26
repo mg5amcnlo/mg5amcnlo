@@ -1,5 +1,10 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.12 (XX/07/13) OM: Add a command print_resutls in the madevent interface. This command print the 
+                      cross-section/number of events/... 
+                  OM: change the way color is handle (no systematic reset). Which provides better
+                      result when the log is printed to a file. (thanks Bae Taegil) 
+
 1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
                       one W decaying leptonically. For such processes the lepton cuts were also used
                       on the neutrino particle reducing the cross-section. This bug was present only

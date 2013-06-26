@@ -29,7 +29,7 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record):
         levelname = record.levelname
-        message   = logging.Formatter.format(self, record) + RESET_SEQ
+        message   = logging.Formatter.format(self, record) + '$RESET'
         for k,v in COLORS.items():
             message = message.replace("$" + k,    COLOR_SEQ % (v+30))\
                          .replace("$BG" + k,  COLOR_SEQ % (v+40))\
