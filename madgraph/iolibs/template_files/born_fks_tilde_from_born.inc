@@ -233,7 +233,7 @@ C
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
       complex*16 imag1
       integer ihel, back_hel
       parameter (imag1 = (0d0,1d0))

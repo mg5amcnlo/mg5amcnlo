@@ -120,8 +120,8 @@ C
       INTEGER    NGRAPHS,    NEIGEN 
       PARAMETER (NGRAPHS=   %(ngraphs)d,NEIGEN=  1) 
       include "nexternal.inc"
-      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
+      INTEGER NCOLOR1, NCOLOR2
+      PARAMETER (NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
 C  
@@ -136,7 +136,6 @@ C
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
-      COMPLEX*16 W(18,NWAVEFUNCS)
       complex*16 imag1
       parameter (imag1 = (0d0,1d0))
 C  
