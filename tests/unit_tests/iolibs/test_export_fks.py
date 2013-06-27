@@ -638,10 +638,8 @@ C
 C     
       INTEGER I, ICROSS,ITYPE,LP
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
-      DOUBLE PRECISION U1,UB1,D1,DB1,C1,CB1,S1,SB1,B1,BB1
-      DOUBLE PRECISION U2,UB2,D2,DB2,C2,CB2,S2,SB2,B2,BB2
-      DOUBLE PRECISION G1,G2
-      DOUBLE PRECISION A1,A2
+      DOUBLE PRECISION G1
+      DOUBLE PRECISION G2
       DOUBLE PRECISION XPQ(-7:7)
 C     
 C     EXTERNAL FUNCTIONS                                              
@@ -663,10 +661,8 @@ C
 C     DATA                                                            
 C         
 C     
-      DATA U1,UB1,D1,DB1,C1,CB1,S1,SB1,B1,BB1/10*1D0/
-      DATA U2,UB2,D2,DB2,C2,CB2,S2,SB2,B2,BB2/10*1D0/
-      DATA A1,G1/2*1D0/
-      DATA A2,G2/2*1D0/
+      DATA G1/1*1D0/
+      DATA G2/1*1D0/
       DATA ICROSS/1/
 C     ----------                                                      
 C         

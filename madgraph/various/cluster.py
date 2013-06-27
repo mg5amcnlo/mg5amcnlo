@@ -16,6 +16,7 @@ import logging
 import os
 import time
 import re
+import glob
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -299,6 +300,13 @@ class MultiCore(Cluster):
                         (' '.join([exe]+argument), proc.returncode)
                 #self.fail_msg = fail_msg
                 logger.warning(fail_msg)
+                try:
+                    log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
+                    logger.warning('Last 15 lines of lofgile %s:\n%s\n' % \
+                            (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
+                except IOError, AttributeError:
+                    logger.warning('Please look for possible logfiles in %s' % cwd)
+                    pass
                 self.remove(fail_msg)
             
             # release the lock for allowing to launch the next job
