@@ -1204,42 +1204,45 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
 
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
                     self.update_status('Setting up grid', level=None)
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
-                    self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
-                p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
-                                    stdout=subprocess.PIPE, 
-                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
+                                   stdout=subprocess.PIPE, \
+                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'all', '0', 'grid']], \
+                self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
 
-            p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
+            p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
@@ -1312,9 +1315,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
                             stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
-                             pjoin(self.me_dir, 'Events', self.run_name))
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_tot.txt' % i), \
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
@@ -1337,8 +1338,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             random seed found in 'randinit' is 33
             Integrated abs(cross-section)
             7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
-            Found 4 correctly terminated jobs 
-            Integrated cross-section
+             Integrated cross-section
             6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
         for aMC@NLO/aMC@LO, and as
 
@@ -1351,7 +1351,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
 \s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-Found (\d+) correctly terminated jobs 
 Integrated cross-section
 \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:
@@ -1405,7 +1404,7 @@ Integrated cross-section
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','all_G*','log*.txt'))
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['all_','grid_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['all_']],[])
         elif mode == 'LO':
             log_GV_files = ''
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
@@ -2173,7 +2172,8 @@ Integrated cross-section
                
         if args[0] == '0':
             # MADEVENT VEGAS MODE
-            input_files.append(pjoin(cwd, 'madevent_vegas'))
+#            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            input_files.append(pjoin(cwd, 'madevent_mintFO'))
             input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
             #j=$2\_G$i
             for i in subdir:
@@ -2182,12 +2182,14 @@ Integrated cross-section
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
                 if len(args) == 4:
+                    args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
-                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-                                                      if n.endswith('.sv1')]
-                        to_move.append('grid.MC_integer')
+#                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
+#                                                      if n.endswith('.sv1')]
+#                        to_move.append('mint_grids')
+                        to_move = ['grid.MC_integer','mint_grids']
                     elif args[0] == '1':
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
@@ -2269,7 +2271,7 @@ Integrated cross-section
         file.write(content)
         file.close()
 
-    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters, accuracy='0'):
         """writes the madin.run_mode file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
@@ -2280,7 +2282,7 @@ Integrated cross-section
 
         content = \
 """%s %s  ! points, iterations
-0 ! accuracy
+%s ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
 1 ! 0 for exact hel sum
@@ -2290,7 +2292,7 @@ Integrated cross-section
 %s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
 %s        ! all, born, real, virt
 """ \
-                    % (npoints,niters,vegas_mode,run_mode)
+                    % (npoints,niters,accuracy,vegas_mode,run_mode)
         file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
         file.write(content)
         file.close()
@@ -2317,7 +2319,8 @@ Integrated cross-section
         if '+' in mode:
             mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
-            exe = 'madevent_vegas'
+#            exe = 'madevent_vegas'
+            exe = 'madevent_mintFO'
             tests = ['test_ME']
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'

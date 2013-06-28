@@ -253,7 +253,7 @@ c      include "fks.inc"
      #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
      #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
-     #                 bpower,virt_wgt
+     #                 bpower
       integer i,j,iplot
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
@@ -393,6 +393,8 @@ c For tests
      &                 total_wgt_sum_min
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
+      double precision virt_wgt
+      common/c_fks_singular/virt_wgt
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -625,6 +627,7 @@ c Soft subtraction term:
      &               +2.d0))
               endif
               bsv_wgt=bsv_wgt*xnormsv
+              virt_wgt=virt_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
             endif
  548        continue
@@ -745,6 +748,7 @@ c
       cnt_wgt = cnt_wgt * enhance
       cnt_swgt = cnt_swgt * enhance
       bsv_wgt = bsv_wgt * enhance
+      virt_wgt = virt_wgt * enhance
       born_wgt = born_wgt * enhance
       deg_wgt = deg_wgt * enhance
       deg_swgt = deg_swgt * enhance
@@ -767,7 +771,7 @@ c
 
          call unweight_function(p_born,unwgtfun)
          dsig=dsig*unwgtfun
-
+         virt_wgt=virt_wgt*unwgtfun
          if(doNLOreweight)then
            if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4
