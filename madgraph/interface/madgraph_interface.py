@@ -4436,8 +4436,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
            N.B. param_card must be given so that the program knows which channel
            is on shell and which is not.
            
-           special argument: skip_2body allow to not consider those decay (use FR)
-                             model: use the model pass in argument.
+           special argument: 
+               - skip_2body: allow to not consider those decay (use FR)
+               - model: use the model pass in argument.
            
         """
 

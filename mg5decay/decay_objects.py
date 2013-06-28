@@ -14,7 +14,7 @@
 ################################################################################
 """Definition for the objects used in the decay module.
    DecayParticle: this object contains all the decay related properties
-                  including all the decay verteices and decay channels.
+                  including all the decay vertices and decay channels.
                   This object also has the 'is_stable' label to denote
                   wether this particle is stable.
    DecayParticleList: this helper class will help to turn Particle 
@@ -964,6 +964,9 @@ class DecayParticle(base_objects.Particle):
                             if temp_c_o:
                                 self['apx_decaywidth'] += temp_c.\
                                     get_apx_decaywidth(model)
+                            print temp_c
+                            raise Exception, '%s' % type(self.get_channels(clevel, temp_c_o))
+                            
                             self.get_channels(clevel, temp_c_o).append(temp_c)
 
 

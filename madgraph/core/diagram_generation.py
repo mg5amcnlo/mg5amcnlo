@@ -1490,12 +1490,12 @@ class MultiProcess(base_objects.PhysicsObject):
                 # If allowed check mass validity [assume 1->N]
                 if use_numerical:
                     # check that final state has lower mass than initial state
-                    initial_mass = model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')]
+                    initial_mass = abs(model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')])
                     if initial_mass == 0:
                          continue
                     for leg in legs[1:]:
                         m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
-                        initial_mass -= m
+                        initial_mass -= abs(m)
                     if initial_mass.real <= 0:
                         continue
 
