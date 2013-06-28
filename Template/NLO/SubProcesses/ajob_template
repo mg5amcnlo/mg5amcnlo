@@ -86,7 +86,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 #   check where is the basic file for the creation of input_app.txt
 #       
  	if [[ $1 == '0' ]]; then
-	    if [[ $3 == '-1' ]] ; then
+	    if [[ $3 == '-1' && -e ./madinM1 ]] ; then
 		input_template=./madinM1
 	    else
  		if  [[  -e ../madin.$2 ]] ; then

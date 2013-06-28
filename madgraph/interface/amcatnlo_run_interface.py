@@ -1205,20 +1205,19 @@ Please, shower the Les Houches events before using them for physics analyses."""
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
-            req_acc = self.run_card['req_acc']
             if mode == 'LO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters,'0.10') 
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO_test.sh', req_acc, 'born_G*'], \
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
@@ -1226,18 +1225,18 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
                     self.update_status('Setting up grid', level=None)
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters,'0.10') 
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
                     self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
                 self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO_test.sh', req_acc, 'all_G*'], \
-                                    stdout=subprocess.PIPE, 
-                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
+                                   stdout=subprocess.PIPE, \
+                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
@@ -1245,7 +1244,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
 
-            p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
+            p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
@@ -1319,9 +1318,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
                             stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
-                             pjoin(self.me_dir, 'Events', self.run_name))
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_tot.txt' % i), \
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
@@ -1344,8 +1341,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             random seed found in 'randinit' is 33
             Integrated abs(cross-section)
             7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
-            Found 4 correctly terminated jobs 
-            Integrated cross-section
+             Integrated cross-section
             6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
         for aMC@NLO/aMC@LO, and as
 
@@ -1358,7 +1354,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
 \s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-Found (\d+) correctly terminated jobs 
 Integrated cross-section
 \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:

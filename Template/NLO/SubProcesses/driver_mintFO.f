@@ -225,6 +225,7 @@ c Update the number of PS points based on xerr, ncall and accuracy
                read (12,*) xint,xerr,dummy
             endif
             close (12)
+            write (*,*) "Update iterations and points to",itmax,ncall
          endif
 
 c
@@ -604,9 +605,9 @@ c-----
       write(*,'(a)') 'Enter number of events and iterations: '
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
-      write(*,'(a)') 'Enter desired fractional accuracy: '
+      write(*,'(a)') 'Enter desired accuracy: '
       read(*,*) accuracy
-      write(*,*) 'Desired fractional accuracy: ',accuracy
+      write(*,*) 'Desired absolute accuracy: ',accuracy
 
       write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
       read(*,*) use_cut
