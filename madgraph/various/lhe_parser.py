@@ -286,7 +286,7 @@ class Event(list):
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
     
-    def get_momenta_str(self, get_order):
+    def get_momenta_str(self, get_order, allow_reversed=True):
         """return the momenta str in the order asked for"""
         
         
@@ -295,11 +295,32 @@ class Event(list):
         out = [''] *(len(order[0])+len(order[1]))
         for i, part in enumerate(self):
             if part.status == 1: #final
-                ind = order[1].index(part.pid) 
+                try:
+                    ind = order[1].index(part.pid)
+                except ValueError, error:
+                    if not allow_reversed:
+                        raise error
+                    else:
+                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                        try:
+                            return self.get_momenta_str(order, False)
+                        except ValueError:
+                            raise error     
                 position = len(order[0]) + ind
                 order[1][ind] = 0   
             elif part.status == -1:
-                ind = order[0].index(part.pid) 
+                try:
+                    ind = order[0].index(part.pid)
+                except ValueError, error:
+                    if not allow_reversed:
+                        raise error
+                    else:
+                        order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                        try:
+                            return self.get_momenta_str(order, False)
+                        except ValueError:
+                            raise error
+                 
                 position =  ind
                 order[0][ind] = 0
             else: #intermediate

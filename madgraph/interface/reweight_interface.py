@@ -82,7 +82,9 @@ class ReweightInterface(extended_cmd.Cmd):
         # dictionary to fortan evaluator
         self.calculator = {}
         self.calculator_nbcall = {}
-            
+        
+        #all the cross-section for convenience
+        self.all_cross_section = {}
             
     def do_import(self, inputfile):
         """import the event file"""
@@ -285,8 +287,9 @@ class ReweightInterface(extended_cmd.Cmd):
         cross = 0
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
-        misc.sprint(self.lhe_input.closed)
+
         for event_nb,event in enumerate(self.lhe_input):
+            #control logger
             if (event_nb % max(int(10**int(math.log10(float(event_nb)+1))),1000)==0): 
                     running_time = misc.format_timer(time.time()-start)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
@@ -308,6 +311,8 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb' % cross)
         self.terminate_fortran_executables(new_card_only=True)
+        #store result
+        self.all_cross_section[rewgtid] = cross
         
 
 
@@ -337,7 +342,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.calculator_nbcall[run_id] += 1
         else:
             # create the executable for this param_card            
-            logger.debug('we have %s calculator ready' % len(self.calculator))
+
             tmpdir = pjoin(self.me_dir,'rw_me', 'SubProcesses', Pdir)
             executable_prod="./check"
             if not os.path.exists(pjoin(tmpdir, 'check')):
@@ -386,15 +391,28 @@ class ReweightInterface(extended_cmd.Cmd):
     def terminate_fortran_executables(self, new_card_only=False):
         """routine to terminate all fortran executables"""
 
-
         for (mode, production) in dict(self.calculator):
+            
             if new_card_only and production == 0:
                 continue
             external = self.calculator[(mode, production)]
-            external.terminate()
+            external.stdin.close()
+            external.stdout.close()
+            external.terminate()            
             del self.calculator[(mode, production)]
     
+    def do_quit(self, line):
+        
+        logger.info('Computed cross-section:')
+        keys = self.all_cross_section.keys()
+        keys.sort()
+        for key in keys:
+            logger.info('%s : %s' % (key,self.all_cross_section[key]))  
+        self.terminate_fortran_executables()
     
+    def __del__(self):
+        self.do_quit('')
+
     
     def adding_me(self, matrix_elements, path):
         """Adding one element to the list based on the matrix element"""
@@ -481,10 +499,19 @@ class ReweightInterface(extended_cmd.Cmd):
                       if l.get('state') or initial.append(l.get('id'))]
                 order = (initial, final)
                 tag = proc.get_initial_final_ids()
+                decay_finals = proc.get_final_ids_after_decay()
+
+                if tag[1] != decay_finals:
+                    order = (initial, list(decay_finals))
+                    decay_finals.sort()
+                    tag = (tag[0], tuple(decay_finals))
                 Pdir = pjoin(path_me, 'rw_me', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
                 assert os.path.exists(Pdir)
+                if tag in self.id_to_path:
+                    raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
                 self.id_to_path[tag] = [order, Pdir]
+
 
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""

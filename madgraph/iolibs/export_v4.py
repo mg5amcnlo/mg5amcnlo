@@ -3884,7 +3884,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         format = cmd._export_format #shortcut
 
         if format in ['standalone_ms', 'standalone_rw']:
-            opt['sa_symmertry'] = True        
+            opt['sa_symmetry'] = True        
     
         if format == 'matrix' or format.startswith('standalone'):
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
