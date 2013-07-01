@@ -35,7 +35,7 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # Up to 99 decay channels are supported. Three-body decays are supported.
 # Branching ratios are used only by HERWIG6, and correctly understood only if
 # they add up to 1, and if up to 3 decay channels per resonance are required.
-# Example of sintax for Z -> e+ e- and Z -> mu+ mu-, with BR = 0.5 each, and for
+# Example of syntax for Z -> e+ e- and Z -> mu+ mu-, with BR = 0.5 each, and for
 # H -> tau+ tau-, with BR = 1:
 # DM_1 = 23 > -11 11 @ 0.5d0
 # DM_2 = 23 > -13 13 @ 0.5d0
