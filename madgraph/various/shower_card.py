@@ -32,6 +32,9 @@ class ShowerCard(dict):
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
     path_vars = ['hwpppath', 'thepegpath', 'hepmcpath']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
+    for i in range(1,100):
+        dmstring='dm_'+str(i)
+        string_vars.append(dmstring)
     int_vars = ['maxprint','nevents','rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
     float_vars = ['maxerrs', 'lambda_5']
 
