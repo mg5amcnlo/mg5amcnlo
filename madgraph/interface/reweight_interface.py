@@ -263,6 +263,8 @@ class ReweightInterface(extended_cmd.Cmd):
         old_param = check_param_card.ParamCard(s_orig.splitlines())
         new_param =  check_param_card.ParamCard(s_new.splitlines())
         card_diff = old_param.create_diff(new_param)
+        if card_diff == '':
+            raise self.InvalidCmd, 'original card and new card are identical'
         mg_rwgt_info.append((str(rewgtid), card_diff))
         
         # re-create the banner.
@@ -276,11 +278,28 @@ class ReweightInterface(extended_cmd.Cmd):
             
         output = open( self.lhe_input.name +'rw', 'w')
         
+        
         logger.info('starts to compute weight for events with the following modification to the param_card:')
         logger.info(card_diff)
         
         #write the banner to the output file
         self.banner.write(output, close_tag=False)
+        if self.mother:
+            out_path = pjoin(self.mother.me_dir, 'Events', '%s_rw_%s' % \
+                                                (self.mother.run_name, rewgtid)) 
+            if not os.path.exists(out_path):
+                os.mkdir(out_path)
+            output2 = open(pjoin(out_path,'unweighted_events.lhe'), 'w')
+            self.banner.write(output2, close_tag=False)
+            
+            if not hasattr(self, 'run_card'):
+                    self.run_card = self.banner.charge_card('run_card')
+            self.run_card['run_tag'] = 'reweight_%s' % self.run_card['run_tag']
+            ff = open(pjoin(out_path, '%s_rw_%s_%s_banner.txt' % \
+                 (self.mother.run_name, rewgtid, self.run_card['run_tag'])),'w') 
+            self.banner.write(ff)
+            ff.close()
+        
         # Loop over all events
         tag_name = 'mg_reweight_%s' % rewgtid
         start = time.time()
@@ -301,9 +320,31 @@ class ReweightInterface(extended_cmd.Cmd):
             event.reweight_data[tag_name] = weight
             #write this event with weight
             output.write(str(event))
+            if self.mother:
+                event.wgt = weight
+                event.reweight_data = {}
+                output2.write(str(event))
+
+                
         
         output.write('</LesHouchesEvents>\n')
         output.close()
+        if self.mother:
+            output2.write('</LesHouchesEvents>\n')
+            output2.close()        
+            # add output information
+            if hasattr(self.mother, 'results'):
+                old_name = self.mother.results.current['run_name']
+                new_run = '%s_rw_%s' % (old_name, rewgtid)
+                self.mother.results.add_run( new_run, self.run_card)
+                self.mother.results.add_detail('nb_event', event_nb+1)
+                self.mother.results.add_detail('cross', cross)
+                self.mother.results.add_detail('error', 'nan')
+                self.mother.do_plot('%s -f' % new_run)
+                self.mother.update_status('Reweight %s done' % rewgtid, 'madspin')
+                self.mother.results.def_current(old_name)
+                self.run_card['run_tag'] = self.run_card['run_tag'][9:]
+                self.mother.run_name = old_name
         self.lhe_input.close()
         files.mv(output.name, self.lhe_input.name)
         running_time = misc.format_timer(time.time()-start)
@@ -403,13 +444,22 @@ class ReweightInterface(extended_cmd.Cmd):
     
     def do_quit(self, line):
         
+        if 'init' in self.banner:
+            cross = 0 
+            error = 0
+            for line in self.banner['init'].split('\n'):
+                split = line.split()
+                if len(split) == 4:
+                    cross, error = float(split[0]), float(split[1])
+            logger.info('Original cross-section: %s +- %s pb' % (cross, error))
+        
         logger.info('Computed cross-section:')
         keys = self.all_cross_section.keys()
         keys.sort()
         for key in keys:
             logger.info('%s : %s' % (key,self.all_cross_section[key]))  
         self.terminate_fortran_executables()
-    
+            
     def __del__(self):
         self.do_quit('')
 
