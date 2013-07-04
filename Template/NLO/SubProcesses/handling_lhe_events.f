@@ -412,6 +412,7 @@ c
       integer i_process
       common/c_addwrite/i_process
       include 'reweight_all.inc'
+      include 'unlops.inc'
 c     if event_id is zero or positive (that means that there was a call
 c     to write_lhef_header_banner) update it and write it
 c RF: don't use the event_id:
@@ -567,7 +568,16 @@ c$$$                 enddo
               stop
            endif
            write(ifile,'(a)')'  </rwgt>'
-
+         elseif(jwgtinfo.eq.15) then
+           write(ifile,'(a)')'  <unlops>'
+           write(ifile,*)NUP_H
+           do i=1,NUP_H
+              write(ifile,504)IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $             VTIMUP_H(I),SPINUP_H(I)
+           enddo
+           write(ifile,'(a)')'  </unlops>'
         elseif(jwgtinfo.eq.8)then
            write(ifile,'(a)') '  <rwgt>'
           write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
@@ -599,7 +609,7 @@ c$$$                 enddo
         endif
       endif
       write(ifile,'(a)') '  </event>'
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -636,6 +646,7 @@ c
       integer i_process
       common/c_addwrite/i_process
       include 'reweight_all.inc'
+      include 'unlops.inc'
 c
       read(ifile,'(a)')string
       read(ifile,*)NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP
@@ -762,6 +773,16 @@ c
               stop
            endif
            read(ifile,'(a)')string
+         elseif(jwgtinfo.eq.15) then
+           read(ifile,'(a)') string
+           read(ifile,*)NUP_H
+           do i=1,NUP_H
+              read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $             VTIMUP_H(I),SPINUP_H(I)
+           enddo
+           read(ifile,'(a)') string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
@@ -795,7 +816,7 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -833,6 +854,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer i_process
       common/c_addwrite/i_process
       include 'reweight_all.inc'
+      include 'unlops.inc'
 c
       read(ifile,'(a)')string
       if(index(string,'<event').eq.0)then
@@ -969,6 +991,16 @@ c
               stop
            endif
            read(ifile,'(a)')string
+         elseif(jwgtinfo.eq.15) then
+           read(ifile,'(a)') string
+           read(ifile,*)NUP_H
+           do i=1,NUP_H
+              read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $             VTIMUP_H(I),SPINUP_H(I)
+           enddo
+           read(ifile,'(a)') string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
           read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
@@ -1002,7 +1034,7 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
+ 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))

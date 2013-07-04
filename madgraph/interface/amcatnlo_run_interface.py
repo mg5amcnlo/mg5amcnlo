@@ -1510,11 +1510,11 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.':
+                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_PDF']=='.true.' and int(self.run_card['ickkw']) != 4:
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -1632,7 +1632,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+        if (self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.') and int(self.run_card['ickkw']) != 4 :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton')

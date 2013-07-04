@@ -711,7 +711,7 @@ c From dsample_fks
       common/fks_indices/i_fks,j_fks
       logical firsttime
       integer sum
-      parameter (sum=3)
+      data sum/3/
       data firsttime /.true./
       logical foundB(2),j_fks_initial(fks_configs),found_ini1,found_ini2
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
@@ -737,6 +737,11 @@ c From dsample_fks
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
+         if (ickkw.eq.4) then
+            sum=0
+            write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
+     $           /' Born PS point (sum=0)'
+         endif
          firsttime=.false.
          foundB(1)=.false.
          foundB(2)=.false.

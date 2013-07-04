@@ -689,6 +689,7 @@ class RunCardNLO(RunCard):
         self.add_line('PDF_set_min', 'int', 21101)
         self.add_line('PDF_set_max', 'int', 21140)
 
+        self.add_line('ickkw', 'int', 0)
        # self.add_line('fixed_couplings', 'bool', True, log=10)
         self.add_line('jetalgo', 'int', 1)
         # Collider energy and type

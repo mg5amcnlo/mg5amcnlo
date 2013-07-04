@@ -951,7 +951,7 @@ c Multi channel stuff:
       common/ccalculatedBorn/calculatedBorn
 
       double precision ev_enh,enhance,rwgt,unwgtfun
-      logical firsttime,passcuts
+      logical firsttime,passcuts,passUNLOPScut
       data firsttime /.true./
       integer inoborn_ev,inoborn_cnt
       double precision xnoborn_ev,xnoborn_cnt
@@ -1161,12 +1161,14 @@ c$$$        iSorH_lhe=1+2 ! filled elsewhere
         scale1_lhe(nFKSprocess)=0.d0
         scale2_lhe(nFKSprocess)=0.d0
       endif
+      if (ickkw.ne.4) then
 c Set the upper value of the shower scale for the H and S events,
 c respectively
-      call set_cms_stuff(mohdr)
-      call set_shower_scale_noshape(pp,nFKSprocess*2)
-      call set_cms_stuff(izero)
-      call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(pp,nFKSprocess*2)
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      endif
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
@@ -1245,6 +1247,8 @@ c for the collinear, soft and/or soft-collinear subtraction terms
 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
+
+      if (ickkw.eq.4) goto 540
 
       call set_cms_stuff(mohdr)
       call set_alphaS(pp)
@@ -1659,6 +1663,12 @@ c
 c Set the ybst_til_tolab before applying the cuts. 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 550
+
+      if (ickkw.eq.4) then
+         call pythia_UNLOPS(pp,passUNLOPScut)
+         if (.not.passUNLOPScut) goto 550
+      endif
+
       call set_cms_stuff(mohdr)
       if(doreweight)then
          wgtxbj_all(1,1,nFKSprocess*2)=xbk(1)
@@ -1680,8 +1690,13 @@ c Set the ybst_til_tolab before applying the cuts.
           do j=1,IPROC
              unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
      &            +PD(j)*xsec*(1-probne)*CONV
-             unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
-     &            +PD(j)*xsec*probne*CONV
+             if (ickkw.ne.4) then
+                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
+     &               +PD(j)*xsec*probne*CONV
+             else
+                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
+     &               +PD(j)*xsec*probne*CONV
+             endif
           enddo
           if(doreweight)then
              if(ifill1H.eq.0)then
@@ -1715,7 +1730,7 @@ c Set the ybst_til_tolab before applying the cuts.
  550  continue
 
       if( (.not.MCcntcalled) .and.
-     &     abrv.ne.'born'.and. abrv.ne.'grid' )then
+     &     abrv.ne.'born'.and. abrv.ne.'grid' .and. ickkw.ne.4)then
          if(pp(0,1).ne.-99d0)then
             call set_cms_stuff(mohdr)
             call assign_emsca(pp,xi_i_fks_ev,y_ij_fks_ev)
@@ -1810,6 +1825,10 @@ c Update the shower starting scale with the shape from montecarlocounter
      &        bsv_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
+
+         if (ickkw.eq.4) then
+            dsigS=dsigS+totH_wgt*fkssymmetryfactor
+         endif
 
          call unweight_function(p_born,unwgtfun)
          dsigS=dsigS*unwgtfun
@@ -1921,7 +1940,7 @@ c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
      &                 ,nFKSprocess*2-1) * xsec*fkssymmetryfactor
                enddo
             endif
-            if(check_reweight.and.doreweight) then
+            if(check_reweight.and.doreweight .and. ickkw.ne.4) then
                do i_process=1,iproc_save(nFKSprocess)
                   if (nbody) then
                      call fill_reweight0inc_nbody(i_process)
@@ -1958,6 +1977,8 @@ c Plot observables for counterevents and Born
      &           (plotEv.or.plotKin) )
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
          endif
+
+         if (ickkw.eq.4) return
 
          dsigH = totH_wgt*fkssymmetryfactor
          call unweight_function(p_born,unwgtfun)
@@ -5536,3 +5557,6 @@ c
       IF(SEED.LE.0) SEED = SEED + M
       FK88RANDOM = SEED*MINV
       END
+
+
+

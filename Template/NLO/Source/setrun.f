@@ -255,7 +255,11 @@ c check that the event normalization input is reasoble
 
 c info for reweight
 
-      ickkw=0
+      if (ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3) then
+         write (*,*) 'ickkw parameter not known. ickkw=',ickkw
+         stop
+      endif
+c$$$      ickkw=0
       chcluster=.false.
       ktscheme=1
 
