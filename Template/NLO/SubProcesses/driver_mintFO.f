@@ -372,6 +372,10 @@ c From dsample_fks
       common /c_xBW/xBW
       double precision virt_wgt
       common/c_fks_singular/virt_wgt
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
       if (ifl.ne.0) then
          write (*,*) 'ifl not equal to zero in sigint()',ifl
@@ -449,6 +453,7 @@ c
          nFKSprocess=nFKSprocessBorn(2)
       endif
       nbody=.true.
+      fillh=.false.
       nFKSprocess_used=nFKSprocess
       nFKSprocess_used_Born=nFKSprocess
       call fks_inc_chooser()
@@ -458,6 +463,10 @@ c
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)*peso
+      if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+         call fill_MC_integer(2,ihel,abs(sigint*volh))
+      endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -491,7 +500,7 @@ c     account this Jacobian
             wgt=1d0/vol
             call generate_momenta(ndim,iconfig,wgt,x,p)
             sigintR = dsig(p,wgt,peso)*peso
-            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*peso*vol)
+            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*vol)
             sigint = sigint+ sigintR
          endif
       endif

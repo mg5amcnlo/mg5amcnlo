@@ -771,7 +771,7 @@ c
 
          call unweight_function(p_born,unwgtfun)
          dsig=dsig*unwgtfun
-         virt_wgt=virt_wgt*unwgtfun
+         virt_wgt=virt_wgt*unwgtfun*fkssymmetryfactorBorn*vegaswgt
          if(doNLOreweight)then
            if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4

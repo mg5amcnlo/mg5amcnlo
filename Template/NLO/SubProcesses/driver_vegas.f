@@ -361,6 +361,10 @@ c From dsample_fks
       double precision vol,sigintR
       integer itotalpoints
       common/ctotalpoints/itotalpoints
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
@@ -441,6 +445,10 @@ c
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
+      if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+         call fill_MC_integer(2,ihel,abs(sigint*peso*volh))
+      endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.

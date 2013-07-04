@@ -105,23 +105,17 @@ c Get random integer from importance sampling (the return value is
 c filled in driver_mintMC.f; we cannot do it here, because we need to
 c include the phase-space jacobians and all that)
             call get_MC_integer(2,hel(0),ihel,volh)
+            fillh=.true.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
                call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
      $              ,tolerance,prec_found,ret_code)
-               
-c Should use the Born here, but don't have it for a given helicity, so
-c use the double pole and fix it by multiplying by the madfks double
-c pole
-               call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
-               virt_wgt=virt_wgt+virt_wgts_hel(1)*madfks_double
-     $              /virt_wgts_hel(3)/volh/dble(hel(0))
-
+               virt_wgt  = virt_wgt   + virt_wgts_hel(1)*dble(goodhel(i))
+     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
                single  = single   + virt_wgts_hel(2)*dble(goodhel(i))
      $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
                double  = double   + virt_wgts_hel(3)*dble(goodhel(i))
      $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
             enddo
-c$$$            call fill_MC_integer(2,ihel,abs(virt_wgt))
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then

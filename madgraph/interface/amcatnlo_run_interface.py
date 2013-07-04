@@ -1050,7 +1050,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         
-        if int(self.run_card['nevents']) == 0:
+        if int(self.run_card['nevents']) == 0 and not mode in ['LO', 'NLO']:
             logger.info('No event file generated: grids have been set-up with a '\
                             'relative precision of %s' % self.run_card['req_acc'])
             return
@@ -1370,8 +1370,8 @@ Integrated cross-section
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
-                    'xsect' : float(match.groups()[6]),
-                    'errt' : float(match.groups()[7])}
+                    'xsect' : float(match.groups()[5]),
+                    'errt' : float(match.groups()[6])}
         else:
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}

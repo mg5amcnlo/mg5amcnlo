@@ -744,6 +744,10 @@ c From dsample_fks
       save proc_map
       double precision virtual_over_born
       common/c_vob/virtual_over_born
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -1037,6 +1041,7 @@ c
             nFKSprocess=nFKSprocessBorn(2)
          endif
          nbody=.true.
+         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
          nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
@@ -1051,6 +1056,10 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f1(1) = f1(1)+result(0,1)
          f1(2) = f1(2)+result(0,2)
+         if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+            call fill_MC_integer(2,ihel,(abs(f1(1))+abs(f1(2)))*volh)
+         endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
