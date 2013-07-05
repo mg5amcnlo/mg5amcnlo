@@ -29,7 +29,7 @@ c general MadFKS parameters
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
-     $     ,virt_wgts_hel(3),born_wgt_recomputed
+     $     ,virt_wgts_hel(3),born_wgt_recomputed,born_wgt_recomp_direct
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -107,21 +107,31 @@ c once the initial pole check is performed.
          else
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
-            call sborn_hel(p,born_wgt_recomputed)
+            call sborn_hel(p,born_wgt_recomp_direct)
+            born_wgt_recomputed=0d0
+            do ihel=1,hel(0)
+               born_wgt_recomputed=born_wgt_recomputed
+     $              +wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            enddo
             if (abs(1d0-born_wgt/born_wgt_recomputed).gt.1d-9) then
                write (*,*) 'Borns not consistent in BinothLHA',born_wgt
      $              ,born_wgt_recomputed
                stop
             endif
+            if (abs(1d0-born_wgt/born_wgt_recomp_direct).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA direct'
+     $              ,born_wgt,born_wgt_recomp_direct
+               stop
+            endif
             target=ran2()*born_wgt_recomputed
             ihel=1
-            accum=wgt_hel(ihel)
+            accum=wgt_hel(hel(ihel))*dble(goodhel(ihel))
             do while (accum.lt.target) 
                ihel=ihel+1
-               accum=accum+wgt_hel(ihel)
+               accum=accum+wgt_hel(hel(ihel))*dble(goodhel(ihel))
             enddo
-            volh=1d0/(born_wgt_recomputed/wgt_hel(ihel))
-     $           *dble(goodhel(ihel))
+            volh=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+     $           /born_wgt_recomputed
 c$$$            call get_MC_integer(2,hel(0),ihel,volh)
 c$$$            fillh=.true.
             fillh=.false.
@@ -186,14 +196,13 @@ c exists, which should be the case when firsttime is false.
                hel(0)=0
                j=0
                do i=1,max_bhel
-c$$$                  read(67,*,err=201) goodhel(i)
-c$$$                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
+                  read(67,*,err=201) goodhel(i)
+                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
-c$$$                     goodhel(j)=goodhel(i)
-                     goodhel(j)=1
+                     goodhel(j)=goodhel(i)
                      hel(0)=hel(0)+1
                      hel(j)=i
-c$$$                  endif
+                 endif
                enddo
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities

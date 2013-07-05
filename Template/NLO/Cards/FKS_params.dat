@@ -39,8 +39,8 @@
 ! this to '-1' if you want to forbid the use of this method
 ! altogether.
 #NHelForMCoverHels
-5
-! Default :: 5
+4
+! Default :: 4
 !
 ! This parameter sets for which fraction of the events the virtual
 ! matrix elements should be included. When using MINT, during the
