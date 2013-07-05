@@ -748,7 +748,6 @@ c From dsample_fks
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
-c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.

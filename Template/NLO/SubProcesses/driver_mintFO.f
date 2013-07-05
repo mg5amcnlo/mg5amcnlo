@@ -580,6 +580,10 @@ c
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 
 
 c-----
@@ -621,6 +625,7 @@ c-----
          isum_hel= i
          write(*,*) 'Summing over',i,' helicities/event'
       endif
+      mc_hel=isum_hel
       isum_hel=0
 
       write(*,10) 'Enter Configuration Number: '

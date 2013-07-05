@@ -737,6 +737,11 @@ end
                              matrix_element,
                              fortran_model)
 
+        filename = 'born_hel.f'
+        self.write_born_hel(writers.FortranWriter(filename),\
+                             matrix_element,
+                             fortran_model)
+
 
         filename = 'born_conf.inc'
         nconfigs, mapconfigs, s_and_t_channels = \
@@ -1044,6 +1049,89 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         writer.writelines(file)
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+
+
+    def write_born_hel(self, writer, fksborn, fortran_model):
+        """Export a matrix element to a born_hel.f file in MadFKS format"""
+
+        matrix_element = fksborn.born_matrix_element
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+    
+        replace_dict = {}
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+        
+    
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+    
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+    
+        # Extract IC line
+        ic_line = self.get_ic_line(matrix_element)
+        replace_dict['ic_line'] = ic_line
+    
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        #den_factor_line = get_den_factor_line(matrix_element)
+    
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+    
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+    
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+   
+        # Extract amp2 lines
+        amp2_lines = self.get_amp2_lines(matrix_element)
+        replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+    
+        # Extract JAMP lines
+        jamp_lines = self.get_JAMP_lines(matrix_element)
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/born_fks_hel.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return
 
 
     #===============================================================================

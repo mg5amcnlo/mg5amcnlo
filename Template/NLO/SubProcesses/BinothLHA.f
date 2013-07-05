@@ -29,7 +29,7 @@ c general MadFKS parameters
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
-     $     ,virt_wgts_hel(3)
+     $     ,virt_wgts_hel(3),born_wgt_recomputed
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -55,6 +55,10 @@ c general MadFKS parameters
       double precision tolerance,prec_found
       integer i,j
       integer nbad, nbadmax
+      double precision target,ran2,accum
+      external ran2
+      double precision wgt_hel(max_bhel)
+      common/c_born_hel/wgt_hel
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
@@ -101,19 +105,34 @@ c once the initial pole check is performed.
             single  = virt_wgts(2)/dble(ngluons)
             double  = virt_wgts(3)/dble(ngluons)
          else
-c Get random integer from importance sampling (the return value is
-c filled in driver_mintMC.f; we cannot do it here, because we need to
-c include the phase-space jacobians and all that)
-            call get_MC_integer(2,hel(0),ihel,volh)
-            fillh=.true.
+c Use the Born helicity amplitudes to sample the helicities of the
+c virtual as flat as possible
+            call sborn_hel(p,born_wgt_recomputed)
+            if (abs(1d0-born_wgt/born_wgt_recomputed).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA',born_wgt
+     $              ,born_wgt_recomputed
+               stop
+            endif
+            target=ran2()*born_wgt_recomputed
+            ihel=1
+            accum=wgt_hel(ihel)
+            do while (accum.lt.target) 
+               ihel=ihel+1
+               accum=accum+wgt_hel(ihel)
+            enddo
+            volh=1d0/(born_wgt_recomputed/wgt_hel(ihel))
+     $           *dble(goodhel(ihel))
+c$$$            call get_MC_integer(2,hel(0),ihel,volh)
+c$$$            fillh=.true.
+            fillh=.false.
             do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
                call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
      $              ,tolerance,prec_found,ret_code)
-               virt_wgt  = virt_wgt   + virt_wgts_hel(1)*dble(goodhel(i))
+               virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(i))
      $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
-               single  = single   + virt_wgts_hel(2)*dble(goodhel(i))
+               single   = single   + virt_wgts_hel(2)*dble(goodhel(i))
      $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
-               double  = double   + virt_wgts_hel(3)*dble(goodhel(i))
+               double   = double   + virt_wgts_hel(3)*dble(goodhel(i))
      $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
             enddo
 c Average over initial state helicities (and take the ngluon factor into
@@ -167,13 +186,14 @@ c exists, which should be the case when firsttime is false.
                hel(0)=0
                j=0
                do i=1,max_bhel
-                  read(67,*,err=201) goodhel(i)
-                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
+c$$$                  read(67,*,err=201) goodhel(i)
+c$$$                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
-                     goodhel(j)=goodhel(i)
+c$$$                     goodhel(j)=goodhel(i)
+                     goodhel(j)=1
                      hel(0)=hel(0)+1
                      hel(j)=i
-                  endif
+c$$$                  endif
                enddo
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
