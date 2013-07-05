@@ -160,6 +160,7 @@ C
       chan_err=0d0
 
       do config_pos=1,nb_sol_config
+          NCALL = nevents
           iseed = iseed + 1 ! avoid to have the same seed
           NDIM=Ndimens
           if(ISR.eq.3) NDIM=NDIM+2
@@ -214,7 +215,20 @@ c                See if this is require to continue to update this
                  acc = max(0.9*check_value/order_value(config_pos),
      &                                                       final_prec)
              endif
-             CALL VEGAS1(fct,CROSS,SD,CHI)
+             call check_nan(cross)
+             write(*,*) 'cross', cross
+             if (cross.eq.0d0)then
+                write(*,*) 'VEGAs no pre-training'
+                NCALL = 2 * nevents
+                do i = 1, NPERM
+                    perm_order(i,config_pos) = i
+                enddo
+                CALL VEGAS(fct,CROSS,SD,CHI)
+             else
+                write(*,*) 'VEGAs1'
+                CALL VEGAS1(fct,CROSS,SD,CHI)
+             endif
+             call check_nan(cross)
 c            See if this is require to continue to update this
              if (sd/cross.le.final_prec) goto 2
 
@@ -248,7 +262,7 @@ c            See if this is require to continue to update this
              else
                 order_value(config_pos)=0d0
              endif
-              if (nb_point_by_perm(1).ne.0)then
+             if (nb_point_by_perm(1).ne.0)then
                   DO I =1,NPERM
                     value = perm_value(I) / (nb_point_by_perm(I))
                     error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
@@ -260,14 +274,25 @@ c            See if this is require to continue to update this
                     perm_value(I) = 0
                     perm_error(I) = 0
                   ENDDO
-              ENDIF
+            else if(cross.eq.0d0) then
+                  DO I =1,NPERM
+                    value = 0d0
+                    error = 0d0
+                    call get_perm(I, loc_perm)
+                    write(23,*) I,' ',config_pos,' ',value,' ', error,
+     &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
+                    nb_point_by_perm(I) = 0
+                    perm_value(I) = 0
+                    perm_error(I) = 0
+                  ENDDO 
+            ENDIF
           endif
        enddo
        check_value = temp_val * min_prec_cut1 
        if (loop_index.eq.1) then
           NCALL = nevents
           ITMX = max_it_step2
-          goto 1 ! refine the integration
+          if (temp_val.ne.0d0) goto 1 ! refine the integration
        endif
 
        write(*,*) "the weight is",temp_val,"+/-",temp_err
@@ -278,15 +303,15 @@ c            See if this is require to continue to update this
 
 c      write(23,*) ' permutation channel   value      error'
 
-      do perm_pos=1, NPERM
-         call get_perm(perm_pos, perm_id)
-      write(23,*) "======================================"
-
-      write(23,*) '1   2', (2+perm_id(i-2), i=3,nexternal)
-      enddo
-      write(23,*) "======================================"
-      write(23,*)'Weight: ',temp_val,'+-', temp_err
-      write(23,*) "======================================"
+c      do perm_pos=1, NPERM
+c         call get_perm(perm_pos, perm_id)
+c      write(23,*) "======================================"
+c
+c      write(23,*) '1   2', (2+perm_id(i-2), i=3,nexternal)
+c      enddo
+c      write(23,*) "======================================"
+c      write(23,*)'Weight: ',temp_val,'+-', temp_err
+c      write(23,*) "======================================"
 
 C**************************************************************************
 C     write histogram file (not activated in the standard mode)           *

@@ -71,3 +71,12 @@ Block MW_perm
 #   TAG           VALUE                    UTILITY
      permutation  T         # make permutation
      bjet_is_jet  T         # consider permutation between b-jets and light jets
+#*************************************************************************
+##                       Phase-Space Integration mapping                ##
+#*************************************************************************
+    force_nwa     2         # Only consider the change of variable alligning particles 
+                            # with width smaller than this value. This speed up the code
+                            # but can lead to zero weight for background event where the
+                            # kinematic doesn't agree with the associated mass.
+                            # if "mw_run nwa" parameter is bigger than this value, that
+                            # value is used for this parameter automatically.

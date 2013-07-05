@@ -305,7 +305,6 @@ class MG_diagram(diagram):
                    2) -> launch (self-iterative) check for the decay
                    3) -> tag particle
         """
-
         # Step 1
         init_list=[]
         for particle in self.ext_content:
@@ -323,7 +322,9 @@ class MG_diagram(diagram):
         init_propa=self.check_decay(init_list,proc_decay.decay_diag)
         #step 3:
         if not init_propa:
+            return
             raise Exception('No matching between process information and feynman diagram information')
+        
         #print 'firt available propa (MG:PID) : ',
         for particle in init_propa:
             #print '(',particle.MG,':',particle.pid,') ',
@@ -357,6 +358,7 @@ class MG_diagram(diagram):
                 if out:
                     return out
             #no config found
+            print "no config found"
             return 0
         
         #step 2:
@@ -373,6 +375,7 @@ class MG_diagram(diagram):
 
         for pid in particle_list_pid:
             if pid not in decay_list_pid:
+                print 'error 377'
                 return 0
             
         #print 'pass in step 3 '
@@ -387,6 +390,7 @@ class MG_diagram(diagram):
                 if i==len(order_particle)-1: #all suceed
                     return order_particle    #return succeed info
 
+        print 'error 392'
         return 0
 
 
@@ -822,7 +826,8 @@ class Option:
 
        #replace defined value:
        for key, value in info['mw_gen'].items():
-           exec('%s = %s' % (tag_to_genvar[key],value))
+           if key != 'comment':
+               exec('%s = %s' % (tag_to_genvar[key],value))
 
 
        self.ecs_on=[]
