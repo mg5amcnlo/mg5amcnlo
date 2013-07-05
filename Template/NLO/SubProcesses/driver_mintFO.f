@@ -226,9 +226,9 @@ c Update the number of PS points based on xerr, ncall and accuracy
                   itmax=nint(sqrt(itmax_fl))
                   ncall=nint(ncall*itmax_fl/nint(sqrt(itmax_fl)))
                endif
-               accuracy=0d0
+               accuracy=accuracy/xint ! relative accuracy on the ABS X-section
             else
-               read (12,*) xint,xerr,dummy
+               read (12,*) xint,xerr,dummy,dummy
             endif
             read (12,*) virtual_fraction,average_virtual
             close (12)

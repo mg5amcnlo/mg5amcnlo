@@ -90,20 +90,15 @@ c others: same as 1 (for now)
       logical even,double_events,bad_iteration
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
-c Accuracy defines if we should double events and grid intervals after
-c every iteration and if we should stop if required accuracy has been
-c reached.
-      if (accuracy.eq.0d0) then
+c if ncalls0 is greater than 0, use the default running, i.e. do not
+c double the events after each iteration as well as use a fixed number
+c of intervals in the grids.
+      if (ncalls0.gt.0) then
          double_events=.false.
          nint_used=nintervals
-         if (ncalls0.le.0) then
-            write (*,*) 'Number of PS points is <= 0 and accuracy=0'
-            stop
-         endif
       else
-         if (ncalls0.le.0) then
-            ncalls0=80*ndim
-         endif
+c if ncalls0.le.0, reset it and double the events per iteration
+         ncalls0=80*ndim
          double_events=.true.
          if (imode.eq.1 .or. imode.eq.-1) then
             nint_used=nintervals
@@ -486,7 +481,8 @@ c Compute the results of the last three iterations
                ans_l3(i)=(ans_l3(i)/unc_l3(i)+ans3(i,j)/unc3(i,j))/
      &              (1/unc_l3(i)+1/unc3(i,j))
                unc_l3(i)=1/sqrt(1/unc_l3(i)**2+1/unc3(i,j)**2)
-               chi2_l3(i)=chi2_l3(i)+(ans3(i,j)-ans_l3(i))**2/unc3(i,j)**2
+               chi2_l3(i)=chi2_l3(i)+
+     &              (ans3(i,j)-ans_l3(i))**2/unc3(i,j)**2
             enddo
             chi2_l3(i)=chi2_l3(i)/2d0 ! three iterations, so 2 degrees of freedom
          enddo
@@ -510,11 +506,13 @@ c Regrid the MC over integers (used for the MC over FKS dirs)
          call regrid_MC_integer
       endif
 c Quit if the desired accuracy has been reached
-      if (nit_included.ge.min_it .and. double_events) then
+      if (nit_included.ge.min_it .and. accuracy.gt.0d0) then
          if (unc(1)/ans(1)*max(1d0,chi2(1)/dble(nit_included-1))
      $        .lt.accuracy) then
             write (*,*) 'Found desired accuracy'
             nit=nitmax
+c Improve the stats in the plots
+            call accum(.true.)
             goto 10
          elseif(unc_l3(1)/ans_l3(1)*max(1d0,chi2_l3(1)).lt.accuracy)
      $           then
@@ -526,6 +524,8 @@ c Quit if the desired accuracy has been reached
                unc(i)=unc_l3(i)
                chi2(i)=chi2_l3(i)*dble(nit_included-1)
             enddo
+c Improve the stats in the plots
+            call accum(.true.)
             goto 10
          endif
       endif
