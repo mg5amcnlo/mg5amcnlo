@@ -96,6 +96,18 @@ class AbstractRoutine(object):
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
         return text
+    
+    def get_info(self, info):
+        """return some information on the routine
+        """
+
+        if info == "rank":
+            rank= 1
+            for coeff in self.expr:
+                if max(sum(coeff), rank):
+                    rank = sum(coeff)
+            return rank -1 # due to the coefficient associate to the wavefunctions
+
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
@@ -560,6 +572,22 @@ class AbstractALOHAModel(dict):
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
+        
+    def get_info(self, info, lorentzname, outgoing, tag):
+        """return some information about the aloha routine
+        - "rank": return the rank of the loop function
+        """
+        
+        lorentz = eval('self.model.lorentz.%s' % lorentzname)
+        assert lorentz.structure == 'external'
+    
+        abstract = AbstractRoutineBuilder(lorentz)
+        routine = abstract.compute_routine(outgoing, tag, factorize=False)
+        
+        if isinstance(info, str):
+            return routine.get_info(info)
+        else:
+            return [routine.get_info(i) for i in info]
     
     def set(self, lorentzname, outgoing, abstract_routine):
         """ add in the dictionary """

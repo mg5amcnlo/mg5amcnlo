@@ -2935,8 +2935,27 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
              
+    def test_aloha_get_rank(self):
+        """ test the FFV creation of vertex """
+        
+        FFV_4 = self.Lorentz(name = 'FFV_4',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')     
 
+        abs = create_aloha.AbstractRoutineBuilder(FFV_4)
+        routine = abs.compute_routine(2, ['L1'], factorize=False)
+        rank = routine.get_info('rank')
+        self.assertEqual(rank, 1)
+        
+        FFV_4 = self.Lorentz(name = 'FFV_4',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')     
 
+        abs = create_aloha.AbstractRoutineBuilder(FFV_4)
+        routine = abs.compute_routine(3, ['L1'], factorize=False)
+        rank = routine.get_info('rank')
+        self.assertEqual(rank, 2)        
+    
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
         
