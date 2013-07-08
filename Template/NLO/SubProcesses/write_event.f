@@ -74,7 +74,7 @@ c
          endif
          Hevents=.true.
          call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        putonshell,ndim,ipole,x,jpart,npart,pb,shower_scale)
+     &        .false.,ndim,ipole,x,jpart,npart,pb,shower_scale)
 c Put the Hevent info in a common block
          NUP_H=npart
          do i=1,NUP_H
