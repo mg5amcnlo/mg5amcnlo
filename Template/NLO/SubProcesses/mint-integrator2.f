@@ -297,7 +297,8 @@ c Add the PS point to the result of this iteration
 c Number of phase-space points used
          ntotcalls(i)=ncalls*kpoint_iter
 c Special for the computation of the 'computed virtual'
-         if (i.eq.4) ntotcalls(i)=non_zero_point(i)
+         if (i.eq.4 .and. non_zero_point(i).ne.0 )
+     &        ntotcalls(i) = non_zero_point(i)
       enddo
       if (ntotcalls(1).gt.max_points .and. non_zero_point(1).lt.25 .and.
      &     double_events) then
@@ -425,10 +426,16 @@ c double the number of points for the next iteration
             elseif(unc(i).eq.0) then ! 1st iteration; set to a large value
                unc(i)=etot(i)*1d99
             endif
-            ans(i)=(ans(i)/unc(i)+vtot(i)/etot(i))/
-     &           (1/unc(i)+1/etot(i))
-            unc(i)=1/sqrt(1/unc(i)**2+1/etot(i)**2)
-            chi2(i)=chi2(i)+(vtot(i)-ans(i))**2/etot(i)**2
+            if (i.ne.1 .and. (etot(i).eq.0 .or. unc(i).eq.0)) then
+               ans(i)=0d0
+               unc(i)=0d0
+               chi2(i)=0d0
+            else
+               ans(i)=(ans(i)/unc(i)+vtot(i)/etot(i))/
+     &              (1/unc(i)+1/etot(i))
+               unc(i)=1/sqrt(1/unc(i)**2+1/etot(i)**2)
+               chi2(i)=chi2(i)+(vtot(i)-ans(i))**2/etot(i)**2
+            endif
          enddo
          write (*,'(a,1x,e9.3)') 'Chi^2=',(vtot(1)-ans(1))**2
      $        /etot(1)**2
@@ -478,11 +485,18 @@ c Compute the results of the last three iterations
             unc_l3(i)=ans3(1,i)*1d99
             chi2_l3(i)=0d0
             do j=1,3
-               ans_l3(i)=(ans_l3(i)/unc_l3(i)+ans3(i,j)/unc3(i,j))/
-     &              (1/unc_l3(i)+1/unc3(i,j))
-               unc_l3(i)=1/sqrt(1/unc_l3(i)**2+1/unc3(i,j)**2)
-               chi2_l3(i)=chi2_l3(i)+
-     &              (ans3(i,j)-ans_l3(i))**2/unc3(i,j)**2
+               if (i.ne.1 .and. (unc_l3(i).eq.0d0 .or. unc3(i
+     $              ,j).eq.0d0)) then
+                  ans_l3(i)=0d0
+                  unc_l3(i)=0d0
+                  chi2_l3=0d0
+               else
+                  ans_l3(i)=(ans_l3(i)/unc_l3(i)+ans3(i,j)/unc3(i,j))/
+     &                 (1/unc_l3(i)+1/unc3(i,j))
+                  unc_l3(i)=1/sqrt(1/unc_l3(i)**2+1/unc3(i,j)**2)
+                  chi2_l3(i)=chi2_l3(i)+
+     &                 (ans3(i,j)-ans_l3(i))**2/unc3(i,j)**2
+               endif
             enddo
             chi2_l3(i)=chi2_l3(i)/2d0 ! three iterations, so 2 degrees of freedom
          enddo
