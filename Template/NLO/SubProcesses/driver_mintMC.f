@@ -16,7 +16,7 @@ C
 C
 C     LOCAL
 C
-      integer i,nconfigs,j,l,l1,l2,ndim,nevts
+      integer i,j,l,l1,l2,ndim,nevts
       double precision tot,mean,sigma,res_abs
       integer npoints
       double precision y,jac,s1,s2,xmin
@@ -156,7 +156,6 @@ c
       call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      nconfigs = 1
 c     
 c     Get user input
 c
@@ -184,7 +183,7 @@ c at the NLO)
         stop
       endif
 
-      write(*,*) "about to integrate ", ndim,ncall,itmax,nconfigs
+      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
 
       itotalpoints=0
       ivirtpoints=0

@@ -2392,9 +2392,9 @@ Integrated cross-section
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
         if not '[real=QCD]' in proc_card:
-            hasvirt = True
             os.putenv('madloop', 'true')
-            tests.append('check_poles')
+            if mode in ['NLO', 'aMC@NLO', 'noshower']:
+                tests.append('check_poles')
         else:
             os.unsetenv('madloop')
 
