@@ -1237,7 +1237,6 @@ c FxFx merging
         if (nbody) ifill2S_Born=0
       endif
       if(AddInfoLHE)then
-c$$$        iSorH_lhe=1+2 ! filled elsewhere
         ifks_lhe(nFKSprocess)=i_fks
         jfks_lhe(nFKSprocess)=j_fks
         fksfather_lhe(nFKSprocess)=0
@@ -1387,8 +1386,8 @@ c respectively
          sevmc = sevmc*ffact
       endif
 
-      if (.not. (rewgt_mohdr_calculated .and. rewgt_izero_calculated) )
-     $     then
+      if (ickkw.eq.3 .and. .not. (rewgt_mohdr_calculated .and.
+     $     rewgt_izero_calculated) )then
          write (*,*)'Both shower scales should be set before'/
      $        /' entering the MC subtraction terms'
          stop
@@ -2062,7 +2061,6 @@ c
             endif
 
             if (nbody) then
-c$$$               wgtref_nbody = dsigS
                do i_process=1,iproc_save(nFKSprocess) 
                   wgtref_nbody_all(i_process)=0d0
                   do j=1,iproc_save(nFKSprocess)
@@ -2073,7 +2071,6 @@ c$$$               wgtref_nbody = dsigS
                   enddo
                enddo
             endif
-c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
             do i_process=1,iproc_save(nFKSprocess) 
                wgtref_all(nFKSprocess*2-1,i_process)=0d0
                do j=1,iproc_save(nFKSprocess)
@@ -2178,7 +2175,6 @@ c Plot observables for counterevents and Born
                stop
             endif
             if (.not.nbody) then
-c$$$               wgtref_all(nFKSprocess*2) = dsigH
                do j=1,iproc_save(nFKSprocess)
                   wgtref_all(nFKSprocess*2,j)=unwgt_table(nFKSprocess,2
      $                 ,j)/vegaswgt
@@ -2333,7 +2329,6 @@ c
       endif
 
       if (Hevents) then
-c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
          SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS)
      &        ,ref_H_scale(iFKS)-min(emsca,scalemax)))
       else
@@ -2409,44 +2404,14 @@ c
          write (*,*) 'Error in set_shower_scale_noshape '/
      &        /'not enough QCD partons in process',NN
          stop
-c$$$      elseif(ickkw.eq.3) then
-c$$$         call set_cms_stuff(izero)
-c$$$         if (.not. setclscales(p1_cnt(0,1,0))) then
-c$$$            write (*,*) 'ERROR in setclscales izero'
-c$$$            stop
-c$$$         endif
-c$$$         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
-c$$$         if (nFxFx_ren_scales.ge.2) then
-c$$$            shower_S_scale(iFKS)=max(FxFx_ren_scales(2)
-c$$$     $           ,FxFx_ren_scales(1))
-c$$$         else
-c$$$            shower_S_scale(iFKS)=FxFx_ren_scales(0)
-c$$$         endif
-c$$$         call set_cms_stuff(mohdr)
-c$$$         if (.not. setclscales(pp)) then
-c$$$            write (*,*) 'ERROR in setclscales mohdr'
-c$$$            stop
-c$$$         endif
-c$$$         rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
-c$$$         if (nFxFx_ren_scales.ge.2) then
-c$$$            ref_H_scale(iFKS)=max(FxFx_ren_scales(2),FxFx_ren_scales(1))
-c$$$            pt_hardness=FxFx_ren_scales(1)
-c$$$         elseif (nFxFx_ren_scales.eq.1) then
-c$$$            ref_H_scale(iFKS)=FxFx_ren_scales(0)
-c$$$            pt_hardness=FxFx_ren_scales(1)
-c$$$         else
-c$$$            ref_H_scale(iFKS)=FxFx_ren_scales(0)
-c$$$            pt_hardness=0d0
-c$$$         endif
-c$$$         shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
       elseif (NN.eq.1) then
 c
 c For processes without jets at the Born
 c
          pt_hardness=0d0
          shower_S_scale(iFKS)=sqrtshat_cnt(0)
-c$$$         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
-         shower_H_scale(iFKS)=sqrtshat_cnt(0)
+         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+c$$$         shower_H_scale(iFKS)=sqrtshat_cnt(0)
          ref_H_scale(iFKS)=0d0
       else
          pt_hardness=0d0        ! updated below if event exists
@@ -5211,8 +5176,6 @@ c Check to see if this channel needs to be included in the multi-channeling
          endif
       
       else                      ! no multi_channel
-c$$$         write (*,*) 'Setting diagram symmetry factor to 1,'//
-c$$$     &        ' because no suppression.'
          diagramsymmetryfactor=1d0
       endif
  14   continue

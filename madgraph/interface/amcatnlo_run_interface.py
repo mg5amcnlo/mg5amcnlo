@@ -1067,7 +1067,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
 
-        if int(self.run_card['ickkw']) == 3:
+        if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
             logger.warning("""You are running with FxFx merging enabled.
 To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
@@ -2620,15 +2620,6 @@ Integrated cross-section
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
         
-        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
-            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
-            raise self.InvalidCmd(error)
-        elif int(self.run_card['ickkw']) == 3:
-            logger.warning("""You are running with FxFx merging enabled.
-To be able to merge samples of various multiplicities without double counting,
-you have to remove some events after showering 'by hand'.
-Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
-
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
         if mode in ['LO', 'NLO']:
@@ -2672,6 +2663,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             '''
             raise self.InvalidCmd(error)
         
+        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+            raise self.InvalidCmd(error)
+        elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+            logger.warning("""You are running with FxFx merging enabled.
+To be able to merge samples of various multiplicities without double counting,
+you have to remove some events after showering 'by hand'.
+Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         
         return mode
 
