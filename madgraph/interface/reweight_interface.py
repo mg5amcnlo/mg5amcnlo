@@ -36,10 +36,12 @@ import MadSpin.interface_madspin as madspin_interface
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.combine_plots as combine_plots
 
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card 
 import MadSpin.decay as madspin
+
 
 logger = logging.getLogger('decay.stdout') # -> stdout
 logger_stderr = logging.getLogger('decay.stderr') # ->stderr
@@ -284,20 +286,23 @@ class ReweightInterface(extended_cmd.Cmd):
         
         #write the banner to the output file
         self.banner.write(output, close_tag=False)
+        # prepare the output file for the weight plot
         if self.mother:
-            out_path = pjoin(self.mother.me_dir, 'Events', '%s_rw_%s' % \
-                                                (self.mother.run_name, rewgtid)) 
-            if not os.path.exists(out_path):
-                os.mkdir(out_path)
-            output2 = open(pjoin(out_path,'unweighted_events.lhe'), 'w')
+            out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
+            output2 = open(out_path, 'w')
             self.banner.write(output2, close_tag=False)
-            
+            new_banner = banner.Banner(self.banner)
             if not hasattr(self, 'run_card'):
-                    self.run_card = self.banner.charge_card('run_card')
-            self.run_card['run_tag'] = 'reweight_%s' % self.run_card['run_tag']
-            ff = open(pjoin(out_path, '%s_rw_%s_%s_banner.txt' % \
-                 (self.mother.run_name, rewgtid, self.run_card['run_tag'])),'w') 
-            self.banner.write(ff)
+                self.run_card = new_banner.charge_card('run_card')
+            self.run_card['run_tag'] = 'reweight_%s' % rewgtid
+            new_banner['slha'] = s_new   
+            del new_banner['initrwgt']
+            #ensure that original banner is kept untouched
+            assert new_banner['slha'] != self.banner['slha']
+            assert 'initrwgt' in self.banner 
+            ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
+                          (self.mother.run_name, self.run_card['run_tag'])),'w') 
+            new_banner.write(ff)
             ff.close()
         
         # Loop over all events
@@ -325,7 +330,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 event.reweight_data = {}
                 output2.write(str(event))
 
-                
+        running_time = misc.format_timer(time.time()-start)
+        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
         output.write('</LesHouchesEvents>\n')
         output.close()
@@ -334,21 +340,39 @@ class ReweightInterface(extended_cmd.Cmd):
             output2.close()        
             # add output information
             if hasattr(self.mother, 'results'):
-                old_name = self.mother.results.current['run_name']
-                new_run = '%s_rw_%s' % (old_name, rewgtid)
-                self.mother.results.add_run( new_run, self.run_card)
-                self.mother.results.add_detail('nb_event', event_nb+1)
-                self.mother.results.add_detail('cross', cross)
-                self.mother.results.add_detail('error', 'nan')
-                self.mother.do_plot('%s -f' % new_run)
-                self.mother.update_status('Reweight %s done' % rewgtid, 'madspin')
-                self.mother.results.def_current(old_name)
-                self.run_card['run_tag'] = self.run_card['run_tag'][9:]
-                self.mother.run_name = old_name
+                run_name = self.mother.run_name
+                results = self.mother.results
+                results.add_run(run_name, self.run_card, current=True)
+                results.add_detail('nb_event', event_nb+1)
+                results.add_detail('cross', cross)
+                results.add_detail('error', 'nan')
+                self.mother.create_plot(mode='reweight', event_path=output2.name,
+                                        tag=self.run_card['run_tag'])
+                #modify the html output to add the original run
+                if 'plot' in results.current.reweight:
+                    html_dir = pjoin(self.mother.me_dir, 'HTML', run_name)
+                    td = pjoin(self.mother.options['td_path'], 'td') 
+                    MA = pjoin(self.mother.options['madanalysis_path'])
+                    path1 = pjoin(html_dir, 'plots_parton')
+                    path2 = pjoin(html_dir, 'plots_%s' % self.run_card['run_tag'])
+                    outputplot = path2
+                    combine_plots.merge_all_plots(path2, path1, outputplot, td, MA)
+                #results.update_status(level='reweight')
+                #results.update(status, level, makehtml=True, error=False)
+                
+                #old_name = self.mother.results.current['run_name']
+                #new_run = '%s_rw_%s' % (old_name, rewgtid)
+                #self.mother.results.add_run( new_run, self.run_card)
+                #self.mother.results.add_detail('nb_event', event_nb+1)
+                #self.mother.results.add_detail('cross', cross)
+                #self.mother.results.add_detail('error', 'nan')
+                #self.mother.do_plot('%s -f' % new_run)
+                #self.mother.update_status('Reweight %s done' % rewgtid, 'madspin')
+                #self.mother.results.def_current(old_name)
+                #self.run_card['run_tag'] = self.run_card['run_tag'][9:]
+                #self.mother.run_name = old_name
         self.lhe_input.close()
         files.mv(output.name, self.lhe_input.name)
-        running_time = misc.format_timer(time.time()-start)
-        logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))
         logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         logger.info('new cross-section is : %g pb' % cross)
         self.terminate_fortran_executables(new_card_only=True)

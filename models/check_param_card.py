@@ -9,9 +9,11 @@ logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.various.misc as misc    
 except:
     import internal.file_writers as file_writers
-
+    import internal.misc as misc
+    
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
@@ -328,7 +330,7 @@ class ParamCard(dict):
                 lhacode = param.lhacode
                 value = param.value
                 new_value = new_card[blockname].get(lhacode).value
-                if value - new_value and abs(value - new_value)/(value +new_value) > 1e-7:
+                if not misc.equal(value, new_value, 7):
                     lhacode = ' '.join([str(i) for i in lhacode])
                     diff += 'set param_card %s %s %s \n' % \
                                        (blockname, lhacode , new_value)

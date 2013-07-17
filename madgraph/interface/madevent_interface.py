@@ -2475,6 +2475,14 @@ calculator."""
             self.keep_cards(['reweight_card.dat'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
+        # forbid this function to create an empty item in results.
+        if self.results.current['cross'] == 0:
+            print self.results.current['run_name'], self.results.current['tag']
+            print 'to rm', self.run_name, self.run_tag
+            self.results.delete_run(self.run_name, self.run_tag)
+        else:
+            print 'last tag', self.run_tag, self.results.current['cross']
+
         # load the name of the event file
         args = self.split_arg(line) 
         self.check_decay_events(args) 
@@ -2851,9 +2859,7 @@ calculator."""
                 #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
                 os.system('gzip -f %s' % filename)                
             else:
-                logger.info('No valid files for delphes plot')
-
-                
+                logger.info('No valid files for delphes plot')                    
     
     def store_result(self):
         """ tar the pythia results. This is done when we are quite sure that 

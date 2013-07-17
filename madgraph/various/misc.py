@@ -702,6 +702,15 @@ def sprint(*args, **opt):
     return 
 
 ################################################################################
+# function to check if two float are approximatively equal
+################################################################################
+def equal(a,b,sig_fig=7):
+    """function to check if two float are approximatively equal"""
+    
+    return ( a==b or 
+             int(a*10**sig_fig) == int(b*10**sig_fig)
+           )
+################################################################################
 # class to change directory with the "with statement"
 ################################################################################
 class chdir:

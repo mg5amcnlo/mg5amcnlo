@@ -596,11 +596,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'unknown'
 
     ############################################################################
-    def create_plot(self, mode='parton', event_path=None, output=None):
+    def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot""" 
 
         madir = self.options['madanalysis_path']
-        tag = self.run_card['run_tag']  
+        if not tag:
+            tag = self.run_card['run_tag']  
         td = self.options['td_path']
 
         if not madir or not td or \
@@ -645,6 +646,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if os.path.exists(event_path):
                         break
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
+             
             elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 
@@ -660,6 +662,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                               'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+        elif mode == 'reweight' and not output:
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_%s.html' % tag)   
 
             
             
@@ -670,9 +675,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
-               
-        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
-                
+        
+        mode = mode.lower()
+        if mode not in ['parton', 'reweight']:
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
+        elif mode == 'parton':
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_parton')
+        else:
+            plot_dir =pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s' % (tag))
+             
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
         
@@ -698,6 +709,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'HTML', self.run_name))
+
             shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
                                                                          output)
 
