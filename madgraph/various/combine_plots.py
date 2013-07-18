@@ -257,7 +257,9 @@ def merge_all_plots(path1, path2, outputpath='/tmp', td='../../td/td', MA=None):
         my_data.import_data(pjoin(path1, all_plot1[title]), 1)
         my_data.import_data(pjoin(path2, filename), 2)
         my_data.print_plots(pjoin(outputpath, filename), 1, 2)
-        if os.path.dirname(td) not in os.environ['DYLD_LIBRARY_PATH']:
+        if 'DYLD_LIBRARY_PATH' not in os.environ:
+            os.environ['DYLD_LIBRARY_PATH'] =  os.path.dirname(td)
+        elif os.path.dirname(td) not in os.environ['DYLD_LIBRARY_PATH']:
             os.environ['DYLD_LIBRARY_PATH'] = '%s:%s' %( os.environ['DYLD_LIBRARY_PATH'], os.path.dirname(td))
         devnull = open(os.devnull,'w')
         subprocess.call([td, filename], cwd=outputpath, stdout=devnull)
