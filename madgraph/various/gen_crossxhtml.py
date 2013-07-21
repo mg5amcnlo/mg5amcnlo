@@ -161,7 +161,10 @@ class AllResults(dict):
             if not tag:
                 self.current = self[run][-1]
             else:
-                self.current = self[run][tag]
+                assert tag in self[run].tags
+                index = self[run].tags.index(tag)
+                self.current = self[run][index]
+                
         else:
             self.current = None
     
