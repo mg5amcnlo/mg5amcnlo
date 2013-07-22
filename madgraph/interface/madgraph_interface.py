@@ -2150,7 +2150,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'nb_core': None,
+                         'nb_core': None
                          }
 
 
@@ -3353,7 +3353,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 
         # NO DECAY CHAIN
         final = set()
-        final_states = re.search(r'> ([^\/\$\=\@>]*)(\s\S+\=|\$|\/|\@|$)', procline)
+        final_states = re.search(r'> ([^\/\$\=\@>]*)(\[|\s\S+\=|\$|\/|\@|$)', procline)
         particles = final_states.groups()[0]
         for particle in particles.split():
             if particle in pids:

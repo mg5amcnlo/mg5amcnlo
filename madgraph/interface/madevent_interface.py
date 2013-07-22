@@ -1639,7 +1639,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             outstr += "                         MadEvent Options    \n"
             outstr += "                         ----------------    \n"
             for key, default in self.options_madevent.items():
-                value = self.options[key]
+                if key in self.options:
+                    value = self.options[key]
+                else:
+                    default = ''
                 if value == default:
                     outstr += "  %25s \t:\t%s\n" % (key,value)
                 else:

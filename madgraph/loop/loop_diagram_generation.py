@@ -304,7 +304,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tgged first."
+                       "make sure that the loop diagrams have been tagged first."
             valid_diag = True
             
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -325,9 +325,27 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        In this example, only massive parts. are allowed in the loop.
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-                valid_diag=False
-            
+#                valid_diag=False
+          
+            # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
+            #        of two vertices being the four gluon vertex and the effective
+            #        glu-glu-Higgs vertex.
+#            if len(diag.get_loop_lines_pdgs())==2:
+#                bubble_lines_pdgs=[abs(diag.get('canonical_tag')[0][0]),
+#                                   abs(diag.get('canonical_tag')[0][0])]
+#                first_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[0][1]]
+#                second_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[1][1]]
+#                first_vertex_pdgs.sort()
+#                second_vertex_pdgs.sort()
+#                bubble_vertices=[first_vertex_pdgs,second_vertex_pdgs]
+#                bubble_vertices.sort()
+#                if bubble_vertices==[[21,21,21,21],[21,21,25]]:
+#                    valid_diag=False
+                
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
 
@@ -556,7 +574,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # LoopUVCTDiagram. It is done before the square order selection because
         # it is possible that some UV-renorm. diagrams are removed as well.
         if self['process']['has_born']:
-            self.setUVCT()
+            self.set_Born_CT()
             
         ldg_debug_info("#UVCTDiags generated",len(self['loop_UVCT_diagrams']))
 
@@ -648,7 +666,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             return False
 
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
-        self.setLoopCT_vertices()
+        self.set_LoopCT_vertices()
         
         # Apply here some user-defined filter.
         # For expert only, you can edit your own filter by modifying the
@@ -758,7 +776,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         return loopsuccessful
 
-    def setUVCT(self):
+    def set_Born_CT(self):
         """ Scan all born diagrams and add for each all the corresponding UV 
         counterterms. It creates one LoopUVCTDiagram per born diagram and set
         of possible coupling_order (so that QCD and QED wavefunction corrections
@@ -767,16 +785,16 @@ class LoopAmplitude(diagram_generation.Amplitude):
         other contributions like the UV mass renormalization are added in the
         function setLoopCTVertices"""
 
-
+#        return True
         #  ============================================
-        #     Vertex renormalization
+        #     Including the UVtree contributions
         #  ============================================
 
         # The following lists the UV interactions potentially giving UV counterterms
         # (The UVmass interactions is accounted for like the R2s)
         UVCTvertex_interactions = base_objects.InteractionList()
         for inter in self['process']['model']['interactions'].get_UV():
-            if not inter.is_UVmass() and len(inter['particles'])>1 and \
+            if inter.is_UVtree() and len(inter['particles'])>1 and \
               inter.is_perturbating(self['process']['perturbation_couplings']) \
               and (set(inter['orders'].keys()).intersection(\
                set(self['process']['perturbation_couplings'])))!=set([]) and \
@@ -884,7 +902,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         return UVCTsuccessful
 
-    def setLoopCT_vertices(self):
+    def set_LoopCT_vertices(self):
         """ Scan each loop diagram and recognizes what are the R2/UVmass 
             CounterTerms associated to them """
 
@@ -897,37 +915,79 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # above.
         CT_interactions = {}
         for inter in self['process']['model']['interactions']:
-            if inter.is_UVmass() or inter.is_R2() and len(inter['particles'])>1 \
-               and inter.is_perturbating(self['process']['perturbation_couplings']):
+#            if inter.is_R2() and \
+            if inter.is_UVmass() or inter.is_UVloop() or inter.is_R2() and \
+                len(inter['particles'])>1 and inter.is_perturbating(\
+                                     self['process']['perturbation_couplings']):
                 # This interaction might have several possible loop particles 
-                # yielding the same counterterm. So we add this interaction ID 
+                # yielding the same CT. So we add this interaction ID 
                 # for each entry in the list loop_particles.
-                for lparts in inter['loop_particles']:      
+                for i, lparts in enumerate(inter['loop_particles']):
                     keya=copy.copy(lparts)
-                    keya.sort()
+                    keya.sort()           
+                    if inter.is_UVloop():
+                        # If it is a CT of type UVloop, then do not specify the
+                        # keya (leave it empty) but make sure the particles
+                        # specified as loop particles are not forbidden before
+                        # adding this CT to CT_interactions 
+                        if (set(self['process']['forbidden_particles']) & \
+                                                        set(lparts)) != set([]):
+                            continue
+                        else:
+                            keya=[]        
                     keyb=[part.get_pdg_code() for part in inter['particles']]
                     keyb.sort()
                     key=(tuple(keyb),tuple(keya))
+                    # We keep track of 'i' (i.e. the position of the 
+                    # loop_particle list in the inter['loop_particles']) so
+                    # that each coupling in a vertex of type 'UVloop' is
+                    # correctly accounted for since the keya is always replaced
+                    # by an empty list since the constraint on the loop particles
+                    # is simply that there is not corresponding forbidden
+                    # particles in the process definition and not that the 
+                    # actual particle content of the loop generate matches.
+                    #
+                    # This can also happen with the type 'UVmass' or 'R2'
+                    # CTvertex ex1(
+                    #        type='UVmass'
+                    #        [...]
+                    #        loop_particles=[[[d,g],[d,g]]])
+                    # Which is a bit silly but can happen and would mean that
+                    # we must account twice for the coupling associated to each
+                    # of these loop_particles.
+                    # One might imagine someone doing it with 
+                    # loop_particles=[[[],[]]], for example, because he wanted
+                    # to get rid of the loop particle constraint for some reason.
                     try:
-                        CT_interactions[key].append(inter['id'])
+                        CT_interactions[key].append((inter['id'],i))
                     except KeyError:
-                        CT_interactions[key]=[inter['id'],]
+                        CT_interactions[key]=[(inter['id'],i),]
         
-        # The dictionary CT_added keeps track of what are the CounterTerms already
-        # added and prevents us from adding them again. For instance, the fermion
-        # boxes with four external gluons exist in 6 copies (with different 
-        # crossings of the external legs each time) and the corresponding R2 must
-        # be added only once. The key of this dictionary characterizing the loop
-        # is (tupleA,tupleB). Tuple A is made from the list of the ID of the external
-        # structures attached to this loop and tuple B from list of the pdg of the
-        # particles building this loop.
+        # The dictionary CTmass_added keeps track of what are the CounterTerms of
+        # type UVmass or R2 already added and prevents us from adding them again. 
+        # For instance, the fermion boxes with four external gluons exists in 6 copies
+        # (with different crossings of the external legs each time) and the 
+        # corresponding R2 must be added only once. The key of this dictionary 
+        # characterizing the loop is (tupleA,tupleB). Tuple A is made from the 
+        # list of the ID of the external structures attached to this loop and
+        # tuple B from list of the pdg of the particles building this loop.
         
+        # Notice that when a CT of type UVmass is specified with an empty 
+        # loop_particles attribute, then it means it must be added once for each
+        # particle with a matching topology, irrespectively of the loop content.
+        # Whenever added, such a CT is put in the dictionary CT_added with a key
+        # having an empty tupleB.
+        # Finally, because CT interactions of type UVloop do specify a
+        # loop_particles attribute, but which serves only to be filtered against
+        # particles forbidden in the process definition, they will also be added
+        # with an empty tupleB.
         CT_added = {}
 
         for diag in self['loop_diagrams']:
             # First build the key from this loop for the CT_interaction dictionary 
             # (Searching Key) and the key for the CT_added dictionary (tracking Key)
             searchingKeyA=[]
+            # Notice that searchingKeyB below also serves as trackingKeyB
             searchingKeyB=[]
             trackingKeyA=[]
             for tagElement in diag['canonical_tag']:
@@ -943,8 +1003,25 @@ class LoopAmplitude(diagram_generation.Amplitude):
             searchingKeyB=list(set(searchingKeyB))
             searchingKeyB.sort()
             trackingKeyA.sort()
-            # There are two kind of keys, the ones defining the loop
-            # particles and the ones only specifying the external legs.
+            # I repeat, they are two kinds of keys:
+            # searchingKey:
+            #    This serves to scan the CT interactions defined and then find
+            #    which ones match a given loop topology and particle.
+            # trackingKey:
+            #    Once some CT vertices are identified to be a match for a loop,
+            #    the trackingKey is used in conjunction with the dictionary
+            #    CT_added to make sure that this CT has not already been included.
+            
+            # Each of these two keys above, has the format 
+            #    (tupleA, tupleB)
+            # with tupleB being the loop_content and either contains the set of 
+            # loop particles PDGs of the interaction (for the searchingKey) 
+            # or of the loops already scanned (trackingKey). It can also be 
+            # empty when considering interactions of type UVmass or R2 which
+            # have an empty loop_particle attribute or those of type UVloop.
+            # TupleA is the set of external particle PDG (for the searchingKey)
+            # and the unordered list of structID attached to the loop (for the
+            # trackingKey)           
             searchingKeySimple=(tuple(searchingKeyA),())
             searchingKeyLoopPart=(tuple(searchingKeyA),tuple(searchingKeyB))
             trackingKeySimple=(tuple(trackingKeyA),())
@@ -979,7 +1056,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 # orders match
                 if CTID not in usedIDs and diag.get_loop_orders(\
                   self['process']['model'])==\
-                   self['process']['model']['interaction_dict'][CTID]['orders']:
+                   self['process']['model']['interaction_dict'][CTID[0]]['orders']:
                     # Create the amplitude vertex corresponding to this CT
                     # and add it to the LoopDiagram treated.
                     CTleglist = base_objects.LegList()
@@ -987,13 +1064,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
                         for structID in tagElement[1]:
                             CTleglist.append(\
                           self['structure_repository'][structID]['binding_leg'])
-                    CTVertex = base_objects.Vertex({'id':CTID, \
+                    CTVertex = base_objects.Vertex({'id':CTID[0], \
                                                     'legs':CTleglist})
                     diag['CT_vertices'].append(CTVertex)
                     # Now add this CT vertex to the CT_added dictionary so that
                     # we are sure it will not be double counted
-                    if self['process']['model']['interaction_dict'][CTID]\
-                                                       ['loop_particles']==[[]]:
+                    if self['process']['model']['interaction_dict'][CTID[0]]\
+                                            ['loop_particles'][CTID[1]]==[] or \
+                       self['process']['model']['interaction_dict'][CTID[0]].\
+                                                                    is_UVloop():
                         try:
                             CT_added[trackingKeySimple].append(CTID)
                         except KeyError:
