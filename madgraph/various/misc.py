@@ -172,10 +172,10 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
-def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
+def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
     
-    command = ['make','-j2'] if job_specs else ['make']
+    command = ['make','-j%s' % nb_core] if job_specs else ['make']
     try:
         p = subprocess.Popen(command + arg, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
@@ -261,6 +261,8 @@ def mod_compilator(directory, new='gfortran', current=None):
             current = 'gfortran'
         elif new == 'gfortran' and current is None:
             current = 'g77'
+        else:
+            current = 'g77|gfortran'
         pattern = re.compile(current)
         text= pattern.sub(new, text)
         open(name,'w').write(text)

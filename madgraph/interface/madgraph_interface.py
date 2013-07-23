@@ -865,7 +865,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -1069,6 +1069,9 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output']:
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
@@ -2168,8 +2171,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'MG5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -2235,7 +2239,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
+        print
 
         return value
         
@@ -3885,7 +3891,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
                 compiler = 'gfortran'
@@ -4021,6 +4027,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return 
+        
+        if not misc.which('patch'):
+            error_text = """Not able to find program \'patch\'. Please reload a clean version
+            or install that program and retry."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            return            
         
         
         # read the data present in .autoupdate
