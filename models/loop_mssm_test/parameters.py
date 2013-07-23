@@ -9,6 +9,14 @@ from object_library import all_parameters, Parameter
 
 from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
+MU_R = Parameter(name = 'MU_R',
+              nature = 'external',
+              type = 'real',
+              value = 91.188,
+              texname = '\\text{\\mu_r}',
+              lhablock = 'LOOP',
+              lhacode = [ 1 ])
+
 # This is a default parameter object representing 0.
 ZERO = Parameter(name = 'ZERO',
                  nature = 'internal',
