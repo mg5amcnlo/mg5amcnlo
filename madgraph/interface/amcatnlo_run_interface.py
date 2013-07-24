@@ -2377,6 +2377,9 @@ Integrated cross-section
             except KeyError:
                 pass
 
+
+        os.environ['fastjet_config'] = self.options['fastjet']
+        
         # make Source
         self.update_status('Compiling source...', level=None)
         misc.compile(['clean4pdf'], cwd = sourcedir)
@@ -2393,7 +2396,7 @@ Integrated cross-section
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
         if not '[real=QCD]' in proc_card:
             hasvirt = True
-            os.putenv('madloop', 'true')
+            os.environ['madloop'] = 'true'
             tests.append('check_poles')
         else:
             os.unsetenv('madloop')
@@ -2498,6 +2501,7 @@ Integrated cross-section
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
         os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def write_test_input(self, test):
