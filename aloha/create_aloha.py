@@ -573,21 +573,60 @@ class AbstractALOHAModel(dict):
                                                        (lorentzname, outgoing) )
             return None
         
-    def get_info(self, info, lorentzname, outgoing, tag):
+    def get_info(self, info, lorentzname, outgoing, tag, cached=False):
         """return some information about the aloha routine
         - "rank": return the rank of the loop function
+        If the cached option is set to true, then the result is stored and
+        recycled if possible.
         """
+
+        returned_dict = {}        
+         # Make sure the input argument is a list
+        if isinstance(info, str):
+            infos=[info]
+        else:
+            infos=info
+        
+        # First deal with the caching of infos
+        if cached:
+            if not 'cached_interaction_infos' in dir(self):
+                self.cached_interaction_infos = {}
+            
+            # Now try to recover it
+            for info_key in infos:
+                try:
+                    returned_dict[info] = self.cached_interaction_infos[\
+                                         (lorentzname,outgoing,tuple(tag),info)]
+                except KeyError:
+                    # Some information has never been computed before, so they
+                    # will be computed later.
+                    pass            
+
+        # Notice that one proceeds here with only the missing entries in
+        # returned_dict
+        missing_entries = list(set(infos)-set(returned_dict.keys()))
+        if len(missing_entries)==0:
+            if isinstance(info,str):
+                return returned_dict[info]
+            else:
+                return returned_dict
         
         lorentz = eval('self.model.lorentz.%s' % lorentzname)
-        assert lorentz.structure == 'external'
-    
+
         abstract = AbstractRoutineBuilder(lorentz)
         routine = abstract.compute_routine(outgoing, tag, factorize=False)
-        
+
+        for info_key in missing_entries:
+            returned_dict[info_key] = routine.get_info(info_key)
+            if cached:
+                # Cache the information computed
+                self.cached_interaction_infos[\
+             (lorentzname,outgoing,tuple(tag),info_key)]=returned_dict[info_key]
+
         if isinstance(info, str):
-            return routine.get_info(info)
+            return returned_dict[info]
         else:
-            return [routine.get_info(i) for i in info]
+            return returned_dict
     
     def set(self, lorentzname, outgoing, abstract_routine):
         """ add in the dictionary """

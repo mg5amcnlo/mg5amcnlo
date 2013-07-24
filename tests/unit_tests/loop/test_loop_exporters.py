@@ -156,11 +156,17 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
         # Several exporters given in a dictionary
         else:
             test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
-                                                               exporters.keys()]         
+                                                               exporters.keys()]
+               
         for (folderName, exporter) in test_list:
-            if self.need(folderName,testName): 
+            # Make sure to set optimized_output to true in the LoopHelasMatrixElement
+            # constructor if necessary
+            isOptimized = isinstance(exporter, \
+                           loop_exporters.LoopProcessOptimizedExporterFortranSA)
+            if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
-                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
+                                        myloopamp,optimized_output=isOptimized),
                   exporter=exporter,
                   helasModel=fortran_model,
                   testedFiles=files_to_check,

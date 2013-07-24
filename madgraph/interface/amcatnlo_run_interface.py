@@ -78,10 +78,6 @@ except ImportError, error:
     import internal.shower_card as shower_card
     aMCatNLO = True
 
-
-
-
-
 class aMCatNLOError(Exception):
     pass
 
