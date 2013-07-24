@@ -56,9 +56,10 @@ class one_plot:
                 self.max = max(self.max, float(line.split()[1]))
         if self.max != old_max:
             self.max_file = tag
+            
     def get_histo(self, tag, norm):
         """return a string with the histogram values, and the normalization """
-        if self.histo[tag]["values"] == '':
+        if tag not in self.histo or self.histo[tag]["values"] == '':
             return ''
         histo = "SET ORDER X Y " + str(norm) + " \n"
         histo += self.histo[tag]["values"]

@@ -227,7 +227,7 @@ C     ----------
       ENDDO
       ANS = 0D0
       DO IHEL=1,NCOMB
-        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
           T=MATRIX(P ,NHEL(1,IHEL),JC(1))
           ANS=ANS+T
           IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN

@@ -894,8 +894,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     def __init__(self, *args, **opts):
         """add the format information compare to standard init"""
         
-        self.format = opts['format']
-        del opts['format']
+        if 'format' in opts:
+            self.format = opts['format']
+            del opts['format']
+        else:
+            self.format = 'standalone'
         ProcessExporterFortran.__init__(self, *args, **opts)
 
     def copy_v4template(self, modelname):

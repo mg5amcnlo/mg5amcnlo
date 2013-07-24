@@ -3410,7 +3410,8 @@ calculator."""
         for id, key in enumerate(switch_order):
             if switch[key] != void:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
-                options.append(key)    
+                options.append(key)
+        options.append('parton')    
         
         #ask the question
         if mode or not self.force:
@@ -3423,9 +3424,9 @@ calculator."""
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])
+                    question += 'Type the number before the switch to change its setting or set the switches explicitly (e.g. \'pythia=ON\').\n'
                     question += 'Type \'0\', \'auto\', \'done\' or just press enter when you are done.'
                     answer = self.ask(question, '0', options)
-                    print 'answer  is %s' % answer
                 if answer.isdigit() and answer != '0':
                     key = switch_order[int(answer) - 1]
                     answer = '%s=%s' % (key, 'ON' if switch[key] == 'OFF' else 'OFF')
@@ -3441,11 +3442,15 @@ calculator."""
                                 switch[key2] = status2
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in switch_order:
+                else:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
-                    if answer == 'pythia':
+                    if answer == 'parton':
+                        switch_assign('pythia', 'OFF')
+                        switch_assign('pgs', 'OFF')
+                        switch_assign('delphes', 'OFF')
+                    elif answer == 'pythia':
                         switch_assign('pythia', 'ON')
                         switch_assign('pgs', 'OFF')
                         switch_assign('delphes', 'OFF')
@@ -3467,8 +3472,10 @@ calculator."""
                         switch_assign('pythia', 'OFF')
                         switch_assign('pgs', 'OFF')
                         switch_assign('delphes', 'OFF')
+                    
+                    
                 if mode:
-                    answer =  '' #mode auto didn't pass here (due to the continue)
+                    answer =  '0' #mode auto didn't pass here (due to the continue)
             else:
                 answer = 'auto'                        
 
