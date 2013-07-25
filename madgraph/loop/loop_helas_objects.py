@@ -419,8 +419,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             output["Pairing%d"%i]=pairing
         output['numCouplings']='_%d'%len(self.get('coupling'))
         output['numeratorNumber']=self.get('number')
+        output["LoopRank"]=self.get_analytic_info('wavefunction_rank')
         if OptimizedOutput:
-            output["LoopRank"]=self.get_analytic_info('wavefunction_rank')
             if self.get('loop_group_id')==-1:
                 output['loopNumber']=self.get('number')
             else:
@@ -452,7 +452,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return self.get_final_loop_wavefunction().\
                                              get_analytic_info(info, alohaModel)
 
-    def compute_alanalytic_information(self,alohaModel):
+    def compute_analytic_information(self,alohaModel):
         """ Make sure that all analytic pieces of information about this 
         wavefunction are computed so that they can be recycled later, typically
         without the need of specifying an alohaModel. For now, all analytic
@@ -1581,8 +1581,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 
         # As a final step, we compute the analytic information for the loop
         # wavefunctions and amplitudes building this loop matrix element.
-        # Notice that the function has no effect when using the non optimized
-        # output mode
         self.compute_all_analytic_information()
         
 
@@ -1863,10 +1861,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         already created and can be specified here instead of being generated.
         This can make a difference for very complicated models."""
         
-        # Analytic information is only used for the optimized output so far
-        if not self.optimized_output:
-            return
-        
         if alohaModel is None:
             # Generate it here
             model = self.get('processes')[0].get('model')
@@ -1891,20 +1885,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # structure or not so that aloha knows if it has to produce the subroutine 
         # which removes the denominator in the propagator of the wavefunction created.
         output = []
+
         for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
             if wa.get('interaction_id') in [0,-1]:
                 continue
-            
-            tags = ['C%s' % w for w in wa.get_conjugate_index()]
-            if isinstance(wa,helas_objects.HelasWavefunction) and \
-                                                              wa.get('is_loop'): 
-                if not self.optimized_output:
-                    tags.append('L')
-                else:
-                    tags.append('L%d'%wa.get_loop_index())
+            output.append(wa.get_aloha_info(self.optimized_output));
 
-            output.append((tuple(wa.get('lorentz')), tuple(tags), 
-                                                     wa.find_outgoing_number()))
         return output
 
     def get_used_helas_loop_amps(self):

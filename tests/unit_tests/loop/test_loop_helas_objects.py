@@ -740,16 +740,16 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         
         ME=self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
-        target_lorentz=[(('VVVV1',), ('L',), 1), (('FFV1',), (), 1), 
-                        (('R2_GG_1', 'R2_GG_3'), (), 0), (('VVV1',), ('L',), 1),
+        target_lorentz=[(('VVVV1',), ('L','P0'), 1), (('FFV1',), (), 1), 
+                        (('R2_GG_1', 'R2_GG_3'), (), 0), (('VVV1',), ('L','P0'), 1),
                         (('FFV1',), ('L',), 1), (('FFV1',), (), 0),
                         (('GHGHG',), ('L',), 1), (('VVV1',), (), 0), 
                         (('R2_GG_1',), (), 0), (('FFV1',), (), 2), 
                         (('GHGHG',), ('L',), 2), 
-                        (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), (), 1),
-                        (('FFV1',), ('L',), 3), (('FFV1',), (), 3),
-                        (('FFV1',), ('L',), 2), (('VVVV4',), ('L',), 1), 
-                        (('R2_QQ_1',), (), 0), (('VVVV3',), ('L',), 1)]
+                        (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), ('P0',), 1),
+                        (('FFV1',), ('L','P0'), 3), (('FFV1',), ('P0',), 3),
+                        (('FFV1',), ('L',), 2), (('VVVV4',), ('L','P0'), 1), 
+                        (('R2_QQ_1',), (), 0), (('VVVV3',), ('L','P0'), 1)]
         self.assertEqual(set(target_lorentz),set(ME.get_used_lorentz()))
 
     def test_helas_diagrams_gd_ggd(self):

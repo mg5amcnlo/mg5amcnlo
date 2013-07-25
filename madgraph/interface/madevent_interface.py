@@ -2486,7 +2486,10 @@ calculator."""
             args.remove('--no_default')
         else:
             no_default = False
-                                    
+        
+        # initialize / remove lhapdf mode        
+        self.configure_directory()
+                               
         self.check_pythia(args)        
         # the args are modify and the last arg is always the mode 
         if not no_default:
@@ -2496,8 +2499,7 @@ calculator."""
         if not self.banner:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
-        # initialize / remove lhapdf mode        
-        self.configure_directory()
+   
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
@@ -2561,7 +2563,14 @@ calculator."""
         td = self.options['td_path']
         
         
+        #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
+        if int(self.run_card['ickkw']):
+            # Add the matched cross-section
+            if 'MGGenerationInfo' in self.banner:
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+            else:
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         
@@ -2997,6 +3006,8 @@ calculator."""
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         self.pdffile = None
+        #remove lhapdf stuff
+        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3081,13 +3092,16 @@ calculator."""
         # store new name
         self.run_name = name
         
-        # Read run_card
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCard(run_card)
-
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, name)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
+        else:
+            # Read run_card
+            run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+            self.run_card = banner_mod.RunCard(run_card)   
+        
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -3111,8 +3125,7 @@ calculator."""
                 # We can add the results to the current run
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
-             
-                    
+                   
         if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
@@ -3680,5 +3693,4 @@ class GridPackCmd(MadEventCmd):
 
 
 AskforEditCard = common_run.AskforEditCard
-
 

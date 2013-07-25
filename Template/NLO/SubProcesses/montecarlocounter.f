@@ -2130,7 +2130,7 @@ c
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/max(en_mother,1d0).ge.tiny)then
                write(*,*)'error C in xmcsubt_PY6Q'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
