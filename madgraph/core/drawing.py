@@ -202,7 +202,9 @@ class FeynmanLine(object):
         """Returns True if the particle is a fermion."""
 
         model_info = self.model.get_particle(abs(self.id))
-        if model_info.get('line') == 'straight':
+        if model_info.get('line') == 'straight' or\
+                model_info.get('line')=='swavy' or\
+                model_info.get('line')=='scurly':
             return True
 
     def is_external(self):

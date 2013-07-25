@@ -250,7 +250,7 @@ in presence of majorana particle/flow violation"""
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
         else:
             lorentz = copy.copy(self.routine_kernel)
-            aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
+            aloha_lib.KERNEL.use_tag = set(self.kernel_tag)
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
