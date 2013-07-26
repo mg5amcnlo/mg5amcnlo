@@ -1959,9 +1959,11 @@ def generate_loop_matrix_element(process_definition, reuse,
                                                 ldiag.get('loop_wavefunctions')]
         timing['n_loop_wfs']=len(lwfs)
         timing['loop_wfs_ranks']=[]
-        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+        for rank in range(0,max([l.get_analytic_info('wavefunction_rank') \
+                                                             for l in lwfs])+1):
             timing['loop_wfs_ranks'].append(\
-                                  len([1 for l in lwfs if l.get('rank')==rank]))
+                len([1 for l in lwfs if \
+                               l.get_analytic_info('wavefunction_rank')==rank]))
     
     return timing, matrix_element
 
