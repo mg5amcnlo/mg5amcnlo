@@ -74,12 +74,12 @@ c
       write (*,*)
       write (*,*) " Phase space point:"
       write (*,*)
-      write (*,*) "-----------------------------------------------------------------------------"
-      write (*,*)  "n        E             px             py              pz               m "
+      write (*,*) "-----------------------------"
+      write (*,*)  "n   E   px   py   pz   m "
       do i=1,nexternal
          write (*,'(i2,1x,5e15.7)') i, P(0,i),P(1,i),P(2,i),P(3,i),dsqrt(dabs(DOT(p(0,i),p(0,i))))
       enddo
-      write (*,*) "-----------------------------------------------------------------------------"
+      write (*,*) "-----------------------------"
 
 c     
 c     Now we can call the matrix element!
@@ -93,8 +93,7 @@ c
 c
 
       write (*,*) "Total Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	
-      write (*,*) "-----------------------------------------------------------------------------"
-
+      write (*,*) "-----------------------------"
 
 c c
 c c      Copy down here (or read in) the four momenta as a string. 

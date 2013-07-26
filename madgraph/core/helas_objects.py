@@ -687,6 +687,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('spin')==2:
             rank=rank+1
 
+        interaction = self.get('lorentz')
+        
+        
         # Treat in an ad-hoc way the higgs effective theory
         spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
               [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]

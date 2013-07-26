@@ -1222,33 +1222,50 @@ class LoopAmplitude(diagram_generation.Amplitude):
     # Helper function
 
     def check_squared_orders(self, sq_order_constrains):
-        """ Filters loop diagrams according to the constraints on the squared
+        """ Filters the diagrams according to the constraints on the squared
             orders in argument and wether the process has a born or not. """
 
         diagRef=base_objects.DiagramList()
         AllLoopDiagrams=base_objects.DiagramList(self['loop_diagrams']+\
-                                                 self['loop_UVCT_diagrams'])
+                                                     self['loop_UVCT_diagrams'])
+        AllBornDiagrams=base_objects.DiagramList(self['born_diagrams'])
         if self['process']['has_born']:
-            diagRef=self['born_diagrams']
+            diagRef=AllBornDiagrams
         else:
             diagRef=AllLoopDiagrams
 
         for order, value in sq_order_constrains.items():
+            if len(diagRef)==0:
+                # If no born contributes but they were supposed to ( in the
+                # case of self['process']['has_born']=True) then it means that
+                # the loop cannot be squared against anything and none should
+                # contribute either. The squared order constraints are just to 
+                # tight for anything to contribute.
+                AllLoopDiagrams = base_objects.DiagramList()
+                break
             if order.upper()=='WEIGHTED':
                 max_wgt=value-diagRef.get_min_order('WEIGHTED')
                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in\
                   AllLoopDiagrams if diag.get_order('WEIGHTED')<=max_wgt])
+                if self['process']['has_born']:
+                    AllBornDiagrams=base_objects.DiagramList([diag for diag in\
+                        AllBornDiagrams if diag.get_order('WEIGHTED')<=max_wgt])
             else:
                 max_order = 0
                 if value>=0:
                     # Fixed squared order
                     max_order=value-diagRef.get_min_order(order)
                 else:
-                    # ask for the N^(-value) Leading Order in tha coupling
+                    # ask for the N^(-value) Leading Order in the coupling
                     max_order=diagRef.get_min_order(order)+2*(-value-1)                    
                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
                     AllLoopDiagrams if diag.get_order(order)<=max_order])
+                if self['process']['has_born']:
+                    AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+                           AllBornDiagrams if diag.get_order(order)<=max_order])
         
+        if self['process']['has_born']:
+            self['born_diagrams'] = AllBornDiagrams
         self['loop_diagrams']=[diag for diag in AllLoopDiagrams if not \
             isinstance(diag,loop_base_objects.LoopUVCTDiagram)]
         self['loop_UVCT_diagrams']=[diag for diag in AllLoopDiagrams if \
