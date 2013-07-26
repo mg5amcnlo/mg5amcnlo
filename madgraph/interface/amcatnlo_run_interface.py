@@ -845,6 +845,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if self.check_mcatnlo_dir():
             self.run_mcatnlo(evt_file)
 
+        self.update_status('', level='all', update_results=True)
+
     ################################################################################
     def do_plot(self, line):
         """Create the plot for a given run"""
@@ -973,12 +975,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mode = argss[0]
         self.ask_run_configuration(mode, options)
 
+        self.update_status('Starting run', level=None, update_results=True)
+
         if self.options_madevent['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options_madevent['automatic_html_opening'] = False
 
         self.compile(mode, options) 
         self.run(mode, options)
+        self.update_status('', level='all', update_results=True)
 
         
     ############################################################################      
@@ -1005,6 +1010,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
 
+        self.update_status('Starting run', level=None, update_results=True)
+
         if self.options_madevent['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options_madevent['automatic_html_opening'] = False
@@ -1013,6 +1020,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         evt_file = self.run(mode, options)
         if self.check_mcatnlo_dir() and not options['parton']:
             self.run_mcatnlo(evt_file)
+
+        self.update_status('', level='all', update_results=True)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1045,6 +1054,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['parton'] = True
         mode = self.ask_run_configuration(mode, options)
 
+        self.update_status('Starting run', level=None, update_results=True)
+
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
@@ -1070,6 +1081,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
+
+        self.update_status('', level='all', update_results=True)
 
 
     ############################################################################      
@@ -1105,6 +1118,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
                 ' shell')
             return False
+
+        self.update_status('', level='all', update_results=True)
 
     def update_status(self, status, level, makehtml=True, force=True, 
                       error=False, starttime = None, update_results=False):
@@ -1690,6 +1705,7 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
+        self.update_status('Showering events', level='parton', update_results = True) 
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
@@ -1829,6 +1845,8 @@ Integrated cross-section
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
+
+        self.update_status('Run completed', level='hadron', update_results=True)
 
 
 
