@@ -3052,7 +3052,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
-    def test_aloha_symmetries(self):
+    def test_aloha_symmetries_and_get_info(self):
         """ test that the symmetries of particles works """
     
         # Check that full identification symmetry works
@@ -3060,6 +3060,32 @@ class test_aloha_creation(unittest.TestCase):
         helas_suite.look_for_symmetries()
         solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4: 3}}  
         self.assertEqual(solution, helas_suite.symmetries)
+        
+        # check that the get_info work
+        
+        start = time.time()
+        rank = helas_suite.get_info('rank', 'VVVV2', 2, ['L1', 'P0'], cached=True)
+        time1 = time.time() - start # time1 is expected to be O(1e-2)
+        self.assertEqual(rank, 0)
+        
+        start = time.time()
+        rank = helas_suite.get_info('rank', 'VVVV2', 2, ['L1', 'P0'])
+        time2 = time.time() - start # time2 is expected to be O(1e-6)
+        
+        self.assertEqual(rank, 0)
+        self.assertTrue(100 * time2 < time1) # if this is not the case this is
+                                             # clearly wrong.
+        
+        
+        # check for correct behavior if wrong input:
+        # 1) check that it fail for non loop routine
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 0, []) 
+        # 2) check that unknow information fails.
+        self.assertRaises(create_aloha.ALOHAERROR, helas_suite.get_info, 'SW', 'VVVV2', 2, ['L1'])
+        # 3) check that appropriate error is raise for invalid input
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 1, ['L1'])
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 0, ['L1'])
+        
         
     def test_has_symmetries(self):
         """Check that functions returning symmetries works"""
@@ -4998,6 +5024,8 @@ def FFV2C1_0(F2,F1,V3,COUP):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
                  
             
 class test_aloha_wavefunctions(unittest.TestCase):

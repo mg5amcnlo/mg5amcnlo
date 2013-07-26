@@ -917,7 +917,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         used.
         Notice that if one knows that this analytic information has already been
         computed before (for example because a call to compute_analytic_information
-        has been performed before, then alohaModel need not be specified since 
+        has been performed before, then alohaModel is not required since 
         the result can be recycled."""
         # This function makes no sense if not called for a loop interaction.
         # At least for now
@@ -958,6 +958,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             result = max_rank
 
         elif info=="wavefunction_rank":
+            # wavefunction_rank is the sum of all the interaction rank
+            # from the history of open-loop call.
             loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
             if len(loop_mothers)==0:
                 # It is an external loop wavefunction
@@ -976,7 +978,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         
         return result
 
-    def compute_analytic_information(self,alohaModel):
+    def compute_analytic_information(self, alohaModel):
         """ Make sure that all analytic pieces of information about this 
         wavefunction are computed so that they can be recycled later, typically
         without the need of specifying an alohaModel."""

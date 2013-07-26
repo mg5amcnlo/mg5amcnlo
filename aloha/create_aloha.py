@@ -102,11 +102,14 @@ class AbstractRoutine(object):
         """return some information on the routine
         """
         if info == "rank":
+            assert isinstance(self.expr, aloha_lib.SplitCoefficient)
             rank= 1
             for coeff in self.expr:
                 if max(sum(coeff), rank):
                     rank = sum(coeff)
             return rank -1 # due to the coefficient associate to the wavefunctions
+        else:
+            raise ALOHAERROR, '%s is not a valid information that can be computed' % info
 
 
 class AbstractRoutineBuilder(object):
@@ -126,7 +129,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [abs(s) for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -147,6 +150,9 @@ class AbstractRoutineBuilder(object):
         """compute the expression and return it"""
         self.outgoing = mode
         self.tag = tag
+        if __debug__:
+            if mode == 0:
+                assert not any(t.startswith('L') for t in tag)
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
@@ -662,17 +668,14 @@ class AbstractALOHAModel(dict):
         """
 
         returned_dict = {}        
-         # Make sure the input argument is a list
+        # Make sure the input argument is a list
         if isinstance(info, str):
-            infos=[info]
+            infos = [info]
         else:
-            infos=info
+            infos = info
         
         # First deal with the caching of infos
-        if cached:
-            if not 'cached_interaction_infos' in dir(self):
-                self.cached_interaction_infos = {}
-            
+        if hasattr(self, 'cached_interaction_infos'):
             # Now try to recover it
             for info_key in infos:
                 try:
@@ -681,23 +684,22 @@ class AbstractALOHAModel(dict):
                 except KeyError:
                     # Some information has never been computed before, so they
                     # will be computed later.
-                    pass            
+                    pass             
+        elif cached:
+            self.cached_interaction_infos = {}
 
-        # Notice that one proceeds here with only the missing entries in
-        # returned_dict
-        missing_entries = list(set(infos)-set(returned_dict.keys()))
-        if len(missing_entries)==0:
-            if isinstance(info,str):
-                return returned_dict[info]
-            else:
-                return returned_dict
-        
-        lorentz = eval('self.model.lorentz.%s' % lorentzname)
+        init = False
+        for info_key in infos:
+            if info_key in returned_dict:
+                continue
+            elif not init:
+                # need to create the aloha object
+                lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                abstract = AbstractRoutineBuilder(lorentz)
+                routine = abstract.compute_routine(outgoing, tag, factorize=False)                
+                init = True
 
-        abstract = AbstractRoutineBuilder(lorentz)
-        routine = abstract.compute_routine(outgoing, tag, factorize=False)
-
-        for info_key in missing_entries:
+            assert 'routine' in locals()
             returned_dict[info_key] = routine.get_info(info_key)
             if cached:
                 # Cache the information computed
