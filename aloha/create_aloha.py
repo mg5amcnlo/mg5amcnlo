@@ -340,8 +340,11 @@ in presence of majorana particle/flow violation"""
     
     def compute_loop_coefficient(self, lorentz, outgoing):
         
-                    
-        l_in = [int(tag[1:]) for tag in self.tag][0]
+
+        l_in = [int(tag[1:]) for tag in self.tag if tag.startswith('L')][0]
+        if (l_in + 1) // 2 in self.conjg:
+            #flip the outgoing tag if in conjugate                                                                                                                                         
+            l_in = l_in + l_in % 2 - (l_in +1) % 2                    
         assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
