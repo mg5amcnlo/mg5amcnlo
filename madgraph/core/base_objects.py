@@ -2237,6 +2237,11 @@ class Process(PhysicsObject):
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
         self['NLO_mode'] = 'tree'
+        # in the context of QED or QED+QCD perturbation, it is useful to
+        # keep track of the orders that have been explicitly asked by the 
+        # user, because other borns will appear used for the subtraction
+        # of singularities
+        self['born_orders'] = {}
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2246,7 +2251,7 @@ class Process(PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
 
-        if name in ['orders', 'overall_orders','squared_orders']:
+        if name in ['orders', 'overall_orders','squared_orders', 'born_orders']:
             Interaction.filter(Interaction(), 'orders', value)
 
         if name == 'model':
@@ -2367,7 +2372,7 @@ class Process(PhysicsObject):
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
                 'legs_with_decays',
-                'perturbation_couplings', 'has_born', 'NLO_mode']
+                'perturbation_couplings', 'has_born', 'NLO_mode', 'born_orders']
 
     def nice_string(self, indent=0, print_weighted = True):
         """Returns a nicely formated string about current process

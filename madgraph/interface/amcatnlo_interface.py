@@ -410,9 +410,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
-        if myprocdef['perturbation_couplings']!=['QCD']:
-                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-                        % ', '.join(myprocdef['perturbation_couplings']))
+
+        print 'MZ, PROC orders', myprocdef['orders']
+        print 'MZ, PROC squared orders', myprocdef['squared_orders']
+        print 'MZ, PROC overall orders', myprocdef['overall_orders']
+        print 'MZ, PROC perturbation couplings', myprocdef['perturbation_couplings']
 
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,

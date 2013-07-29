@@ -659,23 +659,16 @@ class FKSLegList(MG.LegList):
         else: 
             raise FKSProcessError('Too many initial legs')
         #find color representations
-        if pert == 'QCD':
-            color = 'color'
-            zero = 1
-        elif pert == 'QED':
-            color = 'charge'
-            zero = 0.
-        else:
-            raise FKSProcessError,"Only QCD and QED is allowed not %s"% pert
-        colors = sorted(set([abs(l[color]) for l in final_legs]))
-        for col in colors:
-            col_legs = FKSLegList([l for l in final_legs if abs(l[color]) == col])
+        # order according to spin and mass
+        spins = sorted(set([abs(l['spin']) for l in final_legs]))
+        for spin in spins:
+            spin_legs = FKSLegList([l for l in final_legs if abs(l['spin']) == spin])
             #find massive and massless legs in this color repr
-            massive_legs = [l for l in col_legs if not l['massless']]
-            massless_legs = [l for l in col_legs if l['massless']]
+            massive_legs = [l for l in spin_legs if not l['massless']]
+            massless_legs = [l for l in spin_legs if l['massless']]
             # sorting may be different for massive and massless particles
             # for color singlets, do not change order
-            if col == zero:
+            if spin == 0:
                 keys = [itemgetter('number'), itemgetter('number')]
                 reversing = False
             else:

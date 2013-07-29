@@ -34,6 +34,8 @@ logger = logging.getLogger('madgraph.fks_base')
 #===============================================================================
 # FKS Process
 #===============================================================================
+
+
 class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     """A multi process class that contains informations on the born processes 
     and the reals.
@@ -67,7 +69,33 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 raise self.PhysicsObjectError, \
                         "%s is not a valid list for real_amplitudes " % str(value)                             
         return super(FKSMultiProcess,self).filter(name, value)
-    
+
+
+    @staticmethod
+    def correct_procdef(procdef):
+        """fixes the process definition in order to take into account the fact 
+        that when doing qed or mixed perturbations one needs to include 
+        splittings or loops particles which are formally not of the asked 
+        perturbed orders"""
+
+        #keep track of what perturbation the user asked for
+        perturbation = procdef['perturbation_couplings']
+        
+# if the model is not LoopModel, then allow all perturbation_couplings
+        if procdef.get('model').get('perturbation_couplings'):
+            procdef['perturbation_couplings'] = \
+                procdef.get('model').get('perturbation_couplings')
+        else:
+            procdef['perturbation_couplings'] = \
+                list(procdef.get('model').get('coupling_orders'))
+
+# set the squared orders consistently with the perturbation specified by the user
+        if not procdef['squared_orders']:
+            for ord, val in procdef['orders'].items():
+                procdef['squared_orders'][ord] = 2 * val
+
+
+
     def __init__(self,*arguments):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
@@ -86,8 +114,20 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['pdgs'] = []
         
         try:
-            # Now generating the borns for the first time.
-            super(FKSMultiProcess, self).__init__(*arguments)
+            # Now generate the borns for the first time:
+            #---the first step just sets the internal variables according to the 
+            #process definition without generating the amplitudes
+            super(FKSMultiProcess, self).__init__(*arguments, generate_amps = False)
+
+            #---process definitions are corrected in order to be multi-perturbation
+            # compilant
+            for procdef in self['process_definitions']:
+                if not procdef['orders']:
+                    procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
+                self.correct_procdef(procdef)
+            
+            #---now generate the amplitudes
+            self.get('amplitudes')
         except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
             raise InvalidCmd, "Born diagrams could not be generated for the "+\
@@ -96,6 +136,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                " processes yet, but you can still use MadLoop if you want to "+\
                "only generate them."+\
                " For this, use the 'virt=' mode, without multiparticle labels." 
+
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,
@@ -122,21 +163,34 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             'particles in the multiparticle definition:\n %s' ) \
                % (procdef.nice_string(), soft_particles_string) )
                     break
-        for procdef in self['process_definitions']:
-            procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
 
         amps = self.get('amplitudes')
+        #generate reals, but combine them after having combined the borns
         for amp in amps:
             born = FKSProcess(amp)
             self['born_processes'].append(born)
-            born.generate_reals(self['pdgs'], self['real_amplitudes'])
+            born.generate_reals(self['pdgs'], self['real_amplitudes'], combine = False)
 
-        born_pdg_list = [[l['id'] for l in born.born_proc['legs']] \
-                for born in self['born_processes'] ]
+        # now combine the borns, identifying photons and gluons
+        self.combine_born_amplitudes()
 
+        # finally combine the real amplitudes
+        for born in self['born_processes']:
+            born.combine_real_amplitudes()
+
+
+        born_pdg_list = []
+        for born in self['born_processes']:
+            born_pdg_list.extend(born.get_pdg_codes())
+
+        missing_born_pdg_list = []
+        missing_born_amp_list = []
         for born in self['born_processes']:
             for real in born.real_amps:
                 real.find_fks_j_from_i(born_pdg_list)
+                real.find_missing_borns(born_pdg_list, \
+                                        missing_born_pdg_list, \
+                                        missing_born_amp_list)
 
 
         if amps:
@@ -172,6 +226,25 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_isr'] = any([proc.isr for proc in self['born_processes']])
         self['has_fsr'] = any([proc.fsr for proc in self['born_processes']])
 
+
+    def combine_born_amplitudes(self):
+        """combine together born amplitudes identifying photons and gluons.
+        This is needed for consistent subtraction of QED/mixed singularities
+        """
+        pdg_list = []
+        new_borns = []
+        for this in self['born_processes']:
+            try:
+                other = new_borns[pdg_list.index(this.get_pdg_codes_ag())]
+                other.born_amp_list.extend(this.born_amp_list)
+                other.real_amps.extend(this.real_amps)
+            except ValueError:
+                pdg_list.append(this.get_pdg_codes_ag())
+                new_borns.append(this)
+
+        self['born_processes'] = new_borns
+
+
     def add(self, other):
         """combines self and other, extending the lists of born/real amplitudes"""
         self['born_processes'].extend(other['born_processes'])
@@ -183,19 +256,19 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
     def get_born_amplitudes(self):
         """return an amplitudelist with the born amplitudes"""
-        return diagram_generation.AmplitudeList([born.born_amp \
-                for born in self['born_processes']])
+        return diagram_generation.AmplitudeList([amp for \
+                born in self['born_processes'] for \
+                amp in born.born_amp_list])
+
 
     def get_virt_amplitudes(self):
         """return an amplitudelist with the virt amplitudes"""
         return diagram_generation.AmplitudeList([born.virt_amp \
                 for born in self['born_processes'] if born.virt_amp])
 
+
     def get_real_amplitudes(self):
         """return an amplitudelist with the real amplitudes"""
-#        return diagram_generation.AmplitudeList([real.amplitude \
-#                           for born in self['born_processes'] \
-#                           for real in born.real_amps])
         return self.get('real_amplitudes')
 
 
@@ -227,7 +300,7 @@ class FKSRealProcess(object):
     -- leg permutation<<REMOVED!.
     """
     
-    def __init__(self, born_proc, leglist, ij, ijglu,
+    def __init__(self, born_proc, leglist, ij, ij_id, splitting_type,
                  perturbed_orders = ['QCD']): #test written
         """Initializes the real process based on born_proc and leglist.
         Stores the fks informations into the list of dictionaries fks_infos
@@ -239,42 +312,48 @@ class FKSRealProcess(object):
                 # i is a gluon or a photon
                 need_color_links = leg.get('massless') \
                         and leg.get('spin') == 3 \
-                        and leg.get('self_antipart')
+                        and leg.get('self_antipart') \
+                        and leg.get('color') == 8
+                need_charge_links = leg.get('massless') \
+                        and leg.get('spin') == 3 \
+                        and leg.get('self_antipart') \
+                        and leg.get('charge') == 0
             if leg.get('fks') == 'j':
                 j_fks = leg.get('number')
-        self.fks_infos.append({'i' : i_fks, 
-                               'j' : j_fks, 
-                               'ij' : ij, 
-                               'ij_glu': ijglu, 
-                               'need_color_links' : need_color_links})
+        self.fks_infos.append({'i': i_fks, 
+                               'j': j_fks, 
+                               'ij': ij, 
+                               'ij_id': ij_id, 
+                               'splitting_type': splitting_type,
+                               'need_color_links': need_color_links,
+                               'need_charge_links': need_charge_links})
 
         self.process = copy.copy(born_proc)
-        orders = copy.copy(born_proc.get('orders'))
+        orders = copy.copy(born_proc.get('born_orders'))
         for order in perturbed_orders:
             try:
-                orders[order] +=1
+                orders[order] = max(orders[order] + 1, 2)
             except KeyError:
-                pass
-            orders['WEIGHTED'] += born_proc.get('model').get('order_hierarchy')[order]
+                orders[order] = 2
+        # you never do NLO QCD x NLO EW but NLO QCD + NLO EW
+        try:
+            orders['WEIGHTED'] += 2 * max([born_proc.get('model').get('order_hierarchy')[ord] for ord in perturbed_orders])
+        except KeyError:
+            pass
         self.process.set('orders', orders)
 
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
-        if 'QCD' in perturbed_orders:
-            self.colors = [leg['color'] for leg in leglist]
-            # in QCD, charges are irrelevant !
-            self.charges = [0. for leg in leglist]
-            self.perturbation = 'QCD'
-        else:
-            self.colors = [leg['color'] for leg in leglist]
-            self.charges = [leg['charge'] for leg in leglist]
-            self.perturbation = 'QED'
+        self.colors = [leg['color'] for leg in leglist]
+        self.charges = [leg['charge'] for leg in leglist]
+        self.perturbation = 'QCD'
         self.process.set('legs', MG.LegList(leglist))
         self.process.set('legs_with_decays', MG.LegList())
         self.amplitude = diagram_generation.Amplitude()
         self.is_to_integrate = True
         self.is_nbody_only = False
         self.fks_j_from_i = {}
+        self.missing_borns = []
 
 
     def generate_real_amplitude(self):
@@ -283,29 +362,76 @@ class FKSRealProcess(object):
         return self.amplitude
 
 
+    def find_missing_borns(self, born_pdg_list, missing_pdgs, missing_amps):
+        """returns a list of dictionaries {i:, j:, born_amp:} corresponding to
+        borns which have not been generated but need to be included as 
+        counterterms"""
+        missing_borns = []
+        for i in self.process.get('legs'):
+            if i.get('state'):
+                for j in self.process.get('legs'):
+                    if j.get('number') != i.get('number'):
+                        for pert_ord in self.process.get('perturbation_couplings'):
+                            ijlist = fks_common.combine_ij(i, j, self.process.get('model'), {},\
+                                                       pert=pert_ord)
+                            for ij in ijlist:
+                                born_leglist = fks_common.to_fks_legs(
+                                              copy.deepcopy(self.process.get('legs')), 
+                                              self.process.get('model'))
+                                born_leglist.remove(i)
+                                born_leglist.remove(j)
+                                born_leglist.insert(ij.get('number') - 1, ij)
+                                born_leglist.sort(pert = self.perturbation)
+                                pdgs = [l['id'] for l in born_leglist]
+                                if pdgs not in born_pdg_list:
+                                    #this is a missing process, check now that it has diagrams
+                                    # (at order real- order splitting)
+                                    try:
+                                        amp = missing_amps[missing_pdgs.index(pdgs)]
+                                    except ValueError:
+                                        missing_pdgs.append(pdgs)
+                                        newproc = copy.deepcopy(self.process)
+                                        newproc['legs'] = born_leglist
+                                        try:
+                                            newproc['orders'][pert_ord] = \
+                                                max(newproc['orders'][pert_ord] - 1, 0)
+                                        except KeyError:
+                                            pass
+                                        amp = diagram_generation.Amplitude(newproc)
+                                        missing_amps.append(amp)
+                                    if amp['diagrams']:
+                                        missing_borns.append(\
+                                            {'i': i.get('number'),
+                                             'j': j.get('number'),
+                                             'born_amp': amp})
+                                                            
+        self.missing_borns = missing_borns
+        return missing_borns
+
+
     def find_fks_j_from_i(self, born_pdg_list): #test written
         """Returns a dictionary with the entries i : [j_from_i], if the born pdgs are in 
         born_pdg_list"""
         fks_j_from_i = {}
-        dict = {}
         for i in self.process.get('legs'):
             fks_j_from_i[i.get('number')] = []
             if i.get('state'):
                 for j in self.process.get('legs'):
                     if j.get('number') != i.get('number') :
-                        ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict,\
-                                                       pert=self.perturbation)
-                        for ij in ijlist:
-                            born_leglist = fks_common.to_fks_legs(
-                                          copy.deepcopy(self.process.get('legs')), 
-                                          self.process.get('model'))
-                            born_leglist.remove(i)
-                            born_leglist.remove(j)
-                            born_leglist.insert(ij.get('number') - 1, ij)
-                            born_leglist.sort(pert = self.perturbation)
-                            if [l['id'] for l in born_leglist] in born_pdg_list:
-                                fks_j_from_i[i.get('number')].append(\
-                                                        j.get('number'))                                
+                        for pert_order in self.process.get('perturbation_couplings'):
+                            ijlist = fks_common.combine_ij(i, j, self.process.get('model'), {},\
+                                                           pert=pert_order)
+                            for ij in ijlist:
+                                born_leglist = fks_common.to_fks_legs(
+                                              copy.deepcopy(self.process.get('legs')), 
+                                              self.process.get('model'))
+                                born_leglist.remove(i)
+                                born_leglist.remove(j)
+                                born_leglist.insert(ij.get('number') - 1, ij)
+                                born_leglist.sort(pert = self.perturbation)
+                                if [l['id'] for l in born_leglist] in born_pdg_list:
+                                    fks_j_from_i[i.get('number')].append(\
+                                                            j.get('number'))                                
 
         self.fks_j_from_i = fks_j_from_i
         return fks_j_from_i
@@ -339,6 +465,61 @@ class FKSProcessList(MG.PhysicsObjectList):
 class FKSProcess(object):
     """The class for a FKS process. Starts from the born process and finds
     all the possible splittings."""  
+
+
+#helper functions
+
+    def get_colors(self):
+        """return the list of color representations 
+        for each amp in born_amp list"""
+        return [[leg.get('color') for \
+                    leg in amp['process']['legs']] for \
+                    amp in self.born_amp_list]
+                    
+
+    def get_charges(self):
+        """return the list of charges
+        for each amp in born_amp list"""
+        return [[leg.get('charge') for \
+                    leg in amp['process']['legs']] for \
+                    amp in self.born_amp_list]
+
+
+    def get_nlegs(self):
+        """return the number of born legs
+        for each amp in born_amp list"""
+        return [[len(amp['process']['legs'])] for \
+                    amp in self.born_amp_list]
+
+
+    def get_pdg_codes(self):
+        """return the list of pdg codes
+        for each amp in born_amp list"""
+        return [[leg.get('id') for \
+                    leg in amp['process']['legs']] for \
+                    amp in self.born_amp_list]
+
+
+    def get_pdg_codes_ag(self):
+        """return the list of pdg codes replacing the photon pdg (22) with the 
+        gluon one (21)
+        for each amp in born_amp list"""
+        a_id = 22
+        g_id = 21
+        return [[leg.get('id') if leg.get('id') != a_id else g_id for \
+                    leg in amp['process']['legs']] for \
+                    amp in self.born_amp_list]
+     
+    def get_leglist(self):
+        """return the leg list
+        for each amp in born_amp list"""
+        return [fks_common.to_fks_legs( \
+                amp['process']['legs'], \
+                amp['process']['model']) for \
+                amp in self.born_amp_list]
+
+
+###############################################################################
     
     def __init__(self, start_proc = None, remove_reals = True):
         """initialization: starts either from an amplitude or a process,
@@ -348,83 +529,58 @@ class FKSProcess(object):
                 
         self.splittings = {}
         self.reals = []
-        self.fks_dirs = []
-        self.leglist = []
         self.myorders = {}
-        self.pdg_codes = []
-        self.colors = [] # color
-        self.charges = [] # charge
-        self.nlegs = 0
-        self.fks_ipos = []
-        self.fks_j_from_i = {}
-#        self.color_links = []
         self.real_amps = []
         self.remove_reals = remove_reals
         self.nincoming = 0
         self.virt_amp = None
         self.perturbation = 'QCD'
+        self.born_amp_list = diagram_generation.AmplitudeList()
 
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
                     'Not valid type for remove_reals in FKSProcess')
 
         if start_proc:
+            #initilaize with process definition (for test purporses)
             if isinstance(start_proc, MG.Process):
                 pertur = start_proc['perturbation_couplings']
                 if pertur:
                     self.perturbation = sorted(pertur)[0]
-                self.born_proc = fks_common.sort_proc(start_proc,pert = self.perturbation)
-                # filter in Amplitude will legs sorted in bornproc
-                bornproc = copy.copy(self.born_proc) # deepcopy might let T -> array
-                assert bornproc==self.born_proc
-                self.born_amp = diagram_generation.Amplitude(bornproc)
+                self.born_amp_list.append(diagram_generation.Amplitude(\
+                                copy.copy(fks_common.sort_proc(\
+                                        start_proc, pert = self.perturbation))))
+            #initialize with an amplitude
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 pertur = start_proc.get('process')['perturbation_couplings']
-                if pertur:
-                    self.perturbation = sorted(pertur)[0]
-                self.born_proc = fks_common.sort_proc(start_proc.get('process'),\
-                                                      pert = self.perturbation)
-                # filter in Amplitude will legs sorted in bornproc
-                bornproc = copy.copy(self.born_proc)
-                assert bornproc == self.born_proc
-                self.born_amp = diagram_generation.Amplitude(bornproc)
+                self.born_amp_list.append(diagram_generation.Amplitude(\
+                                copy.copy(fks_common.sort_proc(\
+                                    start_proc['process'], 
+                                    pert = self.perturbation))))
             else:
                 raise fks_common.FKSProcessError(\
                     'Not valid start_proc in FKSProcess')
-            self.born_proc.set('legs_with_decays', MG.LegList())
+            self.born_amp_list[0]['process'].set('legs_with_decays', MG.LegList())
 
             logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_proc.nice_string(print_weighted=False).replace(\
+                % self.born_amp_list[0]['process'].nice_string(print_weighted=False).replace(\
                                                                  'Process', '')) 
 
-#            self.model = self.born_proc['model']
-            self.leglist = fks_common.to_fks_legs(
-                                    self.born_proc['legs'], self.born_proc['model'])
-            self.nlegs = len(self.leglist)
-            self.pdg_codes = [leg.get('id') for leg in self.leglist]
-            if self.perturbation == 'QCD':
-                self.colors = [leg.get('color') for leg in self.leglist]
-                # in QCD, charge is irrelevant but impact the combine process !
-                self.charges = [0. for leg in self.leglist]
-                color = 'color'
-                zero = 1
-            elif self.perturbation == 'QED':
-                self.colors = [leg.get('color') for leg in self.leglist]
-                self.charges = [leg.get('charge') for leg in self.leglist]
-                color = 'charge'
-                zero = 0.
             # special treatment of photon is needed !
-            self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
-            self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])
-            for leg in self.leglist:
+            #MZ to be fixed
+            ###self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
+            ###self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])
+            self.isr = False
+            self.fsr = False
+            print 'MZ fix isr/fsr' 
+            #######
+            for leg in self.born_amp_list[0]['process']['legs']:
                 if not leg['state']:
                     self.nincoming += 1
             # find the correct qcd/qed orders from born_amp
-            self.orders = fks_common.find_orders(self.born_amp)
+            self.orders = fks_common.find_orders(self.born_amp_list[0])
                 
-            self.ndirs = 0
-            for order in self.born_proc.get('perturbation_couplings'):
-                self.find_reals(order)
+            self.find_reals(self.born_amp_list[0]['process'].get('perturbation_couplings'))
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):
@@ -464,36 +620,44 @@ class FKSProcess(object):
         are combined together
         """
 
-        born_proc = copy.copy(self.born_proc)
+        born_proc = copy.copy(self.born_amp_list[0]['process'])
         born_proc['orders'] = self.orders
-        for i, list in enumerate(self.reals):
+        leglist = self.get_leglist()[0]
+        for i, real_list in enumerate(self.reals):
             # i is a gluon or photon,i.e. g(a) > ffx or gg
-            if self.leglist[i]['massless'] and self.leglist[i]['spin'] == 3:
-                ijglu = i + 1
-            else:
-                ijglu = 0
-            for l in list:
-                ij = self.leglist[i].get('number')
+            ij_id = leglist[i].get('id')
+            ij = leglist[i].get('number')
+            for real_dict in real_list:
+                ij = leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
-                        born_proc, l, ij, ijglu,\
-                        perturbed_orders = [self.perturbation]))
+                        born_proc, real_dict['leglist'], ij, ij_id, \
+                        real_dict['perturbation'], \
+                        perturbed_orders = born_proc['perturbation_couplings']))
         self.find_reals_to_integrate()
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
 
 
-    def find_reals(self, pert_order):
-        """finds the FKS real configurations for a given process"""
-        if range(len(self.leglist)) != [l['number']-1 for l in self.leglist]:
+    def find_reals(self, pert_orders):
+        """finds the FKS real configurations for a given process.
+        self.reals[i] is a list of dictionaries corresponding to the real 
+        emissions obtained splitting leg i.
+        The dictionaries contain the leglist and the type (order) of the
+        splitting
+        """
+        leglist = self.get_leglist()[0]
+        if range(len(leglist)) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
-        for i in self.leglist:
+        for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
-            self.splittings[i_i] = fks_common.find_splittings(i, self.born_proc['model'], {}, pert_order)
-            for split in self.splittings[i_i]:
-                self.reals[i_i].append(
-                            fks_common.insert_legs(self.leglist, i, split,pert=pert_order))
+            for pert_order in pert_orders:
+                self.splittings[i_i] = fks_common.find_splittings(i, self.born_amp_list[0]['process']['model'], {}, pert_order)
+                for split in self.splittings[i_i]:
+                    self.reals[i_i].append({
+                        'leglist': fks_common.insert_legs(leglist, i, split,pert=pert_order),
+                        'perturbation': pert_order})
                 
 
 
