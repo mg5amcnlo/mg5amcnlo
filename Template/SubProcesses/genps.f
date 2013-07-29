@@ -534,6 +534,61 @@ c
       end
 
 
+      integer function get_nb_jet_in_decay(itree, pos)
+
+      include 'genps.inc'
+      include 'nexternal.inc'
+
+      integer itree(2,-max_branch:-1) !Structure of configuration   
+      integer pos,mgtag                                                   
+      integer nb_jet, i
+      integer to_look(max_branch)
+      integer current, last_look
+
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL),IS_A_ONIUM(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
+     . IS_A_ONIUM
+
+      nb_jet = 0
+      if (pos.gt.0) then
+         if (is_a_j(pos)) nb_jet = 1
+         goto 10
+      endif
+c      goto 10
+      remain = 0
+      do i = 1,max_branch
+         to_look(i) = 0
+      enddo
+      to_look(1) = pos
+      last_look = 2
+
+      nb_jet = 0
+      do current = 1, max_branch
+         if (to_look(current).eq.0) then
+            goto 10
+         endif
+         mgtag = to_look(current)
+         if (itree(1, mgtag).gt.0) then
+            if (is_a_j(itree(1, mgtag))) nb_jet = nb_jet + 1
+         else
+            to_look(last_look) = itree(1, mgtag)
+            last_look = last_look + 1
+         endif
+         if (itree(2, mgtag).gt.0) then
+            if (is_a_j(itree(2, mgtag))) nb_jet = nb_jet + 1
+         else
+            to_look(last_look) = itree(2, mgtag)
+            last_look =last_look + 1
+         endif
+      enddo
+
+ 10   get_nb_jet_in_decay = nb_jet
+c      write(*,*) 'pos -> nb_jet', pos, '->', nb_jet
+      return 
+      end
+
       subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
 c     Calculates the momentum for everything below in the tree until
@@ -582,6 +637,19 @@ c
       common/to_stot/stot,m1,m2
 
       include 'run.inc'
+
+c
+c     allowed refinement based on cut value (currently MM**)
+c
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
+      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL),IS_A_ONIUM(NEXTERNAL)
+      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
+     . IS_A_ONIUM
+      include 'cuts.inc'
+      
+      integer nb_jet, nb_jet2, get_nb_jet_in_decay
+      external get_nb_jet_in_decay
 
 c-----
 c  Begin Code
@@ -705,14 +773,31 @@ c
       if (nt_channel .gt. 0) then               !t-channel stuff exists
 
       totmass=0d0
+      nb_jet = 0 ! know the number of jet in the t-channel in order to use MMJJ
       do ibranch = -ns_channel-1,-nbranch,-1
+         nb_jet = nb_jet + get_nb_jet_in_decay(itree, itree(2,ibranch))
          totmass=totmass+m(itree(2,ibranch))
       enddo
+
+      if (nb_jet.gt.1) then
+c         write(*,*) 'nb_jet', nb_jet
+         totmass = totmass + sqrt((nb_jet-1)*nb_jet/2d0)* MMJJ * 0.80d0
+      endif
       m(-ns_channel-1) = dsqrt(S(-nbranch))
-      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass 
+      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass
+         nb_jet2 = nb_jet - get_nb_jet_in_decay(itree, itree(2,ibranch))
+c         write(*,*) 'ibranch, nb_jet, nb_jet2', ibranch, nb_jet, nb_jet2,itree(2,ibranch)
+         if (nb_jet.gt.1.and.nb_jet2.ne.nb_jet) then            
+c            write(*,*) 'nb_jet', totmass
+            totmass = totmass - SQRT(nb_jet*(nb_jet -1)/2d0)* MMJJ * 0.80d0
+            totmass = totmass + SQRT((nb_jet2-1)*nb_jet2/2d0)*MMJJ * 0.80d0
+c            write(*,*) 'nb_jet2', nb_jet2, totmass
+            nb_jet = nb_jet2
+         endif 
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -722,7 +807,6 @@ c
      &        smin/stot,smax/stot)
 
          m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
-
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
          if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
@@ -962,7 +1046,7 @@ c
          if (pp .gt. 0) then
             PP=SQRT(pp)*0.5d0
          else
-            write(*,*) 'Error creating momentum in gentcms',pp
+            write(*,*) 'Error gentcms',pp, M1,m2,MD2, ESUM
             jac=-1
             return
          endif

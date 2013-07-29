@@ -1,6 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.12 (XX/07/13) OM: Add a command print_resutls in the madevent interface. This command print the 
+1.5.12 (XX/07/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
+                      the cross-section were slightly (~4%) under-evaluated due to such strong cut.
+                  OM: Add a command print_results in the madevent interface. This command print the 
                       cross-section/number of events/... 
                   OM: change the way color is handle (no systematic reset). Which provides better
                       result when the log is printed to a file. (thanks Bae Taegil) 
