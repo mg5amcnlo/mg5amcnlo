@@ -2593,8 +2593,8 @@ class decay_all_events:
             stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay['max_weight'])
             stdin_text+=p_str
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta = self.loadfortran( 'unweighting', decay['path'], stdin_text)
-            
+            trial_nb, BWvalue, weight, momenta, failed = self.loadfortran( 'unweighting', decay['path'], stdin_text)
+            #logger.debug('Nb failures %s ', failed)
             # next: need to fill all intermediate momenta
             
             ext_mom=self.get_mom(momenta)
@@ -3596,8 +3596,9 @@ class decay_all_events:
             trials= int(firstline[1])
             BWvalue= float(firstline[2])
             weight= float(firstline[3])
+            failed= float(firstline[4])
             momenta=[external.stdout.readline() for i in range(nexternal)]
-            return trials, BWvalue, weight, momenta
+            return trials, BWvalue, weight, momenta, failed
 
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""

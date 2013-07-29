@@ -21,6 +21,7 @@ C
       CHARACTER*120 BUFF(NEXTERNAL_PROD)
       integer iforest(2,-nexternal:-1,N_MAX_CG)
       integer itree(2,-nexternal:-1), iconfig
+      integer  map_external2res(nexternal_prod) ! map (index in production) -> index in the full structure
 c      integer mapconfig(0:lmaxconfigs)
       integer sprop(1,-nexternal:-1,N_MAX_CG) ! first col has one entry, since we should have group_processes=false
       integer tprid(-nexternal:-1,N_MAX_CG)
@@ -32,9 +33,10 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0),jac
       double precision M_PROD, M_FULL
       logical notpass
-      integer counter,mode,nbpoints
+      integer counter,mode,nbpoints, counter2
       double precision mean, variance, maxweight,weight,std
       double precision temp
+      double precision Pprod(0:3,nexternal_prod)
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -155,7 +157,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   V. load topology for the whole event select                c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-       call  merge_itree(itree,qmass,qwidth, p)
+       call  merge_itree(itree,qmass,qwidth, p,map_external2res)
        !write(*,*) keep_inv(-5)
        !write(*,*) 'm2_tchan ',m2_tchan(-5)
        !write(*,*) 'fixedinv', fixedinv(-5)
@@ -174,6 +176,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c        max_m=0d0
 c        max_jac=0d0
 
+        counter2=0
         do i=1,nbpoints
            jac=1d0
            ivar=0
@@ -186,12 +189,31 @@ c           do j=1,nexternal_prod
 c              write (*,*) (p(k,j), k=0,3)  
 c           enddo
 
-           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
-           if (jac.lt.0d0) cycle
+           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
+           if (jac.lt.0d0) then
+             counter2=counter2+1 
+             if (counter2.ge.3) then ! use another topology to generate PS points
+               call get_config(iconfig)
+               do k=-nexternal_prod+2,-1
+                do j=1,2
+                  itree(j,k)=iforest(j,k,iconfig)
+                enddo
+               enddo
+ 
+               do k=-nexternal_prod+3,-1
+                 qmass(k)=prmass(k,iconfig)
+                 qwidth(k)=prwidth(k,iconfig)
+               enddo
+               call  merge_itree(itree,qmass,qwidth, p,map_external2res)
+             endif
+
+           cycle
+           endif
            !do j=1,nexternal
            !   write (*,*) (pfull(k,j), k=0,3)  
            !enddo
            call SMATRIX(pfull,M_full)
+           call SMATRIX_PROD(pprod,M_prod)
 c           write(*,*) 'M_full ', M_full
 c           write(*,*) 'jac',jac
 
@@ -251,6 +273,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
        if (mode.eq.2) then
          notpass=.true.
          counter=0
+         counter2=0
          do while (notpass) 
            counter=counter+1
            jac=1d0
@@ -260,14 +283,33 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
               call  ntuple(x(i),0d0,1d0,i,0)
            enddo
 
-           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
-           if (jac.lt.0d0) cycle
+           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
+           if (jac.lt.0d0) then
+             counter2=counter2+1 
+             if (counter2.ge.3) then ! use another topology to generate PS points
+               call get_config(iconfig)
+               do i=-nexternal_prod+2,-1
+                do j=1,2
+                  itree(j,i)=iforest(j,i,iconfig)
+                enddo
+               enddo
+
+               do i=-nexternal_prod+3,-1
+                 qmass(i)=prmass(i,iconfig)
+                 qwidth(i)=prwidth(i,iconfig)
+               enddo
+               call  merge_itree(itree,qmass,qwidth, p,map_external2res)
+             endif
+
+             cycle
+           endif
            call SMATRIX(pfull,M_full)
+           call SMATRIX_PROD(pprod,M_prod)
 
            if (M_full*jac/M_prod.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
         enddo
 
-        write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod
+        write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2
         do i=1,nexternal
            write (*,*) (pfull(j,i), j=0,3)  
         enddo
@@ -293,7 +335,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
               call  ntuple(x(i),0d0,1d0,i,0)
            enddo
 
-           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull) 
+           call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) cycle
            notpass=.false.
            call SMATRIX(pfull,M_full)
@@ -430,7 +472,7 @@ c Make sure have enough mass for external particles
       end
 
 
-      subroutine merge_itree(itree,qmass,qwidth,  p_ext)
+      subroutine merge_itree(itree,qmass,qwidth,  p_ext,mapext2res)
       implicit none
       !include 'genps.inc'
       include 'coupl.inc'
@@ -442,6 +484,7 @@ c
       integer itree(2,-nexternal:-1)   ! PS structure for the production
       double precision qmass(-nexternal:0),qwidth(-nexternal:0) 
       double precision p_ext(0:3,nexternal_prod)
+      integer mapext2res(nexternal_prod)
 c
 c     local
 c
@@ -452,7 +495,7 @@ c
       ! info for the decay part
       double precision idecay(2,-nexternal:-1), prmass(-nexternal:-1),prwidth(-nexternal:-1) 
       integer ns_channel_decay
-      integer  map_external2res(nexternal) ! map (index in production) -> index in the full structure
+      integer  map_external2res(nexternal_prod) ! map (index in production) -> index in the full structure
       double precision p(0:3,-nexternal:nexternal)
  
       integer idB, id1
@@ -485,6 +528,7 @@ c     common
       !include 'run.inc'
       include  'configs_decay.inc'
 
+      mapext2res=map_external2res
 c Determine number of s- and t-channel branches, at this point it
 c includes the s-channel p1+p2
 c      write(*,*) (itree(i,-1), i=1,2)
@@ -688,15 +732,16 @@ c            write(*,*) 'p2 ', (p2(j), j=0,3)
       end
 
 
-      subroutine generate_momenta_conf(jac,x,itree,qmass,qwidth,p)
+      subroutine generate_momenta_conf(jac,x,itree,qmass,qwidth,p,p_prod,mapext2res)
 c
 c
       implicit none
       !include 'genps.inc'
       include 'nexternal.inc'
+      include 'nexternal_prod.inc'
       !include 'run.inc'
 c arguments
-      double precision jac,x(36),p(0:3,nexternal)
+      double precision jac,x(36),p(0:3,nexternal), p_prod(0:3,nexternal)
       integer itree(2,-nexternal:-1)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
 c common
@@ -725,6 +770,7 @@ c Masses of particles. Should be filled in setcuts.f
       common /to_mass/pmass
 
 c local
+      integer  mapext2res(nexternal_prod) ! map (index in production) -> index in the full structure
       integer i,j,
      &     imother
       double precision pb(0:3,-nexternal:nexternal)
@@ -837,6 +883,12 @@ c
        enddo
       enddo
 
+
+      do i = 1, nexternal_prod
+       do j = 0, 3
+         p_prod(j,i)=pb(j,mapext2res(i))
+       enddo
+      enddo
 
       jac=xjac*xpswgt
 
@@ -1093,6 +1145,13 @@ c     normal BW
                bwdelf=(bwfmpl+bwfmmn)/pi
                s(i)=xbwmass3(x(ivar),xm02,qwidth(i),bwdelf
      &              ,bwfmmn)
+
+               if (s(i).gt.smax.or.s(i).lt.smin) then
+                  xjac0=-1d0
+                  pass=.false.
+                  return
+               endif
+
                xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
                !write(*,*) i , sqrt(s(i))
             endif
