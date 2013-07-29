@@ -3109,12 +3109,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('compile %s. This might takes a while.' % name)
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
-        if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
-            text = open(path).read()
-            text = text.replace('MBITS=32','MBITS=64')
-            open(path, 'w').writelines(text)
-            
+        if args[0] == "pythia-pgs":
+            if sys.maxsize > 2**32:
+                path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
+                text = open(path).read()
+                text = text.replace('MBITS=32','MBITS=64')
+                open(path, 'w').writelines(text)
+            if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
+                os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
+                
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
@@ -3140,9 +3143,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w') 
             misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             self.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')

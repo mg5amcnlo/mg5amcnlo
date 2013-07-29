@@ -175,8 +175,12 @@ def multiple_try(nb_try=5, sleep=20):
 def compile(arg=[], cwd=None, mode='fortran', nb_core=1, **opt):
     """compile a given directory"""
 
+    cmd = ['make']
     try:
-        p = subprocess.Popen(['make','-j%s' % nb_core] + arg, stdout=subprocess.PIPE, 
+        if nb_core > 1:
+            cmd.append('-j%s' % nb_core)
+        cmd += arg
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
