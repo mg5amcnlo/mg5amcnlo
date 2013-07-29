@@ -396,12 +396,12 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,ptHW6,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -492,10 +492,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1.d0/2.d0)
       parameter (vca=3.d0)
 
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      include "../../Source/MODEL/input.inc"
       include "pmass.inc"
 c
-
+c g_ew is the electron charge
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
+c
       if (softtest.or.colltest) then
          tiny=1d-6
       else
@@ -518,13 +524,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if ptHW6 (or similar
+c May remove UseSudakov from the definition below if qMC (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,ptHW6,extra)
-      if(extra.and.ptHW6.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_HW6: ptHW6=',ptHW6
+     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+      if(extra.and.qMC.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_HW6: qMC=',qMC
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -594,7 +600,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(ptHW6)
+        probne=bogus_probne_fun(qMC)
       endif
 c
 C
@@ -657,34 +663,43 @@ c Compute deadzones
      &      E0sq(npartner),ileg,npartner
           stop
         endif
+c EW deadzone (QED branching when either the mother or a daughter is a photon)
+c to be updated !!!!!!
+        if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
           if(.not.flagmc)flagmc=.true.
-          if( (fsr .and. m_type.eq.8) .or.
-     #        (isr .and. j_type.eq.8) )then
+          if( (fsr .and. (m_type.eq.8 .or. m_type.eq.0)) .or.
+     #        (isr .and. (j_type.eq.8 .or. j_type.eq.0)) )then
             if(i_type.eq.8)then
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*64*vca*E0sq(npartner)/
+                    xkern(1)=(g**2/N_p)*64*vca*E0sq(npartner)/
      &                    (s*(s*(1-yi)+4*E0sq(npartner)*(1+yi)))
-                    xkernazi=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkern(2)=0.d0
+                    xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
 c Works only for SUSY
@@ -695,8 +710,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -705,8 +722,10 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -714,25 +733,31 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*64*vca*E0sq(npartner)/
+                  xkern(1)=(g**2/N_p)*64*vca*E0sq(npartner)/
      &                  ( s*(s*(1-yj)+4*E0sq(npartner)*(1+yj))-
      &                    xm12*(2*s-xm12)*(1-yj) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
+                  xkern(1)=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=0.d0
+                  xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 4 in xmcsubt_HW6: forbidden ileg'
@@ -740,22 +765,28 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 stop
               endif
             elseif(abs(i_type).eq.3)then
-c g --> q qbar splitting (icode=2)
+c g --> q qbar (or gamma --> q qbar) splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(2)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -763,23 +794,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                  xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 endif
               else
                 write(*,*)'Error 5 in xmcsubt_HW6: forbidden ileg'
@@ -794,7 +831,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
           elseif( (fsr .and. abs(m_type).eq.3) .or.
      #            (isr .and. abs(j_type).eq.3) )then
             if(abs(i_type).eq.3)then
-c q --> g q (or qbar --> g qbar) splitting (icode=3)
+c q --> g q (or q --> gamma q) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel
@@ -802,21 +839,27 @@ c it has to coincide with the fraction appearing in the AP kernel
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                    xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -825,8 +868,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -835,29 +880,37 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
+                  xkern(1)=(g**2/N_p)*
      &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 6 in xmcsubt_HW6: unknown ileg'
@@ -869,19 +922,25 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*64*vcf*E0sq(npartner)/
+                    xkern(1)=(g**2/N_p)*64*vcf*E0sq(npartner)/
      &                    (s*(s*(1-yi)+4*E0sq(npartner)*(1+yi)))
-                    xkernazi=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -893,13 +952,15 @@ c           xm22 = squared recoil mass
                   betae0=sqrt(1-xm12/E0sq(npartner))
                   betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
                   betas=1+(xm12-xm22)/s
-                  xkern=(g**2/N_p)*(32*betae0*(1+betae0)*betad*(1-yj)*
+                  xkern(1)=(g**2/N_p)*(32*betae0*(1+betae0)*betad*(1-yj)*
      &                     E0sq(npartner)*vcf*(s+betad*s+xm12-xm22)) /
      &                  ( s*(betas-betad*yj)*( (s+betad*s+xm12-xm22)*
      &                    (-4*xm12+(s+xm12-xm22)*(betas-betad*yj)) + 
      &                    4*(1+betae0)*E0sq(npartner)*
      &                    (xm12-xm22+s*(1+betad-betas+betad*yj)) ) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -914,34 +975,142 @@ c Non-QCD branching, here taken to be squark->squark gluon
                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   endif
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*64*vcf*E0sq(npartner)/
+                  xkern(1)=(g**2/N_p)*64*vcf*E0sq(npartner)/
      &                  ( s*(s*(1-yj)+4*E0sq(npartner)*(1+yj))-
      &                    xm12*(2*s-xm12)*(1-yj) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
+                  xkern(1)=(g**2/N_p)*4*vcf*
      &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 7 in xmcsubt_HW6: unknown ileg'
+                write(*,*)ileg
+                stop
+              endif
+            elseif(i_type.eq.0)then
+c q --> q gamma splitting (icode=4) and sq --> sq gamma (SUSY) splitting
+              if(ileg.eq.1.or.ileg.eq.2)then
+                 N_p=1
+                 if(1-x.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*64*qj2*E0sq(npartner)/
+     &                    (s*(s*(1-yi)+4*E0sq(npartner)*(1+yi)))
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 elseif(1-yi.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 else
+                    xfact=(1-yi)*(1-x)/x
+                    prefact=4/(s*N_p)
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                    ap=ap/(1-z(npartner))
+                    xkern(1)=0.d0
+                    xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 endif
+              elseif(ileg.eq.3)then
+                N_p=1
+c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
+c           xm22 = squared recoil mass
+                w1=-q1q+q2q-tk
+                w2=-q2q+q1q-uk
+                if(1-x.lt.tiny)then
+                  betae0=sqrt(1-xm12/E0sq(npartner))
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*(32*betae0*(1+betae0)*betad*(1-yj)*
+     &                     E0sq(npartner)*qj2*(s+betad*s+xm12-xm22)) /
+     &                  ( s*(betas-betad*yj)*( (s+betad*s+xm12-xm22)*
+     &                    (-4*xm12+(s+xm12-xm22)*(betas-betad*yj)) + 
+     &                    4*(1+betae0)*E0sq(npartner)*
+     &                    (xm12-xm22+s*(1+betad-betas+betad*yj)) ) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  kn=veckn_ev
+                  knbar=veckbarn_ev
+                  kn0=xp0jfks
+                  xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  if(abs(PDG_type(j_fks)).le.6)then
+c QCD branching
+                    call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  else
+c Non-QCD branching, here taken to be squark->squark gluon 
+                    call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                  endif
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              elseif(ileg.eq.4)then
+                N_p=1
+c ileg = 4: xm12 = squared recoil mass
+c           xm22 = 0 = squared FKS-mother and FKS-sister mass
+                if(1-x.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*64*qj2*E0sq(npartner)/
+     &                  ( s*(s*(1-yj)+4*E0sq(npartner)*(1+yj))-
+     &                    xm12*(2*s-xm12)*(1-yj) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                elseif(1-yj.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  beta=1-xm12/s
+                  xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              else
+                write(*,*)'Error 7b in xmcsubt_HW6: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -958,7 +1127,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(ptHW6.le.scalemax)then
+              if(qMC.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -966,7 +1135,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(ptHW6-scalemin)/(scalemax-scalemin)
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -982,15 +1151,19 @@ c
 c
         else
 c Dead zone
-          xkern=0.d0
-          xkernazi=0.d0
+          xkern(1)=0.d0
+          xkern(2)=0.d0
+          xkernazi(1)=0.d0
+          xkernazi(2)=0.d0
           if(dampMCsubt)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf
-        xkernazi=xkernazi*gfactazi*gfactsf
+        xkern(1)=xkern(1)*gfactsf
+        xkern(2)=xkern(2)*gfactsf
+        xkernazi(1)=xkernazi(1)*gfactazi*gfactsf
+        xkernazi(2)=xkernazi(2)*gfactazi*gfactsf
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -1000,7 +1173,8 @@ c In the case of MC over colour flows, cflows will be passed from outside
           born_red_tilde=born_red_tilde+
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
+c change here, to include also xkern(2)!!!!!!!!
+        xmcxsec(npartner) = xkern(1)*born_red + xkernazi(1)*born_red_tilde
         if(dampMCsubt)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
@@ -1059,7 +1233,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=ptHW6
+        scale1_lhe(nFKSprocess)=qMC
       endif
 c
       if(dampMCsubt)then
@@ -1107,12 +1281,12 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,ptHWPP,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -1204,10 +1378,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1.d0/2.d0)
       parameter (vca=3.d0)
 
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      include "../../Source/MODEL/input.inc"
       include "pmass.inc"
 c
-
+c g_ew is the electron charge
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
+c
       if (softtest.or.colltest) then
          tiny=1d-6
       else
@@ -1230,13 +1410,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if ptHWPP (or similar
+c May remove UseSudakov from the definition below if qMC (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,ptHWPP,extra)
-      if(extra.and.ptHWPP.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_HWPP: ptHWPP=',ptHWPP
+     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+      if(extra.and.qMC.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_HWPP: qMC=',qMC
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -1306,7 +1486,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(ptHWPP)
+        probne=bogus_probne_fun(qMC)
       endif
 c
 C
@@ -1363,33 +1543,42 @@ c Compute deadzones
            stop
          endif
          if(xi(npartner).lt.upper_scale2)lzone(npartner)=.true.
+c EW deadzone (QED branching when either the mother or a daughter is a photon)
+c to be updated !!!!!!
+        if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
           if(.not.flagmc)flagmc=.true.
-          if( (fsr .and. m_type.eq.8) .or.
-     #        (isr .and. j_type.eq.8) )then
+          if( (fsr .and. (m_type.eq.8 .or. m_type.eq.0)) .or.
+     #        (isr .and. (j_type.eq.8 .or. j_type.eq.0)) )then
             if(i_type.eq.8)then
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*16*vca/(s*(1+yi))
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*16*vca/(s*(1+yi))
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkern(2)=0.d0
+                    xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
 c Works only for SUSY
@@ -1400,8 +1589,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -1410,8 +1601,10 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -1419,23 +1612,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*16*vca/(s*(1+yj))
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*16*vca/(s*(1+yj))
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
+                  xkern(1)=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=0.d0
+                  xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 4 in xmcsubt_HWPP: forbidden ileg'
@@ -1443,22 +1642,28 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 stop
               endif
             elseif(abs(i_type).eq.3)then
-c g --> q qbar splitting (icode=2)
+c g --> q qbar (or gamma --> q qbar) splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(2)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -1466,23 +1671,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                  xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 endif
               else
                 write(*,*)'Error 5 in xmcsubt_HWPP: forbidden ileg'
@@ -1497,7 +1708,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
           elseif( (fsr .and. abs(m_type).eq.3) .or.
      #            (isr .and. abs(j_type).eq.3) )then
             if(abs(i_type).eq.3)then
-c q --> g q (or qbar --> g qbar) splitting (icode=3)
+c q --> g q (or q --> gamma q) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel
@@ -1505,21 +1716,27 @@ c it has to coincide with the fraction appearing in the AP kernel
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                    xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -1528,8 +1745,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -1538,29 +1757,37 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
+                  xkern(1)=(g**2/N_p)*
      &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 6 in xmcsubt_HWPP: unknown ileg'
@@ -1572,18 +1799,24 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*16*vcf/(s*(1+yi))
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*16*vcf/(s*(1+yi))
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -1594,9 +1827,11 @@ c           xm22 = squared recoil mass
                 if(1-x.lt.tiny)then
                   betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
                   betas=1+(xm12-xm22)/s
-                  xkern=(g**2/N_p)*16*vcf*(1-yj)*(betad+betas)/
+                  xkern(1)=(g**2/N_p)*16*vcf*(1-yj)*(betad+betas)/
      &                        (s*(betas-yj*betad)*(1+yj))
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -1612,32 +1847,132 @@ c Non-QCD branching, here taken to be squark->squark gluon
                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   endif
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*16*vcf/(s*(1+yj))
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*16*vcf/(s*(1+yj))
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
+                  xkern(1)=(g**2/N_p)*4*vcf*
      &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 7 in xmcsubt_HWPP: unknown ileg'
+                write(*,*)ileg
+                stop
+              endif
+            elseif(i_type.eq.0)then
+c q --> q gamma splitting (icode=4) and sq --> sq gamma (SUSY) splitting
+              if(ileg.eq.1.or.ileg.eq.2)then
+                 N_p=1
+                 if(1-x.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*16*qj2/(s*(1+yi))
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 elseif(1-yi.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 else
+                    xfact=(1-yi)*(1-x)/x
+                    prefact=4/(s*N_p)
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                    ap=ap/(1-z(npartner))
+                    xkern(1)=0.d0
+                    xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 endif
+              elseif(ileg.eq.3)then
+                N_p=1
+c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
+c           xm22 = squared recoil mass
+                w1=-q1q+q2q-tk
+                w2=-q2q+q1q-uk
+                if(1-x.lt.tiny)then
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*16*qj2*(1-yj)*(betad+betas)/
+     &                        (s*(betas-yj*betad)*(1+yj))
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  kn=veckn_ev
+                  knbar=veckbarn_ev
+                  kn0=xp0jfks
+                  xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  if(abs(PDG_type(j_fks)).le.6)then
+c QCD branching
+                    call AP_reduced_massive(j_type,i_type,one,z(npartner),ap)
+                  else
+c Non-QCD branching, here taken to be squark->squark gluon 
+                    call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                  endif
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              elseif(ileg.eq.4)then
+                N_p=1
+c ileg = 4: xm12 = squared recoil mass
+c           xm22 = 0 = squared FKS-mother and FKS-sister mass
+                if(1-x.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*16*qj2/(s*(1+yj))
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                elseif(1-yj.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  beta=1-xm12/s
+                  xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              else
+                write(*,*)'Error 7b in xmcsubt_HWPP: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -1654,7 +1989,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(ptHWPP.le.scalemax)then
+              if(qMC.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -1662,7 +1997,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(ptHWPP-scalemin)/(scalemax-scalemin)
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -1678,15 +2013,19 @@ c
 c
         else
 c Dead zone
-          xkern=0.d0
-          xkernazi=0.d0
+          xkern(1)=0.d0
+          xkern(2)=0.d0
+          xkernazi(1)=0.d0
+          xkernazi(2)=0.d0
           if(dampMCsubt)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf
-        xkernazi=xkernazi*gfactazi*gfactsf
+        xkern(1)=xkern(1)*gfactsf
+        xkern(2)=xkern(2)*gfactsf
+        xkernazi(1)=xkernazi(1)*gfactazi*gfactsf
+        xkernazi(2)=xkernazi(2)*gfactazi*gfactsf
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -1696,7 +2035,8 @@ c In the case of MC over colour flows, cflows will be passed from outside
           born_red_tilde=born_red_tilde+
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
+c change here, to include also xkern(2)!!!!!!!!
+        xmcxsec(npartner) = xkern(1)*born_red + xkernazi(1)*born_red_tilde
         if(dampMCsubt)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
@@ -1755,7 +2095,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=ptHWPP
+        scale1_lhe(nFKSprocess)=qMC
       endif
 c
       if(dampMCsubt)then
@@ -1803,12 +2143,12 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,tPY6Q,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -1909,11 +2249,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-c
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      include "../../Source/MODEL/input.inc"
       include "pmass.inc"
 c
-
+c g_ew is the electron charge
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
+c
       if (softtest.or.colltest) then
          tiny=1d-6
       else
@@ -1936,13 +2281,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if tPY6Q (or similar
+c May remove UseSudakov from the definition below if qMC (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                   xm12,xm22,tk,uk,q1q,q2q,tPY6Q,extra)
-      if(extra.and.tPY6Q.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY6Q: tPY6Q=',tPY6Q
+     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+      if(extra.and.qMC.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY6Q: qMC=',qMC
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -1961,7 +2306,6 @@ c variable, not yet defined) will not be needed in the computation of probne
            scalemin=max(scalemin,sqrt(xm12))
            scalemax=max(scalemin,scalemax)
         endif
-
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2018,7 +2362,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(tPY6Q)
+        probne=bogus_probne_fun(qMC)
       endif
 c
 C
@@ -2155,33 +2499,42 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
             if(z(npartner).lt.zminus.or.
      &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
-
+c EW deadzone (QED branching when either the mother or a daughter is a photon)
+c to be updated !!!!!!
+        if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
+c
 c Compute MC subtraction terms
         if(lzone(npartner))then
           if(.not.flagmc)flagmc=.true.
-          if( (fsr .and. m_type.eq.8) .or.
-     #        (isr .and. j_type.eq.8) )then
+          if( (fsr .and. (m_type.eq.8 .or. m_type.eq.0)) .or.
+     #        (isr .and. (j_type.eq.8 .or. j_type.eq.0)) )then
             if(i_type.eq.8)then
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vca/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkern(2)=0.d0
+                    xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
 c Works only for SUSY
@@ -2192,8 +2545,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2202,8 +2557,10 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -2211,23 +2568,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vca/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vca/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
+                  xkern(1)=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=0.d0
+                  xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 4 in xmcsubt_PY6Q: forbidden ileg'
@@ -2235,22 +2598,28 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 stop
               endif
             elseif(abs(i_type).eq.3)then
-c g --> q qbar splitting (icode=2)
+c g --> q qbar (or gamma --> q qbar) splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(2)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -2258,23 +2627,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                  xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 endif
               else
                 write(*,*)'Error 5 in xmcsubt_PY6Q: forbidden ileg'
@@ -2289,7 +2664,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
           elseif( (fsr .and. abs(m_type).eq.3) .or.
      #            (isr .and. abs(j_type).eq.3) )then
             if(abs(i_type).eq.3)then
-c q --> g q (or qbar --> g qbar) splitting (icode=3)
+c q --> g q (or q --> gamma q) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
@@ -2298,21 +2673,27 @@ c The definition of z here does tend to 1 only in the massless case
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                    xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -2325,8 +2706,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2335,29 +2718,37 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
+                  xkern(1)=(g**2/N_p)*
      &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 6 in xmcsubt_PY6Q: unknown ileg'
@@ -2369,18 +2760,24 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vcf/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vcf/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -2393,8 +2790,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2409,32 +2808,133 @@ c Non-QCD branching, here taken to be squark->squark gluon
                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   endif
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vcf/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vcf/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
+                  xkern(1)=(g**2/N_p)*4*vcf*
      &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 7 in xmcsubt_PY6Q: unknown ileg'
+                write(*,*)ileg
+                stop
+              endif
+            elseif(i_type.eq.0)then
+c q --> q gamma splitting (icode=4) and sq --> sq gamma (SUSY) splitting
+              if(ileg.eq.1.or.ileg.eq.2)then
+                 N_p=1
+                 if(1-x.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 elseif(1-yi.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 else
+                    xfact=(1-yi)*(1-x)/x
+                    prefact=4/(s*N_p)
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                    ap=ap/(1-z(npartner))
+                    xkern(1)=0.d0
+                    xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 endif
+              elseif(ileg.eq.3)then
+                N_p=1
+c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
+c           xm22 = squared recoil mass
+                w1=-q1q+q2q-tk
+                w2=-q2q+q1q-uk
+                if(1-x.lt.tiny)then
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+                  xkern(1)=0.d0
+                  xkern(2)=-(g_ew**2/N_p)*4*qj2*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  kn=veckn_ev
+                  knbar=veckbarn_ev
+                  kn0=xp0jfks
+                  xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  if(abs(PDG_type(j_fks)).le.6)then
+c QCD branching
+                    call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  else
+c Non-QCD branching, here taken to be squark->squark gluon 
+                    call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                  endif
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              elseif(ileg.eq.4)then
+                N_p=1
+c ileg = 4: xm12 = squared recoil mass
+c           xm22 = 0 = squared FKS-mother and FKS-sister mass
+                if(1-x.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                elseif(1-yj.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  beta=1-xm12/s
+                  xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              else
+                write(*,*)'Error 7b in xmcsubt_PY6Q: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -2451,7 +2951,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(tPY6Q.le.scalemax)then
+              if(qMC.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -2459,7 +2959,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(tPY6Q-scalemin)/(scalemax-scalemin)
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -2475,15 +2975,19 @@ c
 c
         else
 c Dead zone
-          xkern=0.d0
-          xkernazi=0.d0
+          xkern(1)=0.d0
+          xkern(2)=0.d0
+          xkernazi(1)=0.d0
+          xkernazi(2)=0.d0
           if(dampMCsubt)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf
-        xkernazi=xkernazi*gfactazi*gfactsf
+        xkern(1)=xkern(1)*gfactsf
+        xkern(2)=xkern(2)*gfactsf
+        xkernazi(1)=xkernazi(1)*gfactazi*gfactsf
+        xkernazi(2)=xkernazi(2)*gfactazi*gfactsf
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -2493,7 +2997,8 @@ c In the case of MC over colour flows, cflows will be passed from outside
           born_red_tilde=born_red_tilde+
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
+c change here, to include also xkern(2)!!!!!!!!
+        xmcxsec(npartner) = xkern(1)*born_red + xkernazi(1)*born_red_tilde
         if(dampMCsubt)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
@@ -2552,7 +3057,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=tPY6Q
+        scale1_lhe(nFKSprocess)=qMC
       endif
 c
       if(dampMCsubt)then
@@ -2600,12 +3105,12 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,ptPY6PT,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -2704,11 +3209,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-c
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      include "../../Source/MODEL/input.inc"
       include "pmass.inc"
 c
-
+c g_ew is the electron charge
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
+c
       if (softtest.or.colltest) then
          tiny=1d-6
       else
@@ -2731,13 +3241,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if ptPY6PT (or similar
+c May remove UseSudakov from the definition below if qMC (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                   xm12,xm22,tk,uk,q1q,q2q,ptPY6PT,extra)
-      if(extra.and.ptPY6PT.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY6PT: ptPY6PT=',ptPY6PT
+     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+      if(extra.and.qMC.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY6PT: qMC=',qMC
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -2769,9 +3279,7 @@ c Distinguish initial or final state radiation
         isr=.true.
         delta=min(1.d0,deltaI)
       elseif(ileg.eq.3.or.ileg.eq.4)then
-        write(*,*)'FSR not available for PYTHIA6PT !!!!'
-        write(*,*)'FSR not available for PYTHIA6PT !!!!'
-        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT'
         stop
         fsr=.true.
         delta=min(1.d0,deltaO)
@@ -2812,7 +3320,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(ptPY6PT)
+        probne=bogus_probne_fun(qMC)
       endif
 c
 C
@@ -2840,73 +3348,84 @@ c
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
 c xmcsubt note
-            z(npartner)=ztmp
-            xi(npartner)=xitmp
-            xjac(npartner)=xjactmp
-
+         z(npartner)=ztmp
+         xi(npartner)=xitmp
+         xjac(npartner)=xjactmp
+c
 c Compute deadzones:
-            lzone(npartner)=.true.
-            parp67=1d0
-            mstp67=2
-            if(ileg.le.2)then
-               lzcc=.false.
-               thetac=0d0
-               ycc=1-parp67*x/(2*(1-x)**2)
-               if(mstp67.eq.0)then
+         lzone(npartner)=.true.
+         parp67=1d0
+         mstp67=2
+         if(ileg.le.2)then
+            lzcc=.false.
+            thetac=0d0
+            ycc=1-parp67*x/(2*(1-x)**2)
+            if(mstp67.eq.0)then
+               lzcc=.true.
+               thetac=1d0
+            elseif(mstp67.eq.1)then
+               if(yi.ge.ycc)then
                   lzcc=.true.
                   thetac=1d0
-               elseif(mstp67.eq.1)then
-                  if(yi.ge.ycc)then
-                     lzcc=.true.
-                     thetac=1d0
-                  endif
-               elseif(mstp67.eq.2)then
-                  lzcc=.true.
-                  thetac=min(1d0,(1d0-ycc)/(1d0-yi))
-               else
-                  write(*,*)'Unknown mstp67 ',mstp67
-                  stop
                endif
-               if(.not.lzcc)lzone(npartner)=.false.
+            elseif(mstp67.eq.2)then
+               lzcc=.true.
+               thetac=min(1d0,(1d0-ycc)/(1d0-yi))
             else
-               write(*,*)'No way'
+               write(*,*)'Unknown mstp67 ',mstp67
                stop
             endif
-
+            if(.not.lzcc)lzone(npartner)=.false.
+         else
+            write(*,*)'No way'
+            stop
+         endif
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+            if(ileg.eq.3)then
+               xifake(npartner)=xi(npartner)+xm12
+               upper_scale=max(upper_scale,sqrt(xm12))
+            endif
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
+c EW deadzone (QED branching when either the mother or a daughter is a photon)
+c to be updated !!!!!!
+        if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
           if(.not.flagmc)flagmc=.true.
-          if( (fsr .and. m_type.eq.8) .or.
-     #        (isr .and. j_type.eq.8) )then
+          if( (fsr .and. (m_type.eq.8 .or. m_type.eq.0)) .or.
+     #        (isr .and. (j_type.eq.8 .or. j_type.eq.0)) )then
             if(i_type.eq.8)then
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vca/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkern(2)=0.d0
+                    xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
 c Works only for SUSY
@@ -2917,8 +3436,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -2927,8 +3448,10 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -2936,23 +3459,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vca/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vca/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
+                  xkern(1)=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=0.d0
+                  xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 4 in xmcsubt_PY6PT: forbidden ileg'
@@ -2960,22 +3489,28 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 stop
               endif
             elseif(abs(i_type).eq.3)then
-c g --> q qbar splitting (icode=2)
+c g --> q qbar (or gamma --> q qbar) splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(2)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -2983,23 +3518,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                  xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 endif
               else
                 write(*,*)'Error 5 in xmcsubt_PY6PT: forbidden ileg'
@@ -3014,7 +3555,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
           elseif( (fsr .and. abs(m_type).eq.3) .or.
      #            (isr .and. abs(j_type).eq.3) )then
             if(abs(i_type).eq.3)then
-c q --> g q (or qbar --> g qbar) splitting (icode=3)
+c q --> g q (or q --> gamma q) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
@@ -3023,21 +3564,27 @@ c The definition of z here does tend to 1 only in the massless case
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                    xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -3050,8 +3597,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3060,29 +3609,37 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
+                  xkern(1)=(g**2/N_p)*
      &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 6 in xmcsubt_PY6PT: unknown ileg'
@@ -3094,18 +3651,24 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vcf/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vcf/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -3118,8 +3681,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3134,32 +3699,133 @@ c Non-QCD branching, here taken to be squark->squark gluon
                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   endif
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vcf/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vcf/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
+                  xkern(1)=(g**2/N_p)*4*vcf*
      &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
-                write(*,*)'Error 7 in xmcsubt_PY6PT: unknown ileg'
+                write(*,*)'Error 7 in xmcsubt_PYPT: unknown ileg'
+                write(*,*)ileg
+                stop
+              endif
+            elseif(i_type.eq.0)then
+c q --> q gamma splitting (icode=4) and sq --> sq gamma (SUSY) splitting
+              if(ileg.eq.1.or.ileg.eq.2)then
+                 N_p=1
+                 if(1-x.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 elseif(1-yi.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 else
+                    xfact=(1-yi)*(1-x)/x
+                    prefact=4/(s*N_p)
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                    ap=ap/(1-z(npartner))
+                    xkern(1)=0.d0
+                    xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 endif
+              elseif(ileg.eq.3)then
+                N_p=1
+c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
+c           xm22 = squared recoil mass
+                w1=-q1q+q2q-tk
+                w2=-q2q+q1q-uk
+                if(1-x.lt.tiny)then
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+                  xkern(1)=0.d0
+                  xkern(2)=-(g_ew**2/N_p)*4*qj2*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  kn=veckn_ev
+                  knbar=veckbarn_ev
+                  kn0=xp0jfks
+                  xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  if(abs(PDG_type(j_fks)).le.6)then
+c QCD branching
+                    call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  else
+c Non-QCD branching, here taken to be squark->squark gluon 
+                    call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                  endif
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              elseif(ileg.eq.4)then
+                N_p=1
+c ileg = 4: xm12 = squared recoil mass
+c           xm22 = 0 = squared FKS-mother and FKS-sister mass
+                if(1-x.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                elseif(1-yj.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  beta=1-xm12/s
+                  xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              else
+                write(*,*)'Error 7b in xmcsubt_PYPT: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -3176,7 +3842,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(ptPY6PT.le.scalemax)then
+              if(qMC.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -3184,7 +3850,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(ptPY6PT-scalemin)/(scalemax-scalemin)
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -3200,15 +3866,19 @@ c
 c
         else
 c Dead zone
-          xkern=0.d0
-          xkernazi=0.d0
+          xkern(1)=0.d0
+          xkern(2)=0.d0
+          xkernazi(1)=0.d0
+          xkernazi(2)=0.d0
           if(dampMCsubt)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf*thetac
-        xkernazi=xkernazi*gfactazi*gfactsf*thetac
+        xkern(1)=xkern(1)*gfactsf*thetac
+        xkern(2)=xkern(2)*gfactsf*thetac
+        xkernazi(1)=xkernazi(1)*gfactazi*gfactsf*thetac
+        xkernazi(2)=xkernazi(2)*gfactazi*gfactsf*thetac
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -3218,7 +3888,8 @@ c In the case of MC over colour flows, cflows will be passed from outside
           born_red_tilde=born_red_tilde+
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
+c change here, to include also xkern(2)!!!!!!!!
+        xmcxsec(npartner) = xkern(1)*born_red + xkernazi(1)*born_red_tilde
         if(dampMCsubt)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
@@ -3277,7 +3948,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=ptPY6PT
+        scale1_lhe(nFKSprocess)=qMC
       endif
 c
       if(dampMCsubt)then
@@ -3327,12 +3998,12 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,ptPY8,emscainv,emscafun
+     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
 
-      double precision shattmp,dot,xkern,xkernazi,born_red,
+      double precision shattmp,dot,xkern(2),xkernazi(2),born_red,
      & born_red_tilde
       double precision bornbars(max_bcol), bornbarstilde(max_bcol)
 
@@ -3432,11 +4103,16 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-c
+      double precision g_ew,charge,qi2,qj2
       double precision pmass(nexternal)
+      include "../../Source/MODEL/input.inc"
       include "pmass.inc"
 c
-
+c g_ew is the electron charge
+      g_ew=sqrt(4.d0*pi/aewm1)
+      qi2=charge(pdg_type(i_fks))**2
+      qj2=charge(pdg_type(j_fks))**2
+c
       if (softtest.or.colltest) then
          tiny=1d-6
       else
@@ -3459,13 +4135,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if ptPY8 (or similar
+c May remove UseSudakov from the definition below if qMC (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     &                   xm12,xm22,tk,uk,q1q,q2q,ptPY8,extra)
-      if(extra.and.ptPY8.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY8: ptPY8=',ptPY8
+     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
+      if(extra.and.qMC.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY8: qMC=',qMC
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -3536,7 +4212,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(ptPY8)
+        probne=bogus_probne_fun(qMC)
       endif
 c
 C
@@ -3638,33 +4314,42 @@ c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=m
             if(z(npartner).lt.zminus.or.
      &         z(npartner).gt.zplus)lzone(npartner)=.false.
          endif
-
+c EW deadzone (QED branching when either the mother or a daughter is a photon)
+c to be updated !!!!!!
+        if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
+c
 c Compute MC subtraction terms
         if(lzone(npartner))then
           if(.not.flagmc)flagmc=.true.
-          if( (fsr .and. m_type.eq.8) .or.
-     #        (isr .and. j_type.eq.8) )then
+          if( (fsr .and. (m_type.eq.8 .or. m_type.eq.0)) .or.
+     #        (isr .and. (j_type.eq.8 .or. j_type.eq.0)) )then
             if(i_type.eq.8)then
 c g --> g g (icode=1) and go --> go g (SUSY) splitting 
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vca/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*8*vca*(1-x*(1-x))**2/(s*x**2)
+                    xkern(2)=0.d0
+                    xkernazi(1)=-(g**2/N_p)*16*vca*(1-x)**2/(s*x**2)
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
 c Works only for SUSY
@@ -3675,8 +4360,10 @@ c           xm22 = squared recoil mass
                 w1=-q1q+q2q-tk
                 w2=-q2q+q1q-uk
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3685,8 +4372,10 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -3694,23 +4383,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vca/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vca/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 8*vca*
+                  xkern(1)=(g**2/N_p)*( 8*vca*
      &                  (s**2*(1-(1-x)*x)-s*(1+x)*xm12+xm12**2)**2 )/
      &                  ( s*(s-xm12)**2*(s*x-xm12)**2 )
-                  xkernazi=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=0.d0
+                  xkernazi(1)=-(g**2/N_p)*(16*vca*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 4 in xmcsubt_PY8: forbidden ileg'
@@ -3718,22 +4413,28 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 stop
               endif
             elseif(abs(i_type).eq.3)then
-c g --> q qbar splitting (icode=2)
+c g --> q qbar (or gamma --> q qbar) splitting (icode=2)
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vtf*(1-x)*((1-x)**2+x**2)/(s*x)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                    xkernazi(2)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.4)then
 c ileg = 4: xm12 = squared recoil mass
@@ -3741,23 +4442,29 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 N_p=2
                 if(isspecial)N_p=1
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*( 4*vtf*(1-x)*
+                  xkern(1)=(g**2/N_p)*( 4*vtf*(1-x)*
      &                  (s**2*(1-2*(1-x)*x)-2*s*x*xm12+xm12**2) )/
      &                  ( (s-xm12)**2*(s*x-xm12) )
-                  xkernazi=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
+                  xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                   call Qterms_reduced_timelike(j_type,i_type,one,z(npartner),Q)
                   Q=Q/(1-z(npartner))
-                  xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                  xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2*vca/vtf)
                 endif
               else
                 write(*,*)'Error 5 in xmcsubt_PY8: forbidden ileg'
@@ -3772,7 +4479,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
           elseif( (fsr .and. abs(m_type).eq.3) .or.
      #            (isr .and. abs(j_type).eq.3) )then
             if(abs(i_type).eq.3)then
-c q --> g q (or qbar --> g qbar) splitting (icode=3)
+c q --> g q (or q --> gamma q) splitting (icode=3)
 c the fks parton is the one associated with 1 - z: this is because its
 c rescaled energy is 1 - x and in the soft limit, where x --> z --> 1,
 c it has to coincide with the fraction appearing in the AP kernel.
@@ -3781,21 +4488,27 @@ c The definition of z here does tend to 1 only in the massless case
                  N_p=2
                  if(isspecial)N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=0.d0
-                    xkernazi=0.d0
+                    xkern(1)=0.d0
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
-                    xkernazi=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkern(1)=(g**2/N_p)*4*vcf*(1-x)*((1-x)**2+1)/(s*x**2)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                    xkernazi(1)=-(g**2/N_p)*16*vcf*(1-x)**2/(s*x**2)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
                     call Qterms_reduced_spacelike(m_type,i_type,one,
      #                                            z(npartner),Q)
                     Q=Q/(1-z(npartner))
-                    xkernazi=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(1)=prefact*xfact*xjac(npartner)*Q/xi(npartner)
+                    xkernazi(2)=xkernazi(1)*(g_ew**2/g**2)*(qi2/vcf)
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -3808,8 +4521,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+(1-z0)**2)/(z0*s)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3818,29 +4533,37 @@ c           xm22 = squared recoil mass
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=0.d0
-                  xkernazi=0.d0
+                  xkern(1)=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*
+                  xkern(1)=(g**2/N_p)*
      &                  ( 4*vcf*(1-x)*(s**2*(1-x)**2+(s-xm12)**2) )/
      &                  ( (s-xm12)*(s*x-xm12)**2 )
-                  xkernazi=0.d0
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(1)*(g_ew**2/g**2)*(qi2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 6 in xmcsubt_PY8: unknown ileg'
@@ -3852,18 +4575,24 @@ c q --> q g splitting (icode=4) and sq --> sq g (SUSY) splitting
               if(ileg.eq.1.or.ileg.eq.2)then
                  N_p=1
                  if(1-x.lt.tiny)then
-                    xkern=(g**2/N_p)*8*vcf/s
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*8*vcf/s
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  elseif(1-yi.lt.tiny)then
-                    xkern=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
-                    xkernazi=0.d0
+                    xkern(1)=(g**2/N_p)*4*vcf*(1+x**2)/(s*x)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  else
                     xfact=(1-yi)*(1-x)/x
                     prefact=4/(s*N_p)
                     call AP_reduced(m_type,i_type,one,z(npartner),ap)
                     ap=ap/(1-z(npartner))
-                    xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                    xkernazi=0.d0
+                    xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=0.d0
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
                  endif
               elseif(ileg.eq.3)then
                 N_p=1
@@ -3876,8 +4605,10 @@ c           xm22 = squared recoil mass
                   betas=1+(xm12-xm22)/s
                   z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
                   dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
-                  xkern=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
-                  xkernazi=0.d0
+                  xkern(1)=-(g**2/N_p)*4*vcf*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   kn=veckn_ev
                   knbar=veckbarn_ev
@@ -3892,32 +4623,133 @@ c Non-QCD branching, here taken to be squark->squark gluon
                     call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
                   endif
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               elseif(ileg.eq.4)then
                 N_p=1
 c ileg = 4: xm12 = squared recoil mass
 c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                 if(1-x.lt.tiny)then
-                  xkern=(g**2/N_p)*8*vcf/s
-                  xkernazi=0.d0
+                  xkern(1)=(g**2/N_p)*8*vcf/s
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 elseif(1-yj.lt.tiny)then
-                  xkern=(g**2/N_p)*4*vcf*
+                  xkern(1)=(g**2/N_p)*4*vcf*
      &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
      &                  ( s*(s-xm12)*(s*x-xm12) )
-                  xkernazi=0.d0
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 else
                   beta=1-xm12/s
                   xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
                   prefact=2/(s*N_p)
                   call AP_reduced(j_type,i_type,one,z(npartner),ap)
                   ap=ap/(1-z(npartner))
-                  xkern=prefact*xfact*xjac(npartner)*ap/xi(npartner)
-                  xkernazi=0.d0
+                  xkern(1)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=0.d0
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
                 endif
               else
                 write(*,*)'Error 7 in xmcsubt_PY8: unknown ileg'
+                write(*,*)ileg
+                stop
+              endif
+            elseif(i_type.eq.0)then
+c q --> q gamma splitting (icode=4) and sq --> sq gamma (SUSY) splitting
+              if(ileg.eq.1.or.ileg.eq.2)then
+                 N_p=1
+                 if(1-x.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 elseif(1-yi.lt.tiny)then
+                    xkern(1)=0.d0
+                    xkern(2)=(g_ew**2/N_p)*4*qj2*(1+x**2)/(s*x)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 else
+                    xfact=(1-yi)*(1-x)/x
+                    prefact=4/(s*N_p)
+                    call AP_reduced(m_type,i_type,one,z(npartner),ap)
+                    ap=ap/(1-z(npartner))
+                    xkern(1)=0.d0
+                    xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                    xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                    xkernazi(1)=0.d0
+                    xkernazi(2)=0.d0
+                 endif
+              elseif(ileg.eq.3)then
+                N_p=1
+c ileg = 3: xm12 = squared FKS-mother and FKS-sister mass
+c           xm22 = squared recoil mass
+                w1=-q1q+q2q-tk
+                w2=-q2q+q1q-uk
+                if(1-x.lt.tiny)then
+                  betad=sqrt((1-(xm12-xm22)/s)**2-(4*xm22/s))
+                  betas=1+(xm12-xm22)/s
+                  z0=1-(2*xm12)/(s*betas*(betas-betad*yj))
+                  dz0dy=-2*xm12*betad/(s*betas*(betas-betad*yj)**2)
+                  xkern(1)=0.d0
+                  xkern(2)=-(g_ew**2/N_p)*4*qj2*(1-yj)*dz0dy*(1+z0**2)/((1-z0)*s)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  kn=veckn_ev
+                  knbar=veckbarn_ev
+                  kn0=xp0jfks
+                  xfact=(2-(1-x)*(1-(kn0/kn)*yj))/kn*knbar*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  if(abs(PDG_type(j_fks)).le.6)then
+c QCD branching
+                    call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  else
+c Non-QCD branching, here taken to be squark->squark gluon 
+                    call AP_reduced_SUSY(j_type,i_type,one,z(npartner),ap)
+                  endif
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              elseif(ileg.eq.4)then
+                N_p=1
+c ileg = 4: xm12 = squared recoil mass
+c           xm22 = 0 = squared FKS-mother and FKS-sister mass
+                if(1-x.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*8*qj2/s
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                elseif(1-yj.lt.tiny)then
+                  xkern(1)=0.d0
+                  xkern(2)=(g_ew**2/N_p)*4*qj2*
+     &                  ( s**2*(1+x**2)-2*xm12*(s*(1+x)-xm12) )/
+     &                  ( s*(s-xm12)*(s*x-xm12) )
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                else
+                  beta=1-xm12/s
+                  xfact=(2-(1-x)*(1-yj))/xij*beta*(1-x)*(1-yj)
+                  prefact=2/(s*N_p)
+                  call AP_reduced(j_type,i_type,one,z(npartner),ap)
+                  ap=ap/(1-z(npartner))
+                  xkern(1)=0.d0
+                  xkern(2)=prefact*xfact*xjac(npartner)*ap/xi(npartner)
+                  xkern(2)=xkern(2)*(g_ew**2/g**2)*(qj2/vcf)
+                  xkernazi(1)=0.d0
+                  xkernazi(2)=0.d0
+                endif
+              else
+                write(*,*)'Error 7b in xmcsubt_PY8: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -3934,7 +4766,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(ptPY8.le.scalemax)then
+              if(qMC.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -3942,7 +4774,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(ptPY8-scalemin)/(scalemax-scalemin)
+              ptresc=(qMC-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -3958,15 +4790,19 @@ c
 c
         else
 c Dead zone
-          xkern=0.d0
-          xkernazi=0.d0
+          xkern(1)=0.d0
+          xkern(2)=0.d0
+          xkernazi(1)=0.d0
+          xkernazi(2)=0.d0
           if(dampMCsubt)then
             emscav(npartner)=etot
             emscwgt(npartner)=0.d0
           endif
         endif
-        xkern=xkern*gfactsf
-        xkernazi=xkernazi*gfactazi*gfactsf
+        xkern(1)=xkern(1)*gfactsf
+        xkern(2)=xkern(2)*gfactsf
+        xkernazi(1)=xkernazi(1)*gfactazi*gfactsf
+        xkernazi(2)=xkernazi(2)*gfactazi*gfactsf
         born_red=0.d0
         born_red_tilde=0.d0
         do cflows=1,colorflow(npartner,0)
@@ -3976,7 +4812,8 @@ c In the case of MC over colour flows, cflows will be passed from outside
           born_red_tilde=born_red_tilde+
      #                   bornbarstilde(colorflow(npartner,cflows))
         enddo
-        xmcxsec(npartner) = xkern*born_red + xkernazi*born_red_tilde
+c change here, to include also xkern(2)!!!!!!!!
+        xmcxsec(npartner) = xkern(1)*born_red + xkernazi(1)*born_red_tilde
         if(dampMCsubt)
      #    xmcxsec(npartner)=xmcxsec(npartner)*emscwgt(npartner)
         wgt = wgt + xmcxsec(npartner)
@@ -4035,7 +4872,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=ptPY8
+        scale1_lhe(nFKSprocess)=qMC
       endif
 c
       if(dampMCsubt)then
@@ -6384,6 +7221,42 @@ c
          xxscalemin=max(xxscalemin,sqrt(xm12))
          xxscalemax=max(xxscalemin,xxscalemax)
       endif
+
+      return
+      end
+
+
+
+
+      function charge(ipdg)
+c computes the electric charge given the pdg code
+      implicit none
+      integer ipdg
+      double precision charge,tmp,dipdg
+c
+      dipdg=dble(ipdg)
+c quarks
+      if(abs(dipdg).eq.1)tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.2)tmp=2d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.3)tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.4)tmp=2d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.5)tmp=-1d0/3d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.6)tmp=2d0/3d0*sign(1d0,dipdg)
+c leptons
+      if(abs(dipdg).eq.11)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.12)tmp=0d0
+      if(abs(dipdg).eq.13)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.14)tmp=0d0
+      if(abs(dipdg).eq.15)tmp=-1d0*sign(1d0,dipdg)
+      if(abs(dipdg).eq.16)tmp=0d0
+c bosons
+      if(dipdg.eq.21)tmp=0d0
+      if(dipdg.eq.22)tmp=0d0
+      if(dipdg.eq.23)tmp=0d0
+      if(abs(dipdg).eq.24)tmp=1d0*sign(1d0,dipdg)
+      if(dipdg.eq.25)tmp=0d0
+
+      charge=tmp
 
       return
       end

@@ -687,6 +687,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('spin')==2:
             rank=rank+1
 
+        interaction = self.get('lorentz')
+        
+        
         # Treat in an ad-hoc way the higgs effective theory
         spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
               [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
@@ -4219,6 +4222,86 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         coeff (frac), imaginary, Nc power)."""
         
         return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
+
+    def get_split_orders_mapping(self):
+        """This function returns two lists, squared_orders, amp_orders.
+        If process['split_orders'] is empty, the function returns two empty lists.
+        
+        squared_orders : All possible contributing squared orders among those
+            specified in the process['split_orders'] argument. The elements of
+            the list are tuples of the format format (OrderValue1,OrderValue2,...) 
+            with OrderValue<i> correspond to the value of the <i>th order in
+            process['split_orders'] (the others are summed over and therefore 
+            left unspecified).
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [(4,0),(2,2),(0,4)]
+        
+        amp_orders : Exactly as for squared order except that this list specifies
+            the contributing order values for the amplitude (i.e. not 'squared').
+            Also, the tuple describing the amplitude order is nested with a 
+            second one listing all amplitude numbers contributing to this order.
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [((2, 0), (2,)), ((0, 2), (1, 3, 4))]
+
+        Keep in mind that the orders of the element of the list is important as
+        it dicatates the order of the corresponding "order indices" in the
+        code output by the exporters.
+        """
+        
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        split_orders=self.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            return (),()
+        order_hierarchy=\
+                    self.get('processes')[0].get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            split_orders.sort(key=lambda order: order_hierarchy[order])
+
+        # Now find the list of amplitude numbers and what amplitude order they
+        # correspond to. For its construction, amp_orders is a dictionary with
+        # is then translated into an ordered list of tuples before being returned.
+        amp_orders={}
+        for diag in self.get('diagrams'):
+            diag_orders=diag.calculate_orders()
+            # Complement the missing split_orders with 0
+            for order in split_orders:
+                if not order in diag_orders.keys():
+                    diag_orders[order]=0
+            key = tuple([diag_orders[order] for order in split_orders])
+            try:
+                amp_orders[key].extend([amp.get('number') for amp in \
+                                                        diag.get('amplitudes')])
+            except KeyError:
+                amp_orders[key] = [amp.get('number') for amp in \
+                                                         diag.get('amplitudes')]
+        amp_orders=[(order[0],tuple(order[1])) for order in amp_orders.items()]
+        # Again make sure a proper hierarchy is defined and order the list
+        # according to it if possible
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            # Order the contribution starting from the minimum WEIGHTED one
+            amp_orders.sort(key= lambda elem: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                         i, order_power in enumerate(elem[0])]))
+            
+        # Now we construct the interference splitting order matrix for 
+        # convenience
+        squared_orders = []
+        for i, amp_order in enumerate(amp_orders):
+            for j in range(0,i+1):
+                key = tuple([ord1 + ord2 for ord1,ord2 in \
+                                            zip(amp_order[0],amp_orders[j][0])])
+                # We don't use the set structure here since keeping the
+                # construction order guarantees us that the squared_orders will
+                # also be ordered according to the WEIGHT.
+                if not key in squared_orders:
+                    squared_orders.append(key)
+
+        return squared_orders, amp_orders
+            
+            
 
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate_tag, outgoing) with

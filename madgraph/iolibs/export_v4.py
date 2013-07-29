@@ -457,6 +457,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                      ",".join([str(i) for \
                                                                i in int_list]))
 
+    def get_split_orders_lines(self, orders, array_name, n=4):
+        """ Return the split orders definition as defined in the list orders and
+        for the name of the array 'array_name'. Split rows in chunks of size n."""
+        
+        ret_list = []  
+        for index, order in enumerate(orders):      
+            for k in xrange(0, len(order), n):
+                ret_list.append("DATA (%s(%3r,i),i=%3r,%3r) /%s/" % \
+                  (array_name,index + 1, k + 1, min(k + n, len(order)),
+                              ','.join(["%5r" % i for i in order[k:k + n]])))
+        return ret_list
+
     def get_color_data_lines(self, matrix_element, n=6):
         """Return the color matrix definition lines for this matrix element. Split
         rows in chunks of size n."""
@@ -648,9 +660,85 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 pass
         return res_list
 
-    def get_JAMP_lines(self, col_amps, basename="JAMP(", basename2="AMP(", split=-1):
+    def get_JAMP_lines_split_order(self, col_amps, split_order_amps, 
+          split_order_names=None, JAMP_format="JAMP(%s)", AMP_format="AMP(%s)"):
         """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
-        defined as a matrix element or directly as a color_amplitudes dictionary"""
+        defined as a matrix element or directly as a color_amplitudes dictionary.
+        The split_order_amps specifies the group of amplitudes sharing the same
+        amplitude orders which should be put in together in a given set of JAMPS.
+        The split_order_amps is supposed to have the format of the second output 
+        of the function get_split_orders_mapping function in helas_objects.py.
+        The split_order_names is optional (it should correspond to the process
+        'split_orders' attribute) and only present to provide comments in the
+        JAMP definitions in the code."""
+
+        # Let the user call get_JAMP_lines_split_order directly from a 
+        error_msg="Malformed '%s' argument passed to the "+\
+                                          "get_JAMP_lines_split_order function."
+        if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
+            color_amplitudes=col_amps.get_color_amplitudes()
+        elif(isinstance(col_amps,list)):
+            if(col_amps and isinstance(col_amps[0],list)):
+                color_amplitudes=col_amps
+            else:
+                raise MadGraph5Error, error_msg%'col_amps'
+        else:
+            raise MadGraph5Error, error_msg%'col_amps'
+        
+        # Verify the sanity of the split_order_amps and split_order_names args
+        if isinstance(split_order_amps,list):
+            for elem in split_order_amps:
+                if len(elem)!=2:
+                    raise MadGraph5Error, error_msg%'split_order_amps'
+                # Check the first element of the two lists to make sure they are
+                # integers, although in principle they should all be integers.
+                if not isinstance(elem[0],tuple):
+                    raise MadGraph5Error, error_msg%'split_order_amps'
+                if not isinstance(elem[1],tuple):
+                    raise MadGraph5Error, error_msg%'split_order_amps'
+                if not isinstance(elem[0][0],int):
+                    raise MadGraph5Error, error_msg%'split_order_amps'
+                if not isinstance(elem[1][0],int):
+                    raise MadGraph5Error, error_msg%'split_order_amps'
+        else:
+            raise MadGraph5Error, error_msg%'split_order_amps'
+        
+        if not split_order_names is None:
+            if isinstance(split_order_names,list):
+                # Should specify the same number of names as there are elements
+                # in the key of the split_order_amps.
+                if len(split_order_names)!=len(split_order_amps[0][0]):
+                    raise MadGraph5Error, error_msg%'split_order_names'
+                # Check the first element of the list to be a string
+                if not isinstance(split_order_names[0],str):
+                    raise MadGraph5Error, error_msg%'split_order_names'                    
+            else:
+                raise MadGraph5Error, error_msg%'split_order_names'                
+        
+        # Now scan all contributing orders to be individually computed and 
+        # construct the list of color_amplitudes for JAMP to be constructed
+        # accordingly.
+        res_list=[]
+        for i, amp_order in enumerate(split_order_amps):
+            col_amps_order = []
+            for jamp in color_amplitudes:
+                col_amps_order.append(filter(lambda col_amp: 
+                                               col_amp[1] in amp_order[1],jamp))
+            if split_order_names:
+                res_list.append('C JAMPs contributing to orders '+' '.join(
+                              ['%s=%i'%order for order in zip(split_order_names,
+                                                                amp_order[0])]))
+            res_list.extend(self.get_JAMP_lines(col_amps_order,
+                                   JAMP_format="JAMP(%s,{0})".format(str(i+1))))
+
+        return res_list
+
+    def get_JAMP_lines(self, col_amps, JAMP_format="JAMP(%s)", 
+                                                AMP_format="AMP(%s)", split=-1):
+        """Return the JAMP = sum(fermionfactor * AMP(i)) lines from col_amps 
+        defined as a matrix element or directly as a color_amplitudes dictionary.
+        The split argument defines how the JAMP lines should be split in order
+        not to be too long."""
 
         # Let the user call get_JAMP_lines directly from a MatrixElement or from
         # the color amplitudes lists.
@@ -666,8 +754,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
 
         res_list = []
-        for i, coeff_list in \
-                enumerate(color_amplitudes):
+        for i, coeff_list in enumerate(color_amplitudes):
+            # It might happen that coeff_list is empty if this function was
+            # called from get_JAMP_lines_split_order (i.e. if some color flow
+            # does not contribute at all for a given order).
+            # In this case we simply set it to 0.
+            if coeff_list==[]:
+                res_list.append(((JAMP_format+"=0D0") % str(i + 1)))
+                continue
             # Break the JAMP definition into 'n=split' pieces to avoid having
             # arbitrarly long lines.
             first=True
@@ -675,8 +769,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             while coeff_list!=[]:
                 coefs=coeff_list[:n]
                 coeff_list=coeff_list[n:]
-                res = ((basename+"%i)=") % (i + 1)) + \
-                      (((basename+"%i)") % (i + 1)) if not first and split>0 else '')
+                res = ((JAMP_format+"=") % str(i + 1)) + \
+                      ((JAMP_format % str(i + 1)) if not first and split>0 else '')
                 first=False
                 # Optimization: if all contributions to that color basis element have
                 # the same coefficient (up to a sign), put it in front
@@ -690,18 +784,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     
                 for (coefficient, amp_number) in coefs:
                     if common_factor:
-                        res = (res + "%s" + basename2 + "%d)") % \
+                        res = (res + "%s" + AMP_format) % \
                                                    (self.coeff(coefficient[0],
                                                    coefficient[1] / abs(coefficient[1]),
                                                    coefficient[2],
                                                    coefficient[3]),
-                                                   amp_number)
+                                                   str(amp_number))
                     else:
-                        res = (res + "%s" + basename2 + "%d)") % (self.coeff(coefficient[0],
+                        res = (res + "%s" + AMP_format) % (self.coeff(coefficient[0],
                                                    coefficient[1],
                                                    coefficient[2],
                                                    coefficient[3]),
-                                                   amp_number)
+                                                   str(amp_number))
     
                 if common_factor:
                     res = res + ')'
@@ -1114,7 +1208,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         return True
 
-
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
@@ -1186,14 +1279,44 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
-        # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+            # For convenience we also write the driver check_sa_splitOrders.f
+            # that explicitely writes out the contribution from each squared order.
+            # The original driver still works and is compiled with 'make' while
+            # the splitOrders one is compiled with 'make check_sa_splitOrders'
+            check_sa_writer=writers.FortranWriter('check_sa_splitOrders.f')
+            self.write_check_sa_splitOrders(\
+                                    squared_orders,split_orders,check_sa_writer)
 
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
         if not self.opt['sa_for_decay'] :
-            file = open(pjoin(_file_path, \
+            if len(split_orders)>0:
+                file = open(pjoin(_file_path, \
+              'iolibs/template_files/matrix_standalone_splitOrders_v4.inc')).read()
+            else:
+                file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
         else:
+            if len(split_orders)>0:
+                logger.warning('The split order option is not available for'+\
+                                                        ' MadSpin output mode.')
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
          
@@ -1203,6 +1326,26 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         writer.writelines(file)
 
         return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
+    def write_check_sa_splitOrders(self,squared_orders, split_orders, writer):
+        """ Write out a more advanced version of the check_sa drivers that
+        individually returns the matrix element for each contributing squared
+        order."""
+        
+        check_sa_content = open(pjoin(self.mgme_dir, 'madgraph', 'iolibs', \
+                             'template_files', 'check_sa_splitOrders.f')).read()
+        printout_sq_orders=[]
+        for i, squared_order in enumerate(squared_orders):
+            sq_orders=[]
+            for j, sqo in enumerate(squared_order):
+                sq_orders.append('%s=%d'%(split_orders[j],sqo))
+            printout_sq_orders.append(\
+                         "write(*,*) 'Matrix element for (%s) = ',MATELEMS(%d)"\
+                                                     %(' '.join(sq_orders),i+1))
+        printout_sq_orders='\n'.join(printout_sq_orders)
+        writer.writelines(check_sa_content%{\
+                                    'printout_sqorders':printout_sq_orders, 
+                                    'nSplitOrders':len(squared_orders)+1})
 
 #===============================================================================
 # ProcessExporterFortranME
