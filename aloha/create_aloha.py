@@ -97,6 +97,20 @@ class AbstractRoutine(object):
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
         return text
+    
+    def get_info(self, info):
+        """return some information on the routine
+        """
+        if info == "rank":
+            assert isinstance(self.expr, aloha_lib.SplitCoefficient)
+            rank= 1
+            for coeff in self.expr:
+                if max(sum(coeff), rank):
+                    rank = sum(coeff)
+            return rank -1 # due to the coefficient associate to the wavefunctions
+        else:
+            raise ALOHAERROR, '%s is not a valid information that can be computed' % info
+
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
@@ -115,7 +129,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [abs(s) for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -136,6 +150,9 @@ class AbstractRoutineBuilder(object):
         """compute the expression and return it"""
         self.outgoing = mode
         self.tag = tag
+        if __debug__:
+            if mode == 0:
+                assert not any(t.startswith('L') for t in tag)
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
@@ -642,6 +659,57 @@ class AbstractALOHAModel(dict):
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
+        
+    def get_info(self, info, lorentzname, outgoing, tag, cached=False):
+        """return some information about the aloha routine
+        - "rank": return the rank of the loop function
+        If the cached option is set to true, then the result is stored and
+        recycled if possible.
+        """
+
+        returned_dict = {}        
+        # Make sure the input argument is a list
+        if isinstance(info, str):
+            infos = [info]
+        else:
+            infos = info
+        
+        # First deal with the caching of infos
+        if hasattr(self, 'cached_interaction_infos'):
+            # Now try to recover it
+            for info_key in infos:
+                try:
+                    returned_dict[info] = self.cached_interaction_infos[\
+                                         (lorentzname,outgoing,tuple(tag),info)]
+                except KeyError:
+                    # Some information has never been computed before, so they
+                    # will be computed later.
+                    pass             
+        elif cached:
+            self.cached_interaction_infos = {}
+
+        init = False
+        for info_key in infos:
+            if info_key in returned_dict:
+                continue
+            elif not init:
+                # need to create the aloha object
+                lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                abstract = AbstractRoutineBuilder(lorentz)
+                routine = abstract.compute_routine(outgoing, tag, factorize=False)                
+                init = True
+
+            assert 'routine' in locals()
+            returned_dict[info_key] = routine.get_info(info_key)
+            if cached:
+                # Cache the information computed
+                self.cached_interaction_infos[\
+             (lorentzname,outgoing,tuple(tag),info_key)]=returned_dict[info_key]
+
+        if isinstance(info, str):
+            return returned_dict[info]
+        else:
+            return returned_dict
     
     def set(self, lorentzname, outgoing, abstract_routine):
         """ add in the dictionary """
@@ -714,44 +782,11 @@ class AbstractALOHAModel(dict):
             if not hasattr(self.model.lorentz, lor.name):
                 setattr(self.model.lorentz, lor.name, lor)
     
-    # Notice that when removing the quick fix, one should also remove the two
-    # additional arguments byPassFix and forceLoop
-    # To emulate the behavior without the quick fix, simply replace the default
-    # value of byPassFix by True.
-    # == START AD-HOC QUICK FIX ==
-    def compute_subset(self, data, byPassFix=True, forceLoop=False):
-    # == END AD-HOC QUICK FIX ==
+    def compute_subset(self, data):
         """ create the requested ALOHA routine. 
         data should be a list of tuple (lorentz, tag, outgoing)
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
-
-        # == START AD-HOC QUICK FIX WARNING ==        
-
-        # In order to be able to use open loops in unitary gauge, one must make
-        # sure ALOHA does not include the longitudinal part of the loop
-        # propagator for the gluon.
-        # In further versions, this will be insured by having separate routines
-        # for the massive and massless vector propagators. For now, I use a 
-        # quick fix which consists in calling twice aloha (rather compute_subset)
-        # with only the loop routines (then in feynman gauge not matter what)
-        # and a second time with the rest as usual.
-        if not byPassFix: 
-            
-            data_loop = [d for d in data if any((t.startswith('L') for t in d[1]))]
-            data_tree = [d for d in data if not any((t.startswith('L') for t in d[1]))]
-            
-            if data_loop == []:
-                self.compute_subset(data,byPassFix=True)
-                return
-            
-            self.compute_subset(data_tree, byPassFix=True, forceLoop=True)
-            old_aloha_gauge = aloha.unitary_gauge
-            aloha.unitary_gauge = False
-            self.compute_subset(data_loop, byPassFix=True, forceLoop=True)
-            aloha.unitary_gauge = old_aloha_gauge
-            return
-        # == END AD-HOC QUICK FIX ==
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
@@ -767,10 +802,7 @@ class AbstractALOHAModel(dict):
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
-            # When removing the QUICK FIX, also remove 'forceLoop'
-            # == START AD-HOC QUICK FIX ==
-            if loop or forceLoop:
-            # == END AD-HOC QUICK FIX ==
+            if loop:
                 aloha.loop_mode = True
                 self.explicit_combine = True
 

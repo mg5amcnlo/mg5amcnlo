@@ -503,6 +503,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
     interaction id, all relevant interaction information, fermion flow
     state, wavefunction number
     """
+    
+    supported_analytical_info = ['wavefunction_rank','interaction_rank']
+
 
     @staticmethod
     def spin_to_size(spin):
@@ -570,9 +573,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['me_id'] = 0
         self['fermionflow'] = 1
         self['is_loop'] = False
-        # The rank is used in the open loops method and stores the rank of the
-        # polynomial describing the loop numerator up to this loop wavefunction
-        self['rank'] = None
+        # Some analytical information about the interaction and wavefunction
+        # can be cached here in the form of a dictionary.
+        # An example of a key of this dictionary is 'rank' which is used in the
+        # open loop method and stores the rank of the polynomial describing the 
+        # loop numerator up to this loop wavefunction.
+        # See the class variable 'supported_analytical_info' for the list of
+        # supporter analytical information
+        self['analytic_info'] = {}
         # The lcut_size stores the size of the L-Cut wavefunction at the origin
         # of the loopwavefunction.
         self['lcut_size']=None
@@ -798,9 +806,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Set conjugate_indices if it's not already set
         if name == 'conjugate_indices' and self[name] == None:
             self['conjugate_indices'] = self.get_conjugate_index()
-
-        if name == 'rank' and self[name] == None:
-            self['rank'] = self.get_rank()
         
         if name == 'lcut_size' and self[name] == None:
             self['lcut_size'] = self.get_lcut_size()  
@@ -901,60 +906,85 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def is_majorana(self):
         return self.is_fermion() and self.get('self_antipart')
 
-    def get_interaction_q_power(self):
-        """ Returns the power of the loop momentum q brought by the interaction
+    def get_analytic_info(self, info, alohaModel=None):
+        """ Returns a given analytic information about this loop wavefunction or
+        its characterizing interaction. The list of available information is in
+        the HelasWavefunction class variable 'supported_analytical_info'. An
+        example of analytic information is the 'interaction_rank', corresponding
+        to the power of the loop momentum q brought by the interaction
         and propagator from which this loop wavefunction originates. This 
-        is done in a SM ad-hoc way, but it should be promoted to be general in 
-        the future, by reading the lorentz structure of the interaction."""
-        rank=0
-        # First add the propagator power for a fermion of spin 1/2.
-        # For the bosons, it is assumed to be in Feynman gauge so that the
-        # propagator does not bring in any power of the loop momentum.
-        if self.get('spin')==2:
-            rank=rank+1
+        is done in a general way by having aloha analyzing the lorentz structure
+        used.
+        Notice that if one knows that this analytic information has already been
+        computed before (for example because a call to compute_analytic_information
+        has been performed before, then alohaModel is not required since 
+        the result can be recycled."""
+        # This function makes no sense if not called for a loop interaction.
+        # At least for now
+        assert(self.get('is_loop'))
+        # Check that the required information is supported
+        assert(info in self.supported_analytical_info)
+                
+        # Try to recycle the information
+        try:
+            return self['analytic_info'][info]
+        except KeyError:
+            # It then need be computed and for this, an alohaModel is necessary
+            if alohaModel is None:
+                raise MadGraph5Error,"The analytic information %s has"%info+\
+                " not been computed yet for this wavefunction and an"+\
+                " alohaModel was not specified, so that the information"+\
+                " cannot be retrieved."
+        
+        result = None
+        
+        if info=="interaction_rank" and len(self['mothers'])==0:
+            # It is of course zero for an external particle
+            result = 0
 
-        # Treat in an ad-hoc way the higgs effective theory
-        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
-              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
-        # HGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
-            return rank+2
-        # HGGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
-            return rank+1
-        # HGGGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
-            return rank
-            
-        # Now add a possible power of the loop momentum depending on the
-        # vertex creating this loop wavefunction. For now we don't read the
-        # lorentz structure but just use an SM ad-hoc rule that only 
-        # the feynman rules for a three point vertex with only bosons bring
-        # in one power of q.
-        if self.is_boson() and len([w for w in self.get('mothers') \
-                                                           if w.is_boson()])==2:
-            rank=rank+1
-        return rank
+        elif info=="interaction_rank":
+            # To get advanced analytic information about the interaction, aloha
+            # has to work as if in the optimized output, namely treat individually
+            # the loop momentum from the rest of the contributions.
+            # The 'L' tag is therefore always followed by an integer representing
+            # the place of the loop wavefunction in the mothers.
+            # For this, optimized_output is set to True below, no matter what.
+            aloha_info = self.get_aloha_info(True)
+            # aloha_info[0] is the tuple of all lorent structures for this lwf,
+            # aloha_info[1] are the tags and aloha_info[2] is the outgoing number.
+            max_rank = max([ alohaModel.get_info('rank', lorentz,
+                                 aloha_info[2], aloha_info[1], cached=True) 
+                                                for lorentz in aloha_info[0] ])
+            result = max_rank
+
+        elif info=="wavefunction_rank":
+            # wavefunction_rank is the sum of all the interaction rank
+            # from the history of open-loop call.
+            loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
+            if len(loop_mothers)==0:
+                # It is an external loop wavefunction
+                result = 0
+            elif len(loop_mothers)==1:
+                result=loop_mothers[0].get_analytic_info('wavefunction_rank',
+                                                                     alohaModel)
+                result = result+self.get_analytic_info('interaction_rank',
+                                                                     alohaModel)
+            else:
+                raise MadGraph5Error, "A loop wavefunction has more than one loop"+\
+                    " mothers."
+                    
+        # Now cache the resulting analytic info
+        self['analytic_info'][info] = result
         
-    def get_rank(self):
-        """ Returns the rank of this wavefunction. Which means the rank of the 
-        polynomial in the loop momenta q which is built at this point in the 
-        loop flow. """
+        return result
+
+    def compute_analytic_information(self, alohaModel):
+        """ Make sure that all analytic pieces of information about this 
+        wavefunction are computed so that they can be recycled later, typically
+        without the need of specifying an alohaModel."""
         
-        if not self['is_loop']:
-            return 0
-        
-        loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
-        
-        if len(loop_mothers)==0:
-            # It is an external loop wavefunction
-            return 0
-        elif len(loop_mothers)==1:
-            rank=loop_mothers[0].get_rank()
-            return rank+self.get_interaction_q_power()
-        else:
-            raise MadGraph5Error, "A loop wavefunction has more than one loop"+\
-                " mothers."
+        for analytic_info in self.supported_analytical_info:
+            self.get_analytic_info(analytic_info, alohaModel)
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -1357,7 +1387,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         output = {}
         if self.get('is_loop') and OptimizedOutput:
-            output['vertex_rank']=self.get_interaction_q_power()
+            output['vertex_rank']=self.get_analytic_info('interaction_rank')
             output['lcut_size']=self.get('lcut_size')
             output['out_size']=self.spin_to_size(self.get('spin'))
         
@@ -1390,7 +1420,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 if mother.get('is_loop'):
                     output['loop_mother_number']=nb
-                    output['loop_mother_rank']=mother.get('rank')
+                    output['loop_mother_rank']=\
+                                   mother.get_analytic_info('wavefunction_rank')
                     output['in_size']=self.spin_to_size(mother.get('spin'))
                     output['WF%d'%i] = 'PL(0,%d)'%nb
                     loop_mother_found=True
@@ -1598,6 +1629,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
         color_indices.append(self.get('color_key'))
 
         return color_indices
+    
+    def get_aloha_info(self, optimized_output=True):
+        """Returns the tuple (lorentz_name, tag, outgoing_number) providing
+        the necessary information to compute_subset of create_aloha to write
+        out the HELAS-like routines."""
+        
+        # In principle this function should not be called for the case below,
+        # or if it does it should handle specifically the None returned value.
+        if self.get('interaction_id') in [0,-1]:
+            return None
+
+        tags = ['C%s' % w for w in self.get_conjugate_index()]
+        if self.get('is_loop'): 
+            if not optimized_output:
+                tags.append('L')
+            else:
+                tags.append('L%d'%self.get_loop_index())
+
+        if self.get('particle').get('propagator') !='':
+                 tags.append('P%s' % str(self.get('particle').get('propagator')))
+
+        return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
     def get_lcutspinletter(self):
         """Returns S,V or F depending on the spin of the mother loop particle.
@@ -1920,6 +1973,51 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
+
+#===============================================================================
+# Start of the legacy of obsolete functions of the HelasWavefunction class.
+#===============================================================================
+
+    def LEGACY_get_interaction_q_power(self):
+        """ Returns the power of the loop momentum q brought by the interaction
+        and propagator from which this loop wavefunction originates. This 
+        is done in a SM ad-hoc way, but it should be promoted to be general in 
+        the future, by reading the lorentz structure of the interaction.
+        This function is now rendered obsolete by the use of the function
+        get_analytical_info. It is however kept for legacy."""
+        rank=0
+        # First add the propagator power for a fermion of spin 1/2.
+        # For the bosons, it is assumed to be in Feynman gauge so that the
+        # propagator does not bring in any power of the loop momentum.
+        if self.get('spin')==2:
+            rank=rank+1
+
+        # Treat in an ad-hoc way the higgs effective theory
+        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
+              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
+        # HGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
+            return rank+2
+        # HGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
+            return rank+1
+        # HGGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
+            return rank
+            
+        # Now add a possible power of the loop momentum depending on the
+        # vertex creating this loop wavefunction. For now we don't read the
+        # lorentz structure but just use an SM ad-hoc rule that only 
+        # the feynman rules for a three point vertex with only bosons bring
+        # in one power of q.
+        if self.is_boson() and len([w for w in self.get('mothers') \
+                                                           if w.is_boson()])==2:
+            rank=rank+1
+        return rank
+    
+#===============================================================================
+# End of the legacy of obsolete functions of the HelasWavefunction class.
+#===============================================================================
 
 #===============================================================================
 # HelasWavefunctionList
@@ -2509,6 +2607,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
                     nflips = nflips + 1
 
         return (-1) ** nflips
+
+    def get_aloha_info(self, optimized_output=True):
+        """Returns the tuple (lorentz_name, tag, outgoing_number) providing
+        the necessary information to compute_subset of create_aloha to write
+        out the HELAS-like routines."""
+        
+        # In principle this function should not be called for the case below,
+        # or if it does it should handle specifically the None returned value.
+        if self.get('interaction_id') in [0,-1]:
+            return None
+
+        tags = ['C%s' % w for w in self.get_conjugate_index()]
+
+        return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
     def get_base_diagram(self, wf_dict, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
@@ -4277,20 +4389,13 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate_tag, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        out = [(tuple(wa.get('lorentz')),  
-                tuple(['C%s' % w for w in wa.get('conjugate_indices')] + \
-                  [] if wa.get('particle').get('propagator') =='' else \
-                  ['P%s' % str(wa.get('particle').get('propagator'))]),
-                 wa.find_outgoing_number()) for wa in \
-                self.get_all_wavefunctions()\
-                if wa.get('interaction_id') not in [0,-1]]  
-        out += [(tuple(wa.get('lorentz')),  
-                 tuple(['C%s' % w for w in wa.get('conjugate_indices')]) ,
-                 wa.find_outgoing_number()) for wa in  self.get_all_amplitudes() \
-                if wa.get('interaction_id') not in [0,-1]]
-        
-        return out
+        output = []
+        for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
+            if wa.get('interaction_id') in [0,-1]:
+                continue
+            output.append(wa.get_aloha_info());
 
+        return output
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
@@ -4880,7 +4985,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
-
         helas_list = []
 
         for me in self.get('matrix_elements'):
