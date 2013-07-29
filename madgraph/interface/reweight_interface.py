@@ -309,6 +309,8 @@ class ReweightInterface(extended_cmd.Cmd):
         tag_name = 'mg_reweight_%s' % rewgtid
         start = time.time()
         cross = 0
+        
+        os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
@@ -335,6 +337,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         output.write('</LesHouchesEvents>\n')
         output.close()
+        os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'n'
         if self.mother:
             output2.write('</LesHouchesEvents>\n')
             output2.close()        
