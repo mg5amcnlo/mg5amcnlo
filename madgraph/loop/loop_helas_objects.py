@@ -181,7 +181,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
            as for the HelasMatrixElement one."""
         
         if arguments:
-            super(LoopHelasAmplitude, self).__init__(arguments)
+            super(LoopHelasAmplitude, self).__init__(*arguments)
         else:
             super(LoopHelasAmplitude, self).__init__()        
 
@@ -1778,9 +1778,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives a list of all the loop wavefunctions for this ME"""
                 
         return helas_objects.HelasWavefunctionList(
+                    # In the default output, this is where the loop wavefunction
+                    # are placed
                     [lwf for ldiag in self.get_loop_diagrams()
-                    for lamp in ldiag.get_loop_amplitudes()
-                    for lwf in lamp.get('wavefunctions')])
+                     for lamp in ldiag.get_loop_amplitudes()
+                     for lwf in lamp.get('wavefunctions')]+
+                    # In the optimized one they are directly in the 
+                    # 'loop_wavefunctions' attribute of the loop diagrams
+                    [lwf for ldiag in self.get_loop_diagrams() for lwf in
+                     ldiag.get('loop_wavefunctions')])
 
     def get_number_of_amplitudes(self):
         """Gives the total number of amplitudes for this ME, including the loop
