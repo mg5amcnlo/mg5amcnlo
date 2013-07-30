@@ -2601,7 +2601,7 @@ class decay_all_events:
             # fill all momenta in the decay branches
             momenta_in_decay=self.get_int_mom_in_decay(decay['decay_struct'],ext_mom)
             # reset extrenal momenta in the production event
-            self.reset_mom_in_prod_event(decay['decay_struct'],event_map,momenta_in_decay,ext_mom)
+            self.reset_mom_in_prod_event(decay['decay_struct'],decay['prod2full'],event_map,momenta_in_decay,ext_mom)
             # reset intermediate momenta in prod event
             self.curr_event.reset_resonances()
             
@@ -2761,12 +2761,12 @@ class decay_all_events:
                 
         return momenta_in_decay
     
-    def reset_mom_in_prod_event(self, decay_struct, event_map, momenta_in_decay,ext_mom):
+    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom):
 
         """ Reset the external momenta in the production event, since
             the virtuality of decaying particles has slightly changed the kinematics
         """
-        
+       
         for index in self.curr_event.event2mg.keys():
             if self.curr_event.event2mg[index]>0:
                 part=self.curr_event.event2mg[index]       # index for production ME
@@ -2775,7 +2775,7 @@ class decay_all_events:
                     id_res=decay_struct[part]['mg_tree'][0][0]
                     self.curr_event.particle[part_for_curr_evt]['momentum']=momenta_in_decay[id_res].copy()
                 else:
-                    self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[part-1]
+                    self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
                 
 
 
@@ -3102,7 +3102,7 @@ class decay_all_events:
                      destination=pjoin(full_path,item)
                      shutil.copyfile(prodfile, destination)  
                 # we need to write the file config_decays.inc
-                self.generate_configs_file(nfinal,dico['decay_struct'],full_path)
+                self.generate_configs_file(nfinal,dico,full_path)
                 
 
         # 6. generate decay only part ------------------------------------------
@@ -3698,7 +3698,7 @@ class decay_all_events:
  
         return BW_weight_prod, topology
       
-    def generate_configs_file(self,nfinal,decay_struct, path):
+    def generate_configs_file(self,nfinal,decay, path):
         """ write the file configs_decay.inc
             also record the itree information in a python variable, 
             this will be needed to write down the event
@@ -3707,7 +3707,8 @@ class decay_all_events:
                 with - BACKWARD ORDER, 
                      - me indices
         """
-    
+   
+        decay_struct=decay['decay_struct'] 
         me_index=2 # should match the particle index in the full matrix element 
         count_res=0 # count number of resonances
         iforest=[] 
@@ -3715,6 +3716,7 @@ class decay_all_events:
         
 #              data (map_external2res(i), i=1,4)/1,2,-2,-4/
  
+        decay['prod2full']=[1,2]
         map_external='      data (map_external2res(i), i=1,%s)/1,2,' %(nfinal+2)    
         for part in range(3,nfinal+3):
             if part in decay_struct:  # particle in the prod. event to be decayed
@@ -3748,9 +3750,11 @@ class decay_all_events:
 
                 count_res=count_res+nb_res
                 map_external+='%s ,' % (-count_res)
+                decay['prod2full'].append(-count_res)
             else:
                 me_index+=1
                 map_external+='%s ,' % me_index
+                decay['prod2full'].append(me_index)
    
         map_external=map_external[:-1]+'/ \n'
         
