@@ -140,10 +140,20 @@ class TestFKSQED(unittest.TestCase):
                 print 'sq_orders', real.amplitude['process']['squared_orders']
                 print 'diagrams', len(real.amplitude['diagrams'])
                 print [[l['id'] for l in born['born_amp']['process']['legs']] for born in real.missing_borns]
+                # check that no missing borns are there
                 self.assertEqual(len(real.missing_borns), 0)
+                # check that reals with 3 or more external gluons,
+                # with 2 or more photons or with any external lepton
+                # have 0 diagrams, 
+                # because they are not NLO QED corrections as requested,
+                # while other reals should have diagrams
+                if real.pdgs.tolist().count(21) >= 3 or \
+                   real.pdgs.tolist().count(22) >= 2 or \
+                   real.pdgs.tolist().count(11) + real.pdgs.tolist().count(-11) > 0:
+                    self.assertEqual(len(real.amplitude['diagrams']), 0)
+                else:
+                    self.assertNotEqual(len(real.amplitude['diagrams']), 0)
 
-                for missing_born in real.missing_borns:
-                    self.assertTrue([l['id'] for l in missing_born['born_amp']['process']['legs']] not in born_pdg_list)
 
                     
 

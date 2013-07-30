@@ -297,7 +297,6 @@ class FKSRealProcess(object):
     -- fks_infos (list containing the possible fks configs for a given process
     -- amplitude 
     -- is_to_integrate
-    -- leg permutation<<REMOVED!.
     """
     
     def __init__(self, born_proc, leglist, ij, ij_id, splitting_type,
@@ -332,7 +331,10 @@ class FKSRealProcess(object):
         orders = copy.copy(born_proc.get('born_orders'))
         for order in perturbed_orders:
             try:
-                orders[order] = max(orders[order] + 1, 2)
+                # + 2 because e.g. when you do QED corrections to a QCD process
+                # you also want interferences between diagrams with an internal
+                # photon (hence QED=2) with pure QCD diagrams 
+                orders[order] = orders[order] + 2
             except KeyError:
                 orders[order] = 2
         # you never do NLO QCD x NLO EW but NLO QCD + NLO EW
@@ -540,6 +542,7 @@ class FKSProcess(object):
         if not remove_reals in [True, False]:
             raise fks_common.FKSProcessError(\
                     'Not valid type for remove_reals in FKSProcess')
+
 
         if start_proc:
             #initilaize with process definition (for test purporses)

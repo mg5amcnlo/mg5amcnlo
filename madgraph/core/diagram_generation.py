@@ -1489,7 +1489,9 @@ class MultiProcess(base_objects.PhysicsObject):
                               'has_born': \
                                  process_definition.get('has_born'),
                               'split_orders': \
-                                 process_definition.get('split_orders')                                
+                                 process_definition.get('split_orders'),
+                              'born_orders': \
+                                 process_definition.get('born_orders')                                
                                  })
                 fast_proc = \
                           array.array('i',[leg.get('id') for leg in legs])
