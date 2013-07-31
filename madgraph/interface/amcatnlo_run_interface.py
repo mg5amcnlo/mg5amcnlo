@@ -2570,12 +2570,13 @@ Integrated cross-section
                                 'madspin': default_switch}
         
         description = {'order':  'Perturbative order of the calculation:',
-                       'fixed_order': 'Fixed order calculation (no event generation):',
-                       'shower': 'Run the shower on the generated events:',
+                       'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
+                       'shower': 'Shower the generated events:',
                        'madspin': ' Decay particles with the MadSpin module:' }
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF'}
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
@@ -2604,18 +2605,23 @@ Integrated cross-section
                 switch['madspin'] = 'OFF'
             
         answers = list(available_mode) + ['auto', 'done']
+        alias = {}
         for id, key in enumerate(switch_order):
             if switch[key] != void:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
+                #allow lower case for on/off
+                alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
+                                   for s in allowed_switch_value[key]))
         answers += special_values
         
         def create_question(switch):
-            switch_format = " %i %-50s %10s=%s\n"
-            question = "The following switches determine which programs are run:\n"
+            switch_format = " %i %-60s %12s=%s\n"
+            question = "The following switches determine which operations are executed:\n"
             for id, key in enumerate(switch_order):
                 question += switch_format % (id+1, description[key], key, switch[key])
-            question += 'Type the number before the switch to change its setting or set the switches explicitly (e.g. \'order=LO\').\n'
-            question += 'Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
+            question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
+            question += '  or set any switch explicitly (e.g. type \'order=LO\' at the prompt)\n'
+            question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
             return question
 
         if not self.force:
@@ -2625,7 +2631,7 @@ Integrated cross-section
                 if mode:
                     answer = mode
                 else:
-                    answer = self.ask(question, '0', answers)
+                    answer = self.ask(question, '0', answers, alias=alias)
                 if answer.isdigit() and answer != '0':
                     key = switch_order[int(answer) - 1]
                     opt1 = allowed_switch_value[key][0]
@@ -2634,7 +2640,6 @@ Integrated cross-section
                 if '=' in answer:
                     key, status = answer.split('=')
                     switch[key] = status
-                    print switch
                     if (key, status) in force_switch:
                         for key2, status2 in force_switch[(key, status)].items():
                             if switch[key2] not in  [status2, void]:

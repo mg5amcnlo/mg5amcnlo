@@ -3424,8 +3424,9 @@ calculator."""
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])
-                    question += 'Type the number before the switch to change its setting or set the switches explicitly (e.g. \'pythia=ON\').\n'
-                    question += 'Type \'0\', \'auto\', \'done\' or just press enter when you are done.'
+                    question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
+                    question += '  or set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
+                    question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
                     answer = self.ask(question, '0', options)
                 if answer.isdigit() and answer != '0':
                     key = switch_order[int(answer) - 1]
