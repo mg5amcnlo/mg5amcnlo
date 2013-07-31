@@ -2442,6 +2442,13 @@ class decay_all_events:
             self.pid2massvar[int(part['pdg_code'])]=part['mass']    
             self.pid2widthvar[int(part['pdg_code'])]=part['width']    
 
+        # load the Monte Carlo masses
+        self.MC_masses=self.get_MC_masses()
+
+#        logger.info('Value of the Monte Carlo masses: ')
+#        logger.info(self.MC_masses)
+
+
         # dictionary pid > color_rep
         self.pid2color = pid2color(self.model)
 
@@ -2499,6 +2506,26 @@ class decay_all_events:
 
 
         self.compile()
+        
+    def get_MC_masses(self):
+        
+        MC_masses={}
+        pid_heavyquarks=[4,5]
+        if 'montecarlomasses' in self.banner:
+            
+            MC_masses_lines=self.banner['montecarlomasses'].split('\n')
+            for line in MC_masses_lines:
+                pidvalue=line.split()
+                if len(pidvalue)<2: continue # skip blank lines
+                pid=abs(int(pidvalue[0]))
+                value=float(pidvalue[1])
+                MC_masses[pid]=value
+                if pid in pid_heavyquarks:
+                    value_ME=self.banner.get('param_card','mass', pid).value
+                    if value_ME>1E-10: MC_masses[pid]=value_ME
+            
+        return MC_masses 
+
         
     def run(self):
         """Running the full code""" 
@@ -2589,13 +2616,28 @@ class decay_all_events:
                     logger.info('Event nb %s %s' % (event_nb, running_time))
                 if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
+            indices_for_mc_masses, values_for_mc_masses=self.get_montecarlo_masses_from_event(decay['decay_struct'], event_map, decay['prod2full'])
+            nb_mc_masses=len(indices_for_mc_masses)
+            #print indices_for_mc_masses
+            #print values_for_mc_masses
+
             p, p_str=self.curr_event.give_momenta(event_map)
             stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay['max_weight'])
             stdin_text+=p_str
+            # here I also need to specify the Monte Carlo Masses
+            stdin_text+=" %s \n" % nb_mc_masses
+            if  nb_mc_masses>0:
+                stdin_text+='%s  \n' % str(indices_for_mc_masses).strip('[]').replace(',', ' ')
+                stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
+            #print stdin_text
+            #print ' '
+            
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed = self.loadfortran( 'unweighting', decay['path'], stdin_text)
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay['path'], stdin_text)
             #logger.debug('Nb failures %s ', failed)
             # next: need to fill all intermediate momenta
+            #print indices_for_mc_masses
+            #print values_for_mc_masses
             
             ext_mom=self.get_mom(momenta)
             # fill all momenta in the decay branches
@@ -2606,7 +2648,8 @@ class decay_all_events:
             self.curr_event.reset_resonances()
             
             #
-            decayed_event = self.decay_one_event_new(self.curr_event,decay['decay_struct'], event_map, momenta_in_decay)
+            decayed_event = self.decay_one_event_new(self.curr_event,decay['decay_struct'],\
+                                                      event_map, momenta_in_decay,use_mc_masses)
             
             
             #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
@@ -3597,8 +3640,9 @@ class decay_all_events:
             BWvalue= float(firstline[2])
             weight= float(firstline[3])
             failed= float(firstline[4])
+            use_mc_masses=int(firstline[5])
             momenta=[external.stdout.readline() for i in range(nexternal)]
-            return trials, BWvalue, weight, momenta, failed
+            return trials, BWvalue, weight, momenta, failed, use_mc_masses
 
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
@@ -4015,7 +4059,57 @@ class decay_all_events:
         decayed_event.nexternal=part_number        
         return decayed_event, weight        
 
-    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay):
+    def get_montecarlo_masses_from_event(self,decay_struct, event_map, map_prod2full):
+        """
+            from the production event curr_event and from the decay channel 'decay_struct'
+            (which has just been selected randomly), get the MonteCarlo masses
+        """
+        
+        # in order to preserve the natural order in lhe file,
+        # we need the inverse of the dico event_map
+        inv_event_map={}
+        for i in event_map.keys():
+            inv_event_map[event_map[i]]=i
+        
+        indices_for_mc_masses=[]
+        values_for_mc_masses=[]
+        
+        for index in self.curr_event.event2mg.keys():
+            if self.curr_event.event2mg[index]>0: # no need to consider resonances in the production event file
+                part=inv_event_map[self.curr_event.event2mg[index]-1]+1 # index for prod. matrix element
+                part_for_curr_evt=self.curr_event.event2mg[index]       # index for event file
+                
+                if part not in decay_struct:
+                    # get the pid
+                    curr_pid=abs(self.curr_event.particle[part_for_curr_evt]['pid'])
+                    if curr_pid in self.MC_masses:
+                        #print part
+                        #print map_prod2full
+                        indices_for_mc_masses.append(map_prod2full[part-1])
+                        values_for_mc_masses.append(self.MC_masses[curr_pid])
+                    
+                else:
+                    # now we need to write the decay products in the event
+                    # follow the decay chain order, so that we can easily keep track of the mother index                                           
+                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
+                        index_d1=decay_struct[part]['mg_tree'][-res-1][1]
+                        index_d2=decay_struct[part]['mg_tree'][-res-1][2]
+                        
+                        pid_d1=abs(decay_struct[part]\
+                                    ["tree"][res]["d1"]["label"])
+                        pid_d2=abs(decay_struct[part]\
+                                    ["tree"][res]["d2"]["label"])
+                        if index_d1 >0 and pid_d1 in self.MC_masses:
+                            indices_for_mc_masses.append(index_d1)
+                            values_for_mc_masses.append(self.MC_masses[pid_d1])
+
+                        if index_d2 >0 and pid_d2 in self.MC_masses:
+                            indices_for_mc_masses.append(index_d2)
+                            values_for_mc_masses.append(self.MC_masses[pid_d2])
+
+        return indices_for_mc_masses,values_for_mc_masses
+
+    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay, use_mc_masses):
         """Write down the event 
            momenta is the list of momenta ordered according to the productin ME
         """
@@ -4176,12 +4270,16 @@ class decay_all_events:
                         if ( indexd1>0):
                             istup=1
                             external+=1
+                            if not use_mc_masses or abs(pid) not in self.MC_masses:
+                                mass=self.banner.get('param_card','mass', abs(pid)).value
+                            else:
+                                mass=self.MC_masses[abs(pid)]
                         else:
                             decay_struct[part]["tree"][indexd1]["colup1"]=d1colup1
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
-                            istup=2
-                    
-                        mass=mom.m
+                            istup=2                    
+                            mass=mom.m
+                        
                         helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
@@ -4202,14 +4300,19 @@ class decay_all_events:
                         if ( indexd2>0):
                             istup=1
                             external+=1
+                            if not use_mc_masses or abs(pid) not in self.MC_masses:
+                                mass=self.banner.get('param_card','mass', abs(pid)).value
+                            else:
+                                mass=self.MC_masses[abs(pid)]
                         else:
                             istup=2
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
+                            mass=mom.m
+
 
                         mothup1=part_number-2
                         mothup2=part_number-2
-                        mass=mom.m
                         helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\

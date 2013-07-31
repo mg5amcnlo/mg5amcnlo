@@ -16,7 +16,7 @@ C     LOCAL
 C     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL_PROD) 
-      REAL*8 PFULL(0:3,NEXTERNAL) 
+      REAL*8 PFULL(0:3,NEXTERNAL), Ptrial(0:3,NEXTERNAL) 
       double precision x(36), Ecollider
       CHARACTER*120 BUFF(NEXTERNAL_PROD)
       integer iforest(2,-nexternal:-1,N_MAX_CG)
@@ -37,6 +37,8 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision mean, variance, maxweight,weight,std
       double precision temp
       double precision Pprod(0:3,nexternal_prod)
+      integer nb_mc_masses, indices_mc_masses(nexternal)
+      double precision values_mc_masses(nexternal)
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -61,6 +63,13 @@ c Conflicting BW stuff
       DOUBLE PRECISION AMP2(n_max_cg)
       COMMON/TO_AMPS/  AMP2
 
+       ! variables associate with the PS generation
+       double precision totmassin, totmass
+       double precision shat, sqrtshat, stot, y, m(-nexternal:nexternal)
+       integer nbranch, ns_channel,nt_channel, pos_pz
+       common /to_topo/
+     & totmassin, totmass,shat, sqrtshat, stot,y, m,
+     & nbranch, ns_channel,nt_channel, pos_pz
 
       call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
                                   ! numbers at the position reached 
@@ -101,7 +110,13 @@ c      enddo
          read (*,*) P(0,i),P(1,i),P(2,i),P(3,i) 
       enddo
 
-
+      if (mode.eq.2) then   
+        read(*,*) nb_mc_masses
+        if (nb_mc_masses.gt.0) then
+            read (*,*) (indices_mc_masses(k), k=1,nb_mc_masses)
+            read (*,*) (values_mc_masses(k), k=1,nb_mc_masses)
+        endif
+      endif
 c      write(*,*) sqrt(dot(P(0,3),P(0,3)))
 c      write(*,*) sqrt(dot(P(0,4),P(0,4)))
 c      write(*,*) dot(P(0,5),P(0,5))
@@ -309,10 +324,33 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            if (M_full*jac/M_prod.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
         enddo
 
-        write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2
-        do i=1,nexternal
-           write (*,*) (pfull(j,i), j=0,3)  
-        enddo
+
+
+        if (nb_mc_masses.gt.0) then 
+
+          no_gen=.True.
+          do k=1,nb_mc_masses
+             m(indices_mc_masses(k))=values_mc_masses(k)
+          enddo
+          call generate_momenta_conf(jac,x,itree,qmass,qwidth,ptrial,pprod,map_external2res) 
+          
+          if (jac.lt.0d0) then
+            write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 0
+            do i=1,nexternal
+               write (*,*) (pfull(j,i), j=0,3)  
+            enddo
+          else
+            write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 1
+            do i=1,nexternal
+              write (*,*) (ptrial(j,i), j=0,3)  
+            enddo
+          endif
+        else
+          write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 0
+          do i=1,nexternal
+            write (*,*) (pfull(j,i), j=0,3)  
+          enddo
+        endif
 
         call flush()
         goto 1
@@ -958,7 +996,7 @@ c         write(*,*) m(itree(1,i))
 c         write(*,*) m(itree(2,i))
 c         write(*,*)  xa2, xb2
 
-         if (.not.keep_inv(i)) then 
+         if (.not.keep_inv(i).and..not.no_gen) then 
            xpswgt0 = xpswgt0*.5D0*PI*SQRT(LAMBDA(ONE,XA2,XB2))/(4.D0*PI)
          endif
 c         write(*,*)  xpswgt0
@@ -1178,7 +1216,7 @@ c     fill masses, update totalmass
 c
 503      continue
          m(i) = sqrt(s(i))
-         if (.not.keep_inv(i)) then
+         if (.not.keep_inv(i).and..not.no_gen) then
            BWshift=abs(m(i)-qmass(i))/qwidth(i)
            if (BWshift.gt.maxBW) maxBW=BWshift
          endif
@@ -1325,7 +1363,7 @@ c
             pass=.false.
             return
          endif
-         if (.not.keep_inv(ibranch)) then
+         if (.not.keep_inv(ibranch).and..not.no_gen) then
          xpswgt0 = xpswgt0/(4d0*dsqrt(lambda(s1,ma2,mbq)))
          endif
       enddo
