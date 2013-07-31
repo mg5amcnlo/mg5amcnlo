@@ -1,5 +1,4 @@
 include ../../Source/make_opts
-include ../../Source/fj_lhapdf_opts
 
 LIBDIR = ../../lib/
 

@@ -1,13 +1,15 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta4 (29.04.13) VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
+2.0.0.beta4(xx/xx/xx) OM: Merge with 1.5.9 (See informtation below)
+                      VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
-                       VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
-		       RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
+                      VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
+		      RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
                            only). Turned off by default.
-		       VH+RF: Added MadLoop stability information to the log files (and run summary
+		      VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
-                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
+                      RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
+                      OM+SF+RF: Add Frixione Jet isolation
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
@@ -44,7 +46,48 @@ Update notes for MadGraph 5 (in reverse time order)
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
 
-1.5.8 (26/02/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
+1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
+                      give the wrong propagators included in event files for certain
+                      processes (such as p p > z z j, z > l+ l-). Apart from the 
+                      propagators (with status 2) in the event file, this bug didn't
+                      affect any other results (such as distributions).
+                  JA: Fix problem in gensym which made some decay chain processes
+                      slower than they should be. Thanks Eric Mintun for reporting.
+                  JA: Fix problem in event clustering (introduced in v. 1.5.8)
+                      which made events from some processes fail Pythia running.
+                  JA: Fixed bug #1156474, Pythia 8 C++ matrix element output for 
+                      decay chain processes such as p p > z j, z > j j.
+                      (Bug #1156474)
+                  JA + OM: Automatically remove libpdf and libgeneric before survey,
+                      so everything works automatically when switching between
+                      built-in PDFs and LHAPDF.
+                  JA: Allow syntax / to remove particles in the define command.
+                      Example: define q = p / g
+                  JA: Added fat warning if any decay process in a decay chain
+                      includes a particle decaying to itself (as is the case
+                      if you do w+ > all all, since you include w+ > w+ a).
+                  JA: Forbid running newprocess_mg5 from a process directory
+                      that has already been generated, to avoid confusion.
+                  OM: Fix lxplus server issue (Bug #1159929)
+                  OM: Fix an issue when MG5 directory is on a read only disk 
+                      (Bug #1160629)
+                  OM: Fix a bug which prevent to have the pythia matching plot/cross-section
+                      in some particular case.
+                  OM: Support of new UFO convention allowing to define custom propagator.
+                      (Both in MG5 and ALOHA)
+                  OM: Change ALOHA default propagator to have a specific expression for the
+                      massless case allowing to speed up matrix element computation with 
+                      photon/gluon.
+                  OM: Correct the default spin 3/2 propagator (wrong incoming/outcoming 
+                      definition)
+                  ML (by OM): Adding support of the SLURM cluster. Thanks to 
+                      Matthew Low for the implementation.
+                  OM: Fixing the standalone_cpp output for the mssm model. (only model impacted)
+                      Thanks to Silvan S Kuttimalai for reporting. 
+                  OM: Fix Bug #1162512: Wrong line splitting in cpp when some name were very long.
+                      (shorten the name + fix the splitting)
+
+1.5.8 (05/03/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
                       (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
                       have such type of expression. More information in bug report #1132996

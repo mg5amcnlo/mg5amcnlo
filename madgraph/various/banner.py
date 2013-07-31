@@ -156,6 +156,26 @@ class Banner(dict):
             ff.close()
 
     ############################################################################
+    #  SPLIT BANNER
+    ############################################################################
+    def charge_card(self, tag):
+        """Build the python object associated to the card"""
+        
+        if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        
+        assert tag in ['mgruncard'], 'invalid card %s' % tag
+        
+        if tag == 'mgruncard':
+            run_card = self[tag].split('\n') 
+            self.run_card = RunCard(run_card)
+            return self.run_card
+
+    ############################################################################
     #  WRITE BANNER
     ############################################################################
     def check_pid(self, pid2label):
@@ -321,22 +341,27 @@ def split_banner(banner_path, me_dir, proc_card=True):
     banner = Banner(banner_path)
     banner.split(me_dir, proc_card)
     
-def recover_banner(results_object, level):
+def recover_banner(results_object, level, run=None, tag=None):
     """as input we receive a gen_crossxhtml.AllResults object.
        This define the current banner and load it
     """
-    try:  
-        run = results_object.current['run_name']    
-        tag = results_object.current['tag'] 
-    except Exception:
-        return Banner()                                  
+    
+    if not run:
+        try:    
+            tag = results_object.current['tag'] 
+        except Exception:
+            return Banner()
+    if not tag:
+        try:    
+            tag = results_object[run].tags[-1] 
+        except Exception,error:
+            return Banner()                                        
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
-    
     banner = Banner(banner_path)
     
     
@@ -436,6 +461,20 @@ class RunCard(dict):
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################
+        # Frixione photon isolation
+        self.add_line('ptgmin', 'float', 0.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
+        # Cut that need to be deactivated in presence of isolation
+        if 'ptgmin' in self and float(self['ptgmin'])>0:
+            if float(self['pta']) > 0:
+                logger.warning('pta cut discarded since photon isolation is used')
+                self['pta'] = '0'
+            if float(self['draj']) > 0:
+                logger.warning('draj cut discarded since photon isolation is used')
+                self['draj'] = '0' 
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
@@ -479,7 +518,7 @@ class RunCard(dict):
         self.add_line('drbb', 'float', 0.4)     
         self.add_line('drll', 'float', 0.4)     
         self.add_line('draa', 'float', 0.4)     
-        self.add_line('drbj', 'float', 0.4)     
+        self.add_line('drbj', 'float', 0.4)  
         self.add_line('draj', 'float', 0.4)     
         self.add_line('drjl', 'float', 0.4)     
         self.add_line('drab', 'float', 0.4)     
@@ -556,6 +595,8 @@ class RunCard(dict):
         self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
+        
+        
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
@@ -682,6 +723,12 @@ class RunCardNLO(RunCard):
         self.add_line('ebeam2', 'float', 4000, fortran_name='ebeam(2)')
         # BW cutoff (M+/-bwcutoff*Gamma)
         self.add_line('bwcutoff', 'float', 15.0)
+        # Photon isolation
+        self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
         if self['pdlabel'] == 'lhapdf':
