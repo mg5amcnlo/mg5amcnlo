@@ -45,6 +45,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         """Default values for all properties"""
         super(FKSMultiProcess, self).default_setup()
         self['born_processes'] = FKSProcessList()
+
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
@@ -232,7 +233,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         This is needed for consistent subtraction of QED/mixed singularities
         """
         pdg_list = []
-        new_borns = []
+        new_borns = FKSProcessList()
         for this in self['born_processes']:
             try:
                 other = new_borns[pdg_list.index(this.get_pdg_codes_ag())]
@@ -492,6 +493,18 @@ class FKSProcess(object):
         for each amp in born_amp list"""
         return [[len(amp['process']['legs'])] for \
                     amp in self.born_amp_list]
+
+
+    def get_born_nice_string(self):
+        """Return the nice string for the born process.
+        If there is only one amplitude, return its nice string
+        else (if there are many with g <-> a identified) replace
+        g / a by V
+        """
+        string = self.born_amp_list[0]['process'].nice_string()
+        if len(self.born_amp_list) > 1:
+            string.replace('a', 'V').replace('g', 'V')
+        return string
 
 
     def get_pdg_codes(self):

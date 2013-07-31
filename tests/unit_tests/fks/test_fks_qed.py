@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 import tests.unit_tests as unittest
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
+import madgraph.fks.fks_helas_objects as fks_helas_objects
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
@@ -36,8 +37,8 @@ class TestFKSQED(unittest.TestCase):
     """a class to test FKS Processes, with QED perturbation"""
 
     def setUp(self):
+        # the model
         if not hasattr(self, 'mymodel'):
-            created_files = ['test']
             TestFKSQED.mymodel = import_ufo.import_model('sm')
             #remove third and fourth generation of quarks, and the muon
             particles_to_rm = [3, 4, 13]
@@ -49,29 +50,59 @@ class TestFKSQED(unittest.TestCase):
                 for vert in bad_vertices:
                     TestFKSQED.mymodel['interactions'].remove(vert)
 
+        # a partonic process
+        if not hasattr(self, 'fksmultiproc_qqqq'):
+            leglist = MG.MultiLegList()
+            leglist.append(MG.MultiLeg({'ids': [1], 'state': False}))
+            leglist.append(MG.MultiLeg({'ids': [-1], 'state': False}))
+            leglist.append(MG.MultiLeg({'ids': [2], 'state': True}))
+            leglist.append(MG.MultiLeg({'ids': [-2], 'state': True}))
+
+            procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':2},
+                           'model': self.mymodel,
+                           'id': 1,
+                           'NLO_mode': 'real',
+                           'required_s_channels':[],
+                           'forbidden_s_channels':[],
+                           'forbidden_particles':[],
+                           'is_decay_chain': False,
+                           'perturbation_couplings':['QED'],
+                           'decay_chains': MG.ProcessList(),
+                           'overall_orders': {},
+                           'born_orders':{'QCD':2, 'QED':2}}
+
+            TestFKSQED.fksmultiproc_qqqq = \
+                    fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
+
+        #dijet production
+        if not hasattr(self, 'fksmultiproc_ppjj'):
+            multi_ids = [1, -1, 2, -2, 22, 21]
+            p = MG.MultiLeg({'ids': multi_ids, 'state': False})
+            j = MG.MultiLeg({'ids': multi_ids, 'state': True})
+            leglist = MG.MultiLegList([p, p, j, j])
+
+            procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':1},
+                           'model': self.mymodel,
+                           'id': 1,
+                           'NLO_mode': 'real',
+                           'required_s_channels':[],
+                           'forbidden_s_channels':[],
+                           'forbidden_particles':[],
+                           'is_decay_chain': False,
+                           'perturbation_couplings':['QED'],
+                           'decay_chains': MG.ProcessList(),
+                           'overall_orders': {},
+                           'squared_orders': {'QCD':4, 'QED':2},
+                           'born_orders':{'QCD':2, 'QED':0}}
+             
+            TestFKSQED.fksmultiproc_ppjj = \
+                    fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
+
 
     def test_qqtoqqQed(self):
         """test the dijet QED corrections for a subprocess"""
-        leglist = MG.MultiLegList()
-        leglist.append(MG.MultiLeg({'ids': [1], 'state': False}))
-        leglist.append(MG.MultiLeg({'ids': [-1], 'state': False}))
-        leglist.append(MG.MultiLeg({'ids': [2], 'state': True}))
-        leglist.append(MG.MultiLeg({'ids': [-2], 'state': True}))
 
-        procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':2},
-                       'model': self.mymodel,
-                       'id': 1,
-                       'NLO_mode': 'real',
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings':['QED'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {},
-                       'born_orders':{'QCD':2, 'QED':2}}
-
-        fksmultiproc = fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
+        fksmultiproc = self.fksmultiproc_qqqq
         fksproc = fksmultiproc['born_processes'][0]
         # check perturbation
      #   self.assertEqual(fksproc.perturbation, 'QED')
@@ -98,28 +129,9 @@ class TestFKSQED(unittest.TestCase):
         
 
     def test_pptojj_2flav(self):
-        """test the dijet QED corrections for dijet production"""
+        """test QED corrections for dijet production"""
 
-        multi_ids = [1, -1, 2, -2, 22, 21]
-        p = MG.MultiLeg({'ids': multi_ids, 'state': False})
-        j = MG.MultiLeg({'ids': multi_ids, 'state': True})
-        leglist = MG.MultiLegList([p, p, j, j])
-
-        procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':1},
-                       'model': self.mymodel,
-                       'id': 1,
-                       'NLO_mode': 'real',
-                       'required_s_channels':[],
-                       'forbidden_s_channels':[],
-                       'forbidden_particles':[],
-                       'is_decay_chain': False,
-                       'perturbation_couplings':['QED'],
-                       'decay_chains': MG.ProcessList(),
-                       'overall_orders': {},
-                       'squared_orders': {'QCD':4, 'QED':2},
-                       'born_orders':{'QCD':2, 'QED':0}}
-         
-        fksmultiproc = fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
+        fksmultiproc = self.fksmultiproc_ppjj
         #check that the correct orders are set for the real amplitudes
         print len(fksmultiproc['born_processes'])
         born_pdg_list = [amp.get_pdg_codes() for amp in fksmultiproc['born_processes']]
@@ -128,10 +140,6 @@ class TestFKSQED(unittest.TestCase):
 
         #there should be 35 born processes
         self.assertEqual(len(fksmultiproc['born_processes']), 35)
-
-###        for amp in fksmultiproc['real_amplitudes']:
-         ###   print [l['id'] for l in amp['process']['legs']], len(amp['diagrams']), amp['process']['orders']
-#            self.assertTrue(len(amp['diagrams']) > 0)
 
         for born in fksmultiproc['born_processes']:
             for real in born.real_amps:
@@ -153,6 +161,26 @@ class TestFKSQED(unittest.TestCase):
                     self.assertEqual(len(real.amplitude['diagrams']), 0)
                 else:
                     self.assertNotEqual(len(real.amplitude['diagrams']), 0)
+
+
+    def test_pptojj_2flav_helas(self):
+        """test the creation of the FKSHelasMultiProcess for dijet QED corrections"""
+        print type(self.fksmultiproc_ppjj['born_processes'])
+        helasmultiproc = fks_helas_objects.FKSHelasMultiProcess(self.fksmultiproc_ppjj)
+
+
+    def test_qqtoqq_helas(self):
+        """test the creation of the FKSHelasMultiProcess for dijet QED corrections"""
+        print type(self.fksmultiproc_ppjj['born_processes'])
+        helasmultiproc = fks_helas_objects.FKSHelasMultiProcess(self.fksmultiproc_qqqq)
+        # should have only one matrix_element (subprocess)
+        self.assertEqual(len(helasmultiproc['matrix_elements']), 1)
+        # this subprocess should have only one born
+        helasproc = helasmultiproc['matrix_elements'][0]
+        self.assertEqual(len(helasproc.born_me_list), 1)
+        self.assertEqual(len(helasproc.color_links), 1)
+        # there should be 6 color_links
+        self.assertEqual(len(helasproc.color_links[0]), 6)
 
 
                     
