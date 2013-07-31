@@ -236,7 +236,7 @@ class Event:
         line=" %8d %2d %4d %4d %4d %4d %+13.7e %+13.7e %+13.7e %14.8e %14.8e %10.4e %10.4e" \
             % (leg["pid"], leg["istup"],leg["mothup1"],leg["mothup2"],\
                leg["colup1"],leg["colup2"],leg["momentum"].px,leg["momentum"].py,\
-                leg["momentum"].pz,leg["momentum"].E, leg["momentum"].m,\
+                leg["momentum"].pz,leg["momentum"].E, leg["mass"],\
                  0.0,float(leg["helicity"]) )
         line+="\n"
         return line
@@ -2596,6 +2596,7 @@ class decay_all_events:
         nb_skip = 0 
         trial_nb_all_events=0
         starttime = time.time()
+        nb_fail_mc_mass=0
         while 1: # loop on event file
             production_tag, event_map = self.load_event()
             if production_tag == 0 == event_map: #end of file
@@ -2638,12 +2639,14 @@ class decay_all_events:
             # next: need to fill all intermediate momenta
             #print indices_for_mc_masses
             #print values_for_mc_masses
+            if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
             ext_mom=self.get_mom(momenta)
             # fill all momenta in the decay branches
             momenta_in_decay=self.get_int_mom_in_decay(decay['decay_struct'],ext_mom)
             # reset extrenal momenta in the production event
-            self.reset_mom_in_prod_event(decay['decay_struct'],decay['prod2full'],event_map,momenta_in_decay,ext_mom)
+            self.reset_mom_in_prod_event(decay['decay_struct'],decay['prod2full'],\
+                                         event_map,momenta_in_decay,ext_mom, use_mc_masses)
             # reset intermediate momenta in prod event
             self.curr_event.reset_resonances()
             
@@ -2783,6 +2786,7 @@ class decay_all_events:
         logger.info('Branching ratio to allowed decays: %g' % self.branching_ratio)
         logger.info('Number of events with weights larger than max_weight: %s' % report['over_weight'])
         logger.info('Number of subprocesses '+str(len(self.calculator)))
+        logger.info('Number of failures when restoring the Monte Carlo masses: %s ' % nb_fail_mc_mass)
         
         return  event_nb/(event_nb+nb_skip)       
 
@@ -2804,7 +2808,7 @@ class decay_all_events:
                 
         return momenta_in_decay
     
-    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom):
+    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom,use_mc_masses):
 
         """ Reset the external momenta in the production event, since
             the virtuality of decaying particles has slightly changed the kinematics
@@ -2814,12 +2818,17 @@ class decay_all_events:
             if self.curr_event.event2mg[index]>0:
                 part=self.curr_event.event2mg[index]       # index for production ME
                 part_for_curr_evt=event_map[part-1]+1 # index for curr event
+                pid=self.curr_event.particle[part_for_curr_evt]['pid']
                 if part in decay_struct:
                     id_res=decay_struct[part]['mg_tree'][0][0]
                     self.curr_event.particle[part_for_curr_evt]['momentum']=momenta_in_decay[id_res].copy()
+                    self.curr_event.particle[part_for_curr_evt]['mass']=self.curr_event.particle[part_for_curr_evt]['momentum'].m
                 else:
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
-                
+                    if not use_mc_masses or abs(pid) not in self.MC_masses:
+                        self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                    else:
+                        self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
 
     def get_mom(self,momenta):
