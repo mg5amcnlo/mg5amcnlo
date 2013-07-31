@@ -1260,7 +1260,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                              '%(LoopSymmetryFactor)d','%(amp_number)d,H)']
                 res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
-                  'loop_rank':lamp.get_rank(),
+                  'loop_rank':lamp.get_analytic_info('wavefunction_rank'),
                   'lcut_size':lamp.get_lcut_size(),
                   'loop_number':lamp.get('number'),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
@@ -1279,9 +1279,9 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                                 '%(new_rank)d)']
                     coef_merge.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
-                      'ref_rank':refamp.get_rank(),
+                      'ref_rank':refamp.get_analytic_info('wavefunction_rank'),
                       'new_number':lamp.get('number'),
-                      'new_rank':lamp.get_rank()})
+                      'new_rank':lamp.get_analytic_info('wavefunction_rank')})
         return res, coef_merge
 
     def get_loop_CT_calls(self, matrix_element, group_loops=False):
