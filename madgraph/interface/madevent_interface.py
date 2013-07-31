@@ -2474,6 +2474,7 @@ calculator."""
             raise self.ConfigurationError, '''Can\'t load Reweight module.
             The variable mg5_path might not be correctly configured.'''
         
+        self.to_store.append('event')
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
@@ -2880,10 +2881,19 @@ calculator."""
         
         self.results.save()
         
+        
         if not self.to_store:
             return 
         
         tag = self.run_card['run_tag']
+        self.update_status('storring files of Previous run', level=None,\
+                                                     error=True)
+        if 'event' in self.to_store:
+            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
+                os.system('gzip -f %s/unweighted_events.lhe' % \
+                                     pjoin(self.me_dir,'Events',self.run_name) )                
+            
+        
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
             os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
@@ -2892,7 +2902,7 @@ calculator."""
             os.system('gzip -f %s/%s_pythia_events.hep' % ( 
                                 pjoin(self.me_dir,'Events',self.run_name), tag))
             self.to_store.remove('pythia')
-            self.update_status('Done', level='pythia',makehtml=False,error=True)
+        self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
             

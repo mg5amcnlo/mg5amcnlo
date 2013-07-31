@@ -330,10 +330,10 @@ class ParamCard(dict):
                 lhacode = param.lhacode
                 value = param.value
                 new_value = new_card[blockname].get(lhacode).value
-                if not misc.equal(value, new_value, 7):
+                if not misc.equal(value, new_value, 6):
                     lhacode = ' '.join([str(i) for i in lhacode])
-                    diff += 'set param_card %s %s %s \n' % \
-                                       (blockname, lhacode , new_value)
+                    diff += 'set param_card %s %s %s # orig: %s\n' % \
+                                       (blockname, lhacode , new_value, value)
         return diff 
                 
         

@@ -704,11 +704,15 @@ def sprint(*args, **opt):
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
-def equal(a,b,sig_fig=7):
+def equal(a,b,sig_fig=6):
     """function to check if two float are approximatively equal"""
-    
+    import math
+    if a:
+        power = sig_fig - int(math.log10(a))
+    else:
+        power = sig_fig
     return ( a==b or 
-             int(a*10**sig_fig) == int(b*10**sig_fig)
+             int(a*10**power) == int(b*10**power)
            )
 ################################################################################
 # class to change directory with the "with statement"

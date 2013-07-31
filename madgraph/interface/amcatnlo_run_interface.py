@@ -2652,32 +2652,32 @@ Integrated cross-section
                     logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
                     if answer == 'LO':
                         switch['order'] = 'LO'
-                        switch['fix_order'] = 'ON'
+                        switch['fixed_order'] = 'ON'
                         assign_switch('shower', 'OFF')
                         assign_switch('madspin', 'OFF')
                     elif answer == 'NLO':
                         switch['order'] = 'NLO'
-                        switch['fix_order'] = 'ON'
+                        switch['fixed_order'] = 'ON'
                         assign_switch('shower', 'OFF')
                         assign_switch('madspin', 'OFF')
                     elif answer == 'aMC@NLO':
                         switch['order'] = 'NLO'
-                        switch['fix_order'] = 'OFF'
+                        switch['fixed_order'] = 'OFF'
                         assign_switch('shower', 'ON')
                         assign_switch('madspin', 'OFF')
                     elif answer == 'aMC@LO':
                         switch['order'] = 'LO'
-                        switch['fix_order'] = 'OFF'
+                        switch['fixed_order'] = 'OFF'
                         assign_switch('shower', 'ON')
                         assign_switch('madspin', 'OFF')
                     elif answer == 'noshower':
                         switch['order'] = 'NLO'
-                        switch['fix_order'] = 'OFF'
+                        switch['fixed_order'] = 'OFF'
                         assign_switch('shower', 'OFF')
                         assign_switch('madspin', 'OFF')                                                    
                     elif answer == 'noshowerLO':
                         switch['order'] = 'LO'
-                        switch['fix_order'] = 'OFF'
+                        switch['fixed_order'] = 'OFF'
                         assign_switch('shower', 'OFF')
                         assign_switch('madspin', 'OFF')
                     if mode:
@@ -2688,14 +2688,14 @@ Integrated cross-section
             if switch['order'] == 'LO':
                 if switch['shower'] == 'ON':
                     mode = 'aMC@LO'
-                elif switch['fix_order'] == 'ON':
+                elif switch['fixed_order'] == 'ON':
                     mode = 'LO'
                 else:
                     mode =  'noshowerLO'
             elif switch['order'] == 'NLO':
                 if switch['shower'] == 'ON':
                     mode = 'aMC@NLO'
-                elif switch['fix_order'] == 'ON':
+                elif switch['fixed_order'] == 'ON':
                     mode = 'NLO'
                 else:
                     mode =  'noshower'  

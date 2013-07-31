@@ -32,3 +32,8 @@ class TEST_misc(unittest.TestCase):
         self.assertFalse(eq(1,-1.0))
         self.assertTrue(eq(0 ,0e-5))
         
+        self.assertTrue(eq(100,1e2))
+        self.assertTrue(eq(100,1e2 + 1e-6))
+        self.assertFalse(eq(100,1e2 + 1e-4))
+        self.assertTrue(eq(80.419, 80.419002))
+        
