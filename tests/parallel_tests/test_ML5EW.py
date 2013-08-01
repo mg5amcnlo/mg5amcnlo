@@ -48,7 +48,8 @@ HCR_processes_long =  [
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
                        ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
-                       ('u u~ > g a',{},['QCD QED'],{})]
+                       ('u u~ > g a',{},['QCD QED'],{}),
+                       ('g g > h h',{},['QCD'],{})]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                for elem in HCR_processes_long)
@@ -74,7 +75,8 @@ ML5EW_processes_long =  [
                        ('g g > t t~ h',{'QCD':2,'QED':1},['QED'],{'QCD':4,'QED':4}),
                        ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
-                       ('u u~ > g a',{},['QCD QED'],{})]
+                       ('u u~ > g a',{},['QCD QED'],{}),
+                         ('g g > h h',{},['QCD'],{})]
 
 ML5EW_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                 for elem in ML5EW_processes_long)
@@ -110,7 +112,7 @@ class ML5EWTest(unittest.TestCase):
         
     def compare_processes(self, my_proc_list = [], model = 'loop_qcd_qed_sm-parallel_test',
             pickle_file = "", energy = 2000, tolerance = 3e-06, filename = "",
-            chosen_runner = "ML5_opt"):
+            chosen_runner = "ML5_opt",loop_induce = False):
         """ A helper function to compare processes. 
         Note that the chosen_runner is what runner should to create the reference
         pickle if missing"""
@@ -134,8 +136,10 @@ class ML5EWTest(unittest.TestCase):
             energy = stored_runner.energy
             
         # Create a MERunner object for MadLoop 5 optimized
-        ML5_opt = loop_me_comparator.LoopMG5Runner()
-        ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
+        # Open Loops is not avaiable for loop induced processes
+        if not loop_induce:
+            ML5_opt = loop_me_comparator.LoopMG5Runner()
+            ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
     
         # Create a MERunner object for MadLoop 5 default
         ML5_default = loop_me_comparator.LoopMG5Runner()
@@ -146,10 +150,14 @@ class ML5EWTest(unittest.TestCase):
         
         # Always put the saved run first if you use it, so that the corresponding PS
         # points will be used.
-        if pickle_file != "":
+        if pickle_file != "" and not loop_induce:
             my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
-        else:
+        elif pickle_file !="" and loop_induce:
+            my_comp.set_me_runners(stored_runner,ML5_default)
+        elif pickle_file == "" and not loop_induce:
             my_comp.set_me_runners(ML5_opt,ML5_default)
+        else:
+            raise MadGraph5Error, 'Cannot find pickle_file for loop induced process.'
         
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,
@@ -359,6 +367,15 @@ class ML5EWTest(unittest.TestCase):
                model = self.test_model_name, pickle_file = 'ml5_sm_%s.pkl'%proc,
                                   filename = 'ptest_long_sm_vs_old_ml5_%s_QCD'%proc,
                                                       chosen_runner = 'ML5_opt')
+
+#  test loop induced processes
+#  ('g g > h h',{},['QCD'],{})
+    def test_long_sm_vs_stored_HCR_gg_hh_QCD(self):
+        proc = 'gg_hh_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = True)
 
 
 if '__main__' == __name__:

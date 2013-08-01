@@ -1065,7 +1065,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
            argument.get('is_loop') or \
            (isinstance(argument, helas_objects.HelasAmplitude) and \
            argument.get('type')=='loop')):
-            flag.append("L")
+            flag.insert(0,"L")
 
         # Creating line formatting:
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
@@ -1378,7 +1378,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
-            flag.append("L%d"%argument.get_loop_index())
+            flag.insert(0,"L%d"%argument.get_loop_index())
 
         # Creating line formatting:
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
