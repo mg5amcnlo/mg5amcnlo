@@ -173,11 +173,3 @@ class TestFKSQED(unittest.TestCase):
         self.assertEqual(len(helasproc.color_links[0]), 6)
 
 
-                    
-
-
-        
-
-
-
-

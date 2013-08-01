@@ -300,7 +300,7 @@ class FKSRealProcess(object):
     -- is_to_integrate
     """
     
-    def __init__(self, born_proc, leglist, ij, ij_id, splitting_type,
+    def __init__(self, born_proc, leglist, ij, ij_id, born_pdgs, splitting_type,
                  perturbed_orders = ['QCD']): #test written
         """Initializes the real process based on born_proc and leglist.
         Stores the fks informations into the list of dictionaries fks_infos
@@ -317,13 +317,14 @@ class FKSRealProcess(object):
                 need_charge_links = leg.get('massless') \
                         and leg.get('spin') == 3 \
                         and leg.get('self_antipart') \
-                        and leg.get('charge') == 0
+                        and leg.get('color') == 1
             if leg.get('fks') == 'j':
                 j_fks = leg.get('number')
         self.fks_infos.append({'i': i_fks, 
                                'j': j_fks, 
                                'ij': ij, 
                                'ij_id': ij_id, 
+                               'underlying_born': born_pdgs,
                                'splitting_type': splitting_type,
                                'need_color_links': need_color_links,
                                'need_charge_links': need_charge_links})
@@ -524,6 +525,7 @@ class FKSProcess(object):
         return [[leg.get('id') if leg.get('id') != a_id else g_id for \
                     leg in amp['process']['legs']] for \
                     amp in self.born_amp_list]
+
      
     def get_leglist(self):
         """return the leg list
@@ -638,6 +640,11 @@ class FKSProcess(object):
 
         born_proc = copy.copy(self.born_amp_list[0]['process'])
         born_proc['orders'] = self.orders
+        born_pdgs = self.get_pdg_codes()
+        # safety check
+        if len(born_pdgs) > 1:
+            raise FKSProcessError('generate_reals should be called before ' + \
+                    ' combining born amplitudes')
         leglist = self.get_leglist()[0]
         for i, real_list in enumerate(self.reals):
             # i is a gluon or photon,i.e. g(a) > ffx or gg
@@ -647,6 +654,7 @@ class FKSProcess(object):
                 ij = leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
                         born_proc, real_dict['leglist'], ij, ij_id, \
+                        born_pdgs[0], 
                         real_dict['perturbation'], \
                         perturbed_orders = born_proc['perturbation_couplings']))
         self.find_reals_to_integrate()
