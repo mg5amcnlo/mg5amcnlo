@@ -4,7 +4,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.
                   OM: Add a command print_results in the madevent interface. This command print the 
                       cross-section/number of events/... 
-                  OM: change the way color is handle (no systematic reset). Which provides better
+                  OM: change the way prompt color is handle (no systematic reset). Which provides better
                       result when the log is printed to a file. (thanks Bae Taegil) 
                   OM: Fix Bug #1199514: Wrong assignment of mass in the lhe events file if the initial 
                       state has one massive and one massless particles. (Thanks Wojciech Kotlarski)

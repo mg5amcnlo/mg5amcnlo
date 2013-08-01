@@ -773,27 +773,11 @@ c
       if (nt_channel .gt. 0) then               !t-channel stuff exists
 
       totmass=0d0
-      nb_jet = 0 ! know the number of jet in the t-channel in order to use MMJJ
       do ibranch = -ns_channel-1,-nbranch,-1
-         nb_jet = nb_jet + get_nb_jet_in_decay(itree, itree(2,ibranch))
          totmass=totmass+m(itree(2,ibranch))
       enddo
-
-      if (nb_jet.gt.1) then
-c         write(*,*) 'nb_jet', nb_jet
-         totmass = totmass + sqrt((nb_jet-1)*nb_jet/2d0)* MMJJ * 0.80d0
-      endif
       m(-ns_channel-1) = dsqrt(S(-nbranch))
       do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass
-         nb_jet2 = nb_jet - get_nb_jet_in_decay(itree, itree(2,ibranch))
-c         write(*,*) 'ibranch, nb_jet, nb_jet2', ibranch, nb_jet, nb_jet2,itree(2,ibranch)
-         if (nb_jet.gt.1.and.nb_jet2.ne.nb_jet) then            
-c            write(*,*) 'nb_jet', totmass
-            totmass = totmass - SQRT(nb_jet*(nb_jet -1)/2d0)* MMJJ * 0.80d0
-            totmass = totmass + SQRT((nb_jet2-1)*nb_jet2/2d0)*MMJJ * 0.80d0
-c            write(*,*) 'nb_jet2', nb_jet2, totmass
-            nb_jet = nb_jet2
-         endif 
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2

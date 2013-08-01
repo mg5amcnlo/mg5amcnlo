@@ -63,7 +63,7 @@ combine_events.o: combine_events.f run_config.inc
 select_events.o: select_events.f run_config.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc
 
-run_card.inc:
+run_card.inc: ../Cards/run_card.dat
 	../bin/madevent treatcards run
 
 clean_lhapdf:

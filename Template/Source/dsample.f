@@ -151,6 +151,10 @@ c
 c
 c     All done
 c
+      tmean = 0d0
+      trmean = 0d0
+      tsigma = 0d0
+      tdem = 0d0
       open(unit=66,file='results.dat',status='unknown')
       i=1
       do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
