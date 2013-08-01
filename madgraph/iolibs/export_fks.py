@@ -328,7 +328,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                  path=os.getcwd()):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
-        proc = matrix_element.born_matrix_element['processes'][0]
+        proc = matrix_element.born_me_list[0]['processes'][0]
         
         cwd = os.getcwd()
         try:
@@ -345,7 +345,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.fksdirs = []
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
-        (matrix_element.get('processes')[0].shell_string())
+        (matrix_element.born_me_list[0].get('processes')[0].shell_string())
         os.mkdir(borndir)
         os.chdir(borndir)
         logger.info('Writing files in %s' % borndir)
@@ -725,50 +725,51 @@ end
         be needed by the P* directories"""
         pathdir = os.getcwd()
 
-        filename = 'born.f'
-        calls_born, ncolor_born = \
-            self.write_born_fks(writers.FortranWriter(filename),\
-                             matrix_element,
-                             fortran_model)
+        
+        for i, range(len(matrix_element.born_me_list)):
+            filename = 'born_%d.f' % (i + 1)
+            calls_born, ncolor_born = \
+                self.write_born_fks(writers.FortranWriter(filename),\
+                                 matrix_element, i, fortran_model)
 
 
-        filename = 'born_conf.inc'
-        nconfigs, mapconfigs, s_and_t_channels = \
-                    self.write_configs_file(
-                    writers.FortranWriter(filename),
-                    matrix_element.born_matrix_element, 
-                    fortran_model)
+#        filename = 'born_conf.inc'
+#        nconfigs, mapconfigs, s_and_t_channels = \
+#                    self.write_configs_file(
+#                    writers.FortranWriter(filename),
+#                    matrix_element.born_matrix_element, 
+#                    fortran_model)
 
-        filename = 'born_props.inc'
-        self.write_props_file(writers.FortranWriter(filename),
-                         matrix_element.born_matrix_element,
-                         fortran_model,
-                            s_and_t_channels)
+#        filename = 'born_props.inc'
+#        self.write_props_file(writers.FortranWriter(filename),
+#                         matrix_element.born_matrix_element,
+#                         fortran_model,
+#                            s_and_t_channels)
     
-        filename = 'born_decayBW.inc'
-        self.write_decayBW_file(writers.FortranWriter(filename),
-                            s_and_t_channels)
+#        filename = 'born_decayBW.inc'
+#        self.write_decayBW_file(writers.FortranWriter(filename),
+#                            s_and_t_channels)
 
-        filename = 'born_leshouche.inc'
-        nflows = self.write_leshouche_file(writers.FortranWriter(filename),
-                             matrix_element.born_matrix_element,
-                             fortran_model)
+#        filename = 'born_leshouche.inc'
+#        nflows = self.write_leshouche_file(writers.FortranWriter(filename),
+#                             matrix_element.born_matrix_element,
+#                             fortran_model)
     
-        filename = 'born_nhel.inc'
-        self.write_born_nhel_file(writers.FortranWriter(filename),
-                           matrix_element.born_matrix_element, nflows,
-                           fortran_model,
-                           ncolor_born)
+#        filename = 'born_nhel.inc'
+#        self.write_born_nhel_file(writers.FortranWriter(filename),
+#                           matrix_element.born_matrix_element, nflows,
+#                           fortran_model,
+#                           ncolor_born)
     
-        filename = 'born_ngraphs.inc'
-        self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
+#        filename = 'born_ngraphs.inc'
+#        self.write_ngraphs_file(writers.FortranWriter(filename),
+#                            nconfigs)
 
-        filename = 'coloramps.inc'
-        self.write_coloramps_file(writers.FortranWriter(filename),
-                             mapconfigs,
-                             matrix_element.born_matrix_element,
-                             fortran_model)
+#        filename = 'coloramps.inc'
+#        self.write_coloramps_file(writers.FortranWriter(filename),
+#                             mapconfigs,
+#                             matrix_element.born_matrix_element,
+#                             fortran_model)
         
         #write the sborn_sf.f and the b_sf_files
         filename = ['sborn_sf.f', 'sborn_sf_dum.f']
@@ -948,10 +949,11 @@ NJetSymmetrizeFinal     %(symfin)s\n\
     # write_born_fks
     #===============================================================================
     # test written
-    def write_born_fks(self, writer, fksborn, fortran_model):
-        """Export a matrix element to a born.f file in MadFKS format"""
+    def write_born_fks(self, writer, fksborn, i, fortran_model):
+        """Export a matrix element to a born.f file in MadFKS format for the
+        i-th born matrix element in fksborn"""
 
-        matrix_element = fksborn.born_matrix_element
+        matrix_element = fksborn.born_me_list[i]
         
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1020,15 +1022,15 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         # Extract glu_ij_lines
-        ij_lines = self.get_ij_lines(fksborn)
+        ij_lines = self.get_ij_lines(fksborn, i)
         replace_dict['ij_lines'] = '\n'.join(ij_lines)
 
         # Extract den_factor_lines
-        den_factor_lines = self.get_den_factor_lines(fksborn)
+        den_factor_lines = self.get_den_factor_lines(fksborn, i)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
         # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list(i))
 
         file = open(os.path.join(_file_path, \
                           'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
