@@ -133,21 +133,13 @@ class TestFKSQED(unittest.TestCase):
 
         fksmultiproc = self.fksmultiproc_ppjj
         #check that the correct orders are set for the real amplitudes
-        print len(fksmultiproc['born_processes'])
         born_pdg_list = [amp.get_pdg_codes() for amp in fksmultiproc['born_processes']]
-        for amp in fksmultiproc['born_processes']:
-            print amp.get_pdg_codes()
 
         #there should be 35 born processes
         self.assertEqual(len(fksmultiproc['born_processes']), 35)
 
         for born in fksmultiproc['born_processes']:
             for real in born.real_amps:
-                print real.pdgs
-                print 'orders', real.amplitude['process']['orders']
-                print 'sq_orders', real.amplitude['process']['squared_orders']
-                print 'diagrams', len(real.amplitude['diagrams'])
-                print [[l['id'] for l in born['born_amp']['process']['legs']] for born in real.missing_borns]
                 # check that no missing borns are there
                 self.assertEqual(len(real.missing_borns), 0)
                 # check that reals with 3 or more external gluons,
@@ -165,13 +157,11 @@ class TestFKSQED(unittest.TestCase):
 
     def test_pptojj_2flav_helas(self):
         """test the creation of the FKSHelasMultiProcess for dijet QED corrections"""
-        print type(self.fksmultiproc_ppjj['born_processes'])
         helasmultiproc = fks_helas_objects.FKSHelasMultiProcess(self.fksmultiproc_ppjj)
 
 
     def test_qqtoqq_helas(self):
         """test the creation of the FKSHelasMultiProcess for dijet QED corrections"""
-        print type(self.fksmultiproc_ppjj['born_processes'])
         helasmultiproc = fks_helas_objects.FKSHelasMultiProcess(self.fksmultiproc_qqqq)
         # should have only one matrix_element (subprocess)
         self.assertEqual(len(helasmultiproc['matrix_elements']), 1)

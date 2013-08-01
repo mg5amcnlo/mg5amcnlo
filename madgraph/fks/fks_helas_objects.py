@@ -133,11 +133,13 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             logger.info("Generating Helas calls for FKS %s" % \
               proc.get_born_nice_string().\
                                     replace('Process', 'process'))
-            matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],
-                                                           fksmulti['real_amplitudes'],
-                                                          loop_optimized = self.loop_optimized,
-                                                          decay_ids=decay_ids,
-                                                          gen_color=False)]
+            matrix_element_list = [\
+                    FKSHelasProcess(proc, self['real_matrix_elements'],
+                    [amp for amp in fksmulti['real_amplitudes'] if amp['diagrams']],
+                    loop_optimized = self.loop_optimized,
+                    decay_ids=decay_ids,
+                    gen_color=False)]
+
             for matrix_element in matrix_element_list:
                 assert isinstance(matrix_element, FKSHelasProcess), \
                           "Not a FKSHelasProcess: %s" % matrix_element
@@ -157,7 +159,9 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
                         if not gen_color:
                             continue
+
                         # loop over the born matrix elements
+                        for born in matrix_element.born_me_list:
 
                             # Always create an empty color basis, and the
                             # list of raw colorize objects (before
@@ -234,21 +238,18 @@ class FKSHelasProcess(object):
             self.perturbation = fksproc.perturbation
             real_amps_new = []
             # combine for example u u~ > t t~ and d d~ > t t~
-            print "MZ fix combination"
-# MZ fix combinations
-
-#            for proc in fksproc.real_amps:
-#                if proc.amplitude['diagrams']:
-#                    fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
-#                    try:
-#                        other = self.real_processes[self.real_processes.index(fksreal_me)]
-#                        other.matrix_element.get('processes').extend(\
-#                                fksreal_me.matrix_element.get('processes') )
-#                    except ValueError:
-#                        if fksreal_me.matrix_element.get('processes') and \
-#                                fksreal_me.matrix_element.get('diagrams'):
-#                            self.real_processes.append(fksreal_me)
-#                            real_amps_new.append(proc)
+            for proc in fksproc.real_amps:
+                if proc.amplitude['diagrams']:
+                    fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
+                    try:
+                        other = self.real_processes[self.real_processes.index(fksreal_me)]
+                        other.matrix_element.get('processes').extend(\
+                                fksreal_me.matrix_element.get('processes') )
+                    except ValueError:
+                        if fksreal_me.matrix_element.get('processes') and \
+                                fksreal_me.matrix_element.get('diagrams'):
+                            self.real_processes.append(fksreal_me)
+                            real_amps_new.append(proc)
             fksproc.real_amps = real_amps_new
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
@@ -256,7 +257,6 @@ class FKSHelasProcess(object):
                           optimized_output = loop_optimized)
             else: 
                 self.virt_matrix_element = None
-#            self.color_links_info = fksproc.find_color_links()
             self.color_links = []
 
     def set_color_links(self):
@@ -344,9 +344,7 @@ class FKSHelasProcess(object):
                 othertag_list.remove(tag)
             except ValueError:
                 return False  
-        if not borns2 and not othertag_list:
-            return True
-        else: 
+        if borns2 or othertag_list:
             return False
 
         # now the reals
@@ -367,6 +365,7 @@ class FKSHelasProcess(object):
         corresponding real processes may not be in the same order. This is 
         taken care of by constructing the list of self_reals.
         """
+
         # first add the born processes
         self_borns = [born for born in self.born_me_list]
         for oth_born in other.born_me_list:
@@ -388,7 +387,13 @@ class FKSHelasProcess(object):
         # finally the reals
         self_reals = [real.matrix_element for real in self.real_processes]
         for oth_real in other.real_processes:
-            this_real = self.real_processes[self_reals.index(oth_real.matrix_element)]
+
+            try:
+                #there should be a 1to1 correspondence between real emission
+                ####this_real = self.real_processes[self_reals.index(oth_real.matrix_element)]
+                this_real = self.real_processes[self.real_processes.index(oth_real)]
+            except ValueError:
+                raise fks_common.FKSProcessError('add_process: error in combination of real MEs')
             #need to store pdg lists rather than processes in order to keep mirror processes different
             this_pdgs = [[leg['id'] for leg in proc['legs']] \
                     for proc in this_real.matrix_element['processes']]
