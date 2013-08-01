@@ -947,14 +947,14 @@ VectorPropagator = lambda l1, l2, part: complex(0,1) * (-1 * Metric(l1, l2) + Ov
 VectorPropagatorMassless= lambda l1, l2, part: complex(0,-1) * Metric(l1, l2)
 
 
-Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part:  complex(0,-1) * (\
+Spin3halfPropagatorin =  lambda mu, nu, s1, s2, part:  complex(0,1) * (\
     -1/3 * (Gamma(mu,s1,-2) + Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
     (PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
     ( Gamma(nu, -3, s2)+ Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) ) - \
     (PSlash(s1,s2, part) + Mass(part) * Identity(s1,s2)) * (Metric(mu, nu) - OverMass2(part) * P(mu, part) * P(nu,part)))
 
 
-Spin3halfPropagatorout =  lambda mu, nu, s1, s2, part: complex(0,-1) * ( \
+Spin3halfPropagatorout =  lambda mu, nu, s1, s2, part: complex(0,1) * ( \
   -1/3 * (Gamma(mu,s1,-2) - Identity(s1, -2) *  P(mu, part) * Mass(part) * OverMass2(part))* \
     (-1*PSlash(-2,-3, part) - Identity(-2,-3) * Mass(part)) * \
     ( Gamma(nu, -3, s2)- Mass(part) * OverMass2(part) * Identity(-3, s2) * P(nu, part) ) - \

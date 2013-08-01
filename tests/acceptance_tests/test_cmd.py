@@ -997,7 +997,7 @@ C
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact.dat')).read(),
+                                           'symfact_orig.dat')).read(),
                          """ 1    1
  2    -1
  3    -1

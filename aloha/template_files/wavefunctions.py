@@ -32,14 +32,15 @@ def ixxxxx(p,fmass,nhel,nsf):
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
-            sqm = sqrt(abs(fmass)) 
-            ip = (1+nh)/2 
-            im = (1-nh)/2 
+            sqm = [sqrt(abs(fmass))]
+            sqm.append(sign(sqm[0],fmass)) 
+            ip = (1+nh)//2 
+            im = (1-nh)//2 
 
-            fi[2] = ip*sqm
-            fi[3] = im*nsf*sqm
-            fi[4] = ip*nsf*sqm
-            fi[5] = im*sqm
+            fi[2] = ip*sqm[ip]
+            fi[3] = im*nsf*sqm[ip]
+            fi[4] = ip*nsf*sqm[im]
+            fi[5] = im*sqm[im]
 
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]
@@ -90,14 +91,15 @@ def oxxxxx(p,fmass,nhel,nsf):
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
-            sqm = sqrt(abs(fmass)) 
-            ip = -((1+nh)/2) 
-            im = (1-nh)/2 
-
-            fo[2] = im*sqm
-            fo[3] = ip*nsf*sqm
-            fo[4] = im*nsf*sqm
-            fo[5] = ip*sqm
+            sqm = [sqrt(abs(fmass))]
+            sqm.append( sign(sqm[0], fmass)) 
+            ip = int(-((1-nh)//2) * nhel)
+            im = int((1+nh)//2 * nhel)
+            
+            fo[2] = im*sqm[abs(im)]
+            fo[3] = ip*nsf*sqm[abs(im)]
+            fo[4] = im*nsf*sqm[abs(ip)]
+            fo[5] = ip*sqm[abs(ip)]
 
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]

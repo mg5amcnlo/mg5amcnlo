@@ -898,7 +898,7 @@ class CheckValidForCmd(object):
         if tag: 
             args.remove(tag[0])
             tag = tag[0][6:]
-        
+
         if len(args) == 0 and not self.run_name:
             if self.results.lastrun:
                 args.insert(0, self.results.lastrun)
@@ -2117,7 +2117,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     os.remove(pjoin(match, 'results.dat'))
             
             #compile gensym
-            misc.compile(['gensym'], cwd=Pdir)
+            self.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
                 raise MadEventError, 'Error make gensym not successful'
 
@@ -2137,7 +2137,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 raise MadEventError, 'Error gensym run not successful'
 
 
-            misc.compile(['madevent'], cwd=Pdir)
+            self.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
             self.total_jobs += len(alljobs)
@@ -2213,7 +2213,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             proc.communicate('%s %s T\n' % (precision, max_process))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                misc.compile(['madevent'], cwd=Pdir)
+                self.compile(['madevent'], cwd=Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 
                 #remove associated results.dat (ensure to not mix with all data)
@@ -2486,11 +2486,15 @@ calculator."""
             args.remove('--no_default')
         else:
             no_default = False
+            
+        if not self.run_name:
+            self.check_pythia(args)
+            self.configure_directory()
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory()
+            self.check_pythia(args)        
         
-        # initialize / remove lhapdf mode        
-        self.configure_directory()
-                               
-        self.check_pythia(args)        
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
@@ -2851,7 +2855,7 @@ calculator."""
             self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
-            
+ 
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
                     run_type='', mode=None, **opt):
         """ """
@@ -3007,7 +3011,7 @@ calculator."""
             del os.environ['lhapdf']
         self.pdffile = None
         #remove lhapdf stuff
-        misc.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+        self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3037,7 +3041,7 @@ calculator."""
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
-            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
     ############################################################################
