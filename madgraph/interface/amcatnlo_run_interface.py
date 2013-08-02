@@ -2367,7 +2367,8 @@ Integrated cross-section
         if self.run_card['pdlabel'] == 'lhapdf':
             self.link_lhapdf(libdir)
         else:
-            logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+                logger.info('Using built-in libraries for PDFs')
             try:
                 del os.environ['lhapdf']
             except KeyError:
