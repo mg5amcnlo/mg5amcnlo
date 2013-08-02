@@ -3162,6 +3162,7 @@ class decay_all_events:
             for dico in self.all_ME[tag]['decays']:
                 full_path=dico['path']
                 for item in list_prodfiles:
+                     #print full_path
                      prodfile=pjoin(prod_path,item)
                      destination=pjoin(full_path,item)
                      shutil.copyfile(prodfile, destination)  
@@ -3253,9 +3254,25 @@ class decay_all_events:
         file=pjoin(path_me, 'param_card.dat')
         shutil.copyfile(file,pjoin(path_me,mode,"Cards","param_card.dat")) 
 
-        for direc in list_prod:
-            if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
-                new_path = pjoin(base_dir, direc)
+#       get all paths to matix elements
+        list_prod=[]
+        if mode == 'full_me':
+            for tag in self.all_ME:    
+                for dico in self.all_ME[tag]['decays']:
+                    full_path=dico['path']
+                    if full_path not in list_prod: list_prod.append(full_path)
+        elif mode == 'production_me':
+            for tag in self.all_ME:    
+                prod_path=self.all_ME[tag]['path']
+                if prod_path not in list_prod: list_prod.append(prod_path)
+        elif mode == 'decay_me':
+                for dir in os.listdir(base_dir):
+                    if dir[0] == 'P': list_prod.append(pjoin(base_dir, dir))
+
+        for me_path in list_prod:
+#            if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
+#                new_path = pjoin(base_dir, direc)
+                new_path = me_path
 
                 if mode == 'full_me':
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'driver.f')
