@@ -3055,14 +3055,19 @@ class decay_all_events:
                 commandline+="add process %s ;" % proc
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                print process
                 commandline+="add process %s;" % (process)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        commandline+="add process %s j ;" % (process)
+                        result = re.split('([/$])', process, 1)
+                        if len(result) ==3:
+                            process, split, rest = result
+                            commandline+="add process %s j %s%s ;" % (process, split, rest)
+                        else:
+                            commandline +='add process %s j;' % process
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
-        
+                
+                        
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
@@ -3105,6 +3110,8 @@ class decay_all_events:
                     decay_text.append(decay)
         decay_text = ', '.join(decay_text)
         commandline = ''
+        
+        
         for proc in processes:
             if '[' not in proc:
                 nb_comma = proc.count(',')
@@ -3114,16 +3121,21 @@ class decay_all_events:
                     before, after = proc.split(',')
                     commandline+="add process %s, %s, (%s, %s);" % (before, decay_text, after, decay_text)
                 else:
-                    raise Exception, 'too much decay at MG level. This can not be done for the moment)'
+                    raise Exception, 'too much decay at MG level. this can not be done for the moment)'
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s, %s;" % (process, decay_text)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        commandline+="add process %s j, %s ;" % (process, decay_text)
+                        result = re.split('([/$])', process, 1)
+                        if len(result) ==3:
+                            process, split, rest = result
+                            commandline+="add process %s j %s%s , %s ;" % (process, split, rest, decay_text)
+                        else:
+                            commandline +='add process %s j, %s;' % (process, decay_text)
                     else:
-                        raise Exception('Madspin not implemented NLO corrections.')        
-        
+                        raise Exception('Madspin not implemented NLO corrections.')
+                
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
