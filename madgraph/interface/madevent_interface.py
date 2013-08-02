@@ -898,7 +898,7 @@ class CheckValidForCmd(object):
         if tag: 
             args.remove(tag[0])
             tag = tag[0][6:]
-        
+
         if len(args) == 0 and not self.run_name:
             if self.results.lastrun:
                 args.insert(0, self.results.lastrun)
@@ -2120,7 +2120,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     os.remove(pjoin(match, 'results.dat'))
             
             #compile gensym
-            misc.compile(['gensym'], cwd=Pdir)
+            self.compile(['gensym'], cwd=Pdir)
             if not os.path.exists(pjoin(Pdir, 'gensym')):
                 raise MadEventError, 'Error make gensym not successful'
 
@@ -2140,7 +2140,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 raise MadEventError, 'Error gensym run not successful'
 
 
-            misc.compile(['madevent'], cwd=Pdir)
+            self.compile(['madevent'], cwd=Pdir)
             
             alljobs = glob.glob(pjoin(Pdir,'ajob*'))
             self.total_jobs += len(alljobs)
@@ -2216,7 +2216,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             proc.communicate('%s %s T\n' % (precision, max_process))
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                misc.compile(['madevent'], cwd=Pdir)
+                self.compile(['madevent'], cwd=Pdir)
                 alljobs = glob.glob(pjoin(Pdir,'ajob*'))
                 
                 #remove associated results.dat (ensure to not mix with all data)
@@ -2542,8 +2542,15 @@ calculator."""
             args.remove('--no_default')
         else:
             no_default = False
-                                    
-        self.check_pythia(args)        
+            
+        if not self.run_name:
+            self.check_pythia(args)
+            self.configure_directory()
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory()
+            self.check_pythia(args)        
+        
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
@@ -2552,8 +2559,7 @@ calculator."""
         if not self.banner:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
                      
-        # initialize / remove lhapdf mode        
-        self.configure_directory()
+   
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
@@ -2617,7 +2623,14 @@ calculator."""
         td = self.options['td_path']
         
         
+        #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
+        if int(self.run_card['ickkw']):
+            # Add the matched cross-section
+            if 'MGGenerationInfo' in self.banner:
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+            else:
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         
@@ -2905,7 +2918,7 @@ calculator."""
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
-            
+ 
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
                     run_type='', mode=None, **opt):
         """ """
@@ -3060,6 +3073,8 @@ calculator."""
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
         self.pdffile = None
+        #remove lhapdf stuff
+        self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3089,7 +3104,7 @@ calculator."""
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
-            misc.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
     ############################################################################
@@ -3144,13 +3159,16 @@ calculator."""
         # store new name
         self.run_name = name
         
-        # Read run_card
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCard(run_card)
-
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, name)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
+        else:
+            # Read run_card
+            run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+            self.run_card = banner_mod.RunCard(run_card)   
+        
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -3174,8 +3192,7 @@ calculator."""
                 # We can add the results to the current run
                 tag = self.results[self.run_name][-1]['tag']
                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
-             
-                    
+                   
         if name in self.results and not new_tag:
             self.results.def_current(self.run_name)
         else:
@@ -3809,5 +3826,4 @@ class GridPackCmd(MadEventCmd):
 
 
 AskforEditCard = common_run.AskforEditCard
-
 

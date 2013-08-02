@@ -559,7 +559,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- define a multiparticle",'$MG:color:BLUE')
         logger.info("Syntax:  define multipart_name [=] part_name_list")
         logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
-        
+        logger.info("Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("-- set options for generation or output.",'$MG:color:BLUE')
@@ -864,7 +865,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -1068,6 +1069,9 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output']:
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
@@ -2168,8 +2172,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'MG5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -2236,7 +2241,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
+        print
 
         return value
         
@@ -2342,16 +2349,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except ValueError:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
@@ -3874,7 +3893,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
                 compiler = 'gfortran'
@@ -4010,6 +4029,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return 
+        
+        if not misc.which('patch'):
+            error_text = """Not able to find program \'patch\'. Please reload a clean version
+            or install that program and retry."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            return            
         
         
         # read the data present in .autoupdate
@@ -5103,7 +5129,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
 
             try:
                 p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
@@ -5144,12 +5169,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            fj_lhapdf_lines = \
-                 ['fastjet_config=%s' % self.options['fastjet'],
-                  'lhapdf_config=%s' % self.options['lhapdf']]
-            text = '\n'.join(fj_lhapdf_lines) + '\n'
-            fj_lhapdf_file.write(text)
-            fj_lhapdf_file.close()
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \

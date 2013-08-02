@@ -1573,6 +1573,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
 
         args = self.split_arg(line.lower())
+        if '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=')
+            args += [arg1, arg2]
+
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
