@@ -2572,7 +2572,7 @@ Integrated cross-section
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
-                       'madspin': ' Decay particles with the MadSpin module:' }
+                       'madspin': 'Decay particles with the MadSpin module:' }
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
@@ -2725,7 +2725,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             cards = ['shower_card.dat']
         
         if not options['force'] and not  self.force:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=False)
             
 
 
