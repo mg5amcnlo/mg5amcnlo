@@ -391,9 +391,6 @@ class ReweightInterface(extended_cmd.Cmd):
         w_orig = self.calculate_matrix_element(event, 0)
         w_new =  self.calculate_matrix_element(event, 1)
         
-        if w_orig == w_new:
-            logger.warning('weight is one')
-        
         return w_new/w_orig*event.wgt
     
     
