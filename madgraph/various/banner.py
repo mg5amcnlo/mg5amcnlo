@@ -47,7 +47,10 @@ class Banner(dict):
     
     def __init__(self, banner_path=None):
         """ """
-        dict.__init__(self)
+        if isinstance(banner_path, Banner):
+            return dict.__init__(self, banner_path)     
+        else:
+            dict.__init__(self)
         
         #Look at the version
         if MADEVENT:
@@ -55,6 +58,8 @@ class Banner(dict):
         else:
             info = misc.get_pkg_info()
             self['mgversion'] = info['version']+'\n'
+        
+
             
         if banner_path:
             self.read_banner(banner_path)
@@ -100,7 +105,10 @@ class Banner(dict):
                     text = ''
                     store = False
             if store:
-                text += line
+                if line.endswith('\n'):
+                    text += line
+                else:
+                    text += '%s%s' % (line, '\n')
                 
             #reaching end of the banner in a event file avoid to read full file 
             if "</init>" in line:

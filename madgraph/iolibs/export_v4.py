@@ -909,6 +909,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 StandAlone format."""
 
+    def __init__(self, *args, **opts):
+        """add the format information compare to standard init"""
+        
+        if 'format' in opts:
+            self.format = opts['format']
+            del opts['format']
+        else:
+            self.format = 'standalone'
+        ProcessExporterFortran.__init__(self, *args, **opts)
+
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -949,9 +959,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefile'))
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
         
+        if self.format == 'standalone':
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+        elif self.format == 'standalone_rw':
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'driver_reweight.f'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+                        
         # Add file in Source
         shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
                     pjoin(self.dir_path, 'Source'))        
@@ -1030,7 +1045,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
 
-        if self.opt['sa_for_decay']:
+        if self.opt['sa_symmetry']:
             # avoid symmetric output
             proc = matrix_element.get('processes')[0]
             leg0 = proc.get('legs')[0]
@@ -1137,13 +1152,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
             
-        if not self.opt.has_key('sa_for_decay'):
-            self.opt['sa_for_decay']=False
+        if not self.opt.has_key('sa_symmetry'):
+            self.opt['sa_symmetry']=False
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        replace_dict = {}
+        replace_dict = {'global_variable':'', 'amp2_lines':''}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -1190,21 +1205,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        if self.opt['sa_for_decay'] :
+        # For MadSpin need to return the AMP2
+        if self.format == 'standalone_ms':
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+            replace_dict['global_variable'] = "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
 
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        if not self.opt['sa_for_decay'] :
-            file = open(pjoin(_file_path, \
+
+        file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
-        else:
-            file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
-         
         file = file % replace_dict
 
         # Write the file
@@ -3180,7 +3193,7 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'] in ['standalone', 'standalone_ms']:
+        elif self.opt['export_format'].startswith('standalone'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -3204,7 +3217,8 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
 
-        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 'madloop','madloop_optimized']:
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 
+                            'madloop','madloop_optimized', 'standalone_rw']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
@@ -3900,18 +3914,23 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         opt = {'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
-               'mp': False,  'sa_for_decay':False, 'model': cmd._curr_model.get('name') }
+               'mp': False,  
+               'sa_symmetry':False, 
+               'model': cmd._curr_model.get('name') }
 
-        if cmd._export_format=='standalone_ms':
-            opt['sa_for_decay'] = True        
+        format = cmd._export_format #shortcut
+
+        if format in ['standalone_ms', 'standalone_rw']:
+            opt['sa_symmetry'] = True        
     
-        if cmd._export_format in ['standalone', 'matrix','standalone_ms']:
-            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+        if format == 'matrix' or format.startswith('standalone'):
+            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
+                                            format=format)
         
-        elif cmd._export_format in ['madevent'] and group_subprocesses:
+        elif format in ['madevent'] and group_subprocesses:
             return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
                                                                             opt)
-        elif cmd._export_format in ['madevent']:
+        elif format in ['madevent']:
             return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
         
         else:

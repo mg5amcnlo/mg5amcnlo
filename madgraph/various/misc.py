@@ -789,6 +789,35 @@ def sprint(*args, **opt):
     return 
 
 ################################################################################
+# function to check if two float are approximatively equal
+################################################################################
+def equal(a,b,sig_fig=6):
+    """function to check if two float are approximatively equal"""
+    import math
+    if a:
+        power = sig_fig - int(math.log10(a))
+    else:
+        power = sig_fig
+    return ( a==b or 
+             int(a*10**power) == int(b*10**power)
+           )
+################################################################################
+# class to change directory with the "with statement"
+################################################################################
+class chdir:
+    def __init__(self, newPath):
+        self.newPath = newPath
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
+
+
+
+################################################################################
 # TAIL FUNCTION
 ################################################################################
 class digest:
