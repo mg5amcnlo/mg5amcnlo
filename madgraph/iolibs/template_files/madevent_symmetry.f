@@ -667,8 +667,6 @@ c
       write(lun,20) 'cp $k log.txt'
       write(lun,20) 'cd ../'
       write(lun,15) 'done'
-      write(lun,15) 'rm -f run.$script'
-      write(lun,15) 'touch done.$script'
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)

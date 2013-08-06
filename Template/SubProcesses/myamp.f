@@ -511,9 +511,9 @@ c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
                     endif
                  enddo
                  if (njet.eq.1) then
-                    xo = (MMJJ/1d2)**2/stot
+                    xo = (MMJJ/1d1)**2/stot
                  else if (njet.eq.2) then
-                    xo = (MMJJ * 0.8)**2/stot
+                    xo = (MMJJ * 0.9)**2/stot
                  endif
               endif
               if (xo.eq.0d0) xo=1d0/stot

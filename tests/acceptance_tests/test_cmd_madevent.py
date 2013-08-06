@@ -223,7 +223,8 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 3864.0
-        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""

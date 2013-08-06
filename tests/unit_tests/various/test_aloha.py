@@ -1253,7 +1253,7 @@ class testLorentzObject(unittest.TestCase):
                 (obj.Metric(rho,sigma) - obj.OverMass2(t) * obj.P(rho,t) *obj.P(sigma,t) )
         
         prop = aloha_obj.Spin2Propagator(mu,nu,rho,sigma, t)
-        zero = 1j * propa - 2 * prop
+        zero = propa - 2 * prop
         
         
         zero = zero.expand().simplify() 
@@ -1291,7 +1291,7 @@ class testLorentzObject(unittest.TestCase):
         propa = propa + 2/6 * OM(t) * Metric(alpha, beta) *  P(mu,t) * P(nu,t)     
         
              
-        zero = 1j*propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        zero = propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         
         zero = zero.expand().simplify() 
         
@@ -1339,7 +1339,7 @@ class testLorentzObject(unittest.TestCase):
         t = 1
         mu, nu, alpha, beta = 1,2,3,4
         
-        aloha = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        aloha = complex(0,1)*Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         analytical = complex(0, 1/3) * (OM(t) * P(-1, t)* P(-1,t) - 1) * (Metric(alpha, beta) + 2 * OM(t) * P(alpha,t)*P(beta,t))
         
         

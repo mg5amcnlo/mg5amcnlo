@@ -2694,7 +2694,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 5 * self._survey_options['points'][1]
+            self.opts['points'] = 3 * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
             self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
@@ -2705,8 +2705,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         files.cp(conf_path, conf_path + '.bk')
 
         text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 25000 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 50000 )''', text)
+        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 10000 )''', text)
+        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 25000 )''', text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
