@@ -1136,10 +1136,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
-        if max_loop_vertex_rank > 1:
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' handle renormalizable gauge theories for which the maximum loop'+\
-              ' power brought by any loop interaction is one.'
         self.general_replace_dict['vertex_max_coefs']=\
                  q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
         self.general_replace_dict['nloopwavefuncs']=\

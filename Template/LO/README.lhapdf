@@ -17,9 +17,7 @@ Note that you need to copy the files in order to create a gridpack from this dir
  'lhapdf'    = pdlabel     ! PDF set
  10042       = lhaid       ! PDF number used ONLY for LHAPDF
 
-4) Run bin/cleanall (to remove any previously compiled files)
-
-5) Run bin/generate_events (or run.sh/...) as usual
+4) Run bin/generate_events (or run.sh/...) as usual
 
 Notes for Mac OS X:
 If LHAPDF doesn't work on Mac, please try downloading gcc-4.6 from
