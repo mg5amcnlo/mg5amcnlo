@@ -496,6 +496,12 @@ class MG_diagram(diagram_class.MG_diagram):
             if hasattr(particle,'has_phi_tf') and particle.has_phi_tf:    
                 mapping[3*particle.MG-6] = p_random+1
                 p_random += 1
+
+        if ECS.step[0].chgt_var == 'a':
+            for particle in ECS.step[0].in_part:
+                 mapping[3*particle.MG-7] = p_random+1
+                 p_random+=1
+
         mapping = [str(i+m_random) if i else str(i) for i in mapping]
         text += 'data (var2random(label, %(num_sol)s), label=1,%(size)s) / %(data)s/\n\n\n' % \
              {'num_sol': num_sol, 'size':len(mapping),'data':','.join(mapping)}
