@@ -42,6 +42,9 @@ c
 c A call to 'reset_MC_grid' resets all the MC integration grids to a
 c flat starting point.
 c
+c A call to 'empty_MC_grid' removes all the accumulated results for the 
+c current iteration.
+c
 c Written by Rikkert Frederix, 2012.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine get_MC_integer(this_dim,niint_thisd,iint,vol)
@@ -140,9 +143,9 @@ c (for 'this_dim') has been picked.
       integer maxdim
       parameter (maxdim=50)
       logical firsttime(maxdim)
-      integer nintervals(maxdim),maxintervals
+      integer maxintervals
       parameter (maxintervals=200)
-      integer ncall(0:maxintervals,maxdim)
+      integer ncall(0:maxintervals,maxdim),nintervals(maxdim)
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
@@ -150,6 +153,8 @@ c (for 'this_dim') has been picked.
          do i=0,nintervals(this_dim)
             if (nintervals(this_dim).ne.0) 
      &           grid(i,this_dim)=dble(i)/nintervals(this_dim)
+            acc(i,this_dim)=0d0
+            ncall(i,this_dim)=0
          enddo
       enddo
       return
@@ -161,14 +166,33 @@ c (for 'this_dim') has been picked.
       double precision f_abs
       integer maxdim
       parameter (maxdim=50)
-      logical firsttime(maxdim)
+      integer maxintervals
+      parameter (maxintervals=200)
+      integer ncall(0:maxintervals,maxdim),nintervals(maxdim)
+      double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
+     &     ,maxdim)
+      common/integration_integer/grid,acc,ncall,nintervals
+      acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+      return
+      end
+
+      subroutine empty_MC_integer
+      implicit none
+      integer i,this_dim
+      integer maxdim
+      parameter (maxdim=50)
       integer nintervals(maxdim),maxintervals
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim)
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
-      acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+      do this_dim=1,maxdim
+         do i=0,nintervals(this_dim)
+            acc(i,this_dim)=0d0
+            ncall(i,this_dim)=0
+         enddo
+      enddo
       return
       end
 
@@ -207,7 +231,7 @@ c Don't update grids if there were too few PS points.
                acc(i,this_dim)=0d0
                ncall(i,this_dim)=0
             enddo
-            return
+            cycle
          endif
 c Define the new grids
          if (acc(nintervals(this_dim),this_dim).ne.0d0) then

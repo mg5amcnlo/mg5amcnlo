@@ -5,8 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
                       VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
-		      RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
-                           only). Turned off by default.
+		      RF: Use MC over helicities for the MadLoop virtual corrections.
 		      VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
