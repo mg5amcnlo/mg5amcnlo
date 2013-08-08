@@ -65,7 +65,8 @@ c      include 'leshouche.inc'
       common /c_leshouche_inc/idup,mothup,icolup
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
 c
 c     reading parameters
@@ -109,6 +110,7 @@ c specified in coupl.inc
          is_a_j(i)=.false.
          is_a_lp(i)=.false.
          is_a_lm(i)=.false.
+         is_a_ph(i)=.false.
 
 c-light-jets
          if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
@@ -123,6 +125,9 @@ c-charged-leptons
          if (idup(i,1).eq.-11) is_a_lp(i)=.true. !  e-
          if (idup(i,1).eq.-13) is_a_lp(i)=.true. !  mu-
          if (idup(i,1).eq.-15) is_a_lp(i)=.true. !  ta-
+
+c-photons
+         if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
       enddo
 
       RETURN
@@ -144,7 +149,8 @@ c variable ptj
       include 'nFKSconfigs.inc'
       include "fks_info.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
@@ -233,6 +239,19 @@ c Add the minimal jet pTs to tau
                      stop
                   endif
                   xm(i)=emass(i)+ptj
+c Add the minimal photon pTs to tau
+               elseif(IS_A_PH(i))then
+                  if (abs(emass(i)).gt.vtiny) then
+                     write (*,*) 'Error in set_tau_min in setcuts.f:'
+                     write (*,*) 'mass of a photon should be zero',i
+     &                    ,emass(i)
+                     stop
+                  endif
+                  if  (j_fks.gt.nincoming)
+     &                 taumin(iFKS)=taumin(iFKS)+ptgmin
+                  taumin_s(iFKS)=taumin_s(iFKS)+ptgmin
+                  taumin_j(iFKS)=taumin_j(iFKS)+ptgmin
+                  xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
                   taumin(iFKS)=taumin(iFKS)+emass(i)

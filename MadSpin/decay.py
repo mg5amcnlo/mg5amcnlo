@@ -1664,7 +1664,7 @@ class AllMatrixElement(dict):
         
         for me in matrix_elements:
             skip = [] # due to particles/anti-particles some me need to be add
-                  # as a separate matrix element in the instance.
+                      # as a separate matrix element in the instance.
             topo = self.get_topologies(me)
             # get the orignal order:
             initial = []
