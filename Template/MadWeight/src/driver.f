@@ -269,7 +269,7 @@ c            See if this is require to continue to update this
              if (nb_point_by_perm(1).ne.0)then
                   DO I =1,NPERM
                     value = perm_value(I) / DBLE(IT) !(nb_point_by_perm(I))
-                    error = dsqrt(perm_error(I)*calls/DBLE(IT)-value**2)
+                    error = dsqrt(dabs(perm_error(I)*nb_point_by_perm(I)/DBLE(IT)**2-value**2))
 c                    error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
 c     &                             * value**2 )/(nb_point_by_perm(I)-1))
                     call get_perm(I, loc_perm)
