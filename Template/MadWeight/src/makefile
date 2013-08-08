@@ -23,10 +23,11 @@ MW_PS= main_code.o gen_ps.o initialization.o call_TF.o permutation.o multi_chann
 $(PROG): $(PROCESS) $(MW_PS)  makefile $(LIBS) 
 	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(MW_PS) $(LINKLIBS)
 
-transfer_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
-	python ../../Source/MadWeight/Python/Cards.py
-madweight_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
-	python ../../Source/MadWeight/Python/Cards.py
+#transfer_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
+#	python ../../Source/MadWeight/Python/Cards.py
+#madweight_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
+#	python ../../Source/MadWeight/Python/Cards.py
+
 driver.o: phasespace.inc nexternal.inc data.inc coupl.inc madweight_card.inc 
 initialization.o: madweight_card.inc TF_param.inc coupl.inc run.inc madweight_param.inc pmass.inc nexternal.inc maxamps.inc leshouche.inc
 matrix.o:nexternal.inc coupl.inc

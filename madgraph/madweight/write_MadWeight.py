@@ -771,8 +771,8 @@ c       choose the permutation (point by point in the ps)
            fct=fct*twgt
 
          %(histo)s
-        perm_value(curr_perm) = perm_value(curr_perm) + fct
-        perm_error(curr_perm) = perm_error(curr_perm) + fct**2
+        perm_value(curr_perm) = perm_value(curr_perm) + fct*wgt
+        perm_error(curr_perm) = perm_error(curr_perm) + fct**2*wgt**2
         nb_point_by_perm(curr_perm) = nb_point_by_perm(curr_perm) + 1
 
          else

@@ -217,6 +217,10 @@ c                See if this is require to continue to update this
              endif
              call check_nan(cross)
              write(*,*) 'cross', cross
+             DO I =1,NPERM
+                 perm_value(I) = 0d0
+                 perm_error(I) = 0d0
+             ENDDO
              if (cross.eq.0d0)then
                 write(*,*) 'VEGAs no pre-training'
                 NCALL = 2 * nevents
@@ -225,7 +229,7 @@ c                See if this is require to continue to update this
                 enddo
                 CALL VEGAS(fct,CROSS,SD,CHI)
              else
-                write(*,*) 'VEGAs1'
+                write(*,*) 'VEGAS1'
                 CALL VEGAS1(fct,CROSS,SD,CHI)
              endif
              call check_nan(cross)
@@ -264,9 +268,10 @@ c            See if this is require to continue to update this
              endif
              if (nb_point_by_perm(1).ne.0)then
                   DO I =1,NPERM
-                    value = perm_value(I) / (nb_point_by_perm(I))
-                    error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
-     &                             * value**2 )/(nb_point_by_perm(I)-1))
+                    value = perm_value(I) / DBLE(IT) !(nb_point_by_perm(I))
+                    error = dsqrt(perm_error(I)*calls/DBLE(IT)-value**2)
+c                    error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
+c     &                             * value**2 )/(nb_point_by_perm(I)-1))
                     call get_perm(I, loc_perm)
                     write(23,*) I,' ',config_pos,' ',value,' ', error,
      &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
