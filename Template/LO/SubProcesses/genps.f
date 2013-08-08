@@ -134,6 +134,9 @@ c
       double precision pmass(nexternal)
       common/to_mass/  pmass
 
+      double precision SMIN
+      common/to_smin/ smin
+
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
       double precision   prb(maxconfigs,maxpoints,maxplace)
@@ -298,7 +301,7 @@ c-------
          endif
 
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
-         CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1),0d0,SJAC)
+         CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
          x(ndim-1) = xtau                   !Fix for 2->1 process
 c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))

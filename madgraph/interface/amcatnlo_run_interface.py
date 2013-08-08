@@ -78,10 +78,6 @@ except ImportError, error:
     import internal.shower_card as shower_card
     aMCatNLO = True
 
-
-
-
-
 class aMCatNLOError(Exception):
     pass
 
@@ -1083,7 +1079,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
 
-    def check_mcatnlo_dir(self):
+    def check_mcatnlo_dir(self, printmsg=True):
         """Check that the MCatNLO dir (with files to run the parton-shower has 
         been copied inside the exported direcotry"""
         if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
@@ -1097,7 +1093,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
             return True
 
         else:
-            logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
+            if printmsg:
+                logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
                 'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
                 ' shell')
             return False
@@ -2371,12 +2368,16 @@ Integrated cross-section
         if self.run_card['pdlabel'] == 'lhapdf':
             self.link_lhapdf(libdir)
         else:
-            logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+                logger.info('Using built-in libraries for PDFs')
             try:
                 del os.environ['lhapdf']
             except KeyError:
                 pass
 
+
+        os.environ['fastjet_config'] = self.options['fastjet']
+        
         # make Source
         self.update_status('Compiling source...', level=None)
         misc.compile(['clean4pdf'], cwd = sourcedir)
@@ -2392,9 +2393,10 @@ Integrated cross-section
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
         if not '[real=QCD]' in proc_card:
-            hasvirt = True
-            os.putenv('madloop', 'true')
-            tests.append('check_poles')
+            os.environ['madloop'] = 'true'
+            if mode in ['NLO', 'aMC@NLO', 'noshower']:
+                tests.append('check_poles')
+                hasvirt = True
         else:
             os.unsetenv('madloop')
 
@@ -2498,6 +2500,7 @@ Integrated cross-section
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
         os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def write_test_input(self, test):
@@ -2557,66 +2560,159 @@ Integrated cross-section
         if 'reweightonly' not in options:
             options['reweightonly'] = False
         
+        
+        void = 'NOT INSTALLED'
+        switch_order = ['order', 'fixed_order', 'shower','madspin']
+        switch = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
+                  'madspin': void}
+        default_switch = ['ON', 'OFF']
+        allowed_switch_value = {'order': ['LO', 'NLO'],
+                                'fixed_order': default_switch,
+                                'shower': default_switch,
+                                'madspin': default_switch}
+        
+        description = {'order':  'Perturbative order of the calculation:',
+                       'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
+                       'shower': 'Shower the generated events:',
+                       'madspin': 'Decay particles with the MadSpin module:' }
+
+        force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
+                       ('madspin', 'ON'): {'fixed_order':'OFF'},
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF'}
+                       }
+        special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
+
+        assign_switch = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
+        
+
         if mode == 'auto': 
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
-            mode = 'noshower' 
+            mode = 'noshower'         
+        
+        # Init the switch value according to the current status
+        available_mode = ['0', '1', '2']
+        if self.check_mcatnlo_dir(printmsg=False):
+            available_mode.append('3')
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+                switch['shower'] = 'ON'
+            else:
+                switch['shower'] = 'OFF'
                 
-        available_mode = ['0', '1', '2', '3', '4', '5', '6']
-        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower', '4': 'LO', '5':'aMC@LO', '6':'noshowerLO'}
-        answers = []
-        for opt in available_mode:
-            value = int(opt)
-            tag = name[opt]
-            answers += [opt, tag]
-            if value > 1:
-                answers.append(10+value)
-                answers.append('%s+madspin' % tag)
+        if not aMCatNLO or self.options['mg5_path']:
+            available_mode.append('4')
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                switch['madspin'] = 'ON'
+            else:
+                switch['madspin'] = 'OFF'
             
-        question = """Which programs do you want to run?
-  0 / auto       : NLO event generation and -if cards exist- shower and madspin.
-  1 / NLO        : Fixed order NLO calculation (no event generation).
-  2 / aMC@NLO    : NLO event generation (include running the shower).
-  3 / noshower   : NLO event generation (without running the shower).
-  4 / LO         : Fixed order LO calculation (no event generation).
-  5 / aMC@LO     : LO event generation (include running the shower).
-  6 / noshowerLO : LO event generation (without running the shower).
-+10 / +madspin   : Add decays with MadSpin (before the shower).\n"""
+        answers = list(available_mode) + ['auto', 'done']
+        alias = {}
+        for id, key in enumerate(switch_order):
+            if switch[key] != void:
+                answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
+                #allow lower case for on/off
+                alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
+                                   for s in allowed_switch_value[key]))
+        answers += special_values
+        
+        def create_question(switch):
+            switch_format = " %i %-60s %12s=%s\n"
+            question = "The following switches determine which operations are executed:\n"
+            for id, key in enumerate(switch_order):
+                question += switch_format % (id+1, description[key], key, switch[key])
+            question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
+            question += '  or set any switch explicitly (e.g. type \'order=LO\' at the prompt)\n'
+            question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
+            return question
 
         if not self.force:
-            if not mode:
-                mode = self.ask(question, '0', answers)
-        elif not mode:
-            mode = 'auto'
-            
-        if mode.isdigit():
-            value =  int(mode)
-            if value > 10:
-                # Running MadSpin
-                mode = str(value-10)
-                mode = name[mode] + '+madspin'
-            else:
-                mode = name[mode]
-        
-        auto = False
-        if mode == 'auto':
-            auto = True
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-                mode = 'aMC@NLO'
-            else:
-                mode = 'noshower'
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
-                mode += '+madspin'         
-        logger.info('Will run in mode %s' % mode)
+            answer = ''
+            while answer not in ['0', 'done', 'auto']:
+                question = create_question(switch)
+                if mode:
+                    answer = mode
+                else:
+                    answer = self.ask(question, '0', answers, alias=alias)
+                if answer.isdigit() and answer != '0':
+                    key = switch_order[int(answer) - 1]
+                    opt1 = allowed_switch_value[key][0]
+                    opt2 = allowed_switch_value[key][1]
+                    answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
+                if '=' in answer:
+                    key, status = answer.split('=')
+                    switch[key] = status
+                    if (key, status) in force_switch:
+                        for key2, status2 in force_switch[(key, status)].items():
+                            if switch[key2] not in  [status2, void]:
+                                logger.info('For coherence \'%s\' is set to \'%s\''
+                                            % (key2, status2), '$MG:color:BLACK')
+                                switch[key2] = status2
+                elif answer in ['0', 'auto', 'done']:
+                    break
+                elif answer in special_values:
+                    logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                    if answer == 'LO':
+                        switch['order'] = 'LO'
+                        switch['fixed_order'] = 'ON'
+                        assign_switch('shower', 'OFF')
+                        assign_switch('madspin', 'OFF')
+                    elif answer == 'NLO':
+                        switch['order'] = 'NLO'
+                        switch['fixed_order'] = 'ON'
+                        assign_switch('shower', 'OFF')
+                        assign_switch('madspin', 'OFF')
+                    elif answer == 'aMC@NLO':
+                        switch['order'] = 'NLO'
+                        switch['fixed_order'] = 'OFF'
+                        assign_switch('shower', 'ON')
+                        assign_switch('madspin', 'OFF')
+                    elif answer == 'aMC@LO':
+                        switch['order'] = 'LO'
+                        switch['fixed_order'] = 'OFF'
+                        assign_switch('shower', 'ON')
+                        assign_switch('madspin', 'OFF')
+                    elif answer == 'noshower':
+                        switch['order'] = 'NLO'
+                        switch['fixed_order'] = 'OFF'
+                        assign_switch('shower', 'OFF')
+                        assign_switch('madspin', 'OFF')                                                    
+                    elif answer == 'noshowerLO':
+                        switch['order'] = 'LO'
+                        switch['fixed_order'] = 'OFF'
+                        assign_switch('shower', 'OFF')
+                        assign_switch('madspin', 'OFF')
+                    if mode:
+                        break
+
+        #assign the mode depending of the switch
+        if not mode or mode == 'auto':
+            if switch['order'] == 'LO':
+                if switch['shower'] == 'ON':
+                    mode = 'aMC@LO'
+                elif switch['fixed_order'] == 'ON':
+                    mode = 'LO'
+                else:
+                    mode =  'noshowerLO'
+            elif switch['order'] == 'NLO':
+                if switch['shower'] == 'ON':
+                    mode = 'aMC@NLO'
+                elif switch['fixed_order'] == 'ON':
+                    mode = 'NLO'
+                else:
+                    mode =  'noshower'  
+        logger.info('will run in mode: %s' % mode)                
+
         if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
-Please, shower the Les Houches events before using them for physics analyses.""")
+Please, shower the Les Houches events before using them for physics analyses.""")            
+            
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
         if mode in ['LO', 'NLO']:
             options['parton'] = True
-        elif 'madspin' in mode:
+        elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
@@ -2631,7 +2727,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             cards = ['shower_card.dat']
         
         if not options['force'] and not  self.force:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=False)
             
 
 

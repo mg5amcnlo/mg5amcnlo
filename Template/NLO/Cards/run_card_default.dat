@@ -118,6 +118,15 @@ average = event_norm ! Normalize events to sum or average to the X sect.
    0  = drll  ! Min distance between opposite sign lepton pairs
   30  = mll   ! Min inv. mass of all oppositely charged lepton pairs
 #***********************************************************************
+# Photon-isolation cuts, according to hep-ph/9801442                   *
+# When ptgmin=0, all the other parameters are ignored                  *
+#***********************************************************************
+  20  = ptgmin    ! Min photon transverse momentum
+ 0.4  = R0gamma   ! Radius of isolation code
+ 1.0  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
+ 1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
+ .true.  = isoEM  ! isolate photons from EM energy (photons and leptons)
+#***********************************************************************
 # maximal pdg code for quark to be considered as a jet                 *
 #***********************************************************************
  5 = maxjetflavor
