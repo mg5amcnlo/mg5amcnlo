@@ -141,24 +141,34 @@ class TestMECmdShell(unittest.TestCase):
         """test that the creation of matched plot works"""
 
         cmd = os.getcwd()
-        self.generate('p p > W+ j', 'sm')
+        self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '/tmp/MGPROCESS/Cards/run_card.dat')
         shutil.copy('/tmp/MGPROCESS/Cards/pythia_card_default.dat',
                     '/tmp/MGPROCESS/Cards/pythia_card.dat')
-        self.do('generate_events -f')
+        self.do('generate_events -f')     
+        
         
         f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
-                
-        self.assertEqual(cmd, os.getcwd())
+        
+        #modify the run_card
+        run_card = self.cmd_line.run_card
+        run_card['nevents'] = 44
+        run_card.write('/tmp/MGPROCESS/Cards/run_card.dat',
+                                    '/tmp/MGPROCESS/Cards/run_card_default.dat')
+            
+        self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
+        self.assertEqual(int(self.cmd_line.run_card['nevents']), 44)
         self.do('pythia run_01 -f')
         self.do('quit')
         
+        self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
+        
         self.check_parton_output()
-        self.check_parton_output('run_02')
+        self.check_parton_output('run_02', target_event=44)
         self.check_pythia_output()        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
@@ -295,6 +305,7 @@ class TestMECmdShell(unittest.TestCase):
 #===============================================================================
 class TestMEfromfile(unittest.TestCase):
     """test that we can launch everything from a single file"""
+
 
     def test_add_time_of_flight(self):
         """checking time of flight is working fine"""

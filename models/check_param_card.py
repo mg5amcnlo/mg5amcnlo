@@ -9,9 +9,11 @@ logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.various.misc as misc    
 except:
     import internal.file_writers as file_writers
-
+    import internal.misc as misc
+    
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
@@ -317,7 +319,25 @@ class ParamCard(dict):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
-            
+    
+    def create_diff(self, new_card):
+        """return a text file allowing to pass from this card to the new one
+           via the set command"""
+        
+        diff = ''
+        for blockname, block in self.items():
+            for param in block:
+                lhacode = param.lhacode
+                value = param.value
+                new_value = new_card[blockname].get(lhacode).value
+                if not misc.equal(value, new_value, 6):
+                    lhacode = ' '.join([str(i) for i in lhacode])
+                    diff += 'set param_card %s %s %s # orig: %s\n' % \
+                                       (blockname, lhacode , new_value, value)
+        return diff 
+                
+        
+    
             
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""

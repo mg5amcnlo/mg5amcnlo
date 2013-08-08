@@ -198,7 +198,6 @@ create_empty = open(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.
 create_empty.close()
 
 # 2. Create the automatic documentation in the apidoc directory
-
 try:
     status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
                                'madgraph', 'aloha',
@@ -216,7 +215,8 @@ if status1:
 # 3. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
-
+# clean all the pyc
+os.system("cd %s;find . -name '*.pyc' -delete" % filepath)
 status2 = subprocess.call(['tar', 'czf', filename, filepath])
 
 if status2:
