@@ -9,6 +9,7 @@
 #
 nevents    = -1     # number of events to shower. If negative, shower all events
 ue_enabled = F      # underlying event on (T)/ off (F) (is MSTP(81) 0/1 for PY6)
+pdfcode    = 0      # pdf code: 0 = internal pdf, 1 = same as NLO, other = lhaglue
 hadronize  = T      # hadronization on/off (is MSTP(111) 0/1 for PY6) 
 maxprint   = 2      # maximum number of events to be printed in the log
 maxerrs    = 0.1    # maximum tolerated fraction of errors
@@ -24,7 +25,7 @@ mup_stable = F      # mu+'s are stable
 mum_stable = F      # mu-'s are stable
 rnd_seed   = 0      # random seed (0 is default)
 rnd_seed2  = 0      # 2nd random seed (only for HW6, 0 is default)
-lambda_5   = -1     # lambda_5 value, -1 for default (only for HW6/PY6)
+lambda_5   = -1     # lambda_5 value, -1 for default
 b_mass     = -1     # b mass, -1 for default
 is_4lep    = F      # true if it is 4 lepton production (only for PY6)
 is_bbar    = F      # true if it is b-b~ production (only for HW6)

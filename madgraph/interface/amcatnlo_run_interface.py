@@ -1893,6 +1893,44 @@ Integrated cross-section
                 tagRun = self.results[self.run_name][i]
                 if tagRun.pythia:
                     return tagRun['tag']
+
+
+    def get_init_dict(self, evt_file):
+        """reads the info in the init block and returns them in a dictionary"""
+        ev_file = open(evt_file)
+        init = ""
+        found = False
+        while True:
+            line = ev_file.readline()
+            if "<init>" in line:
+                found = True
+            elif found and not line.startswith('#'):
+                init += line
+            if "</init>" in line or "<event>" in line:
+                break
+        ev_file.close()
+
+#       IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2), PDFGUP(1),PDFGUP(2),
+#       PDFSUP(1),PDFSUP(2),IDWTUP,NPRUP
+# these are not included (so far) in the init_dict
+#       XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
+            
+        init_dict = {}
+        init_dict['idbmup1'] = int(init.split()[0])
+        init_dict['idbmup2'] = int(init.split()[1])
+        init_dict['ebmup1'] = float(init.split()[2])
+        init_dict['ebmup2'] = float(init.split()[3])
+        init_dict['pdfgup1'] = int(init.split()[4])
+        init_dict['pdfgup2'] = int(init.split()[5])
+        init_dict['pdfsup1'] = int(init.split()[6])
+        init_dict['pdfsup2'] = int(init.split()[7])
+        init_dict['idwtup'] = int(init.split()[8])
+        init_dict['nprup'] = int(init.split()[9])
+
+        return init_dict
+
+
+
             
 
     def banner_to_mcatnlo(self, evt_file):
@@ -1902,6 +1940,7 @@ Integrated cross-section
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
         nevents = self.shower_card['nevents']
+        init_dict = self.get_init_dict(evt_file)
 
         if nevents < 0 or nevents > self.banner.get_detail('run_card', 'nevents'):
             nevents = self.banner.get_detail('run_card', 'nevents')
@@ -1920,7 +1959,8 @@ Integrated cross-section
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
-        content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
+        #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
+        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -1944,6 +1984,15 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
+        lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+        if lhapdfpath:
+            content += 'LHAPDFPATH=%s\n' % lhapdfpath
+        else:
+            #overwrite the PDFCODE variable in order to use internal lhapdf
+            content += 'LHAPDFPATH=\n' 
+            content += 'PDFCODE=0\n'
+
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
