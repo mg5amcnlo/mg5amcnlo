@@ -2468,6 +2468,7 @@ Integrated cross-section
             mypool.map(compile_dir,
                     ((self.me_dir, p_dir, mode, options, 
                         tests, exe, self.options['run_mode']) for p_dir in p_dirs))
+            mypool.close()
         except ImportError: 
             self.nb_core = 1
             logger.info('Multiprocessing module not found. Compiling on 1 core')
