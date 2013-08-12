@@ -482,7 +482,7 @@ c Compute the results of the last three iterations
       if (nit_included.ge.4) then
          do i=1,nintegrals
             ans_l3(i)=0d0
-            unc_l3(i)=ans3(1,i)*1d99
+            unc_l3(i)=ans3(i,1)*1d99
             chi2_l3(i)=0d0
             do j=1,3
                if (i.ne.1 .and. (unc_l3(i).eq.0d0 .or. unc3(i
