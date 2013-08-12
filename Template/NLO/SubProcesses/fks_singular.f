@@ -1162,7 +1162,6 @@ c
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
       double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
@@ -2356,7 +2355,8 @@ c
       parameter (izero=0)
       parameter (mohdr=-100)
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       double precision sqrtshat_ev,shat_ev
       common/parton_cms_ev/sqrtshat_ev,shat_ev
       double precision xi_i_fks_ev,y_ij_fks_ev

@@ -85,6 +85,7 @@ C BEGIN CODE
 C ----------
       DSIG=0D0
 
+C     Make sure cuts are evaluated for first subprocess
       CUTSDONE=.FALSE.
 
       IF(IMODE.EQ.1)THEN
@@ -200,6 +201,9 @@ C               Normalize SELPROC to selection probability
  50   CONTINUE
 
       IF(IPROC.EQ.0) RETURN
+
+C     Redo clustering to ensure consistent with final IPROC
+      CUTSDONE=.FALSE.
 
 C     Update weigth w.r.t SELPROC
       WGT=WGT/SELPROC(IMIRROR,IPROC,ICONF)
