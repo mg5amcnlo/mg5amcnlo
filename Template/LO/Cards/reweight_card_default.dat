@@ -1,0 +1,25 @@
+#******************************************************************
+#                       Reweight Module                           *
+#******************************************************************
+launch
+#* Use the set command to specify the new set of parameter 
+#* Or specify a path to a valid param_card/banner
+#* Example of valid command:
+#*     set aewm1 137
+#*     ~/param_card.dat
+#*
+#* Note: 
+#*   1) the value of alphas will be used from the event
+#*      so the value of the param_card is not taken into account.
+#*   2) It is dangerous to change a mass of any particle. 
+
+
+#* If you want to compute the weight for more than one hyppothesis
+#* you need first to uncomment the following line:
+# launch
+# and then use the set command to specify your parameter.
+# All modification will start from the ORIGINAL card not from the 
+# last define one.
+#* You can have as many weight as you want.
+
+

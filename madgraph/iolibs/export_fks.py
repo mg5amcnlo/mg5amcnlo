@@ -1042,7 +1042,7 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
+                          'iolibs/template_files/born_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -1297,7 +1297,7 @@ c     this subdir has no soft singularities
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/b_sf_xxx_fks_from_born.inc')).read()
+                          'iolibs/template_files/b_sf_xxx_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -1482,7 +1482,7 @@ C
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/realmatrix_fks_born.inc')).read()
+                          'iolibs/template_files/realmatrix_fks.inc')).read()
 
         file = file % replace_dict
         
@@ -1522,10 +1522,14 @@ C
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
     
-        pdf_lines = self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
+        pdf_vars, pdf_data, pdf_lines = \
+                self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
+        replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
-        pdf_lines_mirr = self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
+        pdf_vars_mirr, pdf_data_mirr, pdf_lines_mirr = \
+                self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
         replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
     
         file = open(os.path.join(_file_path, \
@@ -1635,6 +1639,7 @@ C
 #        new_pdg = model.get_first_non_pdg()
     
         base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+        model = matrix_element.get('base_amplitude').get('process').get('model')
         minvert = min([max([len(vert.get('legs')) for vert in \
                             diag.get('vertices')]) for diag in base_diagrams])
     
@@ -1655,7 +1660,7 @@ C
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial, 990)
+                                         get_s_and_t_channels(ninitial, model, 990)
     
             s_and_t_channels.append([schannels, tchannels])
     
@@ -1874,7 +1879,10 @@ C
         """Generate the PDF lines for the auto_dsig.f file"""
 
         processes = matrix_element.get('processes')
+        model = processes[0].get('model')
 
+        pdf_definition_lines = ""
+        pdf_data_lines = ""
         pdf_lines = ""
 
         if ninitial == 1:
@@ -1883,24 +1891,45 @@ C
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC) = 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
-            # Set notation for the variables used for different particles
-            pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
-                         21: 'g', 22: 'a'}
-            # Set conversion from PDG code to number used in PDF calls
-            pdgtopdf = {21: 0, 22: 7}
-            # Fill in missing entries
-            for key in pdf_codes.keys():
-                if key < 21:
-                    pdf_codes[-key] = pdf_codes[key] + 'b'
-                    pdgtopdf[key] = key
-                    pdgtopdf[-key] = -key
-
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
                                                p in processes]))),
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
+
+            # Prepare all variable names
+            pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
+                              sum(initial_states,[])])
+            for key,val in pdf_codes.items():
+                pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
+
+            # Set conversion from PDG code to number used in PDF calls
+            pdgtopdf = {21: 0, 22: 7}
+            # Fill in missing entries of pdgtopdf
+            for pdg in sum(initial_states,[]):
+                if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
+                    pdgtopdf[pdg] = pdg
+                elif pdg not in pdgtopdf and pdg in pdgtopdf.values():
+                    # If any particle has pdg code 7, we need to use something else
+                    pdgtopdf[pdg] = 6000000 + pdg
+
+            # Get PDF variable declarations for all initial states
+            for i in [0,1]:
+                pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
+
+            # Get PDF data lines for all initial states
+            for i in [0,1]:
+                pdf_data_lines += "DATA " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in initial_states[i]]) + \
+                                                 "/%d*1D0/" % len(initial_states[i]) + \
+                                                 "\n"
 
             # Get PDF values for the different initial states
             for i, init_states in enumerate(initial_states):
@@ -1952,7 +1981,7 @@ C
                 pdf_lines = pdf_lines[:-1] + "\n"
 
         # Remove last line break from pdf_lines
-        return pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
 
 
     #test written

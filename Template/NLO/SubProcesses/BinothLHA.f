@@ -95,7 +95,7 @@ c Ellis-Sexton scale)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
       else
-         tolerance=-1d0
+         tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
@@ -104,7 +104,7 @@ c once the initial pole check is performed.
             virt_wgt= virt_wgts(1)/dble(ngluons)
             single  = virt_wgts(2)/dble(ngluons)
             double  = virt_wgts(3)/dble(ngluons)
-         else
+         elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
             call sborn_hel(p,born_wgt_recomp_direct)
@@ -135,16 +135,14 @@ c virtual as flat as possible
 c$$$            call get_MC_integer(2,hel(0),ihel,volh)
 c$$$            fillh=.true.
             fillh=.false.
-            do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
-               call sloopmatrixhel_thres(p,hel(i),virt_wgts_hel
-     $              ,tolerance,prec_found,ret_code)
-               virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(i))
-     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
-               single   = single   + virt_wgts_hel(2)*dble(goodhel(i))
-     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
-               double   = double   + virt_wgts_hel(3)*dble(goodhel(i))
-     $              /(volh*dble(mc_hel))/4d0/dble(ngluons)
-            enddo
+            call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
+     $           ,tolerance,prec_found,ret_code)
+            virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            single   = single   + virt_wgts_hel(2)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            double   = double   + virt_wgts_hel(3)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then
@@ -152,6 +150,10 @@ c account)
      &              'Cannot do MC over helicities for 1->N processes'
                stop
             endif
+         else
+            write (*,*) 'Can only do sum over helicities,'/
+     $           /' or pure MC over helicities',mc_hel
+            stop
          endif
       endif
 c======================================================================
@@ -179,9 +181,9 @@ c MadLoop initialization PS points.
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance)
+     $           tolerance*10d0)
          else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
+            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
          endif
          if (tolerance.lt.0.0d0) then
             cpol = .false.
@@ -216,7 +218,7 @@ c or more non-zero (independent) helicities
             endif
          elseif(cpol .and. firsttime) then
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     &           tolerance
+     &           tolerance*10d0
             write(*,*) " COEFFICIENT DOUBLE POLE:"
             write(*,*) "       MadFKS: ", madfks_double,
      &           "          OLP: ", double

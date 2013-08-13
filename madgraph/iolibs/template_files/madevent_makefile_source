@@ -65,6 +65,11 @@ setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc
 
 run_card.inc:
 	../bin/madevent treatcards run
+
+clean_lhapdf:
+	rm -f $(LIBDIR)libgeneric.$(libext)
+	cd PDF; make clean_lhapdf
+
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..

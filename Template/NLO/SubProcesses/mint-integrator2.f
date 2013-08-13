@@ -284,7 +284,7 @@ c This guarantees a 10% increase of the upper bound in this cell
                enddo
             endif
          endif
-         do i=1,nintervals
+         do i=1,nintegrals
             if (f(i).ne.0d0) non_zero_point(i)=non_zero_point(i)+1
          enddo
 c Add the PS point to the result of this iteration
