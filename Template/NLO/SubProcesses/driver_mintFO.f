@@ -368,8 +368,6 @@ c From dsample_fks
       common/ctotalpoints/itotalpoints
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      integer xBW
-      common /c_xBW/xBW
       double precision virt_wgt
       common/c_fks_singular/virt_wgt
       logical fillh
@@ -453,7 +451,7 @@ c
          nFKSprocess=nFKSprocessBorn(2)
       endif
       nbody=.true.
-      fillh=.false.
+      fillh=.false.  ! this is set to true in BinothLHA if doing MC over helicities
       nFKSprocess_used=nFKSprocess
       nFKSprocess_used_Born=nFKSprocess
       call fks_inc_chooser()
@@ -619,13 +617,12 @@ c-----
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel = 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
-      mc_hel=isum_hel
       isum_hel=0
 
       write(*,10) 'Enter Configuration Number: '

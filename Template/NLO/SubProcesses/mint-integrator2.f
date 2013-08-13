@@ -347,7 +347,7 @@ c empty the accumulated results in the MC over integers
          call empty_MC_integer
 c empty the accumalated results for the MINT grids
          if (imode.eq.0) then
-c this is done above when the iteration starts
+c emptying accum. results is done above when the iteration starts
             continue
          elseif (imode.eq.1) then
 c Cannot really skip the increase of the upper bounding envelope. So,
