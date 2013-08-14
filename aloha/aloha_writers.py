@@ -1121,25 +1121,25 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     else:
         tag=list(tag)
 
-
-        
-
     if name is None:
         prefix=''
         if 'MP' in tag:
             prefix = 'MP_'
             tag.remove('MP')
+        if any(t.startswith('P') for t in tag):
+            #put the propagator tag at the end
+            propa = [t for t in tag if t.startswith('P')][0]
+            tag.remove(propa)
+            tag.append(propa)
         name = prefix + abstract.name + ''.join(tag)
     
     if outgoing is None:
         outgoing = abstract.outgoing
-
     
     return '%s_%s' % (name, outgoing)
 
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
-    
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first

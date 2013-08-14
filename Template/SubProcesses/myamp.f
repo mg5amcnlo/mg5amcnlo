@@ -301,7 +301,7 @@ c
       double precision x1,x2,xk(nexternal)
       double precision dr,mtot,etot,xqfact
       double precision spmass
-      integer i, iconfig, l1, l2, j, nt, nbw, iproc
+      integer i, iconfig, l1, l2, j, nt, nbw, iproc, k
       integer iden_part(-nexternal+1:nexternal)
 
       double precision prmass(-nexternal:0,lmaxconfigs)
@@ -505,15 +505,15 @@ c     JA 4/1/2011 always set grid
 c     OM 7/27/2013 use MMJJ in order to set the mass in a appropriate way
               if (xo.eq.0d0.and.MMJJ.gt.0d0) then
                  njet = 0
-                 do j =1,2
-                    if (iforest(j,i,iconfig).gt.0)then
-                      if (is_a_j(iforest(j,i,iconfig))) njet = njet + 1
+                 do k =1,2
+                    if (iforest(k,i,iconfig).gt.0)then
+                      if (is_a_j(iforest(k,i,iconfig))) njet = njet + 1
                     endif
                  enddo
                  if (njet.eq.1) then
-                    xo = (MMJJ/1d1)**2/stot
+                    xo = (MMJJ/1d2)**2/stot
                  else if (njet.eq.2) then
-                    xo = (MMJJ * 0.9)**2/stot
+                    xo = (MMJJ * 0.8)**2/stot
                  endif
               endif
               if (xo.eq.0d0) xo=1d0/stot
@@ -601,8 +601,8 @@ c        Take into account special cuts
          xo = max(xo, mmnl**2/stot)
          if (mmjj.ne.0d0) then
             njet = 0
-            do i=nincoming+1,nexternal
-                if (is_a_j(i)) njet = njet + 1
+            do k=nincoming+1,nexternal
+               if (is_a_j(k)) njet = njet + 1
             enddo
             xo = max(xo, njet*(njet -1)/2d0*mmjj**2/stot)
          endif

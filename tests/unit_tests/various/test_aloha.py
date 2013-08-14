@@ -4337,7 +4337,21 @@ end
 """
         self.assertEqual(text.split('\n'), target.split('\n'))
             
- 
+    @set_global(loop=False, unitary=True, mp=True, cms=False)
+    def test_aloha_get_name(self):
+
+        FFV_M = UFOLorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')  
+        abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
+        
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['P0','C1'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
+
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['C1','P0'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
     
     @set_global(loop=True, unitary=True, mp=True, cms=False)
     def test_aloha_MP_mode(self):
