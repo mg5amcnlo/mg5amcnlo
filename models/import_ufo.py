@@ -21,7 +21,8 @@ import os
 import re
 import sys
 
-from madgraph import MadGraph5Error, MG5DIR
+
+from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.iolibs.files as files
@@ -191,8 +192,9 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
             
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model,
-                                  log=False) 
+    if ReadWrite:
+        save_load_object.save_to_file(os.path.join(model_path, pickle_name),
+                                   model, log=False) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 

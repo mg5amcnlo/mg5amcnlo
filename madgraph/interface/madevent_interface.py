@@ -65,7 +65,7 @@ try:
     import madgraph.various.combine_runs as combine_runs
 
     import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
     MADEVENT = False
 except Exception, error:
     if __debug__:
@@ -74,7 +74,7 @@ except Exception, error:
     import internal.extended_cmd as cmd
     import internal.banner as banner_mod
     import internal.misc as misc    
-    from internal import InvalidCmd, MadGraph5Error
+    from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.save_load_object as save_load_object
@@ -3681,11 +3681,9 @@ calculator."""
             mode = self.cluster_mode
         
         # ensure that exe is executable
-        if os.path.exists(exe) and not os.access(exe, os.X_OK):
+        if os.path.exists(exe) and ReadWrite:
             os.system('chmod +x %s ' % exe)
-
-        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
-                                            os.access(pjoin(cwd, exe), os.X_OK):
+        elif (cwd and os.path.exists(pjoin(cwd, exe))) and ReadWrite:
             os.system('chmod +x %s ' % pjoin(cwd, exe))
             
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):

@@ -1820,7 +1820,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
-        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+        if madgraph.ReadWrite: # prevent on read-only disk  
             self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
@@ -1868,7 +1868,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+        if madgraph.ReadWrite: #prevent to run on Read Only disk
             self.do_install('update --mode=mg5_end')
         print
 
