@@ -2550,7 +2550,6 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_treatcards(self, line):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-        print "PASS IN TREATCARDS", sys.argv
         args = self.split_arg(line)
         mode,  opt  = self.check_treatcards(args)
 
