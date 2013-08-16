@@ -2550,6 +2550,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     def do_treatcards(self, line):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+        print "PASS IN TREATCARDS", sys.argv
         args = self.split_arg(line)
         mode,  opt  = self.check_treatcards(args)
 
@@ -2584,7 +2585,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 fsock.close()
                 return
             else:
-                subprocess.call(['python', 'write_param_card.py'], 
+                subprocess.call([sys.executable, 'write_param_card.py'], 
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             param_card.write_inc_file(outfile, ident_card, default)

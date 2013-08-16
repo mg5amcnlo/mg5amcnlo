@@ -10,6 +10,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       state has one massive and one massless particles. (Thanks Wojciech Kotlarski)
                   OM: Fix a compilation problem for SLC6 for the installation of pythia-pgs
 		  OM: Fix a crash linked to bug #1209113.
+		  OM: Fix a crash if python is not a valid executation (Bug #1211777)
 
 1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
                       one W decaying leptonically. For such processes the lepton cuts were also used
