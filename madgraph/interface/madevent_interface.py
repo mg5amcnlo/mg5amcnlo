@@ -1490,6 +1490,15 @@ class CompleteForCmd(CheckValidForCmd):
         
         opts = self._run_options + self._calculate_decay_options
         return  self.list_completion(text, opts, line)
+    
+    def complete_display(self, text, line, begidx, endidx):
+        """ Complete the display command"""    
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) >= 2 and args[1] =='results':
+            start = line.find('results')
+            return self.complete_print_results(text, 'print_results '+line[start+7:], begidx+2+start, endidx+2+start)
+        return super(CompleteForCmd, self).complete_display(text, line, begidx, endidx)
 
     def complete_multi_run(self, text, line, begidx, endidx):
         """complete multi run command"""
@@ -1598,8 +1607,6 @@ class CompleteForCmd(CheckValidForCmd):
             tmp1 =  self.list_completion(text, data)
             return tmp1        
         else:
-            #return valid tag_name
-            #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
             data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
             tmp1 =  self.list_completion(text, data)
@@ -1612,7 +1619,7 @@ class MadEventAlreadyRunning(InvalidCmd):
 #===============================================================================
 # MadEventCmd
 #===============================================================================
-class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
+class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     """The command line processor of MadGraph"""    
     
     # Truth values
@@ -1624,7 +1631,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
-    _display_opts = ['run_name', 'options', 'variable']
+    _display_opts = ['run_name', 'options', 'variable', 'results']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
@@ -2052,6 +2059,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else:
                     outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
             output.write(outstr)
+        elif  args[0] == 'results':
+            self.do_print_results(' '.join(args[1:]))
         else:
             super(MadEventCmd, self).do_display(line, output)
  
@@ -2120,7 +2129,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
 
     ############################################################################ 
     def do_print_results(self, line):
-        """Print the cross-section/ number of events for a given run"""
+        """Not in help:Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
         if len(args) > 0:
@@ -3681,9 +3690,10 @@ calculator."""
             mode = self.cluster_mode
         
         # ensure that exe is executable
-        if os.path.exists(exe) and ReadWrite:
+        if os.path.exists(exe) and not os.access(exe, os.X_OK):
             os.system('chmod +x %s ' % exe)
-        elif (cwd and os.path.exists(pjoin(cwd, exe))) and ReadWrite:
+        elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
+                                            os.access(pjoin(cwd, exe), os.X_OK):
             os.system('chmod +x %s ' % pjoin(cwd, exe))
             
         def launch_in_thread(exe, argument, cwd, stdout, control_thread):

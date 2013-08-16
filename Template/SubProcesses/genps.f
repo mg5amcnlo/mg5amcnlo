@@ -534,61 +534,6 @@ c
       end
 
 
-      integer function get_nb_jet_in_decay(itree, pos)
-
-      include 'genps.inc'
-      include 'nexternal.inc'
-
-      integer itree(2,-max_branch:-1) !Structure of configuration   
-      integer pos,mgtag                                                   
-      integer nb_jet, i
-      integer to_look(max_branch)
-      integer current, last_look
-
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
-      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL),IS_A_ONIUM(NEXTERNAL)
-      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
-     . IS_A_ONIUM
-
-      nb_jet = 0
-      if (pos.gt.0) then
-         if (is_a_j(pos)) nb_jet = 1
-         goto 10
-      endif
-c      goto 10
-      remain = 0
-      do i = 1,max_branch
-         to_look(i) = 0
-      enddo
-      to_look(1) = pos
-      last_look = 2
-
-      nb_jet = 0
-      do current = 1, max_branch
-         if (to_look(current).eq.0) then
-            goto 10
-         endif
-         mgtag = to_look(current)
-         if (itree(1, mgtag).gt.0) then
-            if (is_a_j(itree(1, mgtag))) nb_jet = nb_jet + 1
-         else
-            to_look(last_look) = itree(1, mgtag)
-            last_look = last_look + 1
-         endif
-         if (itree(2, mgtag).gt.0) then
-            if (is_a_j(itree(2, mgtag))) nb_jet = nb_jet + 1
-         else
-            to_look(last_look) = itree(2, mgtag)
-            last_look =last_look + 1
-         endif
-      enddo
-
- 10   get_nb_jet_in_decay = nb_jet
-c      write(*,*) 'pos -> nb_jet', pos, '->', nb_jet
-      return 
-      end
-
       subroutine one_tree(itree,iconfig,nbranch,P,M,S,X,jac,pswgt)
 c************************************************************************
 c     Calculates the momentum for everything below in the tree until
@@ -638,19 +583,6 @@ c
 
       include 'run.inc'
 
-c
-c     allowed refinement based on cut value (currently MM**)
-c
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_L(NEXTERNAL)
-      LOGICAL  IS_A_B(NEXTERNAL),IS_A_A(NEXTERNAL),IS_A_ONIUM(NEXTERNAL)
-      LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
-     . IS_A_ONIUM
-      include 'cuts.inc'
-      
-      integer nb_jet, nb_jet2, get_nb_jet_in_decay
-      external get_nb_jet_in_decay
-
 c-----
 c  Begin Code
 c-----
@@ -682,7 +614,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-c      write(*,*) 'Number of t_channels',nt_channel,ns_channel,nbranch
 
 c
 c     Determine masses for all intermediate states.  Starting
