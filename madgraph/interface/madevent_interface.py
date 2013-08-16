@@ -4976,6 +4976,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         cmd.OneLinePathCompletion.__init__(self, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
         except check_param_card.InvalidParamCard:
@@ -5022,10 +5023,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
         
-                    
+        self.run_set = run_card_def.keys() + self.run_card.hidden_param
         # check for conflict with run_card
         for var in self.pname2block:                
-            if var in self.run_card:
+            if var in self.run_set:
                 self.conflict.append(var)        
                             
     
@@ -5073,7 +5074,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           self.list_completion(text, ['run_card', 'param_card'])
         
         if 'run_card' in allowed.keys():
-            opts = self.run_card.keys()
+            opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
             
@@ -5154,7 +5155,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
-        if args[start] in self.run_card.keys() and card != 'param_card':
+        if (args[start] in self.run_set) and card != 'param_card':
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -5165,6 +5166,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]]) 
                 else:
+                    logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
             elif  args[start+1] in ['t','.true.']:
                 self.setR(args[start], '.true.')
