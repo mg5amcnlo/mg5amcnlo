@@ -54,6 +54,7 @@ c
 c     Local for generating amps
 c
       double precision p(0:3,99), wgt, x(99), fx
+      double complex wgt1(2)
       double precision p1(0:3,99),xx(maxinvar)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
@@ -278,7 +279,8 @@ c x_to_f_arg subroutine
          exit
       endif
 
-
+      call sborn(p_born,wgt1)
+      
       write (*,*) ''
       write (*,*) ''
       write (*,*) ''
