@@ -2456,6 +2456,13 @@ class decay_all_events:
         self.Ecollider=float(self.banner.get('run_card', 'ebeam1'))\
                        +float(self.banner.get('run_card', 'ebeam2'))
 
+
+        # write down the seed:
+        seedfile=open(pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat'),'w')
+        if 'seed' in self.options:
+            seedfile.write('       iseed= %s \n' % self.options['seed'])
+        else:
+            seedfile.write('       iseed= 1 \n' )
         
         # width and mass information will be filled up later
         self.pid2width = lambda pid: self.banner.get('param_card', 'decay', abs(pid)).value
@@ -2538,7 +2545,8 @@ class decay_all_events:
         #==========================================================================
         # Need to change the way this is done !
         decay_mapping = self.get_identical_decay()
-        
+        #print decay_mapping        
+ 
         # Estimation of the maximum weight
         #=================================
         if max_weight_arg>0:
@@ -3161,6 +3169,9 @@ class decay_all_events:
             nfinal=len(self.all_ME[tag]['base_order'][1])
             for dico in self.all_ME[tag]['decays']:
                 full_path=dico['path']
+                #print prod_path
+                #print full_path
+                #print ' '
                 for item in list_prodfiles:
                      #print full_path
                      prodfile=pjoin(prod_path,item)
@@ -3286,8 +3297,8 @@ class decay_all_events:
                      
                 
                 if mode=='full_me':
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'htuple.f')
-                    shutil.copyfile(file_madspin, pjoin(new_path,"htuple.f"))  
+                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'ranmar.f')
+                    shutil.copyfile(file_madspin, pjoin(new_path,"ranmar.f"))  
                     
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat')
                     shutil.copyfile(file_madspin, pjoin(new_path,"seeds.dat"))  
@@ -4486,7 +4497,7 @@ class decay_all_events:
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     external.stdin.write(stdin_text)
                     external.stdin.close()
@@ -4499,7 +4510,7 @@ class decay_all_events:
             except Exception:
                 pass
             else:
-                stdin_text="5 0 0"
+                stdin_text="5 0 0 0"
                 external.stdin.write(stdin_text)
                 external.stdin.close()
                 external.stdout.close()

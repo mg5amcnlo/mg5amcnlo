@@ -71,10 +71,15 @@ c Conflicting BW stuff
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
      & nbranch, ns_channel,nt_channel, pos_pz
 
-      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
+      integer*8       iseed
+      common /to_seed/iseed
+
+c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
                                   ! numbers at the position reached 
                                   ! at the previous termination of the
                                   ! code
+
+       include 'seeds.dat'
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
@@ -102,7 +107,11 @@ c      enddo
       elseif (mode.eq.3) then
          continue      ! just retrun the value of M_full   
       else
-         call ntuple(x,0d0,1d0,1,1)  ! write down the position of the sequence of random nbs
+c         call ntuple(x,0d0,1d0,1,1)  ! write down the position of the sequence of random nbs
+         open(unit=57, file='seeds.dat', status='old')
+           iseed=iseed+1
+           write(57,*) '       iseed=',iseed
+         close(57)
          goto 2                      ! and close the program  
       endif
 
@@ -197,7 +206,7 @@ c        max_jac=0d0
            ivar=0
            no_gen=.false.
            do j = 1, 3*(nexternal-nexternal_prod)
-              call  ntuple(x(j),0d0,1d0,j,0)
+              call  ntuple(x(j),0d0,1d0,j,1)
            enddo
 
 c           do j=1,nexternal_prod
@@ -295,7 +304,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            ivar=0
            no_gen=.false.
            do i = 1, 3*(nexternal-nexternal_prod)+1
-              call  ntuple(x(i),0d0,1d0,i,0)
+              call  ntuple(x(i),0d0,1d0,i,1)
            enddo
 
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
@@ -370,7 +379,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          do while (notpass)
 
            do i = 1, 3*(nexternal-nexternal_prod)+1
-              call  ntuple(x(i),0d0,1d0,i,0)
+              call  ntuple(x(i),0d0,1d0,i,1)
            enddo
 
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
@@ -413,7 +422,7 @@ c     common
       enddo
 
       !do i=1,100
-      call  ntuple(random,0d0,1d0,24,0)
+      call  ntuple(random,0d0,1d0,24,1)
       !enddo
 
       do i=1,mapconfig(0)

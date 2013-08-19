@@ -5,7 +5,7 @@ PROG   = check
 INIT   = init
 LINKLIBS =  -L../../lib/ -ldhelas -lmodel 
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
-PROCESS=  driver.o matrix.o matrix_prod.o htuple.o
+PROCESS=  driver.o matrix.o matrix_prod.o ranmar.o
 
  
 $(PROG): $(PROCESS)  makefile $(LIBS)
