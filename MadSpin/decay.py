@@ -1630,7 +1630,14 @@ class AllMatrixElement(dict):
                          daughters[0],daughters[1],type_propa)
 
         return topologies
-    
+   
+    def get_decay_from_tag(self, production_tag, decay_tag):
+
+        for decay in self[production_tag]['decays']:
+            if decay['decay_tag']==decay_tag: return decay
+        logger.info('Unable to retrieve decay from decay_tag')
+        return
+ 
     def get_random_decay(self, production_tag,first=[]):
         """select randomly a decay channel"""
         
@@ -2545,7 +2552,12 @@ class decay_all_events:
         #==========================================================================
         # Need to change the way this is done !
         decay_mapping = self.get_identical_decay()
-        #print decay_mapping        
+
+        # also compute the inverted map, which will be used in the decay procedure       
+        inverted_decay_mapping={}
+        for tag in decay_mapping:
+           for equiv_decay in decay_mapping[tag]:
+               inverted_decay_mapping[equiv_decay[0]]=tag
  
         # Estimation of the maximum weight
         #=================================
@@ -2561,7 +2573,7 @@ class decay_all_events:
         # different decay
         self.add_loose_decay()
         # launch the decay and reweighting
-        efficiency = self.decaying_events()
+        efficiency = self.decaying_events(inverted_decay_mapping)
         if  efficiency != 1:
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
@@ -2584,8 +2596,8 @@ class decay_all_events:
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
- 
-    def decaying_events(self):
+
+    def decaying_events(self,inverted_decay_mapping):
         """perform the decay of each events"""
 
         decay_tools = decay_misc()
@@ -2618,6 +2630,10 @@ class decay_all_events:
                 nb_skip +=1
                 continue 
             else:
+                #  for the matrix element, identify the master decay channel to which 'decay' is equivalent:
+                decay_tag_me=inverted_decay_mapping[decay['decay_tag']]
+                decay_me=self.all_ME.get_decay_from_tag(production_tag, decay_tag_me)
+ 
                 event_nb+=1
                 report[decay['decay_tag']] += 1 
                 if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
@@ -2631,7 +2647,7 @@ class decay_all_events:
             #print values_for_mc_masses
 
             p, p_str=self.curr_event.give_momenta(event_map)
-            stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay['max_weight'])
+            stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'])
             stdin_text+=p_str
             # here I also need to specify the Monte Carlo Masses
             stdin_text+=" %s \n" % nb_mc_masses
@@ -2642,7 +2658,7 @@ class decay_all_events:
             #print ' '
             
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay['path'], stdin_text)
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
             #logger.debug('Nb failures %s ', failed)
             # next: need to fill all intermediate momenta
             #print indices_for_mc_masses
