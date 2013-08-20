@@ -65,7 +65,7 @@ try:
     import madgraph.various.combine_runs as combine_runs
 
     import models.check_param_card as check_param_card    
-    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
+    from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
     MADEVENT = False
 except Exception, error:
     if __debug__:
@@ -74,7 +74,7 @@ except Exception, error:
     import internal.extended_cmd as cmd
     import internal.banner as banner_mod
     import internal.misc as misc    
-    from internal import InvalidCmd, MadGraph5Error
+    from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.save_load_object as save_load_object
@@ -499,7 +499,12 @@ class HelpToCmd(object):
         logger.info("-- run pythia on RUN (current one by default)")
         self.run_options_help([('-f','answer all question by default'),
                                ('--tag=', 'define the tag for the pythia run'),
-                               ('--no_default', 'not run if pythia_card not present')])        
+                               ('--no_default', 'not run if pythia_card not present')]) 
+        
+    def help_print_result(self):
+        logger.info("syntax: print_result [RUN] [TAG]")
+        logger.info("-- show in text format the status of the run (cross-section/nb-event/...)")
+               
                 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
@@ -1485,6 +1490,15 @@ class CompleteForCmd(CheckValidForCmd):
         
         opts = self._run_options + self._calculate_decay_options
         return  self.list_completion(text, opts, line)
+    
+    def complete_display(self, text, line, begidx, endidx):
+        """ Complete the display command"""    
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) >= 2 and args[1] =='results':
+            start = line.find('results')
+            return self.complete_print_results(text, 'print_results '+line[start+7:], begidx+2+start, endidx+2+start)
+        return super(CompleteForCmd, self).complete_display(text, line, begidx, endidx)
 
     def complete_multi_run(self, text, line, begidx, endidx):
         """complete multi run command"""
@@ -1583,6 +1597,21 @@ class CompleteForCmd(CheckValidForCmd):
 
     complete_delphes = complete_pgs        
 
+    def complete_print_results(self,text, line, begidx, endidx):
+        "Complete the print results command"
+        args = self.split_arg(line[0:begidx], error=False) 
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1        
+        else:
+            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
+            data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
+            tmp1 =  self.list_completion(text, data)
+            return tmp1
+            
 
 class MadEventAlreadyRunning(InvalidCmd):
     pass
@@ -1590,7 +1619,7 @@ class MadEventAlreadyRunning(InvalidCmd):
 #===============================================================================
 # MadEventCmd
 #===============================================================================
-class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
+class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     """The command line processor of MadGraph"""    
     
     # Truth values
@@ -1602,7 +1631,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
-    _display_opts = ['run_name', 'options', 'variable']
+    _display_opts = ['run_name', 'options', 'variable', 'results']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
@@ -2030,6 +2059,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 else:
                     outstr += "  %25s \t:\t%s (user set)\n" % (key,value)
             output.write(outstr)
+        elif  args[0] == 'results':
+            self.do_print_results(' '.join(args[1:]))
         else:
             super(MadEventCmd, self).do_display(line, output)
  
@@ -2095,6 +2126,37 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         file_path = args[0]
         
         misc.open_file(file_path)
+
+    ############################################################################ 
+    def do_print_results(self, line):
+        """Not in help:Print the cross-section/ number of events for a given run"""
+        
+        args = self.split_arg(line)
+        if len(args) > 0:
+            run_name = args[0]
+        else:
+            if not self.results.current:
+                raise self.InvalidCmd('no run currently defined. Please specify one.')
+            else:
+                run_name = self.results.current['run_name']
+        if run_name not in self.results:
+            raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
+                                  % run_name)
+        if len(args) == 2:
+            tag = args[1]
+            if tag.isdigit():
+                tag = int(tag) - 1
+                if len(self.results[run_name]) < tag:
+                    raise self.InvalidCmd('Only %s different tag available' % \
+                                                    len(self.results[run_name]))
+                data = self.results[run_name][tag]
+            else:
+                data = self.results[run_name].return_tag(tag)
+        else:
+            data = self.results[run_name].return_tag(None) # return the last
+        
+        self.print_results_in_shell(data)
+        
 
     ############################################################################
     def do_set(self, line, log=True):
@@ -2531,7 +2593,7 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 fsock.close()
                 return
             else:
-                subprocess.call(['python', 'write_param_card.py'], 
+                subprocess.call([sys.executable, 'write_param_card.py'], 
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             param_card.write_inc_file(outfile, ident_card, default)
@@ -2566,6 +2628,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.total_jobs = 0
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
+        
+        #check difficult PS case
+        if float(self.run_card['mmjj']) > 150:
+            self.pass_in_difficult_integration_mode()
+          
         
         P_zero_result = [] # check the number of times where they are no phase-space
         for nb_proc,subdir in enumerate(subproc):
@@ -2630,6 +2697,40 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         self.results.add_detail('error', error) 
         self.update_status('End survey', 'parton', makehtml=False)
 
+    ############################################################################
+    def pass_in_difficult_integration_mode(self):
+        """be more secure for the integration to not miss it due to strong cut"""
+        
+        # improve survey options if default
+        if self.opts['points'] == self._survey_options['points'][1]:
+            self.opts['points'] = 3 * self._survey_options['points'][1]
+        if self.opts['iterations'] == self._survey_options['iterations'][1]:
+            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
+        if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
+            
+        # Modify run_config.inc in order to improve the refine
+        conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
+        files.cp(conf_path, conf_path + '.bk')
+
+        text = open(conf_path).read()
+        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 10000 )''', text)
+        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 25000 )''', text)
+        fsock = open(conf_path, 'w')
+        fsock.write(text)
+        fsock.close()
+        
+        # Compile
+        for name in ['../bin/internal/gen_ximprove', 'all', 
+                     '../bin/internal/combine_events']:
+            self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
+        
+        
+        
+        
+        
+        
+        
     ############################################################################      
     def do_refine(self, line):
         """Advanced commands: launch survey for the current process """
@@ -3591,7 +3692,6 @@ calculator."""
         # ensure that exe is executable
         if os.path.exists(exe) and not os.access(exe, os.X_OK):
             os.system('chmod +x %s ' % exe)
-
         elif (cwd and os.path.exists(pjoin(cwd, exe))) and not \
                                             os.access(pjoin(cwd, exe), os.X_OK):
             os.system('chmod +x %s ' % pjoin(cwd, exe))
@@ -4886,6 +4986,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         cmd.OneLinePathCompletion.__init__(self, *args, **opt)
         self.me_dir = self.mother_interface.me_dir
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
         except check_param_card.InvalidParamCard:
@@ -4932,10 +5033,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
         
-                    
+        self.run_set = run_card_def.keys() + self.run_card.hidden_param
         # check for conflict with run_card
         for var in self.pname2block:                
-            if var in self.run_card:
+            if var in self.run_set:
                 self.conflict.append(var)        
                             
     
@@ -4983,7 +5084,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           self.list_completion(text, ['run_card', 'param_card'])
         
         if 'run_card' in allowed.keys():
-            opts = self.run_card.keys()
+            opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
             
@@ -5064,7 +5165,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
-        if args[start] in self.run_card.keys() and card != 'param_card':
+        if (args[start] in self.run_set) and card != 'param_card':
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)
@@ -5075,6 +5176,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]]) 
                 else:
+                    logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
             elif  args[start+1] in ['t','.true.']:
                 self.setR(args[start], '.true.')

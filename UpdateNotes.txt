@@ -1,5 +1,19 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
+                      the cross-section were slightly (~4%) under-evaluated due to such strong cut.
+                  OM: Add a command print_results in the madevent interface. This command print the 
+                      cross-section/number of events/... 
+                  OM: change the way prompt color is handle (no systematic reset). Which provides better
+                      result when the log is printed to a file. (thanks Bae Taegil) 
+                  OM: Fix Bug #1199514: Wrong assignment of mass in the lhe events file if the initial 
+                      state has one massive and one massless particles. (Thanks Wojciech Kotlarski)
+                  OM: Fix a compilation problem for SLC6 for the installation of pythia-pgs
+                  OM: Fix a crash linked to bug #1209113.
+                  OM: Fix a crash if python is not a valid executation (Bug #1211777)
+		  OM: Fix a bug in the edition of the run_card if some parameters were missing in the cards
+                      (Bug #1183334)
+
 1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
                       one W decaying leptonically. For such processes the lepton cuts were also used
                       on the neutrino particle reducing the cross-section. This bug was present only
