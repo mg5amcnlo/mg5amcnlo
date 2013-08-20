@@ -300,7 +300,7 @@ c         write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
                icb(j,1)=ic(j,1)
             endif
          enddo
-         if (mtc) then
+c$$$         if (mtc) then
 c
 c     Now check if it is a valid swap to make
 c
@@ -367,7 +367,7 @@ c$$$                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),d
          else
             write(*,*) 'Bad swap', (ic(i,1),i=1,nexternal)
          endif   !Good Swap
-         endif   !Real Swap
+c$$$         endif   !Real Swap
          do j=3,nexternal
             ic(j,1)=ic(j,1)-2
          enddo
