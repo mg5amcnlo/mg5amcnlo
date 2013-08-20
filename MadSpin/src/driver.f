@@ -79,7 +79,9 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
                                   ! at the previous termination of the
                                   ! code
 
-       include 'seeds.dat'
+       open(unit=56,file='seeds.dat',status='old')
+       read(56,*) iseed
+       close(56)
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
@@ -110,7 +112,7 @@ c      enddo
 c         call ntuple(x,0d0,1d0,1,1)  ! write down the position of the sequence of random nbs
          open(unit=57, file='seeds.dat', status='old')
            iseed=iseed+1
-           write(57,*) '       iseed=',iseed
+           write(57,*) iseed
          close(57)
          goto 2                      ! and close the program  
       endif

@@ -2467,10 +2467,11 @@ class decay_all_events:
         # write down the seed:
         seedfile=open(pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat'),'w')
         if 'seed' in self.options:
-            seedfile.write('       iseed= %s \n' % self.options['seed'])
+            seedfile.write('  %s \n' % self.options['seed'])
         else:
-            seedfile.write('       iseed= 1 \n' )
-        
+            seedfile.write('   1 \n' )
+        seedfile.close()       
+ 
         # width and mass information will be filled up later
         self.pid2width = lambda pid: self.banner.get('param_card', 'decay', abs(pid)).value
         self.pid2mass = lambda pid: self.banner.get('param_card', 'mass', abs(pid)).value
