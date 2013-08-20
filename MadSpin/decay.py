@@ -2726,7 +2726,7 @@ class decay_all_events:
             #    weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
 
                 # Treat the case that we ge too many overweight.
-            if weight > decay['max_weight']:
+            if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
                 report['%s_f' % (decay['decay_tag'],)] +=1
                 if __debug__:               
