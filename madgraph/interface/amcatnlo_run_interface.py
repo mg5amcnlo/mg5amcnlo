@@ -2679,7 +2679,6 @@ Integrated cross-section
         if not self.force:
             answer = ''
             while answer not in ['0', 'done', 'auto', 'onlyshower']:
-                misc.sprint(answer)
                 question = create_question(switch)
                 if mode:
                     answer = mode
