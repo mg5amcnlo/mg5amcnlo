@@ -351,9 +351,6 @@ c FKS stuff:
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
       character*4 abrv
       common /to_abrv/ abrv
 
@@ -717,17 +714,9 @@ c
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
             if (xtot.ne.0d0) then
                enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
@@ -1001,9 +990,6 @@ c FKS stuff:
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
-
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
 
       logical nbody
       common/cnbody/nbody
@@ -1762,17 +1748,9 @@ c
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
             if (xtot.ne.0d0) then
                enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
@@ -4912,9 +4890,6 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
 
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
       character*1 integrate
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -5131,50 +5106,19 @@ c Setup the FKS symmetry factors.
 c Check to see if this channel needs to be included in the multi-channeling
          diagramsymmetryfactor=0d0
          if (multi_channel) then
-            if (onlyBorn) then
-               open (unit=19,file="symfact.dat",status="old",err=14)
-               do i=1,mapconfig(0)
-                  read (19,*,err=23) fac1,fac2
-                  if (fac2.gt.0) then
-                     multi_chan(fac1)=.true.
-                  else
-                     multi_chan(fac1)=.false.
+            open (unit=19,file="symfact.dat",status="old",err=14)
+            do i=1,mapconfig(0)
+               read (19,*,err=23) fac1,fac2
+               if (i.eq.iconfig) then
+                  if (mapconfig(iconfig).ne.fac1) then
+                     write (*,*) 'inconsistency in symfact.dat',i
+     $                    ,iconfig,mapconfig(iconfig),fac1
+                     stop
                   endif
-               enddo
-               if (multi_chan(mapconfig(iconfig))) then
-                  diagramsymmetryfactor=1d0
-               else
-                  write (*,*) 'No need to integrate this channel'
-                  stop
+                  diagramsymmetryfactor=dble(fac2)
                endif
-               close(19)
-            else                ! not onlyBorn
-               open (unit=19,file="symfact.dat",status="old",err=14)
-               do i=1,mapconfig(0)
-                  read (19,*,err=23) fac1,fac2
-                  if (fac1.eq.mapconfig(iconfig)) then
-                     if (fac2.gt.0) then
-                        write (*,*) 'diagram symmetry factor',fac2
-                        diagramsymmetryfactor=dble(fac2)
-                     elseif(fac2.lt.0) then
-                        write (*,*)
-     &                       'diagram symmetry factor is negative', fac2
-                        write (*,*)
-     &                      'it is not needed to integrate this channel'
-                        diagramsymmetryfactor=1d0
-                     else
-                        write (*,*) 'diagram symmetry factor is zero',
-     $                       fac2
-                        stop
-                     endif
-                  endif
-               enddo
-               if (diagramsymmetryfactor.eq.0d0) then
-                  write (*,*) 'error in diagramsymmetryfactor',iconfig
-                  stop
-               endif
-               close(19)
-            endif
+            enddo
+            close(19)
          else                   ! no multi_channel
             diagramsymmetryfactor=1d0
          endif

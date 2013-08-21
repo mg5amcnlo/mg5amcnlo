@@ -94,7 +94,6 @@ def compile_dir(arguments):
     (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
     logger.info(' Compiling %s...' % p_dir)
 
-    gensym_log = pjoin(me_dir, 'gensym.log')
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
     #compile everything
 
@@ -114,8 +113,9 @@ def compile_dir(arguments):
             raise aMCatNLOError('gensym compilation failed')
 
         open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
-        p = misc.Popen(['./gensym'], stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                 stdout=open(gensym_log, 'w'),cwd= this_dir) 
+        misc.call(['./gensym'],cwd= this_dir,
+                 stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                 stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
         #compile madevent_mintMC/vegas
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
