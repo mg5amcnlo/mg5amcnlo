@@ -358,11 +358,16 @@ class TestMEfromfile(unittest.TestCase):
             out = p.communicate('install pythia-pgs')
         misc.compile(cwd=pythia_path)
         
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(_file_path, os.path.pardir),
-                        stdout=devnull,stderr=devnull)
+                        stdout=stdout,stderr=stdout)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)
