@@ -603,7 +603,7 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             args.append('options')
-        
+
         if args[0] not in self._save_opts:
             raise self.InvalidCmd('wrong \"save\" format')
         
@@ -1632,6 +1632,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
+    _save_opts = ['options']
     # survey options, dict from name to type, default value, and help text
     _survey_options = {'points':('int', 1000,'Number of points for first iteration'),
                        'iterations':('int', 5, 'Number of iterations'),
