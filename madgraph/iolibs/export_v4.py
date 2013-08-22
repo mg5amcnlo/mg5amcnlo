@@ -1352,8 +1352,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         # Generate diagrams
         filename = "matrix.ps"
@@ -2364,9 +2363,9 @@ c           This is dummy particle used in multiparticle vertices
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
         lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
-
         # Write the file
-        writer.writelines(lines)
+        writer.write('\n'.join(lines))
+        writer.write('\n')
 
         return True
 
@@ -2591,8 +2590,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),

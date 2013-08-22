@@ -1,11 +1,13 @@
-# This file was automatically created by FeynRules 1.7.53
-# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Wed 1 Aug 2012 00:44:43
+# This file was automatically created by FeynRules 1.7.214
+# Mathematica version: 9.0 for Mac OS X x86 (64-bit) (January 24, 2013)
+# Date: Thu 22 Aug 2013 18:21:53
 
 
 from __future__ import division
 from object_library import all_particles, Particle
 import parameters as Param
+
+import propagators as Prop
 
 a = Particle(pdg_code = 22,
              name = 'a',
@@ -258,7 +260,7 @@ G0 = Particle(pdg_code = 250,
               width = Param.ZERO,
               texname = 'G0',
               antitexname = 'G0',
-              GoldstoneBoson = True,
+              goldstone = True,
               charge = 0,
               GhostNumber = 0,
               Y = 0)
@@ -272,7 +274,7 @@ G__plus__ = Particle(pdg_code = 251,
                      width = Param.ZERO,
                      texname = 'G+',
                      antitexname = 'G-',
-                     GoldstoneBoson = True,
+                     goldstone = True,
                      charge = 1,
                      GhostNumber = 0,
                      Y = 0)

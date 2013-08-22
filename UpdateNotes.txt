@@ -1,5 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.13 (xx/09/13) OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
+                      (tt~+4jets)
+                  BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
+                      Higgs interactions) 
+                  OM: use evince by default to open eps file instead of gv.
+
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.
                   OM: Add a command print_results in the madevent interface. This command print the 
