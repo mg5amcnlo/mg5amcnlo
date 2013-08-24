@@ -1252,7 +1252,7 @@ class testLorentzObject(unittest.TestCase):
                 (obj.Metric(rho,sigma) - obj.OverMass2(t) * obj.P(rho,t) *obj.P(sigma,t) )
         
         prop = aloha_obj.Spin2Propagator(mu,nu,rho,sigma, t)
-        zero = 1j * propa - 2 * prop
+        zero = propa - 2 * prop
         
         
         zero = zero.expand().simplify() 
@@ -1290,7 +1290,7 @@ class testLorentzObject(unittest.TestCase):
         propa = propa + 2/6 * OM(t) * Metric(alpha, beta) *  P(mu,t) * P(nu,t)     
         
              
-        zero = 1j*propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        zero = propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         
         zero = zero.expand().simplify() 
         
@@ -1338,7 +1338,7 @@ class testLorentzObject(unittest.TestCase):
         t = 1
         mu, nu, alpha, beta = 1,2,3,4
         
-        aloha = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        aloha = complex(0,1)*Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         analytical = complex(0, 1/3) * (OM(t) * P(-1, t)* P(-1,t) - 1) * (Metric(alpha, beta) + 2 * OM(t) * P(alpha,t)*P(beta,t))
         
         
@@ -4384,7 +4384,21 @@ end
 """
         self.assertEqual(text.split('\n'), target.split('\n'))
             
- 
+    @set_global(loop=False, unitary=True, mp=True, cms=False)
+    def test_aloha_get_name(self):
+
+        FFV_M = UFOLorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')  
+        abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
+        
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['P0','C1'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
+
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['C1','P0'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
     
     @set_global(loop=True, unitary=True, mp=True, cms=False)
     def test_aloha_MP_mode(self):

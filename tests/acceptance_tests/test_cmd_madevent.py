@@ -241,7 +241,8 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 3864.0
-        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
@@ -379,15 +380,15 @@ class TestMEfromfile(unittest.TestCase):
                              stdout=stdout,stderr=stderr)
             out = p.communicate('install pythia-pgs')
         misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
-        
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
 
-
-        
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(MG5DIR),
-                        stdout=stdout,stderr=stderr)
-
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)
         
         self.check_parton_output(cross=4.541638, error=0.035)
         self.check_parton_output('run_02', cross=4.541638, error=0.035)
