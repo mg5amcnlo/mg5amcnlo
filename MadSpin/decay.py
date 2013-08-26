@@ -1576,7 +1576,7 @@ class AllMatrixElement(dict):
                             # get_s_and_t_channels gives vertices starting from
                             # final state external particles and working inwards
                             stchannels.append(h.get('amplitudes')[0].\
-                                              get_s_and_t_channels(ninitial, new_pdg))
+                                              get_s_and_t_channels(ninitial, model, new_pdg))
                     else:
                             stchannels.append((empty_verts, None))
 
@@ -1663,7 +1663,7 @@ class AllMatrixElement(dict):
         
         for me in matrix_elements:
             skip = [] # due to particles/anti-particles some me need to be add
-                  # as a separate matrix element in the instance.
+                      # as a separate matrix element in the instance.
             topo = self.get_topologies(me)
             # get the orignal order:
             initial = []

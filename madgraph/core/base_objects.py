@@ -200,7 +200,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -218,6 +218,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -732,6 +733,26 @@ class Interaction(PhysicsObject):
         else:
             return False
         
+    def is_UVloop(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVloop')
+        else:
+            return False
+        
+    def is_UVtree(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVtree')
+        else:
+            return False
+        
     def is_UVCT(self):
         """ Returns if the interaction is of the UVCT type which means that 
         it has been selected as a possible UV counterterm interaction for this
@@ -896,7 +917,15 @@ class InteractionList(PhysicsObjectList):
 
     def get_UVmass(self):
         """ return all interactions in the list of type UVmass """
-        return InteractionList([int for int in self if int.is_UVmass()])    
+        return InteractionList([int for int in self if int.is_UVmass()])
+
+    def get_UVtree(self):
+        """ return all interactions in the list of type UVtree """
+        return InteractionList([int for int in self if int.is_UVtree()])
+    
+    def get_UVloop(self):
+        """ return all interactions in the list of type UVloop """
+        return InteractionList([int for int in self if int.is_UVloop()])
 
 #===============================================================================
 # Model
@@ -2580,11 +2609,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 

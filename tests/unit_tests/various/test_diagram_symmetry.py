@@ -149,6 +149,74 @@ class TestDiagramSymmetry(unittest.TestCase):
             me_value, amp2 = evaluator.evaluate_matrix_element(\
                                               matrix_element, new_p)
             self.assertAlmostEqual(amp2[iamp], amp2_org[isymamp])
+
+    def test_find_symmetry_gg_tt_fullylept(self):
+        """Test the find_symmetry function for subprocess groups"""
+
+        procs = [[21,21, 6, -6]]
+        decayt = [[6,5,-11,12],[6, 5,-13, 14]]
+        decaytx = [[-6,-5,11,-12],[-6, -5, 13,-14]]
+        amplitudes = diagram_generation.AmplitudeList()
+        decay_amps = diagram_generation.DecayChainAmplitudeList()
+
+        proc = procs[0]
+        my_leglist = base_objects.LegList([\
+                    base_objects.Leg({'id': id, 'state': True}) for id in proc])
+        my_leglist[0].set('state', False)
+        my_leglist[1].set('state', False)
+        my_process = base_objects.Process({'legs':my_leglist,
+                                                       'model':self.base_model})
+        my_amplitude = diagram_generation.Amplitude(my_process)
+        amplitudes.append(my_amplitude)
+        
+        for dect in decayt:
+            my_top_decaylegs = base_objects.LegList([\
+                base_objects.Leg({'id': id, 'state': True}) for id in dect])
+            my_top_decaylegs[0].set('state', False)
+            my_decayt_proc = base_objects.Process({'legs':my_top_decaylegs,
+                                                  'model':self.base_model,
+                                                  'is_decay_chain': True})
+            my_decayt = diagram_generation.DecayChainAmplitude(my_decayt_proc)
+            decay_amps.append(my_decayt)
+            
+        for dectx in decaytx:
+            # Define the multiprocess
+            my_topx_decaylegs = base_objects.LegList([\
+               base_objects.Leg({'id': id, 'state': True}) for id in dectx])
+            my_topx_decaylegs[0].set('state', False)
+            my_decaytx_proc = base_objects.Process({'legs':my_topx_decaylegs,
+                                              'model':self.base_model,
+                                              'is_decay_chain': True}) 
+            
+            my_decaytx = diagram_generation.DecayChainAmplitude(my_decaytx_proc)
+            decay_amps.append(my_decaytx)                   
+                
+                
+
+        amplitudes = diagram_generation.DecayChainAmplitudeList([\
+                diagram_generation.DecayChainAmplitude({\
+                        'amplitudes': amplitudes,
+                        'decay_chains': decay_amps})])
+
+        subproc_groups = \
+                  group_subprocs.DecayChainSubProcessGroup.group_amplitudes(\
+                         amplitudes).generate_helas_decay_chain_subproc_groups()
+        self.assertEqual(len(subproc_groups), 1)
+
+        subproc_group = subproc_groups[0]
+        self.assertEqual(len(subproc_group.get('matrix_elements')), 1)
+
+        symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
+                                                subproc_group)
+        
+        sol_perms = [range(8), range(8), [0,1,5,6,7,2,3,4]]  
+
+        self.assertEqual(len([s for s in symmetry if s > 0]), 2)
+        self.assertEqual(symmetry, [1, 1, -2])
+
+        self.assertEqual(perms, sol_perms)
+        
+        
         
     def test_find_symmetry_decay_chain_with_subprocess_group(self):
         """Test the find_symmetry function for subprocess groups"""

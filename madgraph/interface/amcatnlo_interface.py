@@ -67,6 +67,12 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             if args[1] == 'virt':
                 args[1] = 'loop' 
 
+    def check_add(self, args):
+        
+        super(CheckFKS, self).check_add(args)        
+        if '$' in args:
+            raise self.InvalidCmd('$ syntax not valid for aMC@NLO. $$ syntax is on the other hand a valid syntax.')
+
     def check_tutorial(self, args):
         """check the validity of the line"""
         if len(args) == 0:
@@ -165,9 +171,6 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         if options['multicore'] and options['cluster']:
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
-        if options['noreweight'] and options['reweightonly']:
-            raise self.InvalidCmd, 'options -R (--noreweight) and -R (--reweightonly)' + \
-                    ' are not compatible. Please choose one.'
         if mode == 'NLO' and options['reweightonly']:
             raise self.InvalidCmd, 'option -r (--reweightonly) needs mode "aMC@NLO" or "aMC@LO"'
 
@@ -250,9 +253,9 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         else:
 
-            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-R', '-p',
+            opt = ['-f', '-c', '-m', '-i', '-n', '-r', '-p', '-o',
                     '--force', '--cluster', '--multicore', '--interactive',
-                    '--nocompile', '--reweightonly', '--noreweight', '--parton']
+                    '--nocompile', '--reweightonly', '--parton', '--only_generation']
             out['Options'] = self.list_completion(text, opt, line)
         
 
@@ -396,7 +399,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self.validate_model(proc_type[1])
 
         #now generate the amplitudes as usual
-        self.options['group_subprocesses'] = 'False'
+        #self.options['group_subprocesses'] = 'False'
         collect_mirror_procs = False
         ignore_six_quark_processes = self.options['ignore_six_quark_processes']
         if ',' in line:
@@ -422,7 +425,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -646,9 +649,10 @@ _launch_parser.add_option("-n", "--nocompile", default=False, action='store_true
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
                                  " latest generated event files (see list in SubProcesses/nevents_unweighted)")
-_launch_parser.add_option("-R", "--noreweight", default=False, action='store_true',
-                            help="Skip file reweighting")
 _launch_parser.add_option("-p", "--parton", default=False, action='store_true',
                             help="Stop the run after the parton level file generation (you need " + \
                                     "to shower the file in order to get physical results)")
+_launch_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
 

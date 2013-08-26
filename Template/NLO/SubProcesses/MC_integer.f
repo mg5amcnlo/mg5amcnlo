@@ -42,6 +42,9 @@ c
 c A call to 'reset_MC_grid' resets all the MC integration grids to a
 c flat starting point.
 c
+c A call to 'empty_MC_grid' removes all the accumulated results for the 
+c current iteration.
+c
 c Written by Rikkert Frederix, 2012.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine get_MC_integer(this_dim,niint_thisd,iint,vol)
@@ -89,14 +92,19 @@ c Flat grid for this dimension
 c Read the grid for 'this_dim' from file
             open(unit=52,file='grid.MC_integer',status='old',err=999)
             do i=1,this_dim-1 ! skip the lines not needed for 'this_dim'
-               read(52,*) cdum
+               read(52,*,end=999,err=999) cdum
             enddo
-            read(52,*) (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            read(52,*,end=999,err=999)
+     &           (grid(i,this_dim),i=0,nintervals(this_dim)) ! here is what we want
+            do i=this_dim+1,maxdim ! make sure that there are enough lines in this file
+               read(52,*,end=999,err=999) cdum
+            enddo
             close(52)
             goto 998
 c If file not found, give warning and use flat grids for this dimension
  999        write (*,*) 'WARNING: File "grid.MC_integer" not found.'/
-     &           /' Using flat grid to start.'
+     &           /' Using flat grid to start for',this_dim
+            close(52)
             do i=0,nintervals(this_dim)
                grid(i,this_dim)=dble(i)/nintervals(this_dim)
             enddo
@@ -135,9 +143,9 @@ c (for 'this_dim') has been picked.
       integer maxdim
       parameter (maxdim=50)
       logical firsttime(maxdim)
-      integer nintervals(maxdim),maxintervals
+      integer maxintervals
       parameter (maxintervals=200)
-      integer ncall(0:maxintervals,maxdim)
+      integer ncall(0:maxintervals,maxdim),nintervals(maxdim)
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
@@ -145,6 +153,8 @@ c (for 'this_dim') has been picked.
          do i=0,nintervals(this_dim)
             if (nintervals(this_dim).ne.0) 
      &           grid(i,this_dim)=dble(i)/nintervals(this_dim)
+            acc(i,this_dim)=0d0
+            ncall(i,this_dim)=0
          enddo
       enddo
       return
@@ -156,14 +166,33 @@ c (for 'this_dim') has been picked.
       double precision f_abs
       integer maxdim
       parameter (maxdim=50)
-      logical firsttime(maxdim)
+      integer maxintervals
+      parameter (maxintervals=200)
+      integer ncall(0:maxintervals,maxdim),nintervals(maxdim)
+      double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
+     &     ,maxdim)
+      common/integration_integer/grid,acc,ncall,nintervals
+      acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+      return
+      end
+
+      subroutine empty_MC_integer
+      implicit none
+      integer i,this_dim
+      integer maxdim
+      parameter (maxdim=50)
       integer nintervals(maxdim),maxintervals
       parameter (maxintervals=200)
       integer ncall(0:maxintervals,maxdim)
       double precision grid(0:maxintervals,maxdim),acc(0:maxintervals
      &     ,maxdim)
       common/integration_integer/grid,acc,ncall,nintervals
-      acc(iint,this_dim)=acc(iint,this_dim)+f_abs
+      do this_dim=1,maxdim
+         do i=0,nintervals(this_dim)
+            acc(i,this_dim)=0d0
+            ncall(i,this_dim)=0
+         enddo
+      enddo
       return
       end
 
@@ -202,7 +231,7 @@ c Don't update grids if there were too few PS points.
                acc(i,this_dim)=0d0
                ncall(i,this_dim)=0
             enddo
-            return
+            cycle
          endif
 c Define the new grids
          if (acc(nintervals(this_dim),this_dim).ne.0d0) then
@@ -236,7 +265,7 @@ c Write grid to a file
       enddo
       open(unit=52,file='grid.MC_integer',status='unknown',err=999)
       do this_dim=1,maxdim
-         write(52,*) ' ',(grid(i,this_dim),i=0,nintervals(this_dim))
+         write(52,*) (grid(i,this_dim),i=0,nintervals(this_dim))
       enddo
       close(52)
 c

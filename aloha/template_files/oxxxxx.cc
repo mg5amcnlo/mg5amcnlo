@@ -16,10 +16,10 @@ void oxxxxx(double p[4],double fmass,int nhel,int nsf, complex<double> fo[6]){
       sqm[1] = Sgn(sqm[0],fmass); 
       ip = -((1-nh)/2) * nhel ;
       im = (1+nh)/2 * nhel;
-      fo[2] = im *sqm[im];
-      fo[3] = ip*nsf*sqm[im];
-      fo[4] = im*nsf*sqm[-ip];
-      fo[5] = ip*sqm[-ip];
+      fo[2] = im *sqm[abs(ip)];
+      fo[3] = ip*nsf*sqm[abs(ip)];
+      fo[4] = im*nsf*sqm[abs(im)];
+      fo[5] = ip*sqm[abs(im)];
     }
     else{
       pp = min(p[0],pow(pow(p[1],2)+pow(p[2],2)+pow(p[3],2),0.5));

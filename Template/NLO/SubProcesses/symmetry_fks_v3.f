@@ -51,8 +51,7 @@ c
      &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
-      integer ic(nexternal,maxswitch), icb(nexternal-1,maxswitch),jc(12)
-     &     ,nswitch
+      integer icb(nexternal-1,maxswitch),jc(12),nswitch
       double precision saveamp(maxamps)
       integer nmatch, ibase
       logical mtc, even
@@ -165,13 +164,7 @@ c      if (icomp .gt. 3 .or. icomp .lt. 0) icomp=0
       multi_channel=.true.
 
 
-      if (.not.onlyBorn) then
-         write (*,*) 'error in symmetry_fks_v3: onlyBorn should be true'
-         stop
-         nbody=.false.
-      else
-         nbody=.true.
-      endif
+      nbody=.true.
 c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
@@ -233,29 +226,12 @@ c
 c     Get and save base amplitudes
 c
       calculatedBorn=.false.
-      if (onlyBorn) then
-         call sborn(p_born,wgt1)
-      else
-         fx=dsig(p,wgt,1d0)/amp2(mapconfig(iconfig))
-      endif
+c Call the Born twice to make sure that all common blocks are correctly filled.
+      call sborn(p_born,wgt1)
+      call sborn(p_born,wgt1)
       do j = 1 , mapconfig(0)
-         if (onlyBorn) then
-            saveamp(j) = amp2(j)
-         else
-            saveamp(j) = amp2(j)*fx
-         endif
+         saveamp(j) = amp2(j)
       enddo
-      if (.not.onlyBorn) then
-         write (*,*) '(n+1)-body momenta'
-         do j=1,nexternal
-            do i=0,3
-               do k=-2,2
-                  p1_cnt_save(i,j,k)=p1_cnt(i,j,k)
-               enddo
-            enddo
-            write(*,'(i4,4e15.5)') j,(p(i,j),i=0,3)
-         enddo
-      endif
       write (*,*) 'born momenta'
       do j=1,nexternal-1
          do i=0,3
@@ -269,84 +245,46 @@ c     Swap amplitudes looking for matches
 c
 c nexternal is the number for the real configuration. Subtract 1 for the Born.
       nswitch = 1
-      do k=1,nexternal
-         ic(k,1)=k
-         if (k.ne.nexternal) icb(k,1)=k
+      do k=1,nexternal-1
+         icb(k,1)=k
       enddo
       nmatch = 0
       mtc=.false.
       nsym = 1
-      if (.not.onlyBorn) then
-         call nexper(nexternal-2,ic(3,1),mtc,even)
-      else
-         call nexper(nexternal-3,ic(3,1),mtc,even)
-      endif
-      
+      call nexper(nexternal-3,icb(3,1),mtc,even)
 c      write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
       do while(mtc)
-         if (.not.onlyBorn) then
-            call nexper(nexternal-2,ic(3,1),mtc,even)
-         else
-            call nexper(nexternal-3,ic(3,1),mtc,even)
-         endif
+         call nexper(nexternal-3,icb(3,1),mtc,even)
 c         write(*,*) 'mtc',mtc, (ic(i,1),i=1,nexternal)
-         do j=3,nexternal
-            ic(j,1)=ic(j,1)+2
-         enddo
          do j=3,nexternal-1
-            if (j.ge.max(i_fks,j_fks).and..not.onlyBorn) then
-               icb(j,1)=ic(j+1,1)-1
-            else
-               icb(j,1)=ic(j,1)
-            endif
+            icb(j,1)=icb(j,1)+2
          enddo
-         if (mtc) then
+         
+c$$$         if (mtc) then
 c
 c     Now check if it is a valid swap to make
 c
-         if (check_swap(ic(1,1))) then
-            CALL SWITCHMOM(P,P1,IC(1,1),JC,NEXTERNAL)
-            do i=-2,2
-               CALL SWITCHMOM(P1_cnt_save(0,1,i),P1_cnt1(0,1,i),IC(1,1)
-     &              ,JC,NEXTERNAL)
-               do j=1,nexternal
-                  do k=0,3
-                     p1_cnt(k,j,i)=p1_cnt1(k,j,i)
-                  enddo
-               enddo
-            enddo
-            CALL SWITCHMOM(P_ev_red_save,P_ev_red1,ICB(1,1)
-     &           ,JC,NEXTERNAL-1)
+         if (check_swap(icb(1,1))) then
             CALL SWITCHMOM(P_born_save,P_born1,ICB(1,1),JC,NEXTERNAL-1)
             do j=1,nexternal-1
                do k=0,3
                   p_born(k,j)=p_born1(k,j)
-                  p_ev_red(k,j)=p_ev_red1(k,j)
                enddo
             enddo
 
-            write(*,*) 'Good swap', (ic(i,1),i=1,nexternal)
-            write(*,*) '         ', (icb(i,1),i=1,nexternal-1)
+            write(*,*) 'Good swap', (icb(i,1),i=1,nexternal-1)
             nsym=nsym+1
 
             calculatedBorn=.false.
-            if (onlyBorn) then
-               call sborn(p_born,wgt1)
-            else
-               fx = dsig(p1,wgt,1d0)/amp2(mapconfig(iconfig))
-            endif
-c
+            call sborn(p_born,wgt1)
+c$$$            write (*,*) 'saveamp',(saveamp(j),j=1,mapconfig(0))
+c$$$            write (*,*) 'new amp',(amp2(j),j=1,mapconfig(0))
 c        Look for matches, but only for diagrams < current diagram
 c     
          do j=2,mapconfig(0)
             do k=1,j-1
-               if (onlyBorn) then
-                  diff=abs((amp2(mapconfig(j))-saveamp(mapconfig(k)))
-     &                 /(amp2(mapconfig(j))+1d-99))
-               else
-                  diff=abs((amp2(mapconfig(j))*fx-saveamp(mapconfig(k)))
-     &                 /(amp2(mapconfig(j))*fx+1d-99))
-               endif
+               diff=abs((amp2(mapconfig(j))-saveamp(mapconfig(k)))
+     &              /(amp2(mapconfig(j))+1d-99))
                if (diff .lt. 1d-8 ) then
 c$$$                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),diff
                   if (use_config(j) .gt. 0 ) then  !Not found yet
@@ -365,11 +303,11 @@ c$$$                  write(*,*) "Found match graph",mapconfig(j),mapconfig(k),d
             enddo
          enddo
          else
-            write(*,*) 'Bad swap', (ic(i,1),i=1,nexternal)
+            write(*,*) 'Bad swap', (icb(i,1),i=1,nexternal-1)
          endif   !Good Swap
-         endif   !Real Swap
-         do j=3,nexternal
-            ic(j,1)=ic(j,1)-2
+c$$$         endif   !Real Swap
+         do j=3,nexternal-1
+            icb(j,1)=icb(j,1)-2
          enddo
       enddo
 
@@ -416,7 +354,7 @@ c
 c
 c     Arguments
 c
-      integer ic(nexternal)
+      integer ic(nexternal-1)
 c
 c     local
 c
@@ -430,24 +368,13 @@ c
      &     icolup(2,nexternal,maxflow)
 c      include 'leshouche.inc'
       common /c_leshouche_inc/idup,mothup,icolup
-
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      include 'fks_powers.inc'
-
 c------
 c Begin Code
 c-----
       check_swap=.true.
-      do i=1,nexternal
-         if (onlyBorn.and.i.eq.nexternal) cycle
+      do i=1,nexternal-1
          if (idup(i,1) .ne. idup(ic(i),1)) check_swap=.false.
       enddo
-      if (.not.onlyBorn) then
-         if (i_fks .ne. ic(i_fks)) check_swap=.false.
-         if (j_fks .ne. ic(j_fks)) check_swap=.false.
-      endif
       end
 
       subroutine nexper(n,a,mtc,even)
