@@ -39,6 +39,7 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision Pprod(0:3,nexternal_prod)
       integer nb_mc_masses, indices_mc_masses(nexternal)
       double precision values_mc_masses(nexternal)
+      logical ranmar_state_exists
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -74,6 +75,14 @@ c Conflicting BW stuff
       integer*8       iseed
       common /to_seed/iseed
 
+
+      real*8 ranu(97),ranc,rancd,rancm
+      integer iranmr,jranmr
+      common/ raset1 / ranu,ranc,rancd,rancm
+      common/ raset2 / iranmr,jranmr
+      character*120 ranmar_state_file
+      common/ ranmar_state / ranmar_state_file
+
 c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
                                   ! numbers at the position reached 
                                   ! at the previous termination of the
@@ -101,6 +110,8 @@ c      enddo
 1     continue
       maxBW=0d0
       read(*,*) mode,  BWcut, Ecollider, temp
+ 
+      ranmar_state_file = 'ranmar_state.dat'
 
       if (mode.eq.1) then    ! calculate the maximum weight
          nbpoints=int(temp)
@@ -109,11 +120,17 @@ c      enddo
       elseif (mode.eq.3) then
          continue      ! just retrun the value of M_full   
       else
-c         call ntuple(x,0d0,1d0,1,1)  ! write down the position of the sequence of random nbs
-         open(unit=57, file='seeds.dat', status='old')
-           iseed=iseed+1
-           write(57,*) iseed
-         close(57)
+         call  ntuple(x(1),0d0,1d0,1,1)
+c         INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
+c         if (ranmar_state_exists) then 
+c           open(unit=59, file=ranmar_state_file, status='replace')
+c         else
+c           open(unit=59, file=ranmar_state_file, status='new')
+c         endif
+c           write(59,*) ranu,ranc,rancd,rancm,iranmr,jranmr
+c         close(59)
+         write(*,*) 'Have written down the state of ranmar'
+         write(*,*) ranu
          goto 2                      ! and close the program  
       endif
 

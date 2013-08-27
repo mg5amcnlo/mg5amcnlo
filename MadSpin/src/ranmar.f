@@ -14,6 +14,7 @@ c     Local
 c
       integer init, ioffset, joffset
       integer     ij, kl, iseed1,iseed2
+      LOGICAL  ranmar_state_exists
 
 c
 c     Global
@@ -23,6 +24,14 @@ c     18/6/2012 tjs promoted to integer*8 to avoid overflow for iseed > 60K
 c------
       integer*8       iseed
       common /to_seed/iseed
+      
+      real*8 ranu(97),ranc,rancd,rancm
+      integer iranmr,jranmr
+      common/ raset1 / ranu,ranc,rancd,rancm
+      common/ raset2 / iranmr,jranmr
+      
+      character*120 ranmar_state_file
+      common/ ranmar_state / ranmar_state_file
 c
 c     Data
 c
@@ -31,7 +40,14 @@ c
 c-----
 c  Begin Code
 c-----
-      if (init .eq. 1) then
+      INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
+      
+      if (init .eq. 1 .and. ranmar_state_exists) then
+         init = 0
+         open(unit=58, file=ranmar_state_file, status='old')
+           read(58,*) ranu,ranc,rancd,rancm,iranmr,jranmr
+         close(58)
+      elseif (init .eq. 1) then
          init = 0
          call get_offset(ioffset)
          if (iseed .eq. 0) call get_base(iseed)

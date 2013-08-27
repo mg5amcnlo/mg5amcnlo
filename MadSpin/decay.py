@@ -2608,7 +2608,6 @@ class decay_all_events:
 
         logger.info(' ' )
         logger.info('Decaying the events... ')
-        
         self.outputfile = open(pjoin(self.path_me,'decayed_events.lhe'), 'w')
         self.write_banner_information()
         
@@ -4514,7 +4513,7 @@ class decay_all_events:
                     external.terminate()
                     del external
                 elif mode=='full':
-                    stdin_text="5 0 0 0"  # before closing, write down the seed 
+                    stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     external.stdin.write(stdin_text)
                     external.stdin.close()
