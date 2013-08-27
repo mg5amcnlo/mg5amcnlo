@@ -39,7 +39,6 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision Pprod(0:3,nexternal_prod)
       integer nb_mc_masses, indices_mc_masses(nexternal)
       double precision values_mc_masses(nexternal)
-      logical ranmar_state_exists
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -80,8 +79,6 @@ c Conflicting BW stuff
       integer iranmr,jranmr
       common/ raset1 / ranu,ranc,rancd,rancm
       common/ raset2 / iranmr,jranmr
-      character*120 ranmar_state_file
-      common/ ranmar_state / ranmar_state_file
 
 c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
                                   ! numbers at the position reached 
@@ -111,7 +108,6 @@ c      enddo
       maxBW=0d0
       read(*,*) mode,  BWcut, Ecollider, temp
  
-      ranmar_state_file = 'ranmar_state.dat'
 
       if (mode.eq.1) then    ! calculate the maximum weight
          nbpoints=int(temp)
@@ -120,16 +116,8 @@ c      enddo
       elseif (mode.eq.3) then
          continue      ! just retrun the value of M_full   
       else
-         call  ntuple(x(1),0d0,1d0,1,1)
-         INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
-         if (ranmar_state_exists) then 
-           open(unit=59, file=ranmar_state_file, status='replace')
-         else
-           open(unit=59, file=ranmar_state_file, status='new')
-         endif
-           write(59,*) ranu,ranc,rancd,rancm,iranmr,jranmr
-         close(59)
-         write(*,*) ranu
+           write(*,*) ranu,ranc,rancd,rancm,iranmr,jranmr
+         call flush()
          goto 2                      ! and close the program  
       endif
 

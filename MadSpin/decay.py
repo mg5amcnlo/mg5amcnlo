@@ -2467,9 +2467,14 @@ class decay_all_events:
         # write down the seed:
         seedfile=open(pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat'),'w')
         if 'seed' in self.options:
-            seedfile.write('  %s \n' % self.options['seed'])
+            if self.options['seed']>0 and self.options['seed']<60000:
+                seedfile.write('  %s \n' % self.options['seed'])
+            else: 
+                logger.warning('No appropriate seed from the user (should be >0 and <60000), use seed=1')
+                seedfile.write('   1 \n' )
         else:
             seedfile.write('   1 \n' )
+            logger.warning('No appropriate seed from the user (should be >0 and <60000), use seed=1')
         seedfile.close()       
  
         # width and mass information will be filled up later
@@ -4516,6 +4521,11 @@ class decay_all_events:
                     stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     external.stdin.write(stdin_text)
+                    ranmar_state=external.stdout.readline()
+                    ranmar_file=pjoin(path,'ranmar_state.dat')
+                    ranmar=open(ranmar_file, 'w')
+                    ranmar.write(ranmar_state)
+                    ranmar.close()
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()

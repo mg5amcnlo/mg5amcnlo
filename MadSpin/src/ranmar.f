@@ -30,9 +30,6 @@ c------
       common/ raset1 / ranu,ranc,rancd,rancm
       common/ raset2 / iranmr,jranmr
       
-      character*120 ranmar_state_file
-      common/ ranmar_state / ranmar_state_file
-c
 c     Data
 c
       data init /1/
@@ -40,11 +37,11 @@ c
 c-----
 c  Begin Code
 c-----
-      INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
+      INQUIRE(FILE='ranmar_state.dat', EXIST=ranmar_state_exists)
       
       if (init .eq. 1 .and. ranmar_state_exists) then
          init = 0
-         open(unit=58, file=ranmar_state_file, status='old')
+         open(unit=58, file='ranmar_state.dat', status='old')
            read(58,*) ranu,ranc,rancd,rancm,iranmr,jranmr
          close(58)
       elseif (init .eq. 1) then
