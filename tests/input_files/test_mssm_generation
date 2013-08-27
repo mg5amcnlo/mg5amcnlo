@@ -9,6 +9,7 @@ generate_events
 pythia
 /tmp/MGPROCESS/Cards/pythia_card_default.dat
 ./tests/input_files/run_card_matching.dat
+set wt Auto
 done
 quit
 history /tmp/MGPROCESS/history

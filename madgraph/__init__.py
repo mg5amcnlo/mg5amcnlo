@@ -20,10 +20,17 @@ class InvalidCmd(MadGraph5Error):
     """a class for the invalid syntax call"""
 
 import os
+import logging
+import time
 
 #Look for basic file position MG5DIR and MG4DIR
 MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),
                                                                 os.path.pardir))
+if ' ' in MG5DIR:
+   logging.critical('''\033[1;31mpath to MG5: "%s" contains space. 
+    This is likely to create code unstability. 
+    Please consider changing the path location of the code\033[0m''' % MG5DIR)
+   time.sleep(1)
 MG4DIR = MG5DIR
 ReadWrite = True
 try:

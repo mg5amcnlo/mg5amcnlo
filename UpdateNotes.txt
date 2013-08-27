@@ -5,6 +5,7 @@ Update notes for MadGraph 5 (in reverse time order)
                   BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
                       Higgs interactions) 
                   OM: use evince by default to open eps file instead of gv.
+		  OM: Fix a problem with the set command for the card edition for the mssm model.
 
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.

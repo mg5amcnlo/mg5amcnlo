@@ -2464,7 +2464,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 if particle and particle not in decay_info:
                     # No decays given, only total width       
                     decay_info[particle] = [[[], width]]
-            else: # Not decay                              
+            else: # Not decay
                 line_number += 1
         # Clean out possible remaining comments at the end of the card
         while not param_card[-1] or param_card[-1].startswith('#'):
@@ -3654,8 +3654,7 @@ calculator."""
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            misc.call([prog, delphes_dir, 
-                                self.run_name, tag, str(cross)],
+            misc.call([prog, delphes_dir, self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
@@ -4989,14 +4988,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
         run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
         try:
-            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
-        except check_param_card.InvalidParamCard:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+        except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-    
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -5157,6 +5156,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
                         pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                if args[0] == 'param_card':
+                    self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+                elif args[0] == 'run_card':
+                    self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
                 return
             else:
                 card = args[0]
