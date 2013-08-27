@@ -207,9 +207,7 @@ class MadLoopLauncher(ExtLauncher):
                     rFile.close()
                     raise MadGraph5Error,"Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat'))
-                # Result given in this format: 
-                # ((fin,born,spole,dpole,me_pow), p_out)
-                # I should have used a dictionary instead.
+                # The result are returned as a dictionary.
                 result = evaluator.parse_check_output(rFile.readlines(),\
                                                                   format='dict')
                 logger.info(self.format_res_string(result)%shell_name)
@@ -221,9 +219,15 @@ class MadLoopLauncher(ExtLauncher):
         def special_float_format(float):
             return '%s%.16e'%('' if float<0.0 else ' ',float)
         
+        so_order_names = res('Split_Orders_Names')
+        
+        def format_so_orders(so_orders):
+            return ' '.join(['%s=%d'%(so_order_names[i],so_orders[i]) for i in
+                                                         range(len(so_orders))])
+
         ASCII_bar = ''.join(['='*96])
         if res['export_format']=='Default':
-            return '\n'.join(['\n'+ASCII_bar,
+            str_lines = ['\n'+ASCII_bar,
                   '|| Results for process %s',
                   ASCII_bar,
                   '|| Phase-Space point specification (E,px,py,pz)\n',
@@ -232,20 +236,59 @@ class MadLoopLauncher(ExtLauncher):
                   '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
                   '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
+                  '|    Accuracy    = %s'%special_float_format(res['accuracy']),
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   '|    Single pole = %s'%special_float_format(res['1eps']),
-                  '|    Double pole = %s'%special_float_format(res['2eps']),
-                  ASCII_bar+'\n'])
+                  '|    Double pole = %s'%special_float_format(res['2eps'])]
         elif res['export_format']=='LoopInduced':
-            return '\n'.join(['\n'+ASCII_bar,
+            str_lines = ['\n'+ASCII_bar,
                   '|| Results for process %s (Loop-induced)',
                   ASCII_bar,
                   '|| Phase-Space point specification (E,px,py,pz)\n',
                   '\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
                                                      for pmom in res['res_p']]),
                   '\n|| Loop amplitude squared, must be finite:',
+                  '|    Accuracy    = %s'%special_float_format(res['accuracy']),
                   '|    Finite      = %s'%special_float_format(res['finite']),
-                  ASCII_bar+'\n'])
+                  '(\n|| Pole residues, indicated only for checking purposes: )',
+                  '(|    Single pole = %s )'%special_float_format(res['1eps']),
+                  '(|    Double pole = %s )'%special_float_format(res['2eps'])
+                  ]
+            
+        str_lines.append(ASCII_bar)
+        
+        if len(res['Born_SO_results'])==1:
+            str_lines.append('|| All Born contributions are of order (%s)'\
+                                %format_so_orders(res['Born_SO_Results'][0][0]))
+        else:
+            for bso_contrib in res['Born_SO_results']:
+                str_line.append('|| Born contribution of order (%s) = %s'\
+                                             %(format_so_orders(bso_contrib[0]),
+                                  special_float_format(bso_contrib[1]['BORN'])))
+        if len(res['Loop_SO_Results'])==1:
+            str_lines.append('|| All loop contributions are of order (%s)'\
+                                %format_so_orders(res['Loop_SO_Results'][0][0]))
+        else:
+            for lso_contrib in res['Lorn_SO_results']:
+                str_line.append('|| Loop contribution of order (%s):'\
+                                              %format_so_orders(bso_contrib[0]))
+                str_line.append('|    Accuracy    = %s'%\
+                                   special_float_format(lso_contrib[1]['ACC'])),
+                str_line.append('|    Finite      = %s'%\
+                                   special_float_format(lso_contrib[1]['FIN'])),
+                if res['export_format']=='LoopInduced':
+                    str_line.append('(|    Single pole = %s )'%\
+                                   special_float_format(lso_contrib[1]['1EPS']))
+                    str_line.append('(|    Double pole = %s )'%\
+                                   special_float_format(lso_contrib[1]['2EPS']))
+                else:
+                    str_line.append('|    Single pole = %s'%\
+                                   special_float_format(lso_contrib[1]['1EPS']))
+                    str_line.append('|    Double pole = %s'%\
+                                   special_float_format(lso_contrib[1]['2EPS']))              
+        str_lines.append(ASCII_bar+'\n')
+        return '\n'.join(str_lines)
+
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     

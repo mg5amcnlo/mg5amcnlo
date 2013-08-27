@@ -3,6 +3,7 @@ include ../../Source/make_opts
 LIBDIR = ../../lib/
 PROG   = check
 STABCHECKDRIVER = StabilityCheckDriver
+CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel
 LIBS =  $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
 PROCESS= loop_matrix.o improve_ps.o\
@@ -24,6 +25,10 @@ $(PROG): check_sa.o $(PROCESS) makefile $(LIBS)
 
 $(STABCHECKDRIVER):  StabilityCheckDriver.o $(PROCESS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(STABCHECKDRIVER) StabilityCheckDriver.o $(PROCESS) $(LINKLIBS)
+
+# The program below is not essential but just an helpful one to run the born only
+$(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o born_matrix.o makefile $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
+	$(FC) $(FFLAGS) -o $(CHECK_SA_BORN_SPLITORDERS) check_sa_born_splitOrders.o born_matrix.o -L$(LIBDIR) -ldhelas -lmodel
 
 clean:
 		@rm -f *.o

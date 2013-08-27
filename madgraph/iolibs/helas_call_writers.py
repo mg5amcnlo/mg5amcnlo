@@ -1257,18 +1257,24 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             for lamp in ldiag.get_loop_amplitudes():
                 create_coef=['CALL CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                              '%(loop_rank)d','%(lcut_size)d',
-                             'LOOPCOEFS(0,%(loop_number)d)',
-                             '%(LoopSymmetryFactor)d','%(amp_number)d,H)']
+                             '%(loop_number)d','%(LoopSymmetryFactor)d',
+                             '%(amp_number)d,H)']
                 res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
                   'loop_rank':lamp.get_rank(),
                   'lcut_size':lamp.get_lcut_size(),
-                  'loop_number':lamp.get('number'),
+        # For the loop_number below, we used the id of the 'loop_grou' this 
+        # amplitude belongs to. All amplitudes of such loop_group will therefore
+        # be added into the same LOOPCOEF array component.
+                  'loop_number':(lamp.get('loop_group_id')+1),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
                   'LoopSymmetryFactor':lamp.get('loopsymmetryfactor')})
         
-        coef_merge=[]
+        coef_merge=['C  Grouping of loop diagrams now done directly when creating the LOOPCOEFS.']
         
+        return res, coef_merge
+
+        # Below will disappear as soon as the new coef merging system is validated
         if group_loops and matrix_element.get('processes')[0].get('has_born'):
             for (denoms, lamps) in matrix_element.get('loop_groups'):
                 # Only necessary if they are more than one loop with this kind of
@@ -1294,6 +1300,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                   repr(matrix_element)
         
         res = []
+        
         # Either call CutTools for all loop diagrams or for only the reference
         # amplitude for each group (for which the coefficients are the sum of
         # all others)
@@ -1337,18 +1344,18 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         
         call = "CALL LOOP%(numLoopLines)s"
         if (len(loopamp.get('pairing')) != len(loopamp.get('mothers'))):
-            call += "%(numMotherWfs)s(%(numeratorNumber)d,"
+            call += "%(numMotherWfs)s("
             for i in range(len(loopamp.get('pairing'))):
                 call = call + "%(Pairing{0})d,".format(i)
         else:
-            call += "(%(numeratorNumber)d,"            
+            call += "("            
         for i in range(len(loopamp.get('mothers'))):
             call = call + "%(MotherID{0})d,".format(i+1)
         for i in range(len(loopamp.get('wavefunctions'))-2):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),".format(i+1)
         call = call + "%(LoopRank)d,"
-        call = call + "LOOPRES(1,%(loopNumber)d),S(%(loopNumber)d),%(loopNumber)d)"
+        call = call + "I_SO,%(loop_group_id)d)"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
                                                            OptimizedOutput=True)

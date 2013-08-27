@@ -237,8 +237,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         # Store the wavefunctions building this loop
         self['wavefunctions'] = helas_objects.HelasWavefunctionList()
         # In this first version, a LoopHelasAmplitude is always built out of
-        # a single amplitude, but later one could imagine resumming many 
-        # contribution to one CutTools call and having many HelasAmplitudes.
+        # a single amplitude, it was realized later that one would never need
+        # more than one. But until now we kept the structure as such.
         self['amplitudes'] = helas_objects.HelasAmplitudeList()
         # The pairing is used for the output to know at each loop interactions
         # how many non-loop mothers are necessary. This list is ordered as the
@@ -360,10 +360,12 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             self['pairing'].append(len(mothersList))
 
     def get_denominators(self):
-        """ Returns the denominator structure as a tuple whose elements are of
-        this form ((external_part_ids),mass) where external_part_ids are all the
-        leg id building the momentum flowing in the loop, i.e:
-               D_i=(q+Sum(p_j,j))^2 - m^2                             """
+        """ Returns the denominator structure as a tuple (tupleA, tupleB) whose
+        elements are of this form ((external_part_ids),mass) where
+        external_part_ids are all the leg id building the momentum flowing in 
+        the loop, i.e:
+               D_i=(q+Sum(p_j,j))^2 - m^2
+        """
         
         denoms=[]
         last_loop_wf=self.get_final_loop_wavefunction()
@@ -408,7 +410,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         HELAS call. """
         output = {}
         output['numLoopLines']='_%d'%(len(self.get('wavefunctions'))-2)
-        output['loop_group_id']=self.get('loop_group_id')
+        # Plus one below because fortran array start at 1.
+        output['loop_group_id']=self.get('loop_group_id')+1
         output['ampNumber']=self.get('amplitudes')[0].get('number')
         if len(self.get('mothers'))!=len(self.get('pairing')):
             output['numMotherWfs']='_%d'%len(self.get('mothers'))
@@ -450,6 +453,24 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         'lorentz' object stored in each loop vertex and it will be implemented later."""
 
         return self.get_final_loop_wavefunction().get('rank')
+    
+    def get_orders(self):
+        """ Compute the orders building this loop amplitude only (not from the
+        struct wavefunctions. Uses the cached result if available."""
+        
+        if self.get('orders') != {}:
+            return self.get('orders')
+        else:
+            coupling_orders = {}
+            last_wf = self.get_final_loop_wavefunction()
+            while last_wf.get_loop_mother()!=None:
+                for order in last_wf.get('orders').keys():
+                    try:
+                        coupling_orders[order] += last_wf.get('orders')[order]
+                    except Exception:
+                        coupling_orders[order] = last_wf.get('orders')[order]
+                last_wf = last_wf.get_loop_mother()
+            return coupling_orders
 
     # old get_rank
     #def get_rank(self):
@@ -727,6 +748,19 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         has_born = amplitude.get('has_born')          
         
         model = process.get('model')
+
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        self.sort_split_orders(self.get('processes')[0].get('split_orders'))
+
+        # Before starting, and if split_orders are defined in the amplitude
+        # process, we must reorder the generated diagrams so as to put together
+        # all those which share the same coupling orders. Then, we sort these
+        # *group of diagrams* in decreasing WEIGHTED order, so that the
+        # leading contributions are placed first (I will therfore be possible
+        # to compute them only, saving the time of the rest of the computation)
+        amplitude.order_diagrams_according_to_split_orders(\
+                                   self.get('processes')[0].get('split_orders'))
 
         # All the previously defined wavefunctions
         wavefunctions = []
@@ -1428,6 +1462,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     loop_amp.set('number',min([amp.get('number') for amp
                                                in loop_amp.get('amplitudes')]))
                     loop_amp.set('coupling',loop_amp.get_couplings())
+                    loop_amp.set('orders',loop_amp.get_orders())
                     helas_diagram.get('amplitudes').append(loop_amp)
 
                 return wfNumber, amplitudeNumber
@@ -1574,6 +1609,16 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                    UVCTdiag=True)
             diagram_number = diagram_number + 1
             loopHelDiag.set('number', diagram_number)
+            # We must add the UVCT_orders to the regular orders of the 
+            # LooopHelasUVCTAmplitude
+            for lamp in loopHelDiag.get_loop_UVCTamplitudes():
+                new_orders = copy.copy(lamp.get('orders'))
+                for order, value in lamp.get('UVCT_orders').items():
+                    try:
+                        new_orders[order] = new_orders[order] + value
+                    except KeyError:
+                        new_orders[order] = value
+                lamp.set('orders', new_orders)
             helas_diagrams.append(loopHelDiag)
  
         self.set('diagrams', helas_diagrams)
@@ -1603,6 +1648,103 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
+    
+    def get_split_orders_mapping(self):
+        """This function returns three lists:
+                        squared_orders, amps_orders
+            with amps order a dictionary with keys 'loop_amp_orders',
+            'born_amp_orders' and 'ct_amp_orders' with values being the tuples 
+            described below.
+        If process['split_orders'] is empty, all these tuples are set empty.
+        
+        squared_orders : All possible contributing squared orders among those
+            specified in the process['split_orders'] argument. The elements of
+            the list are tuples of the format format (OrderValue1,OrderValue2,...) 
+            with OrderValue<i> correspond to the value of the <i>th order in
+            process['split_orders'] (the others are summed over and therefore 
+            left unspecified).
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [(4,0),(2,2),(0,4)]
+        
+        'born_amp_orders' : Exactly as for squared order except that this list specifies
+            the contributing order values for the amplitude (i.e. not 'squared').
+            Also, the tuple describing the amplitude order is nested with a 
+            second one listing all amplitude numbers contributing to this order.
+            Ex for dijet with process['split_orders']=['QCD','QED']: 
+                => [((2, 0), (2,)), ((0, 2), (1, 3, 4))]
+            The function returns () if the process has no borns.
+        
+        'loop_amp_orders' and 'ct_amp_orders' : The same as for born_amp_orders 
+            but for the loop amplitudes only.
+
+        Keep in mind that the orders of the element of the list is important as
+        it dicatates the order of the corresponding "order indices" in the
+        code output by the exporters.
+        """
+    
+        split_orders=self.get('processes')[0].get('split_orders')
+        
+        # If no split_orders are defined, then return the obvious
+        amps_orders = {'born_amp_orders':(),
+                       'ct_amp_orders':(),
+                       'loop_amp_orders':()}
+        if len(split_orders)==0:
+            return (),(),()
+        
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        self.sort_split_orders(split_orders)
+        
+        process = self.get('processes')[0]
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        self.sort_split_orders(split_orders)
+        loop_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+             self.get_loop_diagrams(), split_orders, 
+             get_amplitudes_function = lambda diag: diag.get_loop_amplitudes(),
+             get_amp_number_function = 
+                             lambda amp: amp.get('amplitudes')[0].get('number'))
+        ct_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+                helas_objects.HelasDiagramList([hd for hd in self['diagrams']
+                if isinstance(hd,LoopHelasDiagram)]), split_orders, 
+                get_amplitudes_function = lambda diag: diag.get_ct_amplitudes())
+
+        amps_orders['loop_amp_orders'] = loop_amp_orders
+        amps_orders['ct_amp_orders'] = ct_amp_orders        
+
+        if process.get('has_born'):
+            born_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+                                          self.get_born_diagrams(),split_orders)
+        
+            amps_orders['born_amp_orders'] = born_amp_orders
+        
+        # Now we construct the interference splitting order matrix for 
+        # convenience
+        loop_orders = set(loop_order[0] for loop_order in \
+                                                  loop_amp_orders+ct_amp_orders)
+        born_orders = set([born_order[0] for born_order in born_amp_orders])
+        
+        
+        if process.get('has_born'):
+            ref_orders = born_orders
+        else:
+            ref_orders = loop_orders
+        
+        squared_orders = set([])
+        for loop_order in loop_orders:
+            for ref_order in ref_orders:
+                key = tuple([ord1 + ord2 for ord1,ord2 in zip(loop_order,ref_order)])
+                squared_orders.add(key)
+        squared_orders = list(squared_orders)
+        # Sort the squared orders if the hierarchy defines them all.
+        order_hierarchy = self.get('processes')[0].get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            squared_orders.sort(key= lambda so: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                              i, order_power in enumerate(so)]))
+
+        return squared_orders, amps_orders
 
     def find_max_loop_coupling(self):
         """ Find the maximum number of loop couplings appearing in any of the
@@ -1649,10 +1791,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     LoopHelasAmplitudeRecognized.append(lamp)
 
     def relabel_loop_amplitudes_optimized(self):
-        """Give a unique number to each LoopHelasAmplitude, but give the same for
-        those which will be CutToolized together. """
+        """Give a unique number to each LoopHelasAmplitude. These will be the
+        number used for the LOOPCOEF array in the optimized output and the
+        grouping is done in a further stage by adding all the LOOPCOEF sharing
+        the same denominator to a given one using the 'loop_group_id' attribute
+        of the LoopHelasAmplitudes. """
         
-        # For now, we don't turn grouping on.
         lamp_number=1
         for lamp in \
          sum([d.get_loop_amplitudes() for d in self.get_loop_diagrams()],[]):

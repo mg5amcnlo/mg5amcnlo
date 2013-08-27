@@ -849,6 +849,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_p.append([float(s) for s in splitline[1:]])
             elif splitline[0]=='BORN':
                 res_dict['born']=float(splitline[1])
+            elif splitline[0]=='ACC':
+                res_dict['accuracy']=float(splitline[1])
             elif splitline[0]=='FIN':
                 res_dict['finite']=float(splitline[1])
             elif splitline[0]=='1EPS':
@@ -859,6 +861,25 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['gev_pow']=int(splitline[1])
             elif splitline[0]=='Export_Format':
                 res_dict['export_format']=splitline[1]
+            elif splitline[0]=='Split_Orders_Names':
+                res_dict['Split_Orders_Names']=splitline[1:]
+            elif splitline[0] in ['Loop_SO_Results', 'Born_SO_Results']:
+                # The value for this key of this dictionary is a list of elements
+                # with format ([],{}) where the first list specifies the split
+                # orders to which the dictionary in the second position corresponds 
+                # to.
+                try:
+                    res_dict[splitline[0]].append(\
+                                         ([int(el) for el in splitline[1:]],{}))
+                except KeyError:
+                    res_dict[splitline[0]] = \
+                                        [([int(el) for el in splitline[1:]],{})]
+            elif splitline[0]=='SO_Loop':
+                res_dict['Loop_SO_Results'][-1][1][splitline[1]]=\
+                                                             float(splitline[2])
+            elif splitline[0]=='SO_Born':
+                res_dict['Born_SO_Results'][-1][1][splitline[1]]=\
+                                                             float(splitline[2])
 
         res_dict['res_p'] = res_p
 

@@ -33,21 +33,31 @@ C
       PARAMETER (ZERO=0E0_16)
       %(complex_mp_format)s IMAG1
       PARAMETER (IMAG1=(0e0_16,1e0_16))
+C     These are constants related to the split orders
+      INTEGER    NSO, NSQUAREDSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C  
 C ARGUMENTS 
 C  
       %(real_mp_format)s PS(0:3,NEXTERNAL)
-      %(real_dp_format)s ANSDP(3)
+      %(real_dp_format)s ANSDP(3,0:NSQUAREDSO)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H,DUMMY,ITEMP
+      %(real_mp_format)s TEMP2
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       %(real_mp_format)s P(0:3,NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
-	  %(real_mp_format)s ANS(3)
+	  %(real_mp_format)s ANS(3,0:NSQUAREDSO)
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
+C
+C FUNCTIONS
+C
+      INTEGER ML5SOINDEX_FOR_BORN_AMP
+	  INTEGER ML5SOINDEX_FOR_LOOP_AMP
+	  INTEGER ML5SQSOINDEX
 C  
 C GLOBAL VARIABLES
 C  
@@ -75,7 +85,7 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/MP_WL/WL,PL
 
-	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 	  common/MP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
@@ -125,15 +135,19 @@ DO K=1, 3
   ENDDO
 ENDDO
 
-DO I=1,NLOOPS
+DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
-    LOOPCOEFS(J,I)=(ZERO,ZERO)
+    DO K=1,NSQUAREDSO  
+      LOOPCOEFS(J,K,I)=(ZERO,ZERO)
+	ENDDO
   ENDDO
 ENDDO
 
 DO K=1,3
-  ANSDP(K)=0.0d0
-  ANS(K)=ZERO
+  DO J=0,NSQUAREDSO
+    ANSDP(K,J)=0.0d0
+    ANS(K,J)=ZERO
+  ENDDO
 ENDDO
 
 DO H=1,NCOMB
@@ -166,7 +180,9 @@ DO I=1,NWAVEFUNCS
 ENDDO
 
 DO I=1,3
-  ANSDP(I)=ANS(I)
+  DO J=0,NSQUAREDSO
+    ANSDP(I,J)=ANS(I,J)
+  ENDDO
 ENDDO
 
 %(mp_coef_merging)s

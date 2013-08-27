@@ -601,7 +601,7 @@ class Amplitude(base_objects.PhysicsObject):
         # Set actual coupling orders for each diagram
         for diagram in res:
             diagram.calculate_orders(model)
-
+            
         # Filter the diagrams according to the squared coupling order
         # constraints and possible the negative one. Remember that OrderName=-n
         # means that the user wants to include everything up to the N^(n+1)LO

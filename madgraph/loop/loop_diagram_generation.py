@@ -381,15 +381,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # least one coupling order building the loop which is in the list
             # of the perturbed order.
             valid_diag=True
-            if (diag.get_loop_line_types()-set(allowedpart))!=set():
+            if (diag.get_loop_line_types()-set(allowedpart))!=set() or \
+                                                       pert_loop_order==set([]):
                 valid_diag=False
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
             # HSS, 17/03/2013
-            if len([col for col in [self['process'].get('model').get_particle(pdg).get('color') \
-                                                      for pdg in diag.get_pdgs_attached_to_loop(\
-                                                    self['structure_repository'])] if col!=1])==1:
+            if len([col for col in [
+                   self['process'].get('model').get_particle(pdg).get('color') \
+                                     for pdg in diag.get_pdgs_attached_to_loop(\
+                                  self['structure_repository'])] if col!=1])==1:
                 valid_diag=False
             # HSS        
             # HSS, 13/12/2012
@@ -1270,7 +1272,60 @@ class LoopAmplitude(diagram_generation.Amplitude):
             isinstance(diag,loop_base_objects.LoopUVCTDiagram)]
         self['loop_UVCT_diagrams']=[diag for diag in AllLoopDiagrams if \
             isinstance(diag,loop_base_objects.LoopUVCTDiagram)]
+
+    def order_diagram_set(self, diag_set, split_orders):
+        """ This is a helper function for order_diagrams_according_to_split_orders
+        and intended to be used from LoopHelasAmplitude only"""
         
+        # The dictionary below has keys being the tuple (split_order<i>_values)
+        # and values being diagram lists sharing the same split orders. 
+        diag_by_so = {}
+        
+        for diag in diag_set:
+            so_key = tuple([diag.get_order(order) for order in split_orders])
+            try:
+                diag_by_so[so_key].append(diag)
+            except KeyError:
+                diag_by_so[so_key]=base_objects.DiagramList([diag,])
+
+        so_keys = diag_by_so.keys()
+        # Complete the order hierarchy by possibly missing defined order for
+        # which we set the weight to zero by default (so that they are ignored).
+        order_hierarchy = self.get('process').get('model').get('order_hierarchy')
+        order_weights = copy.copy(order_hierarchy)
+        for so in split_orders:
+            if so not in order_hierarchy.keys():
+                order_weights[so]=0
+
+        # Now order the keys of diag_by_so by the WEIGHT of the split_orders
+        # (and only those, the orders not included in the split_orders do not
+        # count for this ordering as they could be mixed in any given group).
+        so_keys = sorted(so_keys, key = lambda elem: (sum([power*order_weights[\
+                      split_orders[i]] for i,power in enumerate(elem)])))
+        
+        # Now put the diagram back, ordered this time, in diag_set
+        diag_set[:] = []
+        for so_key in so_keys:
+            diag_set.extend(diag_by_so[so_key])
+        
+
+    def order_diagrams_according_to_split_orders(self, split_orders):
+        """ Reorder the loop and Born diagrams (if any) in group of diagrams
+        sharing the same coupling orders are put together and these groups are
+        order in decreasing WEIGHTED orders.
+        Notice that this function is only called for now by the
+        LoopHelasMatrixElement instances at the output stage.
+        """
+        
+        # If no split order is present (unlikely since the 'corrected order'
+        # normally is a split_order by default, then do nothing
+        if len(split_orders)==0:
+            return
+        
+        self.order_diagram_set(self['born_diagrams'], split_orders)
+        self.order_diagram_set(self['loop_diagrams'], split_orders)
+        self.order_diagram_set(self['loop_UVCT_diagrams'], split_orders)
+
 #===============================================================================
 # LoopMultiProcess
 #===============================================================================

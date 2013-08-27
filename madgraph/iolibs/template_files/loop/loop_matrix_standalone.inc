@@ -5,11 +5,16 @@ C CONSTANTS
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+
+      INCLUDE "nsquaredSO.inc"
+	  INTEGER NSQUAREDSOP1
+	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
+
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(3)
+      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
 	  INTEGER HEL, USERHEL
 	  common/USERCHOICE/USERHEL
 C ----------
@@ -57,7 +62,7 @@ C ----------
 
 	  end
 
-      SUBROUTINE SLOOPMATRIX(P_USER,ANS)
+      SUBROUTINE SLOOPMATRIX(P_USER,ANSRETURNED)
 C  
 %(info_lines)s
 C
@@ -93,6 +98,7 @@ C     This parameter is designed for the check timing command of MG5
       PARAMETER (SKIPLOOPEVAL=.FALSE.)
 	  LOGICAL BOOTANDSTOP
       PARAMETER (BOOTANDSTOP=.FALSE.)
+      INCLUDE "nsquaredSO.inc"
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/stability_tests/maxstabilitylength	  
@@ -100,10 +106,11 @@ C
 C ARGUMENTS 
 C  
       %(real_dp_format)s P_USER(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(3)
+      %(real_dp_format)s ANSRETURNED(0:3,0:NSQUAREDSO)
 C  
 C LOCAL VARIABLES 
 C  
+      %(real_dp_format)s ANS(0:3)
       INTEGER I,J,K,H
 	  INTEGER HELPICKED_BU, CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
@@ -218,8 +225,8 @@ C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHE
 	  DATA USER_STAB_PREC/-1.0d0/	  
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
-	  %(real_dp_format)s ACCURACY
-	  DATA ACCURACY/1.0d0/	  
+	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
+	  DATA (ACCURACY(I),I=0,NSQUAREDSO)/NSQUAREDSOP1*1.0d0/	  
 	  common/ACC/ACCURACY
 
 C ----------
@@ -300,6 +307,8 @@ EVAL_DONE(1)=.TRUE.
 DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
+
+%(compute_born)s
 
 IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES_BU=MLSTABTHRES
@@ -595,7 +604,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
-	ACCURACY=ACC	
+	ACCURACY(0)=ACC	
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
@@ -627,7 +636,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  CTMODE=4
 	  goto 200
     ELSE
-	  ACCURACY=ACC
+	  ACCURACY(0)=ACC
 	ENDIF
   ENDIF
 ENDIF
@@ -640,6 +649,11 @@ IF (USER_STAB_PREC.GT.0.0d0) THEN
   CTMODEINIT=CTMODEINIT_BU  
 ENDIF
 
+C Conform to the returned synthax of split orders even though the default output does not support it (this then done only for compatibility purpose).
+ANSRETURNED(0,0)=ANS(0)
+ANSRETURNED(1,0)=ANS(1)
+ANSRETURNED(2,0)=ANS(2)
+ANSRETURNED(3,0)=ANS(3)
 END
 
       SUBROUTINE compute_accuracy(fulllist, length, acc, estimate)
@@ -758,13 +772,14 @@ C CONSTANTS
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+      INCLUDE "nsquaredSO.inc"
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(3)
+      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
 	  INTEGER HEL
-	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C
 C GLOBAL VARIABLES
 C
@@ -777,7 +792,7 @@ C
 	  %(real_dp_format)s REF
       common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
-	  %(real_dp_format)s ACCURACY
+	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/ACC/ACCURACY
 
 C ----------
@@ -789,10 +804,14 @@ C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
 	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	     PREC_FOUND=ACCURACY
+	     DO I=0,NSQUAREDSO
+	       PREC_FOUND(I)=ACCURACY(I)
+		 ENDDO
 	  ELSE
 C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-	     PREC_FOUND=-1.0d0
+        DO I=0,NSQUAREDSO
+	      PREC_FOUND(I)=-1.0d0
+		ENDDO
 	  ENDIF
 
 	  END
@@ -804,12 +823,13 @@ C CONSTANTS
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+      INCLUDE "nsquaredSO.inc"	  
 C  
 C ARGUMENTS 
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
-      %(real_dp_format)s ANS(3)
-	  %(real_dp_format)s PREC_ASKED,PREC_FOUND
+      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C
 C GLOBAL VARIABLES
 C
@@ -822,7 +842,7 @@ C
 	  %(real_dp_format)s REF
       common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
-	  %(real_dp_format)s ACCURACY
+	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/ACC/ACCURACY
 
 C ----------
@@ -834,10 +854,14 @@ C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 
 	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	     PREC_FOUND=ACCURACY
+	    DO I=0,NSQUAREDSO
+	      PREC_FOUND(I)=ACCURACY(I)
+		ENDDO
 	  ELSE
 C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-	     PREC_FOUND=-1.0d0
+	    DO I=0,NSQUAREDSO
+	      PREC_FOUND(I)=-1.0d0
+		ENDDO
 	  ENDIF
 	  
 	  END

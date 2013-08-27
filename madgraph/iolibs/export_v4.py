@@ -457,7 +457,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                      ",".join([str(i) for \
                                                                i in int_list]))
 
-    def get_split_orders_lines(self, orders, array_name, n=4):
+    def get_split_orders_lines(self, orders, array_name, n=5):
         """ Return the split orders definition as defined in the list orders and
         for the name of the array 'array_name'. Split rows in chunks of size n."""
         
@@ -467,6 +467,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 ret_list.append("DATA (%s(%3r,i),i=%3r,%3r) /%s/" % \
                   (array_name,index + 1, k + 1, min(k + n, len(order)),
                               ','.join(["%5r" % i for i in order[k:k + n]])))
+        return ret_list
+    
+    def format_integer_list(self, list, name, n=5):
+        """ Return an initialization of the python list in argument following 
+        the fortran syntax using the data keyword assignment, filling an array 
+        of name 'name'. It splits rows in chunks of size n."""
+        
+        ret_list = []
+        for k in xrange(0, len(list), n):
+            ret_list.append("DATA (%s(i),i=%3r,%3r) /%s/" % \
+                  (name, k + 1, min(k + n, len(list)),
+                                  ','.join(["%5r" % i for i in list[k:k + n]])))
         return ret_list
 
     def get_color_data_lines(self, matrix_element, n=6):
@@ -1271,6 +1283,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         ncolor = max(1, len(matrix_element.get('color_basis')))
         replace_dict['ncolor'] = ncolor
 
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
@@ -1300,8 +1314,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             # For convenience we also write the driver check_sa_splitOrders.f
             # that explicitely writes out the contribution from each squared order.
             # The original driver still works and is compiled with 'make' while
-            # the splitOrders one is compiled with 'make check_sa_splitOrders'
-            check_sa_writer=writers.FortranWriter('check_sa_splitOrders.f')
+            # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
+            check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
             self.write_check_sa_splitOrders(\
                                     squared_orders,split_orders,check_sa_writer)
 

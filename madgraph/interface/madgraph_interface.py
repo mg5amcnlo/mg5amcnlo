@@ -3072,7 +3072,6 @@ This implies that with decay chains:
         # Check basic validity of the line
         if not line.count('>') in [1,2]:
             self.do_help('generate')
-            print
             raise self.InvalidCmd('Wrong use of \">\" special character.')
         
 
@@ -3269,7 +3268,15 @@ This implies that with decay chains:
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-                                                        
+            
+            if not self.options['loop_optimized_output'] and \
+                         LoopOption not in ['tree','real'] and split_orders!=[]:
+                logger.info('The default output mode (loop_optimized_output'+\
+                  ' = False) does not support evaluations for given power of'+\
+                  ' coupling orders. MadLoop output will therefore not be'+\
+                  ' able to provide such quantities.')
+                split_orders = []
+                       
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)

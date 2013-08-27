@@ -13,20 +13,45 @@ C
 C  
 C ARGUMENTS 
 C 
-      REAL*8 P(0:3,NEXTERNAL),ANS_SUMMED
+      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
 C
 C VARIABLES
 C
       INTEGER I
-	  REAL*8 ANS(NSQAMPSO)
+	  REAL*8 ANS(0:NSQAMPSO)
 C
 C BEGIN CODE
 C
 	  CALL SMATRIX_SPLITORDERS(P,ANS)
-	  ANS_SUMMED=0D0
-	  DO I=1,NSQAMPSO
-	    ANS_SUMMED=ANS_SUMMED+ANS(I)
-	  ENDDO
+	  ANS_SUMMED=ANS(0)
+
+	  END
+
+      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
+      IMPLICIT NONE
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB         
+      PARAMETER (             NCOMB=%(ncomb)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+	  INTEGER HEL
+C
+C GLOBAL VARIABLES
+C
+      INTEGER USERHEL
+	  COMMON/HELUSERCHOICE/USERHEL
+C ----------
+C BEGIN CODE
+C ----------
+      USERHEL=HEL
+	  CALL SMATRIX(P,ANS)
+	  USERHEL=-1
 
 	  END
 
@@ -52,10 +77,12 @@ C
       PARAMETER (             NCOMB=%(ncomb)d)
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER HELAVGFACTOR
+	  PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
 C  
 C ARGUMENTS 
 C  
-      REAL*8 P(0:3,NEXTERNAL),ANS(NSQAMPSO)
+      REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
@@ -68,6 +95,12 @@ C
       DATA GOODHEL/NCOMB*.FALSE./
 %(helicity_lines)s
 %(den_factor_line)s
+C
+C GLOBAL VARIABLES
+C
+      INTEGER USERHEL
+	  COMMON/HELUSERCHOICE/USERHEL
+	  DATA USERHEL/-1/	  
 C ----------
 C BEGIN CODE
 C ----------
@@ -79,24 +112,63 @@ C ----------
       	ANS(I) = 0D0	  
 	  ENDDO
       DO IHEL=1,NCOMB
-         IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-            CALL MATRIX(P ,NHEL(1,IHEL),JC(1), T)
-	 	    BUFF=0D0
-			DO I=1,NSQAMPSO			
-              ANS(I)=ANS(I)+T(I)
-			  BUFF=BUFF+T(I)
-		    ENDDO
-            IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-              GOODHEL(IHEL)=.TRUE.
+	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
+           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+              CALL MATRIX(P ,NHEL(1,IHEL),JC(1), T)
+	 	      BUFF=0D0
+			  DO I=1,NSQAMPSO			
+                ANS(I)=ANS(I)+T(I)
+			    BUFF=BUFF+T(I)
+		      ENDDO
+              IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                GOODHEL(IHEL)=.TRUE.
+              ENDIF
             ENDIF
-          ENDIF
+		  ENDIF
        ENDDO
+	  ANS(0)=0.0d0
 	  DO I=1,NSQAMPSO
         ANS(I)=ANS(I)/DBLE(IDEN)
+		ANS(0)=ANS(0)+ANS(I)
 	  ENDDO
+	  IF(USERHEL.NE.-1) THEN
+		ANS(0)=ANS(0)*HELAVGFACTOR
+		DO I=1,NSQAMPSO
+          ANS(I)=ANS(I)*HELAVGFACTOR
+		ENDDO
+	  ENDIF
       END
-       
-       
+
+      SUBROUTINE SMATRIXHEL_SPLITORDERS(P,HEL,ANS)
+      IMPLICIT NONE
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB         
+      PARAMETER (             NCOMB=%(ncomb)d)
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
+	  INTEGER HEL
+C
+C GLOBAL VARIABLES
+C
+      INTEGER USERHEL
+	  COMMON/HELUSERCHOICE/USERHEL
+C ----------
+C BEGIN CODE
+C ----------
+      USERHEL=HEL
+	  CALL SMATRIX_SPLITORDERS(P,ANS)
+	  USERHEL=-1
+
+	  END
+ 
       SUBROUTINE MATRIX(P,NHEL,IC,RES)
 C  
 %(info_lines)s

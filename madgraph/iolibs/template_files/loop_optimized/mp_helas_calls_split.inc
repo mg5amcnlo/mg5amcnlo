@@ -21,6 +21,9 @@ C
       PARAMETER (ZERO=0.0e0_16)
 	  %(complex_mp_format)s     IZERO
       PARAMETER (IZERO=CMPLX(0.0e0_16,0.0e0_16,KIND=16))
+C     These are constants related to the split orders
+      INTEGER    NSO, NSQUAREDSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C  
 C ARGUMENTS
 C
@@ -38,7 +41,7 @@ C
       include 'mp_coupl_same_name.inc'
 
 	  INTEGER GOODHEL(NCOMB)
-	  LOGICAL GOODAMP(NLOOPGROUPS)
+	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL
 
       %(mp_born_amps_decl)s
@@ -49,14 +52,14 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/MP_WL/WL,PL
 
-	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 	  common/MP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
 	  common/MP_AMPL/AMPL
 
-      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
-	  LOGICAL S(NLOOPGROUPS)
+      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/LOOPRES/LOOPRES,S
 C
 C ----------

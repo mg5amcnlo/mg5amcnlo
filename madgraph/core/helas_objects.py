@@ -4223,6 +4223,55 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return self.generate_color_amplitudes(self['color_basis'],self['diagrams'])
 
+    def sort_split_orders(self, split_orders):
+        """ Sort the 'split_orders' list given in argument so that the orders of
+        smaller weights appear first. Do nothing if not all split orders have
+        a hierarchy defined."""
+        order_hierarchy=\
+                    self.get('processes')[0].get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            split_orders.sort(key=lambda order: order_hierarchy[order])
+
+    def get_split_orders_mapping_for_diagram_list(self, diag_list, split_orders,
+            get_amp_number_function = lambda amp: amp.get('number'),
+            get_amplitudes_function = lambda diag: diag.get('amplitudes')):
+        """ This a helper function for get_split_orders_mapping to return, for 
+        the HelasDiagram list given in argument, the list amp_orders detailed in
+        the description of the 'get_split_orders_mapping' function.
+        """
+
+        order_hierarchy=\
+                    self.get('processes')[0].get('model').get('order_hierarchy')
+        # Find the list of amplitude numbers and what amplitude order they
+        # correspond to. For its construction, amp_orders is a dictionary with
+        # is then translated into an ordered list of tuples before being returned.
+        amp_orders={}
+        for diag in diag_list:
+            diag_orders=diag.calculate_orders()
+            # Complement the missing split_orders with 0
+            for order in split_orders:
+                if not order in diag_orders.keys():
+                    diag_orders[order]=0
+            key = tuple([diag_orders[order] for order in split_orders])
+            try:
+                amp_orders[key].extend([get_amp_number_function(amp) for amp in \
+                                                 get_amplitudes_function(diag)])
+            except KeyError:
+                amp_orders[key] = [get_amp_number_function(amp) for amp in \
+                                                  get_amplitudes_function(diag)]
+        amp_orders=[(order[0],tuple(order[1])) for order in amp_orders.items()]
+        # Again make sure a proper hierarchy is defined and order the list
+        # according to it if possible
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            # Order the contribution starting from the minimum WEIGHTED one
+            amp_orders.sort(key= lambda elem: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                         i, order_power in enumerate(elem[0])]))
+        
+        return amp_orders
+
     def get_split_orders_mapping(self):
         """This function returns two lists, squared_orders, amp_orders.
         If process['split_orders'] is empty, the function returns two empty lists.
@@ -4248,43 +4297,17 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         code output by the exporters.
         """
         
-        # First make sure that the 'split_orders' are ordered according to their
-        # weight.
         split_orders=self.get('processes')[0].get('split_orders')
+        # If no split_orders are defined, then return the obvious
         if len(split_orders)==0:
             return (),()
-        order_hierarchy=\
-                    self.get('processes')[0].get('model').get('order_hierarchy')
-        if set(order_hierarchy.keys()).union(set(split_orders))==\
-                                                    set(order_hierarchy.keys()):
-            split_orders.sort(key=lambda order: order_hierarchy[order])
-
-        # Now find the list of amplitude numbers and what amplitude order they
-        # correspond to. For its construction, amp_orders is a dictionary with
-        # is then translated into an ordered list of tuples before being returned.
-        amp_orders={}
-        for diag in self.get('diagrams'):
-            diag_orders=diag.calculate_orders()
-            # Complement the missing split_orders with 0
-            for order in split_orders:
-                if not order in diag_orders.keys():
-                    diag_orders[order]=0
-            key = tuple([diag_orders[order] for order in split_orders])
-            try:
-                amp_orders[key].extend([amp.get('number') for amp in \
-                                                        diag.get('amplitudes')])
-            except KeyError:
-                amp_orders[key] = [amp.get('number') for amp in \
-                                                         diag.get('amplitudes')]
-        amp_orders=[(order[0],tuple(order[1])) for order in amp_orders.items()]
-        # Again make sure a proper hierarchy is defined and order the list
-        # according to it if possible
-        if set(order_hierarchy.keys()).union(set(split_orders))==\
-                                                    set(order_hierarchy.keys()):
-            # Order the contribution starting from the minimum WEIGHTED one
-            amp_orders.sort(key= lambda elem: 
-                         sum([order_hierarchy[split_orders[i]]*order_power for \
-                                         i, order_power in enumerate(elem[0])]))
+        
+        # First make sure that the 'split_orders' are ordered according to their
+        # weight.
+        self.sort_split_orders(split_orders)
+            
+        amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+                                              self.get('diagrams'),split_orders)
             
         # Now we construct the interference splitting order matrix for 
         # convenience

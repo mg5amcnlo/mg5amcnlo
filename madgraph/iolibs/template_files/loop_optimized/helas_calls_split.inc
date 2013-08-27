@@ -21,6 +21,9 @@ C
       PARAMETER (ZERO=0D0)
 	  %(real_mp_format)s     MP__ZERO
       PARAMETER (MP__ZERO=0.0e0_16)
+C     These are constants related to the split orders
+      INTEGER    NSO, NSQUAREDSO, NAMPSO
+	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
 C  
 C ARGUMENTS
 C
@@ -43,6 +46,9 @@ C
 	  LOGICAL GOODAMP(NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
 
+	  integer I_SO
+	  common/I_SO/I_SO
+
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/W/W
@@ -51,14 +57,14 @@ C
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/WL/WL,PL
 
-	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPS)
+	  %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 	  common/LCOEFS/LOOPCOEFS
 
       %(complex_dp_format)s AMPL(3,NCTAMPS)
 	  common/AMPL/AMPL
 
-      %(complex_dp_format)s LOOPRES(3,NLOOPGROUPS)
-	  LOGICAL S(NLOOPGROUPS)
+      %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
+	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/LOOPRES/LOOPRES,S
 C
 C ----------
