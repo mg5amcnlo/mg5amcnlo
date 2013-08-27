@@ -2169,7 +2169,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                                                                  'subproc.mg'))]
         
         #check difficult PS case
-        if float(self.run_card['mmjj']) > 150:
+        if float(self.run_card['mmjj']) > 0.01 * (float(self.run_card['ebeam1'])+float(self.run_card['ebeam2'])):
             self.pass_in_difficult_integration_mode()
           
         
@@ -2242,19 +2242,19 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         # improve survey options if default
         if self.opts['points'] == self._survey_options['points'][1]:
-            self.opts['points'] = 3 * self._survey_options['points'][1]
+            self.opts['points'] = 2 * self._survey_options['points'][1]
         if self.opts['iterations'] == self._survey_options['iterations'][1]:
-            self.opts['iterations'] = 2 + self._survey_options['iterations'][1]
+            self.opts['iterations'] = 1 + self._survey_options['iterations'][1]
         if self.opts['accuracy'] == self._survey_options['accuracy'][1]:
-            self.opts['accuracy'] = self._survey_options['accuracy'][1]/3  
+            self.opts['accuracy'] = self._survey_options['accuracy'][1]/2  
             
         # Modify run_config.inc in order to improve the refine
         conf_path = pjoin(self.me_dir, 'Source','run_config.inc')
         files.cp(conf_path, conf_path + '.bk')
 
         text = open(conf_path).read()
-        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 10000 )''', text)
-        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 25000 )''', text)
+        text = re.sub('''\(min_events = \d+\)''', '''(min_events = 7500 )''', text)
+        text = re.sub('''\(max_events = \d+\)''', '''(max_events = 20000 )''', text)
         fsock = open(conf_path, 'w')
         fsock.write(text)
         fsock.close()
