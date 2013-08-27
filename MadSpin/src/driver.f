@@ -121,15 +121,14 @@ c      enddo
          continue      ! just retrun the value of M_full   
       else
          call  ntuple(x(1),0d0,1d0,1,1)
-c         INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
-c         if (ranmar_state_exists) then 
-c           open(unit=59, file=ranmar_state_file, status='replace')
-c         else
-c           open(unit=59, file=ranmar_state_file, status='new')
-c         endif
-c           write(59,*) ranu,ranc,rancd,rancm,iranmr,jranmr
-c         close(59)
-         write(*,*) 'Have written down the state of ranmar'
+         INQUIRE(FILE=ranmar_state_file, EXIST=ranmar_state_exists)
+         if (ranmar_state_exists) then 
+           open(unit=59, file=ranmar_state_file, status='replace')
+         else
+           open(unit=59, file=ranmar_state_file, status='new')
+         endif
+           write(59,*) ranu,ranc,rancd,rancm,iranmr,jranmr
+         close(59)
          write(*,*) ranu
          goto 2                      ! and close the program  
       endif

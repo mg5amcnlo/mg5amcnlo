@@ -4516,6 +4516,8 @@ class decay_all_events:
                     stdin_text="5 0 0 0 \n"  # before closing, write down the seed 
                     external = self.calculator[('full',path)]
                     external.stdin.write(stdin_text)
+                    temp=external.stdout.readline()
+#                    print temp
                     external.stdin.close()
                     external.stdout.close()
                     external.terminate()
