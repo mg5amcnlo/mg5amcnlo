@@ -861,6 +861,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['gev_pow']=int(splitline[1])
             elif splitline[0]=='Export_Format':
                 res_dict['export_format']=splitline[1]
+            elif splitline[0]=='RETCODE':
+                res_dict['return_code']=int(splitline[1])
             elif splitline[0]=='Split_Orders_Names':
                 res_dict['Split_Orders_Names']=splitline[1:]
             elif splitline[0] in ['Loop_SO_Results', 'Born_SO_Results']:

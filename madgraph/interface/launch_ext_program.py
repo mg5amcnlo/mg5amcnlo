@@ -254,7 +254,38 @@ class MadLoopLauncher(ExtLauncher):
                   '(|    Single pole = %s )'%special_float_format(res['1eps']),
                   '(|    Double pole = %s )'%special_float_format(res['2eps'])
                   ]
-            
+        
+        str_lines.append(ASCII_bar)
+        units = res['return_code']%10
+        tens = (res['return_code']%100 - units)/10
+        hundreds = (res['return_code']-tens*10-units)/100
+        if hundreds==1:
+            if tens==3 or tens==4:
+                str_lines.append('|| Unknown numerical stability because'+\
+                                     ' MadLoop is in the initialization stage.')
+            else:
+                str_lines.append('||ÊUnknown numerical stability, check '+\
+                                        'CTModeRun value in MadLoopParams.dat.')
+        elif hundreds==2:
+            str_lines.append('||ÊStable kinematic configuration (SPS).')
+        elif hundreds==3:
+            str_lines.append('||ÊUnstable kinematic configuration (UPS).')            
+            str_lines.append('|  Quadruple precision rescue successful.')
+        elif hundreds==4:
+            str_lines.append('||ÊExceptional kinematic configuration (EPS).')
+            str_lines.append('|  Both double an quadruple precision '+\
+                                                  'computations, are unstable.')
+        if tens==2 or tens==4:
+            str_lines.append('|  Quadruple precision computation used.')
+        if hundreds==1:
+            if res['accuracy']>0.0:
+                str_lines.append('|  Relative accuracy  = %.2e'%res['accuracy'])
+            elif res['accuracy']==0.0:
+                str_lines.append('|  Relative accuracy  = 0.0 '+\
+                                                    '(beyond double precision)')
+            else:
+                str_lines.append('|  Estimated accuracy could not be computed'+\
+                                                      ' for an unknown reason.')
         str_lines.append(ASCII_bar)
         
         if len(res['Born_SO_results'])==1:
