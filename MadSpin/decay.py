@@ -75,77 +75,6 @@ class Event:
         self.inputfile=inputfile
         self.particle={}
 
-    def give_procdef(self, pid2label):
-        """ Return a string with the process in the format i j > k l ... """
-        proc_line=""
-        initial=0
-        for part in range(1,len(self.particle)+1):
-            if self.particle[part]["istup"]==-1:
-                initial+=1
-                proc_line+=pid2label[self.particle[part]["pid"]]+" "
-                if initial==2 :
-                    proc_line+="> "
-
-            if self.particle[part]["istup"]==1:
-                proc_line+=pid2label[self.particle[part]["pid"]]+" "
-        return proc_line
- 
-
-    def get_map_resonances(self, branchindex2label,pid2label):
-        """
-           decay_processes is a dictionary 1 : "A1"
-                                           2 : "A2" 
-                                           ...
-          returns a map  {mg index : index of the branch}
-          for each mg index associated with a resonance to be decayed
-        """
-        # first build a dictionary {}
-
-        dico_map={}
-        dico_label={}
-
-#        dico_symmetry_fac={}  # dico {label : symmetry factor}
-        branch_not_yet_found=branchindex2label.keys()
-        branch_found=[]
-
-         
-        for index in self.event2mg.keys():
-           if self.event2mg[index]>0:
-                part=self.event2mg[index]
-                pid=self.particle[part]['pid']
-                found=0
-                for  index, id in enumerate(branch_not_yet_found):
-                    if pid2label[pid]==branchindex2label[id]:
-                        found=1
-                        dico_map[part]=id
-                        label=pid2label[pid]
-                        dico_label[part]=label 
-#                        if not dico_symmetry_fac.has_key(label):
-#                            dico_symmetry_fac[label]=1
-#                        else:
-#                            dico_symmetry_fac[label]+=1
-
-                        branch_found.append(id)
-                        to_delete=index
-                        break
-                if found: del branch_not_yet_found[to_delete]
-
-                if not found:
-                    for index in branch_found:  
-                        if pid2label[pid]==branchindex2label[index]:
-                            dico_map[part]=index
-                            dico_label[part]=pid2label[pid]
-
-#       now get the symmetry factor:
-#        symm_fac=1.0
-        #print dico_symmetry_fac
-#        for label in dico_symmetry_fac.keys():
-#            for index in range(2,dico_symmetry_fac[label]+1):
-#                symm_fac=symm_fac*(index)
-
-        return dico_map, dico_label #, symm_fac
-
-
     def give_momenta(self, map_event=None):
         """ return the set of external momenta of the event, 
                 in two different formats:
@@ -889,110 +818,6 @@ class production_topo(dict):
         self["branchings"].append(branch)
 
 
-    def topo2event(self,event):
-        """This routine is typically called and the end of the reshuffling phase.
-             The momenta in the topology were reshuffled in a previous step, and now they are copied 
-             back to the production event in this routine 
-        """
-        to_decay = self.production["decaying"]
-        #     start with external legs
-        for part in range(1,len(event.particle)+1):
-            event.particle[part]["momentum"]=self["get_momentum"][part].copy()
-            if part in to_decay:
-                if event.particle[part]["momentum"].m < 1.0e-3:
-                    logger.debug('Decaying particle with a mass of less than 1 MeV in topo2event')
-
-
-    def generate_BW_masses (self, pid2width, pid2mass,s,E_collider):
-        """Generate the BW masses of the particles to be decayed in the production event    """    
-        # topo, to_decay, pid2name
-
-        weight=1.0
-        self.max_bw = 0
-        for part in self["get_id"].keys():
-            pid=self["get_id"][part]
-            if pid in self.production['decaying']:
-                mass=0.25
-                width=pid2width(pid)*pid2mass(pid)/(2.0*pid2mass(pid))**2
-            
-                mpole=pid2mass(pid)
-                w=pid2width(pid)
-                BW_cut = float(self.options['BW_cut'])
-
-                m_min=max(mpole-BW_cut*w, 0.5)
-                m_max=mpole+BW_cut*w 
-                if E_collider>0:m_max=min(m_max,0.99*E_collider)
-
-                zmin=math.atan(m_min**2/w/mpole-mpole/w)/width
-                zmax=math.atan(m_max**2/w/mpole-mpole/w)/width
-                
-                virtualmass2, jac=self.transpole(mass,width, zmin, zmax)
-                virtualmass2=virtualmass2*(2.0*mpole)**2
-                weight=weight*jac
-
-                self.max_bw = max(self.max_bw, abs(math.sqrt(virtualmass2) - pid2mass(pid)) / abs(pid2width(pid)))
-                #print "need to generate BW mass of "+str(part)
-                ##print "mass: "+str(pid2mass[pid])
-                #print "width: "+str(pid2width[pid])
-                #print "virtual mass: "+str(math.sqrt(virtualmass2))
-                #print "jac: "+str(jac)
-                old_mass=self["get_mass2"][part]
-                self["get_mass2"][part]=virtualmass2
-                # sanity check
-                if pid2mass(pid)<1e-6:
-                    logger.debug('A decaying particle has a mass of less than 1e-6 GeV')
-# for debugg purposes:
-                if abs((pid2mass(pid)-math.sqrt(self["get_mass2"][part]))/pid2mass(pid))>1.0 :
-                    logger.debug('Mass after BW smearing affected by more than 100 % (1)') 
-                    logger.debug('Pole mass: '+str(pid2mass(pid)))
-                    logger.debug('Virtual mass: '+str(math.sqrt(self["get_mass2"][part])))
-                                       
-                #print self["get_mass2"]         
-
-#    need to check if last branch is a t-branching. If it is, 
-#    we need to update the value of branch["m2"]
-
-        if len(self["branchings"])>0:  # Exclude 2>1 self.topologies
-            if self["branchings"][-1]["type"]=="t":
-                if self["branchings"][-2]["type"]!="t":
-                    logger.debug('last branching is t-channel')
-                    logger.debug('but last-but-one branching is not t-channel')
-                else:
-                    part=self["branchings"][-1]["index_d2"] 
-                    if part >0: # reset the mass only if "part" refers to an external particle 
-                        old_mass=self["branchings"][-2]["m2"]
-                        self["branchings"][-2]["m2"]=math.sqrt(self["get_mass2"][part])
-                        #sanity check
-
-                        if abs(old_mass-self["branchings"][-2]["m2"])>1e-10:
-                            if abs((old_mass-self["branchings"][-2]["m2"])/old_mass)>1.0 :
-                                logger.debug('Mass after BW smearing affected by more than 100 % (2)')
-                                logger.debug('Previous value: '+ str(old_mass))
-                                logger.debug('New mass: '+ str((self["branchings"][-2]["m2"])))
-                                try:
-                                    pid=self["get_id"][part]
-                                    logger.debug('pole mass: %s' % pid2mass[pid])
-                                except Exception:
-                                    pass
-
-        return weight
-
-    def transpole(self,pole,width, zmin, zmax):
-
-        """ routine for the generation of a p^2 according to 
-            a Breit Wigner distribution
-            the generation window is 
-            [ M_pole^2 - 30*M_pole*Gamma , M_pole^2 + 30*M_pole*Gamma ] 
-        """
-
-        z=zmin+(zmax-zmin)*random.random()
-        y = pole+width*math.tan(width*z)
-
-        jac=(width/math.cos(width*z))**2*(zmax-zmin)
-        return y, jac
-
-
-
     def print_topo(self):
         """Print the structure of the topology    """
         for branch in self["branchings"]:
@@ -1004,377 +829,6 @@ class production_topo(dict):
             line+=str(d2)+" ,    type="
             line+=branch["type"]
             print line
-#            try:
-                #print "momentum propa"
-                #print self["get_momentum"][propa].nice_string()
-                #print "P^2:    "+str(self["get_mass2"][propa])
-                #print "root:    "+str(math.sqrt(abs(self["get_mass2"][propa])))
-                #print "momentum d1"
-                #print self["get_momentum"][d1].nice_string()
-                #print "P^2:    "+str(self["get_mass2"][d1])
-                #print "root:    "+str(math.sqrt(abs(self["get_mass2"][d1])))
-                #print "momentum d2"
-                #print self["get_momentum"][d2].nice_string()
-                #print "P^2:    "+str(self["get_mass2"][d2])
-                #print "root:    "+str(math.sqrt(abs(self["get_mass2"][d2])))
-#            except Exception, error:
-                #print "topology not yet dressed" 
-
-    def dress_topo_from_event(self,event):
-        """ event has been read from the production events file,
-                use these momenta to dress the topology
-        """
-
-#     start with external legs
-        for id in range(len(event.particle)):
-            part = id + 1
-            self["get_momentum"][id+1]=event.particle[part]["momentum"].copy()
-            self["get_mass2"][id+1]=event.particle[part]["mass"]**2
-            self["get_id"][id+1]=event.particle[part]["pid"]
-
-
-#    now fill also intermediate legs
-#    Don't care about the pid of intermediate legs
-        for branch in self["branchings"]:
-            part=branch["index_propa"]
-            if branch["type"]=="s":
-                mom_propa=self["get_momentum"][branch["index_d1"]].add(self["get_momentum"][branch["index_d2"]])
-            elif branch["type"]=="t":
-                mom_propa=self["get_momentum"][branch["index_d1"]].subtract(self["get_momentum"][branch["index_d2"]])
-            self["get_momentum"][part]=mom_propa
-            self["get_mass2"][part]=mom_propa.sq
-
-# Also record shat and rapidity, since the initial momenta will also be reshuffled
-#
-        p1=self["get_momentum"][1].copy()
-        p2=self["get_momentum"][2].copy()
-        ptot=p1.add(p2)
-        self["shat"]=ptot.sq
-        self["rapidity"]=0.5*math.log((ptot.E+ptot.pz)/(ptot.E-ptot.pz))
-
-    def reshuffle_momenta(self):
-        """
-            At this stage, 
-            - the topo should be dressed with momenta.
-            - the angles should be already extracted.
-            - the masses should be corrected.
-            This routine scan all branchings:
-                 - first consider the t-branchings, go to the appropriate frame, 
-                     modify the three-momenta to account for the corrected masses,
-                 - then consider the s-branchings, go to the approriate frame,
-                     rescale the three-momenta to account for the corrected masses.
-        """
- 
-#     step number one: need to check if p^2 of each propa
-#     is ok with the new set of masses ...
-#     we first check this for all the s-branchings
-
-#     Close to threshold, problems may occur: 
-#         e.g. in A>B+C, one may have mA>mB+mC
-#     Currently, if this happens, I throw away the point
-#     but I am not sure what is the best prescription here ... 
-
-        for  branch in self["branchings"]:
-             
-#            no need to consider t-branching here:
-            if branch["type"]!="s":
-                    continue
-            d1=branch["index_d1"]
-            d2=branch["index_d2"]
-            propa=branch["index_propa"]
-
-            MA=math.sqrt(self["get_mass2"][propa])
-            MB=math.sqrt(self["get_mass2"][d1])
-             #print self["get_mass2"][d2]
-            MC=math.sqrt(self["get_mass2"][d2])
-            if MA < MB + MC:
-                 #print "WARNING: s-channel propagator with too low p^2 "
-                 #print "in branch "+str(iter)
-                 #print "MA = "+str(MA)
-                 #print "MB = "+str(MB)
-                 #print "MC = "+str(MC)
-                 #print "throw away the point"
-
-                 #print "increase the value of p^2"
-#                 self["get_mass2"][propa]=(MC+MB+iota)**2 
-#                 if iter==len(self["branchings"])-1:             # if last branching, needs to 
-#                        self["shat"]=self["get_mass2"][propa]    # set shat to the new value of MA**2 
-                return 0
-
-
-     
-#     then loop over all t-channels
-#     and re-genenate the "d2" daughter in each of these branchings
-        got_a_t_branching=0
-        for nu, branch in enumerate(self["branchings"]):
-
-#            no need to consider the last branching in this loop:
-            if(nu==len(self["branchings"])-1): break
-
-#            no need to scan the s-branching now
-            if branch["type"]!="t":
-                    continue
-
-            got_a_t_branching=1
-            # t-channel sequence: A+B > 1 + 2,     r= pa-p1
-            ida=branch["index_d1"]
-            idb=2
-            id1=branch["index_d2"]
-            res=branch["index_propa"]
-            # go to the rest frame of    A+B
-            # set momenta A, B, 1
-            pa = self["get_momentum"][ida]
-            pb = self["get_momentum"][idb]
-            p1 = self["get_momentum"][id1]
-#            set masses
-            ma2=self["get_mass2"][ida]
-            if (self["get_mass2"][id1]>=0):
-                #print "m1^2, t-branch "+str(iter)
-                #print self["get_mass2"][id1]
-                m1=math.sqrt(self["get_mass2"][id1])
-            else:
-                return 0
-            m2=branch["m2"]
-            t=self["get_mass2"][res]
-
-            # express momenta p1 and pa in A+B CMS system
-            pboost=self["get_momentum"][2].add(self["get_momentum"][branch["index_d1"]])
-            pboost.px=-pboost.px
-            pboost.py=-pboost.py
-            pboost.pz=-pboost.pz
-#            p1_cms=p1.boost(pboost)
-            pa_cms=pa.boost(pboost)
-
-#             determine the magnitude of p1 in the cms frame
-            Esum=pboost.sq
-
-            if Esum>0 :
-                Esum=math.sqrt(Esum)
-            else:
-                return 0
-            md2=(m1+m2)*(m1-m2)
-            ed=md2/Esum
-            if (m1*m2==0) :
-                pp=(Esum-abs(ed))*0.5
-            else:
-                pp=(md2/Esum)**2-2.0*(m1**2+m2**2)+Esum**2
-                if pp>0 :
-                    pp=0.5*math.sqrt(pp)
-                else:
-                    return 0
-
-#                Now evaluate p1
-            E_acms=pa_cms.E
-            p_acms=math.sqrt(pa_cms.mod2)
-
-            p1E=(Esum+ed)*0.5
-            if p1E < m1: 
-#                logger.warning('E1 is smaller than m1 in t-branching')
-#                logger.warning('Try to reshuffle the momenta once more')
-                return 0
-            p1z=-(m1*m1+ma2-t-2.0*p1E*E_acms)/(2.0*p_acms)
-            ptsq=pp*pp-p1z*p1z
-
-            if (ptsq<0 ): 
-#                if pT=0 to begin with, one can get p1z slightly larger 
-#                                than pp due to numerical uncertainties.
-#                     In that case, just change slightly the invariant t
-                if (-ptsq/(pp*pp) <1e-6 ):
-                    oldt=t
-                    if (p1z>0):
-                        p1z=pp
-                    else:
-                        p1z=-pp
-                    pt=0.0
-                    t=m1*m1+ma2-2.0*p1E*E_acms+2.0*p_acms*p1z
-                    diff_t=abs((t-oldt)/t)*100
-                    if (diff_t>2.0): 
-                        logger.warning('t invariant was changed by '+str(diff_t)+' percents')
-                else:
-                    return 0
-            else:
-                pt=math.sqrt(pp*pp-p1z*p1z)
-
-            p1x=pt*branch["cosphi"]
-            p1y=pt*branch["sinphi"]
-
-            p1=momentum(p1E,p1x,p1y,p1z)
-
-            p1=p1.rot(pa_cms)
-            pboost.px=-pboost.px
-            pboost.py=-pboost.py
-            pboost.pz=-pboost.pz
-            p1=p1.boost(pboost)
-            pr=pa.subtract(p1)
-                #print " p1 is "
-                #print p1.nice_string()
-                #print " pr is "
-                #print pr.nice_string()
-            p2=(pa.add(pb)).subtract(p1)
-                #print " p2 is "
-                #print p2.nice_string()
-#            now update momentum 
-            self["get_momentum"][id1]=p1.copy()
-            self["get_momentum"][res]=pr.copy()
-
-        # after we have looped over all t-branchings,
-        # p2 can be identified with the momentum of the second daughter of the last branching
-
-        if got_a_t_branching==1:
-            pid=self["branchings"][-1]["index_d2"]
-            self["get_momentum"][pid]=p2.copy()
-        #else: it means that there were no t-channel at all
-        #            last branching should be associated with shat 
-        #            note that the initial momenta will be reshuffled 
-        #            at the end of this routine 
-
-
-#    Now we can    loop over all the s-channel branchings.
-#    Need to start at the end of the list of branching
-        for branch in reversed(self["branchings"]):
-            if branch["type"]!="s":
-                    continue
-            d1=branch["index_d1"]
-            d2=branch["index_d2"]
-            propa=branch["index_propa"]
-            del self["get_momentum"][d1]
-            del self["get_momentum"][d2]
-            mA=math.sqrt(self["get_mass2"][propa])
-            mB=math.sqrt(self["get_mass2"][d1])
-            mC=math.sqrt(self["get_mass2"][d2])
-            mom=self["get_momentum"][propa]
-            costh=branch["costheta"]
-            sinth=branch["sintheta"]
-            cosphi=branch["cosphi"]
-            sinphi=branch["sinphi"]
-            decay2body=generate_2body_decay(mom, mA,mB,mC, \
-                                    costh_val=costh, sinth_val=sinth, \
-                                    cosphi_val=cosphi, sinphi_val=sinphi)
-            self["get_momentum"][d1]=decay2body.momd1.copy()
-            self["get_momentum"][d2]=decay2body.momd2.copy()
-
-#    Need a special treatment for the 2 > 1 processes:
-        if len(self["get_mass2"])==3:
-            self["shat"]=self["get_mass2"][3]
-
-#    Finally, compute the initial momenta
-#    First generate initial momenta in the CMS frame
-#    Then boost
-        mB=self["get_mass2"][1]
-        mC=self["get_mass2"][2]
-        if mB>0:
-            mB=math.sqrt(mB)
-        else:
-            mB=0.0
-        if mC>0:
-            mC=math.sqrt(mC)
-        else:
-            mC=0.0
-        mA=math.sqrt(self["shat"])
-        Etot=mA*math.cosh(self["rapidity"])
-        pztot=mA*math.sinh(self["rapidity"])
-        ptot=momentum(Etot,0.0,0.0,pztot)
-
-        decay2body=generate_2body_decay(ptot,mA,mB,mC, \
-                             costh_val=1.0, sinth_val=0.0, \
-                             cosphi_val=0.0, sinphi_val=1.0)
-
-        self["get_momentum"][1]=decay2body.momd1
-        self["get_momentum"][2]=decay2body.momd2
-
-#    Need a special treatment for the 2 > 1 processes:
-        if len(self["get_momentum"])==3:
-            self["get_momentum"][3]=momentum(Etot,0.0,0.0,pztot)
-        
-        return 1
-
-    def extract_angles(self):
-        """ the topo should be dressed with momenta at this stage.
-                    Now: extract the angles characterizing each branching.
-                    For t-channel, the equivalent of cos(theta) is the mass of p2
-        """    
-
-        for nu, branch in enumerate(self["branchings"]):
-            if branch["type"]=="s":
-            # we have the decay A > B + C
-            # go to the rest frame of the decaying particle A, and extract cos theta and phi
-                propa=branch["index_propa"]
-#                d1=branch["index_d1"]
-                d2=branch["index_d1"]
-                pboost=self["get_momentum"][propa].copy()
-                pboost.px=-pboost.px
-                pboost.py=-pboost.py
-                pboost.pz=-pboost.pz
-#               pb_cms=self["get_momentum"][d1].boost(pboost)
-                pc_cms=self["get_momentum"][d2].boost(pboost)
-                mod_pc_cms=math.sqrt(pc_cms.mod2)
-                branch["costheta"]=pc_cms.pz/mod_pc_cms
-                branch["sintheta"]=math.sqrt(1.0-branch["costheta"]**2)
-                branch["cosphi"]=pc_cms.px/mod_pc_cms/branch["sintheta"]
-                branch["sinphi"]=pc_cms.py/mod_pc_cms/branch["sintheta"]
-
-            if branch["type"]=="t":
-            # we have a t-channel decay A + B > 1 + 2
-            # go to the rest frame of    A+B, and extract phi
-                    
-            # set momenta A, B, 1
-                pa = self["get_momentum"][branch["index_d1"]]
-                pb = self["get_momentum"][2]
-                p1 = self["get_momentum"][branch["index_d2"]]
-                p2=(pa.add(pb)).subtract(p1)
-
-                if (nu==len(self["branchings"])-1):
-                    # last t-channel branching, p2 should be zero
-                    check=p2.E**2+p2.mod2
-                    if check>1e-3: 
-                        logger.warning('p2 in the last t-branching is not zero')
-                        # If last t-channel branching, there is no angles to extract
-                    continue
-                elif (nu==len(self["branchings"])-2):
-                    # here m2 corresponds to the mass of the second daughter in the last splitting 
-                    part=self["branchings"][-1]["index_d2"]
-                    if self["get_mass2"][part]<0.0 :
-                        logger.warning('negative mass for particle '+str(part))
-                        logger.warning( self["get_mass2"][part])
-                    branch["m2"]=math.sqrt(self["get_mass2"][part])
-                elif p2.sq <0 and abs(p2.E)>1e-2: 
-                    logger.warning('GET A NEGATIVE M2 MASS IN THE T-BRANCHING '+str(iter))
-                    logger.warning( '(ROUTINE EXTRACT_ANGLES)')
-                    logger.warning( p2.nice_string() )
-                    logger.warning( p2.sq )
-                else:
-                    branch["m2"]=p2.m
-                 
-                # express momenta p1 and pa in A+B CMS system
-                pboost=self["get_momentum"][2].add(self["get_momentum"][branch["index_d1"]])
-                pboost.px=-pboost.px
-                pboost.py=-pboost.py
-                pboost.pz=-pboost.pz
-
-                if pboost.m<1e-6: 
-                    logger.warning('Warning: m=0 in T-BRANCHING '+str(iter))
-                    logger.warning(' pboost.nice_string()')
-
-                p1_cms=p1.boost(pboost)
-                pa_cms=pa.boost(pboost)
-
-#               E_acms=pa.E
-#               mod_acms=math.sqrt(pa_cms.mod2)
-#
-#               now need to go to the frame where pa is aligned along with the z-axis
-                p_rot=pa_cms.copy()
- 
-                p1_cmsrot=p1_cms.invrot(p_rot)
-#               pa_cmsrot=pa_cms.invrot(p_rot)
-#               now extract cosphi, sinphi
-                pt=math.sqrt(p1_cmsrot.px**2+p1_cmsrot.py**2)
-                if (pt>p1_cms.E*10e-10):
-                    branch["cosphi"]=p1_cmsrot.px/pt                 
-                    branch["sinphi"]=p1_cmsrot.py/pt
-                else:                 
-                    branch["cosphi"]=1                 
-                    branch["sinphi"]=0.0
-
 
 class AllMatrixElement(dict):
     """Object containing all the production topologies required for event to decay.
@@ -2211,46 +1665,7 @@ class decay_misc:
 
         return finalfound
    
-
-    def get_resonances(self,decay_processes):
-        """ return a list of    labels of each resonance involved in the decay chain """
-
-        resonances=[]
-        for line in decay_processes:
-            line=line.replace(">", " > ")
-            line=line.replace("(", " ( ")
-            line=line.replace(")", " ) ")
-            list_proc=line.split()
-            for i , item in enumerate(list_proc): 
-                if item ==">":
-                    resonances.append(list_proc[i-1])
-        return resonances
          
-    def restore_light_parton_masses(self,topo,event):
-        """ masses of light partons were set to zero for 
-                the evaluation of the matrix elements
-                now we need to restore the initial masses before
-                writting the decayed event in the lhe file
-        """
-
-        light_partons=[21,1,2,3]
-        for part in topo["get_id"].keys():
-            if abs(topo["get_id"][part]) in light_partons:
-                topo["get_mass2"][part]=event.particle[part]["mass"]**2
-
-#    need to check if last branch is a t-branching. If it is, 
-#    we need to update the value of branch["m2"]
-#    since this will be used in the reshuffling procedure
-        if len(topo["branchings"])>0:  # Exclude 2>1 self.topologies
-            if topo["branchings"][-1]["type"]=="t":
-                if topo["branchings"][-2]["type"]!="t":
-                    logger.warning('last branching is t-channel')
-                    logger.warning('but last-but-one branching is not t-channel')
-                else:
-                    part=topo["branchings"][-1]["index_d2"]
-                    if part >0: # reset the mass only if "part" is an external particle
-                        topo["branchings"][-2]["m2"]=math.sqrt(topo["get_mass2"][part])
-
     def reorder_branch(self,branch):
         """ branch is a string with the definition of a decay chain
                 If branch contains " A > B C , B > ... " 
@@ -2365,8 +1780,7 @@ class decay_misc:
         #print "Selected topology"
         #print good_topo
         return good_topo, cumul
-
-
+    
     def get_final_state_compact(self,final_state_full):
 
         dc_pos=final_state_full.find(",")
@@ -2380,7 +1794,7 @@ class decay_misc:
             for index, obj in enumerate(list_obj):
                 if obj==">":
                     to_be_deleted.append(list_obj[index-1])
-                 
+
             for obj in list_obj:
                 if obj!=">" and obj!="," and obj not in to_be_deleted:
                     final_state_compact+=obj+"    "
@@ -2390,7 +1804,7 @@ class decay_misc:
                 list_part=branch.split()
                 branches[list_part[0]]={"finalstate":list_part[2:]}
                 branches[list_part[0]]["branch"], dummy= self.reorder_branch(branch)
-        else: 
+        else:
             final_state_compact=final_state_full
             branches={}
 
@@ -2410,18 +1824,6 @@ class decay_misc:
         
         return mean, sd
      
-
-
-    def get_dico_branchindex2label(self, decay_processes):
-        """ return a dictionary {index branch : label of decaying particle}"""
-
-        dico={}
-        for part in decay_processes:
-            line_proc=decay_processes[part].split()
-            dico[part]=line_proc[0]
-
-        return dico
-
 
 class decay_all_events:
     
@@ -3350,45 +2752,7 @@ class decay_all_events:
         # in param_card.dat, since this is where the input 
         # parameters will be read when evaluating matrix elements
         if need_param_card_modif:
-            decay_misc.modify_param_card(self.pid2width, self.path_me)
-
-#    def get_max_weight_from_1toN(self):
-#        """Get the maximum weight value from the 1->N formula.
-#           This is currently not use."""
-#        
-#        numberps = self.options['max_weight_ps_point'] # number of phase pace points per event
-#        
-#        starttime = time.time()
-#        for decay in self.all_decay.values():
-#            max_weight = 0
-#            dc_branch = decay['dc_branch']
-#            index = dc_branch['tree'][-1]['label']
-#            mass = self.pid2mass(index)
-#            width = self.pid2width[abs(index)]
-#            p  = momentum(mass, 0, 0, 0) 
-#            BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
-#            
-#            for i in range(10*numberps):
-#                decay_products, jac = dc_branch.generate_momenta(p, 1, self.pid2width,
-#                                                          self.pid2mass, BW_cut)
-#                
-#                p_str = {0:p.nice_string()}
-#                for pos in decay_products.keys():
-#                    if pos < 1:
-#                        continue
-#                    mom = decay_products[pos]["momentum"]
-#                    p_str[pos] = mom.nice_string()
-#                p_str = '\n'.join([p_str[pos] for pos in range(len(p_str))]+[''])
-#                weight =  self.calculate_matrix_element('decay', decay['path'], p_str)
-#                #print p_str, weight
-#                #print weight, jac
-#                max_weight = max([max_weight, weight * jac / mass**2 / width**2])
-#            decay['max_weight']= max_weight
-#            if self.options['BW_effect']:
-#                decay['max_weight']= max_weight * math.atan(2*self.options['BW_cut'])*width/mass/2
-#            #print decay['path'], decay['max_weight'], misc.format_timer(time.time()-starttime)
-#            
-            
+            decay_misc.modify_param_card(self.pid2width, self.path_me)            
             
     def get_max_weight_from_event(self, decay_mapping):
         """ """
@@ -3438,30 +2802,13 @@ class decay_all_events:
 
 #            mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
 
-            # we should remove the tag_topo stuff
-            #tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
-            #topology = self.all_ME[production_tag][tag_topo]
     
             logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
             #logger.debug('Selected topology               : '+str(tag_topo))
 
-#            topology.dress_topo_from_event(self.curr_event)
-#            topology.extract_angles()
-#            if self.options['BW_effect']:
-#                decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])
-            
             max_decay = {}
             mean_decay= {}
             std_decay = {}
-            #for dec in range(numberps):
-            #    if self.options['BW_effect']:
-            #        BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
-            #                                            event_map, prod_values)
-            #    else:
-            #        BW_weight_prod = 1
-                #BW_weight_prod = 1
-            #topology.topo2event(self.curr_event)
-            #atleastonedecay = False
 
             for decay in self.all_ME[production_tag]['decays']:
                 #print decay
@@ -3474,13 +2821,6 @@ class decay_all_events:
                 atleastonedecay = True
                 weight = self.get_max_weight_from_fortran(decay['path'], event_map,numberps,self.options['BW_cut'])
                 
-                    #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
-                    #     then decayed weight:
-                    #p_full, p_full_str =decayed_event.give_momenta()
-                    #print p_full_str
-                    #mg5_me_full = self.calculate_matrix_element('full',
-                    #                                  decay['path'], p_full_str)
-                    
                     #weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
                 if tag in max_decay:
                     max_decay[tag] = max([max_decay[tag], weight])
@@ -3619,18 +2959,6 @@ class decay_all_events:
                                path, std_in)
 
         return max_weight
-
-        
-    def evaluate_me_production(self, production_tag, map_event):
-        """return the numerical value of the matrix element"""
-        p, p_str=self.curr_event.give_momenta(map_event)
-
-        prod_values = self.calculate_matrix_element('prod',
-                               self.all_ME[production_tag]['path'], p_str)
-        prod_values=prod_values.replace("\n", "")
-        prod_values=prod_values.split()
-        mg5_me_prod = float(prod_values[0])
-        return mg5_me_prod, prod_values
         
     def loadfortran(self, mode, path, stdin_text):
         """ call the fortran executable """
@@ -3725,47 +3053,7 @@ class decay_all_events:
             return prod_values
         else:
             return float(prod_values)
-        
-    def reshuffle_event(self, production_tag, tag_topo, event_map, prod_values):
-        """reshuffle event"""
-        #to_decay_label, to_decay_amp
-        decay_tools = decay_misc()
-        
-        try_reshuffle=0
-        while 1:
-            try_reshuffle+=1
-            if try_reshuffle > 10:
-                logger.debug('current %s' % try_reshuffle)
-            topology = self.all_ME[production_tag][tag_topo]
-            
-            BW_weight_prod = topology.generate_BW_masses(self.pid2width,self.pid2mass, \
-                                                           self.curr_event.shat, self.Ecollider)
-
-            # end sanity check
-            if topology.reshuffle_momenta():
-                if try_reshuffle > 10:
-                    logger.debug('pass at %s' % try_reshuffle)
-                break
-            
-            if try_reshuffle % 10 == 0:
-                logger.debug( 'tried %ix to reshuffle the momenta, failed'% try_reshuffle)
-                logger.debug( ' So let us try with another topology')
-                tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
-                topology = self.all_ME[production_tag][tag_topo]
-                topology.dress_topo_from_event(self.curr_event)
-                topology.extract_angles()
-                # sometimes not possible to set the masses of the external partons to zero,
-                # keep the original masses
-#                    decay_tools.set_light_parton_massless(self.topologies\
-#                                              [tag_production][tag_topo])
-                continue
-                #try_reshuffle=0
-                if try_reshuffle >100:
-                    misc.sprint('fail 100 times')
-                    break
- 
-        return BW_weight_prod, topology
-      
+              
     def generate_configs_file(self,nfinal,decay, path):
         """ write the file configs_decay.inc
             also record the itree information in a python variable, 
@@ -3834,254 +3122,6 @@ class decay_all_events:
         for item in pmasswidth:
             trappe.write(item)
         trappe.close()
-        
-    def decay_one_event(self,curr_event,decay_struct, event_map,BW_cut,ran=1, write=0):
-        """Consider the production event recorded in "curr_event", and decay it
-            according to the structure recoreded in "decay_struct".
-            If ran=1: random decay, phi and cos theta generated according to 
-               a uniform distribution in the rest frame of the decaying particle
-            If ran=0 : use the previsously-generated angles and masses to get 
-               the momenta."""
-
-        pid2width = self.pid2width
-        pid2mass = self.pid2mass
-        pid2color = self.pid2color
-
-
-        decayed_event=Event()
-        decayed_event.event2mg={}
-
-        if ran==0: # reshuffling phase: the decayed event is about to be written, so we need 
-                    # to record some information 
-            decayed_event.ievent=curr_event.ievent
-            decayed_event.wgt=curr_event.wgt
-            decayed_event.scale=curr_event.scale
-            decayed_event.aqed=curr_event.aqed
-            decayed_event.aqcd=curr_event.aqcd
-            decayed_event.diese=curr_event.diese
-            decayed_event.rwgt=curr_event.rwgt
-
-        part_number=0
-        external=0
-        maxcol=curr_event.max_col
-        weight=1.0
-
-        # in order to preserve the natural order in lhe file,
-        # we need the inverse of the dico event_map
-        inv_event_map={}
-        for i in event_map.keys():
-            inv_event_map[event_map[i]]=i
-        sol_nb = None
-        for index in curr_event.event2mg.keys():
-            if curr_event.event2mg[index]>0:
-                if write==0:
-                    part=curr_event.event2mg[index] # index for production ME
-                    part_for_curr_evt=event_map[part-1]+1 # index for curr event                
-                else:
-                    part=inv_event_map[curr_event.event2mg[index]-1]+1
-                    part_for_curr_evt=curr_event.event2mg[index]
-                if part in decay_struct:
-                    mom_init = curr_event.particle[part_for_curr_evt]["momentum"].copy()
-                    # sanity check
-                    if mom_init.m<1e-6:
-                        logger.debug('Decaying particle with mass less than 1e-6 GeV in decay_one_event_old')
-
-                    #choose which final state to take
-                                        
-                    decay_products, jac, sol_nb=decay_struct[part].generate_momenta(mom_init,\
-                                        ran, pid2width,pid2mass,BW_cut,self.Ecollider, sol_nb)
-
-                    if ran==1:
-                        if decay_products==0: return 0, 0
-                        weight=weight*jac
-
-                    # now we need to write the decay products in the event
-                    # follow the decay chain order, so that we can easily keep track of the mother index
-                    for res in range(-1,-len(decay_struct[part]["tree"].keys())-1,-1):
-                        if (res==-1):
-                            part_number+=1
-                            mom=decay_products[res]["momentum"]
-                            pid=decay_products[res]["pid"]
-                            istup=2
-                            mothup1=1
-                            mothup2=2
-                            colup1=curr_event.particle[part_for_curr_evt]["colup1"]
-                            colup2=curr_event.particle[part_for_curr_evt]["colup2"]
-                            decay_products[res]["colup1"]=colup1
-                            decay_products[res]["colup2"]=colup2
-                            mass=mom.m
-                            helicity=0.
-                            decayed_event.particle[part_number]={"pid":pid,\
-                                "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
-                                "colup1":colup1,"colup2":colup2,"momentum":mom,\
-                                "mass":mass,"helicity":helicity}
-                            decayed_event.event2mg[part_number]=part_number
-                    #print part_number
-                    #print pid
-                    #print " "
-                        mothup1=part_number
-                        mothup2=part_number
-#
-#             Extract color information so that we can write the color flow
-#
-                        colormother=pid2color[decay_products[res]["pid"]]
-                        colord1=pid2color[decay_products[decay_struct[part]\
-                                            ["tree"][res]["d1"]["index"]]["pid"]]
-                        colord2=pid2color[decay_products[decay_struct[part]\
-                                            ["tree"][res]["d2"]["index"]]["pid"]]
-                
-                        colup1=decay_products[res]["colup1"]
-                        colup2=decay_products[res]["colup2"]
-
-#            now figure out what is the correct color flow informatio
-#            Only consider 1,3, 3-bar and 8 color rep.
-#            Normally, the color flow needs to be determined only
-#            during the reshuffling phase, but it is currenlty assigned 
-#            for each "trial event"
-                        if abs(colord1)==1:
-                            d2colup1=colup1
-                            d2colup2=colup2
-                            d1colup1=0
-                            d1colup2=0
-                        elif abs(colord2)==1:
-                            d1colup1=colup1
-                            d1colup2=colup2
-                            d2colup1=0
-                            d2colup2=0
-                        elif colord1==3 and colord2==-3 and colormother ==1:
-                            maxcol+=1
-                            d1colup1=maxcol
-                            d1colup2=0
-                            d2colup1=0
-                            d2colup2=maxcol
-                     
-                        elif colord1==3 and colord2==-3 and colormother ==8:
-                            d1colup1=colup1
-                            d1colup2=0
-                            d2colup1=0
-                            d2colup2=colup2
-                        elif colord1==-3 and colord2==3 and colormother ==8:
-                            d1colup1=0
-                            d1colup2=colup2
-                            d2colup1=colup1
-                            d2colup2=0
-                        elif colord1==-3 and colord2==3 and colormother ==1:
-                            maxcol+=1
-                            d1colup1=0
-                            d1colup2=maxcol
-                            d2colup1=maxcol
-                            d2colup2=0
-                        elif colord1==3 and colord2==8 and colormother ==3:
-                            maxcol+=1
-                            d2colup1=colup1
-                            d2colup2=maxcol
-                            d1colup1=maxcol
-                            d1colup2=0
-
-                        elif colord2==3 and colord1==8 and colormother ==3:
-                            maxcol+=1
-                            d1colup1=colup1
-                            d1colup2=maxcol
-                            d2colup1=maxcol
-                            d2colup2=0
-
-                        elif colord1==-3 and colord2==8 and colormother ==-3:
-                            maxcol+=1
-                            d2colup2=colup2
-                            d2colup1=maxcol
-                            d1colup2=maxcol
-                            d1colup1=0
-
-                        elif colord2==-3 and colord1==8 and colormother ==-3:
-                            maxcol+=1
-                            d1colup2=colup2
-                            d1colup1=maxcol
-                            d2colup2=maxcol
-                            d2colup1=0
-                        else:
-                            raise Exception, 'color combination not treated by MadSpin (yet). (%s,%s,%s)' \
-                                % (colord1,colord2,colormother)
-                        part_number+=1
-                        mom=decay_products[decay_struct[part]\
-                                    ["tree"][res]["d1"]["index"]]["momentum"]
-                        pid=decay_products[decay_struct[part]\
-                                    ["tree"][res]["d1"]["index"]]["pid"]
-
-
-                        indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
-                        if ( indexd1>0):
-                            istup=1
-                            external+=1
-                        else:
-                            decay_products[indexd1]["colup1"]=d1colup1
-                            decay_products[indexd1]["colup2"]=d1colup2
-                            istup=2
-                    
-                        mass=mom.m
-                        helicity=0.
-                        decayed_event.particle[part_number]={"pid":pid,\
-                                "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
-                                "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
-                                "mass":mass,"helicity":helicity}
-                        decayed_event.event2mg[part_number]=part_number
-
-                        part_number+=1
-                        mom=decay_products[decay_struct[part]["tree"][res]["d2"]\
-                                           ["index"]]["momentum"]
-                        pid=decay_products[decay_struct[part]["tree"][res]["d2"]\
-                                           ["index"]]["pid"]
-
-                        indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
-                        if ( indexd2>0):
-                            istup=1
-                            external+=1
-                        else:
-                            istup=2
-                            decay_products[indexd2]["colup1"]=d2colup1
-                            decay_products[indexd2]["colup2"]=d2colup2
-
-                        mothup1=part_number-2
-                        mothup2=part_number-2
-                        mass=mom.m
-                        helicity=0.
-                        decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
-                           "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
-                           "colup2":d2colup2,\
-                           "momentum":mom,"mass":mass,"helicity":helicity}
-
-                        decayed_event.event2mg[part_number]=part_number
-
-                else:
-                    external+=1 
-                    part_number+=1
-                    decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
-                    decayed_event.event2mg[part_number]=part_number
-            
-            else: # resonance in the production event
-                if (ran==0): # write resonances in the prod. event ONLY if the 
-                    # decayed event is ready to be written down    
-                    part=curr_event.event2mg[index]
-                    part_number+=1
-                    decayed_event.particle[part_number]=curr_event.resonance[part]
-                    decayed_event.event2mg[part_number]=part_number
-#        Here I need to check that the daughters still have the correct mothup1 and mothup2
-                    for part in curr_event.resonance.keys():
-                        mothup1=curr_event.resonance[part]["mothup1"]         
-                        mothup2=curr_event.resonance[part]["mothup2"] 
-                        if mothup1==index:
-                            if mothup2!=index: print "Warning: mothup1!=mothup2"
-                            curr_event.resonance[part]["mothup1"]=part_number
-                            curr_event.resonance[part]["mothup2"]=part_number
-                    for part in curr_event.particle.keys():
-                        mothup1=curr_event.particle[part]["mothup1"]         
-                        mothup2=curr_event.particle[part]["mothup2"] 
-                        if mothup1==index:
-                            if mothup2!=index: print "Warning: mothup1!=mothup2"
-                            curr_event.particle[part]["mothup1"]=part_number
-                            curr_event.particle[part]["mothup2"]=part_number
-
-        decayed_event.nexternal=part_number        
-        return decayed_event, weight        
 
     def get_montecarlo_masses_from_event(self,decay_struct, event_map, map_prod2full):
         """
