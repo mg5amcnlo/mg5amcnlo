@@ -110,7 +110,7 @@ class Event:
                 pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
                 data = pattern.findall(self.rwgt)
                 try:
-                    text = ''.join('<wgt id=%s>%s</wgt>\n' % (pid, float(value) * factor)
+                    text = ''.join('   <wgt id=\'%s\'> %+11.4e </wgt>\n' % (pid, float(value) * factor)
                                      for (pid,value) in data) 
                 except ValueError, error:
                     raise Exception, 'Event File has unvalid weight. %s' % error
