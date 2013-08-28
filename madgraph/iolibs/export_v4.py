@@ -1250,8 +1250,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
 
-        if self.opt['sa_for_decayP'] or self.opt['sa_for_decayF'] \
-               or self.opt['sa_symmetry']:
+        if self.opt['sa_symmetry']:
             # avoid symmetric output
             proc = matrix_element.get('processes')[0]
             leg0 = proc.get('legs')[0]
@@ -1285,7 +1284,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         # Create the matrix.f file and the nexternal.inc file
-        if self.opt['sa_for_decayP']:
+        if self.opt['export_format']=='standalone_msP':
             filename = 'matrix_prod.f'
         else:
             filename = 'matrix.f'
@@ -1294,7 +1293,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_element,
             fortran_model)
 
-        if self.opt['sa_for_decayP']:
+        if self.opt['export_format']=='standalone_msP':
             filename = 'configs_production.inc'
             mapconfigs, s_and_t_channels = self.write_configs_file(\
                 writers.FortranWriter(filename),
@@ -1376,12 +1375,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
             
-        if not self.opt.has_key('sa_for_decayP'):
-            self.opt['sa_for_decayP']=False
-
-        if not self.opt.has_key('sa_for_decayF'):
-            self.opt['sa_for_decayF']=False
-
         if not self.opt.has_key('sa_symmetry'):
             self.opt['sa_symmetry']=False
 
@@ -1435,7 +1428,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        if self.opt['sa_for_decayP'] :
+        if self.opt['export_format']=='standalone_msP':
         # For MadSpin need to return the AMP2
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
@@ -1445,11 +1438,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        if self.opt['sa_for_decayP'] :
+        if self.opt['export_format']=='standalone_msP' :
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_msP_v4.inc')).read()
 
-        elif self.opt['sa_for_decayF'] :
+        elif self.opt['export_format']=='standalone_msF':
             file = open(pjoin(_file_path, \
                           'iolibs/template_files/matrix_standalone_msF_v4.inc')).read()
 
@@ -4105,16 +4098,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
                'mp': False,  
-               'sa_for_decayP':False, 
-               'sa_for_decayF':False, 
                'sa_symmetry':False, 
                'model': cmd._curr_model.get('name') }
-
-        if cmd._export_format=='standalone_msP':
-            opt['sa_for_decayP'] = True        
-
-        if cmd._export_format=='standalone_msF':
-            opt['sa_for_decayF'] = True        
 
         format = cmd._export_format #shortcut
 

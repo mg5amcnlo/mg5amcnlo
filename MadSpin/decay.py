@@ -1655,8 +1655,9 @@ class AllMatrixElement(dict):
 
         for decay in self[production_tag]['decays']:
             if decay['decay_tag']==decay_tag: return decay
-        logger.info('Unable to retrieve decay from decay_tag')
-        return
+
+        msg = 'Unable to retrieve decay from decay_tag'
+        raise Exception, msg
  
     def get_random_decay(self, production_tag,first=[]):
         """select randomly a decay channel"""
@@ -2486,15 +2487,8 @@ class decay_all_events:
 
         # write down the seed:
         seedfile=open(pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat'),'w')
-        if 'seed' in self.options:
-            if self.options['seed']>0 and self.options['seed']<60000:
-                seedfile.write('  %s \n' % self.options['seed'])
-            else: 
-                logger.warning('No appropriate seed from the user (should be >0 and <60000), use seed=1')
-                seedfile.write('   1 \n' )
-        else:
-            seedfile.write('   1 \n' )
-            logger.warning('No appropriate seed from the user (should be >0 and <60000), use seed=1')
+
+        seedfile.write('  %s \n' % self.options['seed'])
         seedfile.close()       
  
         # width and mass information will be filled up later
@@ -2668,8 +2662,6 @@ class decay_all_events:
 
             indices_for_mc_masses, values_for_mc_masses=self.get_montecarlo_masses_from_event(decay['decay_struct'], event_map, decay['prod2full'])
             nb_mc_masses=len(indices_for_mc_masses)
-            #print indices_for_mc_masses
-            #print values_for_mc_masses
 
             p, p_str=self.curr_event.give_momenta(event_map)
             stdin_text=' %s %s %s %s \n' % ('2', self.options['BW_cut'], self.Ecollider, decay_me['max_weight'])
@@ -2679,15 +2671,10 @@ class decay_all_events:
             if  nb_mc_masses>0:
                 stdin_text+='%s  \n' % str(indices_for_mc_masses).strip('[]').replace(',', ' ')
                 stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
-            #print stdin_text
-            #print ' '
             
 #            here apply the reweighting procedure in fortran
             trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
-            #logger.debug('Nb failures %s ', failed)
             # next: need to fill all intermediate momenta
-            #print indices_for_mc_masses
-            #print values_for_mc_masses
             if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
             ext_mom=self.get_mom(momenta)
@@ -2704,53 +2691,7 @@ class decay_all_events:
                                                       event_map, momenta_in_decay,use_mc_masses)
             
             
-            #mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)   
-            #tag_topo, cumul_proba = decay_tools.select_one_topo(prod_values)
-            #topology = self.all_ME[production_tag][tag_topo]            
-
-            #topology.dress_topo_from_event(self.curr_event)
-            #topology.extract_angles()
-            #if self.options['BW_effect']:
-            #    decay_tools.set_light_parton_massless(self.all_ME[production_tag][tag_topo])            
-            
-            #trial_nb=0
-            #while 1: # loop untill find a valid decay
-            #    trial_nb += 1
-            #    if trial_nb > 1000:
-            #        logger.warning('fail to find valid decay -> remove events')
-            #        nb_skip += 1
-            #        event_nb -= 1
-            #        break
-                    
-            #    if self.options['BW_effect']:
-            #        BW_weight_prod, topology = self.reshuffle_event(production_tag, tag_topo, 
-            #                                            event_map, prod_values)
-            #    else:
-            #        BW_weight_prod = 1
-                #BW_weight_prod = 1
-            #    topology.topo2event(self.curr_event)
-            #    name =  ','.join([m.nice_string() for m  in decay['matrix_element'].get('decay_chains')])
-            #    BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 0
-                
-            #    decayed_event, BW_weight_decay = self.decay_one_event(\
-            #                        self.curr_event, 
-            #                        decay['decay_struct'],
-            #                        event_map,
-            #                        BW_cut)
-                                    
-            #    if decayed_event==0:
-            #        #logger.warning('failed to decay event properly') this is not a problem, we just had mA<mB+mC
-            #        continue
-            #    mg5_me_prod, prod_values = self.evaluate_me_production(production_tag, event_map)
-            #    #     then decayed weight:
-            #    p_full, p_full_str=decayed_event.give_momenta()
-            #    #print p_full_str
-            #    mg5_me_full = self.calculate_matrix_element('full',
-            #                                      decay['path'], p_full_str)
-            #    #print dec, mg5_me_full, mg5_me_prod, BW_weight_prod,BW_weight_decay,
-            #    weight=mg5_me_full*BW_weight_prod*BW_weight_decay/mg5_me_prod
-
-                # Treat the case that we ge too many overweight.
+            # Treat the case that we ge too many overweight.
             if weight > decay_me['max_weight']:
                 report['over_weight'] += 1
                 report['%s_f' % (decay['decay_tag'],)] +=1
@@ -2774,13 +2715,6 @@ class decay_all_events:
     This is for channel %s with current BW_value at : %g'""" \
                     % (weight/decay['max_weight'], decay['decay_tag'], BWvalue)  
                     logger.error(error)
-                    print stdin_text
-                    print 'weight'
-                    print weight
-                    print 'decay[max_weight]'
-                    print decay['max_weight']
-                    print 'path'
-                    print decay['path'] 
                 elif report['over_weight'] > max(0.005*event_nb,3):
                     error = """Found too many weight larger than the computed max_weight (%s/%s = %s%%). 
     Please relaunch MS with more events/PS point by event in the
