@@ -771,11 +771,7 @@ class CheckValidForCmd(object):
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            restrict_file = None
-            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
-                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
-            model = import_ufo.import_model(modelname, decay=True, 
-                        restrict_file=restrict_file)
+            model = import_ufo.import_model(modelname, decay=True)
             if self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
             
