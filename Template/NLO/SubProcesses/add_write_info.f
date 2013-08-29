@@ -772,11 +772,15 @@ c     If mother and daughter have the same ID, remove one of them
                idenpart=0
                do j=1,2
                   ida(j)=itree(j,i)
-                  if(    (ida(j).lt.0.and.
-     &                        sprop_tree(i).eq.sprop_tree(ida(j)))
-     &               .or.(ida(j).gt.0.and.
-     &                        sprop_tree(i).eq.IDUP(ida(j))))
-     &                 idenpart=ida(j)    ! mother and daugher have same ID
+                  if(ida(j).lt.0) then
+                     if (sprop_tree(i).eq.sprop_tree(ida(j))) then
+                        idenpart=ida(j) ! mother and daugher have same ID
+                     endif
+                  elseif (ida(j).gt.0) then
+                     if (sprop_tree(i).eq.IDUP(ida(j))) then
+                        idenpart=ida(j) ! mother and daugher have same ID
+                     endif
+                  endif
                enddo
 c     Always remove if daughter final-state (and identical)
                if(idenpart.gt.0) then
