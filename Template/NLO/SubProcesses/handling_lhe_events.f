@@ -779,11 +779,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                 call read_rwgt_line(iunit,idwgt,wgtxsecmu(i,j))
+                 call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-              call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
+              call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
@@ -985,11 +985,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                call read_rwgt_line(iunit,idwgt,wgtxsecmu(i,j))
+                call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-             call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
+             call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
