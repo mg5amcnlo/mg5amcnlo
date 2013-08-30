@@ -205,12 +205,15 @@ class Event(list):
            {key: value}. If no group is define group should be '' """
            
         self.reweight_data = {}
+        self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
             pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
             data = pattern.findall(self.tag)
             try:
-                self.reweight_data = dict([(pid, float(value)) for (pid, value) in data])
+                self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
+                                           if not self.reweight_order.append(pid)])
+                      # the if is to create the order file on the flight
             except ValueError, error:
                 raise Exception, 'Event File has unvalid weight. %s' % error
             self.tag = self.tag[:start] + self.tag[stop+7:]
@@ -275,8 +278,15 @@ class Event(list):
         scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
         if self.reweight_data:
+            # check that all key have an order if not add them at the end
+            if set(self.reweight_data.keys()) != set(self.reweight_order):
+                self.reweight_order += [k for k in self.reweight_data.keys() \
+                                                if k not in self.reweight_order]
+                
+                
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
-                             ['<wgt id=\'%s\'> %s </wgt>' % i for i in self.reweight_data.items()]) 
+                        '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
+                        for i in self.reweight_order)
         else:
             reweight_str = '' 
         out = out % {'scale': scale_str, 

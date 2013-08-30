@@ -2346,6 +2346,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Define a multiparticle"""
 
         self.avoid_history_duplicate('define %s' % line, ['define'])
+        if not self._curr_model:
+            self.do_import('model sm')
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
