@@ -2816,6 +2816,18 @@ Please, shower the Les Houches events before using them for physics analyses."""
 samples of various multiplicities without double counting, you
 have to remove some events after showering 'by hand'.  Please
 read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+            if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                raise self.InvalidCmd(error)
+            elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                    "Type \'n\' to stop or \'y\' to continue"
+                answers = ['n','y']
+                answer = self.ask(question, 'n', answers, alias=alias)
+                if answer == 'n':
+                    error = '''Stop opertation'''
+                    self.ask_run_configuration(mode, options)
+#                    raise aMCatNLOError(error)
         
         return mode
 

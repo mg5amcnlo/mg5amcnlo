@@ -28,11 +28,9 @@ c Local
 c External
       double precision alphas
       external alphas
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 c Data 
       double precision mass(6)
       data (mass(i),i=1,6) /0d0,0d0,0d0,0d0,4.5d0,173d0/
-c FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS FIXTHIS
 
       gamma=0.0d0
       if (q0.ge.Q1) then
