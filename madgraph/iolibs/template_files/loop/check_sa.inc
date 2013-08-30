@@ -177,9 +177,9 @@ C
         write(*,*) 'Quadruple precision computation used.'
       endif
       if (HUNDREDS.ne.1) then
-        if (PREC_FOUND.gt.0.0d0) then
+        if (PREC_FOUND(0).gt.0.0d0) then
           write(*,'(1x,a23,1x,1e10.2)') 'Relative accuracy     =',PREC_FOUND(0)
-        elseif (PREC_FOUND.eq.0.0d0) then
+        elseif (PREC_FOUND(0).eq.0.0d0) then
           write(*,'(1x,a23,1x,1e10.2,1x,a30)') 'Relative accuracy     =',PREC_FOUND(0),'(i.e. beyond double precision)'
         else
           write(*,*) 'Estimated accuracy could not be computed for an unknown reason.'
@@ -196,9 +196,7 @@ C
       write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI
       write (*,*) "---------------------------------"
 	  %(print_so_born_results)s
-      write (*,*) "---------------------------------"	  
 	  %(print_so_loop_results)s
-      write (*,*) "---------------------------------"	  
 
       open(69, file="result.dat", err=976, action='WRITE')
       do i=1,nexternal      
@@ -211,7 +209,7 @@ C
       write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/MATELEM(0,0)/AO2PI
       write (69,*) 'Export_Format Default'
 	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
-	  write (69,'(a8,1x,1e10.4)') 'ACC',PREC_FOUND(0)
+	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
 	  %(write_so_born_results)s
 	  %(write_so_loop_results)s
       close(69)

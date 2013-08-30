@@ -719,14 +719,24 @@ class CPPWriter(FileWriter):
 
         while len(res_lines[-1]) > self.line_length:
             long_line = res_lines[-1]
-            split_at = self.line_length
+            split_at = -1
             for character in split_characters:
                 index = long_line[(self.line_length - self.max_split): \
                                       self.line_length].rfind(character)
                 if index >= 0:
                     split_at = self.line_length - self.max_split + index + 1
                     break
-            
+                
+            # no valid breaking so find the first breaking allowed:
+            if split_at == -1:
+                split_at = len(long_line)
+                for character in split_characters:
+                    split = long_line[self.line_length].find(character)
+                    if split > 0:
+                        split_at = min(split, split_at)
+            if split_at == len(long_line):
+                break
+                    
             # Don't allow split within quotes
             quotes = self.quote_chars.findall(long_line[:split_at])
             if quotes and len(quotes) % 2 == 1:

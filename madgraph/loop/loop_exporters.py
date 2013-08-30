@@ -261,7 +261,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         # To store the result
         res_list = [[] for i in range(n_amps)]
-        
         for i, coeff_list in enumerate(color_amplitudes):
                 for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
@@ -331,6 +330,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 progress_bar.update(i+1)
             line_num=[]
             line_denom=[]
+
+            # Treat the special case where this specific amplitude contributes to no
+            # color flow at all. So it is zero because of color but not even due to
+            # an accidental cancellation among color flows, but simply because of its
+            # projection to each individual color flow is zero. In such case, the 
+            # corresponding jampl_list is empty and all color coefficients must then
+            # be zero. This happens for example in the Higgs Effective Theory model
+            # for the bubble made of a 4-gluon vertex and the effective ggH vertex.
+            if len(jampl_list)==0:
+                line_num=[0]*len(ampb_to_jampb)
+                line_denom=[1]*len(ampb_to_jampb)
+                ColorMatrixNumOutput.append(line_num)
+                ColorMatrixDenomOutput.append(line_denom)
+                continue
+
             for jampb_list in ampb_to_jampb:
                 real_num=0
                 imag_num=0
@@ -379,7 +393,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                               "%d-%m-%Y %H:%M"))            
         if progress_bar!=None:
             progress_bar.finish()
-
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -614,7 +627,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                           LoopFortranModel)
             
             filename = 'check_sa.f'
-            self.write_check_sa(writers.FortranWriter(filename,matrix_element))
+            self.write_check_sa(writers.FortranWriter(filename),matrix_element)
             
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
@@ -656,7 +669,7 @@ PARAMETER (NSQUAREDSO=0)""")
 """INTEGER NSQUAREDSO
 PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])     
         for key in ['print_so_born_results','print_so_loop_results',
-                               'write_so_born_results','write_so_born_results']:
+                               'write_so_born_results','write_so_loop_results']:
             if key not in replace_dict.keys():
                 replace_dict[key]=''
         if matrix_element.get('processes')[0].get('has_born'):
@@ -949,7 +962,7 @@ C                ENDIF
         else:
             replace_dict['compute_born']=\
 """C Compute the born, for a specific helicity if asked so.
-call smatrixhel(p,USERHEL,ANS(0))
+call smatrixhel(P_USER,USERHEL,ANS(0))
 """
             replace_dict['set_reference']=\
 """C We chose to use the born evaluation for the reference
@@ -1170,10 +1183,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
-        if max_loop_vertex_rank > 1:
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' handle renormalizable gauge theories for which the maximum loop'+\
-              ' power brought by any loop interaction is one.'
         self.general_replace_dict['vertex_max_coefs']=\
                  q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
         self.general_replace_dict['nloopwavefuncs']=\
@@ -1469,7 +1478,12 @@ ENDDO"""
                                            ['%d'%so_value for so_value in so])),
           "write (69,*) 'SO_Born BORN ',MATELEM(0,%d)"%(j+1),
           ]) for j, so in enumerate(squared_born_so_orders)])
-
+        
+        # Add a bottom bar to both print_so_[loop|born]_results 
+        self.general_replace_dict['print_so_born_results'] += \
+                             '\nwrite (*,*) "---------------------------------"'
+        self.general_replace_dict['print_so_loop_results'] += \
+                             '\nwrite (*,*) "---------------------------------"'
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
                          noSplit=False):

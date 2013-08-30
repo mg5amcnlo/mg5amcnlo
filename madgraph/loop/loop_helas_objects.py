@@ -24,6 +24,7 @@ import itertools
 import math
 
 import aloha
+import aloha.create_aloha as create_aloha
 
 from madgraph import MadGraph5Error
 import madgraph.core.base_objects as base_objects
@@ -180,7 +181,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
            as for the HelasMatrixElement one."""
         
         if arguments:
-            super(LoopHelasAmplitude, self).__init__(arguments)
+            super(LoopHelasAmplitude, self).__init__(*arguments)
         else:
             super(LoopHelasAmplitude, self).__init__()        
 
@@ -405,7 +406,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
              +sum([amp.get('coupling') for amp in self.get('amplitudes') if \
              amp.get('coupling')!=['none']],[]))
 
-    def get_helas_call_dict(self,OptimizedOutput=False,specifyHel=True):
+    def get_helas_call_dict(self, OptimizedOutput=False,specifyHel=True):
         """ return a dictionary to be used for formatting
         HELAS call. """
         output = {}
@@ -421,6 +422,7 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             output["Pairing%d"%i]=pairing
         output['numCouplings']='_%d'%len(self.get('coupling'))
         output['numeratorNumber']=self.get('number')
+        output["LoopRank"]=self.get_analytic_info('wavefunction_rank')
         if OptimizedOutput:
             if self.get('loop_group_id')==-1:
                 output['loopNumber']=self.get('number')
@@ -434,7 +436,6 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             output["LoopMass%d"%(i+1)]=mass
         for i , coupling in enumerate(self.get('coupling')):
             output["LoopCoupling%d"%(i+1)]=coupling
-        output["LoopRank"]=self.get_rank()
         output["LoopSymmetryFactor"]=self.get('loopsymmetryfactor')
         return output
 
@@ -445,19 +446,10 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
         return ("LOOP",len(self.get('wavefunctions'))-2,\
                 len(self.get('mothers')),len(self.get('coupling')))
 
-    def get_rank(self):
-        """ Returns the rank of the loop numerator, i.e. the maximum power to which
-        the loop momentum is elevated in the loop numerator. The way of returning it
-        here is only valid for the simple interactions of the SM. The completely
-        general approach needs to use aloha to gather the information of the
-        'lorentz' object stored in each loop vertex and it will be implemented later."""
-
-        return self.get_final_loop_wavefunction().get('rank')
-    
     def get_orders(self):
         """ Compute the orders building this loop amplitude only (not from the
         struct wavefunctions. Uses the cached result if available."""
-        
+
         if self.get('orders') != {}:
             return self.get('orders')
         else:
@@ -471,31 +463,25 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
                         coupling_orders[order] = last_wf.get('orders')[order]
                 last_wf = last_wf.get_loop_mother()
             return coupling_orders
+    
+    def get_analytic_info(self, info, alohaModel=None):
+        """ Returns an analytic information of the loop numerator, for example
+        the 'wavefunction_rank' i.e. the maximum power to which the loop momentum 
+        is elevated in the loop numerator. All analytic pieces of information 
+        are for now identical to the one retrieved from the final_loop_wavefunction."""
 
-    # old get_rank
-    #def get_rank(self):
-    #    """ Returns the rank of the loop numerator, i.e. the maximum power to which
-    #    the loop momentum is elevated in the loop numerator. The way of returning it
-    #    here is only valid for the interactions of the SM. The completely
-    #    general approach needs to use aloha to gather the information of the
-    #    'lorentz' object stored in each loop vertex and it will be implemented later."""
-    #    
-    #    rank=0
-    #    # First add one power for each fermion propagator
-    #    rank=rank+len([ wf for wf in self.get('wavefunctions') if \
-    #                   wf.get('mothers') and wf.is_fermion()])
-    #    # Add one if the L-cut particle is a fermion
-    #    if True in [ wf.is_fermion() for wf in self.get('wavefunctions') if \
-    #                   not wf.get('mothers')]:
-    #        rank=rank+1
-    #	# HSS 28/09/2012
-    #    # Add one for each three-boson vertex, except VVS,UUS and SSS in the SM
-    #    rank=rank+len([ wf for wf in self.get('wavefunctions') if wf.incr_rank()])
-    #    # Counting the amplitude as well (there is only one normally)
-    #    rank=rank+len([ amp for amp in self.get('amplitudes') if amp.incr_rank()])
-    #	# HSS
-    #    return rank
+        return self.get_final_loop_wavefunction().\
+                                             get_analytic_info(info, alohaModel)
 
+    def compute_analytic_information(self,alohaModel):
+        """ Make sure that all analytic pieces of information about this 
+        wavefunction are computed so that they can be recycled later, typically
+        without the need of specifying an alohaModel. For now, all analytic
+        information about the loop helas amplitude are identical to those of the
+        final loop wavefunction."""
+        
+        self.get_final_loop_wavefunction().compute_analytic_information(\
+                                                                     alohaModel)
 
     def calculate_fermionfactor(self):
         """ The fermion factor is not implemented for this object but in the
@@ -650,7 +636,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # dictionary are ordering in decreasing ranks, so that the first one
         # (later to be the reference amplitude) has the highest rank
         self['loop_groups']=[(group[0],helas_objects.HelasAmplitudeList(
-                sorted(group[1],key=lambda lamp: lamp.get_rank(),reverse=True)))
+            sorted(group[1],key=lambda lamp: \
+            lamp.get_analytic_info('wavefunction_rank'),reverse=True)))
                                                for group in self['loop_groups']]
         # Also, order them so to put first the groups with the smallest
         # reference amplitude number
@@ -1024,6 +1011,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     # Add one for the starting external loop wavefunctions
                     # which is fixed
                     wfNumber = wfNumber+1
+
             # Return the diagram obtained
             return helas_diagram, wfNumber, amplitudeNumber
 
@@ -1649,6 +1637,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
     
+        # As a final step, we compute the analytic information for the loop
+        # wavefunctions and amplitudes building this loop matrix element.
+        self.compute_all_analytic_information()
+    
     def get_split_orders_mapping(self):
         """This function returns three lists:
                         squared_orders, amps_orders
@@ -1683,13 +1675,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """
     
         split_orders=self.get('processes')[0].get('split_orders')
-        
         # If no split_orders are defined, then return the obvious
         amps_orders = {'born_amp_orders':(),
                        'ct_amp_orders':(),
                        'loop_amp_orders':()}
         if len(split_orders)==0:
-            return (),(),()
+            return (),amps_orders
         
         # First make sure that the 'split_orders' are ordered according to their
         # weight.
@@ -1758,13 +1749,17 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """ Returns the maximum power of loop momentum brought by a loop
         interaction. For renormalizable theories, it should be no more than one.
         """
-        return max([lwf.get_interaction_q_power() for lwf in \
+        return max([lwf.get_analytic_info('interaction_rank') for lwf in \
                                              self.get_all_loop_wavefunctions()])
 
     def get_max_loop_rank(self):
         """ Returns the rank of the contributing loop with maximum rank """
-        return max([lamp.get_rank() for ldiag in self.get_loop_diagrams() \
-                    for lamp in ldiag.get_loop_amplitudes()])
+        r_list = [lamp.get_analytic_info('wavefunction_rank') for ldiag in \
+               self.get_loop_diagrams() for lamp in ldiag.get_loop_amplitudes()]
+        if len(r_list)==0:
+            return 0
+        else:
+            return max(r_list)
 
     def get_max_loop_particle_spin(self):
         """ Returns the spin of the loop particle with maximum spin among all
@@ -1942,9 +1937,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives a list of all the loop wavefunctions for this ME"""
                 
         return helas_objects.HelasWavefunctionList(
+                    # In the default output, this is where the loop wavefunction
+                    # are placed
                     [lwf for ldiag in self.get_loop_diagrams()
-                    for lamp in ldiag.get_loop_amplitudes()
-                    for lwf in lamp.get('wavefunctions')])
+                     for lamp in ldiag.get_loop_amplitudes()
+                     for lwf in lamp.get('wavefunctions')]+
+                    # In the optimized one they are directly in the 
+                    # 'loop_wavefunctions' attribute of the loop diagrams
+                    [lwf for ldiag in self.get_loop_diagrams() for lwf in
+                     ldiag.get('loop_wavefunctions')])
 
     def get_number_of_amplitudes(self):
         """Gives the total number of amplitudes for this ME, including the loop
@@ -2013,6 +2014,34 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                  isinstance(hd,LoopHelasDiagram) and\
                  len(hd.get_loop_UVCTamplitudes())>=1])
 
+    def compute_all_analytic_information(self, alohaModel=None):
+        """Make sure that all analytic pieces of information about all 
+        loop wavefunctions and loop amplitudes building this loop helas matrix
+        element are computed so that they can be recycled later, typically
+        without the need of specifying an alohaModel.
+        Notice that for now this function is called at the end of the 
+        generat_helas_diagrams function and the alohaModel is created here.
+        In principle, it might be better to have this function called by the
+        exporter just after export_v4 because at this stage an alohaModel is
+        already created and can be specified here instead of being generated.
+        This can make a difference for very complicated models."""
+        
+        if alohaModel is None:
+            # Generate it here
+            model = self.get('processes')[0].get('model')
+            myAlohaModel = create_aloha.AbstractALOHAModel(model.get('name'))
+            myAlohaModel.add_Lorentz_object(model.get('lorentz'))
+        else:
+            # Use the one provided
+            myAlohaModel = alohaModel
+
+        for lwf in self.get_all_loop_wavefunctions():
+            lwf.compute_analytic_information(myAlohaModel)
+        
+        for diag in self.get_loop_diagrams():
+            for amp in diag.get_loop_amplitudes():
+                amp.compute_analytic_information(myAlohaModel)
+
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, tags, outgoing) with
         all lorentz structures used by this LoopHelasMatrixElement."""
@@ -2021,20 +2050,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # structure or not so that aloha knows if it has to produce the subroutine 
         # which removes the denominator in the propagator of the wavefunction created.
         output = []
+
         for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
             if wa.get('interaction_id') in [0,-1]:
                 continue
-            
-            tags = ['C%s' % w for w in wa.get_conjugate_index()]
-            if isinstance(wa,helas_objects.HelasWavefunction) and \
-                                                              wa.get('is_loop'): 
-                if not self.optimized_output:
-                    tags.append('L')
-                else:
-                    tags.append('L%d'%wa.get_loop_index())
+            output.append(wa.get_aloha_info(self.optimized_output));
 
-            output.append((tuple(wa.get('lorentz')), tuple(tags), 
-                                                     wa.find_outgoing_number()))
         return output
 
     def get_used_helas_loop_amps(self):
@@ -2056,10 +2077,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """ Returns a list of the necessary updates of the loop wavefunction
         polynomials """
         
-        res=list(set([(lwf.get_rank()-lwf.get_interaction_q_power(),
-          lwf.get_interaction_q_power()) for ldiag in self.get_loop_diagrams() 
-          for lwf in ldiag.get('loop_wavefunctions')]))
-        return res
+        return list(set([(lwf.get_analytic_info('wavefunction_rank')-\
+                                    lwf.get_analytic_info('interaction_rank'), 
+                                    lwf.get_analytic_info('interaction_rank')) 
+                                for ldiag in self.get_loop_diagrams() 
+                                for lwf in ldiag.get('loop_wavefunctions')]))
         
     def get_used_couplings(self):
         """Return a list with all couplings used by this

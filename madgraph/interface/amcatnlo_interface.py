@@ -425,7 +425,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)

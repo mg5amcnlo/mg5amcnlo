@@ -298,46 +298,54 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
         return
-        
+
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
-        for i,diag in enumerate(self['loop_diagrams']):
+        for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tgged first."
+                       "make sure that the loop diagrams have been tagged first."
             valid_diag = True
-            if i not in [16,26] :valid_diag=False
-            if valid_diag :
-                print i, diag.get('tag')
-                #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
-            #if 22 in diag.get_loop_lines_pdgs():
-            #     valid_diag=False
+            
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-            #if len(diag.get_loop_lines_pdgs())!=4:
-            #    valid_diag=False
+#            if len(diag.get_loop_lines_pdgs())!=4:
+#                valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-            # if 23 in diag.get_pdgs_attached_to_loop(structs)
-            #    valid_diag=False
-            #if set([abs(pdg) for pdg in diag.get_loop_lines_pdgs()]).intersection(set([23,24,250,251,25,9000002,9000003,9000004])):
-            #    valid_diag=False
-            #if set(diag.get_pdgs_attached_to_loop(structs)).intersection(set([23,250,251,25,-251,24,-24,9000002,-9000002,9000003,-9000003,9000004,-9000004])):
-            #    valid_diag=False
+#            if 23 in diag.get_pdgs_attached_to_loop(structs):
+#                valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
             #        the PDG. 
             #        In this example, only massive parts. are allowed in the loop.
-
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            #if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-            #    valid_diag=False
-            
+#                valid_diag=False
+          
+            # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
+            #        of two vertices being the four gluon vertex and the effective
+            #        glu-glu-Higgs vertex.
+#            if len(diag.get_loop_lines_pdgs())==2:
+#                bubble_lines_pdgs=[abs(diag.get('canonical_tag')[0][0]),
+#                                   abs(diag.get('canonical_tag')[0][0])]
+#                first_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[0][1]]
+#                second_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[1][1]]
+#                first_vertex_pdgs.sort()
+#                second_vertex_pdgs.sort()
+#                bubble_vertices=[first_vertex_pdgs,second_vertex_pdgs]
+#                bubble_vertices.sort()
+#                if bubble_vertices==[[21,21,21,21],[21,21,25]]:
+#                    valid_diag=False
+                
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
 
@@ -387,18 +395,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
-            # HSS, 17/03/2013
             if len([col for col in [
                    self['process'].get('model').get_particle(pdg).get('color') \
                                      for pdg in diag.get_pdgs_attached_to_loop(\
                                   self['structure_repository'])] if col!=1])==1:
                 valid_diag=False
-            # HSS        
-            # HSS, 13/12/2012
-            #if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
-            # HSS
-#            if sum([loop_orders[order] for order in pert_loop_order])< 2:
-#                valid_diag=False
+            
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection

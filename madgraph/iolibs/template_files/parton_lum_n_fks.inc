@@ -23,10 +23,7 @@ C LOCAL VARIABLES
 C                                                                     
       INTEGER I, ICROSS,ITYPE,LP                                      
       DOUBLE PRECISION P1(0:3,NEXTERNAL)                              
-      DOUBLE PRECISION u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1             
-      DOUBLE PRECISION u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2             
-      DOUBLE PRECISION g1,g2                                          
-      DOUBLE PRECISION a1,a2                                          
+%(pdf_vars)s
       DOUBLE PRECISION XPQ(-7:7)                                      
 C                                                                     
 C EXTERNAL FUNCTIONS                                                  
@@ -45,10 +42,7 @@ C
 C                                                                     
 C DATA                                                                
 C                                                                     
-      DATA u1,ub1,d1,db1,c1,cb1,s1,sb1,b1,bb1/10*1d0/                 
-      DATA u2,ub2,d2,db2,c2,cb2,s2,sb2,b2,bb2/10*1d0/                 
-      DATA a1,g1/2*1d0/                                               
-      DATA a2,g2/2*1d0/                                               
+%(pdf_data)s
       DATA ICROSS/1/                                          
 C ----------                                                          
 C BEGIN CODE                                                          

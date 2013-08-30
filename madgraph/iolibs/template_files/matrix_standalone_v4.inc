@@ -1,3 +1,31 @@
+      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
+      IMPLICIT NONE
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB         
+      PARAMETER (             NCOMB=%(ncomb)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+	  INTEGER HEL
+C
+C GLOBAL VARIABLES
+C
+      INTEGER USERHEL
+	  COMMON/HELUSERCHOICE/USERHEL
+C ----------
+C BEGIN CODE
+C ----------
+      USERHEL=HEL
+	  CALL SMATRIX(P,ANS)
+	  USERHEL=-1
+
+	  END
+
       SUBROUTINE SMATRIX(P,ANS)
 C  
 %(info_lines)s
@@ -18,6 +46,8 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
+	  INTEGER HELAVGFACTOR
+	  PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
 C  
 C ARGUMENTS 
 C  
@@ -33,6 +63,14 @@ C
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
+
+C
+C GLOBAL VARIABLES
+C
+      INTEGER USERHEL
+	  DATA USERHEL/-1/
+	  COMMON/HELUSERCHOICE/USERHEL
+
 %(helicity_lines)s
 %(den_factor_line)s
 C ----------
@@ -44,15 +82,20 @@ C ----------
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                 T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
-               ANS=ANS+T
-               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                   GOODHEL(IHEL)=.TRUE.
-               ENDIF
-             ENDIF
+	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
+                IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
+                    T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+                    ANS=ANS+T
+                    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+                        GOODHEL(IHEL)=.TRUE.
+                    ENDIF
+                ENDIF
+		     ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)
+	  IF(USERHEL.NE.-1) THEN
+          ANS=ANS*HELAVGFACTOR	  
+	  ENDIF
       END
        
        
@@ -98,6 +141,7 @@ C
 C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
+%(global_variable)s
 C  
 C COLOR DATA
 C  
@@ -116,4 +160,5 @@ C ----------
           ENDDO
           MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
+%(amp2_lines)s
       END

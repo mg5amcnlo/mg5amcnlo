@@ -222,7 +222,8 @@ c a scale to be used as a reference for renormalization scale
 c for 'geometric mean'
       integer j
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       integer NN,NJET,JET(nexternal),iqcd
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,fastjetdmergemax

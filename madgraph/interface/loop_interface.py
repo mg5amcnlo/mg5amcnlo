@@ -416,7 +416,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
     def do_output(self, line):
         """Main commands:Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -595,7 +595,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
     def ML5finalize(self, nojpeg, online = False):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
-        
+
         if self._export_format in ['standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are

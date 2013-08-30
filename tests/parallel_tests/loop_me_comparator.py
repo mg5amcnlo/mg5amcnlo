@@ -174,9 +174,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             initializations = []
             for i, proc in enumerate(proc_list):
                 init = LoopMG5Runner.initialize_process(\
-                          proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
+                      proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
                 initializations.append(init)
-            self.fix_PSPoint_in_check(dir_name,PSpoints!=[])
             self.fix_MadLoopParamCard(dir_name)
             if PSpoints==[]:
                 self.fix_energy_in_check(dir_name, energy)          
@@ -237,7 +236,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         # If directory doesn't exist, skip and return 0
         if not shell_name:
             logging.info("Directory hasn't been created for process %s"%str(proc))
-            return ((0.0, 0.0, 0.0, 0.0, 0), [])
+            return False 
 
         if verbose: logging.info("Initializing process %s in dir %s"%(str(proc), shell_name))
         
@@ -245,7 +244,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
 
         init = process_checks.LoopMatrixElementTimer.run_initialization(\
           run_dir=dir_name, SubProc_dir=os.path.join(working_dir, 'SubProcesses'))
-        
+       
         if init is None:
             return False
         else:
@@ -273,6 +272,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
+        LoopMG5Runner.fix_PSPoint_in_check(dir_name, PSpoint!=[])
         # Make sure the modified source file are recompiled
         if os.path.isfile(os.path.join(dir_name,'check')):
             os.remove(os.path.join(dir_name,'check'))
@@ -352,14 +352,18 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             pass
 
     @staticmethod
-    def fix_PSPoint_in_check(dir_name, read_ps = True):
+    def fix_PSPoint_in_check(check_sa_dir, read_ps = True):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
+        
+        file_path = os.path.join(check_sa_dir,'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find check_sa.f in path %s.'%str(file_path))
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'r')
+        file = open(file_path, 'r')
         check_sa = file.read()
         file.close()
 
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.f'), 'w')
+        file = open(file_path, 'w')
         check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
                                                       else '.FALSE.'), check_sa)
         check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        

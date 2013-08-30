@@ -320,4 +320,16 @@ C
 	  STOP
 
 	  END
-       
+
+      SUBROUTINE GET_NSQSO_BORN(NSQSO)
+C
+C     Simple subroutine returning the number of squared split order
+C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
+C
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+	  INTEGER NSQSO
+
+	  NSQSO=NSQAMPSO
+
+      END

@@ -174,7 +174,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         and PDG code needs to be flipped if we move the final vertex around."""
 
         if vertex.get('id') in [0,-1]:
-            return (vertex.get('id'),)
+            return ((vertex.get('id'),),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -184,7 +184,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                          inter.get('lorentz'))
                    
         if last_vertex:
-            return (ret_list,)
+            return ((ret_list,),)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             # If we have possibly onshell s-channel particles with
@@ -195,21 +195,21 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             if s_pdg and (part.get('width').lower() == 'zero' or \
                vertex.get('legs')[-1].get('onshell') == False):
                 s_pdg = 0
-            return ((part.get('spin'), part.get('color'),
+            return (((part.get('spin'), part.get('color'),
                      part.get('self_antipart'),
                      part.get('mass'), part.get('width'), s_pdg),
-                    ret_list)
+                    ret_list),)
 
     @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
+    def flip_vertex(new_vertex, old_vertex, links):
         """Move the wavefunction part of vertex id appropriately"""
 
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) == 2:
             # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            return ((old_vertex[0][0],new_vertex[0][0]),)
+        elif len(new_vertex[0]) == 2 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
+            return ((new_vertex[0][1],),)
         # We should not get here
         assert(False)
 
@@ -247,6 +247,258 @@ class IdentifyMETagMadSpin(IdentifyMETag):
         return ((spin, color, selfanti, mass, width, random.random()), ret_list) 
 
         
+#===============================================================================
+# DiagramTag class to create canonical order configs
+#===============================================================================
+
+class CanonicalConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to create canonical order of
+    config. Need to compare leg number, mass, width, and color.
+    Also implement find s- and t-channels from the tag.
+    Warning! The sorting in this tag must be identical to that of
+       IdentifySGConfigTag in diagram_symmetry.py (apart from leg number)
+       to make sure symmetry works!"""
+
+    def get_s_and_t_channels(self, ninitial, model, new_pdg, max_final_leg = 2):
+        """Get s and t channels from the tag, as two lists of vertices
+        ordered from the outermost s-channel and in/down towards the highest
+        number initial state leg. 
+        Algorithm: Start from the final tag. Check for final leg number for 
+        all links and move in the direction towards leg 2 (or 1, if 1 and 2
+        are in the same direction).
+        """
+
+        final_leg = min(ninitial, max_final_leg)
+
+        # Look for final leg numbers in all links
+        done = [l for l in self.tag.links if \
+                l.end_link and l.links[0][1][0] == final_leg]
+        while not done:
+            # Identify the chain closest to final_leg
+            right_num = -1
+            for num, link in enumerate(self.tag.links):
+                if len(link.vertex_id) == 2 and \
+                        link.vertex_id[-1][-1] == final_leg:
+                    right_num = num
+            if right_num == -1:
+                # We need to look for leg number 1 instead
+                for num, link in enumerate(self.tag.links):
+                    if len(link.vertex_id) == 2 and \
+                       link.vertex_id[-1][-1] == 1:
+                        right_num = num
+            if right_num == -1:
+                # This should never happen
+                raise diagram_generation.DiagramTag.DiagramTagError, \
+                    "Error in CanonicalConfigTag, no link with number 1 or 2."
+
+            # Now move one step in the direction of right_link
+            right_link = self.tag.links[right_num]
+            # Create a new link corresponding to moving one step
+            new_links = list(self.tag.links[:right_num]) + \
+                                           list(self.tag.links[right_num + 1:])
+            new_link = diagram_generation.DiagramTagChainLink(\
+                                           new_links,
+                                           self.flip_vertex(\
+                                             self.tag.vertex_id,
+                                             right_link.vertex_id,
+                                             new_links))
+            # Create a new final vertex in the direction of the right_link
+            other_links = list(right_link.links) + [new_link]
+            other_link = diagram_generation.DiagramTagChainLink(\
+                                             other_links,
+                                             self.flip_vertex(\
+                                                 right_link.vertex_id,
+                                                 self.tag.vertex_id,
+                                                 other_links))
+            self.tag = other_link
+            done = [l for l in self.tag.links if \
+                    l.end_link and l.links[0][1][0] == final_leg]
+
+        # Construct a diagram from the resulting tag
+        diagram = self.diagram_from_tag(model)
+
+        # Go through the vertices and add them to s-channel or t-channel
+        schannels = base_objects.VertexList()
+        tchannels = base_objects.VertexList()
+
+        for vert in diagram.get('vertices')[:-1]:
+            if vert.get('legs')[-1].get('number') > ninitial:
+                schannels.append(vert)
+            else:
+                tchannels.append(vert)
+
+        # Need to make sure leg number 2 is always last in last vertex
+        lastvertex = diagram.get('vertices')[-1]
+        legs = lastvertex.get('legs')
+        leg2 = [l.get('number') for l in legs].index(final_leg)
+        legs.append(legs.pop(leg2))
+        if ninitial == 2:
+            # Last vertex always counts as t-channel        
+            tchannels.append(lastvertex)
+        else:
+            legs[-1].set('id', 
+                     model.get_particle(legs[-1].get('id')).get_anti_pdg_code())
+            schannels.append(lastvertex)
+
+        # Split up multiparticle vertices using fake s-channel propagators
+        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
+                          if len(v.get('legs')) > 3]
+        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
+                          if len(v.get('legs')) > 3]
+        
+        increase = 0
+        for channel in multischannels + multitchannels:
+            newschannels = []
+            vertex = channel[1]
+            while len(vertex.get('legs')) > 3:
+                # Pop the first two legs and create a new
+                # s-channel from them
+                popped_legs = \
+                           base_objects.LegList([vertex.get('legs').pop(0) \
+                                                    for i in [0,1]])
+                popped_legs.append(base_objects.Leg({\
+                    'id': new_pdg,
+                    'number': min([l.get('number') for l in popped_legs]),
+                    'state': True,
+                    'onshell': None}))
+
+                new_vertex = base_objects.Vertex({
+                    'id': vertex.get('id'),
+                    'legs': popped_legs})
+
+                # Insert the new s-channel before this vertex
+                if channel in multischannels:
+                    schannels.insert(channel[0]+increase, new_vertex)
+                    # Account for previous insertions
+                    increase += 1
+                else:
+                    schannels.append(new_vertex)
+                legs = vertex.get('legs')
+                # Insert the new s-channel into vertex
+                legs.insert(0, copy.copy(popped_legs[-1]))
+                # Renumber resulting leg according to minimum leg number
+                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+
+        # Finally go through all vertices, sort the legs and replace
+        # leg number with propagator number -1, -2, ...
+        number_dict = {}
+        nprop = 0
+        for vertex in schannels + tchannels:
+            # Sort the legs
+            legs = vertex.get('legs')[:-1]
+            if vertex in schannels:
+                legs.sort(lambda l1, l2: l2.get('number') - \
+                          l1.get('number'))
+            else:
+                legs.sort(lambda l1, l2: l1.get('number') - \
+                          l2.get('number'))
+            for ileg,leg in enumerate(legs):
+                newleg = copy.copy(leg)
+                try:
+                    newleg.set('number', number_dict[leg.get('number')])
+                except KeyError:
+                    pass
+                else:
+                    legs[ileg] = newleg                    
+            nprop = nprop - 1
+            last_leg = copy.copy(vertex.get('legs')[-1])
+            number_dict[last_leg.get('number')] = nprop
+            last_leg.set('number', nprop)
+            legs.append(last_leg)
+            vertex.set('legs', base_objects.LegList(legs))
+
+        return schannels, tchannels
+
+
+
+
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify configs: 
+        ((leg numer, mass, width, color), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        # use charge to forbid identification of neutrino and lepton
+        # the main reason is that the cuts are different on such particles.
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+
+        return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
+                  part.get('mass'), part.get('width')),
+                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify configs:
+        interaction color, mass, width. Also provide propagator PDG code."""
+
+        inter = model.get_interaction(vertex.get('id'))
+
+        if last_vertex:
+            return ((0,),
+                    (vertex.get('id'),
+                     min([l.get('number') for l in vertex.get('legs')])))
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    (vertex.get('id'), 
+                     vertex.get('legs')[-1].get('onshell'),
+                     vertex.get('legs')[-1].get('number')))
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex, links):
+        """Move the wavefunction part of propagator id appropriately"""
+
+        # Find leg numbers for new vertex
+        min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
+                         + [l.links[0][1][0] for l in links if l.end_link])
+
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
+            # We go from a last link to next-to-last link 
+            return (old_vertex[0], 
+                    (new_vertex[1][0], old_vertex[1][1], min_number))
+        elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (old_vertex[0], (new_vertex[1][0], min_number))
+
+        # We should not get here
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in CanonicalConfigTag, wrong setup of vertices in link."
+        
+    @staticmethod
+    def leg_from_link(link):
+        """Return a leg from a link"""
+
+        if link.end_link:
+            # This is an external leg, info in links
+            leg = base_objects.Leg({'number':link.links[0][1][0],
+                                     'id':link.links[0][1][1],
+                                     'state':link.links[0][1][2],
+                                     'onshell':None})
+            return leg
+        # This shouldn't happen
+        assert False
+
+    @staticmethod
+    def vertex_from_link(legs, vertex_id, model):
+        """Return a vertex given a leg list and a vertex id"""
+        vertex = base_objects.Vertex({'legs': legs,
+                                      'id': vertex_id[1][0]})
+        if len(vertex_id[1]) == 3:
+            vertex.get('legs')[-1].set('onshell', vertex_id[1][1])
+        return vertex
+
+    @staticmethod
+    def id_from_vertex_id(vertex_id):
+        """Return the numerical vertex id from a link.vertex_id"""
+
+        return vertex_id[-1][0]
+
 
 #===============================================================================
 # HelasWavefunction
@@ -258,6 +510,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
     interaction id, all relevant interaction information, fermion flow
     state, wavefunction number
     """
+    
+    supported_analytical_info = ['wavefunction_rank','interaction_rank']
+
 
     @staticmethod
     def spin_to_size(spin):
@@ -325,9 +580,14 @@ class HelasWavefunction(base_objects.PhysicsObject):
         self['me_id'] = 0
         self['fermionflow'] = 1
         self['is_loop'] = False
-        # The rank is used in the open loops method and stores the rank of the
-        # polynomial describing the loop numerator up to this loop wavefunction
-        self['rank'] = None
+        # Some analytical information about the interaction and wavefunction
+        # can be cached here in the form of a dictionary.
+        # An example of a key of this dictionary is 'rank' which is used in the
+        # open loop method and stores the rank of the polynomial describing the 
+        # loop numerator up to this loop wavefunction.
+        # See the class variable 'supported_analytical_info' for the list of
+        # supporter analytical information
+        self['analytic_info'] = {}
         # The lcut_size stores the size of the L-Cut wavefunction at the origin
         # of the loopwavefunction.
         self['lcut_size']=None
@@ -553,9 +813,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         # Set conjugate_indices if it's not already set
         if name == 'conjugate_indices' and self[name] == None:
             self['conjugate_indices'] = self.get_conjugate_index()
-
-        if name == 'rank' and self[name] == None:
-            self['rank'] = self.get_rank()
         
         if name == 'lcut_size' and self[name] == None:
             self['lcut_size'] = self.get_lcut_size()  
@@ -658,83 +915,85 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def is_majorana(self):
         return self.is_fermion() and self.get('self_antipart')
 
-    # HSS 28/09/2012
-    def incr_rank(self):
-	"""To check whether the associated 3-boson interaction should increase a rank. Now, it is only suitable for the SM."""
-	# make sure the interaction is a 3-boson one
-	if self.is_fermion():return False
-	if len([wf for wf in self.get('mothers')])!=2:return False
-	if len([wf for wf in self.get('mothers') if wf.is_boson()])!=2:return False
-
-	if self.get('spin')==1 and not self.get('particle').get('ghost'):
-	   scalar_num=1
-	else:
-	   scalar_num=0
-	scalar_num=scalar_num+len([wf for wf in self.get('mothers') if wf.get('spin')==1 and not wf.get('particle').get('ghost')])
-	return scalar_num % 2 != 1
-    # HSS
-
-
-    def get_interaction_q_power(self):
-        """ Returns the power of the loop momentum q brought by the interaction
+    def get_analytic_info(self, info, alohaModel=None):
+        """ Returns a given analytic information about this loop wavefunction or
+        its characterizing interaction. The list of available information is in
+        the HelasWavefunction class variable 'supported_analytical_info'. An
+        example of analytic information is the 'interaction_rank', corresponding
+        to the power of the loop momentum q brought by the interaction
         and propagator from which this loop wavefunction originates. This 
-        is done in a SM ad-hoc way, but it should be promoted to be general in 
-        the future, by reading the lorentz structure of the interaction."""
-        rank=0
-        # First add the propagator power for a fermion of spin 1/2.
-        # For the bosons, it is assumed to be in Feynman gauge so that the
-        # propagator does not bring in any power of the loop momentum.
-        if self.get('spin')==2:
-            rank=rank+1
+        is done in a general way by having aloha analyzing the lorentz structure
+        used.
+        Notice that if one knows that this analytic information has already been
+        computed before (for example because a call to compute_analytic_information
+        has been performed before, then alohaModel is not required since 
+        the result can be recycled."""
+        # This function makes no sense if not called for a loop interaction.
+        # At least for now
+        assert(self.get('is_loop'))
+        # Check that the required information is supported
+        assert(info in self.supported_analytical_info)
+                
+        # Try to recycle the information
+        try:
+            return self['analytic_info'][info]
+        except KeyError:
+            # It then need be computed and for this, an alohaModel is necessary
+            if alohaModel is None:
+                raise MadGraph5Error,"The analytic information %s has"%info+\
+                " not been computed yet for this wavefunction and an"+\
+                " alohaModel was not specified, so that the information"+\
+                " cannot be retrieved."
+        
+        result = None
+        
+        if info=="interaction_rank" and len(self['mothers'])==0:
+            # It is of course zero for an external particle
+            result = 0
 
-        interaction = self.get('lorentz')
+        elif info=="interaction_rank":
+            # To get advanced analytic information about the interaction, aloha
+            # has to work as if in the optimized output, namely treat individually
+            # the loop momentum from the rest of the contributions.
+            # The 'L' tag is therefore always followed by an integer representing
+            # the place of the loop wavefunction in the mothers.
+            # For this, optimized_output is set to True below, no matter what.
+            aloha_info = self.get_aloha_info(True)
+            # aloha_info[0] is the tuple of all lorent structures for this lwf,
+            # aloha_info[1] are the tags and aloha_info[2] is the outgoing number.
+            max_rank = max([ alohaModel.get_info('rank', lorentz,
+                                 aloha_info[2], aloha_info[1], cached=True) 
+                                                for lorentz in aloha_info[0] ])
+            result = max_rank
+
+        elif info=="wavefunction_rank":
+            # wavefunction_rank is the sum of all the interaction rank
+            # from the history of open-loop call.
+            loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
+            if len(loop_mothers)==0:
+                # It is an external loop wavefunction
+                result = 0
+            elif len(loop_mothers)==1:
+                result=loop_mothers[0].get_analytic_info('wavefunction_rank',
+                                                                     alohaModel)
+                result = result+self.get_analytic_info('interaction_rank',
+                                                                     alohaModel)
+            else:
+                raise MadGraph5Error, "A loop wavefunction has more than one loop"+\
+                    " mothers."
+                    
+        # Now cache the resulting analytic info
+        self['analytic_info'][info] = result
         
+        return result
+
+    def compute_analytic_information(self, alohaModel):
+        """ Make sure that all analytic pieces of information about this 
+        wavefunction are computed so that they can be recycled later, typically
+        without the need of specifying an alohaModel."""
         
-        # Treat in an ad-hoc way the higgs effective theory
-        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
-              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
-        # HGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
-            return rank+2
-        # HGGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
-            return rank+1
-        # HGGGG effective vertex
-        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
-            return rank
-            
-        # Now add a possible power of the loop momentum depending on the
-        # vertex creating this loop wavefunction. For now we don't read the
-        # lorentz structure but just use an SM ad-hoc rule that only 
-        # the feynman rules for a three point vertex with only bosons bring
-        # in one power of q.
-        # HSS, 22/10/2012
-        # if self.is_boson() and len([w for w in self.get('mothers') \
-        #                                                   if w.is_boson()])==2:
-        if self.incr_rank():
-            rank=rank+1
-        # HSS
-        return rank
-        
-    def get_rank(self):
-        """ Returns the rank of this wavefunction. Which means the rank of the 
-        polynomial in the loop momenta q which is built at this point in the 
-        loop flow. """
-        
-        if not self['is_loop']:
-            return 0
-        
-        loop_mothers=[wf for wf in self['mothers'] if wf['is_loop']]
-        
-        if len(loop_mothers)==0:
-            # It is an external loop wavefunction
-            return 0
-        elif len(loop_mothers)==1:
-            rank=loop_mothers[0].get_rank()
-            return rank+self.get_interaction_q_power()
-        else:
-            raise MadGraph5Error, "A loop wavefunction has more than one loop"+\
-                " mothers."
+        for analytic_info in self.supported_analytical_info:
+            self.get_analytic_info(analytic_info, alohaModel)
 
     def to_array(self):
         """Generate an array with the information needed to uniquely
@@ -981,7 +1240,30 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
-                    diagram_wavefunctions.append(new_wf)
+                    # Make sure that new_wf comes before any wavefunction
+                    # which has it as mother
+                    if len(self['mothers']) == 0:
+                        #insert at the beginning
+                        if diagram_wavefunctions:
+                            wf_nb = diagram_wavefunctions[0].get('number')
+                            for w in diagram_wavefunctions:
+                                w.set('number', w.get('number') + 1)
+                            new_wf.set('number', wf_nb)
+                            diagram_wavefunctions.insert(0, new_wf)
+                        else:
+                            diagram_wavefunctions.insert(0, new_wf)
+                    else:
+                        for i, wf in enumerate(diagram_wavefunctions):
+                            if self in wf.get('mothers'):
+                                # Update wf numbers
+                                new_wf.set('number', wf.get('number'))
+                                for w in diagram_wavefunctions[i:]:
+                                    w.set('number', w.get('number') + 1)
+                                # Insert wavefunction
+                                diagram_wavefunctions.insert(i, new_wf)
+                                break
+                        else:
+                            diagram_wavefunctions.append(new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -1137,7 +1419,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         output = {}
         if self.get('is_loop') and OptimizedOutput:
-            output['vertex_rank']=self.get_interaction_q_power()
+            output['vertex_rank']=self.get_analytic_info('interaction_rank')
             output['lcut_size']=self.get('lcut_size')
             output['out_size']=self.spin_to_size(self.get('spin'))
         
@@ -1170,7 +1452,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 if mother.get('is_loop'):
                     output['loop_mother_number']=nb
-                    output['loop_mother_rank']=mother.get('rank')
+                    output['loop_mother_rank']=\
+                                   mother.get_analytic_info('wavefunction_rank')
                     output['in_size']=self.spin_to_size(mother.get('spin'))
                     output['WF%d'%i] = 'PL(0,%d)'%nb
                     loop_mother_found=True
@@ -1188,6 +1471,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
+        output['propa'] = self.get('particle').get('propagator')
+        if output['propa'] != '':
+            output['propa'] = 'P%s' % output['propa']
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
@@ -1375,6 +1661,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
         color_indices.append(self.get('color_key'))
 
         return color_indices
+    
+    def get_aloha_info(self, optimized_output=True):
+        """Returns the tuple (lorentz_name, tag, outgoing_number) providing
+        the necessary information to compute_subset of create_aloha to write
+        out the HELAS-like routines."""
+        
+        # In principle this function should not be called for the case below,
+        # or if it does it should handle specifically the None returned value.
+        if self.get('interaction_id') in [0,-1]:
+            return None
+
+        tags = ['C%s' % w for w in self.get_conjugate_index()]
+        if self.get('is_loop'): 
+            if not optimized_output:
+                tags.append('L')
+            else:
+                tags.append('L%d'%self.get_loop_index())
+
+        if self.get('particle').get('propagator') !='':
+                 tags.append('P%s' % str(self.get('particle').get('propagator')))
+
+        return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
     def get_lcutspinletter(self):
         """Returns S,V or F depending on the spin of the mother loop particle.
@@ -1558,7 +1866,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if not wf['is_loop']:
                 res=res.union(wf.get_struct_external_leg_ids())
         return res
-
+#
     def get_loop_index(self):
         """Return the index of the wavefunction in the mothers which is the 
         loop one"""
@@ -1701,6 +2009,51 @@ class HelasWavefunction(base_objects.PhysicsObject):
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
         return not self.__eq__(other)
+
+#===============================================================================
+# Start of the legacy of obsolete functions of the HelasWavefunction class.
+#===============================================================================
+
+    def LEGACY_get_interaction_q_power(self):
+        """ Returns the power of the loop momentum q brought by the interaction
+        and propagator from which this loop wavefunction originates. This 
+        is done in a SM ad-hoc way, but it should be promoted to be general in 
+        the future, by reading the lorentz structure of the interaction.
+        This function is now rendered obsolete by the use of the function
+        get_analytical_info. It is however kept for legacy."""
+        rank=0
+        # First add the propagator power for a fermion of spin 1/2.
+        # For the bosons, it is assumed to be in Feynman gauge so that the
+        # propagator does not bring in any power of the loop momentum.
+        if self.get('spin')==2:
+            rank=rank+1
+
+        # Treat in an ad-hoc way the higgs effective theory
+        spin_cols = [(self.get('spin'),abs(self.get('color')))]+\
+              [(w.get('spin'),abs(w.get('color'))) for w in self.get('mothers')]
+        # HGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8)]):
+            return rank+2
+        # HGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8)]):
+            return rank+1
+        # HGGGG effective vertex
+        if sorted(spin_cols) == sorted([(1,1),(3,8),(3,8),(3,8),(3,8)]):
+            return rank
+            
+        # Now add a possible power of the loop momentum depending on the
+        # vertex creating this loop wavefunction. For now we don't read the
+        # lorentz structure but just use an SM ad-hoc rule that only 
+        # the feynman rules for a three point vertex with only bosons bring
+        # in one power of q.
+        if self.is_boson() and len([w for w in self.get('mothers') \
+                                                           if w.is_boson()])==2:
+            rank=rank+1
+        return rank
+    
+#===============================================================================
+# End of the legacy of obsolete functions of the HelasWavefunction class.
+#===============================================================================
 
 #===============================================================================
 # HelasWavefunctionList
@@ -2291,6 +2644,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
 
         return (-1) ** nflips
 
+    def get_aloha_info(self, optimized_output=True):
+        """Returns the tuple (lorentz_name, tag, outgoing_number) providing
+        the necessary information to compute_subset of create_aloha to write
+        out the HELAS-like routines."""
+        
+        # In principle this function should not be called for the case below,
+        # or if it does it should handle specifically the None returned value.
+        if self.get('interaction_id') in [0,-1]:
+            return None
+
+        tags = ['C%s' % w for w in self.get_conjugate_index()]
+
+        return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
+
     def get_base_diagram(self, wf_dict, vx_list = [], optimization = 1):
         """Return the base_objects.Diagram which corresponds to this
         amplitude, using a recursive method for the wavefunctions."""
@@ -2335,177 +2702,22 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial, new_pdg, reverse_t_ch = False):
+    def get_s_and_t_channels(self, ninitial, model, new_pdg, reverse_t_ch = False):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
-        s-channel and in/down towards the highest (if not reverse_t_ch) or
-        lowest (if reverse_t_ch) number initial state leg."""
+        s-channel and in/down towards the highest number initial state
+        leg."""
 
-        schannels = base_objects.VertexList()
-        tchannels = base_objects.VertexList()
+        # Create a CanonicalConfigTag to ensure that the order of
+        # propagators is canonical
+        wf_dict = {}
+        max_final_leg = 2
+        if reverse_t_ch:
+            max_final_leg = 1
+        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
+        diagram = tag.diagram_from_tag(model)
+        return tag.get_s_and_t_channels(ninitial, model, new_pdg, max_final_leg)
 
-        (startleg, finalleg) = (1,2)
-        if reverse_t_ch: (startleg, finalleg) = (2,1)
-
-        # Add vertices for all s-channel mothers
-        final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
-                               self.get('mothers'))
-
-        for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}, optimization = 0))
-
-        # Extract initial state mothers
-        init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
-                              self.get('mothers'))
-
-        if len(init_mothers) > 2:
-            raise self.PhysicsObjectError, \
-                  "get_s_and_t_channels can only handle up to 2 initial states"
-
-        if len(init_mothers) == 1:
-            # This is an s-channel leg, or the first vertex in a decay
-            # process. Add vertex and start stepping down towards
-            # initial state
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + init_mothers:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-            # Change direction of init_mother
-            legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-
-            # Add vertex to s-channels
-            schannels.append(base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs}))
-
-            # Add s- and t-channels from further down
-            mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1],
-                                                       reverse_t_ch)
-
-            schannels.extend(mother_s)
-        else:
-            # This is a t-channel leg. Start with the leg going
-            # towards external particle 1, and then do external
-            # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == \
-                                   startleg,
-                                   init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == \
-                                   finalleg,
-                                   init_mothers)[0]
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1] + [init_mothers2]:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels going down towards leg 1
-            mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2],
-                                                         reverse_t_ch)
-
-            schannels.extend(mother_s)
-
-            # Add vertex to t-channels
-            tchannels.append(vertex)
-
-            # Add s- and t-channels going down towards leg 2
-            mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1],
-                                                         reverse_t_ch)
-            schannels.extend(mother_s)
-            tchannels.extend(mother_t)
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
-
-        # Split up multiparticle vertices using fake s-channel propagators
-        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
-                          if len(v.get('legs')) > 3]
-        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
-                          if len(v.get('legs')) > 3]
-        
-        increase = 0
-        for channel in multischannels + multitchannels:
-            newschannels = []
-            vertex = channel[1]
-            while len(vertex.get('legs')) > 3:
-                # Pop the first two legs and create a new
-                # s-channel from them
-                popped_legs = \
-                           base_objects.LegList([vertex.get('legs').pop(0) \
-                                                    for i in [0,1]])
-                popped_legs.append(base_objects.Leg({\
-                    'id': new_pdg,
-                    'number': min([l.get('number') for l in popped_legs]),
-                    'state': True,
-                    'onshell': None}))
-
-                new_vertex = base_objects.Vertex({
-                    'id': vertex.get('id'),
-                    'legs': popped_legs})
-
-                # Insert the new s-channel before this vertex
-                if channel in multischannels:
-                    schannels.insert(channel[0]+increase, new_vertex)
-                    # Account for previous insertions
-                    increase += 1
-                else:
-                    schannels.append(new_vertex)
-                legs = vertex.get('legs')
-                # Insert the new s-channel into vertex
-                legs.insert(0, copy.copy(popped_legs[-1]))
-                # Renumber resulting leg according to minimum leg number
-                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-        # Finally go through all vertices, sort the legs and replace
-        # leg number with propagator number -1, -2, ...
-        number_dict = {}
-        nprop = 0
-        for vertex in schannels + tchannels:
-            # Sort the legs
-            legs = vertex.get('legs')[:-1]
-            if vertex in schannels:
-                legs.sort(lambda l1, l2: l2.get('number') - \
-                          l1.get('number'))
-            else:
-                legs.sort(lambda l1, l2: l1.get('number') - \
-                          l2.get('number'))
-            for leg in legs:
-                try:
-                    leg.set('number', number_dict[leg.get('number')])
-                except KeyError:
-                    pass
-            nprop = nprop - 1
-            last_leg = vertex.get('legs')[-1]
-            number_dict[last_leg.get('number')] = nprop
-            last_leg.set('number', nprop)
-            legs.append(last_leg)
-            vertex.set('legs', base_objects.LegList(legs))
-
-        return schannels, tchannels
 
     def get_color_indices(self):
         """Get the color indices corresponding to
@@ -2532,18 +2744,6 @@ class HelasAmplitude(base_objects.PhysicsObject):
         HelasWavefunctions on same footing."""
 
         return 0
-
-    # HSS 28/09/2012
-    def incr_rank(self):
-	"""To check whether the associated 3-boson interaction should increase a rank. Now, it is only suitable for the SM."""
-	# make sure the interaction is a 3-boson one
-	if len([wf for wf in self.get('mothers')])!=3:return False
-	if len([wf for wf in self.get('mothers') if wf.is_boson()])!=3:return False
-
-	scalar_num=len([wf for wf in self.get('mothers') if wf.get('spin')==1 and not wf.get('particle').get('ghost')])
-	return scalar_num % 2 != 1
-    # HSS
-
 
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
@@ -2603,6 +2803,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
             output['coup%d'%i] = str(coup)
 
         output['out'] = self.get('number') - flip
+        output['propa'] = ''
         return output
 
 
@@ -4330,11 +4531,14 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate_tag, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')), tuple(['C%s' % w for w in wa.get('conjugate_indices')]),
-                 wa.find_outgoing_number()) for wa in \
-                self.get_all_wavefunctions() + self.get_all_amplitudes() \
-                if wa.get('interaction_id') not in [0,-1]]
-        
+        output = []
+        for wa in self.get_all_wavefunctions() + self.get_all_amplitudes():
+            if wa.get('interaction_id') in [0,-1]:
+                continue
+            output.append(wa.get_aloha_info());
+
+        return output
+
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
@@ -4356,8 +4560,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for proc in self.get('processes'):
             legs = copy.copy(proc.get('legs'))
             legs[0:2] = [legs[1],legs[0]]
+            decay_legs = copy.copy(proc.get('legs_with_decays'))
+            decay_legs[0:2] = [decay_legs[1],decay_legs[0]]
             process = copy.copy(proc)
             process.set('legs', legs)
+            process.set('legs_with_decays', decay_legs)
             processes.append(process)
         return processes
 
@@ -4923,7 +5130,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
-
         helas_list = []
 
         for me in self.get('matrix_elements'):
@@ -5155,43 +5361,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
-#<<<<<<< TREE
-#                # If the matrix element has no diagrams,
-#                # remove this matrix element.
-#                if not matrix_element.get('processes') or \
-#                       not matrix_element.get('diagrams'):
-#                    continue
-#                
-#                # Check if identical matrix element already present
-#
-#                
-#                if combine and matrix_element in matrix_elements:
-#                    me = matrix_elements[matrix_elements.index(matrix_element)]
-#                    me_procs = me.get('processes')
-#                    procs = matrix_element.get('processes')
-#                    if me_procs[0].get_ninitial() > 1 or \
-#                            procs[0].get_initial_ids() == \
-#                            me_procs[0].get_initial_ids():
-#                        logger.info("Combining process %s with %s" % \
-#                                (procs[0].nice_string().\
-#                                     replace('Process: ', ''),
-#                                 me_procs[0].nice_string().\
-#                                     replace('Process: ', '')))
-#                        for proc in procs:
-#                            if proc not in me_procs:
-#                                me_procs.append(proc)
-#                            else:
-#                                raise InvalidCmd,("Duplicate process %s found."\
-#                                           +" Please check your processes.") % \
-#                                    proc.nice_string().replace('Process: ', '')
-#                        # Remove this matrix element from the lists
-#                        if combine_matrix_elements and amplitude_tags:
-#                            amplitude_tags.pop(-1)
-#                            identified_matrix_elements.pop(-1)
-#                            permutations.pop(-1)
-#                        continue
-#=======
-#>>>>>>> MERGE-SOURCE
 
                 # Add this matrix element to list
                 matrix_elements.append(matrix_element)

@@ -489,9 +489,9 @@ class MatrixElementEvaluator(object):
         if nincoming == 1:
 
             # Momenta for the incoming particle
-            p.append([m1, 0., 0., 0.])
+            p.append([abs(m1), 0., 0., 0.])
 
-            p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+            p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
 
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
             for i in range(1, nfinal+1):
@@ -716,7 +716,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.close()
 
     @classmethod
-    def fix_PSPoint_in_check(cls, dir_name, read_ps = True, npoints = 1,
+    def fix_PSPoint_in_check(cls, dir_path, read_ps = True, npoints = 1,
                              hel_config = -1, mu_r=0.0):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
         if hel_config is different than -1 then check_sa.f is configured so to
@@ -725,20 +725,32 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
         is < 0.0 the value in the param_card.dat is used."""
 
-        file = open(os.path.join(dir_name,'check_sa.f'), 'r')
+        file_path = dir_path
+        if not os.path.isfile(dir_path) or \
+                                   not os.path.basename(dir_path)=='check_sa.f':
+            file_path = os.path.join(dir_path,'check_sa.f')
+            if not os.path.isfile(file_path):
+                directories = glob.glob(os.path.join(dir_path,'P0_*'))
+                if len(directories)>0 and os.path.isdir(directories[0]):
+                     file_path = os.path.join(directories[0],'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find the location of check_sa.f'+\
+                                  ' from the specified path %s.'%str(file_path))    
+
+        file = open(file_path, 'r')
         check_sa = file.read()
         file.close()
         
-        file = open(os.path.join(dir_name,'check_sa.f'), 'w')
+        file = open(file_path, 'w')
         check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
                                                       else '.FALSE.'), check_sa)
         check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
         if hel_config != -1:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIXHEL(P,%d,MATELEM)"\
-                                                          %hel_config, check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
         else:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
-                                                                       check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
         if mu_r > 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
                                         (("%.17e"%mu_r).replace('e','d')),check_sa)
@@ -829,7 +841,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     '1eps':0.0,
                     '2eps':0.0,
                     'gev_pow':0,
-                    'export_format':'Default'}
+                    'export_format':'Default',
+                    'accuracy':0.0,
+                    'return_code':0,
+                    'Split_Orders_Names':[],
+                    'Loop_SO_Results':[],
+                    'Born_SO_Results':[]
+                    }
         res_p = []
         
         # output is supposed to be a file, if it is its content directly then
@@ -849,8 +867,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_p.append([float(s) for s in splitline[1:]])
             elif splitline[0]=='BORN':
                 res_dict['born']=float(splitline[1])
-            elif splitline[0]=='ACC':
-                res_dict['accuracy']=float(splitline[1])
             elif splitline[0]=='FIN':
                 res_dict['finite']=float(splitline[1])
             elif splitline[0]=='1EPS':
@@ -861,6 +877,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['gev_pow']=int(splitline[1])
             elif splitline[0]=='Export_Format':
                 res_dict['export_format']=splitline[1]
+            elif splitline[0]=='ACC':
+                res_dict['accuracy']=float(splitline[1])
             elif splitline[0]=='RETCODE':
                 res_dict['return_code']=int(splitline[1])
             elif splitline[0]=='Split_Orders_Names':
@@ -870,19 +888,15 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 # with format ([],{}) where the first list specifies the split
                 # orders to which the dictionary in the second position corresponds 
                 # to.
-                try:
-                    res_dict[splitline[0]].append(\
+                res_dict[splitline[0]].append(\
                                          ([int(el) for el in splitline[1:]],{}))
-                except KeyError:
-                    res_dict[splitline[0]] = \
-                                        [([int(el) for el in splitline[1:]],{})]
             elif splitline[0]=='SO_Loop':
                 res_dict['Loop_SO_Results'][-1][1][splitline[1]]=\
                                                              float(splitline[2])
             elif splitline[0]=='SO_Born':
                 res_dict['Born_SO_Results'][-1][1][splitline[1]]=\
                                                              float(splitline[2])
-
+        
         res_dict['res_p'] = res_p
 
         if format=='tuple':
@@ -1028,7 +1042,42 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         except IndexError:
             raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
                                                            'not well formatted.'
+
+    @classmethod
+    def set_MadLoop_Params(cls,MLCardPath,params):
+        """ Set the parameters in MadLoopParamCard to the values specified in
+        the dictionary params.
+        The key is the name of the parameter and the value is the corresponding
+        string to write in the card."""
         
+        # Not elegant, but the file is small anyway, so no big deal.
+        MLCard_lines = open(MLCardPath).readlines()
+        newCard_lines = []
+        modified_Params = []
+        param_to_modify=None
+        for i, line in enumerate(MLCard_lines):
+            if not param_to_modify is None:
+                modified_Params.append(param_to_modify)
+                newCard_lines.append(params[param_to_modify]+'\n')
+                param_to_modify = None
+            else:
+                if line.startswith('#') and \
+                   line.split()[0][1:] in params.keys():
+                    param_to_modify = line.split()[0][1:]
+                newCard_lines.append(line)
+        if not param_to_modify is None:
+            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
+                                                           'not well formatted.'
+        
+        left_over = set(params.keys())-set(modified_Params)
+        if left_over != set([]):
+            raise MadGraph5Error, 'The following parameters could not be '+\
+                             'accessed in MadLoopParams.dat : %s'%str(left_over)
+
+        newCard=open(MLCardPath,'w')
+        newCard.writelines(newCard_lines)
+        newCard.close()
+
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -1092,7 +1141,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             curr_attempt = to_attempt.pop()+1
             # Plus one because the filter are written on the next PS point after
             # initialization is performed.
-            cls.fix_PSPoint_in_check(SubProc_dir, read_ps = False, 
+            cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
                                                          npoints = curr_attempt)
             compile_time, run_time, ram_usage = cls.make_and_run(run_dir)
             if compile_time==None:
@@ -1816,27 +1865,11 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                                      multiprocess, model, id_anti_id_dict):
                 continue
             # Generate process based on the selected ids
-            process = base_objects.Process({\
-                'legs': base_objects.LegList(\
-                        [base_objects.Leg({'id': id, 'state':False}) for \
-                         id in is_prod] + \
-                        [base_objects.Leg({'id': id, 'state':True}) for \
-                         id in fs_prod]),
-                'model':multiprocess.get('model'),
-                'id': multiprocess.get('id'),
-                'orders': multiprocess.get('orders'),
-                'required_s_channels': \
-                              multiprocess.get('required_s_channels'),
-                'forbidden_s_channels': \
-                              multiprocess.get('forbidden_s_channels'),
-                'forbidden_particles': \
-                              multiprocess.get('forbidden_particles'),
-                'perturbation_couplings': \
-                              multiprocess.get('perturbation_couplings'),
-                'is_decay_chain': \
-                              multiprocess.get('is_decay_chain'),
-                'overall_orders': \
-                              multiprocess.get('overall_orders')})
+            process = multiprocess.get_process_with_legs(base_objects.LegList(\
+                            [base_objects.Leg({'id': id, 'state':False}) for \
+                             id in is_prod] + \
+                            [base_objects.Leg({'id': id, 'state':True}) for \
+                             id in fs_prod]))
 
             if opt is not None:
                 if isinstance(opt, dict):
@@ -1937,6 +1970,7 @@ def generate_loop_matrix_element(process_definition, reuse,
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
+    
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
     timing['HelasDiagrams_generation']=time.time()-start
@@ -1947,9 +1981,11 @@ def generate_loop_matrix_element(process_definition, reuse,
                                                 ldiag.get('loop_wavefunctions')]
         timing['n_loop_wfs']=len(lwfs)
         timing['loop_wfs_ranks']=[]
-        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+        for rank in range(0,max([l.get_analytic_info('wavefunction_rank') \
+                                                             for l in lwfs])+1):
             timing['loop_wfs_ranks'].append(\
-                                  len([1 for l in lwfs if l.get('rank')==rank]))
+                len([1 for l in lwfs if \
+                               l.get_analytic_info('wavefunction_rank')==rank]))
     
     return timing, matrix_element
 
@@ -2196,21 +2232,9 @@ def check_process(process, evaluator, quick, options):
         if order != range(1,len(legs) + 1):
             logger.info("Testing permutation: %s" % \
                         order)
-
-        newproc = base_objects.Process({'legs':legs,
-            'orders':copy.copy(process.get('orders')),
-            'model':process.get('model'),
-            'id':copy.copy(process.get('id')),
-            'uid':process.get('uid'),
-            'required_s_channels':copy.copy(process.get('required_s_channels')),
-            'forbidden_s_channels':copy.copy(process.get('forbidden_s_channels')),
-            'forbidden_particles':copy.copy(process.get('forbidden_particles')),
-            'is_decay_chain':process.get('is_decay_chain'),
-            'overall_orders':copy.copy(process.get('overall_orders')),
-            'decay_chains':process.get('decay_chains'),
-            'perturbation_couplings':copy.copy(process.get('perturbation_couplings')),
-            'squared_orders':copy.copy(process.get('squared_orders')),
-            'has_born':process.get('has_born')})
+        
+        newproc = copy.copy(process)
+        newproc.set('legs',legs)
 
         # Generate the amplitude for this process
         try:

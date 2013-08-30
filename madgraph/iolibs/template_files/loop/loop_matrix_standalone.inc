@@ -7,8 +7,6 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
 
       INCLUDE "nsquaredSO.inc"
-	  INTEGER NSQUAREDSOP1
-	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 
 C  
 C ARGUMENTS 
@@ -99,6 +97,8 @@ C     This parameter is designed for the check timing command of MG5
 	  LOGICAL BOOTANDSTOP
       PARAMETER (BOOTANDSTOP=.FALSE.)
       INCLUDE "nsquaredSO.inc"
+	  INTEGER NSQUAREDSOP1
+	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/stability_tests/maxstabilitylength	  
@@ -225,9 +225,19 @@ C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHE
 	  DATA USER_STAB_PREC/-1.0d0/	  
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
+C     Return codes H,T,U correspond to the hundreds, tens and units
+C     building returncode, i.e.
+C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
+	  
+      INTEGER RET_CODE_H,RET_CODE_T,RET_CODE_U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
-	  DATA (ACCURACY(I),I=0,NSQUAREDSO)/NSQUAREDSOP1*1.0d0/	  
-	  common/ACC/ACCURACY
+	  DATA (ACCURACY(I),I=0,NSQUAREDSO)/NSQUAREDSOP1*1.0d0/
+	  DATA RET_CODE_H,RET_CODE_T,RET_CODE_U/1,1,0/
+	  common/ACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
+
+	  LOGICAL MP_DONE_ONCE
+	  DATA MP_DONE_ONCE/.FALSE./
+	  common/MP_DONE_ONCE/MP_DONE_ONCE
 
 C ----------
 C BEGIN CODE
@@ -300,6 +310,7 @@ ENDIF
 ENDIF
 
 MP_DONE=.FALSE.
+MP_DONE_ONCE=.FALSE.
 MP_PS_SET=.FALSE.
 STAB_INDEX=0
 DOING_QP_EVALS=.FALSE.
@@ -603,9 +614,11 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
-    CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+    CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS(1))
 	ACCURACY(0)=ACC	
+	RET_CODE_H=3	
 	IF(ACC.GE.MLSTABTHRES) THEN
+	  RET_CODE_H=4
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
       WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
@@ -625,7 +638,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  ENDIF
     ENDIF
   ELSE
-    CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
+    CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS(1))
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  DOING_QP_EVALS=.TRUE.
 	  EVAL_DONE(1)=.TRUE.
@@ -637,11 +650,28 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  goto 200
     ELSE
 	  ACCURACY(0)=ACC
+      RET_CODE_H=2	
 	ENDIF
   ENDIF
+ELSE
+  RET_CODE_H=1
+  ACCURACY=-1.0d0
 ENDIF
 
  9999 continue
+
+C Finalize the return code
+IF (MP_DONE_ONCE) THEN
+  RET_CODE_T=2
+ELSE
+  RET_CODE_T=1
+ENDIF
+IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
+  RET_CODE_H=1
+  RET_CODE_T=RET_CODE_T+2
+  ACCURACY=-1.0d0
+ENDIF
+RET_CODE_U=0
 
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN
@@ -765,8 +795,21 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
-      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND)
-      IMPLICIT NONE
+      SUBROUTINE GET_NSQSO_LOOP(NSQSO)
+C
+C     Simple subroutine returning the number of squared split order
+C     contributions returned in ANS when calling sloopmatrix 
+C
+      INCLUDE "nsquaredSO.inc"
+
+	  INTEGER NSQSO
+
+	  NSQSO=NSQUAREDSO
+
+      END
+
+      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+	  IMPLICIT NONE
 C  
 C CONSTANTS
 C
@@ -778,7 +821,7 @@ C ARGUMENTS
 C  
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
-	  INTEGER HEL
+	  INTEGER HEL,RET_CODE
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
 C
 C GLOBAL VARIABLES
@@ -786,14 +829,11 @@ C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
-	  INTEGER NTRY	  
-	  LOGICAL CHECKPHASE
-	  LOGICAL HELDOUBLECHECKED
-	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+	  INTEGER I
 
+	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
-	  common/ACC/ACCURACY
+	  common/ACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
@@ -803,20 +843,52 @@ C ----------
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
-	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	     DO I=0,NSQUAREDSO
-	       PREC_FOUND(I)=ACCURACY(I)
-		 ENDDO
-	  ELSE
-C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-        DO I=0,NSQUAREDSO
-	      PREC_FOUND(I)=-1.0d0
-		ENDDO
-	  ENDIF
+      DO I=0,NSQUAREDSO
+	    PREC_FOUND(I)=ACCURACY(I)
+	  ENDDO
+	  PREC_FOUND=ACCURACY
+      RET_CODE=100*H+10*T+U
 
 	  END
 
-      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND)
+      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+C
+C     Inputs are:
+C     P(0:3, Nexternal)  double  :: Kinematic configuration (E,px,py,pz)
+C     PEC_ASKED          double  :: Target relative accuracy, -1 for default
+C
+C     Outputs are:
+C     ANS(3)             double  :: Result (finite, single pole, double pole) 
+C     PREC_FOUND         double  :: Relative accuracy estimated for the result
+C                                   Returns -1 if no stab test could be performed.
+C	  RET_CODE			 integer :: Return code. See below for details
+C
+C     Return code conventions: RET_CODE = H*100 + T*10 + U
+C
+C     H == 1
+C         Stability unknown.
+C     H == 2
+C         Stable PS (SPS) point.
+C         No stability rescue was necessary.
+C     H == 3
+C         Unstable PS (UPS) point.
+C         Stability rescue necessary, and successful.
+C     H == 4
+C         Exceptional PS (EPS) point.
+C         Stability rescue attempted, but unsuccessful.
+C
+C     T == 1
+C         Default computation (double prec.) was performed.
+C     T == 2
+C         Quadruple precision was used for this PS point.
+C     T == 3
+C         MadLoop in initialization phase. Only double precision used.
+C     T == 4
+C         MadLoop in initialization phase. Quadruple precision used.
+C
+C     U is a number left for future use (always set to 0 for now).
+C     example: TIR vs OPP usage.
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -830,20 +902,18 @@ C
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
 	  %(real_dp_format)s PREC_ASKED,PREC_FOUND(0:NSQUAREDSO)
+	  INTEGER RET_CODE
 C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
 	  COMMON/USER_STAB_PREC/USER_STAB_PREC
 
-	  INTEGER NTRY
-	  LOGICAL CHECKPHASE
-	  LOGICAL HELDOUBLECHECKED
-	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+	  INTEGER I
 
+	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
-	  common/ACC/ACCURACY
+	  common/ACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
@@ -853,15 +923,9 @@ C ----------
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 
-	  IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED) THEN
-	    DO I=0,NSQUAREDSO
-	      PREC_FOUND(I)=ACCURACY(I)
-		ENDDO
-	  ELSE
-C This is a 'tag value' to say that because ML is still in initialization mode, it could not provide the accuray.
-	    DO I=0,NSQUAREDSO
-	      PREC_FOUND(I)=-1.0d0
-		ENDDO
-	  ENDIF
+	  DO I=0,NSQUAREDSO
+	    PREC_FOUND(I)=ACCURACY(I)
+	  ENDDO
+	  RET_CODE=100*H+10*T+U		 
 	  
 	  END

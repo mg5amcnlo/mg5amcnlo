@@ -133,6 +133,12 @@ class MadLoopLauncher(ExtLauncher):
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
         self.cards = ['param_card.dat','MadLoopParams.dat']
 
+    def prepare_run(self):
+        """ Usually the user will not want to doublecheck the helicity filter."""
+        process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
+                                os.path.join(self.card_dir,'MadLoopParams.dat'),
+                                        {'DoubleCheckHelicityFilter':'.FALSE.'})
+
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""
 
@@ -191,7 +197,7 @@ class MadLoopLauncher(ExtLauncher):
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
-                # We use mu_r=1.0 to use the one defined by the user in the
+                # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_car.dat
                 evaluator.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
@@ -210,115 +216,131 @@ class MadLoopLauncher(ExtLauncher):
                 # The result are returned as a dictionary.
                 result = evaluator.parse_check_output(rFile.readlines(),\
                                                                   format='dict')
-                logger.info(self.format_res_string(result)%shell_name)
+                for line in self.format_res_string(result, shell_name):
+                    if isinstance(line, str):
+                        logger.info(line)
+                    elif isinstance(line,tuple):
+                        logger.info(line[0],line[1])
 
-    def format_res_string(self, res):
+    def format_res_string(self, res, shell_name):
         """ Returns a good-looking string presenting the results.
         The argument the tuple ((fin,born,spole,dpole,me_pow), p_out)."""
+        
+        main_color='$MG:color:BLUE'
         
         def special_float_format(float):
             return '%s%.16e'%('' if float<0.0 else ' ',float)
         
-        so_order_names = res('Split_Orders_Names')
+        so_order_names = res['Split_Orders_Names']
         
         def format_so_orders(so_orders):
             return ' '.join(['%s=%d'%(so_order_names[i],so_orders[i]) for i in
                                                          range(len(so_orders))])
 
-        ASCII_bar = ''.join(['='*96])
-        if res['export_format']=='Default':
-            str_lines = ['\n'+ASCII_bar,
-                  '|| Results for process %s',
-                  ASCII_bar,
-                  '|| Phase-Space point specification (E,px,py,pz)\n',
-                  '\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                     for pmom in res['res_p']]),
-                  '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
-                  '|    Born        = %s'%special_float_format(res['born']),
-                  '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
-                  '|    Accuracy    = %s'%special_float_format(res['accuracy']),
-                  '|    Finite      = %s'%special_float_format(res['finite']),
-                  '|    Single pole = %s'%special_float_format(res['1eps']),
-                  '|    Double pole = %s'%special_float_format(res['2eps'])]
-        elif res['export_format']=='LoopInduced':
-            str_lines = ['\n'+ASCII_bar,
-                  '|| Results for process %s (Loop-induced)',
-                  ASCII_bar,
-                  '|| Phase-Space point specification (E,px,py,pz)\n',
-                  '\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                     for pmom in res['res_p']]),
-                  '\n|| Loop amplitude squared, must be finite:',
-                  '|    Accuracy    = %s'%special_float_format(res['accuracy']),
-                  '|    Finite      = %s'%special_float_format(res['finite']),
-                  '(\n|| Pole residues, indicated only for checking purposes: )',
-                  '(|    Single pole = %s )'%special_float_format(res['1eps']),
-                  '(|    Double pole = %s )'%special_float_format(res['2eps'])
-                  ]
+        ASCII_bar = ('|'+''.join(['='*96]),main_color)
         
-        str_lines.append(ASCII_bar)
-        units = res['return_code']%10
-        tens = (res['return_code']%100 - units)/10
-        hundreds = (res['return_code']-tens*10-units)/100
-        if hundreds==1:
-            if tens==3 or tens==4:
-                str_lines.append('|| Unknown numerical stability because'+\
-                                     ' MadLoop is in the initialization stage.')
+        ret_code_h = res['return_code']//100
+        ret_code_t = (res['return_code']-100*ret_code_h)//10
+        ret_code_u = res['return_code']%10
+        StabilityOutput=[]
+        if ret_code_h==1:
+            if ret_code_t==3 or ret_code_t==4:
+                StabilityOutput.append('| Unknown numerical stability because '+\
+                                      'MadLoop is in the initialization stage.')
             else:
-                str_lines.append('||ÊUnknown numerical stability, check '+\
-                                        'CTModeRun value in MadLoopParams.dat.')
-        elif hundreds==2:
-            str_lines.append('||ÊStable kinematic configuration (SPS).')
-        elif hundreds==3:
-            str_lines.append('||ÊUnstable kinematic configuration (UPS).')            
-            str_lines.append('|  Quadruple precision rescue successful.')
-        elif hundreds==4:
-            str_lines.append('||ÊExceptional kinematic configuration (EPS).')
-            str_lines.append('|  Both double an quadruple precision '+\
-                                                  'computations, are unstable.')
-        if tens==2 or tens==4:
-            str_lines.append('|  Quadruple precision computation used.')
-        if hundreds==1:
+                StabilityOutput.append('| Unknown numerical stability, check '+\
+                                        'CTRunMode value in MadLoopParams.dat.')
+        elif ret_code_h==2:
+            StabilityOutput.append('| Stable kinematic configuration (SPS).')
+        elif ret_code_h==3:
+            StabilityOutput.append('| Unstable kinematic configuration (UPS).')
+            StabilityOutput.append('| Quadruple precision rescue successful.')            
+        elif ret_code_h==4:
+            StabilityOutput.append('| Exceptional kinematic configuration (EPS).')
+            StabilityOutput.append('| Both double and quadruple precision'+\
+                                                  ' computations are unstable.')
+        
+        if ret_code_t==2 or ret_code_t==4:
+            StabilityOutput.append('| Quadruple precision was used for this'+\
+                                                                 'computation.')
+        if ret_code_h!=1:
             if res['accuracy']>0.0:
-                str_lines.append('|  Relative accuracy  = %.2e'%res['accuracy'])
+                StabilityOutput.append('| Estimated relative accuracy = %.1e'\
+                                                               %res['accuracy'])
             elif res['accuracy']==0.0:
-                str_lines.append('|  Relative accuracy  = 0.0 '+\
-                                                    '(beyond double precision)')
+                StabilityOutput.append('| Estimated relative accuracy = %.1e'\
+                             %res['accuracy']+' (i.e. beyond double precision)')
             else:
-                str_lines.append('|  Estimated accuracy could not be computed'+\
-                                                      ' for an unknown reason.')
-        str_lines.append(ASCII_bar)
+                StabilityOutput.append('| Estimated accuracy could not be '+\
+                                              'computed for an unknown reason.')
+
+        PS_point_spec = ['|| Phase-Space point specification (E,px,py,pz)','|']
+        PS_point_spec.append('\n'.join(['| '+' '.join(['%s'%\
+           special_float_format(pi) for pi in pmom]) for pmom in res['res_p']]))
+        PS_point_spec.append('|')
         
-        if len(res['Born_SO_results'])==1:
-            str_lines.append('|| All Born contributions are of order (%s)'\
+        str_lines=[]
+        
+        if res['export_format']=='Default':
+            str_lines.extend(['\n',ASCII_bar,
+  ('|| Results for process %s'%shell_name,main_color),
+  ASCII_bar]+PS_point_spec+StabilityOutput+[
+  '|',
+  ('|| Total Born contribution (GeV^%d):'%res['gev_pow'],main_color),
+  ('|    Born        = %s'%special_float_format(res['born']),main_color),
+  ('|| Total virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
+  ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
+  ('|    Single pole = %s'%special_float_format(res['1eps']),main_color),
+  ('|    Double pole = %s'%special_float_format(res['2eps']),main_color)])
+        elif res['export_format']=='LoopInduced':
+            str_lines.extend(['\n',ASCII_bar,
+  ('|| Results for process %s (Loop-induced)'%shell_name,main_color),
+  ASCII_bar]+PS_point_spec+StabilityOutput+[
+  '|',
+  ('|| Loop amplitude squared, must be finite:',main_color),
+  ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
+  '|(| Pole residues, indicated only for checking purposes: )',
+  '|(    Single pole = %s )'%special_float_format(res['1eps']),
+  '|(    Double pole = %s )'%special_float_format(res['2eps'])])
+            
+        str_lines.append('|')
+        
+        if len(res['Born_SO_Results'])==1:
+            str_lines.append('|| All Born contributions are of split orders (%s)'\
                                 %format_so_orders(res['Born_SO_Results'][0][0]))
-        else:
-            for bso_contrib in res['Born_SO_results']:
-                str_line.append('|| Born contribution of order (%s) = %s'\
+        elif len(res['Born_SO_Results'])>1:
+            for bso_contrib in res['Born_SO_Results']:
+                str_lines.append('|| Born contribution of split orders (%s) = %s'\
                                              %(format_so_orders(bso_contrib[0]),
                                   special_float_format(bso_contrib[1]['BORN'])))
+        
+        if len(so_order_names):
+            str_lines.append('|')
+
         if len(res['Loop_SO_Results'])==1:
-            str_lines.append('|| All loop contributions are of order (%s)'\
+            str_lines.append('|| All virtual contributions are of split orders (%s)'\
                                 %format_so_orders(res['Loop_SO_Results'][0][0]))
-        else:
-            for lso_contrib in res['Lorn_SO_results']:
-                str_line.append('|| Loop contribution of order (%s):'\
-                                              %format_so_orders(bso_contrib[0]))
-                str_line.append('|    Accuracy    = %s'%\
-                                   special_float_format(lso_contrib[1]['ACC'])),
-                str_line.append('|    Finite      = %s'%\
+        elif len(res['Loop_SO_Results'])>1:
+            for lso_contrib in res['Loop_SO_Results']:
+                str_lines.append('|| Virtual contribution of split orders (%s):'\
+                                              %format_so_orders(lso_contrib[0]))
+                str_lines.append('|    Accuracy    =  %.1e'%\
+                                                         lso_contrib[1]['ACC']),
+                str_lines.append('|    Finite      = %s'%\
                                    special_float_format(lso_contrib[1]['FIN'])),
                 if res['export_format']=='LoopInduced':
-                    str_line.append('(|    Single pole = %s )'%\
+                    str_lines.append('|(    Single pole = %s )'%\
                                    special_float_format(lso_contrib[1]['1EPS']))
-                    str_line.append('(|    Double pole = %s )'%\
+                    str_lines.append('|(    Double pole = %s )'%\
                                    special_float_format(lso_contrib[1]['2EPS']))
                 else:
-                    str_line.append('|    Single pole = %s'%\
+                    str_lines.append('|    Single pole = %s'%\
                                    special_float_format(lso_contrib[1]['1EPS']))
-                    str_line.append('|    Double pole = %s'%\
+                    str_lines.append('|    Double pole = %s'%\
                                    special_float_format(lso_contrib[1]['2EPS']))              
-        str_lines.append(ASCII_bar+'\n')
-        return '\n'.join(str_lines)
+        str_lines.extend([ASCII_bar,'\n'])
+
+        return str_lines
 
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """

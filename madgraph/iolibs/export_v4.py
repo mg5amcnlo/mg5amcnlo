@@ -123,7 +123,7 @@ class ProcessExporterFortran(object):
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([pjoin('bin', 'internal', 'clean_template')], \
+                    misc.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -602,10 +602,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                        {"num": (config_to_diag_dict[config][0] + 1)}
 
-                line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
-                                  {"num": a.get('number')} for a in \
+                amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
                                        idiag in config_to_diag_dict[config]], [])])
+                
+                # Not using \sum |M|^2 anymore since this creates troubles
+                # when ckm is not diagonal due to the JIM mechanism.
+                if '+' in amp:
+                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                else:
+                    line += "%s*dconjg(%s)" % (amp, amp)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
@@ -958,7 +964,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set compiler based on what's available on the system"""
                 
         # Check for compiler
-        if misc.which(default_compiler):
+        if default_compiler and misc.which(default_compiler):
             compiler = default_compiler
         elif misc.which('gfortran'):
             compiler = 'gfortran'
@@ -966,29 +972,41 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             compiler = 'g77'
         elif misc.which('f77'):
             compiler = 'f77'
-        else:
+        elif default_compiler:
             logger.warning('No Fortran Compiler detected! Please install one')
-            compiler = default_compiler
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA'):
-            self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template/LO'))
+        if not os.environ.has_key('MADGRAPH_DATA') and os.access(MG5DIR, os.W_OK):
+            self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
+        mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
 	
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
+        FC_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
         for iline, line in enumerate(lines):
             FC_result = FC_re.match(line)
             if FC_result:
+                if compiler != FC_result.group(2):
+                    mod = True
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
-        outfile = open(make_opts, 'w')
+        if not mod:
+            return
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
         outfile.write('\n'.join(lines))
 
 #===============================================================================
@@ -997,6 +1015,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 class ProcessExporterFortranSA(ProcessExporterFortran):
     """Class to take care of exporting a set of matrix elements to
     MadGraph v4 StandAlone format."""
+
+    def __init__(self, *args, **opts):
+        """add the format information compare to standard init"""
+        
+        if 'format' in opts:
+            self.format = opts['format']
+            del opts['format']
+        else:
+            self.format = 'standalone'
+        ProcessExporterFortran.__init__(self, *args, **opts)
 
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
@@ -1038,9 +1066,14 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
                     pjoin(self.dir_path, 'SubProcesses', 'makefile'))
-        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
         
+        if self.format == 'standalone':
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+        elif self.format == 'standalone_rw':
+            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'driver_reweight.f'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
+                        
         # Add file in Source
         shutil.copy(pjoin(temp_dir, 'Source', 'make_opts'), 
                     pjoin(self.dir_path, 'Source'))        
@@ -1128,7 +1161,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
 
-        if self.opt['sa_for_decay']:
+        if self.opt['sa_symmetry']:
             # avoid symmetric output
             proc = matrix_element.get('processes')[0]
             leg0 = proc.get('legs')[0]
@@ -1234,13 +1267,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
             
-        if not self.opt.has_key('sa_for_decay'):
-            self.opt['sa_for_decay']=False
+        if not self.opt.has_key('sa_symmetry'):
+            self.opt['sa_symmetry']=False
 
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        replace_dict = {}
+        replace_dict = {'global_variable':'', 'amp2_lines':''}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -1289,9 +1322,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         color_data_lines = self.get_color_data_lines(matrix_element)
         replace_dict['color_data_lines'] = "\n".join(color_data_lines)
 
-        if self.opt['sa_for_decay'] :
+        # For MadSpin need to return the AMP2
+        if self.format == 'standalone_ms':
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+            replace_dict['global_variable'] = "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
 
         # JAMP definition, depends on the number of independent split orders
         split_orders=matrix_element.get('processes')[0].get('split_orders')
@@ -1320,20 +1355,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                                     squared_orders,split_orders,check_sa_writer)
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
-        if not self.opt['sa_for_decay'] :
-            if len(split_orders)>0:
-                file = open(pjoin(_file_path, \
-              'iolibs/template_files/matrix_standalone_splitOrders_v4.inc')).read()
-            else:
-                file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_v4.inc')).read()
-        else:
-            if len(split_orders)>0:
-                logger.warning('The split order option is not available for'+\
-                                                        ' MadSpin output mode.')
+        if len(split_orders)>0:
             file = open(pjoin(_file_path, \
-                          'iolibs/template_files/matrix_standalone_ms_v4.inc')).read()
-         
+              'iolibs/template_files/matrix_standalone_splitOrders_v4.inc')).read()
+        else:
+            file = open(pjoin(_file_path, \
+                          'iolibs/template_files/matrix_standalone_v4.inc')).read()
+
         file = file % replace_dict
 
         # Write the file
@@ -1465,7 +1493,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 model.restrict_card.write(out_path)
             else:
                 files.cp(model.restrict_card, out_path)
-
                 
     #===========================================================================
     # export model files
@@ -1628,7 +1655,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
@@ -2097,9 +2124,10 @@ c           This is dummy particle used in multiparticle vertices
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        configs = [(i+1, d) for i,d in enumerate(matrix_element.get('diagrams'))]
-        mapconfigs = [c[0] for c in configs]
         model = matrix_element.get('processes')[0].get('model')
+        configs = [(i+1, d) for (i, d) in \
+                       enumerate(matrix_element.get('diagrams'))]
+        mapconfigs = [c[0] for c in configs]
         return mapconfigs, self.write_configs_file_from_diagrams(writer,
                                                             [[c[1]] for c in configs],
                                                             mapconfigs,
@@ -2167,7 +2195,8 @@ c           This is dummy particle used in multiparticle vertices
                     # get_s_and_t_channels gives vertices starting from
                     # final state external particles and working inwards
                     stchannels.append(h.get('amplitudes')[0].\
-                                      get_s_and_t_channels(ninitial, new_pdg))
+                                      get_s_and_t_channels(ninitial, model,
+                                                           new_pdg))
                 else:
                     stchannels.append((empty_verts, None))
 
@@ -2856,7 +2885,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
@@ -3327,7 +3356,7 @@ class UFO_model_to_mg4(object):
         if self.opt['export_format'] in ['madloop','madloop_optimized']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'] in ['standalone', 'standalone_ms']:
+        elif self.opt['export_format'].startswith('standalone'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -3351,7 +3380,8 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
 
-        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 'madloop','madloop_optimized']:
+        elif self.opt['export_format'] in ['standalone', 'standalone_ms', 
+                            'madloop','madloop_optimized', 'standalone_rw']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         else:
@@ -3579,18 +3609,32 @@ class UFO_model_to_mg4(object):
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
-            if mp:
+            elif mp:
                 fsock.writelines("%s%s = %s\n" % (self.mp_prefix,param.name,
                                             self.mp_p_to_f.parse(param.expr)))
-        if dp:
-            fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
-            fsock.writelines(""" gal(1) = 1d0
+
+        fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
+        if ('aEWM1',) in self.model['parameters']:
+            if dp:
+                fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                                 gal(2) = 1d0
+                         """)
+            elif mp:
+                fsock.writelines(""" %(mp_prefix)sgal(1) = 2 * SQRT(MP__PI/MP__aEWM1)
+                                 %(mp_prefix)sgal(2) = 1d0 
+                                 """ %{'mp_prefix':self.mp_prefix})
+                pass
+        else:
+            if dp:
+                logger.warning('$RED aEWM1 not define in MODEL. AQED will not be written correcty in LHE FILE')
+                fsock.writelines(""" gal(1) = 1d0
                                  gal(2) = 1d0
                              """)
-        if mp:
-            fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
+            elif mp:
+                fsock.writelines(""" %(mp_prefix)sgal(1) = 1e0_16
                                  %(mp_prefix)sgal(2) = 1e0_16
                              """%{'mp_prefix':self.mp_prefix})
+
     
     def create_couplings(self):
         """ create couplings.f and all couplingsX.f """
@@ -4060,18 +4104,23 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
         opt = {'clean': not noclean,
                'complex_mass': cmd.options['complex_mass_scheme'],
                'export_format':cmd._export_format,
-               'mp': False,  'sa_for_decay':False, 'model': cmd._curr_model.get('name') }
+               'mp': False,  
+               'sa_symmetry':False, 
+               'model': cmd._curr_model.get('name') }
 
-        if cmd._export_format=='standalone_ms':
-            opt['sa_for_decay'] = True        
+        format = cmd._export_format #shortcut
+
+        if format in ['standalone_ms', 'standalone_rw']:
+            opt['sa_symmetry'] = True        
     
-        if cmd._export_format in ['standalone', 'matrix','standalone_ms']:
-            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt)
+        if format == 'matrix' or format.startswith('standalone'):
+            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
+                                            format=format)
         
-        elif cmd._export_format in ['madevent'] and group_subprocesses:
+        elif format in ['madevent'] and group_subprocesses:
             return  ProcessExporterFortranMEGroup(cmd._mgme_dir, cmd._export_dir,
                                                                             opt)
-        elif cmd._export_format in ['madevent']:
+        elif format in ['madevent']:
             return ProcessExporterFortranME(cmd._mgme_dir, cmd._export_dir,opt)
         
         else:
