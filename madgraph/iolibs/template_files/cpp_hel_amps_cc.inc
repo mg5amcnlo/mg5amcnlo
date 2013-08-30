@@ -4,6 +4,11 @@
 //==========================================================================
 
 #include "HelAmps_%(model_name)s.h"
+#include <complex>
+#include <cmath>
+#include <iostream>
+#include <cstdlib>
+using namespace std;
 
 namespace %(namespace)s_%(model_name)s {
 

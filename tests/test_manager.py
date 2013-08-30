@@ -44,6 +44,7 @@ import unittest
 import time
 import datetime
 import shutil
+import glob
 from functools import wraps
 
 #Add the ROOT dir to the current PYTHONPATH
@@ -135,6 +136,55 @@ def set_global(loop=False, unitary=True, mp=False, cms=False):
             return out
         return deco_f_set
     return deco_set
+
+#===============================================================================
+# listIOTests
+#===============================================================================
+
+def listIOTests(arg=['']):
+    """ Listing the IOtests associated to expression and returning them as a
+    list of tuples (folderName,testName).     
+    """
+    
+    if len(arg)!=1 or not isinstance(arg[0],str):
+        print "Exactly one argument, and in must be a string, not %s."%arg
+        return
+    arg=arg[0]
+    
+    IOTestManager.testFolders_filter = arg.split('/')[0].split('&')
+    IOTestManager.testNames_filter = arg.split('/')[1].split('&')    
+    IOTestManager.filesChecked_filter = '/'.join(arg.split('/')[2:]).split('&')
+ 
+    all_tests = []
+    
+    # The version below loads the test so it is slow because all tests are setUp
+    # and therefore loaded. The other method is however less accurate because it
+    # might be that the reference file have not been generated yet
+#    for IOTestsClass in IOTestFinder():
+#        IOTestsClass().setUp()
+#    all_tests = IOTestManager.all_tests.keys()
+    
+    # Extract the tarball for hardcoded comparison if necessary
+    if not path.isdir(_hc_comparison_files):
+        if path.isfile(_hc_comparison_tarball):
+            tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+            tar.extractall(path.dirname(_hc_comparison_files))
+            tar.close()
+        else:
+            os.makedirs(_hc_comparison_files)
+
+    # We look through the uncompressed tarball for the name of the folders and
+    # test. It is however less accurate since it might be that some test
+    # reference folder have not been generated yet
+    for dirPath in glob.glob(path.join(_hc_comparison_files,"*")):
+        if path.isdir(dirPath): 
+            folderName=path.basename(dirPath)
+            for testPath in glob.glob(path.join(_hc_comparison_files,\
+                                                               folderName,"*")):
+                if path.isdir(testPath):
+                    all_tests.append((folderName,path.basename(testPath)))                  
+
+    return all_tests
 
 #===============================================================================
 # runIOTests
@@ -638,7 +688,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     If you prepend '+' to the folder or test name, then you will include all 
     items in this category which starts with what follows '+'.
     > Ex. '+short' includes all IOTests starting with 'short'
-    To bypass the monitoring of the modification, you can use -f.
+    To bypass the monitoring of the modifications of the files with a name of
+    a file already reviewed, you can use -f. To bypass ALL monitoring, use -F
+    (this is not recommended).
     
     Finally, you can run the test only from here too. Same synthax as above,
     but use the option -i R.
@@ -700,6 +752,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path)
     else:
+        if options.IOTests=='L':
+            print "Listing all tests defined in the reference tarball..."
+            print '\n'.join("> %s/%s"%test for test in listIOTests(args) if\
+                                            IOTestManager.need(test[0],test[1]))
+            exit()
         if options.force:
             force = 10
         elif options.semiForce:

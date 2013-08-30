@@ -492,9 +492,9 @@ class MatrixElementEvaluator(object):
         if nincoming == 1:
 
             # Momenta for the incoming particle
-            p.append([m1, 0., 0., 0.])
+            p.append([abs(m1), 0., 0., 0.])
 
-            p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+            p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
 
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
             for i in range(1, nfinal+1):
@@ -1959,9 +1959,11 @@ def generate_loop_matrix_element(process_definition, reuse,
                                                 ldiag.get('loop_wavefunctions')]
         timing['n_loop_wfs']=len(lwfs)
         timing['loop_wfs_ranks']=[]
-        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+        for rank in range(0,max([l.get_analytic_info('wavefunction_rank') \
+                                                             for l in lwfs])+1):
             timing['loop_wfs_ranks'].append(\
-                                  len([1 for l in lwfs if l.get('rank')==rank]))
+                len([1 for l in lwfs if \
+                               l.get_analytic_info('wavefunction_rank')==rank]))
     
     return timing, matrix_element
 

@@ -29,6 +29,7 @@ c general MadFKS parameters
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
+     $     ,virt_wgts_hel(3),born_wgt_recomputed,born_wgt_recomp_direct
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -54,6 +55,10 @@ c general MadFKS parameters
       double precision tolerance,prec_found
       integer i,j
       integer nbad, nbadmax
+      double precision target,ran2,accum
+      external ran2
+      double precision wgt_hel(max_bhel)
+      common/c_born_hel/wgt_hel
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
@@ -83,7 +88,7 @@ c Ellis-Sexton scale)
       if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=IRPoleCheckThreshold/10d0
+         tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
          call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
@@ -99,22 +104,45 @@ c once the initial pole check is performed.
             virt_wgt= virt_wgts(1)/dble(ngluons)
             single  = virt_wgts(2)/dble(ngluons)
             double  = virt_wgts(3)/dble(ngluons)
-         else
-c Get random integer from importance sampling (the return value is
-c filled in driver_mintMC.f; we cannot do it here, because we need to
-c include the phase-space jacobians and all that)
-            call get_MC_integer(2,hel(0),ihel,volh)
-            fillh=.true.
-            do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
-               call sloopmatrixhel_thres(p,hel(i),virt_wgts,tolerance
-     $              ,prec_found,ret_code)
-               virt_wgt= virt_wgt +
-     &              virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
-               single  = single   +
-     &              virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
-               double  = double   +
-     &              virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+         elseif (mc_hel.eq.1) then
+c Use the Born helicity amplitudes to sample the helicities of the
+c virtual as flat as possible
+            call sborn_hel(p,born_wgt_recomp_direct)
+            born_wgt_recomputed=0d0
+            do ihel=1,hel(0)
+               born_wgt_recomputed=born_wgt_recomputed
+     $              +wgt_hel(hel(ihel))*dble(goodhel(ihel))
             enddo
+            if (abs(1d0-born_wgt/born_wgt_recomputed).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA',born_wgt
+     $              ,born_wgt_recomputed
+               stop
+            endif
+            if (abs(1d0-born_wgt/born_wgt_recomp_direct).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA direct'
+     $              ,born_wgt,born_wgt_recomp_direct
+               stop
+            endif
+            target=ran2()*born_wgt_recomputed
+            ihel=1
+            accum=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            do while (accum.lt.target) 
+               ihel=ihel+1
+               accum=accum+wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            enddo
+            volh=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+     $           /born_wgt_recomputed
+c$$$            call get_MC_integer(2,hel(0),ihel,volh)
+c$$$            fillh=.true.
+            fillh=.false.
+            call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
+     $           ,tolerance,prec_found,ret_code)
+            virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            single   = single   + virt_wgts_hel(2)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            double   = double   + virt_wgts_hel(3)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then
@@ -122,9 +150,10 @@ c account)
      &              'Cannot do MC over helicities for 1->N processes'
                stop
             endif
-            virt_wgt= virt_wgt/4d0/dble(ngluons)
-            single  = single/4d0/dble(ngluons)
-            double  = double/4d0/dble(ngluons)
+         else
+            write (*,*) 'Can only do sum over helicities,'/
+     $           /' or pure MC over helicities',mc_hel
+            stop
          endif
       endif
       

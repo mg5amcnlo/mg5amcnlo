@@ -36,13 +36,15 @@ c     instead of stopping the code, as this might accidentally happen.
       endif
 
       ipart=ipdg
-      if(ipart.eq.21) ipart=0
+      if(iabs(ipart).eq.21) ipart=0
       if(iabs(ipart).eq.22) ipart=7
       iporg=ipart
 
 c     This will be called for any PDG code, but we only support up to 7
       if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
+         write(*,*) 'For lepton colliders, please set the lpp* '//
+     $    'variables to 0 in the run_card'  
          open(unit=26,file='../../../error',status='unknown')
          write(26,*) 'Error: PDF not supported for pdg ',ipdg
          stop 1
@@ -70,9 +72,11 @@ c     Check if result can be reused since any of last two calls
       enddo
 
 c     Reuse previous result, if possible
-      if (ireuse.gt.0.and.pdflast(iporg,ireuse).ne.-99d9) then
-         pdg2pdf=pdflast(iporg,ireuse)
-         return 
+      if (ireuse.gt.0) then
+         if (pdflast(iporg,ireuse).ne.-99d9) then
+            pdg2pdf=pdflast(iporg,ireuse)
+            return 
+         endif
       endif
 
 c     Bjorken x and/or facrorization scale and/or PDF set are not
