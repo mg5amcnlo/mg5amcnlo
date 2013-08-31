@@ -11,6 +11,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
                       OM+SF+RF: Add Frixione Photon isolation
                       PA+OM: Fast version of MadSpin implemented (PS generation in Fortran).
+		      VH+RF: Improved the Binoth LHA interface
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 

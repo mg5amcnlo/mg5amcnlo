@@ -2219,7 +2219,8 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
-                     pjoin(cwd, 'FKS_params.dat')]
+                     pjoin(cwd, 'FKS_params.dat'),
+                     pjoin(cwd, 'OLE_order.olc')]
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2440,7 +2441,8 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card:
+        if not '[real=QCD]' in proc_card and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
