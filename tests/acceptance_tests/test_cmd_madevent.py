@@ -485,7 +485,6 @@ class TestMEfromPdirectory(unittest.TestCase):
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
-        print data[0].parton
         self.assertTrue('lhe' in data[0].parton)
         if cross:
             self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)

@@ -525,7 +525,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if model_name:
             self.load_model(model_name, mg_names, complex_mass)
         else:
-            raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')
+            raise self.InvalidCmd('Only UFO model can be loaded in this module.')
         
         mgcmd = self.mg5cmd
         modelpath = self.model.get('modelpath')

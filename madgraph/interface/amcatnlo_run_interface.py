@@ -1435,47 +1435,6 @@ Integrated cross-section
               '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
-        # Recuperate the fraction of unstable PS points found in the runs for the
-        # virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
-             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
-             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
-             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
-             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
-             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
-             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
-             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
-             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
-#        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
-#                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
-#                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
-        for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
-            UPS_stats = re.search(UPS_stat_finder,logfile.read())
-            logfile.close()
-            if not UPS_stats is None:
-                channel_name = '/'.join(gv_log.split('/')[-5:-1])
-                try:
-                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
-                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
-                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
-                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
-                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
-                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
-                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
-                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
-                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
-                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
-                except KeyError:
-                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
-                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
-                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
-                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
-                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         # Find the number of potential errors found in all log files
         # This re is a simple match on a case-insensitve 'error' but there is 
         # also some veto added for excluding the sentence 
@@ -1527,7 +1486,6 @@ Integrated cross-section
                          self.run_card['parton_shower'],
                          neg_frac, 
                          misc.format_timer(time.time()-self.start_time))
-                   
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (cross-section is non-physical):',
@@ -1546,7 +1504,48 @@ Integrated cross-section
             logger.info(message+'\n')
             return
 
-        # Now display the general statistics
+# Now display the general statistics
+# Recuperate the fraction of unstable PS points found in the runs for
+# the virtuals
+        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
+#        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
+#                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
+#                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')             
+            UPS_stats = re.search(UPS_stat_finder,logfile.read())
+            logfile.close()
+            if not UPS_stats is None:
+                channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                try:
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
+                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
+                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
+                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
+                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
+                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
+                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
+                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
+                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
+                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
+                except KeyError:
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
+                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
+                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
+                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
+                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
+                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -2220,7 +2219,8 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
-                     pjoin(cwd, 'FKS_params.dat')]
+                     pjoin(cwd, 'FKS_params.dat'),
+                     pjoin(cwd, 'OLE_order.olc')]
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2441,7 +2441,8 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card:
+        if not '[real=QCD]' in proc_card and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')

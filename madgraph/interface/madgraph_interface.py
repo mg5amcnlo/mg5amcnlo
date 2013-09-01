@@ -608,6 +608,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
+        logger.info("OLP ProgramName",'$MG:color:BLACK')
+        logger.info(" > (default 'MadLoop') [Used for virtual generation]")
+        logger.info(" > Chooses what One-Loop Program to use for the virtual")
+        logger.info(" > matrix element generation via the BLAH accord.")
        
 #===============================================================================
 # CheckValidForCmd
@@ -1127,7 +1131,10 @@ This will take effect only in a NEW terminal
         if args[0] in ['timeout']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
-            
+        
+        if args[0] in ['OLP']:
+            if args[1] not in MadGraphCmd._OLP_supported:
+                raise self.InvalidCmd('timeout values should be a integer')    
 
             
     def check_open(self, args):
@@ -1887,9 +1894,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
+            elif args[1] == 'OLP':
+                return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'stdout_level':
-                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL','default'])
-        
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
+                                                          'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'nb_core':
@@ -2109,8 +2118,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
                      'MCatNLO-utilities','update', 'Delphes2']
-    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix',
-                          'standalone_rw'] 
+    _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
+                          'matrix', 'standalone_rw'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2120,6 +2129,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _OLP_supported = ['MadLoop', 'GoSam']
 
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
@@ -2142,7 +2152,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
-                       'cluster_temp_path':None
+                       'cluster_temp_path':None,
+                       'OLP': 'MadLoop',
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2228,8 +2239,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
 
-        self._v4_export_formats = ['madevent', 'standalone','standalone_ms',
-                                    'matrix', 'standalone_rw'] 
+        self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
+                                   'matrix', 'standalone_rw'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
     
@@ -2346,6 +2357,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Define a multiparticle"""
 
         self.avoid_history_duplicate('define %s' % line, ['define'])
+        if not self._curr_model:
+            self.do_import('model sm')
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -3676,7 +3689,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]
                 if not mother[0] > 0:
-                    child = [-id for id in child]
+                    child = [x if self._curr_model.get_particle(x)['self_antipart'] 
+                             else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
 
@@ -3693,6 +3707,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     for decay in amp.get('decay_chains'):
                         remove_amp(decay.get('amplitudes'))
         remove_amp(self._curr_amps) 
+        
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -4628,14 +4643,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # They are a valid model
             able_to_mod = True
             if args[1] == 'unitary':
-                if 1 in self._curr_model.get('gauge'):		   
+                if 0 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = True
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             else:
-                if 0 in self._curr_model.get('gauge'):		   
+                if 1 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = False
                 else:
                     able_to_mod = False
@@ -4729,6 +4744,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             self.options[args[0]] = (int(first), int(second))
              
+        elif args[0] == 'OLP':
+            # Reset the amplitudes, MatrixElements and exporter as they might
+            # depend on this option
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self._curr_exporter = None
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -4828,13 +4851,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # exporter: which exporter to use (v4/cpp/...)
         # output: [Template/dir/None] copy the Template, just create dir or do nothing
         config = {}
-        config['madevent'] =      {'check': True,  'exporter': 'v4',  'output':'Template'}
-        config['matrix'] =        {'check': False, 'exporter': 'v4',  'output':'dir'}
-        config['standalone'] =    {'check': False, 'exporter': 'v4',  'output':'Template'}
-        config['standalone_ms'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
-        config['standalone_rw'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
-        config['standalone_cpp'] ={'check': False, 'exporter': 'cpp', 'output': 'Template'}
-        config['pythia8'] =       {'check': False, 'exporter': 'cpp', 'output':'dir'}
+        config['madevent'] =       {'check': True,  'exporter': 'v4',  'output':'Template'}
+        config['matrix'] =         {'check': False, 'exporter': 'v4',  'output':'dir'}
+        config['standalone'] =     {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_msF'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_msP'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
+        config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
         
         
         options = config[self._export_format]
@@ -4859,12 +4883,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
         if  options['exporter'] == 'cpp' and options['output'] == 'Template':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-            
-            
+
         if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
-            
-            
+
+
         # Reset _done_export, since we have new directory
         self._done_export = False
 
@@ -4888,7 +4911,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             """Helper function to generate the matrix elements before
             exporting"""
 
-            if self._export_format in ['standalone_ms', 'standalone_mw']:
+            if self._export_format in ['standalone_msP', 'standalone_msF', 'standalone_mw']:
                 to_distinguish = []
                 for part in self._curr_model.get('particles'):
                     if part.get('name') in args and part.get('antiname') in args and\
@@ -4945,7 +4968,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
                     mode = {}
-                    if self._export_format in ['standalone_ms', 'standalone_rw']:
+                    if self._export_format in [ 'standalone_msP' , 'standalone_msF', 'standalone_rw']:
                         mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
                        helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
@@ -4969,7 +4992,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 
-                                   'standalone_ms', 'standalone_rw']:
+                                   'standalone_msP', 'standalone_msF', 'standalone_rw']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -5040,7 +5063,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
-        if self._export_format in ['standalone', 'standalone_ms', 'standalone_rw']:
+        if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -5103,8 +5126,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 
-                                   'standalone_rw', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
+                                   'standalone_msF', 'standalone_rw', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -5206,7 +5229,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms',
+        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
                                    'standalone_rw']:
             
             self._curr_exporter.finalize_v4_directory( \
