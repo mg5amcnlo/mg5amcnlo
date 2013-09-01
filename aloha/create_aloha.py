@@ -46,7 +46,7 @@ _conjugate_gap = 50
 _spin2_mult = 1000
 
 
-class ALOHAERROR(Exception): pass
+ALOHAERROR = aloha.ALOHAERROR
 
 class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
