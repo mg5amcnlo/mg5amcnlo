@@ -287,7 +287,7 @@ in presence of majorana particle/flow violation"""
                 elif propa == []:
                     massless = False
                 else:
-                    lorentz *= self.get_custom_propa(propa[0], spin, id)
+                    lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
                 
                 
@@ -300,10 +300,10 @@ in presence of majorana particle/flow violation"""
                         id += _conjugate_gap + id % 2 - (id +1) % 2
                     if (id % 2):
                         #propagator outcoming
-                        lorentz *= SpinorPropagatorout(id, 'I2', outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorout(id, 'I2', outgoing)
                     else:
                     #    #propagator incoming
-                        lorentz *= SpinorPropagatorin('I2', id, outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     if massless or not aloha.unitary_gauge: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
@@ -317,21 +317,21 @@ in presence of majorana particle/flow violation"""
                         spin_id = id
                     nb_spinor += 1
                     if not massless and (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     elif not massless and not (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
                     elif spin_id %2:
-                        lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
                     else :
-                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
           
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if massless:
-                        lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2masslessPropagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3')
                     else:
-                        lorentz *= Spin2Propagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2Propagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(

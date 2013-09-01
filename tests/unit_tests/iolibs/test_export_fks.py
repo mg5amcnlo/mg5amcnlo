@@ -123,12 +123,14 @@ class IOExportFKSTest(unittest.TestCase,
         goal = \
 """#OLE_order written by MadGraph 5
 
-MatrixElementSquareType CHsummed
+MatrixElementSquareType CHaveraged
 CorrectionType          QCD
 IRregularisation        CDR
 AlphasPower             2
 AlphaPower              0
 NJetSymmetrizeFinal     Yes
+ModelFile               ./param_card.dat
+Parameters              alpha_s
 
 # process
 21 21 -> 6 -6 
@@ -136,7 +138,7 @@ NJetSymmetrizeFinal     Yes
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_lh_order(\
             self.give_pos('test'),\
-            self.myfks_me)
+            self.myfks_me, 'MadLoop')
         self.assertFileContains('test', goal)
 
 
