@@ -1,15 +1,17 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-2.0.0.beta4(xx/xx/xx) OM: Merge with 1.5.9 (See informtation below)
+
+2.0.0.beta4(xx/xx/xx) OM: Merge with 1.5.9-12 (See informtation below)
                       VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
                       VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
-		      RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
-                           only). Turned off by default.
+		      RF: Use MC over helicities for the MadLoop virtual corrections.
 		      VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
-                      OM+SF+RF: Add Frixione Jet isolation
+                      OM+SF+RF: Add Frixione Photon isolation
+                      PA+OM: Fast version of MadSpin implemented (PS generation in Fortran).
+		      VH+RF: Improved the Binoth LHA interface
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
@@ -45,6 +47,61 @@ Update notes for MadGraph 5 (in reverse time order)
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
+
+1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
+                      the cross-section were slightly (~4%) under-evaluated due to such strong cut.
+                  OM: Add a command print_results in the madevent interface. This command print the 
+                      cross-section/number of events/... 
+                  OM: change the way prompt color is handle (no systematic reset). Which provides better
+                      result when the log is printed to a file. (thanks Bae Taegil) 
+                  OM: Fix Bug #1199514: Wrong assignment of mass in the lhe events file if the initial 
+                      state has one massive and one massless particles. (Thanks Wojciech Kotlarski)
+                  OM: Fix a compilation problem for SLC6 for the installation of pythia-pgs
+                  OM: Fix a crash linked to bug #1209113.
+                  OM: Fix a crash if python is not a valid executation (Bug #1211777)
+		  OM: Fix a bug in the edition of the run_card if some parameters were missing in the cards
+                      (Bug #1183334)
+
+1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
+                      one W decaying leptonically. For such processes the lepton cuts were also used
+                      on the neutrino particle reducing the cross-section. This bug was present only
+                      for group_subprocesses=True (the default)
+                  OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                      LINUX computer only)
+                  OM: The compilation of madevent is now performed by the number of core specify
+                      in the configuration file. Same for pythia, ...
+                  OM: Improve support for Read-Only system
+                  OM: Fix a bug with the detection of the compiler when user specifiy a specific
+                      compiler.
+                  OM: Fix a problem that MG5 fails to compute the cross-section/width after that 
+                      a first computation fails to integrate due to a wrong mass spectrum. 
+                  OM: Fix a wrong output (impossible to compile) for pythia in presence of photon/gluon
+                      propagator (introduce in 1.5.8)
+                  OM: Allow to have UFO model with "goldstone" attribute instead of "GoldstoneBoson", since
+                      FR change convention in order to match the UFO paper.
+
+1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
+                      massless propagator. (introduce in 1.5.9)
+                  OM: Fix question #226810: checking that patch program exists before
+                      trying to update MG5 code.
+                  OM: Fix Bug #1171049: an error in the order of wavefunctions 
+                      making the code to crash (introduce in 1.5.7)
+		  OM: Allow to use an additional syntax for the set command.
+                      set gauge = Feynman is now valid. (Was not valid before due to the '=')
+                  OM: Fix By Arian Abrahantes. Fix SGE cluster which was not working when
+                      running full simulation (PGS/Delphes).
+                  OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
+                      written the routine) 
+                  OM: Fix Bug #1177442. This crash occurs only for very large model. 
+                      None of the model shipped with MG5 are impacted.
+                  OM: Fix Question #228315. On some filesystem, some of the executable 
+                      loose the permission to be executable. Recover those errors 
+                      automatically.
+                  OM: Modify the diagram enhancement technique. When more diagram have 
+                      the same propagator structure we still combine them but we now include
+                      the interference term in the enhancement technique for those diagrams.
+                      This fix a crash for some multi-jet process in presence of non diagonal
+                      ckm matrices.
 
 1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
                       give the wrong propagators included in event files for certain

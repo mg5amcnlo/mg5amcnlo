@@ -44,13 +44,13 @@ C ----------
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
-c             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
+             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
                  T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
                ANS=ANS+T
-c               IF (T .NE. 0D0) THEN
-c                   GOODHEL(IHEL)=.TRUE.
-c               ENDIF
-c             ENDIF
+               IF (T .NE. 0D0) THEN
+                   GOODHEL(IHEL)=.TRUE.
+               ENDIF
+             ENDIF
           ENDDO
       ANS=ANS/DBLE(IDEN)
       END
@@ -98,8 +98,6 @@ C
 C GLOBAL VARIABLES
 C  
       include 'coupl.inc'
-      Double Precision amp2(NGRAPHS)
-      common/to_amps/  amp2
 C  
 C COLOR DATA
 C  
@@ -118,5 +116,5 @@ C ----------
           ENDDO
           MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
-%(amp2_lines)s
+
       END

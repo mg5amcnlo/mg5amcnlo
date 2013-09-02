@@ -30,10 +30,13 @@ class ShowerCard(dict):
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
-    path_vars = ['hwpppath', 'thepegpath', 'hepmcpath','py8path']
+    path_vars = ['hwpppath', 'thepegpath', 'hepmcpath', 'lhapdfpath', 'py8path']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
-    int_vars = ['maxprint','nevents','rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
-    float_vars = ['maxerrs', 'lambda_5']
+    for i in range(1,100):
+        dmstring='dm_'+str(i)
+        string_vars.append(dmstring)
+    int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
+    float_vars = ['maxerrs', 'lambda_5', 'b_mass']
 
     # names_dict has the following structure:
     # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIGPP: varhwpp, PYTHIA8: varpy8}
@@ -42,6 +45,7 @@ class ShowerCard(dict):
     # used / written for thar mc
     names_dict = {\
             'ue_enabled' : {'HERWIG6':'lhsoft', 'PYTHIA6': 'mstp_81', 'HERWIGPP': 'ue_hwpp', 'PYTHIA8': 'ue_py8'},
+            'pdfcode' : {'HERWIG6':'pdfcode', 'PYTHIA6': 'pdfcode', 'HERWIGPP': 'pdfcode', 'PYTHIA8': 'pdfcode'},
             'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents', 'PYTHIA8': 'nevents'},
             'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp', 'PYTHIA8': 'hadronize_py8'},
             'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp', 'PYTHIA8': 'b_stable_py8'},
@@ -62,7 +66,8 @@ class ShowerCard(dict):
             'modbos_1' : {'HERWIG6':'modbos_1'},
             'modbos_2' : {'HERWIG6':'modbos_2'},
             'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp', 'PYTHIA8': 'err_fr_py8'},
-            'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth'},
+            'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth', 'HERWIGPP': 'lambdaherw', 'PYTHIA8': 'lambdapyth'},
+            'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass', 'PYTHIA8': 'b_mass'},
             'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'}}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     

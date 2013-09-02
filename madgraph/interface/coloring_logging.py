@@ -46,7 +46,7 @@ class ColorFormatter(logging.Formatter):
                 new_args.append(arg)
         record.args = tuple(new_args)
         color     = COLOR_SEQ % (30 + color_choice)
-        message   = logging.Formatter.format(self, record) + RESET_SEQ
+        message   = logging.Formatter.format(self, record) + '$RESET'
         for k,v in COLORS.items():
             message = message.replace("$" + k,    COLOR_SEQ % (v+30))\
                          .replace("$BG" + k,  COLOR_SEQ % (v+40))\

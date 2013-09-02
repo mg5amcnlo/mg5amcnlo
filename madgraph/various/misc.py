@@ -172,12 +172,15 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
-def compile(arg=[], cwd=None, mode='fortran', job_specs = True ,**opt):
+def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
-    
-    command = ['make','-j2'] if job_specs else ['make']
+
+    cmd = ['make']
     try:
-        p = subprocess.Popen(command + arg, stdout=subprocess.PIPE, 
+        if nb_core > 1:
+            cmd.append('-j%s' % nb_core)
+        cmd += arg
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -261,6 +264,8 @@ def mod_compilator(directory, new='gfortran', current=None):
             current = 'gfortran'
         elif new == 'gfortran' and current is None:
             current = 'g77'
+        else:
+            current = 'g77|gfortran'
         pattern = re.compile(current)
         text= pattern.sub(new, text)
         open(name,'w').write(text)
@@ -785,6 +790,35 @@ def sprint(*args, **opt):
                '\nraised at %s at line %s ' % (filename, lineno))
     
     return 
+
+################################################################################
+# function to check if two float are approximatively equal
+################################################################################
+def equal(a,b,sig_fig=6):
+    """function to check if two float are approximatively equal"""
+    import math
+    if a:
+        power = sig_fig - int(math.log10(a))
+    else:
+        power = sig_fig
+    return ( a==b or 
+             int(a*10**power) == int(b*10**power)
+           )
+################################################################################
+# class to change directory with the "with statement"
+################################################################################
+class chdir:
+    def __init__(self, newPath):
+        self.newPath = newPath
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
+
+
 
 ################################################################################
 # TAIL FUNCTION

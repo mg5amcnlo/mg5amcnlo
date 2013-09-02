@@ -420,7 +420,14 @@ class CanonicalConfigTag(diagram_generation.DiagramTag):
 
         part = model.get_particle(leg.get('id'))
 
-        return [((leg.get('number'), part.get('spin'), part.get('color'),
+        # use charge to forbid identification of neutrino and lepton
+        # the main reason is that the cuts are different on such particles.
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+
+        return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
                  (leg.get('number'),leg.get('id'),leg.get('state')))]
         
@@ -1231,7 +1238,30 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
-                    diagram_wavefunctions.append(new_wf)
+                    # Make sure that new_wf comes before any wavefunction
+                    # which has it as mother
+                    if len(self['mothers']) == 0:
+                        #insert at the beginning
+                        if diagram_wavefunctions:
+                            wf_nb = diagram_wavefunctions[0].get('number')
+                            for w in diagram_wavefunctions:
+                                w.set('number', w.get('number') + 1)
+                            new_wf.set('number', wf_nb)
+                            diagram_wavefunctions.insert(0, new_wf)
+                        else:
+                            diagram_wavefunctions.insert(0, new_wf)
+                    else:
+                        for i, wf in enumerate(diagram_wavefunctions):
+                            if self in wf.get('mothers'):
+                                # Update wf numbers
+                                new_wf.set('number', wf.get('number'))
+                                for w in diagram_wavefunctions[i:]:
+                                    w.set('number', w.get('number') + 1)
+                                # Insert wavefunction
+                                diagram_wavefunctions.insert(i, new_wf)
+                                break
+                        else:
+                            diagram_wavefunctions.append(new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)

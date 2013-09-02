@@ -364,10 +364,15 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if not self.seed:
             import random
-            self.seed = random.randint(0, int(2**32))
+            self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
             self.history.insert(0, 'set seed %s' % self.seed)
+
+        if self.seed > 30081*30081: # can't use too big random number
+            msg = 'Random seed too large ' + str(self.seed) + ' > 30081*30081'
+            raise Exception, msg
+
         self.options['seed'] = self.seed
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)

@@ -287,7 +287,7 @@ in presence of majorana particle/flow violation"""
                 elif propa == []:
                     massless = False
                 else:
-                    lorentz *= self.get_custom_propa(propa[0], spin, id)
+                    lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
                 
                 
@@ -300,10 +300,10 @@ in presence of majorana particle/flow violation"""
                         id += _conjugate_gap + id % 2 - (id +1) % 2
                     if (id % 2):
                         #propagator outcoming
-                        lorentz *= SpinorPropagatorout(id, 'I2', outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorout(id, 'I2', outgoing)
                     else:
                     #    #propagator incoming
-                        lorentz *= SpinorPropagatorin('I2', id, outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     if massless or not aloha.unitary_gauge: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
@@ -317,21 +317,21 @@ in presence of majorana particle/flow violation"""
                         spin_id = id
                     nb_spinor += 1
                     if not massless and (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     elif not massless and not (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
                     elif spin_id %2:
-                        lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
                     else :
-                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
           
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if massless:
-                        lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2masslessPropagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3')
                     else:
-                        lorentz *= Spin2Propagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2Propagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
@@ -716,9 +716,8 @@ class AbstractALOHAModel(dict):
     
         self[(lorentzname, outgoing)] = abstract_routine
     
-    def compute_all(self, save=True, wanted_lorentz = []):
+    def compute_all(self, save=True, wanted_lorentz = [], custom_propa=False):
         """ define all the AbstractRoutine linked to a model """
-
 
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
@@ -742,8 +741,23 @@ class AbstractALOHAModel(dict):
                     self.external_routines.append('%s_%s' % (lorentz.name, i))
                 continue
             
+            #standard routines
+            routines = [(i,[]) for i in range(len(lorentz.spins)+1)]
+            # search for special propagators
+            if custom_propa:
+                for vertex in self.model.all_vertices:
+                    if lorentz in vertex.lorentz:
+                        for i,part in enumerate(vertex.particles):
+                            new_prop = False
+                            if hasattr(part, 'propagator') and part.propagator:
+                                new_prop = ['P%s' % part.propagator.name]
+                            elif part.mass.name.lower() == 'zero':
+                                new_prop = ['P0'] 
+                            if new_prop and (i+1, new_prop) not in routines:
+                                routines.append((i+1, new_prop))
+            
             builder = AbstractRoutineBuilder(lorentz, self.model)
-            self.compute_aloha(builder)
+            self.compute_aloha(builder, routines=routines)
 
             if lorentz.name in self.multiple_lor:
                 for m in self.multiple_lor[lorentz.name]:
@@ -794,11 +808,14 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         request = {}
+
         for list_l_name, tag, outgoing in data:
             #allow tag to have integer for retro-compatibility
+            all_tag = tag[:]
             conjugate = [i for i in tag if isinstance(i, int)]
-            tag =  [i for i in tag if isinstance(i, str)]
-            tag = tag + ['C%s'%i for i in conjugate] 
+            tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
+            tag = tag + ['C%s'%i for i in conjugate]             
+            tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
             conjugate = tuple([int(c[1:]) for c in tag if c.startswith('C')])
             loop = any((t.startswith('L') for t in tag))
@@ -853,8 +870,10 @@ class AbstractALOHAModel(dict):
                 continue
             #allow tag to have integer for retrocompatibility
             conjugate = [i for i in tag if isinstance(i, int)]
-            tag =  [i for i in tag if isinstance(i, str)]
+            all_tag = tag[:]
+            tag =  [i for i in tag if isinstance(i, str) and not i.startswith('P')]
             tag = tag + ['C%s'%i for i in conjugate] 
+            tag = tag + [i for i in all_tag if isinstance(i, str) and  i.startswith('P')] 
             
             if not self.explicit_combine:
                 lorentzname = list_l_name[0]
@@ -896,7 +915,11 @@ class AbstractALOHAModel(dict):
         if not symmetry:
             symmetry = name
         if not routines:
-            tag = ['C%s' % i for i in builder.conjg]
+            if not tag:
+                tag = ['C%s' % i for i in builder.conjg]
+            else:
+                addon = ['C%s' % i for i in builder.conjg]
+                tag = [(i,addon +onetag) for i,onetag in tag]
             routines = [ tuple([i,tag]) for i in range(len(builder.spins) + 1 )]
 
         # Create the routines

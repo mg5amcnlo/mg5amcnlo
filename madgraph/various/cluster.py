@@ -174,10 +174,21 @@ class Cluster(object):
                 time.sleep(self.options['cluster_status_update'][1])
             elif nb_iter == change_at:
                 logger.info('''Start to wait %ss between checking status.
-Note that you can change this time in the configuration file.''' % self.options['cluster_status_update'][0])
-                time.sleep(self.options['cluster_status_update'][0])
+Note that you can change this time in the configuration file.
+Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
+                try:
+                    time.sleep(self.options['cluster_status_update'][0])
+                except KeyboardInterrupt:
+                    logger.info('start to update the status')
+                    nb_iter = min(0, change_at -2)
             else:
-                time.sleep(self.options['cluster_status_update'][0])
+                try:
+                    time.sleep(self.options['cluster_status_update'][0])
+                except KeyboardInterrupt:
+                    logger.info('start to update the status')
+                    nb_iter = min(0, change_at -2)
+                    
+                    
         self.submitted = 0
         self.submitted_ids = []
 
@@ -905,6 +916,9 @@ class SGECluster(Cluster):
             stderr = '/dev/null'
         elif stderr == -2: # -2 is subprocess.STDOUT
             stderr = stdout
+        else:
+            stderr = self.def_get_path(stderr)
+            
         if log is None:
             log = '/dev/null'
         else:
