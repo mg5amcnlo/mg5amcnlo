@@ -1,0 +1,68 @@
+#!/bin/bash -e
+
+# ####################################################################
+# To successfully employ this script, make sure that your bash is in #
+# the bin - directory or adjust accordingly.                         #
+######################################################################
+# functions
+printtime () {
+printf "%02d:%02d:%02d:%02d sec\n" "$(($1/86400))" "$(($1/3600%24))" "$(($1/60%60))" "$(($1%60))"""    
+}
+
+# paths:
+TIMINGS=timings
+RUNDIR=${PWD}
+VIRDIR=${PWD}/Virtuals/
+
+#- time ---------------------------------------
+echo '===============================' >$TIMINGS
+echo 'Generation and compilation time'>>$TIMINGS
+echo '==============================='>>$TIMINGS
+echo '--> Start generation:'          >>$TIMINGS
+echo "$(date -u)"                     >>$TIMINGS
+TIME1="$(date +%s)"
+#- time ---------------------------------------
+
+
+echo '---> Creating code for virtual part...'
+gosam.py --olp --mc=amcatnlo --config=gosam.rc --ignore-unknown --destination=$VIRDIR OLE_order.lh
+
+# check for error in code generation
+if [ -f gosam.crashed ]
+then
+	echo '---> Error <---'
+	exit
+fi
+
+#- time ---------------------------------------
+TIME2="$(date +%s)"
+GENTIME="$((TIME2-TIME1))"
+echo '* generation time:'             >>$TIMINGS
+echo $(printtime $GENTIME)            >>$TIMINGS
+echo '--> Start compilation:'         >>$TIMINGS
+#- time ---------------------------------------
+
+cp gosam.rc $VIRDIR
+
+cd $VIRDIR
+echo '---> Generating makefiles with autotools...'
+bash autogen.sh --prefix=$VIRDIR --libdir=$VIRDIR/lib
+
+
+echo '---> Generating code for amplitudes...'
+make
+make install
+
+cd $RUNDIR
+
+#- time ---------------------------------------
+TIME3="$(date +%s)"
+COMPTIME="$((TIME3-TIME2))"
+TOTATIME="$((TIME3-TIME1))"
+echo '* compilation time:'            >>$TIMINGS
+echo $(printtime $COMPTIME)           >>$TIMINGS
+echo '--> Finishing:'                 >>$TIMINGS
+echo "$(date -u)"                     >>$TIMINGS
+echo '* total time:'                  >>$TIMINGS
+echo $(printtime $TOTATIME)           >>$TIMINGS
+#- time ---------------------------------------
