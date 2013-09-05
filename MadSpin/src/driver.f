@@ -305,6 +305,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          counter=0
          counter2=0
          do while (notpass) 
+           maxBW=0d0
            counter=counter+1
            jac=1d0
            ivar=0
@@ -336,7 +337,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            call SMATRIX(pfull,M_full)
            call SMATRIX_PROD(pprod,M_prod)
 
-           if (M_full*jac/M_prod.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
+           weight=M_full*jac/M_prod
+
+           if (weight.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
         enddo
 
 
@@ -350,18 +353,18 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           call generate_momenta_conf(jac,x,itree,qmass,qwidth,ptrial,pprod,map_external2res) 
           
           if (jac.lt.0d0) then
-            write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 0
+            write(*,*) nexternal,  counter, maxBW, weight, counter2, 0
             do i=1,nexternal
                write (*,*) (pfull(j,i), j=0,3)  
             enddo
           else
-            write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 1
+            write(*,*) nexternal,  counter, maxBW, weight, counter2, 1
             do i=1,nexternal
               write (*,*) (ptrial(j,i), j=0,3)  
             enddo
           endif
         else
-          write(*,*) nexternal,  counter, maxBW, M_full*jac/M_prod, counter2, 0
+          write(*,*) nexternal,  counter, maxBW, weight, counter2, 0
           do i=1,nexternal
             write (*,*) (pfull(j,i), j=0,3)  
           enddo
@@ -422,6 +425,11 @@ c     common
       integer            mapconfig(0:N_MAX_CG), this_config
       common/to_mconfigs/mapconfig, this_config
 
+      if (mapconfig(0).eq.1) then
+        iconfig=1
+        return
+      endif
+
       cumulweight(0)=0d0
       do i=1,mapconfig(0)
          cumulweight(i)=amp2(mapconfig(i))+cumulweight(i-1)
@@ -442,7 +450,8 @@ c     common
          endif 
       enddo
 
-      write(*,*) 'Unable to generate iconfig'
+      write(*,*) 'Unable to generate iconfig ', random, mapconfig(0),
+     -  amp2, cumulweight
 
       end
 
@@ -551,7 +560,7 @@ c
       integer  map_external2res(nexternal_prod) ! map (index in production) -> index in the full structure
       double precision p(0:3,-nexternal:nexternal)
  
-      integer idB, id1
+      integer idB, id1, index_p2
       double precision pa(0:3), pb(0:3), p1(0:3), p2(0:3),pboost(0:3)
       double precision pb_cms(0:3), p1_cms(0:3), p1_rot(0:3)
 
@@ -611,7 +620,7 @@ c Set one_body to true if it s a 2->1 process at the Born (i.e. 2->2 for the n+1
             continue
             !one_body=.false.
          else
-            write(*,*)'Error #1 in genps_madspin.f',nexternal,nincoming
+            write(*,*)'Error#1 in genps_madspin.f',nexternal,nincoming
             stop
          endif
 
@@ -696,7 +705,7 @@ c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
       !write(*,*) nt_channel
  
 
-c      write(*,*) (itree_full(i,-1), i=1,2)
+      !write(*,*) (itree_full(i,-1), i=1,2)
 c      write(*,*) (itree_full(i,-2), i=1,2)
 c      write(*,*) (itree_full(i,-3), i=1,2)
 c      write(*,*) (itree_full(i,-4), i=1,2)
@@ -743,12 +752,15 @@ c      write(*,*) 'nt_channel ',nt_channel
              m2_tchan(i)=dot(p2,p2)
              if (m2_tchan(i).gt.0d0) then 
                  m2_tchan(i)=sqrt(m2_tchan(i))
-             elseif (m2_tchan(i).gt.-1d-2) then ! sometimes negative because of numerical instabilities
-                 m2_tchan(i)=0d0
              else
+                ! might be negative because of numerical unstabilities
+                index_p2=itree(2,i-1)
+                if (index_p2.gt.0) then
+                   m2_tchan(i)=m(index_p2)
+                else
         write(*,*) 'Warning: m_2^2 is negative in t-channel branching '
-             endif
-
+                endif
+            endif
          ! extract phi
          do j=0,3
             pboost(j) = pa(j)+pb(j)
@@ -831,9 +843,15 @@ c local
      &     ,xjac,xpswgt
      &     ,pwgt,p_born_CHECK(0:3,nexternal), ptot(0:3)
       logical pass
+
+      double precision smax, smin, xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn
+      double precision bwdelf, BWshift
+
 c external
       double precision lambda
       external lambda
+      double precision xbwmass3,bwfunc
+      external xbwmass3,bwfunc
 c parameters
       real*8 pi
       parameter (pi=3.1415926535897932d0)
@@ -848,17 +866,61 @@ c Conflicting BW stuff
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
 
+       double precision BWcut, maxBW
+       common /to_BWcut/BWcut, maxBW
+
       pass=.true.
 
+     
 c
       xjac=1d0
       xpswgt=1d0
 
 
 c     STEP 1: generate the initial momenta
+
+      if (nexternal_prod.gt.3) then
       s(-nbranch)  = shat
       m(-nbranch)  = sqrtshat
       pb(0,-nbranch)= m(-nbranch)
+
+      else
+
+c      write(*,*) 'nbranch' 
+c      write(*,*) nbranch 
+      ! P.A.: Shat needs to be generated accoding to a BW distribution
+      smax=min(stot*0.99D0,(qmass(-nbranch+1)+BWcut*qwidth(-nbranch+1))**2 )
+      smin=max(0.1d0,(qmass(-nbranch+1)-BWcut*qwidth(-nbranch+1))**2 )
+      xm02=qmass(-nbranch+1)**2
+      bwmdpl=smax-xm02
+      bwmdmn=xm02-smin
+      bwfmpl=atan(bwmdpl/(qmass(-nbranch+1)*qwidth(-nbranch+1)))
+      bwfmmn=atan(bwmdmn/(qmass(-nbranch+1)*qwidth(-nbranch+1)))
+      bwdelf=(bwfmpl+bwfmmn)/pi
+      ivar=ivar+1
+      s(-nbranch)=xbwmass3(x(ivar),xm02,qwidth(-nbranch+1),bwdelf
+     &              ,bwfmmn)
+ 
+
+      if (s(-nbranch).gt.smax.or.s(-nbranch).lt.smin) then
+          xjac=-1d0
+          pass=.false.
+          return
+      endif
+       xjac=xjac*bwdelf/bwfunc(s(-nbranch),xm02,qwidth(-nbranch+1))
+       m(-nbranch) = dsqrt(s(-nbranch))
+       BWshift=abs(m(-nbranch)-qmass(-nbranch+1))/qwidth(-nbranch+1)
+       if (BWshift.gt.maxBW) maxBW=BWshift
+       pb(0,-nbranch)=m(-nbranch)
+      endif
+c      write(*,*) x(ivar)
+c      write(*,*) smax
+c      write(*,*) smin
+c      write(*,*) nbranch
+c      write(*,*) qmass(-nbranch+1)
+c      write(*,*) qwidth(-nbranch+1)
+c      write(*,*)  m(-nbranch)
+     
       pb(1,-nbranch)= 0d0
       pb(2,-nbranch)= 0d0
       pb(3,-nbranch)= 0d0
@@ -1103,7 +1165,7 @@ c Generate invariant masses for all s-channel branchings of the Born
          smin = (m(itree(1,i))+m(itree(2,i)))**2
          smax = (sqrtshat-totalmass+sqrt(smin))**2
          if(smax.lt.smin.or.smax.lt.0.d0.or.smin.lt.0.d0)then
-            write(*,*)'Error #13 in genps_madspin.f'
+            write(*,*)'Error#13 in genps_madspin.f'
             write(*,*)smin,smax,i
             stop
          endif
@@ -1374,7 +1436,7 @@ c gentcms(pa,pb,t,phi,m1,m2,p1,pr)
      &        pb(0,ibranch),xjac0)
 c
         if (xjac0 .lt. 0d0) then
-            write(*,*) 'Failed gentcms',ibranch,xjac0
+            write(*,*) 'Failedgentcms',ibranch,xjac0
             pass=.false.
             return
          endif
@@ -1446,7 +1508,7 @@ c
          if (pp .gt. 0) then
             PP=SQRT(pp)*0.5d0
          else
-            write(*,*) 'Warning #12 in genps_madspin.f',pp
+            write(*,*) 'Warning#12 in genps_madspin.f',pp
             jac=-1
             return
          endif
@@ -1659,14 +1721,14 @@ c
       tmp=S**2+MA2**2+MB2**2-2d0*S*MA2-2d0*MA2*MB2-2d0*S*MB2
       if(tmp.le.0.d0)then
         if(ma2.lt.0.d0.or.mb2.lt.0.d0)then
-          write(6,*)'Error #1 in function Lambda:',s,ma2,mb2
+          write(6,*)'Error#1 in function Lambda:',s,ma2,mb2
           stop
         endif
         rat=1-(sqrt(ma2)+sqrt(mb2))/s
         if(rat.gt.-tiny)then
           tmp=0.d0
         else
-          write(6,*)'Error #2 in function Lambda:',s,ma2,mb2
+          write(6,*)'Error#2 in function Lambda:',s,ma2,mb2
         endif
       endif
       LAMBDA=tmp
