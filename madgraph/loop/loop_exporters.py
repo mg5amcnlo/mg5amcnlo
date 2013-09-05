@@ -65,10 +65,9 @@ class LoopExporterFortran(object):
         from this class AND from the corresponding ProcessExporterFortran(ME,SA,...).
         It plays the same role as ProcessExporterFrotran and simply defines here
         loop-specific helpers functions necessary for all loop exporters.
-        Notice that we do have LoopExporterFortran inheriting from 
-        ProcessExporterFortran hence giving access to arguments like dir_path and
-        clean. This creates a diamond inheritance scheme in which we avoid mro
-        (method resolution order) ambiguity by using unique method names here."""
+        Notice that we do not have LoopExporterFortran inheriting from 
+        ProcessExporterFortran but give access to arguments like dir_path and
+        clean using options. This avoids method resolution object ambiguity"""
 
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
@@ -120,6 +119,17 @@ class LoopExporterFortran(object):
 
         # Return to original PWD
         os.chdir(cwd)
+    
+    def get_aloha_model(self, model):
+        """ Caches the aloha model created here as an attribute of the loop 
+        exporter so that it can later be used in the LoopHelasMatrixElement
+        in the function compute_all_analytic_information for recycling aloha 
+        computations across different LoopHelasMatrixElements steered by the
+        same loop exporter.
+        """
+        if not hasattr(self, 'aloha_model'):
+            self.aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        return self.aloha_model
 
     #===========================================================================
     # write the multiple-precision header files
@@ -173,7 +183,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+                     
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
                             writers.FortranWriter('cts_mpc.h'),)
@@ -181,10 +191,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Return to original PWD
         os.chdir(cwd)
 
+    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+                                                         wanted_couplings = []):
+        """ Caches the aloha model created here when writing out the aloha 
+        fortran subroutine.
+        """
+        self.get_aloha_model(model)
+        super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
+           wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
+
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
-    
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
@@ -586,6 +604,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         LoopFortranModel = helas_call_writers.FortranUFOHelasCallWriter(
                      argument=fortran_model.get('model'),
                      hel_sum=matrix_element.get('processes')[0].get('has_born'))
+
+        # Compute the analytical information of the loop wavefunctions in the
+        # loop helas matrix elements using the cached aloha model to reuse
+        # as much as possible the aloha computations already performed for
+        # writing out the aloha fortran subroutines.
+        matrix_element.compute_all_analytic_information(
+          self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
@@ -1117,7 +1142,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
         the optimized FortranModel"""
         # Create the necessary files for the loop matrix element subroutine
-
+        
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
             raise MadGraph5Error, 'The optimized loop fortran output can only'+\
@@ -1125,6 +1150,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
+
+        # Compute the analytical information of the loop wavefunctions in the
+        # loop helas matrix elements using the cached aloha model to reuse
+        # as much as possible the aloha computations already performed for
+        # writing out the aloha fortran subroutines.
+        matrix_element.compute_all_analytic_information(
+          self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.

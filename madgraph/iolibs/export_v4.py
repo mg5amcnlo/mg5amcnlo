@@ -392,8 +392,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Backup the loop mode, because it can be changed in what follows.
         old_loop_mode = aloha.loop_mode
 
-        # Create the aloha model
-        aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        # Create the aloha model or use the existing one (for loop exporters
+        # this is useful as the aloha model will be used again in the 
+        # LoopHelasMatrixElements generated). We do not save the model generated
+        # here if it didn't exist already because it would be a waste of
+        # memory for tree level applications since aloha is only needed at the
+        # time of creating the aloha fortran subroutines.
+        if hasattr(self, 'aloha_model'):
+            aloha_model = self.aloha_model
+        else:
+            aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))            
         aloha_model.add_Lorentz_object(model.get('lorentz'))
 
         # Compute the subroutines
