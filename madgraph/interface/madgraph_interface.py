@@ -2184,7 +2184,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Initializing before starting the main loop"""
 
         self.prompt = 'mg5>'
-        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+        if madgraph.ReadWrite: # prevent on read-only disk  
             self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
@@ -2252,7 +2252,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+        if madgraph.ReadWrite: #prevent to run on Read Only disk
             self.do_install('update --mode=mg5_end')
         print
 
@@ -3895,6 +3895,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
+            if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
+                os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
+
         elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
             path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
             text = open(path).read()
@@ -3938,13 +3941,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             except Exception:
                 pass
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
             except Exception:
                 pass
-            status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
+            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('Compilation succeeded')
         else:
