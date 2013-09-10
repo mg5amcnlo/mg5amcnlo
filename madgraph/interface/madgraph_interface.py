@@ -5217,6 +5217,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
             if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
+                # first remove the MCatNLO folder if present (e.g. if overwriting)
+                try:
+                    files.rm(pjoin(self._export_dir, 'MCatNLO'))
+                except OSError:
+                    pass
                 files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
             else:
                 logger.warning('MCatNLO-utilities is not installed.')
