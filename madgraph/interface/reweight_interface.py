@@ -566,7 +566,7 @@ class ReweightInterface(extended_cmd.Cmd):
         matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
         
         self.id_to_path = {}
-        for me in matrix_elements:             
+        for me in matrix_elements:
             for proc in me.get('processes'):
                 initial = []    #filled in the next line
                 final = [l.get('id') for l in proc.get('legs')\
@@ -583,7 +583,11 @@ class ReweightInterface(extended_cmd.Cmd):
                                   'P%s' % me.get('processes')[0].shell_string())
                 assert os.path.exists(Pdir)
                 if tag in self.id_to_path:
-                    raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                    if not Pdir == self.id_to_path[tag][1]:
+                        misc.sprint(tag, Pdir, self.id_to_path[tag][1])
+                        raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                    else:
+                        continue
                 self.id_to_path[tag] = [order, Pdir]
 
 

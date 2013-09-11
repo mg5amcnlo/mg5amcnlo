@@ -1177,7 +1177,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     pjoin(self.dir_path, 'Source'))        
         # add the makefile 
         filename = pjoin(self.dir_path,'Source','makefile')
-        self.write_source_makefile(writers.FileWriter(filename))            
+        self.write_source_makefile(writers.FileWriter(filename))          
         
     #===========================================================================
     # export model files
@@ -1252,20 +1252,20 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         if self.opt['sa_symmetry']:
             # avoid symmetric output
-            proc = matrix_element.get('processes')[0]
-            leg0 = proc.get('legs')[0]
-            leg1 = proc.get('legs')[1]
-            if not leg1.get('state'):
-                proc.get('legs')[0] = leg1
-                proc.get('legs')[1] = leg0
-                dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
-                       "P%s" % proc.shell_string())
-                #restore original order
-                proc.get('legs')[1] = leg1
-                proc.get('legs')[0] = leg0                
-                if os.path.exists(dirpath2):
-                    logger.info('Symmetric directory exists')
-                    return 0
+            for proc in matrix_element.get('processes'):
+                leg0 = proc.get('legs')[0]
+                leg1 = proc.get('legs')[1]
+                if not leg1.get('state'):
+                    proc.get('legs')[0] = leg1
+                    proc.get('legs')[1] = leg0
+                    dirpath2 =  pjoin(self.dir_path, 'SubProcesses', \
+                           "P%s" % proc.shell_string())
+                    #restore original order
+                    proc.get('legs')[1] = leg1
+                    proc.get('legs')[0] = leg0                
+                    if os.path.exists(dirpath2):
+                        logger.info('Symmetric directory exists')
+                        return 0
 
         try:
             os.mkdir(dirpath)
