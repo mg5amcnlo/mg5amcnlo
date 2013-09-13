@@ -2219,8 +2219,10 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
-                     pjoin(cwd, 'FKS_params.dat'),
-                     pjoin(cwd, 'OLE_order.olc')]
+                     pjoin(cwd, 'FKS_params.dat')]
+        
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
+            input_files.append(pjoin(cwd, 'OLE_order.olc'))
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
