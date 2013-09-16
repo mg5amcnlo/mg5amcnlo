@@ -1026,14 +1026,14 @@ c
       buff2=' '
       do while(.true.)
          read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)write(outfile,*)buff2
+         if(index(buff2,'= nevents').eq.0)write(outfile,'(a)')buff2
          if(index(buff2,'= nevents').ne.0)exit
       enddo
       write(outfile,*)
      &nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
-         write(outfile,*)buff2
+         write(outfile,'(a)')buff2
       enddo
 c
       return
