@@ -100,7 +100,7 @@ C ----------
       ANS(2) = 0D0
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).eq.-1) then
+        if (nhel(glu_ij,ihel).le.0) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
             ANS(2)=ANS(2)+BORNTILDE
@@ -184,9 +184,11 @@ C ----------
       BORN = 0d0
       BORNTILDE = (0d0,0d0)
       back_hel = nhel(glu_ij)
+      borns(1) = 0d0
+      borns(2) = 0d0
       do ihel=-1,1,2
-        borns(2-(1-ihel)/2)=0d0
-        nhel(glu_ij) = ihel
+        if (ihel.eq.-1.or.nhel(glu_ij).ne.0) then
+        if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
 %(helas_calls)s
         do i=1,ngraphs
@@ -226,6 +228,7 @@ C ----------
           Jamp2(i)=Jamp2(i)+Jamp(i)*dconjg(Jamp(i))
           Jamph(2-(1-ihel)/2,i)=Jamp(i)
         Enddo
+      endif
       Enddo
       BORN=BORNS(1)+BORNS(2)
       DO I = 1, NCOLOR
