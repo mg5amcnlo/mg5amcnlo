@@ -8,8 +8,9 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-NLOLIBS=$(libmadloop) $(libcuttools)
-# Uncomment the line below to compile 'by hand'
+NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
+# Uncomment the line below to compile with MadLoop without setting the environnement 
+# variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
@@ -68,37 +69,37 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(CXX) -g -c $(CXXFLAGS) $^
 
 gensym: $(SYM)
-	$(FC) $(FFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
 	rm fks_singular.o
 
 test_Sij: symmetry_fks_test_Sij.o $(TEST)
-	$(FC) $(FFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
 
 test_ME: symmetry_fks_test_ME.o $(TEST)
-	$(FC) $(FFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_ME.o
 
 test_MC: symmetry_fks_test_MC.o $(TEST) 
-	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_MC.o
 
 check_poles: $(POLES) $(libmadloop)
-	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
 
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done

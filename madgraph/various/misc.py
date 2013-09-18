@@ -174,10 +174,13 @@ def multiple_try(nb_try=5, sleep=20):
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
-    
-    command = ['make','-j%s' % nb_core] if job_specs else ['make']
+
+    cmd = ['make']
     try:
-        p = subprocess.Popen(command + arg, stdout=subprocess.PIPE, 
+        if nb_core > 1:
+            cmd.append('-j%s' % nb_core)
+        cmd += arg
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                              stderr=subprocess.STDOUT, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
@@ -794,13 +797,13 @@ def sprint(*args, **opt):
 def equal(a,b,sig_fig=6):
     """function to check if two float are approximatively equal"""
     import math
+
     if a:
-        power = sig_fig - int(math.log10(a))
+        power = sig_fig - int(math.log10(abs(a))) + 1
     else:
-        power = sig_fig
-    return ( a==b or 
-             int(a*10**power) == int(b*10**power)
-           )
+        power = sig_fig + 1
+    return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
+
 ################################################################################
 # class to change directory with the "with statement"
 ################################################################################

@@ -351,9 +351,6 @@ c FKS stuff:
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
       character*4 abrv
       common /to_abrv/ abrv
 
@@ -721,17 +718,9 @@ c
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
             if (xtot.ne.0d0) then
                enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
@@ -1006,9 +995,6 @@ c FKS stuff:
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
-
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
 
       logical nbody
       common/cnbody/nbody
@@ -1770,17 +1756,9 @@ c
                write (*,*) 'Is fks_singular compiled correctly?'
                stop
             endif
-            if (onlyBorn) then
-               do i=1, mapconfig(0)
-                  if (multi_chan(mapconfig(i))) then
-                     xtot=xtot+amp2(mapconfig(i))
-                  endif
-               enddo
-            else
-               do i=1,mapconfig(0)
-                  xtot=xtot+amp2(mapconfig(i))
-               enddo
-            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
             if (xtot.ne.0d0) then
                enhance=amp2(mapconfig(iconfig))/xtot
                enhance=enhance*diagramsymmetryfactor
@@ -4903,12 +4881,14 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       include 'genps.inc'
       include 'nexternal.inc'
       include 'fks_powers.inc'
-c      include 'fks.inc'
+      include 'nFKSconfigs.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'reweight0.inc'
       include 'reweightNLO.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
 
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -4916,8 +4896,8 @@ c      include 'fks.inc'
       integer tprid(-max_branch:-1,lmaxconfigs)
       include "born_conf.inc"
 
-      logical firsttime
-      data firsttime/.true./
+      logical firsttime,firsttime_nFKSprocess(fks_configs)
+      data firsttime,firsttime_nFKSprocess/.true.,fks_configs*.true./
 
       double precision xicut_used
       common /cxicut_used/xicut_used
@@ -4925,8 +4905,6 @@ c      include 'fks.inc'
       common /cdelta_used/delta_used
       double precision xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
-      logical xexternal
-      common /toxexternal/ xexternal
       logical rotategranny
       common/crotategranny/rotategranny
       double precision diagramsymmetryfactor
@@ -4936,13 +4914,16 @@ c      include 'fks.inc'
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
 
-      logical multi_chan(lmaxconfigs)
-      common /to_multi_chan/multi_chan
-
       character*1 integrate
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer fac_i,fac_j,i_fks_pdg,j_fks_pdg
+
+      integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
+     $     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
+     $     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+      save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
+     $     ,ngluons_FKS
 
       character*13 filename
 
@@ -4958,64 +4939,6 @@ c      include 'fks.inc'
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
-c
-c Check to see if this channel needs to be included in the multi-channeling
-      diagramsymmetryfactor=0d0
-      if (multi_channel) then
-         if (onlyBorn) then
-            open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapconfig(0)
-               read (19,*,err=23) fac1,fac2
-               if (fac2.gt.0) then
-                  multi_chan(fac1)=.true.
-               else
-                  multi_chan(fac1)=.false.
-               endif
-            enddo
-            if (multi_chan(mapconfig(iconfig))) then
-               diagramsymmetryfactor=1d0
-            else
-               write (*,*) 'No need to integrate this channel'
-               stop
-            endif
-            close(19)
-         else                   ! not onlyBorn
-            open (unit=19,file="symfact.dat",status="old",err=12)
-            do i=1,mapconfig(0)
-               read (19,*,err=23) fac1,fac2
-               if (fac1.eq.mapconfig(iconfig)) then
-                  if (fac2.gt.0) then
-                     write (*,*) 'diagram symmetry factor',fac2
-                     diagramsymmetryfactor=dble(fac2)
-                  elseif(fac2.lt.0) then
-                     write (*,*)
-     &                    'diagram symmetry factor is negative', fac2
-                     write (*,*)
-     &                    'it is not needed to integrate this channel'
-                     diagramsymmetryfactor=1d0
-                  else
-                     write (*,*) 'diagram symmetry factor is zero', fac2
-                     stop
-                  endif
-               endif
-            enddo
-            if (diagramsymmetryfactor.eq.0d0) then
-               write (*,*) 'error in diagramsymmetryfactor',iconfig
-               stop
-            endif
-            close(19)
-         endif
-      
-      else                      ! no multi_channel
-c$$$         write (*,*) 'Setting diagram symmetry factor to 1,'//
-c$$$     &        ' because no suppression.'
-         diagramsymmetryfactor=1d0
-      endif
- 14   continue
-
-c Set xexternal to true to use the x's from external vegas in the
-c x_to_f_arg subroutine
-      xexternal=.true.
 
 c The value of rotategranny may be superseded later if phase space
 c parametrization allows it
@@ -5050,6 +4973,8 @@ c parametrization allows it
 c Beta_0 defined according to (MadFKS.C.5)
       beta0=gamma(0)/(2*pi)
 
+      if (firsttime_nFKSprocess(nFKSprocess)) then
+         firsttime_nFKSprocess(nFKSprocess)=.false.
 c---------------------------------------------------------------------
 c              Symmetry Factors
 c---------------------------------------------------------------------
@@ -5085,67 +5010,111 @@ c subtracted reals.
 c
 c We set fkssymmetryfactorBorn to zero when i_fks not a gluon
 c
-      fkssymmetryfactor=0d0
-      fkssymmetryfactorDeg=0d0
-      fkssymmetryfactorBorn=0d0
-
-      i_fks_pdg=pdg_type(i_fks)
-      j_fks_pdg=pdg_type(j_fks)
+         i_fks_pdg=pdg_type(i_fks)
+         j_fks_pdg=pdg_type(j_fks)
       
-      fac_i=0
-      fac_j=0
-      do i=nincoming+1,nexternal
-         if (i_fks_pdg.eq.pdg_type(i)) fac_i = fac_i + 1
-         if (j_fks_pdg.eq.pdg_type(i)) fac_j = fac_j + 1
-      enddo
+         fac_i_FKS(nFKSprocess)=0
+         fac_j_FKS(nFKSprocess)=0
+         do i=nincoming+1,nexternal
+            if (i_fks_pdg.eq.pdg_type(i)) fac_i_FKS(nFKSprocess) =
+     $           fac_i_FKS(nFKSprocess) + 1
+            if (j_fks_pdg.eq.pdg_type(i)) fac_j_FKS(nFKSprocess) =
+     $           fac_j_FKS(nFKSprocess) + 1
+         enddo
 c Overwrite if initial state singularity
-      if(j_fks.le.nincoming) fac_j=1
+         if(j_fks.le.nincoming) fac_j_FKS(nFKSprocess)=1
 
 c i_fks and j_fks of the same type? -> subtract 1 to avoid double counting
-      if (j_fks.gt.nincoming .and. i_fks_pdg.eq.j_fks_pdg) fac_j=fac_j-1
+         if (j_fks.gt.nincoming .and. i_fks_pdg.eq.j_fks_pdg)
+     $        fac_j_FKS(nFKSprocess)=fac_j_FKS(nFKSprocess)-1
 
 c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
-      if (j_fks.gt.nincoming) then
-         if ( i_fks_pdg.eq.j_fks_pdg .and. i_fks_pdg.ne.21) then
-            write (*,*) 'ERROR, if PDG type of i_fks and j_fks '//
-     &           'are equal, they MUST be gluons',
-     &           i_fks,j_fks,i_fks_pdg,j_fks_pdg
-            stop
-         elseif(abs(particle_type(i_fks)).eq.3) then
-            if ( particle_type(i_fks).ne.-particle_type(j_fks) .or.
-     &           pdg_type(i_fks).ne.-pdg_type(j_fks)) then
-               write (*,*) 'ERROR, if i_fks is a color triplet, j_fks'//
-     &              ' must be its anti-particle,'//
-     &              ' or an initial state gluon.',
-     &              i_fks,j_fks,particle_type(i_fks),
-     &              particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
+         if (j_fks.gt.nincoming) then
+            if ( i_fks_pdg.eq.j_fks_pdg .and. i_fks_pdg.ne.21) then
+               write (*,*) 'ERROR, if PDG type of i_fks and j_fks '//
+     &              'are equal, they MUST be gluons',
+     &              i_fks,j_fks,i_fks_pdg,j_fks_pdg
+               stop
+            elseif(abs(particle_type(i_fks)).eq.3) then
+               if ( particle_type(i_fks).ne.-particle_type(j_fks) .or.
+     &              pdg_type(i_fks).ne.-pdg_type(j_fks)) then
+                  write (*,*) 'ERROR, if i_fks is a color triplet,'//
+     &                 ' j_fks must be its anti-particle,'//
+     &                 ' or an initial state gluon.',
+     &                 i_fks,j_fks,particle_type(i_fks),
+     &                 particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
+                  stop
+               endif
+            elseif(i_fks_pdg.ne.21) then ! if not already above, it MUST be a gluon
+               write (*,*) 'ERROR, i_fks is not a gluon and falls not'//
+     $              ' in other categories',i_fks,j_fks,i_fks_pdg
+     $              ,j_fks_pdg
+            endif
+         endif
+
+         ngluons_FKS(nFKSprocess)=0
+         do i=nincoming+1,nexternal
+            if (pdg_type(i).eq.21) ngluons_FKS(nFKSprocess)
+     $           =ngluons_FKS(nFKSprocess)+1
+         enddo
+
+
+
+c Set color types of i_fks, j_fks and fks_mother.
+         i_type=particle_type(i_fks)
+         j_type=particle_type(j_fks)
+         if (abs(i_type).eq.abs(j_type)) then
+            m_type=8
+            if ( (j_fks.le.nincoming .and.
+     &           abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
+     &           (j_fks.gt.nincoming .and.
+     &           abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
+               write(*,*)'Flavour mismatch #1 in setfksfactor',
+     &              i_fks,j_fks,i_type,j_type
                stop
             endif
-         elseif(i_fks_pdg.ne.21) then ! if not already above, it MUST be a gluon
-            write (*,*) 'ERROR, i_fks is not a gluon and falls not'//
-     &           ' in other categories',i_fks,j_fks,i_fks_pdg,j_fks_pdg
-         endif
-      endif
-
-      ngluons=0
-      do i=nincoming+1,nexternal
-         if (pdg_type(i).eq.21) ngluons=ngluons+1
-      enddo
-
-      if (nbody.and.i_fks_pdg.eq.21) then
-         if (ngluons.le.0) then
-            write (*,*)
-     &           'ERROR, number of gluons should be larger than 1',
-     &           ngluons
+         elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
+            if(j_fks.le.nincoming)then
+               m_type=-i_type
+            else
+               write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
+               stop
+            endif
+         elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
+            if (j_fks.le.nincoming) then
+               m_type=j_type
+            else
+               m_type=j_type
+            endif
+         else
+            write(*,*)'Flavour mismatch #2 in setfksfactor',
+     &           i_type,j_type,m_type
             stop
          endif
+         i_type_FKS(nFKSprocess)=i_type
+         j_type_FKS(nFKSprocess)=j_type
+         m_type_FKS(nFKSprocess)=m_type
+      endif
+
+      i_type=i_type_FKS(nFKSprocess)
+      j_type=j_type_FKS(nFKSprocess)
+      m_type=m_type_FKS(nFKSprocess)
+
+c Set matrices used by MC counterterms
+      call set_mc_matrices
+
+      fac_i=fac_i_FKS(nFKSprocess)
+      fac_j=fac_j_FKS(nFKSprocess)
+      ngluons=ngluons_FKS(nFKSprocess)
+c Setup the FKS symmetry factors. 
+      if (nbody.and.pdg_type(i_fks).eq.21) then
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
          fkssymmetryfactorBorn=dble(ngluons)
       else
          fkssymmetryfactor=dble(fac_i*fac_j)
          fkssymmetryfactorDeg=dble(fac_i*fac_j)
-         if (i_fks_pdg.eq.21) then
+         if (pdg_type(i_fks).eq.21) then
             fkssymmetryfactorBorn=dble(fac_i*fac_j)
          else
             fkssymmetryfactorBorn=0d0
@@ -5157,54 +5126,29 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
          endif
       endif
 
-      if ((abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi')
-     &     .and.fkssymmetryfactorBorn.eq.0d0) then
-         write (*,*) 'Not needed to run this subprocess '//
-     &        'because doing only Born or virtual'
-         stop
-      endif
-
-c Set color types of i_fks, j_fks and fks_mother.
-      i_type=particle_type(i_fks)
-      j_type=particle_type(j_fks)
-      if (abs(i_type).eq.abs(j_type)) then
-         m_type=8
-         if ( (j_fks.le.nincoming .and.
-     &        abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
-     &        (j_fks.gt.nincoming .and.
-     &        abs(i_type).eq.3 .and. j_type.ne.-i_type)) then
-            write(*,*)'Flavour mismatch #1 in setfksfactor',
-     &           i_fks,j_fks,i_type,j_type
-            stop
+      if (firsttime) then
+c Check to see if this channel needs to be included in the multi-channeling
+         diagramsymmetryfactor=0d0
+         if (multi_channel) then
+            open (unit=19,file="symfact.dat",status="old",err=14)
+            do i=1,mapconfig(0)
+               read (19,*,err=23) fac1,fac2
+               if (i.eq.iconfig) then
+                  if (mapconfig(iconfig).ne.fac1) then
+                     write (*,*) 'inconsistency in symfact.dat',i
+     $                    ,iconfig,mapconfig(iconfig),fac1
+                     stop
+                  endif
+                  diagramsymmetryfactor=dble(fac2)
+               endif
+            enddo
+            close(19)
+         else                   ! no multi_channel
+            diagramsymmetryfactor=1d0
          endif
-      elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
-         if(j_fks.le.nincoming)then
-            m_type=-i_type
-         else
-            write (*,*) 'Error in setfksfactor: (i,j)=(q,g)'
-            stop
-         endif
-      elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
-         if (j_fks.le.nincoming) then
-            m_type=j_type
-         else
-            m_type=j_type
-         endif
-      else
-         write(*,*)'Flavour mismatch #2 in setfksfactor',
-     &        i_type,j_type,m_type
-         stop
-      endif
-
-      filename="contract.file"
-      call BinothLHAInit(filename)
-
-c Set matrices used by MC counterterms
-      call set_mc_matrices
-
+ 12      continue
 c Setup for parton-level NLO reweighting
-      if(firsttime.and.(doNLOscaleunc.or.doNLOPDFunc)) then
-         call setup_fill_rwgt_NLOplot()
+         if(doNLOscaleunc.or.doNLOPDFunc) call setup_fill_rwgt_NLOplot()
          firsttime=.false.
       endif
 
@@ -5217,9 +5161,9 @@ c Setup for parton-level NLO reweighting
  23   continue
       write (*,*) '"symfact.dat" is not of the correct format'
       stop
- 12   continue
+ 14   continue
       diagramsymmetryfactor=1d0
-      goto 14
+      goto 12
       end
 
 
