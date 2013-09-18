@@ -1513,6 +1513,39 @@ class TestLinkRBConfSM(unittest.TestCase):
         if not hasattr(self, 'base_model'):
             TestLinkRBConfSM.base_model = import_ufo.import_model('sm')
 
+    def test_link_udxwpg_udxwp(self):
+        """tests that the real emission process ud~>w+g and born process u u~>w+ are
+        correctly linked"""
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':-1, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':24, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':1}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':-1, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':24, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':0, 'QED':1}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
+                    {'i': 4, 'j':2, 'ij':2}]
+
+        links =[[{'born_conf':0, 'real_conf':1}],
+                [{'born_conf':0, 'real_conf':0}]]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
     def test_link_uuddg_uudd(self):
         """tests that the real emission process uu~>dd~g and born process uu~>dd~ are
         correctly linked"""
