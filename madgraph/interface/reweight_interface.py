@@ -571,8 +571,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 initial = []    #filled in the next line
                 final = [l.get('id') for l in proc.get('legs')\
                       if l.get('state') or initial.append(l.get('id'))]
+                misc.sprint(final)
                 order = (initial, final)
                 tag = proc.get_initial_final_ids()
+                misc.sprint(type(proc))
                 decay_finals = proc.get_final_ids_after_decay()
 
                 if tag[1] != decay_finals:
@@ -588,6 +590,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
                     else:
                         continue
+                misc.sprint( order, Pdir)
                 self.id_to_path[tag] = [order, Pdir]
 
 
