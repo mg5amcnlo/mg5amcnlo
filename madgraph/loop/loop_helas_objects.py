@@ -1385,10 +1385,20 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                           "The amplitude vertex of a loop diagram must be a "+\
                           "two point vertex with id=-1" 
 
+                    mothers=helas_objects.HelasWavefunctionList(\
+                                [last_loop_wf,other_external_loop_wf])
+                    wfNumber = mothers.check_and_fix_fermion_flow(wavefunctions,
+                                              diagram_wavefunctions,
+                                              external_wavefunctions,
+                                              None,
+                                              wfNumber,
+                                              False,
+                                              []) # number_to_wavefunctions is useless in loop case
                     amp = helas_objects.HelasAmplitude(lastvx, model)
                     amp.set('interaction_id',-1)
-                    amp.set('mothers', helas_objects.HelasWavefunctionList(\
-                                [last_loop_wf,other_external_loop_wf]))
+                    amp.set('mothers',mothers)
+                    #amp.set('mothers', helas_objects.HelasWavefunctionList(\
+                    #            [last_loop_wf,other_external_loop_wf]))
                     amp.set('pdg_codes',[last_loop_wf.get_pdg_code(),
                                      other_external_loop_wf.get_pdg_code()])
                             ###print "mothers added for amp="
