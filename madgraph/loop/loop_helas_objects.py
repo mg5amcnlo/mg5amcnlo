@@ -1439,9 +1439,34 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                                in loop_amp.get('amplitudes')]))
                     loop_amp.set('coupling',loop_amp.get_couplings())
                     helas_diagram.get('amplitudes').append(loop_amp)
-
+                    # here we check the two L-cut loop helas wavefunctions are                                                                                                                           
+                    # in consistent flow                                                                                                                                                                 
+                    check_lcut_fermion_flow_consistency(\
+                        loop_amp_wfs[0],loop_amp_wfs[1])
                 return wfNumber, amplitudeNumber
-                
+            
+            def check_lcut_fermion_flow_consistency(lcut_wf1, lcut_wf2):
+                """Checks that the two L-cut loop helas wavefunctions have                                                                                                                               
+                a consistent fermion flow."""
+                if lcut_wf1.is_boson():
+                    if lcut_wf1.get('state')!='final' or\
+                            lcut_wf2.get('state')!='final':
+                        raise MadGraph5Error,\
+                            "Inconsistent flow in L-cut bosons."
+                elif not lcut_wf1.is_majorana():
+                    for lcut_wf in [lcut_wf1,lcut_wf2]:
+                        if not ((lcut_wf.get('is_part') and \
+                                     lcut_wf.get('state')=='outgoing') or\
+                                    (not lcut_wf.get('is_part') and\
+                                         lcut_wf.get('state')=='incoming')):
+                            raise MadGraph5Error,\
+                                "Inconsistent flow in L-cut Dirac fermions."
+                elif lcut_wf1.is_majorana():
+                    if (lcut_wf1, lcut_wf2) not in \
+                            [('incoming','outgoing'),('outgoing','incoming')]:
+                        raise MadGraph5Error,\
+                            "Inconsistent flow in L-cut Majorana fermions."
+                                            
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):
                 """Process the counterterms vertices defined in this loop
                    diagram."""
