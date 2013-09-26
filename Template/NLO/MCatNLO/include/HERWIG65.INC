@@ -1,1 +1,1 @@
-       INCLUDE 'herwig6521.inc'
+../srcHerwig/HERWIG65.INC
