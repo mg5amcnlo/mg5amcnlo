@@ -33,11 +33,12 @@ endif
 	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
 
 Pythia8: $(FORFILE) \
-	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libhepmcinterface.a
+	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
+	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8tohepmc.a
 	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) -I$(HEPMCLOCATION)/$(INCDIR) \
         $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
 	-L$(PYTHIA8LOCATION)/$(LIBDIRARCH) -lpythia8 $(LIBLHAPDF) $(LIBGZIP) \
-	-lhepmcinterface -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \
+	-lpythia8tohepmc -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \
 
 .PHONY: clean
 clean:
