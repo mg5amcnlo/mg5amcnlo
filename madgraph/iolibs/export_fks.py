@@ -779,7 +779,7 @@ end
     
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
+                    matrix_element.born_matrix_element.get_number_of_amplitudes())
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -1807,11 +1807,11 @@ C
             iconfig = iconfig + 1
             helas_diag = matrix_element.get('diagrams')[idiag]
             mapconfigs.append(helas_diag.get('number'))
-            lines.append("# Diagram %d" % \
-                         (helas_diag.get('number')))
+            lines.append("# Diagram %d, Amplitude %d" % \
+                         (helas_diag.get('number'),helas_diag.get('amplitudes')[0]['number']))
             # Correspondance between the config and the amplitudes
             lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
-                                                     helas_diag.get('number')))
+                                                     helas_diag.get('amplitudes')[0]['number']))
     
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards

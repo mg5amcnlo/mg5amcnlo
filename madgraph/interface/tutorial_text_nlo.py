@@ -97,9 +97,6 @@ Note also that, because of the way they have been generated, the parton-level
 events in the .lhe file are UNPHYSICAL. 
 In order to obtain physical results, please use the .hep file
 
-Please note that, in order to generate the showered .hep file, you must have 
-the MCatNLO-utilities package installed 
-(otherwise just type "install MCatNLO-utilities").
 Please enter
 aMC@NLO> launch 
 

@@ -2117,7 +2117,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'MCatNLO-utilities','update', 'Delphes2']
+                     'update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
@@ -2139,7 +2139,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -3843,8 +3842,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes', 
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis', 
-                'MCatNLO-utilities':'MCatNLO-utilities'}
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis'}
         name = name[args[0]]
 
         try:
@@ -3897,16 +3895,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             open(path, 'w').writelines(text)
             if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
                 os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
-
-        elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
-            text = open(path).read()
-            text = text.replace('MBITS=32','MBITS=64')
-            open(path, 'w').writelines(text)
-            to_copy = [os.path.join('SubProcesses', 'reweight0.inc')]
-            for f in to_copy:
-                files.cp(os.path.join(MG5DIR, 'Template', 'NLO', f), \
-                        os.path.join(MG5DIR, 'MCatNLO-utilities', 'MCatNLO', 'srcCommon'))
             
         # Compile the file
         # Check for F77 compiler
@@ -3926,8 +3914,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-            elif args[0] == 'MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
             
             if path:
                 text = open(path).read()
@@ -3993,9 +3979,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
                     
-            if args[0] == 'MCatNLO-utilities':
-                self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
-            
         if args[0] == 'Delphes2':
             data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
             data = data.replace('data/', 'DELPHESDIR/data/')
@@ -5211,17 +5194,44 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
-                               'lhapdf': self.options['lhapdf'],
+                    to_keep = {'lhapdf': self.options['lhapdf'],
                                'fastjet': self.options['fastjet']})
 
-            # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
-            if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
-                files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
-            else:
-                logger.warning('MCatNLO-utilities is not installed.')
-                logger.warning('If you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
+            # check if stdhep has to be compiled (only the first time)
+            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
+                logger.info('Compiling StdHEP. This has to be done only once.')
+                # this is for 64-bit systems
+                if sys.maxsize > 2**32:
+                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+                    text = open(path).read()
+                    text = text.replace('MBITS=32','MBITS=64')
+                    open(path, 'w').writelines(text)
+                # Set the correct fortran compiler
+                if 'FC' not in os.environ or not os.environ['FC']:
+                    if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
+                        compiler = self.options['fortran_compiler']
+                    elif misc.which('gfortran'):
+                        compiler = 'gfortran'
+                    elif misc.which('g77'):
+                        compiler = 'g77'
+                    else:
+                        raise self.InvalidCmd('Require g77 or Gfortran compiler')
+                    path = None
+                    base_compiler= ['FC=g77','FC=gfortran']
+                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+                    text = open(path).read()
+                    for base in base_compiler:
+                        text = text.replace(base,'FC=%s' % compiler)
+                    open(path, 'w').writelines(text)
+
+                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
+                logger.info('Done.')
+            #then link the libraries in the exported dir
+            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a'), \
+               pjoin(self._export_dir, 'MCatNLO', 'lib'))
+            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
+               pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent

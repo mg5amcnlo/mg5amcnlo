@@ -26,9 +26,10 @@ class TEST_misc(unittest.TestCase):
         self.assertTrue(eq(1,1.0))
         self.assertTrue(eq(1,1.0, 1))
         self.assertTrue(eq(1,1.0, 7))
-        self.assertTrue(eq(1,1.0 + 1e-8, 7))
-        self.assertFalse(eq(1,1.0 + 1e-8, 8))
-        self.assertFalse(eq(1,1.0 + 1e-8, 9))
+        self.assertTrue(eq(1,1.0 + 2e-8, 7))
+        self.assertTrue(eq(1,1.0 - 2e-8, 7))
+        self.assertFalse(eq(1,1.0 + 2e-8, 8))
+        self.assertFalse(eq(1,1.0 + 2e-8, 9))
         self.assertFalse(eq(1,-1.0))
         self.assertTrue(eq(0 ,0e-5))
         
@@ -36,4 +37,21 @@ class TEST_misc(unittest.TestCase):
         self.assertTrue(eq(100,1e2 + 1e-6))
         self.assertFalse(eq(100,1e2 + 1e-4))
         self.assertTrue(eq(80.419, 80.419002))
+        
+        # Check negative number
+        self.assertTrue(eq(-1,-1))
+        self.assertTrue(eq(-1,-1.0 + 1e-8, 7))
+        self.assertTrue(eq(-1,-1.0 + 2e-8, 7))
+        self.assertTrue(eq(-1,-1.0 - 2e-8, 7))
+        self.assertFalse(eq(-1,-1.0 + 2e-8, 8))
+        self.assertFalse(eq(-1,-1.0 + 2e-8, 9))
+        self.assertFalse(eq(-1,1.0))
+        self.assertTrue(eq(-0 ,-0e-5))
+        
+        self.assertTrue(eq(-100,-1e2))
+        self.assertTrue(eq(-100,-1e2 + 1e-6))
+        self.assertFalse(eq(-100,-1e2 + 1e-4))
+        self.assertTrue(eq(-80.419, -80.419002))        
+        
+        
         

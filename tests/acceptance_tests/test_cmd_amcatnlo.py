@@ -79,24 +79,8 @@ class TestMECmdShell(unittest.TestCase):
             devnull =open(os.devnull,'w')
             stdout=devnull
             stderr=devnull
-                
-                
-                    
-        if not os.path.exists(pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')):
-            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
-                             stdin=subprocess.PIPE,
-                             stdout=stdout,stderr=stderr)
-            out = p.communicate('install MCatNLO-utilities')
-        misc.compile(cwd=pjoin(MG5DIR,'MCatNLO-utilities'))
-        interface.exec_cmd('set MCatNLO-utilities_path %s --no_save' % pjoin(MG5DIR, 'MCatNLO-utilities') )
 
         interface.onecmd('output /tmp/MGPROCESS/ -f')
-        self.assertTrue(os.path.exists(\
-                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libstdhep.a')))
-        self.assertTrue(os.path.exists(\
-                    pjoin(MG5DIR, 'MCatNLO-utilities','MCatNLO','lib','libFmcfio.a')))        
-#        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libstdhep.a'))
-#        self.assertTrue(os.path.exists('/tmp/MGPROCESS/MCatNLO/lib/libFmcfio.a'))        
         proc_card = open('/tmp/MGPROCESS/Cards/proc_card_mg5.dat').read()
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
         

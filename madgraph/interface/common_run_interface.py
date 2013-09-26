@@ -315,7 +315,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -1425,8 +1424,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
-        run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
-    
+        try:
+            run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+        except IOError:
+            run_card_def = {}
+            
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -1466,7 +1468,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
         
-        self.run_set = run_card_def.keys() + self.run_card.hidden_param            
+        if run_card_def:
+            self.run_set = run_card_def.keys() + self.run_card.hidden_param
+        elif self.run_card:
+            self.run_set = self.run_card.keys()
+        else:
+            self.run_set = []            
         # check for conflict with run_card
         for var in self.pname2block:                
             if var in self.run_set:
