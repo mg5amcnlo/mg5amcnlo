@@ -1,0 +1,122 @@
+#
+# architecture specific information for StdHep makefiles
+# 
+
+include ../make_opts
+
+SUNAME = $(shell uname | sed s/[_-].*//)
+
+ifeq "$(FC)" ""
+     F77 = gfortran
+else
+     F77 = $(FC)
+endif
+
+ifeq "$(SUNAME)" "CYGWIN"
+    CC=gcc
+    CPP=gcc -E
+    CFLAGS= $(DFLG)
+    CXFLAGS = -I/usr/X11R6/include
+    FFLAGS= $(DFLG) -fno-second-underscore
+    KPPFLAGS= -C -P -DLinux -DUNIX
+    LOCAL = -lnsl
+#    BUILD_SHARED = false
+    SHFLAG = -fPIC
+    SHEXT  = so
+    LIBS= -L/usr/X11R6/lib -lXm -lXt -lX11 -lXp -lXext \
+          -lm -lg2c -lnsl
+endif
+
+UNAME = $(shell uname)
+ifeq "$(UNAME)" "IRIX"
+    IRIX6 = $(findstring 6,$(shell uname -r))
+    ifeq "$(IRIX6)" "6"
+	UNAME=IRIX64
+    endif
+endif
+
+ifndef DEBUG
+    DEBUG = none
+    DFLG =
+    SFX =
+else
+    DFLG = $(DEBUG)
+    SFX = _g
+endif
+
+AR=ar
+
+ifeq "$(UNAME)" "IRIX"
+    IRIX6 = $(findstring 6,$(shell uname -r))
+    CC=cc
+    CPP = /lib/cpp
+    KPPFLAGS= -C -P -DIRIX -DUNIX
+    CFLAGS= $(DFLG)
+    FFLAGS= $(DFLG)
+    BIGGER_STRINGS=-Wf,-XNl6000
+    LIBS=-lXm -lXt -lX11 -lm -lF77 -lI77 -lU77 -lisam -lsun -lPW -lm
+endif
+ifeq "$(UNAME)" "IRIX64"
+    CC=cc
+    CPP = /lib/cpp
+    CFLAGS= $(DFLG) -n32 -mips3 
+    FFLAGS= $(DFLG) -n32 -mips3
+    KPPFLAGS= -C -P -DIRIX -DUNIX
+    BIGGER_STRINGS=-Wf,-XNl6000
+    LIBS=-lXm -lXt -lX11 -lm -lftn -lPW -lm
+endif
+ifeq "$(UNAME)" "Darwin"
+    CC=gcc
+    CPP=gcc -E
+    CFLAGS= $(DFLG)  -I/sw/include -m$(MBITS)
+    FFLAGS= $(DFLG) -fno-second-underscore 
+    KPPFLAGS= -C -P -DLinux -DUNIX
+    LOCAL = -lSystem -lcc_dynamic -ldl
+    #BUILD_SHARED = true
+    SHFLAG = -fPIC
+    SHEXT  = dylib
+    LIBS= -L/usr/X11R6/lib -L/sw/lib -lXm -lXt -lX11 -lXext \
+          -lm -lg2c
+endif
+ifeq "$(UNAME)" "Linux"
+    CC=gcc
+    CPP=gcc -E
+    CFLAGS= $(DFLG)
+    CXFLAGS = -I/usr/X11R6/include
+    FFLAGS= $(DFLG) -fno-second-underscore
+    KPPFLAGS= -C -P -DLinux -DUNIX
+    LOCAL = -lnsl
+    BUILD_SHARED = true
+    SHFLAG = -fPIC
+    SHEXT  = so
+    LIBS= -L/usr/X11R6/lib -lXm -lXt -lX11 -lXp -lXext \
+          -lm -lg2c -lnsl
+endif
+ifeq "$(UNAME)" "OSF1"
+    CC=cc
+    CPP = /usr/lib/cpp
+    CFLAGS= $(DFLG) 
+    CXFLAGS = -DUSE_DIRENT -DFUNCPROTO -DXTFUNCPROTO
+    FFLAGS= $(DFLG) -fpe2 -check underflow -check overflow
+    KPPFLAGS= -C -P -DOSF1 -DUNIX
+    MAP = -Wl,-m > $@.map 2>&1
+    LIBS=-lXm -lXt -lX11 -lm -lfor -lots
+endif
+ifeq "$(UNAME)" "SunOS"
+    CC=/opt/SUNWspro/bin/cc
+    CPP = /usr/ccs/lib/cpp
+    CFLAGS= $(DFLG) -I/usr/openwin/include 
+    CXFLAGS = -Xa -I/usr/openwin/include -I/usr/dt/include -DMOTIF12 
+    FFLAGS= $(DFLG)
+    KPPFLAGS= -C -P -DSunOS -DUNIX
+    ##LOCAL= -L/opt/SUNWspro/lib -lm -lnsl -lsocket -lF77 -lM77 -ldbxFintr -lsunmath -R/opt/SUNWspro/lib
+    LOCAL= -lw -lgen -lsocket -lnsl -lintl
+    LIBS= -L/usr/openwin/lib -L/usr/dt/lib -lm -lXm -lXt -lX11 -lgen \
+	   -lF77 -lM77 -lsunmath -lsocket -lnsl -R /usr/openwin/lib -R /usr/dt/lib
+endif
+
+ifndef BUILD_SHARED
+    SHX =
+else
+    SHX = _s
+endif

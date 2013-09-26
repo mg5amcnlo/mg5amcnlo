@@ -1,0 +1,100 @@
+# Use this file as follows:
+# gmake -f Makefile_MadFKS EXTRAOBJ=<alpha,linux>.o VPATH=<vpath> <EXENAME>
+# See below for a list of name of executables. This is usually unnecessary,
+# the relevant operations being done by the scripts. If done manually, the
+# proper <vpath> must be entered at runtime
+
+ifeq ($(shell uname),AIX)
+F77=xlf -qextname -qflttrap=overflow:zerodivide:invalid:enable -O3 -qstrict \
+#       -qautodbl=dblpad
+SYSOBJ=
+AUTODBL=-qautodbl=dblpad
+endif
+ifeq ($(shell uname),SunOS)
+F77= f77 -fnonstd
+SYSOBJ=
+endif
+ifeq ($(shell uname),Linux)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CPP= g++ $(INCLOPTION)
+SYSOBJ=trapfpe.o
+endif
+ifeq ($(shell uname),HP-UX)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+SYSOBJ=
+endif
+ifeq ($(shell uname),OSF1)
+F77= f77 
+CPP= g++ $(INCLOPTION)
+SYSOBJ=
+endif
+ifeq ($(shell uname),Darwin)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CPP= g++ $(INCLOPTION)
+endif
+
+DEBUG=
+FF=$(F77) $(DEBUG)
+
+
+$(OBJDIR)/%.o: $(HWSDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+$(OBJDIR)/%.o: $(PYSDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+$(OBJDIR)/%.o: $(SRCDIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+$(OBJDIR)/%.o: $(COMSRC)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+$(OBJDIR)/%.o: $(ANADIR)/%.f
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.for
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+$(OBJDIR)/%.o: $(COMSRC)/%.for
+	$(F77) -I$(INCDIR) $(DEBUG) $(AUTODBL) -c $< -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $< -o $@
+$(OBJDIR)/%.o: $(COMSRC)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $< -o $@
+$(OBJDIR)/%.o: $(ANADIR)/%.cc
+	$(CPP) -I$(INCDIR) $(DEBUG) -c $< -o $@
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $^ -o $@
+$(OBJDIR)/%.o: $(COMSRC)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $^ -o $@
+$(OBJDIR)/%.o: $(ANADIR)/%.c
+	$(CC) -I$(INCDIR) $(DEBUG) -c $< -o $@
+
+
+UTIFILES=$(OBJDIR)/mcatnlo_date.o $(OBJDIR)/mcatnlo_int.o $(OBJDIR)/mcatnlo_uxdate.o $(OBJDIR)/mcatnlo_uti.o \
+         $(OBJDIR)/mcatnlo_str.o $(EXTRAOBJ)
+LUTIFILES=$(OBJDIR)/mcatnlo_date.o $(OBJDIR)/mcatnlo_int.o $(OBJDIR)/mcatnlo_uxdate.o $(OBJDIR)/mcatnlo_uti.o \
+         $(OBJDIR)/mcatnlo_str.o $(EXTRAOBJ)
+PDFFILES=$(OBJDIR)/mcatnlo_pdftomlm.o $(OBJDIR)/mcatnlo_libofpdf.o $(OBJDIR)/dummies.o
+CPDFFILES=$(OBJDIR)/mcatnlo_mlmtopdf.o $(OBJDIR)/dummies.o
+LPDFFILES=$(OBJDIR)/mcatnlo_mlmtolha.o $(OBJDIR)/dummies.o
+HWFILES=$(OBJDIR)/$(HERWIGVER) $(OBJDIR)/madfks_hwdriver.o $(OBJDIR)/madfks_hwlhin.o \
+        $(OBJDIR)/mcatnlo_str.o $(HWUTI)
+PYFILES=$(OBJDIR)/$(PYTHIAVER) $(OBJDIR)/madfks_pydriver.o $(OBJDIR)/madfks_pylhin.o \
+        $(OBJDIR)/mcatnlo_str.o $(PYUTI)
+
+
+HW_EXE_DEFAULT : $(HWFILES) $(PDFFILES)
+	$(FF) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+HW_EXE_PDFLIB : $(HWFILES) $(CPDFFILES) 
+	$(FF) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+HW_EXE_LHAPDF : $(HWFILES) $(LPDFFILES)  
+	$(FF) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_DEFAULT : $(PYFILES) $(PDFFILES)
+	$(FF) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_PDFLIB : $(PYFILES) $(CPDFFILES) 
+	$(FF) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
+PY_EXE_LHAPDF : $(PYFILES) $(LPDFFILES)  
+	$(FF) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@

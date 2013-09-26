@@ -1,0 +1,88 @@
+#
+# architecture specific information for StdHep makefiles
+# 
+
+include ../../src/make_opts
+
+SUNAME = $(shell uname | sed s/[_-].*//)
+
+F77 =$(FC)
+ifeq "$(F77)" ""
+	F77= gfortran
+endif
+
+ifeq "$(SUNAME)" "CYGWIN"
+    CC=gcc
+    CFLAGS= $(DFLG) -I/usr/X11R6/include
+    FFLAGS= $(DFLG) -fno-second-underscore
+    MXTLIBS = -L/usr/X11R6/lib -L/usr/lib -lg2c -lXm -lrpc -lX11 -lXt \
+              -lXp -lXext -lm
+endif
+
+UNAME = $(shell uname)
+ifeq "$(UNAME)" "IRIX"
+    IRIX6 = $(findstring 6,$(shell uname -r))
+    ifeq "$(IRIX6)" "6"
+	UNAME=IRIX64
+    endif
+endif
+
+ifndef DEBUG
+    DEBUG = none
+    DFLG =
+    SFX =
+else
+    DFLG = $(DEBUG)
+    SFX = _g
+endif
+
+ifeq "$(UNAME)" "IRIX"
+    CC=cc
+    CFLAGS= $(DFLG)
+    FFLAGS= $(DFLG)
+    MXTLIBS = -lXm -lXt -lX11 -lPW -lm
+endif
+ifeq "$(UNAME)" "IRIX64"
+    CC=cc
+    CFLAGS= $(DFLG) -n32 -mips3
+    FFLAGS= $(DFLG) -n32 -mips3
+    MXTLIBS = -lXm -lXt -lX11 -lPW -lm
+endif
+ifeq "$(UNAME)" "Linux"
+    CC=gcc
+    CFLAGS= $(DFLG) -I/usr/X11R6/include 
+    FFLAGS= $(DFLG) -fno-second-underscore
+    MXTLIBS = -L/usr/X11R6/lib -lXm -lX11 -lXt -lXp -lXext -lm
+    BUILD_SHARED = true
+    SHFLAG = -fPIC
+    SHEXT  = so
+endif
+ifeq "$(UNAME)" "Darwin"
+    CC=gcc
+    CPP=gcc
+    CFLAGS= $(DFLG) -I/usr/X11R6/include -m$(MBITS)
+    FFLAGS= $(DFLG)  -fno-second-underscore
+    LOCAL = -lSystem -ldl
+endif
+ifeq "$(UNAME)" "OSF1"
+    CC=cc
+    CFLAGS= $(DFLG) 
+    FFLAGS= $(DFLG) -fpe2 -check underflow -check overflow
+    MXTLIBS = -lXm -lXt -lX11 -lm -lfor -lots
+    MAP = -Wl,-m > $@.map 2>&1
+endif
+ifeq "$(UNAME)" "SunOS"
+    CC=/opt/SUNWspro/bin/cc
+    CFLAGS= $(DFLG) -I/usr/openwin/include -I/usr/dt/include -DMOTIF12
+    FFLAGS= $(DFLG)
+    MXTLIBS = -L/usr/openwin/lib -L/usr/dt/lib -lm -lXm -lXt -lX11 -lgen \
+	   -lF77 -lM77 -lsunmath -lsocket -lnsl -R /usr/openwin/lib -R /usr/dt/lib
+endif
+
+ifndef BUILD_SHARED
+    SHX =
+else
+    SHX = _s
+endif
+
+AR=ar
