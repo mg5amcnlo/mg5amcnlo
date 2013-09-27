@@ -2082,6 +2082,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                                    wf_number,
                                    force_flip_flow=False,
                                    number_to_wavefunctions=[]):
+
         """Check for clashing fermion flow (N(incoming) !=
         N(outgoing)). If found, we need to trace back through the
         mother structure (only looking at fermions), until we find a

@@ -704,7 +704,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
     def check_check(self, args):
         """check the validity of args"""
-        
+                
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -728,7 +728,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 args.insert(1, '-no_reuse')
         else:
             args.append('-no_reuse')
-            
+
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
             misc.sprint(param_card)
@@ -746,11 +746,22 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
+        i=-1
+        options_list = {'--energy':'1000','--split_orders':'-1'}
+        user_options={}
+        while args[i].startswith('--'):
+            option=args[i].split('=')
+            user_options[option[0]]=option[1]
+            i=i-1
         
-        if not args[-1].startswith('--energy='):
-            args.append('--energy=1000')
+        for option, default_value in options_list.items():
+            if option not in user_options.keys():
+                user_options[option]=default_value    
         
-        self.check_process_format(" ".join(args[1:-1]))
+        for option, value in user_options.items():
+            args.append('%s=%s'%(option,value))
+        
+        self.check_process_format(" ".join(args[1:-len(options_list.keys())]))
 
         return param_card
     
@@ -2804,7 +2815,7 @@ This implies that with decay chains:
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        options['reuse'] = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
@@ -2812,11 +2823,19 @@ This implies that with decay chains:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
 
-        options['energy'] = float(args[-1].split('=')[1])
-        args = args[:-1]        
+        i=-1
+        while args[i].startswith('--'):
+            option = args[i].split('=')
+            if option[0] =='--energy':
+                options['energy']=float(option[1])
+            elif option[0]=='--split_orders':
+                options['split_orders']=int(option[1])
+            i=i-1
+        args = args[:i+1]
+        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
-
+        
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")

@@ -30,6 +30,7 @@
       CHARACTER*120 BUFF(NEXTERNAL)
       CHARACTER*1 EX 
       INTEGER HELCHOICE
+      INTEGER SOCHOICE
 
 !     
 !     EXTERNAL
@@ -80,8 +81,13 @@
         if (MU_R.lt.0.0d0) then
           MU_R=SQRTS            
         endif
-        write(*,*) "Enter Helicity tag, -1 = summed. For loops only."
+        write(*,*) "Enter Helicity tag, -1 = summed."
         read(*,*) HELCHOICE
+        write(*,*) "Enter split_orders choice, -1 = all."
+        read(*,*) SOCHOICE
+        IF (SOCHOICE.NE.-1) THEN
+          CALL SET_COUPLINGORDERS_TARGET(SOCHOICE)
+        ENDIF
 !---  Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
 !     

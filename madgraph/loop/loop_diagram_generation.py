@@ -500,6 +500,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # two if they are perturbed. It is a temporary change that will be 
         # reverted after loop diagram generation.
         user_orders=copy.copy(self['process']['orders'])
+        user_squared_orders=copy.copy(self['process']['squared_orders'])
         
         # If the user did not specify any order, we can expect him not to be an
         # expert. So we must make sure the born all factorize the same powers of
@@ -685,6 +686,19 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # user_filter() function which by default does nothing but in which you
         # will find examples of common filters.
         self.user_filter(self['process']['model'],self['structure_repository'])
+
+        # Now revert the squared order. This function typically adds to the 
+        # squared order list the target WEIGHTED order which has been detected.
+        # This is typically not desired because if the used types in directly
+        # what it sees on the screen, it does not get back the same process.
+        # for example, u u~ > d d~ [virt=QCD] becomes
+        # u u~ > d d~ [virt=QCD] WEIGHTED=6
+        # but of course the photon-gluon s-channel born interference is not
+        # counted in.
+        # However, if you type it in generate again with WEIGHTED=6, you will
+        # get it.
+        self['process']['squared_orders'].clear()
+        self['process']['squared_orders'].update(user_squared_orders)
 
         # Give some info about the run
         nLoopDiag = 0

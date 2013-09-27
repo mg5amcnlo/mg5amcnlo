@@ -1642,21 +1642,50 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         self.compute_all_analytic_information()
     
     def get_split_orders_mapping(self):
-        """This function returns three lists:
+        """This function returns a list and a dictionary:
                         squared_orders, amps_orders
-            with amps order a dictionary with keys 'loop_amp_orders',
-            'born_amp_orders' and 'ct_amp_orders' with values being the tuples 
-            described below.
-        If process['split_orders'] is empty, all these tuples are set empty.
+        
+        ===
+              
+        The squared_orders lists all contributing squared_orders as tuple whose
+        elements are the power at which are elevated the couplings orderered as
+        in the 'split_orders'.
         
         squared_orders : All possible contributing squared orders among those
             specified in the process['split_orders'] argument. The elements of
-            the list are tuples of the format format (OrderValue1,OrderValue2,...) 
+            the list are tuples of the format
+             ((OrderValue1,OrderValue2,...),
+              (max_contrib_ct_amp_number,
+              max_contrib_uvct_amp_number,
+              max_contrib_loop_amp_number,
+              max_contrib_group_id))
             with OrderValue<i> correspond to the value of the <i>th order in
             process['split_orders'] (the others are summed over and therefore 
             left unspecified).
             Ex for dijet with process['split_orders']=['QCD','QED']: 
-                => [(4,0),(2,2),(0,4)]
+                => [((4,0),(8,2,3)),((2,2),(10,3,3)),((0,4),(20,5,4))]
+           
+        'max_contrib_loop_amp_number': For optimization purposes, it is good to
+        know what is the maximum loop amplitude number contributing to any given 
+        squared order. The fortran output is structured so that if the user 
+        is interested in a given squared order contribution only, then
+        all the open loop coefficients for the amplitudes with a number above
+        this value can be skipped.
+        
+        'max_contrib_(uv)ct_amp_number': Same as above but for the 
+        (uv)ctamplitude number.
+        
+        'max_contrib_group_id': The same as above, except this time
+        it is for the loop group id used for the loop reduction.
+ 
+        ===
+        
+        The amps_orders is a *dictionary* with keys 
+          'born_amp_orders',
+          'loop_amp_orders'
+        with values being the tuples described below.
+        
+        If process['split_orders'] is empty, all these tuples are set empty.
         
         'born_amp_orders' : Exactly as for squared order except that this list specifies
             the contributing order values for the amplitude (i.e. not 'squared').
@@ -1666,21 +1695,21 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 => [((2, 0), (2,)), ((0, 2), (1, 3, 4))]
             The function returns () if the process has no borns.
         
-        'loop_amp_orders' and 'ct_amp_orders' : The same as for born_amp_orders 
-            but for the loop amplitudes only.
+        'loop_amp_orders' : The same as for born_amp_orders but for the loop
+            type of amplitudes only.
 
-        Keep in mind that the orders of the element of the list is important as
-        it dicatates the order of the corresponding "order indices" in the
-        code output by the exporters.
+        Keep in mind that the orders of the elements of the outter most list is
+        important as it dictates the order for the corresponding "order indices" 
+        in the fortran code output by the exporters.
         """
     
         split_orders=self.get('processes')[0].get('split_orders')
         # If no split_orders are defined, then return the obvious
-        amps_orders = {'born_amp_orders':(),
-                       'ct_amp_orders':(),
-                       'loop_amp_orders':()}
+        amps_orders = {'born_amp_orders':[],
+                       'loop_amp_orders':[]}
         if len(split_orders)==0:
-            return (),amps_orders
+            self.squared_orders = []
+            return [],amps_orders
         
         # First make sure that the 'split_orders' are ordered according to their
         # weight.
@@ -1693,49 +1722,130 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         loop_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
              self.get_loop_diagrams(), split_orders, 
              get_amplitudes_function = lambda diag: diag.get_loop_amplitudes(),
-             get_amp_number_function = 
-                             lambda amp: amp.get('amplitudes')[0].get('number'))
+             # We chose at this stage to store not only the amplitude numbers but
+             # also the reference reduction id in the loop grouping, necessary
+             # for returning the max_contrib_ref_amp_numbers.
+             get_amp_number_function =  lambda amp: 
+               (amp.get('amplitudes')[0].get('number'),amp.get('loop_group_id')))
         ct_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
-                helas_objects.HelasDiagramList([hd for hd in self['diagrams']
-                if isinstance(hd,LoopHelasDiagram)]), split_orders, 
+                self.get_loop_diagrams(), split_orders, 
                 get_amplitudes_function = lambda diag: diag.get_ct_amplitudes())
+        uvct_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
+                self.get_loop_UVCT_diagrams(), split_orders)
+    
+        # With this function, we just return the contributing amplitude numbers
+        # The format is therefore the same as for the born_amp_orders and
+        # ct_amp_orders
+        amps_orders['loop_amp_orders'] = dict([(lao[0],
+                          [el[0] for el in lao[1]]) for lao in loop_amp_orders])
+        # Now add there the ct_amp_orders and uvct_amp_orders
+        for ct_amp_order in ct_amp_orders+uvct_amp_orders:
+            try:
+                amps_orders['loop_amp_orders'][ct_amp_order[0]].extend(\
+                                                          list(ct_amp_order[1]))
+            except KeyError:
+                amps_orders['loop_amp_orders'][ct_amp_order[0]] = \
+                                                           list(ct_amp_order[1])
+        # We must now turn it back to a list
+        amps_orders['loop_amp_orders'] = [
+            (key, tuple(sorted(amps_orders['loop_amp_orders'][key]))) 
+                               for key in amps_orders['loop_amp_orders'].keys()]         
+        # and re-sort it to make sure it follows an increasing WEIGHT order.
+        order_hierarchy = self.get('processes')[0]\
+                                            .get('model').get('order_hierarchy')
+        if set(order_hierarchy.keys()).union(set(split_orders))==\
+                                                    set(order_hierarchy.keys()):
+            amps_orders['loop_amp_orders'].sort(key= lambda so: 
+                         sum([order_hierarchy[split_orders[i]]*order_power for \
+                                           i, order_power in enumerate(so[0])]))
 
-        amps_orders['loop_amp_orders'] = loop_amp_orders
-        amps_orders['ct_amp_orders'] = ct_amp_orders        
-
+        # Finally the born amp orders
         if process.get('has_born'):
             born_amp_orders = self.get_split_orders_mapping_for_diagram_list(\
                                           self.get_born_diagrams(),split_orders)
         
             amps_orders['born_amp_orders'] = born_amp_orders
         
-        # Now we construct the interference splitting order matrix for 
-        # convenience
-        loop_orders = set(loop_order[0] for loop_order in \
-                                                  loop_amp_orders+ct_amp_orders)
-        born_orders = set([born_order[0] for born_order in born_amp_orders])
-        
-        
+        # Now we construct the interference splitting order matrix.
+        # For this we flatten the list of many individual 2-tuples of the form
+        # (amp_number, ref_amp_number) into one big 2-tuple of the form
+        # (tuple_of_all_amp_numers, tuple_of_all_ref_amp_numbers).
+        loop_orders = [(lso[0],tuple(zip(*list(lso[1])))) for lso in loop_amp_orders]
+
+        # For the reference orders (against which the loop and ct amps are squared)
+        # we only need the value of the orders, not the corresponding amp numbers.
         if process.get('has_born'):
-            ref_orders = born_orders
+            ref_orders = [bao[0] for bao in born_amp_orders]
         else:
-            ref_orders = loop_orders
+            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders]
         
-        squared_orders = set([])
-        for loop_order in loop_orders:
-            for ref_order in ref_orders:
-                key = tuple([ord1 + ord2 for ord1,ord2 in zip(loop_order,ref_order)])
-                squared_orders.add(key)
-        squared_orders = list(squared_orders)
+        # Temporarily we set squared_orders to be a dictionary with keys being
+        # the actual contributing squared_orders and the values are the list 
+        # [max_contrib_amp_number,max_contrib_ref_amp_number]
+        squared_orders = {}
+        for ref_order in ref_orders:
+            for uvct_order in uvct_amp_orders:
+                key = tuple([ord1 + ord2 for ord1,ord2 in zip(uvct_order[0],
+                                                                    ref_order)])
+                try:
+                    # Finding the max_contrib_uvct_amp_number
+                    squared_orders[key][0] = max([squared_orders[key][0]]+
+                                                            list(uvct_order[1]))
+                except KeyError:
+                    squared_orders[key] = [max(list(uvct_order[1])),-1,-1,-1]
+
+            for ct_order in ct_amp_orders:
+                key = tuple([ord1 + ord2 for ord1,ord2 in zip(ct_order[0],
+                                                                    ref_order)])
+                try:
+                    # Finding the max_contrib_ct_amp_number
+                    squared_orders[key][1] = max([squared_orders[key][1]]+
+                                                              list(ct_order[1]))
+                except KeyError:
+                    squared_orders[key] = [-1,max(list(ct_order[1])),-1,-1]
+
+            for loop_order in loop_orders:
+                key = tuple([ord1 + ord2 for ord1,ord2 in zip(loop_order[0],
+                                                                    ref_order)])
+                try:
+                    # Finding the max_contrib_loop_amp_number
+                    squared_orders[key][2] = max([squared_orders[key][2]]+
+                                                         list(loop_order[1][0]))
+                    # Finding the max_contrib_loop_id
+                    squared_orders[key][3] = max([squared_orders[key][3]]+
+                                                         list(loop_order[1][1]))
+                except KeyError:
+                    squared_orders[key] = [-1,-1,max(list(loop_order[1][0])),
+                                                    max(list(loop_order[1][1]))]
+
+        # To sort the squared_orders, we now turn it into a list instead of a
+        # dictionary. Each element of the list as the format
+        #   ( squared_so_powers_tuple, (max_amp_number, max_ref_amp_number) )
+        squared_orders = [(sqso[0],tuple(sqso[1])) for sqso in \
+                                                         squared_orders.items()]
         # Sort the squared orders if the hierarchy defines them all.
         order_hierarchy = self.get('processes')[0].get('model').get('order_hierarchy')
         if set(order_hierarchy.keys()).union(set(split_orders))==\
                                                     set(order_hierarchy.keys()):
             squared_orders.sort(key= lambda so: 
                          sum([order_hierarchy[split_orders[i]]*order_power for \
-                                              i, order_power in enumerate(so)]))
+                                           i, order_power in enumerate(so[0])]))
+
+        # Cache the squared_orders information
+        self.squared_orders = squared_orders
 
         return squared_orders, amps_orders
+
+    def get_squared_order_contribs(self):
+        """Return the squared_order contributions as returned by the function
+        get_split_orders_mapping. It uses the cached value self.squared_orders
+        if it was already defined during a previous call to get_split_orders_mapping.
+        """
+
+        if not hasattr(self, "squared_orders"):
+            self.get_split_orders_mapping()
+
+        return self.squared_orders
 
     def find_max_loop_coupling(self):
         """ Find the maximum number of loop couplings appearing in any of the

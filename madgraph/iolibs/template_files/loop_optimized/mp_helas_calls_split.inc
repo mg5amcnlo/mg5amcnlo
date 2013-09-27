@@ -44,6 +44,12 @@ C
 	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
 	  common/Filters/GOODAMP,GOODHEL
 
+	  INTEGER SQSO_TARGET
+	  common/SOCHOICE/SQSO_TARGET
+      
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+
       %(mp_born_amps_decl)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
 	  common/MP_W/W
@@ -66,6 +72,15 @@ C ----------
 C BEGIN CODE
 C ----------
 
+C     The target squared split order contribution is already reached if true.
+      IF (FILTER_SO.AND.%(required_so_broadcaster)s) THEN
+	    GOTO 1001
+	  ENDIF
+
 %(helas_calls)s
 
+      GOTO 1001
+%(continue_label)d CONTINUE
+      %(required_so_broadcaster)s=.TRUE.
+1001  CONTINUE
       END

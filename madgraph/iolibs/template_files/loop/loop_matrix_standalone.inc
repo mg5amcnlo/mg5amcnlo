@@ -795,6 +795,19 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
+	  SUBROUTINE SET_COUPLINGORDERS_TARGET(SOTARGET)
+	  IMPLICIT NONE
+C
+C     This routine can be accessed by an external user to set the squared split order target.
+C     This functionality is only available in the optimized mode, but for compatibility 
+C     purposes, a dummy version is also put in this default output.
+C
+C ----------
+C BEGIN CODE
+C ----------
+      write(*,*) 'WARNING:: Ignored, the possibility of selecting specific squared order contributions is not available in the default mode.'
+	  END
+
       SUBROUTINE GET_NSQSO_LOOP(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order

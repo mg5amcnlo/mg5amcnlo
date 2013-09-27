@@ -175,6 +175,25 @@ C     Typically, the hel_offset is 10000
 	  DATA USERHEL/-1/
 	  common/USERCHOICE/USERHEL
 
+C     This integer can be accessed by an external user to set its target squared split order.
+C     If set to a value different than -1, the code will try to avoid computing anything which
+C     does not contribute to contributions of squared split orders SQSO_TARGET and below.
+	  INTEGER SQSO_TARGET
+	  DATA SQSO_TARGET/-1/
+	  common/SOCHOICE/SQSO_TARGET
+C     The following logical are used to broadcast the fact that the target 'required' CT and
+C     loop split orders contributions have been reached already and the rest can be skipped.
+	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  DATA UVCT_REQ_SO_DONE/.FALSE./
+	  DATA MP_UVCT_REQ_SO_DONE/.FALSE./	  
+	  DATA CT_REQ_SO_DONE/.FALSE./
+	  DATA MP_CT_REQ_SO_DONE/.FALSE./	  
+	  DATA LOOP_REQ_SO_DONE/.FALSE./
+	  DATA MP_LOOP_REQ_SO_DONE/.FALSE./	  
+	  DATA CTCALL_REQ_SO_DONE/.FALSE./
+	  DATA FILTER_SO/.FALSE./
+	  common/SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+
 	  integer I_SO
 	  DATA I_SO/1/
 	  common/I_SO/I_SO
@@ -419,6 +438,9 @@ ENDIF
 
 LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
 
+CTCALL_REQ_SO_DONE=.FALSE.
+FILTER_SO = (.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.(SQSO_TARGET.ne.-1)
+
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,NSQUAREDSO
@@ -459,7 +481,26 @@ DO H=1,NCOMB
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
+
+  UVCT_REQ_SO_DONE=.FALSE.
+  CT_REQ_SO_DONE=.FALSE.
+  LOOP_REQ_SO_DONE=.FALSE.
+
+C Helas calls for the born amplitudes and counterterms associated to given loops
   %(born_ct_helas_calls)s
+2000 CONTINUE
+  CT_REQ_SO_DONE=.TRUE.
+
+c Helas calls for the counterterm of type 'UVtree' in the UFO.
+c These are generated irrespectively of the produced loops.
+c In general, only wavefunction renormalization counterterms
+c (if needed by the loop UFO model) are of this type.
+c Quite often and in principle for all loop UFO models from 
+c FeynRules, there are none of these type of counterterms.
+  %(uvct_helas_calls)s
+3000 CONTINUE
+  UVCT_REQ_SO_DONE=.TRUE.
+
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
     DUMMY=GOODHEL(H)
   ELSE
@@ -472,7 +513,11 @@ DO H=1,NCOMB
 	  %(squaring)s
     ENDDO
   ENDDO
-  %(coef_construction)s  
+  
+  %(coef_construction)s
+4000 CONTINUE
+  LOOP_REQ_SO_DONE=.TRUE.
+
   ENDIF
 ENDDO
 
@@ -498,7 +543,12 @@ DO I_SO=1,NSQUAREDSO
   DO J=1,NLOOPGROUPS
     S(I,J)=.TRUE.
   ENDDO
+  IF (FILTER_SO.and.SQSO_TARGET.NE.I_SO) GOTO 5001
 %(loop_CT_calls)s
+  GOTO 5001
+5000 CONTINUE
+  CTCALL_REQ_SO_DONE=.TRUE.
+5001 CONTINUE
 ENDDO
 
 %(actualize_ans)s
@@ -989,7 +1039,9 @@ C       The following is used instead
           acc(k) = acc(k) + ACCURACIES(I)*ABS(ESTIMATE(I,K))
           AVG = AVG + ESTIMATE(I,K)
         ENDDO
-        acc(k)  = acc(k) / ( ABS(AVG) / 3.0d0)
+		if (avg.ne.0.0d0) then
+          acc(k)  = acc(k) / ( ABS(AVG) / 3.0d0)
+		endif
 
 	  enddo
 
@@ -1189,6 +1241,29 @@ C
 C --=========================================--
 C   Definition of additional access routines
 C --=========================================--
+
+	  SUBROUTINE SET_COUPLINGORDERS_TARGET(SOTARGET)
+	  IMPLICIT NONE
+C
+C     This routine can be accessed by an external user to set the squared split order target.
+C     If set to a value different than -1, the code will try to avoid computing anything which
+C     does not contribute to contributions of squared split orders SQSO_TARGET and below.
+C     This can considerably speed up the code. However, keep in mind that any contribution of
+C     'squared order index' larger than SQSO_TARGET cannot be trust.
+C
+C     ARGUMENTS
+C
+      INTEGER SOTARGET
+C
+C     GLOBAL
+C
+	  INTEGER SQSO_TARGET
+	  common/SOCHOICE/SQSO_TARGET
+C ----------
+C BEGIN CODE
+C ----------
+      SQSO_TARGET = SOTARGET
+	  END
 
       SUBROUTINE SLOOPMATRIXHEL(P,HEL,ANS)
       IMPLICIT NONE

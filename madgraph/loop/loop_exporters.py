@@ -669,7 +669,7 @@ PARAMETER (NSQUAREDSO=0)""")
 """INTEGER NSQUAREDSO
 PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])     
         for key in ['print_so_born_results','print_so_loop_results',
-                               'write_so_born_results','write_so_loop_results']:
+            'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
                 replace_dict[key]=''
         if matrix_element.get('processes')[0].get('has_born'):
@@ -869,7 +869,9 @@ PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])
     # Helper function to split HELAS CALLS in dedicated subroutines placed
     # in different files.
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
-                         helas_calls, entry_name, bunch_name,n_helas=2000):
+                         helas_calls, entry_name, bunch_name,n_helas=2000,
+                         required_so_broadcaster = 'LOOP_REQ_SO_DONE',
+                         continue_label = 1000):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
         size n_helas and place them in dedicated subroutine with name 
@@ -882,8 +884,11 @@ PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])
             helascalls_replace_dict['bunch_number']=i+1                
             helascalls_replace_dict['helas_calls']=\
                                            '\n'.join(helas_calls[k:k + n_helas])
+            helascalls_replace_dict['required_so_broadcaster']=\
+                                                         required_so_broadcaster
+            helascalls_replace_dict['continue_label']=continue_label
             new_helascalls_file = open(os.path.join(self.template_dir,\
-                                            template_name)).read()
+                                                          template_name)).read()
             new_helascalls_file = new_helascalls_file % helascalls_replace_dict
             helascalls_files.append(new_helascalls_file)
         # Setup the call to these HELASCALLS subroutines in loop_matrix.f
@@ -1019,8 +1024,11 @@ call smatrix(p,ref)"""
         # Extract helas calls
         loop_amp_helas_calls = fortran_model.get_loop_amp_helas_calls(\
                                                             matrix_element)
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+        born_ct_helas_calls, UVCT_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element)
+        # In the default output, we do not need to separate these two kind of
+        # contributions
+        born_ct_helas_calls = born_ct_helas_calls + UVCT_helas_calls
         file = open(os.path.join(self.template_dir,\
         
                         'loop_matrix_standalone.inc')).read()
@@ -1107,8 +1115,11 @@ call smatrix(p,ref)"""
             replace_dict['h_w_suffix']=''            
 
         # Extract helas calls
-        born_amps_and_wfs_calls = fortran_model.get_born_ct_helas_calls(\
-                                                matrix_element, include_CT=True)
+        born_amps_and_wfs_calls , uvct_amp_calls = \
+          fortran_model.get_born_ct_helas_calls(matrix_element, include_CT=True)
+        # In the default output, these two kind of contributions do not need to
+        # be differentiated
+        born_amps_and_wfs_calls = born_amps_and_wfs_calls + uvct_amp_calls
         
         # Turn these HELAS calls to the multiple-precision version of the HELAS
         # subroutines.
@@ -1354,24 +1365,34 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['mp_squaring']=\
 """ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_LOOP_AMP(J))
 TEMP2 = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
-ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
-ANS(1,0)=ANS(1,0)+TEMP2"""       
+IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+  ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
+  ANS(1,0)=ANS(1,0)+TEMP2
+ENDIF"""       
         else:
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']=\
-"""ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_BORN_AMP(J))                                 
+"""ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_BORN_AMP(J))
+IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN                               
 DO K=1,3
 TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
 ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
 ANS(K,0)=ANS(K,0)+TEMP2
-ENDDO"""
+ENDDO
+ENDIF"""
         # Extract helas calls
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+        squared_orders = matrix_element.get_squared_order_contribs()
+        split_orders = matrix_element.get('processes')[0].get('split_orders')
+        
+        born_ct_helas_calls , uvct_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element,
+                       squared_orders=squared_orders, split_orders=split_orders)
         self.turn_to_mp_calls(born_ct_helas_calls)
+        self.turn_to_mp_calls(uvct_helas_calls)
         coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
-                                    matrix_element,group_loops=self.group_loops)
+                                    matrix_element,group_loops=self.group_loops,
+                        squared_orders=squared_orders,split_orders=split_orders)
         self.turn_to_mp_calls(coef_construction)
         self.turn_to_mp_calls(coef_merging)        
                                          
@@ -1383,12 +1404,22 @@ ENDDO"""
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'mp_born_ct_helas_calls','mp_helas_calls_ampb')
+                            'mp_born_ct_helas_calls','mp_helas_calls_ampb',
+                            required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
+                            continue_label = 2000)
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'mp_helas_calls_split.inc',file,uvct_helas_calls,\
+                            'mp_uvct_helas_calls','mp_helas_calls_uvct',
+                            required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
+                            continue_label = 3000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'mp_helas_calls_split.inc',file,coef_construction,\
-                    'mp_coef_construction','mp_coef_construction')
+                    'mp_coef_construction','mp_coef_construction',
+                    required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
+                    continue_label = 4000)
         else:
             replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['mp_uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['mp_coef_construction']='\n'.join(coef_construction)
         
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
@@ -1428,15 +1459,24 @@ ENDDO"""
             self.general_replace_dict['print_so_loop_results']=\
                                          "write(*,*) 'No split orders defined.'"
         elif len(squared_orders)==1:
+            self.general_replace_dict['set_coupling_target']=''
             self.general_replace_dict['print_so_loop_results']=\
               "write(*,*) 'All loop contributions are of split orders (%s)'"%(
                       ' '.join(['%s=%d'%(split_orders[i],squared_orders[0][i]) \
                                             for i in range(len(split_orders))]))
         else:
+            self.general_replace_dict['set_coupling_target']='\n'.join([
+'# Here we leave the default target squared split order to -1, meaning that we'+
+' aim at computing all individual contributions. You can choose otherwise.',
+'call SET_COUPLINGORDERS_TARGET(-1)'])
             self.general_replace_dict['print_so_loop_results'] = '\n'.join([
               '\n'.join(["write(*,*) 'Loop ME for orders (%s) :'"%(' '.join(
           ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))])),
+              "IF (PREC_FOUND(%d).NE.-1.0d0) THEN"%(j+1),
               "write(*,*) ' > accuracy = ',PREC_FOUND(%d)"%(j+1),
+              "ELSE",
+              "write(*,*) ' > accuracy =   NA'",              
+              "ENDIF",
               "write(*,*) ' > finite   = ',MATELEM(1,%d)"%(j+1),
               "write(*,*) ' > 1eps     = ',MATELEM(2,%d)"%(j+1),
               "write(*,*) ' > 2eps     = ',MATELEM(3,%d)"%(j+1)
@@ -1504,19 +1544,22 @@ ENDDO"""
         
         # Take care of the split_orders
         squared_orders, amps_orders = matrix_element.get_split_orders_mapping()
+        # Creating here a temporary list containing only the information of 
+        # what are the different squared split orders contributing
+        # (no max_contrib_amp_number and max_contrib_ref_amp_number)
+        sqso_contribs = [sqso[0] for sqso in squared_orders]
         split_orders = matrix_element.get('processes')[0].get('split_orders')
         # The entries set in the function below are only for check_sa written
         # out in write_matrix_element_v4 (it is however placed here because the
         # split order information is only available here).
         self.setup_check_sa_replacement_dictionary(\
-                                         split_orders,squared_orders,amps_orders)
+                                         split_orders,sqso_contribs,amps_orders)
         
         # Now recast the split order basis for the loop, born and counterterm
         # amplitude into one single splitorderbasis.
         overall_so_basis = list(set(
             [born_so[0] for born_so in amps_orders['born_amp_orders']]+
-            [born_so[0] for born_so in amps_orders['loop_amp_orders']]+
-            [born_so[0] for born_so in amps_orders['ct_amp_orders']]))
+            [born_so[0] for born_so in amps_orders['loop_amp_orders']]))
         # We must re-sort it to make sure it follows an increasing WEIGHT order
         order_hierarchy = matrix_element.get('processes')[0]\
                                             .get('model').get('order_hierarchy')
@@ -1529,7 +1572,7 @@ ENDDO"""
         # Those are additional entries used throughout the different files of
         # MadLoop5
         self.general_replace_dict['nSO'] = len(split_orders)
-        self.general_replace_dict['nSquaredSO'] = len(squared_orders)
+        self.general_replace_dict['nSquaredSO'] = len(sqso_contribs)
         self.general_replace_dict['nAmpSO'] = len(overall_so_basis)
         
         replace_dict = copy.copy(self.general_replace_dict)
@@ -1538,14 +1581,14 @@ ENDDO"""
         replace_dict['ampsplitorders'] = '\n'.join(self.get_split_orders_lines(\
                                              overall_so_basis,'AMPSPLITORDERS'))
         replace_dict['SquaredSO'] = '\n'.join(self.get_split_orders_lines(\
-                                                 squared_orders,'SQPLITORDERS'))
+                                                  sqso_contribs,'SQPLITORDERS'))
         # Now we build the different arrays storing the split_orders ID of each
         # amp.
-        ampSO_list=[-1]*sum(len(el[1]) for el in \
-                  (amps_orders['ct_amp_orders']+amps_orders['loop_amp_orders']))
-        for SO in (amps_orders['ct_amp_orders']+amps_orders['loop_amp_orders']):
+        ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['loop_amp_orders'])
+        for SO in amps_orders['loop_amp_orders']:
             for amp_number in SO[1]:
                 ampSO_list[amp_number-1]=overall_so_basis.index(SO[0])+1
+
         replace_dict['loopAmpSO'] = '\n'.join(self.format_integer_list(
                                                     ampSO_list,'LOOPAMPORDERS'))
         ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['born_amp_orders'])
@@ -1594,8 +1637,10 @@ ENDDO
             replace_dict['squaring']='\n'.join([\
               'ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_LOOP_AMP(J))',
               'TEMP2 = DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))',
+              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
               'ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2',
-              'ANS(1,0)=ANS(1,0)+TEMP2'])       
+              'ANS(1,0)=ANS(1,0)+TEMP2',
+              'ENDIF'])       
         else:
             replace_dict['compute_born']=\
 """
@@ -1625,11 +1670,13 @@ ENDDO
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join([
               'ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_BORN_AMP(J))',
+              'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
               'DO K=1,3',
               'TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
               'ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2',
-              'ANS(K,0)=ANS(K,0)+TEMP2',                   
-              'ENDDO'])
+              'ANS(K,0)=ANS(K,0)+TEMP2',
+              'ENDDO',                   
+              'ENDIF'])
 
         # Actualize results from the loops computed. Only necessary for
         # processes with a born.
@@ -1639,11 +1686,13 @@ ENDDO
 """DO I=1,NLOOPGROUPS
 LTEMP=.TRUE.
 DO K=1,NSQUAREDSO
-  IF (.NOT.S(K,I)) LTEMP=.FALSE.
-  DO J=1,3
-    ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
-    ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
-  ENDDO
+  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.K) THEN
+    IF (.NOT.S(K,I)) LTEMP=.FALSE.
+    DO J=1,3
+      ANS(J,K)=ANS(J,K)+LOOPRES(J,K,I)
+      ANS(J,0)=ANS(J,0)+LOOPRES(J,K,I)
+    ENDDO
+  ENDIF
 ENDDO""")
             actualize_ans.append(\
                "IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN")
@@ -1671,30 +1720,46 @@ ENDDO""")
         HelConfigWriter.close()
         
         # Extract helas calls
-        born_ct_helas_calls = fortran_model.get_born_ct_helas_calls(\
-                                                            matrix_element)
+        born_ct_helas_calls, uvct_helas_calls = \
+                           fortran_model.get_born_ct_helas_calls(matrix_element,
+                        squared_orders=squared_orders,split_orders=split_orders)
         coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
-                                    matrix_element,group_loops=self.group_loops)
-        loop_CT_calls = fortran_model.get_loop_CT_calls(\
-                                    matrix_element,group_loops=self.group_loops)
+                                    matrix_element,group_loops=self.group_loops,
+                        squared_orders=squared_orders,split_orders=split_orders)
+
+        loop_CT_calls = fortran_model.get_loop_CT_calls(matrix_element,\
+                    group_loops=self.group_loops, squared_orders=squared_orders,
+                                                      split_orders=split_orders)
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()
 
         # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.
+        # 200 is reasonable but feel free to change it.        
         if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
             file=self.split_HELASCALLS(writer,replace_dict,\
                             'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls','helas_calls_ampb')
+                            'born_ct_helas_calls','helas_calls_ampb',
+                            required_so_broadcaster = 'CT_REQ_SO_DONE',
+                            continue_label = 2000)
+            file=self.split_HELASCALLS(writer,replace_dict,\
+                            'helas_calls_split.inc',file,uvct_helas_calls,\
+                            'uvct_helas_calls','helas_calls_uvct',
+                            required_so_broadcaster = 'UVCT_REQ_SO_DONE',
+                            continue_label = 3000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,coef_construction,\
-                    'coef_construction','coef_construction')
+                    'coef_construction','coef_construction',
+                    required_so_broadcaster = 'LOOP_REQ_SO_DONE',
+                    continue_label = 4000)
             file=self.split_HELASCALLS(writer,replace_dict,\
                     'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls')
+                    'loop_CT_calls','loop_CT_calls',
+                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
+                    continue_label = 5000)
         else:
             replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
+            replace_dict['uvct_helas_calls']='\n'.join(uvct_helas_calls)
             replace_dict['coef_construction']='\n'.join(coef_construction)
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
         

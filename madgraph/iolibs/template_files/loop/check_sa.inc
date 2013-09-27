@@ -81,6 +81,8 @@ C CMS energy in GEV
 
       call printout()
 
+	  %(set_coupling_target)s
+
       do K=1,NPSPOINTS
 
       if(READPS) then

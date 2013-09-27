@@ -3111,13 +3111,17 @@ class ProcessDefinition(Process):
             'model':self.get('model'),
             'id': self.get('id'),
             'orders': self.get('orders'),
+            'squared_orders': self.get('squared_orders'),
+            'has_born': self.get('has_born'),
             'required_s_channels': self.get('required_s_channels'),
+            'forbidden_onsh_s_channels': self.get('forbidden_onsh_s_channels'),            
             'forbidden_s_channels': self.get('forbidden_s_channels'),
             'forbidden_particles': self.get('forbidden_particles'),
             'perturbation_couplings': self.get('perturbation_couplings'),
             'is_decay_chain': self.get('is_decay_chain'),
             'overall_orders': self.get('overall_orders'),
-            'split_orders': self.get('split_orders')
+            'split_orders': self.get('split_orders'),
+            'NLO_mode': self.get('NLO_mode')
             })
             
     def get_process(self, initial_state_ids, final_state_ids):
