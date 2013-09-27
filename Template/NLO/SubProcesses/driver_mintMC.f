@@ -1132,9 +1132,9 @@ c much. Do this by overwrite the 'wgt' variable
          unwgt=.true.
          call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
          f_check=f(2)
+         sigintF=f_check
 c The following two are needed when writing events to do NLO/Born
 c reweighting
-         sigintF=f_check
          sigintF_without_w=sigintF/w
          f_abs_without_w=f(1)/w
       endif
@@ -1287,10 +1287,18 @@ c basic one to which we sum everything
                   nFKSprocess=proc_map(proc_map(0,1),k)
 c Add the n-body only once
                   if (nFKSprocess.eq.nFKSprocess_soft) then
-                     f_unwgt(nFKSprocess_soft,i) =
-     &                    f_unwgt(nFKSprocess_soft,i) +
-     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
-                     f_V=f_V+unwgt_table(0,3,i)
+                     do j=1,iproc_save(nFKSprocess_used_born)
+                        if (eto(j,nFKSprocess_used_born).eq.i) then
+                           f_unwgt(nFKSprocess_soft,i) =
+     &                          f_unwgt(nFKSprocess_soft,i) +
+     &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                           f_V=f_V+unwgt_table(0,3,i)
+                        endif
+                     enddo
+c$$$                     f_unwgt(nFKSprocess_soft,i) =
+c$$$     &                    f_unwgt(nFKSprocess_soft,i) +
+c$$$     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
+c$$$                     f_V=f_V+unwgt_table(0,3,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1430,6 +1438,9 @@ c contribution
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
          nScontributions=0
+         do i=1,maxproc_found
+            f_unwgt(nFKSprocess_used_born,i)=0d0
+         enddo
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
             if (unwgt_table(0,2,j).ne.0d0) then
@@ -1444,7 +1455,9 @@ c and the n-body contributions
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
-                  f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
+                  f_unwgt(nFKSprocess_used_born,i)=
+     &                 f_unwgt(nFKSprocess_used_born,i)+
+     &                 unwgt_table(0,1,i)
                   f_V=f_V+unwgt_table(0,3,i)
                endif
             enddo
