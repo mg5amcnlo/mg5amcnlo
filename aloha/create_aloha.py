@@ -143,6 +143,8 @@ class AbstractRoutineBuilder(object):
         self.model = model
         self.denominator = None
 #        assert model
+
+        self.lastprint = 0 # to avoid that ALOHA makes too many printout
         
         
     
@@ -259,7 +261,12 @@ in presence of majorana particle/flow violation"""
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
-            logger.info('aloha creates %s routines' % self.name)
+            if self.tag == []:
+                logger.info('aloha creates %s routines' % self.name)
+            elif AbstractALOHAModel.lastprint < time.time() - 1:
+                AbstractALOHAModel.lastprint = time.time()
+                logger.info('aloha creates %s set of routines with options: %s' \
+                            % (self.name, ','.join(self.tag)) )
             try:
                 lorentz = self.parse_expression()  
                 self.routine_kernel = lorentz
@@ -556,6 +563,7 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
+    lastprint = 0
 
     def __init__(self, model_name, write_dir=None, format='Fortran', 
                  explicit_combine=False):
@@ -666,6 +674,10 @@ class AbstractALOHAModel(dict):
         If the cached option is set to true, then the result is stored and
         recycled if possible.
         """
+
+        if not aloha.loop_mode and any(t.startswith('L') for t in tag):
+            aloha.loop_mode = True
+
 
         returned_dict = {}        
         # Make sure the input argument is a list
