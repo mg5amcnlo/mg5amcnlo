@@ -56,6 +56,15 @@ THEPEGPATH = None   # Path to the dir where ThePeg is installed
 HEPMCPATH  = None   # Path to the dir where HepMC is installed
 ################################################################################
 #
+# PYTHIA8 PATH
+# The following line need to be set only for Pythia8. Use the absolute paths
+# to the directories where the packages are installed, containing lib/, include/,
+# and share/ subfolders. "None" and an empty value are equivalent
+#
+################################################################################
+PY8PATH    = None   # Path to the dir where Pythia8 is installed
+################################################################################
+#
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
 # StdHEP/HEPMC file, but to directly run his/her own analyse.
