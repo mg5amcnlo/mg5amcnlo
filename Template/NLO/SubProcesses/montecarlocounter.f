@@ -492,9 +492,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1.d0/2.d0)
       parameter (vca=3.d0)
 
-      double precision rescaling
-      parameter(rescaling=1d0)
-
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -536,7 +533,7 @@ c variable, not yet defined) will not be needed in the computation of probne
       emsca=etot
       if(dampMCsubt)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         if(scalemax.ge.etot)scalemax=etot
@@ -1207,9 +1204,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtf=1.d0/2.d0)
       parameter (vca=3.d0)
 
-      double precision rescaling
-      parameter(rescaling=1d0)
-
       double precision pmass(nexternal)
       include "pmass.inc"
 c
@@ -1251,7 +1245,7 @@ c variable, not yet defined) will not be needed in the computation of probne
       emsca=etot
       if(dampMCsubt)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         if(scalemax.ge.etot)scalemax=etot
@@ -1915,8 +1909,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-      double precision rescaling
-      parameter(rescaling=1d0)
 c
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -1959,7 +1951,7 @@ c variable, not yet defined) will not be needed in the computation of probne
       emsca=etot
       if(dampMCsubt)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         scalemax=min(scalemax,ref_scale)
@@ -2712,8 +2704,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-      double precision rescaling
-      parameter(rescaling=1d0)
 c
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -2756,7 +2746,7 @@ c variable, not yet defined) will not be needed in the computation of probne
       emsca=etot
       if(dampMCsubt)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         scalemax=min(scalemax,ref_scale)
@@ -3444,8 +3434,6 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision upper_scale
       common/cupscale/upper_scale
 
-      double precision rescaling
-      parameter(rescaling=0.5d0)
 c
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -3488,7 +3476,7 @@ c variable, not yet defined) will not be needed in the computation of probne
       emsca=etot
       if(dampMCsubt)then
         emsca=0.d0
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         scalemax=min(scalemax,ref_scale)
@@ -6317,14 +6305,12 @@ c
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
 
-      double precision eetot,rescaling
+      double precision eetot
       double precision pmass(nexternal)
       include "pmass.inc"
 c
 c
       MonteCarlo=shower_mc
-      rescaling=1d0
-      if(MonteCarlo.eq.'PYTHIA8')rescaling=0.5d0
       eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
@@ -6340,7 +6326,7 @@ c entering this function
      &                xxm12,dum1,dum2,dum3,dum4,dum5,qMC,extra)
 
       if(dampMCsubt)then
-        ref_scale=sqrt( (1-xi_i_fks)*shat )*rescaling
+        ref_scale=sqrt( (1-xi_i_fks)*shat )
         scalemin=max(frac_low*ref_scale,scaleMClow)
         scalemax=max(frac_upp*ref_scale,scalemin+scaleMCdelta)
         if(MonteCarlo(1:6).eq.'PYTHIA')scalemax=min(scalemax,ref_scale)
@@ -6397,13 +6383,10 @@ c entering this function
 
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
-      double precision rescaling
 c
       MonteCarlo=shower_mc
-      rescaling=1d0
-      if(MonteCarlo.eq.'PYTHIA8')rescaling=0.5d0
       eetot=2d0*sqrt( ebeam(1)*ebeam(2) )
-      ref_scale=sqrt((1-xi)*sh)*rescaling
+      ref_scale=sqrt((1-xi)*sh)
       xxscalemin=max(frac_low*ref_scale,scaleMClow)
       xxscalemax=max(frac_upp*ref_scale,xxscalemin+scaleMCdelta)
       if(MonteCarlo(1:6).eq.'PYTHIA')xxscalemax=min(xxscalemax,ref_scale)

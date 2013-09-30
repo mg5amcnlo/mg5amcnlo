@@ -426,10 +426,15 @@ TimeShower:pTmaxFudge = 1.         ! Factor changing the max scale
 #TimeShower:alphaSvalue = 0.1383   ! Alpha_s(MZ) in final-state shower
 #TimeShower:alphaSorder = 2        ! Alpha_s running order in final-state shower
 #TimeShower:alphaorder = 0         ! Alpha_EM running order in final-state shower
-TimeShower:interleave = off        ! If on, FSR interleaved with ISR
+TimeShower:interleave = on         ! If on, FSR interleaved with ISR
 TimeShower:allowBeamRecoil = on    ! If off, no energy transfer to from ISR to FSR
-TimeShower:globalRecoil = on       ! All final-state particle recoil against the branching
+TimeShower:dampenBeamRecoil = off  ! Dampens the effect of beam recoil
+TimeShower:globalRecoil = on       ! All final-state particles recoil against the branching
 TimeShower:nMaxGlobalRecoil = 1    ! Number of splittings with TimeShower:globalRecoil = on
+TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first emission is FSR
+TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
+TimeShower:nPartonsInBorn = -1     ! Number of Born partons (only to treat H and S differently)
+TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
 TimeShower:QCDshower = on          ! QCD final-state shower
 TimeShower:nGluonToQuark = 5       ! Number if flavors allowed in g->qqbar
 TimeShower:QEDshowerByQ = off      ! Prevent quarks from radiating photons
@@ -438,6 +443,7 @@ TimeShower:QEDshowerByGamma = off  ! Prevent photons from branching
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:MEafterFirst = off      ! No Matrix-element corrections after first emission
 TimeShower:phiPolAsym = on         ! Azimuthal asymmetry induced by gluon polarization
+TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -453,6 +459,7 @@ SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first e
 SpaceShower:phiPolAsym = on        ! Azimuthal asymmetry induced by gluon polarization
 SpaceShower:nQuarkIn = 5           ! Number of flavors in g->qqbar and also in incoming beams
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
+SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = off    ! No primordial kT
