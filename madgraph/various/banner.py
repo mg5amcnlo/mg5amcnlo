@@ -265,6 +265,8 @@ class Banner(dict):
                 tag = 'MGProcCard'
             elif 'procdef_mg5' in card_name:
                 tag = 'MGProcCard'
+            elif 'shower_card' in card_name:
+                tag = 'MGShowerCard'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 

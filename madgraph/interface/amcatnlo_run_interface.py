@@ -1122,6 +1122,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 'banner.txt'))
+
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
@@ -2759,10 +2761,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
-        if not options['force'] and not  self.force:
+        if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False)
-            
 
+        self.banner = banner_mod.Banner()
+
+        for card in cards:
+            print card
+            self.banner.add(pjoin(self.me_dir, 'Cards', card))
 
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner_mod.RunCardNLO(run_card)
