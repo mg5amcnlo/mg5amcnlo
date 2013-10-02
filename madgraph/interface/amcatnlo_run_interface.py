@@ -2745,8 +2745,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
+        ignore = []
         if mode in ['LO', 'NLO']:
             options['parton'] = True
+            ignore = ['shower_card.dat', 'madspin_card.dat']
         elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
@@ -2756,7 +2758,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if options['reweightonly']:
             cards = ['run_card.dat']
 
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore)
         
         if mode =='onlyshower':
             cards = ['shower_card.dat']

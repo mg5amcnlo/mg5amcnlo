@@ -1178,7 +1178,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         
     ############################################################################
-    def keep_cards(self, need_card=[]):
+    def keep_cards(self, need_card=[], ignore=[]):
         """Ask the question when launching generate_events/multi_run"""
         
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
@@ -1187,6 +1187,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
+            if card in ignore:
+                continue
             if card not in need_card:
                 if os.path.exists(pjoin(cards_path, card)):
                     os.remove(pjoin(cards_path, card))
