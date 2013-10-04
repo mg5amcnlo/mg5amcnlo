@@ -620,7 +620,6 @@ class FKSLegList(MG.LegList):
 
     def sort(self):
         """Sorting routine, sorting chosen to be optimal for madfks"""
-        print 'sorting', [l['id'] for l in self]
         sorted_leglist = FKSLegList()
         #find initial state legs
         initial_legs = FKSLegList([l for l in copy.copy(self) if not l['state']])
@@ -685,8 +684,6 @@ class FKSLegList(MG.LegList):
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
-
-        print 'sorted', [l['id'] for l in self]
 
 
 

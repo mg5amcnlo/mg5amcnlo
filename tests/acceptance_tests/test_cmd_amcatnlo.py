@@ -161,6 +161,44 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+
+    def test_ppgogo_amcatnlo(self):
+        """tests if the p p > go go (in the mssm) process works"""
+        self.generate(['p p > go go [real=QCD]'], 'mssm')
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+        self.do('launch aMC@NLO -fp')
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
+    def test_ppgogo_nlo(self):
+        """tests if the p p > go go (in the mssm) process works at fixed order"""
+        self.generate(['p p > go go [real=QCD]'], 'mssm')
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000  = npoints_FO' in card)
+        card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '6000   = npoints_FO' in card)
+        card = card.replace('6000   = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '5000   = npoints_FO' in card)
+        card = card.replace('5000   = npoints_FO', '100  = npoints_FO')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+        self.do('launch NLO -f')
+        # test the plot file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
         
 
 
