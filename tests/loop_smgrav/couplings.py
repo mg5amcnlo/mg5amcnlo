@@ -212,6 +212,10 @@ GC_72 = Coupling(name = 'GC_72',
 GC_68 = Coupling(name = 'GC_68',
                  value = '-(ee**2*complex(0,1)*kappa*v**2)/(8.*sw**2)',
                  order = {'QED':1})
+
+GC_69 = Coupling(name = 'GC_69',
+                 value = '-(complex(0,1)*kappa)/2.',
+                 order = {'QED':1})
 #############################################################
 
 # == Additional coupling for the goldstones for Feynman gauge

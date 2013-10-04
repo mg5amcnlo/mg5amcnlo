@@ -455,7 +455,7 @@ V_WWY = Vertex(name = 'V_WWY',
              particles = [ P.W__minus__, P.W__plus__, P.y ],
              color = [ '1' ],
              lorentz = [ L.VVT2, L.VVT3 ],
-             couplings = {(0,1):C.GC_11,(0,0):C.GC_68})
+             couplings = {(0,1):C.GC_69,(0,0):C.GC_68})
 
 #GC_68 = Coupling(name = 'GC_68',
 #                 value = '-(ee**2*complex(0,1)*kappa*v**2)/(8.*sw**2)',

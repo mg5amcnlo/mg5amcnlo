@@ -130,6 +130,23 @@ class TestMECmdShell(unittest.TestCase):
             exe = os.path.join('/tmp/MGPROCESS/SubProcesses', pdir, 'madevent_mintMC')
             self.assertTrue(os.path.exists(exe))
 
+
+    def test_check_ppwy(self):
+        """test that the p p > w y (spin 2 graviton) process works with loops. This
+        is needed in order to test the correct wavefunction size setting for spin2
+        particles"""
+        cmd = os.getcwd()
+        self.generate(['p p > w+ y [QCD] '], 'tests/loop_smgrav')
+        self.do('generate_events -fp')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
+
     def generate_production(self):
         """production"""
         
