@@ -121,7 +121,11 @@ class TestMECmdShell(unittest.TestCase):
         particles"""
         cmd = os.getcwd()
         self.generate(['p p > w+ y [QCD] '], 'tests/loop_smgrav')
-        self.do('generate_events -fp')
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+        self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
