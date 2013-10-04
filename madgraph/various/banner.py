@@ -47,7 +47,10 @@ class Banner(dict):
     
     def __init__(self, banner_path=None):
         """ """
-        dict.__init__(self)
+        if isinstance(banner_path, Banner):
+            return dict.__init__(self, banner_path)     
+        else:
+            dict.__init__(self)
         
         #Look at the version
         if MADEVENT:
@@ -55,6 +58,8 @@ class Banner(dict):
         else:
             info = misc.get_pkg_info()
             self['mgversion'] = info['version']+'\n'
+        
+
             
         if banner_path:
             self.read_banner(banner_path)
@@ -100,7 +105,10 @@ class Banner(dict):
                     text = ''
                     store = False
             if store:
-                text += line
+                if line.endswith('\n'):
+                    text += line
+                else:
+                    text += '%s%s' % (line, '\n')
                 
             #reaching end of the banner in a event file avoid to read full file 
             if "</init>" in line:
@@ -154,6 +162,26 @@ class Banner(dict):
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
             ff.close()
+
+    ############################################################################
+    #  SPLIT BANNER
+    ############################################################################
+    def charge_card(self, tag):
+        """Build the python object associated to the card"""
+        
+        if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        
+        assert tag in ['mgruncard'], 'invalid card %s' % tag
+        
+        if tag == 'mgruncard':
+            run_card = self[tag].split('\n') 
+            self.run_card = RunCard(run_card)
+            return self.run_card
 
     ############################################################################
     #  WRITE BANNER
@@ -321,22 +349,27 @@ def split_banner(banner_path, me_dir, proc_card=True):
     banner = Banner(banner_path)
     banner.split(me_dir, proc_card)
     
-def recover_banner(results_object, level):
+def recover_banner(results_object, level, run=None, tag=None):
     """as input we receive a gen_crossxhtml.AllResults object.
        This define the current banner and load it
     """
-    try:  
-        run = results_object.current['run_name']    
-        tag = results_object.current['tag'] 
-    except Exception:
-        return Banner()                                  
+    
+    if not run:
+        try:    
+            tag = results_object.current['tag'] 
+        except Exception:
+            return Banner()
+    if not tag:
+        try:    
+            tag = results_object[run].tags[-1] 
+        except Exception,error:
+            return Banner()                                        
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
         # security if the banner was remove (or program canceled before created it)
         return Banner()  
-    
     banner = Banner(banner_path)
     
     
@@ -353,6 +386,9 @@ def recover_banner(results_object, level):
 
 class RunCard(dict):
     """A class object for the run_card"""
+
+    #list of paramater which are allowed BUT not present in the _default file.
+    hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
 
     def __init__(self, run_card):
         """ """
@@ -414,16 +450,23 @@ class RunCard(dict):
             template = output_file
         
         text = ""
-        for line in file(template,'r'):
+        for line in file(template,'r'):                  
             nline = line.split('#')[0]
             nline = nline.split('!')[0]
             comment = line[len(nline):]
             nline = nline.split('=')
             if len(nline) != 2:
                 text += line
-            else:
+            elif nline[1].strip() in self:
                 text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+            else:
+                logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
+                text += line 
         
+        for param in self.hidden_param:
+            if param in self:
+                text += '  %s\t= %s \n' % (self[param],param) 
+
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
@@ -707,9 +750,9 @@ class RunCardNLO(RunCard):
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
         if self['pdlabel'] == 'lhapdf':
-            self.add_line('lhaid', 'int', 10042)
+            self.add_line('lhaid', 'int', 21100)
         else:
-            self.add_line('lhaid', 'int', 10042, log=10)
+            self.add_line('lhaid', 'int', 21100, log=10)
         
         self.fsock.close()
 

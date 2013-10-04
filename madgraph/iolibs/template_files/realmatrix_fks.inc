@@ -1,9 +1,7 @@
       SUBROUTINE SMATRIX_%(N_me)d(P,ANS)
 C  
 %(info_lines)s
-C 
-C MadGraph StandAlone Version
-C 
+C
 C Returns amplitude squared summed/avg over colors
 c and helicities
 c for the point in phase space P(0:3,NEXTERNAL)
@@ -15,8 +13,8 @@ C
 C CONSTANTS
 C  
       include 'nexternal.inc'
-      INTEGER                 NCOMB         
-      PARAMETER (             NCOMB=%(ncomb)d)
+      INTEGER     NCOMB         
+      PARAMETER ( NCOMB=%(ncomb)d)
 C  
 C ARGUMENTS 
 C  
@@ -24,63 +22,60 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY,T_IDENT(NCOMB)
+      INTEGER IHEL,IDEN,I,T_IDENT(NCOMB)
+      REAL*8 MATRIX_%(N_me)d
       REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
-      REAL*8 MATRIX_%(N_me)d
-      INTEGER IHEL,IDEN, I
-      INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
+      LOGICAL GOODHEL(NCOMB)
+      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER NTRY
+      DATA NTRY/0/
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
 C ----------
       NTRY=NTRY+1
-      DO IHEL=1,NEXTERNAL
-         JC(IHEL) = +1
-      ENDDO
       ANS = 0D0
-          DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-                IF (NTRY.LT.2) THEN
+      DO IHEL=1,NCOMB
+        IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+          IF (NTRY.LT.2) THEN
 C for the first ps-point, check for helicities that give
 C identical matrix elements
-                   T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL),JC(1))            
-                   T_SAVE(IHEL)=T
-                   T_IDENT(IHEL)=-1
-                   DO I=1,IHEL-1
-                      IF (T.EQ.0D0) EXIT
-                      IF (T_SAVE(I).EQ.0D0) CYCLE
-                      IF (ABS(T/T_SAVE(I)-1D0) .LT. 1D-12) THEN
-C                         WRITE (*,*) 'FOUND IDENTICAL',T,IHEL,T_SAVE(I),I
-                         T_IDENT(IHEL) = I
-                      ENDIF
-                   ENDDO
-                ELSE
-                   IF (T_IDENT(IHEL).GT.0) THEN
-C if two helicity states are identical, dont recompute
-                      T=T_SAVE(T_IDENT(IHEL))
-                      T_SAVE(IHEL)=T
-                   ELSE
-                      T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL),JC(1))            
-                      T_SAVE(IHEL)=T
-                   ENDIF
-                ENDIF
-C add to the sum of helicities
-               ANS=ANS+T
-               IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                   GOODHEL(IHEL)=.TRUE.
+            T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL))            
+            T_SAVE(IHEL)=T
+            T_IDENT(IHEL)=-1
+            DO I=1,IHEL-1
+               IF (T.EQ.0D0) EXIT
+               IF (T_SAVE(I).EQ.0D0) CYCLE
+               IF (ABS(T/T_SAVE(I)-1D0) .LT. 1D-12) THEN
+C                  WRITE (*,*) 'FOUND IDENTICAL',T,IHEL,T_SAVE(I),I
+                  T_IDENT(IHEL) = I
                ENDIF
-             ENDIF
-          ENDDO
+            ENDDO
+          ELSE
+            IF (T_IDENT(IHEL).GT.0) THEN
+C if two helicity states are identical, dont recompute
+              T=T_SAVE(T_IDENT(IHEL))
+              T_SAVE(IHEL)=T
+            ELSE
+              T=MATRIX_%(N_me)d(P ,NHEL(1,IHEL))            
+              T_SAVE(IHEL)=T
+            ENDIF
+          ENDIF
+C add to the sum of helicities
+          ANS=ANS+T
+          IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
+            GOODHEL(IHEL)=.TRUE.
+          ENDIF
+        ENDIF
+      ENDDO
       ANS=ANS/DBLE(IDEN)
       END
        
        
-      REAL*8 FUNCTION MATRIX_%(N_me)d(P,NHEL,IC)
+      REAL*8 FUNCTION MATRIX_%(N_me)d(P,NHEL)
 C  
 %(info_lines)s
 C
@@ -95,32 +90,27 @@ C CONSTANTS
 C  
       INTEGER    NGRAPHS
       PARAMETER (NGRAPHS=%(ngraphs)d) 
-      include 'nexternal.inc'
       INTEGER    NWAVEFUNCS, NCOLOR
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
+      include 'nexternal.inc'
+      include 'coupl.inc'
 C  
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL)
-      INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER NHEL(NEXTERNAL)
 C  
 C LOCAL VARIABLES 
 C  
       INTEGER I,J
-      COMPLEX*16 ZTEMP
+      INTEGER IC(NEXTERNAL)
+      data ic /nexternal*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(%(wavefunctionsize)d,NWAVEFUNCS)
-      COMPLEX*16 DUM0,DUM1
-      DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
-C  
-C GLOBAL VARIABLES
-C  
-      include 'coupl.inc'
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS)
 C  
 C COLOR DATA
 C  
@@ -130,7 +120,6 @@ C BEGIN CODE
 C ----------
 %(helas_calls)s
 %(jamp_lines)s
-
       MATRIX_%(N_me)d = 0.D0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)

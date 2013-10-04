@@ -2050,7 +2050,7 @@ c xmcsubt note
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
 c
-c Compute deadzones:
+c Compute deadzones
          lzone(npartner)=.true.
          mstj50=2
          mstp67=2
@@ -2130,7 +2130,7 @@ c
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/max(en_mother,1d0).ge.tiny)then
                write(*,*)'error C in xmcsubt_PY6Q'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
@@ -2844,7 +2844,7 @@ c xmcsubt note
             xi(npartner)=xitmp
             xjac(npartner)=xjactmp
 
-c Compute deadzones:
+c Compute deadzones
             lzone(npartner)=.true.
             parp67=1d0
             mstp67=2
@@ -3346,7 +3346,9 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2
+     # xmrec2,www,massmax,massmin,ma2,p_mum(0:3),p_partner(0:3,nexternal-1),
+     # p_dip(0:3,nexternal-1),m_dip(nexternal-1),m_partner(nexternal-1),m_mum,
+     # m2_dipole(nexternal-1),max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3568,8 +3570,24 @@ c xmcsubt note
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
 c
-c Compute deadzones:
+c Compute deadzones
          lzone(npartner)=.true.
+         if(ileg.gt.2)then
+            do i=0,3
+               p_mum(i)=p_born(i,fksfather)
+               p_partner(i,npartner)=p_born(i,ipartners(npartner))
+               p_dip(i,npartner)=p_mum(i)+p_partner(i,npartner)
+            enddo
+            m_dip(npartner)=sqrt(dot(p_dip(0,npartner),p_dip(0,npartner)))
+            m_partner(npartner)=sqrt(dot(p_partner(0,npartner),p_partner(0,npartner)))
+            m_mum=0d0
+            if(ileg.eq.3)m_mum=sqrt(xm12)
+            m2_dipole(npartner)=(m_dip(npartner)-m_partner(npartner))**2-m_mum**2
+            max_scale(npartner)=min(sqrt(m2_dipole(npartner)/4d0),
+     &                              shower_S_scale(nFKSprocess*2-1))
+            max_scale(npartner)=max(max_scale(npartner),3d0)
+            if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
+         endif
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)

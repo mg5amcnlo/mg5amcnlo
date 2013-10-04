@@ -1,0 +1,782 @@
+
+\section { StdHep Routines}
+\label{routines}
+
+\subsection {StdHep Translation Routines}
+\label{conversion routines}
+
+\begin{description}
+\item[hep2geant] 
+  Put undecayed HEPEVT particles into the Geant KINE stack.
+  Particles unknown to GEANT are entered as geantino's.
+\item[hwghep(mconv)] Translate to or from Herwig event format.
+
+\begin{tabular}{lcll}
+mconv & = & 1 & fill the HEPEVT common block \\
+      & = & 2 & fill the Herwig common blocks \\
+\end{tabular}
+
+\item[isahep(mconv)] Translate to or from Isajet event format. 
+
+\begin{tabular}{lcll}
+mconv & = & 1 & fill the HEPEVT common block \\
+      & = & 2 & fill the Isajet common blocks \\
+\end{tabular}
+
+\item[lunhep(mconv)] Translate to or from Pythia event format. 
+
+\begin{tabular}{lcll}
+mconv & = & 1 & fill the HEPEVT common block \\
+      & = & 2 & fill the Pythia common blocks \\
+\end{tabular}
+
+\item[qqhep(mconv)] Translate to or from QQ event format.  
+
+\begin{tabular}{lcll}
+mconv & = & 1 & fill the HEPEVT common block \\
+      & = & 2 & fill the QQ common blocks \\
+      & = & 3 & fill the QQ common blocks for decay of "stable" particles \\
+\end{tabular}
+
+\item[pythia2ev4]  fill the non-track related part of HEPEV4.
+
+\item[std3to4(mconv)] Translate between StdHep 3.04 and 4.06 numbering.  
+
+\begin{tabular}{lcll}
+mconv & = & 1 & convert from StdHep 3.04 to StdHep 4.06 \\
+      & = & 2 & convert from StdHep 4.06 to StdHep 3.04 \\
+\end{tabular}
+
+\item[cnv1998to2000(id,mconv)] Translate between the new and old StdHep numbering schemes.
+
+\begin{tabular}{lcll}
+cnv1998to2000 & = &   & requested particle ID \\
+id            & = &   & particle ID to translate \\
+mconv         & = & 1 & convert from PDG 1998 (StdHep 4.09) to PDG 2000 (StdHep 4.10)  \\
+              & = & 2 & convert from PDG 2000 (StdHep 4.10) to PDG 1998 (StdHep 4.09)  \\
+\end{tabular}
+
+\item[cnv2000to2004(id,mconv)] Translate between the 2000 and 2004 PDG/StdHep numbering schemes.
+
+\begin{tabular}{lcll}
+cnv2000to2004 & = &   & requested particle ID \\
+id            & = &   & particle ID to translate \\
+mconv         & = & 1 & convert from PDG 2000 (StdHep 5.01) to PDG 2004 (StdHep 5.03)  \\
+              & = & 2 & convert from PDG 2004 (StdHep 5.03) to PDG 2000 (StdHep 5.01)  \\
+\end{tabular}
+
+\item[cnv2004to2006(id,mconv)] Translate between the 2004 and 2006 PDG/StdHep numbering schemes.
+
+\begin{tabular}{lcll}
+cnv2004to2006 & = &   & requested particle ID \\
+id            & = &   & particle ID to translate \\
+mconv         & = & 1 & convert from PDG 2004 (StdHep 5.05) to PDG 2006 (StdHep 5.06)  \\
+              & = & 2 & convert from PDG 2006 (StdHep 5.06) to PDG 2004 (StdHep 5.05)  \\
+\end{tabular}
+
+\item[pdgrdtb]
+  Read particle mass and width information from the PDG table.
+  Fill the PDGTBL and STDTBL common blocks.
+\item[pdgrdcsvtb]
+  Read particle mass and width information from the new style PDG table.
+  Fill the PDGTBL and STDTBL common blocks.
+  IMPORTANT: This routine only works with mass\_width\_2006.csv.
+  Use parsecsv\_2004 for mass\_width\_2004.csv.
+\item[stdflhwxsec] Fill common block STDCM1 from Herwig.  
+  STDCM1 contains center-of-mass energy, cross-section, random number
+  seeds, number of events to be generated, number of events generated,
+  and number of events written.
+\item[stdflisxsec] Fill common block STDCM1 from Isajet.  
+  STDCM1 contains center-of-mass energy, cross-section, random number
+  seeds, number of events to be generated, number of events generated,
+  and number of events written.
+\item[stdflpyxsec(n1)] Fill common block STDCM1 from Pythia.  
+  STDCM1 contains center-of-mass energy, cross-section, random number
+  seeds, number of events to be generated, number of events generated,
+  and number of events written.
+
+\begin{tabular}{lcl}
+n1 & = & number of events to be generated \\
+\end{tabular}
+
+\item[hptrlsth] Print full translation list for Herwig. 
+\item[hptrlsti] Print full translation list for Isajet. 
+\item[hptrlstj] Print full translation list for Pythia. 
+\item[hptrlstq] Print full translation list for QQ. 
+\item[std3to4lst] Print full translation list for new vs old numbering. 
+\item[cnv98to00lst] Print full translation list for PDG 1998 vs PDG 2000. 
+\item[cnv2000to2004lst] Print full translation list for PDG 2000 vs PDG 2004. 
+\item[cnv2004to2006lst] Print full translation list for PDG 2004 vs PDG 2006. 
+
+\item[pdgprtb(ityp,lun)] Print information from the PDG mass and width table. 
+
+\begin{tabular}{lcll}
+ityp & = & 1 & print particle properties for particles known to StdHep \\
+     & = & 2 & print complete list of particle properties from old style PDG table \\
+     & = & 3 & print complete list of particle properties from new style PDG table \\
+lun  & = &   & output unit for writing table \\
+\end{tabular}
+
+\item[gtran(id,mconv)] Translate to or from Geant particle id numbering. 
+
+\begin{tabular}{lcll}
+gtran & = &   & requested particle ID \\
+id    & = &   & particle ID to translate \\
+mconv & = & 1 & convert from Geant to StdHep numbering scheme \\
+      & = & 2 & convert from StdHep to Geant numbering scheme \\
+\end{tabular}
+
+\item[istran(id,mconv)] Translate to or from Isajet particle id numbering. 
+
+\begin{tabular}{lcll}
+istran & = &   & requested particle ID \\
+id     & = &   & particle ID to translate \\
+mconv  & = & 1 & convert from Isajet to StdHep numbering scheme \\
+       & = & 2 & convert from StdHep to Isajet numbering scheme \\
+\end{tabular}
+
+\item[lutran(id,mconv)] Translate to or from Pythia particle id numbering. 
+
+\begin{tabular}{lcll}
+lutran & = &   & requested particle ID \\
+id     & = &   & particle ID to translate \\
+mconv  & = & 1 & convert from Pythia to StdHep numbering scheme \\
+       & = & 2 & convert from StdHep to Pythia numbering scheme \\
+\end{tabular}
+
+\item[hwtran(id,mconv)] Translate to or from Herwig particle id numbering. 
+
+\begin{tabular}{lcll}
+hwtran & = &   & requested particle ID \\
+id     & = &   & particle ID to translate \\
+mconv  & = & 1 & convert from Herwig to StdHep numbering scheme \\
+       & = & 2 & convert from StdHep to Herwig numbering scheme \\
+\end{tabular}
+
+\item[qqtran(id,mconv)] Translate to or from QQ particle id numbering. 
+
+\begin{tabular}{lcll}
+qqtran & = &   & requested particle ID \\
+id     & = &   & particle ID to translate \\
+mconv  & = & 1 & convert from QQ to StdHep numbering scheme \\
+       & = & 2 & convert from StdHep to QQ numbering scheme \\
+\end{tabular}
+
+\item[pdgtran(id,mconv)] Translate to or from PDG particle id numbering. 
+
+\begin{tabular}{lcll}
+pdgtran & = &   & requested particle ID \\
+id      & = &   & particle ID to translate \\
+mconv   & = & 1 & convert from PDG to StdHep numbering scheme \\
+        & = & 2 & convert from StdHep to PDG numbering scheme \\
+\end{tabular}
+
+\item[pdgtonew(id,mconv)] Translate between PDG96 and the new numbering scheme. 
+
+\begin{tabular}{lcll}
+pdgtonew & = &   & requested particle ID \\
+id       & = &   & particle ID to translate \\
+mconv    & = & 1 & convert from PDG96 to StdHep 4.06 numbering scheme \\
+         & = & 2 & convert from StdHep 4.06 to PDG96 numbering scheme \\
+\end{tabular}
+
+\item[std3to4tran(id,mconv)] Translate between the new and old StdHep numbering schemes.
+
+\begin{tabular}{lcll}
+std3to4tran & = &   & requested particle ID \\
+id          & = &   & particle ID to translate \\
+mconv       & = & 1 & convert from StdHep 3.04 to StdHep 4.06 numbering scheme \\
+            & = & 2 & convert from StdHep 4.06 to StdHep 3.04 numbering scheme \\
+\end{tabular}
+
+\end{description}
+
+
+\subsection{StdHep Routines for QQ Decay}
+
+\begin{description}
+\item[stddecayqq] 
+ Search the HEPEVT list for particles which QQ can decay.  One by one, 
+ decay these particles and add the results to the HEPEVT common block.
+
+\item[stdqqdcy(it)] 
+  Decay particle it via QQ and add the results to the HEPEVT common block.
+
+\begin{tabular}{lcl}
+it & = & the index for this particle within HEPEVT \\
+\end{tabular}
+
+\item[stdzeroqq] 
+ Zero elements of QQ common blocks before performing the QQ decays.
+ This routine is called by stddecayqq.
+
+\item[stdqqadd(ihep)]
+ Add tracks generated by QQ to the HEPEVT common block.
+
+\begin{tabular}{lcl}
+ihep & = & the first QQ particle corresponds to HEPEVT particle ihep \\
+\end{tabular}
+
+\item[stdqquset]
+ Call QQ initialization routines.
+ This routine must be called by the user at initialization time.
+
+\item[stdfixmass]
+ Force all "stable" particles in the HEPEVT common block to lie on the mass shell.
+ This routine assumes that phep(5) is the correct mass.  
+ Stdfixmass is called by stddecayqq.
+
+\item[stdfixpart(it)]
+ Force a single particle in the HEPEVT common block to lie on the mass shell.
+ This routine assumes that phep(5) is the correct mass.  
+
+\begin{tabular}{lcl}
+it & = & the index for this particle within HEPEVT \\
+\end{tabular}
+
+\end{description}
+
+
+\subsection{Basic StdHep Routines}
+
+\begin{description}
+\item[heplst(mlst) ] List an event from the HEPEVT common block.
+
+\begin{tabular}{lcll}
+mlst & = & 1 & print all information from HEPEVT except the vertex \\
+     & = & 2 & print all information from HEPEVT, including the vertex \\
+\end{tabular}
+
+\item[heptree] Print an event in simple tree format. 
+\item[hepnam(id,chau) ] Return the particle name as a character string.
+
+\begin{tabular}{lcl}
+chau & = & 20 character particle name \\
+id   & = & particle ID \\
+\end{tabular}
+
+\item[hepcmp(id)]
+ Compress the StdHep particle ID for use in mass and decay arrays of 
+ size 1600.  Also check to be sure the given ID is defined.
+
+\begin{tabular}{lcl}
+hepcmp & = & compressed particle ID \\
+id   & = & StdHep particle ID \\
+\end{tabular}
+
+\item[hepchg(id)]
+ Return an integer charge which is 3 times the charge of the particle.
+
+\begin{tabular}{lcl}
+hepchg & = & 3 times the charge of the particle \\
+id   & = & StdHep particle ID \\
+\end{tabular}
+
+\item[stdchg(id)]
+ Return the charge of particle id as a real number.
+
+\begin{tabular}{lcl}
+stdchg & = & the charge of the particle \\
+id   & = & StdHep particle ID \\
+\end{tabular}
+
+\item[stdexpname(id,lsz) ]
+ Return an expanded particle name for particle id.
+ Fill and pad the variable with empty space if necessary.
+
+\begin{tabular}{lcl}
+stdexpname & = & expanded particle name \\
+id   & = & StdHep particle ID \\
+lsz  & = & length of the character variable \\
+\end{tabular}
+
+\item[stdlst]
+ List the particles known to StdHep.
+
+\end{description}
+
+
+\subsection{StdHep Utility Routines} 
+
+\begin{description}
+\item[stdversn] Print the StdHep version number and date.
+\item[stdquarklst(iq,nqrk,lsize,lqrk)]
+ Search the HEPEVT common block for all mesons and baryons with quark
+ content iq.  Fill array lqrk(lsize).
+
+\begin{tabular}{lcl}
+iq    & = & quark identification \\
+nqrk  & = & number of particles found \\
+lsize & = & length of the array \\
+lqrk  & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stdparentlst(ip,nprnt,lsize,lprnt)]
+ Search the HEPEVT common block for all ancestors of particle ip.
+ Fill lprnt(lsize).
+
+\begin{tabular}{lcl}
+ip    & = & index of particle in HEPEVT \\
+nprnt & = & number of particles found \\
+lsize & = & length of the array \\
+lprnt & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stddautrlst(ip,ndau,lsize,ldtr)]
+ Search the HEPEVT common block for the immediate daughters of particle ip.
+ Fill ldtr(lsize).
+
+\begin{tabular}{lcl}
+ip    & = & index of particle in HEPEVT \\
+ndau  & = & number of particles found \\
+lsize & = & length of the array \\
+ldtr  & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stddscndlst(ip,ndsc,lsize,ldsc)]
+ Search the HEPEVT common block for all the descendants of particle ip.
+ Fill ldsc(lsize).
+
+\begin{tabular}{lcl}
+ip    & = & index of particle in HEPEVT \\
+ndsc  & = & number of particles found \\
+lsize & = & length of the array \\
+ldsc  & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stdstdsclst(ip,ndsc,lsize,ldsc)]
+ Search the HEPEVT common block for all the stable descendants of particle ip.
+ Fill ldsc(lsize). 
+
+\begin{tabular}{lcl}
+ip    & = & index of particle in HEPEVT \\
+ndsc  & = & number of particles found \\
+lsize & = & length of the array \\
+ldsc  & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stdchgdsclst(ip,ndsc,lsize,ldsc)]
+ Search the HEPEVT common block for all the charged, stable 
+ descendants of particle ip.
+ Fill ldsc(lsize). 
+
+\begin{tabular}{lcl}
+ip    & = & index of particle in HEPEVT \\
+ndsc  & = & number of particles found \\
+lsize & = & length of the array \\
+ldsc  & = & array of particle indices in HEPEVT \\
+\end{tabular}
+
+\item[stdparent(ip,ipc,lyn)]
+ Check to see if particle ipc is a parent of particle ip.
+
+\begin{tabular}{lcl}
+ip   & = & index of particle in HEPEVT \\
+ipc  & = & index of prospective parent in HEPEVT \\
+lyn  & = & true or false \\
+\end{tabular}
+
+\item[stddautr(ip,ipc,lyn)]
+ Check to see if particle ipc is a descendant of particle ip.
+
+\begin{tabular}{lcl}
+ip   & = & index of particle in HEPEVT \\
+ipc  & = & index of prospective descendant in HEPEVT \\
+lyn  & = & true or false \\
+\end{tabular}
+
+\item[stdquarkcnt(ip,iq,iret,ipar)]
+ Look to see if particle it or any of its parents contain quark iq.
+
+\begin{tabular}{lcll}
+ip   & = & index of particle in HEPEVT \\
+iq   & = & quark identification \\
+iret & = & 0 & no match found \\
+     & = & 1 & this particle contains quark iq \\
+     & = & 2 & parent ipar contains quark iq \\
+ipar & = & 0 & unless iret is 2 \\
+\end{tabular}
+
+\item[stdrotboost(the,phi,bex,bey,bez)]
+ Rotate and boost the frame of reference for particles in the
+ \mbox{HEPEVT} common block. 
+ This is a modified version of LUROBO from Jetset.
+
+\begin{tabular}{lcl}
+the  & = & polar coordinate giving the rotated direction \\
+phi  & = & polar coordinate giving the rotated direction \\
+bex  & = & give direction and size of a Lorentz boost \\
+bey  & = & give direction and size of a Lorentz boost \\
+bez  & = & give direction and size of a Lorentz boost \\
+\end{tabular}
+
+\item[stddbrotb(imi,ima,the,phi,dbex,dbey,dbez)] 
+ Rotate and boost the frame of reference for the HEPEVT common block. 
+ Stddbrotb performs a specific range and double precision boost.
+ This is a modified version of LUDBRB from Jetset.
+
+\begin{tabular}{lcl}
+imi  & = & begin range of entries affectec by transformation \\
+ima  & = & end range of entries affectec by transformation \\
+the  & = & polar coordinate giving the rotated direction \\
+phi  & = & polar coordinate giving the rotated direction \\
+dbex & = & give direction and size of a Lorentz boost \\
+dbey & = & give direction and size of a Lorentz boost \\
+dbez & = & give direction and size of a Lorentz boost \\
+\end{tabular}
+
+\item[stdsort]
+ Sort the HEPEVT common block by daughters. 
+ This routine is called by qqhep.
+
+\item[stdquarks(ip,kq1,kq2,kq3,kql,kqj,kqr,kqx)]
+ Get the constitutent quarks of particle ip.
+ All numbers are positive.
+
+\begin{tabular}{lcl}
+ip  & = & index of particle in HEPEVT \\
+kq1 & = &  quark L of IJKLM \\
+kq2 & = &  quark K of IJKLM \\
+kq3 & = &  quark J of IJKLM \\
+kqj & = &  2*Jspin + 1 \\
+kql & = &  $n_L$ \\
+kqr & = &  $n_r$ \\
+kqx & = &  used to tag various special or imprecisely defined states \\
+\end{tabular}
+
+\item[stdcquarks(ip,kq1,kq2,kq3,kql,kqj,kqr,kqx)]
+ Get the signed constitutent quarks of particle ip.
+
+\begin{tabular}{lcl}
+ip  & = & index of particle in HEPEVT \\
+kq1 & = &  quark L of IJKLM \\
+kq2 & = &  quark K of IJKLM \\
+kq3 & = &  quark J of IJKLM \\
+kqj & = &  2*Jspin + 1 \\
+kql & = &  $n_L$ \\
+kqr & = &  $n_r$ \\
+kqx & = &  used to tag various special or imprecisely defined states \\
+\end{tabular}
+
+\item[stdspin(ip,xjsp)] 
+ Return the J spin of particle ip as a real number.
+
+\begin{tabular}{lcl}
+ip   & = & index of particle in HEPEVT \\
+xjsp & = & J spin \\
+\end{tabular}
+
+\item[sum\_4vec\_d(nv,psum,p1,p2,...)] 
+ Do a 4 vector sum of an arbitrary list of double precision 4 vectors.
+
+\begin{tabular}{lcl}
+nv   & = & number of 4 vectors to sum \\
+psum & = & output 4 vector \\
+p1   & = & the first input 4-vector \\
+p2   & = & the second input 4-vector \\
+\end{tabular}
+
+\item[sum\_4vec\_f(nv,psum,p1,p2,...)] 
+ Do a 4 vector sum of an arbitrary list of single precision 4 vectors.
+
+\begin{tabular}{lcl}
+nv   & = & number of 4 vectors to sum \\
+psum & = & output 4 vector \\
+p1   & = & the first input 4-vector \\
+p2   & = & the second input 4-vector \\
+\end{tabular}
+
+\end{description}
+
+
+\subsection{StdHep I/O Routines}
+
+\subsubsection{Xdr Binary Files}
+
+\begin{description}
+\item[stdxrd(ilbl,istream,lok)]
+ Read the next record from an xdr input stream, returning ilbl and lok.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxrdm(ilbl,istream,lok)]
+ Read the next record from an xdr input stream, returning ilbl and lok.
+ Stdxrdm handles multiple input streams to fake multiple interactions.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxwrt(ilbl,istream,lok)]  
+ Write record type ilbl to an xdr output stream, returning lok.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxrinit(filename,ntries,istream,lok)]
+ Initialize xdr and open an input stream, returning ntries and lok.
+ This routine should never be called more than once.
+
+\begin{tabular}{lcll}
+filename & = &  & name of the xdr input file \\
+ntries & = &  & expected number of events in this file \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxropen(filename,ntries,istream,lok)] 
+ Open an xdr input stream, returning ntries and lok.
+ This routine is called by stdxrinit.
+
+\begin{tabular}{lcll}
+filename & = &  & name of the xdr input file \\
+ntries & = &  & expected number of events in this file \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxwinit(filename,title,ntries,istream,lok)]
+ Initialize xdr and open an output stream, returning lok.
+ This routine should never be called more than once.
+
+\begin{tabular}{lcll}
+filename & = &  & name of the xdr output file \\
+title & = &  & title for the xdr output file \\
+ntries & = &  & expected number of events in this file \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0   & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxwopen(filename,title,ntries,istream,lok)]
+ Open an xdr output stream, returning lok.
+ This routine is called by stdxwinit.
+
+\begin{tabular}{lcll}
+filename & = &  & name of the xdr output file \\
+title & = &  & title for the xdr output file \\
+ntries & = &  & expected number of events in this file \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+lok  & = & 0  & if no problems were encountered \\
+\end{tabular}
+
+\item[stdxend(istream)]
+ Close the xdr output stream.
+
+\begin{tabular}{lcl}
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\end{description}
+
+\subsubsection{I/O Utilities}
+
+\begin{description}
+
+\item[stdzero]
+ Set the contents of the HEPEVT common block to zero.
+ This routine must be called by the user if heprdm or stdxrdm is used.
+
+\item[zerohepeup]
+ Set the contents of the HEPEUP common block to zero.
+
+\item[readmadgraph(version,lok)]
+ Read a MadGraph ascii data file.  
+ At this time, the file contains information used to fill HEPEUP. 
+ The user must fill HEPRUP with information from other sources, 
+ and may choose to manipulate the information in HEPEUP before using it.
+
+\begin{tabular}{lcll}
+version & = &  & MadGraph version \\
+lok  & = & 0  & if no problems were encountered \\
+\end{tabular}
+
+\item[stdprthd]
+ Print the contents of stdhd.inc, which contains the MCFio header information.
+
+\end{description}
+
+\subsection{StdHep I/O Routines - C Binding}
+
+\subsubsection{Xdr Binary Files}
+
+\begin{description}
+\item[int StdHepXdrRead(ilbl,istream)] 
+ Read the next record from an xdr input stream, returning ilbl.
+ The return argument is 0 if no problems were encountered.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrReadMulti(ilbl,istream)]
+ Read the next record from an xdr input stream, returning ilbl.
+ StdHepXdrReadMulti handles multiple input streams to fake 
+ multiple interactions.
+ The return argument is 0 if no problems were encountered.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrWrite(ilbl,istream)]
+ Write record type ilbl to an xdr output stream.
+ The return argument is 0 if no problems were encountered.
+
+\begin{tabular}{lcll}
+ilbl & = & 1   & HEPEVT common block \\
+ilbl & = & 2   & HEPEVT, HEPEV2, and HEPEV3 common blocks \\
+ilbl & = & 4   & HEPEVT and HEPEV4 common blocks \\
+ilbl & = & 5   & HEPEVT, HEPEV2, HEPEV3, HEPEV4, and HEPEV5 common blocks \\
+ilbl & = & 11  & HEPEUP common block \\
+ilbl & = & 12  & HEPRUP common block \\
+ilbl & = & 100 & StdHep begin run record \\
+ilbl & = & 200 & StdHep end run record \\
+istream & = &  & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrReadInit(filename,ntries,istream)] initialize input 
+ Initialize xdr and open an input stream, returning ntries.
+ The return argument is 0 if no problems were encountered.
+ This routine should never be called more than once.
+
+\begin{tabular}{lcl}
+filename & = & name of the xdr input file \\
+ntries & = & expected number of events in this file \\
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrReadOpen(filename,ntries,istream)] initialize input stream 
+ Open an xdr input stream, returning ntries.
+ This routine is called by stdxrinit.
+ The return argument is 0 if no problems were encountered.
+
+\begin{tabular}{lcl}
+filename & = & name of the xdr input file \\
+ntries & = & expected number of events in this file \\
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrWriteInit(filename,title,ntries,istream)]
+ Initialize xdr and open an output stream.
+ The return argument is 0 if no problems were encountered.
+ This routine should never be called more than once.
+
+\begin{tabular}{lcl}
+filename & = & name of the xdr output file \\
+title & = & title for the xdr output file \\
+ntries & = & expected number of events in this file \\
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[int StdHepXdrWriteOpen(filename,title,ntries,istream)]
+ Open an xdr output stream.
+ This routine is called by stdxwinit.
+ The return argument is 0 if no problems were encountered.
+
+\begin{tabular}{lcl}
+filename & = & name of the xdr output file \\
+title & = & title for the xdr output file \\
+ntries & = & expected number of events in this file \\
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\item[StdHepXdrEnd(istream)] 
+ Close the xdr output stream at ixdrstr(istream).
+
+\begin{tabular}{lcl}
+istream & = & index to array ixdrstr holding stream pointer \\
+\end{tabular}
+
+\end{description}
+
+\subsubsection{I/O Utilities}
+
+\begin{description}
+
+\item[StdHepZero]
+ Set the contents of the hepevt\_ structure to zero. 
+ Hepevt\_ is a mirror of the HEPEVT common block.
+ This routine must be called by the user if StdHepXdrReadMulti is used.
+
+\item[StdHepZeroHEPEUP]
+ Set the contents of the hepeup\_ structure to zero. 
+ Hepeup\_ is a mirror of the HEPEUP common block.
+
+\begin{tabular}{lcll}
+version & = &  & MadGraph version \\
+lok  & = & 0  & if no problems were encountered \\
+\end{tabular}
+
+\item[StdHepPrintHeader]
+ Print the contents of stdhd.h, which contains the MCFio header information.
+
+\end{description}
+
+
+
+\subsubsection{Ascii Dump}
+
+\begin{description}
+
+\item[dumphepeup(iev)]
+ Dump the contentents of the HEPEUP common block to an ascii file 
+ specified by lnhdmp in HEPLUN.
+
+\begin{tabular}{lcl}
+iev & = & event number \\
+lnhdmp & = & unit number of dump file (in HEPLUN) \\
+\end{tabular}
+
+\item[dumpheprup]
+ Dump the contentents of the HEPRUP common block to an ascii file
+ specified by lnhdmp in HEPLUN.
+
+\end{description}
+
+

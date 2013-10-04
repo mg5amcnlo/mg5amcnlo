@@ -1,5 +1,4 @@
 include ../../Source/make_opts
-include ../../Source/fj_lhapdf_opts
 
 LIBDIR = ../../lib/
 
@@ -9,8 +8,9 @@ FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
 #FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
 #FJLIBS=
 
-NLOLIBS=$(libmadloop) $(libcuttools)
-# Uncomment the line below to compile 'by hand'
+NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
+# Uncomment the line below to compile with MadLoop without setting the environnement 
+# variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
 LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
@@ -22,12 +22,12 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
 	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
-	 montecarlocounter.o reweight_xsec.o boostwdir2.o       \
-	 FKSParamReader.o
+	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
+	 FKSParamReader.o MC_integer.o 
 
 # Files needed for vegas, mint & mintMC
 RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
-	madfks_plot.o MC_integer.o fill_MC_mshell.o
+	madfks_plot.o fill_MC_mshell.o born_hel.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -41,7 +41,7 @@ BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
 	write_event.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o check_poles.o BinothLHA.o MC_integer.o
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o born_hel.o
 
 # Files for tests
 TEST= $(FILES) BinothLHADummy.o cuts.o
@@ -66,34 +66,34 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(CXX) -g -c $(CXXFLAGS) $^
 
 gensym: $(SYM)
-	$(FC) $(FFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
 	rm fks_singular.o
 
 test_Sij: symmetry_fks_test_Sij.o $(TEST)
-	$(FC) $(FFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
 
 test_ME: symmetry_fks_test_ME.o $(TEST)
-	$(FC) $(FFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_ME.o
 
 test_MC: symmetry_fks_test_MC.o $(TEST) 
-	$(FC) $(FFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_MC.o
 
 check_poles: $(POLES) $(libmadloop)
-	$(FC) $(FFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
 
 libMadLoop.a:
 	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done

@@ -16,7 +16,7 @@ C
 C
 C     LOCAL
 C
-      integer i,nconfigs,j,l,l1,l2,ndim,nevts
+      integer i,j,l,l1,l2,ndim,nevts
       double precision tot,mean,sigma,res_abs
       integer npoints
       double precision y,jac,s1,s2,xmin
@@ -156,7 +156,6 @@ c
       call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      nconfigs = 1
 c     
 c     Get user input
 c
@@ -184,7 +183,7 @@ c at the NLO)
         stop
       endif
 
-      write(*,*) "about to integrate ", ndim,ncall,itmax,nconfigs
+      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
 
       itotalpoints=0
       ivirtpoints=0
@@ -1264,9 +1263,16 @@ c basic one to which we sum everything
                   nFKSprocess=proc_map(proc_map(0,1),k)
 c Add the n-body only once
                   if (nFKSprocess.eq.nFKSprocess_soft) then
-                     f_unwgt(nFKSprocess_soft,i) =
-     &                    f_unwgt(nFKSprocess_soft,i) +
-     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                     do j=1,iproc_save(nFKSprocess_used_born)
+                        if (eto(j,nFKSprocess_used_born).eq.i) then
+                           f_unwgt(nFKSprocess_soft,i) =
+     &                          f_unwgt(nFKSprocess_soft,i) +
+     &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                        endif
+                     enddo
+c$$$                     f_unwgt(nFKSprocess_soft,i) =
+c$$$     &                    f_unwgt(nFKSprocess_soft,i) +
+c$$$     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1403,6 +1409,9 @@ c contribution
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
          f=0d0
          nScontributions=0
+         do i=1,maxproc_found
+            f_unwgt(nFKSprocess_used_born,i)=0d0
+         enddo
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
             if (unwgt_table(0,2,j).ne.0d0) then
@@ -1416,7 +1425,9 @@ c and the n-body contributions
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
-                  f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
+                  f_unwgt(nFKSprocess_used_born,i)=
+     &                 f_unwgt(nFKSprocess_used_born,i)+
+     &                 unwgt_table(0,1,i)
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))

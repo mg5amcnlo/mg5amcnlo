@@ -6,9 +6,21 @@
 if [[  ! -d ./bin || ! -d ./SubProcesses ]]; then
     cd ../
     if [[ ! -d ./bin || ! -d ./SubProcesses  ]]; then
-        echo "Error: store must be executed from the main, or bin directory"
+        echo "Error: newprocess_mg5 must be executed from the main, or bin directory"
         exit
     fi
+fi
+
+if [[ -e SubProcesses/subproc.mg ]]; then
+    echo "Error: newprocess_mg5 can only be used in a clean copy of Template."
+    echo "       This directory already contains a generated process, please"
+    echo "       open the index.html file to see information about the process."
+    echo "If you want to generate events from this process directory, run"
+    echo "  bin/generate_events"
+    echo "or"
+    echo "  bin/madevent"
+    echo "and type \"help\" to get started."
+    exit
 fi
 
 # Check that mg5 exists

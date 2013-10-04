@@ -199,7 +199,7 @@ class CheckValidForCmd(object):
         elif '_card.dat' in args[0]:   
             name = args[0].replace('_card.dat','_card_default.dat')
             if os.path.isfile(os.path.join(path,'Cards', name)):
-                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
+                files.cp(os.path.join(path,'Cards', name), os.path.join(path,'Cards', args[0]))
                 args[0] = os.path.join(path,'Cards', args[0])
             else:
                 raise self.InvalidCmd('No default path for this file')
@@ -315,7 +315,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -490,7 +489,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True):
         """ """
-        
+        if not self.options['madanalysis_path']:
+            plot = False
+            
+        self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
+                                  self.ask)
+    
+    @staticmethod
+    def ask_edit_card_static(cards, mode='fixed', plot=True, 
+                             timeout=0, ask=None, **opt):
+        if not ask:
+            ask = CommonRunCmd.ask
+
         def path2name(path):
             if '_card' in path:
                 return path.split('_card')[0]
@@ -501,7 +511,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
         # Ask the user if he wants to edit any of the files
         #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?\n""" 
+        question = """Do you want to edit a card (press enter to bypass editing)?\n""" 
         possible_answer = ['0', 'done']
         card = {0:'done'}
         
@@ -511,8 +521,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             possible_answer.append(imode)
             question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
-        
-        if plot and self.options['madanalysis_path']:
+        if plot:
             question += '  9 / %-9s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
@@ -531,9 +540,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         out = 'to_run'
         while out not in ['0', 'done']:
-            out = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+            out = ask(question, '0', possible_answer, timeout=int(1.5*timeout), 
                               path_msg='enter path', ask_class = AskforEditCard,
-                              cards=cards, mode=mode)
+                              cards=cards, mode=mode, **opt)
 
             
     @staticmethod
@@ -586,11 +595,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'unknown'
 
     ############################################################################
-    def create_plot(self, mode='parton', event_path=None, output=None):
+    def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot""" 
 
         madir = self.options['madanalysis_path']
-        tag = self.run_card['run_tag']  
+        if not tag:
+            tag = self.run_card['run_tag']  
         td = self.options['td_path']
 
         if not madir or not td or \
@@ -635,6 +645,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if os.path.exists(event_path):
                         break
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
+             
             elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 
@@ -650,6 +661,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                               'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+        elif mode == 'reweight' and not output:
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_%s.html' % tag)   
 
             
             
@@ -660,9 +674,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
-               
-        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
-                
+        
+        mode = mode.lower()
+        if mode not in ['parton', 'reweight']:
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
+        elif mode == 'parton':
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_parton')
+        else:
+            plot_dir =pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s' % (tag))
+             
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
         
@@ -688,6 +708,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'HTML', self.run_name))
+
             shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
                                                                          output)
 
@@ -1161,7 +1182,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Ask the question when launching generate_events/multi_run"""
         
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
-                      'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat']
+                      'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
+                      'reweight_card.dat']
         
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
@@ -1377,10 +1399,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     set command define and modifying the param_card/run_card correctly"""
     
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
-        
+
+        # Initiation
+        if 'pwd' in opt:
+            self.me_dir = opt['pwd']
+            del opt['pwd']
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
-        self.me_dir = self.mother_interface.me_dir
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+
+        if not hasattr(self, 'me_dir') or not self.me_dir:
+            self.me_dir = self.mother_interface.me_dir
+
+        # read the card
+
+        try:
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        except IOError:
+            self.run_card = {}
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
         except check_param_card.InvalidParamCard:
@@ -1388,8 +1423,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
-        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-    
+        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+        try:
+            run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+        except IOError:
+            run_card_def = {}
+            
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -1429,10 +1468,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
         
-                    
+        if run_card_def:
+            self.run_set = run_card_def.keys() + self.run_card.hidden_param
+        elif self.run_card:
+            self.run_set = self.run_card.keys()
+        else:
+            self.run_set = []            
         # check for conflict with run_card
         for var in self.pname2block:                
-            if var in self.run_card:
+            if var in self.run_set:
                 self.conflict.append(var)        
                             
     
@@ -1480,7 +1524,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           self.list_completion(text, ['run_card', 'param_card'])
         
         if 'run_card' in allowed.keys():
-            opts = self.run_card.keys()
+            opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
             
@@ -1537,6 +1581,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
 
         args = self.split_arg(line.lower())
+        if '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=')
+            args += [arg1, arg2]
+
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
@@ -1557,9 +1605,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
-        if args[start] in [l.lower() for l in self.run_card.keys()] and card != 'param_card':
-            if args[start] not in self.run_card.keys():
-                args[start] = [l for l in self.run_card.keys() \
+        if args[start] in [l.lower() for l in self.run_set] and card != 'param_card':
+            if args[start] not in self.run_set:
+                args[start] = [l for l in self.run_set \
                                                  if l.lower() == args[start]][0]
             
             if args[start+1] in self.conflict and card == '':
@@ -1572,6 +1620,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]]) 
                 else:
+                    logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
             elif  args[start+1] in ['t','.true.']:
                 self.setR(args[start], '.true.')
@@ -1634,7 +1683,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.setP(args[start], key, value)
             else:
                 logger.warning('invalid set command %s' % line)
-                return                   
+                return
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
         # PARAM_CARD NO BLOCK NAME
