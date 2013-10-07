@@ -2766,8 +2766,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         self.banner = banner_mod.Banner()
 
+        # store the cards in the banner
         for card in cards:
             self.banner.add(pjoin(self.me_dir, 'Cards', card))
+        # and the run settings
+        run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
+        self.banner.add_text('run_settings', run_settings)
 
         self.run_card = self.banner.charge_card('run_card')
         self.run_tag = self.run_card['run_tag']
