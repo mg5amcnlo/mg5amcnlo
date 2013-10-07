@@ -1303,10 +1303,6 @@ c Add the n-body only once
                            f_V=f_V+unwgt_table(0,3,i)
                         endif
                      enddo
-c$$$                     f_unwgt(nFKSprocess_soft,i) =
-c$$$     &                    f_unwgt(nFKSprocess_soft,i) +
-c$$$     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
-c$$$                     f_V=f_V+unwgt_table(0,3,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)

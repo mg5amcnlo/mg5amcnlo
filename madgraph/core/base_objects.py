@@ -25,6 +25,7 @@ import re
 import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -2690,17 +2691,22 @@ class Process(PhysicsObject):
         """Give the pdg code of the process including decay"""
         
         finals = self.get_final_ids()
-        to_add = []
         for proc in self.get('decay_chains'):
             init = proc.get_initial_ids()[0]
-            while 1:
-                try:
-                    finals.remove(init)
-                except:
-                    break
-            to_add += proc.get_final_ids_after_decay()
-        finals += to_add
-        return finals 
+            #while 1:
+            try:
+                pos = finals.index(init)
+            except:
+                break
+            finals[pos] = proc.get_final_ids_after_decay()
+        output = []
+        for d in finals:
+            if isinstance(d, list):
+                output += d
+            else:
+                output.append(d)
+        
+        return output
     
 
     def get_final_legs(self):
