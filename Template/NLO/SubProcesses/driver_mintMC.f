@@ -109,6 +109,9 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      integer nvirt(0:nintervals,ndimmax)
+      double precision ave_virt(0:nintervals,ndimmax)
+      common/c_ave_virt/ave_virt,nvirt
 
       logical SHsep
       logical Hevents
@@ -222,6 +225,7 @@ c to restore grids:
             open (unit=12, file='preset_mint_grids',status='old')
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
+               read (12,*) (ave_virt(j,i),i=1,ndim)
             enddo
             read (12,*) xint
             read (12,*) ifold_energy,ifold_phi,ifold_yij
@@ -260,6 +264,7 @@ c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
          do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
+            write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          write (12,*) xint
          write (12,*) ifold_energy,ifold_phi,ifold_yij
@@ -276,6 +281,7 @@ c to restore grids:
          open (unit=12, file='mint_grids',status='old')
          do j=0,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
+            read (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          read (12,*) xint
          read (12,*) ifold_energy,ifold_phi,ifold_yij
@@ -320,6 +326,7 @@ c to save grids:
          do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
             write (12,*) (ymax(j,i),i=1,ndim)
+            write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          write (12,*) (ifold(i),i=1,ndim)
          write (12,*) resS,errS
@@ -352,6 +359,7 @@ c to restore grids:
          do j=1,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
             read (12,*) (ymax(j,i),i=1,ndim)
+            read (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          read (12,*) (ifold(i),i=1,ndim)
          read (12,*) resS,errS

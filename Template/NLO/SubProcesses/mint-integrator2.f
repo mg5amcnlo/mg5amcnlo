@@ -125,6 +125,7 @@ c Initialize grids
                xgrid(kint,kdim)=dble(kint)/nint_used
             enddo
          enddo
+         call init_ave_virt(nint_used,ndim)
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
          even=.false.
@@ -242,6 +243,7 @@ c compute jacobian ('vol') for the PS point
             if(imode.eq.0)
      &           nhits(icell(kdim),kdim)=nhits(icell(kdim),kdim)+1
          enddo
+         call get_ave_virt(x,nint_used,ndim,average_virtual)
 c contribution to integral
          if(imode.eq.0) then
             dummy=fun(x,vol,ifirst,f1)
@@ -269,6 +271,9 @@ c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
             do kdim=1,ndim
                xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f(1)
             enddo
+            if (f(4).ne.0d0) then
+               call fill_ave_virt(x,nint_used,ndim,f(4))
+            endif
          else
 c update the upper bounding envelope
             prod=1
@@ -375,6 +380,7 @@ c Reset the MINT grids
                      xgrid(kint,kdim)=dble(kint)/nint_used
                   enddo
                enddo
+               call init_ave_virt(nint_used,ndim)
             elseif (imode.eq.1) then
                do kdim=1,ndim
                   nintcurr=nint_used/ifold(kdim)
@@ -548,6 +554,7 @@ c Double the number of intervals in the grids if not yet reach the maximum
          do kdim=1,ndim
             call double_grid(xgrid(0,kdim),nint_used)
          enddo
+         call double_ave_virt(nint_used,ndim)
          nint_used=2*nint_used
       endif
 c double the number of points for the next iteration
@@ -956,4 +963,75 @@ c Got random numbers for all dimensions, update kkk() for the next call
       return
       end
 
+
+      subroutine init_ave_virt(ninter,ndim)
+      implicit none
+      include "mint.inc"
+      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,i
+      double precision ave_virt(0:nintervals,ndimmax)
+      common/c_ave_virt/ave_virt,nvirt
+      do kdim=1,ndim
+         do i=0,ninter
+            nvirt(i,kdim)=0
+            ave_virt(i,kdim)=0d0
+         enddo
+      enddo
+      return
+      end
+
+      subroutine get_ave_virt(x,ninter,ndim,average_virtual)
+      implicit none
+      include "mint.inc"
+      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,ncell
+      double precision x(ndimmax),ave_virt(0:nintervals,ndimmax)
+     $     ,average_virtual
+      common/c_ave_virt/ave_virt,nvirt
+      average_virtual=1d0
+      do kdim=1,ndim
+         ncell=min(int(x(kdim)*ninter)+1,ninter)
+         average_virtual=average_virtual*ave_virt(ncell,kdim)
+      enddo
+      return
+      end
+
+      subroutine fill_ave_virt(x,ninter,ndim,virtual)
+      implicit none
+      include "mint.inc"
+      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,ncell
+      double precision x(ndimmax),ave_virt(0:nintervals,ndimmax),virtual
+      common/c_ave_virt/ave_virt,nvirt
+      do kdim=1,ndim
+         ncell=min(int(x(kdim)*ninter)+1,ninter)
+         nvirt(ncell,kdim)=nvirt(ncell,kdim)+1
+         ave_virt(ncell,kdim)=
+     &        ( ave_virt(ncell,kdim)*dble(nvirt(ncell,kdim)-1)+
+     &          sign(1d0,virtual)*abs(virtual)**(1d0/ndim) )
+     &         /dble(nvirt(ncell,kdim))
+      enddo
+      return
+      end
+
+      subroutine double_ave_virt(ninter,ndim)
+      implicit none
+      include "mint.inc"
+      integer kdim,ndim,nvirt(0:nintervals,ndimmax),i,ninter
+      double precision ave_virt(0:nintervals,ndimmax)
+      common/c_ave_virt/ave_virt,nvirt
+      do kdim=1,ndim
+         do i=ninter,1,-1
+            ave_virt(i*2,kdim)=ave_virt(i,kdim)
+            if (i.ne.1) ave_virt(i*2-1,kdim)=(ave_virt(i,kdim)
+     $           +ave_virt(i-1,kdim))/2d0
+            nvirt(i*2,kdim)=nvirt(i,kdim)
+            if ( (nvirt(i,kdim).eq.0 .and. nvirt(i-1,kdim).eq.1) .or.
+     &           (nvirt(i,kdim).eq.1 .and. nvirt(i-1,kdim).eq.0) ) then
+               nvirt(i*2-1,kdim)=1
+            else
+               if (i.ne.1) nvirt(i*2-1,kdim)=(nvirt(i,kdim)+nvirt(i-1
+     $              ,kdim))/2
+            endif
+         enddo
+      enddo
+      return
+      end
 
