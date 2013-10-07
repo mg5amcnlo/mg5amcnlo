@@ -27,7 +27,7 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
 
       include "nexternal.inc"
       include "genps.inc"
-      integer j,k,itype,istep,ievts_ok,i_mult(30),imin,imax
+      integer j,k,itype,istep,ievts_ok,nBorn
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
 c
       write(*,*)'Enter event file name'
@@ -36,6 +36,12 @@ c
       write(*,*)'     2 to keep H events'
       write(*,*)'     3 to keep a subset of events'
       read(*,*)itype
+      if(itype.lt.3)then
+         write(*,*)'Type the Born multiplicity.'
+         write(*,*)'If the line after each event starts'
+         write(*,*)'with #, this entry is not needed'
+         read(*,*)nBorn
+      endif
 
       loc=index(event_file,' ')
       if(itype.eq.1)then
@@ -58,14 +64,8 @@ c
          stop
       endif
 
-c first round to establish ievts_ok, and to check whether
-c information iSorH_lhe is available
+c first round to establish ievts_ok
       ifile=34
-      do i=1,30
-         i_mult(i)=0
-      enddo
-      imin=31
-      imax=1
       extra=.false.
       open(unit=ifile,file=event_file,status='unknown')
       call read_lhef_header(ifile,maxevt,MonteCarlo)
@@ -78,13 +78,14 @@ c information iSorH_lhe is available
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
       i=1
       ievts_ok=0
+      extra=.false.
       if(itype.le.2)then
          do while(i.le.maxevt)
             call read_lhef_event(ifile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-            if(buff(1:1).eq.'#')then
-               extra=.true.
+            extra=buff(1:1).eq.'#'
+            if(extra)then
                read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      &           fksfather_lhe,ipartner_lhe,
      &           scale1_lhe,scale2_lhe,
@@ -92,30 +93,14 @@ c information iSorH_lhe is available
      &           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
                if(itype.eq.iSorH_lhe)ievts_ok=ievts_ok+1
             else
-               i_mult(nup)=i_mult(nup)+1
+               if(itype.eq.1+nup-nBorn)ievts_ok=ievts_ok+1
+               if(nup-nBorn.ne.0.and.nup-nBorn.ne.1)then
+                  write(*,*)'Cannot extract S/H events from this file'
+                  stop
+               endif
             endif
             i=i+1
          enddo
-         if(.not.extra)then
-            do i=1,30
-               j=30-i
-               if(i.le.2.and.i_mult(i).ne.0)then
-                  write(*,*)'Error in i_mult',i_mult
-                  stop
-               endif
-               if(i_mult(i).ne.0.and.i.lt.imin)imin=i
-               if(i_mult(j).ne.0.and.j.gt.imax)imax=j
-            enddo
-            if(imax-imin.eq.1)then
-               if(itype.eq.1)ievts_ok=i_mult(imin)
-               if(itype.eq.2)ievts_ok=i_mult(imax)
-            else
-               write(*,*)'Unable to understand files with more than'
-               write(*,*)'two multiplicities. Set imin and imax by'
-               write(*,*)'hand here'
-               stop
-            endif
-         endif
       elseif(itype.eq.3)then
          ievts_ok=min(maxevt,nevmax)-nevmin
       endif
@@ -151,10 +136,6 @@ c second round to write file
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          sum_wgt=sum_wgt+XWGTUP
          if(extra)then
-            if(buff(1:1).ne.'#')then
-               write(*,*)'Inconsistency in event file',i,' ',buff
-               stop
-            endif
             read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      &         fksfather_lhe,ipartner_lhe,
      &         scale1_lhe,scale2_lhe,
@@ -173,8 +154,8 @@ c second round to write file
          enddo
          call phspncheck_nocms2(i,npart,xmass,xmom)
          if( (itype.le.2.and.extra.and.itype.eq.iSorH_lhe).or.
-     &       (itype.eq.1.and..not.extra.and.nup.eq.imin).or.
-     &       (itype.eq.2.and..not.extra.and.nup.eq.imax).or.
+     &       (itype.eq.1.and..not.extra.and.nup.eq.nBorn).or.
+     &       (itype.eq.2.and..not.extra.and.nup.eq.nBorn+1).or.
      &       (itype.eq.3.and.i.ge.nevmin) )then
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
