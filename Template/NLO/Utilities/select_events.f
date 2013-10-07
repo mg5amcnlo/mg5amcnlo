@@ -21,14 +21,17 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       character*80 event_file,fname2
       character*140 buff
       character*10 MonteCarlo,string
-      character*1 ch1
+      character*12 str1,str2
+      character*9 ch1
       logical extra
-      integer numev,number,ioffset,jj,loc
+      integer numev,number,ioffset,jj,loc,loc1,loc2,init1,init2
 
       include "nexternal.inc"
       include "genps.inc"
       integer j,k,itype,istep,ievts_ok,nBorn
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      integer numscales,numPDFpairs,isc,ipdf
+      common/cwgxsec1/numscales,numPDFpairs
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
@@ -39,17 +42,16 @@ c
       if(itype.lt.3)then
          write(*,*)'Type the Born multiplicity.'
          write(*,*)'If the line after each event starts'
-         write(*,*)'with #, this entry is not needed'
+         write(*,*)'with "#aMCatNLO", this is not used'
          read(*,*)nBorn
       endif
 
       loc=index(event_file,' ')
       if(itype.eq.1)then
-         fname2=event_file(1:loc-1)//'.S'
+         fname2=event_file(1:loc-1)//'.S_events'
       elseif(itype.eq.2)then
-         fname2=event_file(1:loc-1)//'.H'
+         fname2=event_file(1:loc-1)//'.H_events'
       elseif(itype.eq.3)then
-         fname2=event_file(1:loc-1)//'.RED'
          write(*,*)'Enter first and last event to keep'
          read(*,*)nevmin0,nevmax0
          if(nevmin0.lt.0.or.nevmax0.lt.0)then
@@ -59,6 +61,23 @@ c
          endif
          nevmin=min(nevmin0,nevmax0)
          nevmax=max(nevmin0,nevmax0)
+         write(str1,'(i10.10)')nevmin
+         write(str2,'(i10.10)')nevmax
+         loc1=index(str1,' ')
+         loc2=index(str2,' ')
+         do i=1,len(str1)
+            if(str1(i:i).ne.'0')then
+               init1=i
+               exit
+            endif
+         enddo
+         do i=1,len(str2)
+            if(str2(i:i).ne.'0')then
+               init2=i
+               exit
+            endif
+         enddo
+         fname2=event_file(1:loc-1)//'.'//str1(init1:loc1-1)//'_to_'//str2(init2:loc2-1)
       else
          write(*,*)'Invalid itype',itype
          stop
@@ -68,7 +87,9 @@ c first round to establish ievts_ok
       ifile=34
       extra=.false.
       open(unit=ifile,file=event_file,status='unknown')
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numscales=int(sqrt(dble(isc)))
+      numPDFpairs=ipdf/2
       if(itype.eq.3.and.nevmin.gt.maxevt)then
          write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
          stop
@@ -86,7 +107,7 @@ c first round to establish ievts_ok
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
             extra=buff(1:1).eq.'#'
             if(extra)then
-               read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+               read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      &           fksfather_lhe,ipartner_lhe,
      &           scale1_lhe,scale2_lhe,
      &           jwgtinfo,mexternal,iwgtnumpartn,
@@ -136,7 +157,7 @@ c second round to write file
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          sum_wgt=sum_wgt+XWGTUP
          if(extra)then
-            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+            read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      &         fksfather_lhe,ipartner_lhe,
      &         scale1_lhe,scale2_lhe,
      &         jwgtinfo,mexternal,iwgtnumpartn,
@@ -178,7 +199,6 @@ c second round to write file
       enddo
       write(ofile,*)'</LesHouchesEvents>'
       if(itype.eq.3)write(*,*)'The sum of the weights is:',sum_wgt
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       close(34)
       close(35)
