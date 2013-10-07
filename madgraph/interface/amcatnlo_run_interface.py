@@ -804,8 +804,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
         #common_run.CommonRunCmd.__init__(self, me_dir, options)
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
 
@@ -1389,7 +1387,7 @@ Integrated cross-section
                 process = line.replace('generate ', '')
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
@@ -2769,11 +2767,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
         self.banner = banner_mod.Banner()
 
         for card in cards:
-            print card
             self.banner.add(pjoin(self.me_dir, 'Cards', card))
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
+        self.run_card = self.banner.charge_card('run_card')
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         #add a tag in the run_name for distinguish run_type
@@ -2782,8 +2778,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.run_name += '_LO' 
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         if 'aMC@' in mode or mode == 'onlyshower':
-            shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-            self.shower_card = shower_card.ShowerCard(shower_card_path)
+            self.shower_card = self.banner.charge_card('shower_card')
         
         return mode
 

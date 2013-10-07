@@ -22,6 +22,7 @@ pjoin = os.path.join
 
 try:
     import madgraph.various.misc as misc
+    import madgraph.various.shower_card as shower_card
     import madgraph.iolibs.file_writers as file_writers
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
@@ -30,6 +31,7 @@ except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     import internal.check_param_card as param_card_reader
+    import internal.various.shower_card as shower_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -175,13 +177,19 @@ class Banner(dict):
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
         
-        assert tag in ['mgruncard'], 'invalid card %s' % tag
+        assert tag in ['mgruncard', 'mgshowercard'], 'invalid card %s' % tag
         
         if tag == 'mgruncard':
             run_card = self[tag].split('\n') 
             self.run_card = RunCard(run_card)
             return self.run_card
+        elif tag ==' mgshowercard':
+            shower_content = self[tag] 
+            self.shower_card = shower_card.shower_card(shower_content, True)
+            return self.shower_card
 
     ############################################################################
     #  WRITE BANNER
@@ -287,8 +295,11 @@ class Banner(dict):
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+
         
-        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'invalid card %s' % tag
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard'], 'invalid card %s' % tag
         
         if tag == 'slha':
             param_card = self[tag].split('\n')
@@ -305,6 +316,10 @@ class Banner(dict):
             proc_card = self[tag].split('\n')
             self.proc_card = ProcCard(proc_card)
             return self.proc_card
+        elif tag ==' mgshowercard':
+            shower_content = self[tag] 
+            self.shower_card = shower_card.shower_card(shower_content, True)
+            return self.shower_card
 
         
     def get_detail(self, tag, *arg):
@@ -327,7 +342,10 @@ class Banner(dict):
             tag = 'mg5proccard' 
             attr_tag = 'proc_card'
             arg = ('generate',)
-        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'not recognized'
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+            attr_tag = 'shower_card'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
         
         if not hasattr(self, attr_tag):
             self.charge_card(attr_tag) 
