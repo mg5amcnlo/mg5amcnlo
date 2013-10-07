@@ -49,13 +49,17 @@ c to get the unique IPROC's
             do i=1,nexternal-1
                if (i.eq.min(j_fks,i_fks)) then
                   if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
+c     gluon splitting
                      id_current(i,j)=21
-                  elseif(abs(particle_type(j_fks)).eq.3) then
+                  elseif(idup(i_fks,j).eq.21) then
+c     final state gluon emitted
                      id_current(i,j)=idup(j_fks,j)
-                  elseif (abs(particle_type(i_fks)).eq.3) then
+                  elseif(idup(j_fks,j).eq.21) then 
+c     intial state g->qqbar splitting
                      id_current(i,j)=-idup(i_fks,j)
                   else
-                     write (*,*) 'Error #1 in unwgt_table'
+                     write (*,*) 'Error #1 in unwgt_table',nFKSprocess
+     $                    ,idup(i_fks,j),idup(j_fks,j)
                      stop
                   endif
                elseif (i.lt.max(j_fks,i_fks)) then
