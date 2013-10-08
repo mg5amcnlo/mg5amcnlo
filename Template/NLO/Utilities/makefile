@@ -9,10 +9,13 @@ FILES2=madfks_plot.f madfks_dbook.f setcuts.o
 %.o : %.f
 	$(FF) -c $<
 
-all: check_events compare_events merge_events plot_events plot_events_lhef \
-	select_events split_events
+all: check_events combine_plots compare_events merge_events plot_events \
+	plot_events_lhef select_events split_events sum_plots
 
 check_events : $(FILES) check_events.o
+	$(FF) $^ -o $@
+
+combine_plots : combine_plots.o
 	$(FF) $^ -o $@
 
 compare_events : $(FILES) compare_events.o
@@ -33,8 +36,11 @@ select_events : $(FILES) select_events.o
 split_events : $(FILES) split_events.o
 	$(FF) $^ -o $@
 
+sum_plots : sum_plots.o
+	$(FF) $^ -o $@
+
 clean:
 	@rm -f *.o
-	@rm -f check_events compare_events merge_events plot_events plot_events_lhef \
-	select_events split_events
+	@rm -f check_events combine_plots compare_events merge_events plot_events \
+	plot_events_lhef select_events split_events sum_plots
 	@rm -f LHEF.* res_wgt headfile
