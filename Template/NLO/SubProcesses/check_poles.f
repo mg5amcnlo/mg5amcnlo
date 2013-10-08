@@ -9,16 +9,16 @@ C
       double precision pi, zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero = 0d0)
-      integer npoints, npointsChecked
+      integer npoints, npointsChecked,ret_code
       integer i, j, k
-      double precision tolerance, tolerance_default
+      double precision tolerance
       double precision accuracy
-      parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
       parameter (ren_scale = 1d2)
       parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3, nexternal)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -37,6 +37,11 @@ C
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 cc
       include 'run.inc'
       include 'coupl.inc'
@@ -44,10 +49,17 @@ cc
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
       
+c general MadFKS parameters
+      include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
 C-----  
+c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -59,9 +71,9 @@ C-----
       read(*,*) npoints
       write(*,*)'Insert the relative tolerance'
       write(*,*)' A negative number will mean use the default one: ',
-     1 tolerance_default 
+     1 IRPoleCheckThreshold 
       read(*,*) tolerance
-      if (tolerance .le. zero) tolerance = tolerance_default
+      if (tolerance .le. zero) tolerance = IRPoleCheckThreshold
 
       mu_r = ren_scale
       qes2 = ren_scale**2
@@ -70,7 +82,12 @@ C-----
           pmass_rambo(i-nincoming) = pmass(i)
       enddo
 
-      nfksprocess=1
+c Find the nFKSprocess for which we compute the Born-like contributions,
+c ie. which is a Born+g real-emission process
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (particle_type(i_fks).eq.8) exit
+      enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)
@@ -139,7 +156,8 @@ C-----
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy
+     $         ,ret_code) 
 
           finite = virt_wgts(1)/dble(ngluons)
           single = virt_wgts(2)/dble(ngluons)

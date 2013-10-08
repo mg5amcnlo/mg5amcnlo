@@ -226,7 +226,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
         try:
             call = self["amplitudes"][amplitude.get_call_key()](amplitude)
             return call
-        except KeyError:
+        except KeyError, error:
             return ""
 
     def add_wavefunction(self, key, function):
@@ -1060,7 +1060,6 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         if argument.needs_hermitian_conjugate():
             flag = ['C%d' % i for i in \
                                   argument.get_conjugate_index()]
-
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop') or \
            (isinstance(argument, helas_objects.HelasAmplitude) and \
@@ -1071,7 +1070,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
-                                        '%s' % l[0], l[1:], outgoing, flag),
+                                        '%s' % l[0], l[1:], outgoing, flag, True),
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))                                            
                }
@@ -1261,7 +1260,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                              '%(LoopSymmetryFactor)d','%(amp_number)d,H)']
                 res.append(','.join(create_coef)%{\
                   'number':lamp.get_final_loop_wavefunction().get('number'),
-                  'loop_rank':lamp.get_rank(),
+                  'loop_rank':lamp.get_analytic_info('wavefunction_rank'),
                   'lcut_size':lamp.get_lcut_size(),
                   'loop_number':lamp.get('number'),
                   'amp_number':lamp.get('amplitudes')[0].get('number'),
@@ -1280,9 +1279,9 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                                 '%(new_rank)d)']
                     coef_merge.append(','.join(merge_coef)%{\
                       'ref_number':refamp.get('number'),
-                      'ref_rank':refamp.get_rank(),
+                      'ref_rank':refamp.get_analytic_info('wavefunction_rank'),
                       'new_number':lamp.get('number'),
-                      'new_rank':lamp.get_rank()})
+                      'new_rank':lamp.get_analytic_info('wavefunction_rank')})
         return res, coef_merge
 
     def get_loop_CT_calls(self, matrix_element, group_loops=False):
@@ -1373,8 +1372,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         l = [str(l) for l in argument.get('lorentz')]
         flag = []
         if argument.needs_hermitian_conjugate():
-            flag = ['C%d' % i for i in \
-                                  argument.get_conjugate_index()]
+            flag = ['C%d' % i for i in argument.get_conjugate_index()]
         
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
@@ -1384,7 +1382,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         call = 'CALL %(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s)'
 
         arg = {'routine_name': aloha_writers.combine_name(\
-                                        '%s' % l[0], l[1:], outgoing, flag),
+                                        '%s' % l[0], l[1:], outgoing, flag, True),
                'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))                                            
                }
@@ -1549,13 +1547,12 @@ class CPPUFOHelasCallWriter(UFOHelasCallWriter):
             call = '%(routine_name)s(%(wf)s%(coup)s%(mass)s%(out)s);'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
-                                            '%s' % l[0], l[1:], outgoing, flag),
+                                            '%s' % l[0], l[1:], outgoing, flag,True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("pars->%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    } 
-
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:
@@ -1715,13 +1712,13 @@ class PythonUFOHelasCallWriter(UFOHelasCallWriter):
             call = '%(out)s= %(routine_name)s(%(wf)s%(coup)s%(mass)s)'
             # compute wf
             arg = {'routine_name': aloha_writers.combine_name(\
-                                            '%s' % l[0], l[1:], outgoing, flag),
+                                            '%s' % l[0], l[1:], outgoing, flag, True),
                    'wf': ("w[%%(%d)d]," * len(argument.get('mothers'))) % \
                                       tuple(range(len(argument.get('mothers')))),
                     'coup': ("%%(coup%d)s," * len(argument.get('coupling'))) % \
                                      tuple(range(len(argument.get('coupling'))))           
                    }
-            
+
             if isinstance(argument, helas_objects.HelasWavefunction):
                 arg['out'] = 'w[%(out)d]'
                 if aloha.complex_mass:

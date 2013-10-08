@@ -34,7 +34,7 @@
              if (NRotations_DP .lt. 0 .or.
      &           NRotations_DP .gt. 2 ) then
                stop 'NRotations_DP must be >= 0 and <=2.'
-             endif 
+             endif
 
            else if (buff .eq. '#NRotations_QP') then
              read(666,*,end=999) NRotations_QP
@@ -94,6 +94,10 @@
 
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
+             if (ImprovePSPoint .lt. -1 .or.
+     &           ImprovePSPoint .gt. 2 ) then
+               stop 'ImprovePSPoint must be >= -1 and <=2.'
+             endif
 
           else
              write(*,*) 'The parameter name ',buff(2:),
@@ -177,6 +181,6 @@ C     a non existing or malformed parameter file
       LoopInitStartOver=.False.
       HelInitStartOver=.False.
       ZeroThres=1.0d-9
-      ImprovePSPoint=.True.
+      ImprovePSPoint=2
 
       end

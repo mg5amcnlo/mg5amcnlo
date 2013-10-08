@@ -304,7 +304,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
                     
-        if not loop_type.startswith('real') and \
+        if loop_type and not loop_type.startswith('real') and \
                  not self.options['gauge']=='Feynman' and \
                  not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
             if 1 in self._curr_model.get('gauge'):
@@ -331,7 +331,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # interfaces
         # Clear history, amplitudes and matrix elements when a model is imported
         # Remove previous imports, generations and outputs from history
-        self.history.clean(remove_bef_last='import')
+        self.history.clean(remove_bef_last='import',
+                           to_keep=['set','load','import', 'define'])
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -368,7 +369,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
     def do_output(self, line):
         """Main commands:Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -547,7 +548,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
     def ML5finalize(self, nojpeg, online = False):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
-        
+
         if self._export_format in ['standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are

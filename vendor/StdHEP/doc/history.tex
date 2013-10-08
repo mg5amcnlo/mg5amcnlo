@@ -1,0 +1,335 @@
+
+\section {History}
+
+\begin{description}
+
+\item[5.06.01]
+
+\begin{itemize}
+\item StdHep 5.06.01 was built with Pythia 6.413, Herwig 6.510a, 
+      Isajet 7.72a, and QQ 9.2b.
+\item Makefiles work with gfortran on MacOSX.
+\item Use PDG 2006 numbers.
+\item Get mass\_width\_2006.csv and mass\_width\_2006.mc.
+\end{itemize}
+
+
+\item[5.05.05]
+
+\begin{itemize}
+\item StdHep 5.05.05 was built with Pythia 6.402, Herwig 6.510a, 
+      Isajet 7.72a, and QQ 9.2b.
+\item Bug fix for stdstdsclst.
+\item Add stdhd.inc, stdhd.h, StdHepPrintHeader, and stdprthd 
+      to make title, comment, and date available when 
+      reading or writing mcfio files.
+\end{itemize}
+
+\item[5.05.03]
+
+\begin{itemize}
+\item StdHep 5.05.03 was built with Pythia 6.325, Herwig 6.510a, 
+      Isajet 7.72a, and QQ 9.2b.
+\item Translate IDTAUL and IDTAUR for Isajet.
+\item Read mass\_width\_2004.csv, which has a new format.
+\item Build only static libraries by default.
+\end{itemize}
+
+
+\item[5.05]
+
+\begin{itemize}
+\item StdHep 5.05 was built with Pythia 6.325, Herwig 6.510, 
+      Isajet 7.72, and QQ 9.2b.
+\item Using PDG 2004 numbers.
+\item Move generator includes into subdirectories of \$STDHEP\_DIR/src/inc.
+\end{itemize}
+
+\item[5.04.02]
+\begin{itemize}
+\item MCFio is part of StdHep again.  
+\end{itemize}
+
+\item[5.04]
+
+\begin{itemize}
+\item StdHep 5.04 was built with Pythia 6.319, Herwig 6.507, 
+      Isajet 7.51, QQ 9.2b, and MCFio 5.3.
+\item Using PDG 2004 numbers.
+\end{itemize}
+
+\item[5.03]
+
+\begin{itemize}
+\item StdHep 5.03 was built with Pythia 6.223, Herwig 6.505, Isajet 7.51, and QQ 9.2b.
+\item MCFio has been moved to a separate product.  
+      StdHep 5.03 was built with MCFio 5.3.
+\item Using PDG 2004 numbers  
+      (use cnv2000to2004 when using files written by StdHep 5.01).
+\end{itemize}
+
+\item[5.02]
+
+\begin{itemize}
+\item StdHep 5.02 was built with Pythia 6.216, Herwig 6.5, Isajet 7.51, and QQ 9.2b.
+\item Add routines to fill and write Les Houches common blocks HEPEUP and HEPRUP.
+\item Read MadGraph data files.
+\item Supply stdhep\_mcfio.h header with prototypes for C I/O routines.
+\item Change STDCM1.
+\end{itemize}
+
+\item[5.01]
+
+\begin{itemize}
+\item StdHep 5.01 was built with Pythia 6.203, Herwig 6.4, Isajet 7.51, and QQ 9.2b.
+\item Pythia has changed and added numbers.
+\item StdHepC++ is distributed with CLHEP, not with the Fortran stdhep.
+\item Define common blocks HEPEV4 and HEPEV5.
+\end{itemize}
+
+
+\item[4.10]
+
+\begin{itemize}
+\item StdHep 4.10 was built with Pythia 6.155, Herwig 6.2, Isajet 7.51, and QQ 9.2b.
+\item PDG 2000 numbers  (use cnv409to410).
+\item Add more StdHepC++ utilities.
+\end{itemize}
+
+\item[4.09]
+
+\begin{itemize}
+\item StdHep 4.09 was built with Pythia 6.129, Herwig 6.1, Isajet 7.37, and QQ 9.2b.
+\item Restructure StdHepC++ classes.
+\end{itemize}
+
+\item[4.08]
+
+\begin{itemize}
+\item StdHep 4.08 was built with Pythia 6.129, Herwig 6.1, Isajet 7.37, and QQ 9.2b.
+\item Modify hep2geant to only add non-degenerate vertices.
+\end{itemize}
+
+\item[4.07]
+
+\begin{itemize}
+\item StdHep 4.07 was built with Pythia 6.125, Herwig 5.9a, Isajet 7.37, and QQ 9.2b.
+\item Add status 23 for isajet "initial" partons.
+\item Makefiles support building debug libraries (e.g. gmake DEBUG=-g all).
+\item Begin to add C++ binding as libStdHepCXX.a.
+\end{itemize}
+
+\item[4.06]
+
+\begin{itemize}
+\item StdHep 4.06 was built with Pythia 6.125, Herwig 5.9a, Isajet 7.37, and QQ 9.2b.
+\item Test with Isajet 7.42 (no modifications required).
+\item Fix translation of Isajet neutralinos.
+\item Fix typo in hepchg (present in versions 4.01 to 4.05).
+\end{itemize}
+
+\item[4.05]
+
+\begin{itemize}
+\item Update table file for UPS.
+\item Bug fix for mcfio.
+\end{itemize}
+
+\item[4.04]
+
+\begin{itemize}
+\item StdHep 4.04 was built with Pythia 6.115, Herwig 5.9a, Isajet 7.37, and QQ 9.2b.
+\item Include more information for multiple interaction events.
+\item Update mcfio.
+\end{itemize}
+
+\item[4.03]
+
+\begin{itemize}
+\item StdHep 4.03 was built with Pythia 6.115, Herwig 5.9a, Isajet 7.37, and QQ 9.2b.
+\item Bug fixes for qqtran and hepnam.
+\item New PDG mass table using the new numbering scheme.
+\end{itemize}
+
+\item[4.02]
+
+\begin{itemize}
+\item StdHep 4.02 was built with Pythia 6.115, Herwig 5.9a, Isajet 7.31, and QQ 9.2a.
+\item Late-breaking modifications to the new numbering scheme were implemented.
+\end{itemize}
+
+\item[4.01]
+
+\begin{itemize}
+\item StdHep 4.01 was built with Pythia 6.115, Herwig 5.9, Isajet 7.31, and QQ 9.2a.
+\item The new numbering scheme was implemented.
+\end{itemize}
+
+\item[4.00]
+
+\begin{itemize}
+\item StdHep 4.00 was built with Pythia 6.114, Herwig 5.9, Isajet 7.31, and QQ 9.2.
+\item Native mode binary and Zebra I/O routines were dropped.
+\item Translation routines for DPMJET 2.4 were added.
+\item Fortran preprocessing is now handled by cpp.
+\item Use the same /HEPEVT/ common block for Herwig and StdHep.
+      The translation routine changes idhep in place.
+\end{itemize}
+
+\item[3.05]
+
+\begin{itemize}
+\item StdHep 3.05 was built with Jetset 7.0408, Herwig 5.8a, Isajet 7.16, and QQ
+ 9.2.
+\item Change qqtran for 4 QQ particle translations.
+\end{itemize}
+
+\item[3.04]
+
+\begin{itemize}
+\item StdHep 3.04 was built with Jetset 7.0408, Herwig 5.8a, Isajet 7.16, and QQ 9.2.
+\item Fix XDR I/O bug (affected final particle in event list).
+\end{itemize}
+
+\item[3.03]
+
+\begin{itemize}
+\item StdHep 3.03 was built with Jetset 7.0408, Herwig 5.8a, Isajet 7.16, and QQ 9.2.
+\item Add qqufile to stdluns.inc.
+\item Add stdfixmass to adjust particle energy if mass is off shell.
+\item Add 4 vector sum routines (Rob Kutschke).
+\item Improved logic for stdchgdsclst (Rob Kutschke).
+\item Fix hep2geant interface to convert double precision to real.
+\end{itemize}
+
+\item[3.02]
+
+\begin{itemize}
+\item StdHep 3.02 was built with Jetset 7.0408, Herwig 5.8, Isajet 7.13, and QQ 9.1.
+\item Compile OSF1 version with floating point checking on.
+\item Fix some bugs in display package (Phase and Space).
+\end{itemize}
+
+\item[3.01]
+
+\begin{itemize}
+\item StdHep 3.01 was built with Jetset 7.0408, Herwig 5.8, Isajet 7.13, and QQ
+9.1.
+\item A C binding library for the MCFio interface routines was added.
+\item Phase and Space display programs now accept MCFio files.
+\item An ad-hoc ion numbering scheme has been added.
+\end{itemize}
+
+\item[3.00]
+
+\begin{itemize}
+\item StdHep 3.00 was built with Jetset 7.04, Herwig 5.8, Isajet 7.13, and QQ 9.1.
+\item The phep and vhep arrays are now double precision.
+This provides consistency with Jetset 7.0407 (and higher) and Herwig.  
+It is the emerging standard \cite{lund}.
+\item MCFio I/O routines have been included.
+\item Translation done for QQ 9.1.
+\item Fix a bug in heprd/hepwrt (affects backward compatibility).
+\item As of PDG 1994 \cite{pdg94}, the particle $f_0(1710)$ 
+has become $f_J(1710)$.  It retains particle ID 60221 in StdHep.
+\end{itemize}
+
+\item[2.03]
+
+\begin{itemize}
+\item StdHep 2.03 was built with Jetset 7.04, Herwig 5.8, Isajet 7.13, and QQ 9.0.
+\end{itemize}
+
+\item[2.02]
+
+\begin{itemize}
+\item StdHep 2.02 was built with Jetset 7.04, Herwig 5.7, Isajet 7.06, and QQ 9.0.
+\item StdHep 2.02 is not backwards compatible.  It contains modifications
+to heprd and hepwrt and to the definitions of heavy baryons.
+\item Modify hep2geant, stdquarks, and stdspin
+\item Stdrotboost and stdcquarks added
+\item Allow more than one event to be read into the /HEPEVT/ common block
+to mimic multiple interactions.
+\item Cross-section written upon request
+\item Add Pythia example
+\item Fix a minor bug in istran, which translated states not known to Isajet.
+\end{itemize}
+
+\item[2.01]
+
+\begin{itemize}
+\item Modify stddecayqq to spawn another routine
+\item Clean up begin-run and end-run output options
+\item First attempt to get cross-sections, etc. in a standard common block
+\item Expand read/write options
+\item Resolve $\Xi$ and $\Xi^{\prime}$ translation issue
+\item Add more utility routines
+\item QQ translation routines
+\item read/write routine changes
+\item Version 2.01 is not backwards compatible.
+\end{itemize}
+
+\item[2.00]
+
+\begin{itemize}
+\item QQ translation and utility routines are now functional.
+\item Add routine to print StdHep version number.
+\item Add more diffractive particles for Jetset 7.4.
+\item Replace local routines isflavr and islabl with Isajet routines.
+\item Replace local routine isaprtlst with Isajet routine prtlst.
+\item Add utility routines
+\item Version 2.00 is not backwards compatible.
+\end{itemize}
+
+\item[1.06]
+
+\begin{itemize}
+\item Add utility routines
+\item Modify native mode output routines to use keyword for identification
+\item Add QQ translation routines
+\item Add $Z^{\prime 0}$ for Herwig 5.7
+\item Use Herwig include file
+\end{itemize}
+
+\item[1.05]
+
+\begin{itemize}
+\item Make StdHep compatible with new SUSY particles in Isajet 7.0.
+(see Appendix \ref{elem}).
+\item Add hptrlst subroutines to stdhep library.
+\item Add routines to read and print the particle info supplied by PDG.
+\end{itemize}
+
+\item[1.04]
+
+\begin{itemize}
+\item As of PDG 1992 \cite{pdg92}, the particle $f_2(1720)$ 
+has become $f_0(1710)$.  The particle ID was changed from 10225 to 60221.
+\item Add new Jetset particles
+\end{itemize}
+
+\item[1.03]
+
+\begin{itemize}
+\item Add zebra I/O routines
+\item Add flag HEPDBG for extra debugging code
+\item Add flag HPZTST to select zebra output in test jobs
+\end{itemize}
+
+\item[1.02]
+
+\begin{itemize}
+\item Add simple I/O routines to write /HEPEVT/ common block.
+\item Add test programs
+\item Add routines to convert Herwig events.  
+\item Improve hepnam and hepcmp
+\end{itemize}
+
+\item[1.01]
+
+\begin{itemize}
+\item First version of StdHep translation package.
+\item Convert Isajet and Jetset events to the /HEPEVT/ standard.
+\end{itemize}
+
+\end{description}

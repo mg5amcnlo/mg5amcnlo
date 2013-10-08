@@ -127,7 +127,7 @@ if '__main__' == __name__:
     my_comp = loop_me_comparator.LoopMEComparator()
     # Always put the saved run first if you use it, so that the corresponding PS
     # points will be used
-    my_comp.set_me_runners(ML5_opt)
+    my_comp.set_me_runners(ML5_opt,ML5_default)
 
     # Run the actual comparison
     energy=1000

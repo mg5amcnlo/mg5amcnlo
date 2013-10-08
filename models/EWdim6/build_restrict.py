@@ -29,16 +29,20 @@ all_categories = []
 first_category = build_restrict_lib.Category('sm customization')
 all_categories.append(first_category)
 
+
 first_category.add_options(name='diagonal ckm', # name
                            default=True,          # default
-                           rules=[('CKMBLOCK',[1], 0.0)],
+                           rules=[('WOLFENSTEIN',[1], 0.0),
+                                  ('WOLFENSTEIN',[2], 0.0),
+                                  ('WOLFENSTEIN',[3], 0.0),
+                                  ('WOLFENSTEIN',[4], 0.0)]
                            )
 
-first_category.add_options(name='c mass = 0', # name
-                           default=True,        # default
-                           rules=[('MASS',[4], 0.0),
-                                  ('YUKAWA',[4], 0.0)]
-                           )
+#first_category.add_options(name='c mass = 0', # name
+#                           default=True,        # default
+#                           rules=[('MASS',[4], 0.0),
+#                                  ('YUKAWA',[4], 0.0)]
+#                           )
 
 first_category.add_options(name='b mass = 0',
                            default=False,
@@ -52,17 +56,17 @@ first_category.add_options(name='tau mass = 0',
                                   ('YUKAWA',[15], 0.0)]
                            )
 
-first_category.add_options(name='muon mass = 0',
-                           default=True,
-                           rules=[('MASS',[13], 0.0),
-                                  ('YUKAWA',[13], 0.0)]
-                           )
+#first_category.add_options(name='muon mass = 0',
+#                           default=True,
+#                           rules=[('MASS',[13], 0.0),
+#                                  ('YUKAWA',[13], 0.0)]
+#                           )
 
-first_category.add_options(name='electron mass = 0',
-                           default=True,
-                           rules=[('MASS',[11], 0.0),
-                                  ('YUKAWA',[11], 0.0)]
-                           )
+#first_category.add_options(name='electron mass = 0',
+#                           default=True,
+#                           rules=[('MASS',[11], 0.0),
+#                                  ('YUKAWA',[11], 0.0)]
+#                           )
 
 dim6_category = build_restrict_lib.Category('Adding Dim6 Operator')
 all_categories.append(dim6_category)

@@ -69,13 +69,15 @@ class TestGetSandTchannels(unittest.TestCase):
                         [[5,4,-1], [2,3,-2], [-2,-1,-3]] ]
 
         for id, diag in enumerate(me.get('diagrams')):
-            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, new_pdg = 7, reverse_t_ch = False)
+            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, 
+                        model=self.base_model, new_pdg = 7, reverse_t_ch = False)
             self.assertEqual( [ [l['number'] for l in v['legs']] for v in s_ch] + \
                               [ [l['number'] for l in v['legs']] for v in t_ch] , 
                               target[id])
 
         for id, diag in enumerate(me.get('diagrams')):
-            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, new_pdg = 7, reverse_t_ch = True)
+            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, 
+                        model=self.base_model, new_pdg = 7, reverse_t_ch = True)
             self.assertEqual( [ [l['number'] for l in v['legs']] for v in s_ch] + \
                               [ [l['number'] for l in v['legs']] for v in t_ch] , 
                               target_flip[id])

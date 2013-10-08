@@ -16,6 +16,7 @@ import logging
 import os
 import time
 import re
+import glob
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -55,13 +56,15 @@ class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
 
-    def __init__(self, cluster_queue=None, cluster_temp_path=None, **opts):
+    def __init__(self,*args, **opts):
         """Init the cluster"""
+
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
-        self.cluster_queue = cluster_queue
-        self.temp_dir = cluster_temp_path
+        
+        self.cluster_queue = opts['cluster_queue']
+        self.temp_dir = opts['cluster_temp_path']
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
@@ -160,7 +163,10 @@ class Cluster(object):
     def wait(self, me_dir, fct):
         """Wait that all job are finish"""
         
+        nb_iter = 0
+        change_at = 5 # number of iteration from which we wait longer between update.
         while 1: 
+            nb_iter += 1
             idle, run, finish, fail = self.control(me_dir)
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
@@ -169,10 +175,25 @@ class Cluster(object):
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
-            if idle < run:
+            if idle < run or nb_iter < change_at:
                 time.sleep(self.options['cluster_status_update'][1])
+            elif nb_iter == change_at:
+                logger.info('''Start to wait %ss between checking status.
+Note that you can change this time in the configuration file.
+Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
+                try:
+                    time.sleep(self.options['cluster_status_update'][0])
+                except KeyboardInterrupt:
+                    logger.info('start to update the status')
+                    nb_iter = min(0, change_at -2)
             else:
-                time.sleep(self.options['cluster_status_update'][0])
+                try:
+                    time.sleep(self.options['cluster_status_update'][0])
+                except KeyboardInterrupt:
+                    logger.info('start to update the status')
+                    nb_iter = min(0, change_at -2)
+                    
+                    
         self.submitted = 0
         self.submitted_ids = []
 
@@ -222,16 +243,15 @@ class MultiCore(Cluster):
     
     job_id = '$'
     
-    def __init__(self, nb_core, *args, **opt):
+    def __init__(self, *args, **opt):
         """Init the cluster"""
         import thread
-        
         super(MultiCore, self).__init__(self, *args, **opt)
         
         
         self.submitted = 0
         self.finish = 0
-        self.nb_core = nb_core
+        self.nb_core = opt['nb_core']
         self.update_fct = None
 
         # initialize the thread controler
@@ -304,6 +324,13 @@ class MultiCore(Cluster):
                         (' '.join([exe]+argument), proc.returncode)
                 #self.fail_msg = fail_msg
                 logger.warning(fail_msg)
+                try:
+                    log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
+                    logger.warning('Last 15 lines of lofgile %s:\n%s\n' % \
+                            (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
+                except IOError, AttributeError:
+                    logger.warning('Please look for possible logfiles in %s' % cwd)
+                    pass
                 self.remove(fail_msg)
             
             # release the lock for allowing to launch the next job
@@ -387,8 +414,8 @@ class MultiCore(Cluster):
                     if self.submitted == self.done:
                         break
                     logger.debug('Found too many jobs. Recovering')
-                    time.sleep(5)
                     no_in_queue += 1
+                    time.sleep(min(180, 5 * no_in_queue))
                     if no_in_queue > 3:
                         logger.debug('Still too many jobs. Continue')
                         break
@@ -444,8 +471,8 @@ class MultiCore(Cluster):
                 else:
                     no_in_queue += 1
                     try:
-                        time.sleep(5)
-                        if no_in_queue > 5 * 3600.0 / 5:
+                        time.sleep(min(180,5*no_in_queue))
+                        if no_in_queue > 5 * 3600.0 / 162:
                             break
                     except KeyboardInterrupt:
                         logger.warning('CTRL-C assumes that all jobs are done. Continue the code')
@@ -471,9 +498,9 @@ class MultiCore(Cluster):
                     if update_status:
                         update_status(len(self.waiting_submission), len(self.pids) ,
                                                                       self.done)
-                    time.sleep(5)
+                    time.sleep(min(5*no_in_queue, 180))
                     no_in_queue += 1
-                    if no_in_queue > 5 * 3600.0 / 5:
+                    if no_in_queue > 5 * 3600.0 / 162:
                             break
                 except KeyboardInterrupt:
                     break
@@ -782,23 +809,30 @@ class CondorCluster(Cluster):
         if not self.submitted_ids:
             return 0, 0, 0, 0
         
-        cmd = "condor_q " + ' '.join(self.submitted_ids) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
-                                                         stderr=subprocess.PIPE)
-        error = status.stderr.read()
-        if status.returncode or error:
-            raise ClusterManagmentError, 'condor_q returns error: %s' % error
+        packet = 15000
+        for i in range(1+(len(self.submitted_ids)-1)//packet):
+            start = i * packet
+            stop = (i+1) * packet
+            cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
             
+                
             
-        idle, run, fail = 0, 0, 0
-        for line in status.stdout:
-            status = line.strip()
-            if status in ['I','U']:
-                idle += 1
-            elif status == 'R':
-                run += 1
-            elif status != 'C':
-                fail += 1
+            status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
+                                                             stderr=subprocess.PIPE)
+            error = status.stderr.read()
+            if status.returncode or error:
+                raise ClusterManagmentError, 'condor_q returns error: %s' % error
+                
+                
+            idle, run, fail = 0, 0, 0
+            for line in status.stdout:
+                status = line.strip()
+                if status in ['I','U']:
+                    idle += 1
+                elif status == 'R':
+                    run += 1
+                elif status != 'C':
+                    fail += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
     
@@ -969,6 +1003,9 @@ class SGECluster(Cluster):
             stderr = '/dev/null'
         elif stderr == -2: # -2 is subprocess.STDOUT
             stderr = stdout
+        else:
+            stderr = self.def_get_path(stderr)
+            
         if log is None:
             log = '/dev/null'
         else:
@@ -1178,7 +1215,7 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
-                pass
+                self.submitted_ids.remove(id)
             else:
                 fail += 1
 
@@ -1326,7 +1363,113 @@ def asyncrone_launch(exe, cwd=None, stdout=None, argument = [], **opt):
     return mc.lock
 
 
+class SLURMCluster(Cluster):
+    """Basic class for dealing with cluster submission"""
+
+    name = 'slurm'
+    job_id = 'SLURM_JOBID'
+    idle_tag = ['Q','PD','S','CF']
+    running_tag = ['R']
+    complete_tag = ['C']
+
+    @multiple_try()
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+        """Submit a job prog to a SLURM cluster"""
+        
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
+        
+        if cwd is None:
+            cwd = os.getcwd()
+        if stdout is None:
+            stdout = '/dev/null'
+        if stderr is None:
+            stderr = '/dev/null'
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
+        if log is None:
+            log = '/dev/null'
+        
+        command = ['sbatch','-o', stdout,
+                   '-J', me_dir, 
+                   '-e', stderr, prog]
+                   
+        a = misc.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
+
+        output = a.communicate()
+        output_arr = output[0].split(' ')
+        id = output_arr[3].rstrip()
+
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id
+
+    @multiple_try()
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+        cmd = 'squeue j'+str(id)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
+                                  stderr=open(os.devnull,'w'))
+        
+        for line in status.stdout:
+            line = line.strip()
+            if 'Invalid' in line:
+                return 'F'
+            elif line.startswith(str(id)):
+                status = line.split()[4]
+        if status in self.idle_tag:
+            return 'I' 
+        elif status in self.running_tag:                
+            return 'R' 
+        return 'F'
+        
+    @multiple_try()    
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+        cmd = "squeue"
+        status = misc.Popen([cmd], stdout=subprocess.PIPE)
+
+        if me_dir.endswith('/'):
+           me_dir = me_dir[:-1]    
+        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+        if not me_dir[0].isalpha():
+                  me_dir = 'a' + me_dir[1:]
+
+        idle, run, fail = 0, 0, 0
+        for line in status.stdout:
+            if me_dir in line:
+                status = line.split()[4]
+                if status in self.idle_tag:
+                    idle += 1
+                elif status in self.running_tag:
+                    run += 1
+                elif status in self.complete_tag:
+                    continue
+                else:
+                    fail += 1
+
+        return idle, run, self.submitted - (idle+run+fail), fail
+
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "scancel %s" % ' '.join(self.submitted_ids)
+        print 'cmd = ',cmd
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
-             'lsf': LSFCluster, 'ge':GECluster}
+             'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster}
 
 

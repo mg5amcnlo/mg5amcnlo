@@ -191,6 +191,7 @@ c Set all reweight variables equal to zero
       integer i,j,k
 c
       wgtref=0.d0
+      wgtref_nbody=0.d0
       do k=1,4
         wgtqes2(k)=0.d0
         wgtxbj(1,k)=0.d0
@@ -245,9 +246,12 @@ c Set all reweight variables equal to zero
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
       logical all
-      integer i,j,k,iFKS
+      integer i,j,k,iFKS,l
 c
-      wgtref_all(iFKS)=0.d0
+      do l=1,maxproc_save
+         wgtref_all(iFKS,l)=0.d0
+         if (all) wgtref_nbody_all(l)=0.d0
+      enddo
       do k=1,4
          wgtqes2_all(k,iFKS)=0.d0
          wgtxbj_all(1,k,iFKS)=0.d0
@@ -309,19 +313,36 @@ c should not be used if wgtkin(0,1,*)=-99
       end
       
 
-      subroutine fill_reweight0inc(iFKS)
+      subroutine fill_reweight0inc_nbody(iproc)
+c Set all reweight variables equal to zero
+      implicit none
+      include "reweight_all.inc"
+      integer iproc
+      logical debug
+      parameter (debug=.false.)
+      if (debug) write (*,*) 'wgtref_nbody',wgtref_nbody
+     $     ,wgtref_nbody_all(iproc)
+      call reweight_overwrite(wgtref_nbody,wgtref_nbody_all(iproc),2)
+      return
+      end
+
+
+      subroutine fill_reweight0inc(iFKS,iproc)
 c Set all reweight variables equal to zero
       implicit none
       include "genps.inc"
       include "nexternal.inc"
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
-      integer i,j,k,iFKS
+      integer i,j,k,iFKS,iproc
       logical debug
       parameter (debug=.false.)
 c
-      if (debug) write (*,*) 'wgtref',iFKS,wgtref,wgtref_all(iFKS)
-      call reweight_overwrite(wgtref,wgtref_all(iFKS),0)
+      if (debug) write (*,*) 'wgtref',iFKS,wgtref,wgtref_all(iFKS,iproc)
+      call reweight_overwrite(wgtref,wgtref_all(iFKS,iproc),0)
+c$$$      if (debug) write (*,*) 'wgtref_nbody',wgtref_nbody
+c$$$     $     ,wgtref_nbody_all(iproc)
+c$$$      call reweight_overwrite(wgtref_nbody,wgtref_nbody_all(iproc),2)
       do k=1,4
          if (debug) write (*,*) 'wgtqes2',k,iFKS,wgtqes2(k)
      &        ,wgtqes2_all(k,iFKS)
@@ -444,20 +465,23 @@ c     i=2: overwrite 'a' by 'b'
       end
 
 
-      subroutine sum_reweight(iFKS_s,iFKS)
+      subroutine sum_reweight(iFKS_s,iFKS,iproc)
 c Set all reweight variables equal to zero
       implicit none
       include "genps.inc"
       include "nexternal.inc"
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
-      integer i,j,k,iFKS_s,iFKS
+      integer i,j,k,iFKS_s,iFKS,iproc
       logical debug
       parameter (debug=.false.)
 c
-      if (debug) write (*,*) 'wgtref',iFKS_s,iFKS,wgtref_all(iFKS_s)
-     &     ,wgtref_all(iFKS)
-      call reweight_sum(wgtref_all(iFKS_s),wgtref_all(iFKS))
+      if (debug) write (*,*) 'wgtref',iFKS_s,iFKS,wgtref_all(iFKS_s
+     $     ,iproc),wgtref_all(iFKS,iproc)
+      call reweight_sum(wgtref_all(iFKS_s,iproc),wgtref_all(iFKS,iproc))
+      if (debug) write (*,*) 'wgtref_nbody',iFKS_s,iFKS
+     $     ,wgtref_nbody_all(iproc),wgtref_nbody_all(iproc)
+      call reweight_sum(wgtref_nbody_all(iproc),wgtref_nbody_all(iproc))
       do k=1,4
          if (debug) write (*,*) 'wgtqes2',k,iFKS_s,iFKS,wgtqes2_all(k
      &        ,iFKS_s),wgtqes2_all(k,iFKS)
@@ -609,7 +633,7 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
       integer k,izero,mohdr
@@ -781,6 +805,7 @@ c with the reference weight
       include 'q_es.inc'
       include 'run.inc'
       include "reweight.inc"
+      include 'nFKSconfigs.inc'
 
       logical passcuts
       double precision compute_rwgt_wgt_Hev
@@ -792,9 +817,20 @@ c with the reference weight
       double precision pi
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -846,7 +882,8 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
+            xsec=xsec+CONV*PD(i_process)*wgtwmcxsec(i)*g**(2*wgtbpower
+     $           +2.d0)
           endif
         enddo
       endif
@@ -881,7 +918,8 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwreal(k)*g**(2*wgtbpower+2.d0)
+            xsec=xsec+CONV*PD(i_process)*wgtwreal(k)*g**(2*wgtbpower
+     $           +2.d0)
           endif
         enddo
       endif
@@ -915,7 +953,7 @@ c Should cause the code to crash if used
         else
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
-          xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+          xsec=xsec+CONV*PD(i_process)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
       endif
 c
@@ -943,6 +981,7 @@ c with the reference weight
       include 'q_es.inc'
       include 'run.inc'
       include "reweight.inc"
+      include 'nFKSconfigs.inc'
 
       logical passcuts
       double precision compute_rwgt_wgt_Sev
@@ -953,12 +992,24 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
@@ -1011,7 +1062,12 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
+            do j=1,iproc_save(nFKSprocess)
+               if (eto(j,nFKSprocess).eq.i_process) then
+                  xsec=xsec+CONV*PD(j)*wgtwmcxsec(i)*g**(2*wgtbpower
+     $                 +2.d0)
+               endif
+            enddo
           endif
         enddo
       endif
@@ -1080,21 +1136,27 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*( wgtwreal(k)+wgtwdeg(k)+
-     #                       wgtwdegmuf(k)*xlgmuf )*
-     #                g**(2*wgtbpower+2.d0)
+            do j=1,iproc_save(nFKSprocess)
+               if (eto(j,nFKSprocess).eq.i_process) then
+                  xsec=xsec+CONV*PD(j)*( wgtwreal(k)+wgtwdeg(k)
+     $                 +wgtwdegmuf(k)*xlgmuf )*g**(2*wgtbpower+2.d0)
+               endif
+            enddo
             if(k.eq.2)then
               nFKSprocess=nFKSprocess_used_Born
               xlum = dlum()
-              if(wgtbpower.gt.0)then
-                xsec=xsec+xlum*wgtwborn(k)*g**(2*wgtbpower)
-              else
-                xsec=xsec+xlum*wgtwborn(k)
-              endif
-              xsec=xsec+xlum*( wgtwns(k)+
-     #                         wgtwnsmuf(k)*xlgmuf+
-     #                         wgtwnsmur(k)*xlgmur )*
-     #                  g**(2*wgtbpower+2.d0)
+              do j=1,iproc_save(nFKSprocess)
+                 if (eto(j,nFKSprocess).eq.i_process) then
+                    if(wgtbpower.gt.0)then
+                       xsec=xsec+CONV*PD(j)*wgtwborn(k)*g**(2*wgtbpower)
+                    else
+                       xsec=xsec+CONV*PD(j)*wgtwborn(k)
+                    endif
+                    xsec=xsec+CONV*PD(j)*( wgtwns(k)+ wgtwnsmuf(k)
+     $                   *xlgmuf+wgtwnsmur(k)*xlgmur )*g**(2*wgtbpower
+     $                   +2.d0)
+                 endif
+              enddo
             endif
           endif
         enddo
@@ -1130,7 +1192,11 @@ c Should cause the code to crash if used
         else
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
-          xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+          do j=1,iproc_save(nFKSprocess)
+             if (eto(j,nFKSprocess).eq.i_process) then
+                xsec=xsec+CONV*PD(j)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+             endif
+          enddo
         endif
       endif
 c
@@ -1168,12 +1234,24 @@ c with the reference weight
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
-      parameter (tiny=1.d-4)
+      parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
@@ -1212,15 +1290,17 @@ c
          xbk(2) = wgtxbj_all(2,2,0)
          nFKSprocess=nFKSprocess_used_Born
          xlum = dlum()
-         if(wgtbpower.gt.0)then
-            xsec=xsec+xlum*wgtwborn_all*g**(2*wgtbpower)
-         else
-            xsec=xsec+xlum*wgtwborn_all
-         endif
-         xsec=xsec+xlum*( wgtwns_all+
-     &        wgtwnsmuf_all*xlgmuf+
-     &        wgtwnsmur_all*xlgmur )*
-     &        g**(2*wgtbpower+2.d0)
+         do j=1,iproc_save(nFKSprocess)
+            if (eto(j,nFKSprocess).eq.i_process) then
+               if(wgtbpower.gt.0)then
+                  xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2*wgtbpower)
+               else
+                  xsec=xsec+CONV*PD(j)*wgtwborn_all
+               endif
+               xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all*xlgmuf+
+     $              wgtwnsmur_all*xlgmur )*g**(2*wgtbpower+2.d0)
+            endif
+         enddo
       endif
 c
       muR_over_ref=save_murrat
@@ -1245,7 +1325,7 @@ c
       double precision compute_rwgt_wgt_NLO,compute_rwgt_wgt_Hev,
      #                 compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
       double precision wgtnew,tiny
-      parameter (tiny=1.d-3)
+      parameter (tiny=1.d-2)
 c
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)

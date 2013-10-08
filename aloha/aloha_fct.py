@@ -171,6 +171,7 @@ def guess_routine_from_name(names):
         # search for tag allow tag [L, L$, C$, MP]
         allow_tag = ['C1','C2','C3','C4','C5','C6','C7']
         allow_tag += ['L%s' % i for i in range(1,20)]
+        allow_tag += ['P%s' % i for i in range(0,20)]
         allow_tag += ['L']
         tags = []
         

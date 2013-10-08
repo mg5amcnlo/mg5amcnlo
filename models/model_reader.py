@@ -84,9 +84,14 @@ class ModelReader(loop_base_objects.LoopModel):
            
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
-                                            and not k.startswith('decay_table')]
+                                            and not k.startswith('decay_table')
+                                            and 'info' not in k]
+            param_key = [k for k in parameter_dict.keys() if 'info' not in k]
             
             if set(key) != set(parameter_dict.keys()):
+                # the two card are different. check if this critical
+                
+
                 fail = True    
                 msg = '''Invalid restriction card (not same block)
     %s != %s.
@@ -175,6 +180,7 @@ class ModelReader(loop_base_objects.LoopModel):
         couplings = sum(self['couplings'].values(), [])
         # Now calculate all couplings
         for coup in couplings:
+#            print "I execute %s = %s"%(coup.name, coup.expr)
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:

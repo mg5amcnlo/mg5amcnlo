@@ -28,3 +28,9 @@ import os
 MG5DIR = os.path.realpath(os.path.join(os.path.dirname(__file__),
                                                                 os.path.pardir))
 MG4DIR = MG5DIR
+ReadWrite = True
+try:
+    open(os.path.join(MG5DIR,'.test'),'w').write('test')
+    os.remove(os.path.join(MG5DIR,'.test'))
+except IOError:
+    ReadWrite = False

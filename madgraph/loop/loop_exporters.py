@@ -254,7 +254,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         # To store the result
         res_list = [[] for i in range(n_amps)]
-        
         for i, coeff_list in enumerate(color_amplitudes):
                 for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
@@ -324,6 +323,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 progress_bar.update(i+1)
             line_num=[]
             line_denom=[]
+
+            # Treat the special case where this specific amplitude contributes to no
+            # color flow at all. So it is zero because of color but not even due to
+            # an accidental cancellation among color flows, but simply because of its
+            # projection to each individual color flow is zero. In such case, the 
+            # corresponding jampl_list is empty and all color coefficients must then
+            # be zero. This happens for example in the Higgs Effective Theory model
+            # for the bubble made of a 4-gluon vertex and the effective ggH vertex.
+            if len(jampl_list)==0:
+                line_num=[0]*len(ampb_to_jampb)
+                line_denom=[1]*len(ampb_to_jampb)
+                ColorMatrixNumOutput.append(line_num)
+                ColorMatrixDenomOutput.append(line_denom)
+                continue
+
             for jampb_list in ampb_to_jampb:
                 real_num=0
                 imag_num=0
@@ -372,7 +386,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                               "%d-%m-%Y %H:%M"))            
         if progress_bar!=None:
             progress_bar.finish()
-
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -641,18 +654,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         mass_list=matrix_element.get_external_masses()[:-2]
         mp_variable_prefix = check_param_card.ParamCard.mp_prefix
 
-        # First the double precision version of it
-        replace_dict['real_format']=replace_dict['real_dp_format']
-        replace_dict['mp_prefix']=''
-        replace_dict['exp_letter']='d'
-        replace_dict['mp_specifier']=''
-        replace_dict['coupl_inc_name']='coupl.inc'
-        replace_dict['masses_def']='\n'.join(['MASSES(%(i)d)=%(m)s'\
-                             %{'i':i+1,'m':m} for i, m in enumerate(mass_list)])
-        
-        file_dp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
-        file_dp=file_dp%replace_dict
-        # Now the mp version of it
+        # Write the quadruple precision version of this routine only.
         replace_dict['real_format']=replace_dict['real_mp_format']
         replace_dict['mp_prefix']='MP_'
         replace_dict['exp_letter']='e'
@@ -663,10 +665,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                   i, m in enumerate(mass_list)])
         file_mp = open(os.path.join(self.template_dir,'improve_ps.inc')).read()
         file_mp=file_mp%replace_dict
-        file = file_dp + \
-              '\n\nC Now the multiple precision version of IMPROVE_PS(P)\n\n' +\
-               file_mp
-        writer.writelines(file)
+        #
+        writer.writelines(file_mp)
 
     def write_loop_num(self, writer, matrix_element,fortran_model):
         """ Create the file containing the core subroutine called by CutTools
@@ -1136,10 +1136,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
-        if max_loop_vertex_rank > 1:
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' handle renormalizable gauge theories for which the maximum loop'+\
-              ' power brought by any loop interaction is one.'
         self.general_replace_dict['vertex_max_coefs']=\
                  q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
         self.general_replace_dict['nloopwavefuncs']=\

@@ -1,6 +1,6 @@
-# This file was automatically created by FeynRules 1.7.9
-# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Fri 18 May 2012 14:43:24
+# This file was automatically created by FeynRules 1.7.127
+# Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
+# Date: Tue 22 Jan 2013 16:20:54
 
 
 from __future__ import division
@@ -52,57 +52,12 @@ vt = Particle(pdg_code = 16,
 
 vt__tilde__ = vt.anti()
 
-e__minus__ = Particle(pdg_code = 11,
-                      name = 'e-',
-                      antiname = 'e+',
-                      spin = 2,
-                      color = 1,
-                      mass = Param.Me,
-                      width = Param.ZERO,
-                      texname = 'e-',
-                      antitexname = 'e+',
-                      charge = -1,
-                      GhostNumber = 0,
-                      LeptonNumber = 1)
-
-e__plus__ = e__minus__.anti()
-
-m__minus__ = Particle(pdg_code = 13,
-                      name = 'm-',
-                      antiname = 'm+',
-                      spin = 2,
-                      color = 1,
-                      mass = Param.MM,
-                      width = Param.ZERO,
-                      texname = 'm-',
-                      antitexname = 'm+',
-                      charge = -1,
-                      GhostNumber = 0,
-                      LeptonNumber = 1)
-
-m__plus__ = m__minus__.anti()
-
-tt__minus__ = Particle(pdg_code = 15,
-                       name = 'tt-',
-                       antiname = 'tt+',
-                       spin = 2,
-                       color = 1,
-                       mass = Param.MTA,
-                       width = Param.ZERO,
-                       texname = 'tt-',
-                       antitexname = 'tt+',
-                       charge = -1,
-                       GhostNumber = 0,
-                       LeptonNumber = 1)
-
-tt__plus__ = tt__minus__.anti()
-
 u = Particle(pdg_code = 2,
              name = 'u',
              antiname = 'u~',
              spin = 2,
              color = 3,
-             mass = Param.MU,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'u',
              antitexname = 'u~',
@@ -117,7 +72,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = Param.MC,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'c',
              antitexname = 'c~',
@@ -147,7 +102,7 @@ d = Particle(pdg_code = 1,
              antiname = 'd~',
              spin = 2,
              color = 3,
-             mass = Param.MD,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 'd',
              antitexname = 'd~',
@@ -162,7 +117,7 @@ s = Particle(pdg_code = 3,
              antiname = 's~',
              spin = 2,
              color = 3,
-             mass = Param.MS,
+             mass = Param.ZERO,
              width = Param.ZERO,
              texname = 's',
              antitexname = 's~',
@@ -358,4 +313,49 @@ phi__plus__ = Particle(pdg_code = 251,
                        LeptonNumber = 0)
 
 phi__minus__ = phi__plus__.anti()
+
+e__minus__ = Particle(pdg_code = 11,
+                      name = 'e-',
+                      antiname = 'e+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.ZERO,
+                      width = Param.ZERO,
+                      texname = 'e-',
+                      antitexname = 'e+',
+                      charge = -1,
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
+
+e__plus__ = e__minus__.anti()
+
+m__minus__ = Particle(pdg_code = 13,
+                      name = 'm-',
+                      antiname = 'm+',
+                      spin = 2,
+                      color = 1,
+                      mass = Param.ZERO,
+                      width = Param.ZERO,
+                      texname = 'm-',
+                      antitexname = 'm+',
+                      charge = -1,
+                      GhostNumber = 0,
+                      LeptonNumber = 1)
+
+m__plus__ = m__minus__.anti()
+
+tt__minus__ = Particle(pdg_code = 15,
+                       name = 'tt-',
+                       antiname = 'tt+',
+                       spin = 2,
+                       color = 1,
+                       mass = Param.MTA,
+                       width = Param.WTau,
+                       texname = 'tt-',
+                       antitexname = 'tt+',
+                       charge = -1,
+                       GhostNumber = 0,
+                       LeptonNumber = 1)
+
+tt__plus__ = tt__minus__.anti()
 

@@ -411,12 +411,125 @@ class TestFKSProcess(unittest.TestCase):
                 {'process_definitions':my_process_definitions})
         
         self.assertEqual(len(my_multi_process.get('born_processes')),4)
+        self.assertEqual(my_multi_process.get('has_isr'),True)
+        self.assertEqual(my_multi_process.get('has_fsr'),True)
         #check the total numbers of reals 11 11 6 16
         totreals = 0
         for born in my_multi_process.get('born_processes'):
             for reals in born.reals:
                 totreals += len(reals)
         self.assertEqual(totreals, 44)
+
+
+    def test_FKSMultiProcess_no_fsr(self):
+        """tests the correct initializiation of a FKSMultiProcess. In particular
+        checks the setting for has_isr/fsr"""
+        p = [1, -1]
+        a = [22]
+
+        my_multi_leg_p = MG.MultiLeg({'ids': p, 'state': True});
+        my_multi_leg_a = MG.MultiLeg({'ids': a, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg_p] * 2] + \
+                                            [copy.copy(leg) for leg in [my_multi_leg_a] * 2])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        my_process_definition = MG.ProcessDefinition({\
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions':my_process_definitions})
+        self.assertEqual(my_multi_process.get('has_isr'),True)
+        self.assertEqual(my_multi_process.get('has_fsr'),False)
+
+
+    def test_FKSMultiProcess_no_isr(self):
+        """tests the correct initializiation of a FKSMultiProcess. In particular
+        checks the setting for has_isr/fsr"""
+        p = [1, -1]
+        a = [22]
+
+        my_multi_leg_p = MG.MultiLeg({'ids': p, 'state': True});
+        my_multi_leg_a = MG.MultiLeg({'ids': a, 'state': True});
+
+        # Define the multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg_a] * 2] + \
+                                            [copy.copy(leg) for leg in [my_multi_leg_p] * 2])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        my_process_definition = MG.ProcessDefinition({\
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions':my_process_definitions})
+        self.assertEqual(my_multi_process.get('has_isr'),False)
+        self.assertEqual(my_multi_process.get('has_fsr'),True)
+
+
+    def test_FKSMultiProcess_add(self):
+        """tests the correct initializiation of a FKSMultiProcess and the add funciton. In particular
+        checks the setting for has_isr/fsr"""
+        p = [1, -1]
+        a = [22]
+
+        my_multi_leg_p = MG.MultiLeg({'ids': p, 'state': True});
+        my_multi_leg_a = MG.MultiLeg({'ids': a, 'state': True});
+
+        # Define the first multiprocess
+        my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg_a] * 2] + \
+                                            [copy.copy(leg) for leg in [my_multi_leg_p] * 2])
+        
+        my_multi_leglist[0].set('state', False)
+        my_multi_leglist[1].set('state', False)
+        my_process_definition = MG.ProcessDefinition({\
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions = MG.ProcessDefinitionList(\
+            [my_process_definition])
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions':my_process_definitions})
+        nborn = len(my_multi_process['born_processes'])
+
+        # Define the second multiprocess
+        my_multi_leglist1 = MG.MultiLegList([copy.copy(leg) for leg in [my_multi_leg_p] * 2] + \
+                                            [copy.copy(leg) for leg in [my_multi_leg_a] * 2])
+        
+        my_multi_leglist1[0].set('state', False)
+        my_multi_leglist1[1].set('state', False)
+        my_process_definition1 = MG.ProcessDefinition({\
+                        'legs': my_multi_leglist1,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel})
+        my_process_definitions1 = MG.ProcessDefinitionList(\
+            [my_process_definition1])
+
+        my_multi_process1 = fks_base.FKSMultiProcess(\
+                {'process_definitions':my_process_definitions1})
+        nborn1 = len(my_multi_process1['born_processes'])
+
+        my_multi_process.add(my_multi_process1)
+        
+        self.assertEqual(nborn + nborn1, len(my_multi_process['born_processes']))
+        self.assertEqual(my_multi_process.get('has_isr'),True)
+        self.assertEqual(my_multi_process.get('has_fsr'),True)
+
 
     def test_FKSProcess_gggg(self):
         """tests that for g g > g g all the relevant splittings are there"""
@@ -531,6 +644,7 @@ class TestFKSProcess(unittest.TestCase):
         realproc.generate_real_amplitude()
 
         self.assertEqual(sorted_real_proc, realproc.amplitude.get('process'))
+        self.assertEqual(realproc.amplitude['process']['legs_with_decays'], MG.LegList())
         amp = diagram_generation.Amplitude(sorted_real_proc)
         self.assertEqual(amp,realproc.amplitude)
         self.assertEqual(array.array('i',[2,21,2,21,21]), realproc.pdgs)
@@ -1230,7 +1344,8 @@ class TestFKSProcess(unittest.TestCase):
 
     def test_sort_fks_proc(self):
         """tests that two FKSProcesses with different legs order in the
-        input process/amplitude are returned as equal"""
+        input process/amplitude are returned as equal. check also that
+        born_proc has 'legs_with_decay' = madgraph.base_objects.LegList()"""
         model = import_ufo.import_model('sm')
 
 # sorted leglist for e+ e- > u u~ g
@@ -1269,3 +1384,6 @@ class TestFKSProcess(unittest.TestCase):
 
         self.assertEqual(fks_a_s.born_proc, fks_a_u.born_proc)
         self.assertEqual(fks_a_s.born_amp, fks_a_u.born_amp)
+
+        self.assertEqual(fks_a_s.born_proc['legs_with_decays'], MG.LegList())
+        self.assertEqual(fks_a_u.born_proc['legs_with_decays'], MG.LegList())

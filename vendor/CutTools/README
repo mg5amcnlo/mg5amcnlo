@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.8.7 (Dec 15 2012)
+              CutTools V1.9.0 (Apr 25 2013)
 
               contact author: pittau@ugr.es
 
@@ -468,6 +468,19 @@ compiling and running example0.f in the directory "examples"
 
 - Minimal fix dmns_a,b,c,d -> dmns_1,2,3,4 in computeamp 
 
+- Feb 12 2013:
+
+- fix in cut3%cc to avoid underflow 
+
+- April 23 2013:
+
+- more precise computation of bet in dp_bild_l and mp_build_l, to avoid 1/0
+
+- April 25 2013:
+
+- more precise computation of del12 in dp_bild_l and mp_build_l and 
+  protection added against 1/0
+
 ---------------------------------------------------------------------------
-Last modification of this document: Dec 15 2012
+Last modification of this document: Apr 25 2013
 ---------------------------------------------------------------------------

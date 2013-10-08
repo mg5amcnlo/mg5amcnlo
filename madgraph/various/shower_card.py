@@ -30,10 +30,13 @@ class ShowerCard(dict):
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
-    path_vars = ['hwpppath', 'thepegpath', 'hepmcpath']
+    path_vars = ['hwpppath', 'thepegpath', 'hepmcpath', 'lhapdfpath']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
-    int_vars = ['maxprint','nevents','rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
-    float_vars = ['maxerrs', 'lambda_5']
+    for i in range(1,100):
+        dmstring='dm_'+str(i)
+        string_vars.append(dmstring)
+    int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'modbos_1', 'modbos_2']
+    float_vars = ['maxerrs', 'lambda_5', 'b_mass']
 
     # names_dict has the following structure:
     # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIGPP: varhwpp}
@@ -42,6 +45,7 @@ class ShowerCard(dict):
     # used / written for thar mc
     names_dict = {\
             'ue_enabled' : {'HERWIG6':'lhsoft', 'PYTHIA6': 'mstp_81', 'HERWIGPP': 'ue_hwpp'},
+            'pdfcode' : {'HERWIG6':'pdfcode', 'PYTHIA6': 'pdfcode', 'HERWIGPP': 'pdfcode'},
             'nevents' : {'HERWIG6':'nevents', 'PYTHIA6': 'nevents', 'HERWIGPP': 'nevents'},
             'hadronize' : {'PYTHIA6': 'mstp_111', 'HERWIGPP': 'hadronize_hwpp'},
             'b_stable' : {'HERWIG6':'b_stable_hw', 'PYTHIA6': 'b_stable_py', 'HERWIGPP': 'b_stable_hwpp'},
@@ -62,7 +66,8 @@ class ShowerCard(dict):
             'modbos_1' : {'HERWIG6':'modbos_1'},
             'modbos_2' : {'HERWIG6':'modbos_2'},
             'maxerrs' : {'HERWIG6':'err_fr_hw', 'PYTHIA6': 'err_fr_py', 'HERWIGPP': 'err_fr_hwpp'},
-            'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth'},
+            'lambda_5' : {'HERWIG6':'lambdaherw', 'PYTHIA6': 'lambdapyth', 'HERWIGPP': 'lambdaherw'},
+            'b_mass' : {'HERWIG6':'b_mass', 'PYTHIA6': 'b_mass', 'HERWIGPP': 'b_mass'},
             'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi'}}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
@@ -132,6 +137,7 @@ class ShowerCard(dict):
         """write the shower_card for shower in card_path.
         if self.testing, card_path takes the value of the string"""
 
+        shower = shower.upper()
         if shower.startswith('PYTHIA6'):
             self.shower = 'PYTHIA6'
         else:

@@ -102,7 +102,10 @@ if '__main__' == __name__:
             argument = treat_old_argument(argument)
         
         launch = run.aMCatNLOCmd(me_dir=root_path)
-        launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
+        if '-o' in argument:
+            launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
+        else:
+            launch.run_cmd('launch %s' % ' '.join(argument[1:]))
         launch.run_cmd('quit')
     except KeyboardInterrupt:
         try:

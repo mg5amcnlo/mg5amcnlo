@@ -5,8 +5,6 @@
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
       double precision xtotal,absxsec,evwgt
-      double precision scalefac_array(80), scalefac
-      common /c_scalefac/ scalefac_array
       integer i_orig
       common /c_i_orig/i_orig
       integer ioutput
@@ -14,13 +12,16 @@
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
 
-      write (*,*) 'Keep the original weights from the event files, '
-      write (*,*) 'or overwrite them by the (total Xsec)/(# events)?'
-      write (*,*)
-     &     "give '0' for original or '1' for overwrite (default is '1')"
+      write (*,*) "Overwrite the event weights?"
+      write (*,*) "give '0' to keep original weights;"
+      write (*,*) "give '1' to overwrite the weights"/
+     $     /" to sum to the Xsec;"
+      write (*,*) "give '2' to overwrite the weights"/
+     $     /" to average to the Xsec (=default)"
       read (*,*) i_orig
-      if (i_orig.ne.0 .and. i_orig.ne.1) stop
+      if (i_orig.ne.0 .and. i_orig.ne.1 .and. i_orig.ne.2) stop
       write(*,*) i_orig
+
 
       istep=0
  1    continue
@@ -50,12 +51,10 @@
       do while (.true.)
          read(10,'(120a)',err=2,end=2) string120
          eventfile=string120(2:index(string120,'   '))
-         read(string120(index(string120,'   '):120),*)
-     &          ievents,absxsec,scalefac
+         read(string120(index(string120,'   '):120),*) ievents,absxsec
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
          numoffiles=numoffiles+1
-         scalefac_array(numoffiles)=scalefac
 c store here the number of events per file         
          nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
@@ -65,7 +64,11 @@ c store here the number of events per file
 c Every time we find 80 files, collect the events
          if (numoffiles.eq.80) then
             nbunches=nbunches+1
-            evwgt=xtotal/dfloat(nevents)
+            if (i_orig.eq.1) then
+               evwgt=xtotal/dfloat(nevents)
+            elseif(i_orig.eq.2) then
+               evwgt=xtotal
+            endif
             write (*,*) 'found ',numoffiles,
      &           ' files, bunch number is',nbunches
             if(nbunches.le.9) then
@@ -89,7 +92,7 @@ c Every time we find 80 files, collect the events
                endif
             enddo
             close (ioutput)
-            write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal,
+         write(98,*) outputfile(1:15),'     ',nevents,'  ',xtotal,
      #       '   ', 1e0
             numoffiles=0
             nevents=0
@@ -101,7 +104,11 @@ c Every time we find 80 files, collect the events
 c Also collect events from the rest files
       if(numoffiles.ne.0) then
          nbunches=nbunches+1
-         evwgt=xtotal/dfloat(nevents)
+         if (i_orig.eq.1) then
+            evwgt=xtotal/dfloat(nevents)
+         elseif(i_orig.eq.2) then
+            evwgt=xtotal
+         endif
          write (*,*) 'found ',numoffiles,
      &        ' files, bunch number is',nbunches
          if(nbunches.le.9) then
@@ -154,7 +161,7 @@ c
       common /c_i_orig/i_orig
       integer ioutput,junit(80)
       integer imaxevt,maxevt,ii,numoffiles,nevents,itot,iunit,
-     # mx_of_evt(80),i0
+     # mx_of_evt(80),i0,i,j
       double precision evwgt,evwgt_sign
       integer ione
       parameter (ione=1)
@@ -179,8 +186,7 @@ c
       parameter (debug=.false.)
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
-      double precision scalefac_array(80)
-      common /c_scalefac/ scalefac_array
+      include 'reweight_all.inc'
 c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
@@ -195,10 +201,6 @@ c
       call read_lhef_init(junit(ione),
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,XMAXUP,LPRUP)
-
-      xsecup = scalefac_array(1) * xsecup
-      xerrup = scalefac_array(1) * xerrup
-      xmaxup = scalefac_array(1) * xmaxup
 c if the number of the events is in the header (as for evt files in the
 c     subchannel folders (P*/G*/), the number of events should be in the
 c      header. Check consistency in this case
@@ -240,11 +242,6 @@ c      header. Check consistency in this case
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
-
-        xsecup1 = scalefac_array(ii) * xsecup1
-        xerrup1 = scalefac_array(ii) * xerrup1
-        xmaxup1 = scalefac_array(ii) * xmaxup1
-
         xsecup=xsecup+xsecup1
         xerrup=xerrup+xerrup1**2
         if(
@@ -274,7 +271,7 @@ c      header. Check consistency in this case
       call write_lhef_header_banner(ioutput,maxevt,MonteCarlo0,path)
       call write_lhef_init(ioutput,
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
-     #  XSECUP,XERRUP,XMAXUP,LPRUP)
+     #  XSECUP,XERRUP,abs(evwgt),LPRUP)
       itot=maxevt
       do ii=1,maxevt
         rnd=fk88random(iseed)
@@ -282,7 +279,6 @@ c      header. Check consistency in this case
         call read_lhef_event(iunit,
      #    NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-         xwgtup = scalefac_array(i0) * xwgtup
 c Sanity check on weights read and computed a posteriori (check only for
 c event samples that are relatively large, otherwise it could be a
 c statistical fluctuation because the number of events per channel is
@@ -290,16 +286,26 @@ c assigned randomly with a weight according to the contribution of that
 c channel to the total cross section)
         if( ( abs(XWGTUP/evwgt).gt.2.d0.or.
      #        abs(XWGTUP/evwgt).lt.0.5d0 ) .and.
-     #       mx_of_evt(i0).gt.50 )then
-          write(*,*)'Error in collect_all_evfiles'
-          write(*,*)'Events weights appear to be wrong'
-          write(*,*)XWGTUP,evwgt
-          stop
+     #       mx_of_evt(i0).gt.50 .and. i_orig.eq.1)then
+           write(*,*)'Error in collect_all_evfiles'
+           write(*,*)'Events weights appear to be wrong'
+           write(*,*)XWGTUP,evwgt
+           stop
         endif
         if (i_orig.eq.0) then
            evwgt_sign=XWGTUP
         else
+c Overwrite the weights. Also overwrite the weights used for PDF & scale
+c reweighting
            evwgt_sign=dsign(evwgt,XWGTUP)
+           do i=1,numscales
+              do j=1,numscales
+                 wgtxsecmu(i,j)=wgtxsecmu(i,j)*evwgt_sign/XWGTUP
+              enddo
+           enddo
+           do i=1,numPDFpairs*2
+              wgtxsecPDF(i)=wgtxsecPDF(i)*evwgt_sign/XWGTUP
+          enddo
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,

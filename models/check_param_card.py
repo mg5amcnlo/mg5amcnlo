@@ -9,9 +9,11 @@ logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.various.misc as misc    
 except:
     import internal.file_writers as file_writers
-
+    import internal.misc as misc
+    
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
@@ -83,7 +85,10 @@ class Parameter (object):
         data = data.split()
         if not len(data):
             return
-        self.lhacode = tuple([int(d) for d in data[1:]])
+        self.lhacode = [int(d) for d in data[2:]]
+        self.lhacode.sort()
+        self.lhacode = tuple([len(self.lhacode)] + self.lhacode)
+        
         self.value = float(data[0]) 
         self.format = 'decay_table'
 
@@ -129,7 +134,6 @@ class Block(list):
         """return the parameter associate to the lhacode"""
         if not self.param_dict:
             self.create_param_dict()
-            
         try:
             return self.param_dict[tuple(lhacode)]
         except KeyError:
@@ -149,6 +153,7 @@ class Block(list):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
+
         
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
@@ -308,11 +313,31 @@ class ParamCard(dict):
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
-        if isinstance(outpath, str):
+        if not outpath:
+            return text
+        elif isinstance(outpath, str):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
-            
+    
+    def create_diff(self, new_card):
+        """return a text file allowing to pass from this card to the new one
+           via the set command"""
+        
+        diff = ''
+        for blockname, block in self.items():
+            for param in block:
+                lhacode = param.lhacode
+                value = param.value
+                new_value = new_card[blockname].get(lhacode).value
+                if not misc.equal(value, new_value, 6):
+                    lhacode = ' '.join([str(i) for i in lhacode])
+                    diff += 'set param_card %s %s %s # orig: %s\n' % \
+                                       (blockname, lhacode , new_value, value)
+        return diff 
+                
+        
+    
             
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""
@@ -333,11 +358,15 @@ class ParamCard(dict):
                     value = self[block].get(tuple(lhaid)).value
                 except KeyError:
                     value =defaultcard[block].get(tuple(lhaid)).value
+                    logger.warning('information about \"%s %s" is missing using default value: %s.' %\
+                                   (block, lhaid, value))
+
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
-            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
-            
-        
+                logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
+                                   (block, lhaid, value))
+            value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
         
                 
     def append(self, obj):
@@ -1175,7 +1204,6 @@ def check_valid_param_card(path, restrictpath=None):
         restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
-            print 'no restriction card'
             return True
         
     cardrule = ParamCardRule()

@@ -135,7 +135,7 @@ class Computation(dict):
                 argument.append(expression)
         if str(fct_tag)+str(argument) in self.inverted_fct:
             return self.inverted_fct[str(fct_tag)+str(argument)]
-        else:
+        else: 
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))

@@ -188,6 +188,7 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
          ntry=ntry+1

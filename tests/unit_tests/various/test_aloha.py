@@ -1252,7 +1252,7 @@ class testLorentzObject(unittest.TestCase):
                 (obj.Metric(rho,sigma) - obj.OverMass2(t) * obj.P(rho,t) *obj.P(sigma,t) )
         
         prop = aloha_obj.Spin2Propagator(mu,nu,rho,sigma, t)
-        zero = 1j * propa - 2 * prop
+        zero = propa - 2 * prop
         
         
         zero = zero.expand().simplify() 
@@ -1290,7 +1290,7 @@ class testLorentzObject(unittest.TestCase):
         propa = propa + 2/6 * OM(t) * Metric(alpha, beta) *  P(mu,t) * P(nu,t)     
         
              
-        zero = 1j*propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        zero = propa - aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         
         zero = zero.expand().simplify() 
         
@@ -1338,7 +1338,7 @@ class testLorentzObject(unittest.TestCase):
         t = 1
         mu, nu, alpha, beta = 1,2,3,4
         
-        aloha = Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
+        aloha = complex(0,1)*Metric(mu,nu) * aloha_obj.Spin2Propagator(mu,nu,alpha,beta, t)
         analytical = complex(0, 1/3) * (OM(t) * P(-1, t)* P(-1,t) - 1) * (Metric(alpha, beta) + 2 * OM(t) * P(alpha,t)*P(beta,t))
         
         
@@ -2935,8 +2935,30 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertAlmostEqual(eval(str(zero.get_rep(ind))),0)
              
+    def test_aloha_get_rank(self):
+        """ test the FFV creation of vertex """
+        
+        FFV_4 = self.Lorentz(name = 'FFV_4',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')     
 
+        abs = create_aloha.AbstractRoutineBuilder(FFV_4)
+        routine = abs.compute_routine(2, ['L1'], factorize=False)
+        rank = routine.get_info('rank')
+        self.assertEqual(rank, 1)
+        
+        FFV_4 = self.Lorentz(name = 'FFV_4',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')     
 
+        abs = create_aloha.AbstractRoutineBuilder(FFV_4)
+        routine = abs.compute_routine(3, ['L1','P0'], factorize=False)
+        rank_massless = routine.get_info('rank')
+        routine = abs.compute_routine(3, ['L1'], factorize=False)
+        rank_massive = routine.get_info('rank')
+        self.assertEqual(rank_massive, 2)
+        self.assertEqual(rank_massless, 0)
+   
     def test_aloha_FFV(self):
         """ test the FFV creation of vertex """
         
@@ -3030,7 +3052,7 @@ class test_aloha_creation(unittest.TestCase):
         for ind in zero.listindices():
             self.assertEqual(eval(str(zero.get_rep(ind))),0)
         
-    def test_aloha_symmetries(self):
+    def test_aloha_symmetries_and_get_info(self):
         """ test that the symmetries of particles works """
     
         # Check that full identification symmetry works
@@ -3038,6 +3060,32 @@ class test_aloha_creation(unittest.TestCase):
         helas_suite.look_for_symmetries()
         solution = {'VVVV2': {2: 1 ,4: 3}, 'SSS1': {2: 1, 3: 2}, 'VVSS1': {2: 1, 4: 3}, 'VVS1': {2: 1},'SSSS1': {2: 1, 3: 2, 4: 3}}  
         self.assertEqual(solution, helas_suite.symmetries)
+        
+        # check that the get_info work
+        
+        start = time.time()
+        rank = helas_suite.get_info('rank', 'VVVV2', 2, ['L1', 'P0'], cached=True)
+        time1 = time.time() - start # time1 is expected to be O(1e-2)
+        self.assertEqual(rank, 0)
+        
+        start = time.time()
+        rank = helas_suite.get_info('rank', 'VVVV2', 2, ['L1', 'P0'])
+        time2 = time.time() - start # time2 is expected to be O(1e-6)
+        
+        self.assertEqual(rank, 0)
+        self.assertTrue(100 * time2 < time1) # if this is not the case this is
+                                             # clearly wrong.
+        
+        
+        # check for correct behavior if wrong input:
+        # 1) check that it fail for non loop routine
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 0, []) 
+        # 2) check that unknow information fails.
+        self.assertRaises(create_aloha.ALOHAERROR, helas_suite.get_info, 'SW', 'VVVV2', 2, ['L1'])
+        # 3) check that appropriate error is raise for invalid input
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 1, ['L1'])
+        self.assertRaises(AssertionError, helas_suite.get_info, 'rank', 'VVVV2', 0, ['L1'])
+        
         
     def test_has_symmetries(self):
         """Check that functions returning symmetries works"""
@@ -3455,6 +3503,69 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         for out,sol in zip(ufo_value,solution):
             self.assertAlmostEqual(out, sol)
 
+    def test_aloha_expr_VVS1(self):
+        """Test analytical expression for VVS from SILH. 
+        This checks that P(-1,1)**2 is correct."""
+        
+        
+        aloha_lib.KERNEL.clean()
+        from models.mssm.object_library import Lorentz
+        VVS1 = Lorentz(name = 'VVS1',
+                 spins = [ 3, 3, 1 ],
+                 structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
+        builder = create_aloha.AbstractRoutineBuilder(VVS1)
+        amp = builder.compute_routine(0)
+
+        solution = """subroutine VVS1_0(V1, V2, S3, COUP,vertex)
+implicit none
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 V2(*)
+ complex*16 TMP2
+ complex*16 S3(*)
+ complex*16 TMP1
+ real*8 P1(0:3)
+ complex*16 TMP0
+ complex*16 vertex
+ complex*16 COUP
+ complex*16 V1(*)
+ complex*16 TMP3
+P1(0) = dble(V1(1))
+P1(1) = dble(V1(2))
+P1(2) = dimag(V1(2))
+P1(3) = dimag(V1(1))
+ TMP1 = (P1(0)*V1(3)-P1(1)*V1(4)-P1(2)*V1(5)-P1(3)*V1(6))
+ TMP0 = (V2(3)*P1(0)-V2(4)*P1(1)-V2(5)*P1(2)-V2(6)*P1(3))
+ TMP3 = (P1(0)*P1(0)-P1(1)*P1(1)-P1(2)*P1(2)-P1(3)*P1(3))
+ TMP2 = (V2(3)*V1(3)-V2(4)*V1(4)-V2(5)*V1(5)-V2(6)*V1(6))
+ vertex = COUP*S3(3)*(-CI*(TMP0*TMP1)+CI*(TMP2*TMP3))
+end
+
+
+"""
+        routine = amp.write(output_dir=None, language='Fortran')
+        split_solution = [l.strip() for l in solution.split('\n')]
+        split_routine = [l.strip() for l in routine.split('\n')]
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+        V1_1, V1_2, V1_3, V1_4 = 1,2,3,4
+        V2_1, V2_2, V2_3, V2_4 = 5,5,6,7
+        S3_1, S3_2, S3_3, S3_4 = 10,20,32,44
+        P1_0, P1_1, P1_2, P1_3 = 1,2,3,6
+        M1 = P1_0**2 - P1_1**2 - P1_2**2 - P1_3**2
+        # For V4:
+        cImag = complex(0,1)
+
+        for name, expr in amp.contracted.items():
+            exec('%s = %s' % (name,expr))       
+
+
+        ufo_value = eval(str(amp.expr.get_rep([0])))
+        self.assertAlmostEqual(ufo_value, 1080j)
+
+
         
     def test_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
@@ -3687,15 +3798,54 @@ class TestAlohaWriter(unittest.TestCase):
         writer = aloha_writers.ALOHAWriterForFortran(abstract, '/tmp')
         
         numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
-        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi,
+                   100*math.pi]
  
-        solution = ['CI', '1d0/2d0 * CI', '(3d0 + 9d0*CI)', '1d0', '0d0', '1d0', '2d0', '-3d0', '3d0', '3d0', '101d0/100d0', '2000d0', '1d0/3d0', '1d0/4d0', '3d0/4d0']
+        solution = ['CI', '1d0/2d0 * CI', '(3d0 + 9d0*CI)', '1d0', '0d0', '1d0', '2d0', '-3d0', '3d0', '3d0', '101d0/100d0', '2000d0', '1d0/3d0', '1d0/4d0', '3d0/4d0','3.14159265359d0', '314.159265359d0']
 #        converted = [writer.change_number_format(number) for number in numbers]
         for i, number in enumerate(numbers):
             value = writer.change_number_format(number)
             self.assertEqual(value, solution[i])
         #map(self.assertEqual, converted, solution)
  
+    def test_change_number_format_python(self):
+        """ Check that the number are correctly written in fortranwriter """
+        
+        SSS = UFOLorentz(name = 'SSS',
+               spins = [ 1, 1, 1])
+    
+        
+        abstract = AbstractRoutineBuilder(SSS).compute_routine(0)
+        writer = aloha_writers.ALOHAWriterForPython(abstract, '/tmp')
+        
+        numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi, 1.001,
+                   100*math.pi]
+ 
+        solution = ['1j', '1j/2', '(3+9j)', '1', '0', '1', '2', '-3', '3', '3', '101/100', '2000', '1/3', '1/4', '3/4','3.14159265359','1.001','314.159265359']
+#        converted = [writer.change_number_format(number) for number in numbers]
+        for i, number in enumerate(numbers):
+            value = writer.change_number_format(number)
+            self.assertEqual(value, solution[i]) 
+
+    def test_change_number_format_cpp(self):
+        """ Check that the number are correctly written in fortranwriter """
+        
+        SSS = UFOLorentz(name = 'SSS',
+               spins = [ 1, 1, 1])
+    
+        
+        abstract = AbstractRoutineBuilder(SSS).compute_routine(0)
+        writer = aloha_writers.ALOHAWriterForCPP(abstract, '/tmp')
+        
+        numbers = [complex(0,1), complex(0,1/2), 3*complex(1.0,3), complex(1,0)]
+        numbers +=[0, 1, 2, -3, 3.0, 3.00, 1.01, 2000, 1/3, 1/4, 3/4, math.pi]
+ 
+        solution = ['cI', '1./2. * cI', '(3. + 9.*cI)', '1.', '0.', '1.', '2.', '-3.', '3.', '3.', '101./100.', '2000.', '1./3.', '1./4.', '3./4.', '3.141592654']
+#        converted = [writer.change_number_format(number) for number in numbers]
+        for i, number in enumerate(numbers):
+            value = writer.change_number_format(number)
+            self.assertEqual(value, solution[i]) 
  
     def test_pythonwriter(self):
         """ test that python writer works """
@@ -3798,22 +3948,22 @@ def RFSC1_2(F2,S3,COUP,M1,W1):
     R1[1] = +F2[1]+S3[1]
     P1 = [-complex(R1[0]).real, -complex(R1[1]).real, -complex(R1[1]).imag, -complex(R1[0]).imag]
     denom = COUP/(P1[0]**2-P1[1]**2-P1[2]**2-P1[3]**2 - M1 * (M1 -1j* W1))
-    R1[2]= denom*-0.666666666667 * M1*OM1*S3[2]*(F2[4]*(P1[0]*(M1*0.5 * M1*OM1*(P1[0]-P1[3])+(+(-0.5+0j)*(P1[0])+P1[3]))+(P1[1]*-0.5*(P1[1]+2j*(P1[2]))+(-0.5*(P1[3]*P1[3])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[0]*(M1*0.5 * M1*OM1*(+1j*(P1[2])-P1[1])+P1[1])+1j*(P1[2]*P1[3])))
-    R1[6]= denom*0.666666666667 * M1*OM1*S3[2]*(F2[5]*(P1[1]*(M1*0.5 * M1*OM1*(P1[1]-1j*(P1[2]))+(+(-0.5-0j)*(P1[1])+1j*(P1[2])))+(P1[0]*-0.5*(P1[0]+2*(P1[3]))+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[3]*P1[3]))))+F2[4]*(P1[1]*(M1*0.5 * M1*OM1*(P1[3]-P1[0])+P1[0])+1j*(P1[2]*P1[3])))
-    R1[10]= denom*-0.333333333333 * M1*OM1*S3[2]*(F2[5]*(P1[2]*(M1*M1*OM1*(+1j*(P1[2])-P1[1])+(+2*(P1[1])-1j*(P1[2])))+(P1[0]*(+1j*(P1[0])+2j*(P1[3]))+(+1j*(P1[1]*P1[1]+P1[3]*P1[3]))))+F2[4]*(P1[2]*(M1*M1*OM1*(P1[0]-P1[3])+2*(P1[3]))-2j*(P1[0]*P1[1])))
-    R1[14]= denom*0.666666666667 * M1*OM1*S3[2]*(F2[4]*(P1[3]*(M1*0.5 * M1*OM1*(P1[3]-P1[0])+(+(-0.5-0j)*(P1[3])+P1[0]))+(P1[1]*-0.5*(P1[1]+2j*(P1[2]))+(-0.5*(P1[0]*P1[0])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[3]*(M1*0.5 * M1*OM1*(P1[1]-1j*(P1[2]))+1j*(P1[2]))+P1[0]*P1[1]))
-    R1[3]= denom*-0.666666666667 * M1*OM1*S3[2]*(F2[5]*(P1[0]*(M1*0.5 * M1*OM1*(P1[0]+P1[3])+(+(-0.5+0j)*(P1[0])-P1[3]))+(P1[1]*0.5*(+2j*(P1[2])-P1[1])+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[3]*P1[3]))))+F2[4]*(P1[0]*(M1*-0.5 * M1*OM1*(P1[1]+1j*(P1[2]))+P1[1])+1j*(P1[2]*P1[3])))
-    R1[7]= denom*0.666666666667 * M1*OM1*S3[2]*(F2[4]*(P1[1]*(M1*0.5 * M1*OM1*(P1[1]+1j*(P1[2]))+(+(-0.5-0j)*(P1[1])-1j*(P1[2])))+(P1[0]*0.5*(+2*(P1[3])-P1[0])+(-0.5*(P1[3]*P1[3])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[1]*(M1*-0.5 * M1*OM1*(P1[0]+P1[3])+P1[0])+1j*(P1[2]*P1[3])))
-    R1[11]= denom*0.333333333333 * M1*OM1*S3[2]*(F2[4]*(P1[2]*(M1*M1*OM1*(P1[1]+1j*(P1[2]))+(-1j*(P1[2])-2*(P1[1])))+(P1[0]*(-2j*(P1[3])+1j*(P1[0]))+(+1j*(P1[3]*P1[3]+P1[1]*P1[1]))))+F2[5]*(P1[2]*(M1*-M1*OM1*(P1[0]+P1[3])+2*(P1[3]))-2j*(P1[0]*P1[1])))
-    R1[15]= denom*-0.666666666667 * M1*OM1*S3[2]*(F2[5]*(P1[3]*(M1*0.5 * M1*OM1*(P1[0]+P1[3])+(+(-0.5+0j)*(P1[3])-P1[0]))+(P1[1]*0.5*(+2j*(P1[2])-P1[1])+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[0]*P1[0]))))+F2[4]*(P1[3]*(M1*-0.5 * M1*OM1*(P1[1]+1j*(P1[2]))+1j*(P1[2]))+P1[0]*P1[1]))
-    R1[4]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[0]*0.5*(F2[4]+2*(OM1*(F2[4]*(P1[0]*0.5*(+2*(P1[3])-P1[0])+(P1[1]*-0.5*(P1[1]+2j*(P1[2]))+(-0.5*(P1[3]*P1[3])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[0]*P1[1]+1j*(P1[2]*P1[3])))))+(-0.5*(F2[4]*P1[3])+F2[5]*0.5*(+1j*(P1[2])-P1[1])))
-    R1[8]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[1]*0.5*(+2*(OM1*(F2[4]*(P1[0]*0.5*(+2*(P1[3])-P1[0])+(P1[1]*-0.5*(P1[1]+2j*(P1[2]))+(-0.5*(P1[3]*P1[3])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[0]*P1[1]+1j*(P1[2]*P1[3]))))-F2[4])+(-0.5j*(F2[4]*P1[2])+F2[5]*0.5*(P1[0]+P1[3])))
-    R1[12]= denom*0.333333333333j * M1*M1*OM1*S3[2]*(P1[2]*(OM1*(F2[4]*(P1[0]*(-1j*(P1[0])+2j*(P1[3]))+(P1[1]*(-1j*(P1[1])+2*(P1[2]))+(-1j*(P1[3]*P1[3])+1j*(P1[2]*P1[2]))))+2*(F2[5]*(+1j*(P1[0]*P1[1])-P1[2]*P1[3])))+1j*(F2[4]))+(F2[5]*-1*(P1[0]+P1[3])+F2[4]*P1[1]))
-    R1[16]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[3]*0.5*(+2*(OM1*(F2[4]*(P1[0]*0.5*(+2*(P1[3])-P1[0])+(P1[1]*-0.5*(P1[1]+2j*(P1[2]))+(-0.5*(P1[3]*P1[3])+(0.5-0j)*(P1[2]*P1[2]))))+F2[5]*(P1[0]*P1[1]+1j*(P1[2]*P1[3]))))-F2[4])+(+0.5*(F2[4]*P1[0])+F2[5]*0.5*(+1j*(P1[2])-P1[1])))
-    R1[5]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[0]*0.5*(F2[5]+2*(OM1*(F2[5]*(P1[0]*-0.5*(P1[0]+2*(P1[3]))+(P1[1]*0.5*(+2j*(P1[2])-P1[1])+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[3]*P1[3]))))+F2[4]*(P1[0]*P1[1]+1j*(P1[2]*P1[3])))))+(+0.5*(F2[5]*P1[3])+F2[4]*-0.5*(P1[1]+1j*(P1[2]))))
-    R1[9]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[1]*0.5*(+2*(OM1*(F2[5]*(P1[0]*-0.5*(P1[0]+2*(P1[3]))+(P1[1]*0.5*(+2j*(P1[2])-P1[1])+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[3]*P1[3]))))+F2[4]*(P1[0]*P1[1]+1j*(P1[2]*P1[3]))))-F2[5])+(+0.5j*(F2[5]*P1[2])+F2[4]*0.5*(P1[0]-P1[3])))
-    R1[13]= denom*-0.333333333333j * M1*M1*OM1*S3[2]*(P1[2]*(OM1*(F2[5]*(P1[0]*(+1j*(P1[0])+2j*(P1[3]))+(P1[1]*(+2*(P1[2])+1j*(P1[1]))+(-1j*(P1[2]*P1[2])+1j*(P1[3]*P1[3]))))+2*(F2[4]*(P1[2]*P1[3]-1j*(P1[0]*P1[1]))))-1j*(F2[5]))+(F2[4]*(P1[3]-P1[0])+F2[5]*P1[1]))
-    R1[17]= denom*-0.666666666667 * M1*M1*OM1*S3[2]*(P1[3]*0.5*(+2*(OM1*(F2[5]*(P1[0]*-0.5*(P1[0]+2*(P1[3]))+(P1[1]*0.5*(+2j*(P1[2])-P1[1])+(+(0.5-0j)*(P1[2]*P1[2])-0.5*(P1[3]*P1[3]))))+F2[4]*(P1[0]*P1[1]+1j*(P1[2]*P1[3]))))-F2[5])+(-0.5*(F2[5]*P1[0])+F2[4]*0.5*(P1[1]+1j*(P1[2]))))    
+    R1[2]= denom*1j/3 * M1*S3[2]*(OM1*(P1[0]*(F2[4]*(M1*M1*OM1*(P1[3]-P1[0])+(+2*(P1[0])-P1[3]))+F2[5]*(M1*M1*OM1*(P1[1]-1j*(P1[2]))+(+1j*(P1[2])-P1[1])))-F2[4]*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))-F2[4])
+    R1[6]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[1]*(F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(P1[3]-P1[0]))+F2[5]*(M1*M1*OM1*(+1j*(P1[2])-P1[1])+(+2*(P1[1])-1j*(P1[2]))))+F2[5]*(P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))+F2[5])
+    R1[10]= denom*-1/3 * M1*S3[2]*(OM1*(P1[2]*(F2[4]*(M1*M1*OM1*(-1j*(P1[3])+1j*(P1[0]))+(-1j*(P1[0])+1j*(P1[3])))+F2[5]*(M1*-M1*OM1*(P1[2]+1j*(P1[1]))+(+2*(P1[2])+1j*(P1[1]))))+F2[5]*(P1[1]*P1[1]+P1[3]*P1[3]-P1[0]*P1[0]))+F2[5])
+    R1[14]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[3]*(F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(+2*(P1[3])-P1[0]))+F2[5]*(M1*M1*OM1*(+1j*(P1[2])-P1[1])+(P1[1]-1j*(P1[2]))))+F2[4]*(P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))+F2[4])
+    R1[3]= denom*1j/3 * M1*S3[2]*(OM1*(P1[0]*(F2[4]*(M1*M1*OM1*(P1[1]+1j*(P1[2]))+(-1j*(P1[2])-P1[1]))+F2[5]*(M1*-M1*OM1*(P1[0]+P1[3])+(P1[3]+2*(P1[0]))))-F2[5]*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]))-F2[5])
+    R1[7]= denom*-1j/3 * M1*S3[2]*(OM1*(P1[1]*(F2[4]*(M1*-M1*OM1*(P1[1]+1j*(P1[2]))+(+2*(P1[1])+1j*(P1[2])))+F2[5]*(M1*M1*OM1*(P1[0]+P1[3])+(-P1[0]-P1[3])))+F2[4]*(P1[3]*P1[3]+P1[2]*P1[2]-P1[0]*P1[0]))+F2[4])
+    R1[11]= denom*1/3 * M1*S3[2]*(OM1*(P1[2]*(F2[4]*(M1*M1*OM1*(+1j*(P1[1])-P1[2])+(-1j*(P1[1])+2*(P1[2])))+F2[5]*(M1*-M1*OM1*(+1j*(P1[0]+P1[3]))+(+1j*(P1[0]+P1[3]))))+F2[4]*(P1[3]*P1[3]+P1[1]*P1[1]-P1[0]*P1[0]))+F2[4])
+    R1[15]= denom*1j/3 * M1*S3[2]*(OM1*(P1[3]*(F2[4]*(M1*M1*OM1*(P1[1]+1j*(P1[2]))+(-1j*(P1[2])-P1[1]))+F2[5]*(M1*-M1*OM1*(P1[0]+P1[3])+(P1[0]+2*(P1[3]))))+F2[5]*(P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))+F2[5])
+    R1[4]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[0]*(M1*M1*(OM1*-1/3*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0])+ -5/3)+(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))+1/3*(P1[3]*M1*M1))+(+7/3*(P1[0])-1/3*(P1[3])))+F2[5]*(M1*1/3 * M1*OM1*(P1[1]-1j*(P1[2]))+(-1/3*(P1[1])+1j/3*(P1[2]))))
+    R1[8]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[1]*(M1*M1*(OM1*-1/3*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0])+ -5/3)+(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))-1j/3*(P1[2]*M1*M1))+(+7/3*(P1[1])+1j/3*(P1[2])))+F2[5]*(M1*1/3 * M1*OM1*(P1[0]+P1[3])+(-1/3*(P1[0]+P1[3]))))
+    R1[12]= denom*1/3 * S3[2]*(F2[4]*(OM1*(P1[2]*(M1*M1*(OM1*-1*(-1j*(P1[0]*P1[0])+1j*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]))+ -5j)+(+3j*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2])-3j*(P1[0]*P1[0])))-P1[1]*M1*M1)+(P1[1]+7j*(P1[2])))+F2[5]*(M1*M1*OM1*(P1[0]+P1[3])+(-P1[0]-P1[3])))
+    R1[16]= denom*1j * S3[2]*(F2[4]*(OM1*(P1[3]*(M1*M1*(OM1*-1/3*(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0])+ -5/3)+(P1[3]*P1[3]+P1[1]*P1[1]+P1[2]*P1[2]-P1[0]*P1[0]))+1/3*(P1[0]*M1*M1))+(+7/3*(P1[3])-1/3*(P1[0])))+F2[5]*(M1*1/3 * M1*OM1*(+1j*(P1[2])-P1[1])+(-1j/3*(P1[2])+1/3*(P1[1]))))
+    R1[5]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[0]*(M1*M1*(OM1*-1/3*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))-1/3*(P1[3]*M1*M1))+(+7/3*(P1[0])+1/3*(P1[3])))+F2[4]*(M1*1/3 * M1*OM1*(P1[1]+1j*(P1[2]))+(-1j/3*(P1[2])-1/3*(P1[1]))))
+    R1[9]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[1]*(M1*M1*(OM1*-1/3*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))+1j/3*(P1[2]*M1*M1))+(-1j/3*(P1[2])+7/3*(P1[1])))+F2[4]*(M1*1/3 * M1*OM1*(P1[0]-P1[3])+(-1/3*(P1[0])+1/3*(P1[3]))))
+    R1[13]= denom*-1/3 * S3[2]*(F2[5]*(OM1*(P1[2]*(M1*M1*(OM1*(-1j*(P1[0]*P1[0])+1j*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]))+ 5j)+(+3j*(P1[0]*P1[0])-3j*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3])))-P1[1]*M1*M1)+(P1[1]-7j*(P1[2])))+F2[4]*(M1*M1*OM1*(P1[0]-P1[3])+(P1[3]-P1[0])))
+    R1[17]= denom*1j * S3[2]*(F2[5]*(OM1*(P1[3]*(M1*M1*(OM1*-1/3*(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0])+ -5/3)+(P1[1]*P1[1]+P1[2]*P1[2]+P1[3]*P1[3]-P1[0]*P1[0]))-1/3*(P1[0]*M1*M1))+(+7/3*(P1[3])+1/3*(P1[0])))+F2[4]*(M1*1/3 * M1*OM1*(P1[1]+1j*(P1[2]))+(-1j/3*(P1[2])-1/3*(P1[1]))))
     return R1
         
     
@@ -3921,22 +4071,22 @@ P1(1) = -dble(R1(2))
 P1(2) = -dimag(R1(2))
 P1(3) = -dimag(R1(1))
     denom = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI* W1))
-    R1(3)= denom*-2d0/3d0 * M1*OM1*S3(3)*(F2(5)*(P1(0)*(M1*1d0/2d0 * M1*OM1*(P1(0)-P1(3))+(-1d0/2d0*(P1(0))+P1(3)))+(P1(1)*-1d0/2d0*(P1(1)+2d0 * CI*(P1(2)))+(-1d0/2d0*(P1(3)*P1(3))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(0)*(M1*1d0/2d0 * M1*OM1*(+CI*(P1(2))-P1(1))+P1(1))+CI*(P1(2)*P1(3))))
-    R1(4)= denom*-2d0/3d0 * M1*OM1*S3(3)*(F2(6)*(P1(0)*(M1*1d0/2d0 * M1*OM1*(P1(0)+P1(3))+(-1d0/2d0*(P1(0))-P1(3)))+(P1(1)*1d0/2d0*(+2d0 * CI*(P1(2))-P1(1))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(3)*P1(3)))))+F2(5)*(P1(0)*(M1*-1d0/2d0 * M1*OM1*(P1(1)+CI*(P1(2)))+P1(1))+CI*(P1(2)*P1(3))))
-    R1(5)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(0)*1d0/2d0*(F2(5)+2d0*(OM1*(F2(5)*(P1(0)*1d0/2d0*(+2d0*(P1(3))-P1(0))+(P1(1)*-1d0/2d0*(P1(1)+2d0 * CI*(P1(2)))+(-1d0/2d0*(P1(3)*P1(3))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(0)*P1(1)+CI*(P1(2)*P1(3))))))+(-1d0/2d0*(F2(5)*P1(3))+F2(6)*1d0/2d0*(+CI*(P1(2))-P1(1))))
-    R1(6)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(0)*1d0/2d0*(F2(6)+2d0*(OM1*(F2(6)*(P1(0)*-1d0/2d0*(P1(0)+2d0*(P1(3)))+(P1(1)*1d0/2d0*(+2d0 * CI*(P1(2))-P1(1))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(3)*P1(3)))))+F2(5)*(P1(0)*P1(1)+CI*(P1(2)*P1(3))))))+(+1d0/2d0*(F2(6)*P1(3))+F2(5)*-1d0/2d0*(P1(1)+CI*(P1(2)))))
-    R1(7)= denom*2d0/3d0 * M1*OM1*S3(3)*(F2(6)*(P1(1)*(M1*1d0/2d0 * M1*OM1*(P1(1)-CI*(P1(2)))+(-1d0/2d0*(P1(1))+CI*(P1(2))))+(P1(0)*-1d0/2d0*(P1(0)+2d0*(P1(3)))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(3)*P1(3)))))+F2(5)*(P1(1)*(M1*1d0/2d0 * M1*OM1*(P1(3)-P1(0))+P1(0))+CI*(P1(2)*P1(3))))
-    R1(8)= denom*2d0/3d0 * M1*OM1*S3(3)*(F2(5)*(P1(1)*(M1*1d0/2d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/2d0*(P1(1))-CI*(P1(2))))+(P1(0)*1d0/2d0*(+2d0*(P1(3))-P1(0))+(-1d0/2d0*(P1(3)*P1(3))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(1)*(M1*-1d0/2d0 * M1*OM1*(P1(0)+P1(3))+P1(0))+CI*(P1(2)*P1(3))))
-    R1(9)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(1)*1d0/2d0*(+2d0*(OM1*(F2(5)*(P1(0)*1d0/2d0*(+2d0*(P1(3))-P1(0))+(P1(1)*-1d0/2d0*(P1(1)+2d0 * CI*(P1(2)))+(-1d0/2d0*(P1(3)*P1(3))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(0)*P1(1)+CI*(P1(2)*P1(3)))))-F2(5))+(-1d0/2d0 * CI*(F2(5)*P1(2))+F2(6)*1d0/2d0*(P1(0)+P1(3))))
-    R1(10)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(1)*1d0/2d0*(+2d0*(OM1*(F2(6)*(P1(0)*-1d0/2d0*(P1(0)+2d0*(P1(3)))+(P1(1)*1d0/2d0*(+2d0 * CI*(P1(2))-P1(1))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(3)*P1(3)))))+F2(5)*(P1(0)*P1(1)+CI*(P1(2)*P1(3)))))-F2(6))+(+1d0/2d0 * CI*(F2(6)*P1(2))+F2(5)*1d0/2d0*(P1(0)-P1(3))))
-    R1(11)= denom*-1d0/3d0 * M1*OM1*S3(3)*(F2(6)*(P1(2)*(M1*M1*OM1*(+CI*(P1(2))-P1(1))+(+2d0*(P1(1))-CI*(P1(2))))+(P1(0)*(+CI*(P1(0))+2d0 * CI*(P1(3)))+(+CI*(P1(1)*P1(1)+P1(3)*P1(3)))))+F2(5)*(P1(2)*(M1*M1*OM1*(P1(0)-P1(3))+2d0*(P1(3)))-2d0 * CI*(P1(0)*P1(1))))
-    R1(12)= denom*1d0/3d0 * M1*OM1*S3(3)*(F2(5)*(P1(2)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-CI*(P1(2))-2d0*(P1(1))))+(P1(0)*(-2d0 * CI*(P1(3))+CI*(P1(0)))+(+CI*(P1(3)*P1(3)+P1(1)*P1(1)))))+F2(6)*(P1(2)*(M1*-M1*OM1*(P1(0)+P1(3))+2d0*(P1(3)))-2d0 * CI*(P1(0)*P1(1))))
-    R1(13)= denom*1d0/3d0 * CI * M1*M1*OM1*S3(3)*(P1(2)*(OM1*(F2(5)*(P1(0)*(-CI*(P1(0))+2d0 * CI*(P1(3)))+(P1(1)*(-CI*(P1(1))+2d0*(P1(2)))+(-CI*(P1(3)*P1(3))+CI*(P1(2)*P1(2)))))+2d0*(F2(6)*(+CI*(P1(0)*P1(1))-P1(2)*P1(3))))+CI*(F2(5)))+(F2(6)*-1d0*(P1(0)+P1(3))+F2(5)*P1(1)))
-    R1(14)= denom*-1d0/3d0 * CI * M1*M1*OM1*S3(3)*(P1(2)*(OM1*(F2(6)*(P1(0)*(+CI*(P1(0))+2d0 * CI*(P1(3)))+(P1(1)*(+2d0*(P1(2))+CI*(P1(1)))+(-CI*(P1(2)*P1(2))+CI*(P1(3)*P1(3)))))+2d0*(F2(5)*(P1(2)*P1(3)-CI*(P1(0)*P1(1)))))-CI*(F2(6)))+(F2(5)*(P1(3)-P1(0))+F2(6)*P1(1)))
-    R1(15)= denom*2d0/3d0 * M1*OM1*S3(3)*(F2(5)*(P1(3)*(M1*1d0/2d0 * M1*OM1*(P1(3)-P1(0))+(-1d0/2d0*(P1(3))+P1(0)))+(P1(1)*-1d0/2d0*(P1(1)+2d0 * CI*(P1(2)))+(-1d0/2d0*(P1(0)*P1(0))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(3)*(M1*1d0/2d0 * M1*OM1*(P1(1)-CI*(P1(2)))+CI*(P1(2)))+P1(0)*P1(1)))
-    R1(16)= denom*-2d0/3d0 * M1*OM1*S3(3)*(F2(6)*(P1(3)*(M1*1d0/2d0 * M1*OM1*(P1(0)+P1(3))+(-1d0/2d0*(P1(3))-P1(0)))+(P1(1)*1d0/2d0*(+2d0 * CI*(P1(2))-P1(1))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(0)*P1(0)))))+F2(5)*(P1(3)*(M1*-1d0/2d0 * M1*OM1*(P1(1)+CI*(P1(2)))+CI*(P1(2)))+P1(0)*P1(1)))
-    R1(17)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(3)*1d0/2d0*(+2d0*(OM1*(F2(5)*(P1(0)*1d0/2d0*(+2d0*(P1(3))-P1(0))+(P1(1)*-1d0/2d0*(P1(1)+2d0 * CI*(P1(2)))+(-1d0/2d0*(P1(3)*P1(3))+1d0/2d0*(P1(2)*P1(2)))))+F2(6)*(P1(0)*P1(1)+CI*(P1(2)*P1(3)))))-F2(5))+(+1d0/2d0*(F2(5)*P1(0))+F2(6)*1d0/2d0*(+CI*(P1(2))-P1(1))))
-    R1(18)= denom*-2d0/3d0 * M1*M1*OM1*S3(3)*(P1(3)*1d0/2d0*(+2d0*(OM1*(F2(6)*(P1(0)*-1d0/2d0*(P1(0)+2d0*(P1(3)))+(P1(1)*1d0/2d0*(+2d0 * CI*(P1(2))-P1(1))+(+1d0/2d0*(P1(2)*P1(2))-1d0/2d0*(P1(3)*P1(3)))))+F2(5)*(P1(0)*P1(1)+CI*(P1(2)*P1(3)))))-F2(6))+(-1d0/2d0*(F2(6)*P1(0))+F2(5)*1d0/2d0*(P1(1)+CI*(P1(2)))))
+    R1(3)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(0)*(F2(5)*(M1*M1*OM1*(P1(3)-P1(0))+(+2d0*(P1(0))-P1(3)))+F2(6)*(M1*M1*OM1*(P1(1)-CI*(P1(2)))+(+CI*(P1(2))-P1(1))))-F2(5)*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))-F2(5))
+    R1(4)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(0)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-CI*(P1(2))-P1(1)))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(P1(3)+2d0*(P1(0)))))-F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)))-F2(6))
+    R1(5)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(0)*(M1*M1*(OM1*-1d0/3d0*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0))+ -5d0/3d0)+(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+1d0/3d0*(P1(3)*M1*M1))+(+7d0/3d0*(P1(0))-1d0/3d0*(P1(3))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(P1(1)-CI*(P1(2)))+(-1d0/3d0*(P1(1))+1d0/3d0 * CI*(P1(2)))))
+    R1(6)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(0)*(M1*M1*(OM1*-1d0/3d0*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(3)*M1*M1))+(+7d0/3d0*(P1(0))+1d0/3d0*(P1(3))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0 * CI*(P1(2))-1d0/3d0*(P1(1)))))
+    R1(7)= denom*-1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(1)*(F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(P1(3)-P1(0)))+F2(6)*(M1*M1*OM1*(+CI*(P1(2))-P1(1))+(+2d0*(P1(1))-CI*(P1(2)))))+F2(6)*(P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))+F2(6))
+    R1(8)= denom*-1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(1)*(F2(5)*(M1*-M1*OM1*(P1(1)+CI*(P1(2)))+(+2d0*(P1(1))+CI*(P1(2))))+F2(6)*(M1*M1*OM1*(P1(0)+P1(3))+(-P1(0)-P1(3))))+F2(5)*(P1(3)*P1(3)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(5))
+    R1(9)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(1)*(M1*M1*(OM1*-1d0/3d0*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0))+ -5d0/3d0)+(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))-1d0/3d0 * CI*(P1(2)*M1*M1))+(+7d0/3d0*(P1(1))+1d0/3d0 * CI*(P1(2))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(P1(0)+P1(3))+(-1d0/3d0*(P1(0)+P1(3)))))
+    R1(10)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(1)*(M1*M1*(OM1*-1d0/3d0*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))+1d0/3d0 * CI*(P1(2)*M1*M1))+(-1d0/3d0 * CI*(P1(2))+7d0/3d0*(P1(1))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(0)-P1(3))+(-1d0/3d0*(P1(0))+1d0/3d0*(P1(3)))))
+    R1(11)= denom*-1d0/3d0 * M1*S3(3)*(OM1*(P1(2)*(F2(5)*(M1*M1*OM1*(-CI*(P1(3))+CI*(P1(0)))+(-CI*(P1(0))+CI*(P1(3))))+F2(6)*(M1*-M1*OM1*(P1(2)+CI*(P1(1)))+(+2d0*(P1(2))+CI*(P1(1)))))+F2(6)*(P1(1)*P1(1)+P1(3)*P1(3)-P1(0)*P1(0)))+F2(6))
+    R1(12)= denom*1d0/3d0 * M1*S3(3)*(OM1*(P1(2)*(F2(5)*(M1*M1*OM1*(+CI*(P1(1))-P1(2))+(-CI*(P1(1))+2d0*(P1(2))))+F2(6)*(M1*-M1*OM1*(+CI*(P1(0)+P1(3)))+(+CI*(P1(0)+P1(3)))))+F2(5)*(P1(3)*P1(3)+P1(1)*P1(1)-P1(0)*P1(0)))+F2(5))
+    R1(13)= denom*1d0/3d0 * S3(3)*(F2(5)*(OM1*(P1(2)*(M1*M1*(OM1*-1d0*(-CI*(P1(0)*P1(0))+CI*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)))+ -5d0 * CI)+(+3d0 * CI*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2))-3d0 * CI*(P1(0)*P1(0))))-P1(1)*M1*M1)+(P1(1)+7d0 * CI*(P1(2))))+F2(6)*(M1*M1*OM1*(P1(0)+P1(3))+(-P1(0)-P1(3))))
+    R1(14)= denom*-1d0/3d0 * S3(3)*(F2(6)*(OM1*(P1(2)*(M1*M1*(OM1*(-CI*(P1(0)*P1(0))+CI*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)))+ 5d0 * CI)+(+3d0 * CI*(P1(0)*P1(0))-3d0 * CI*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3))))-P1(1)*M1*M1)+(P1(1)-7d0 * CI*(P1(2))))+F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(P1(3)-P1(0))))
+    R1(15)= denom*-1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(0)-P1(3))+(+2d0*(P1(3))-P1(0)))+F2(6)*(M1*M1*OM1*(+CI*(P1(2))-P1(1))+(P1(1)-CI*(P1(2)))))+F2(5)*(P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(5))
+    R1(16)= denom*1d0/3d0 * CI * M1*S3(3)*(OM1*(P1(3)*(F2(5)*(M1*M1*OM1*(P1(1)+CI*(P1(2)))+(-CI*(P1(2))-P1(1)))+F2(6)*(M1*-M1*OM1*(P1(0)+P1(3))+(P1(0)+2d0*(P1(3)))))+F2(6)*(P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+F2(6))
+    R1(17)= denom*CI * S3(3)*(F2(5)*(OM1*(P1(3)*(M1*M1*(OM1*-1d0/3d0*(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0))+ -5d0/3d0)+(P1(3)*P1(3)+P1(1)*P1(1)+P1(2)*P1(2)-P1(0)*P1(0)))+1d0/3d0*(P1(0)*M1*M1))+(+7d0/3d0*(P1(3))-1d0/3d0*(P1(0))))+F2(6)*(M1*1d0/3d0 * M1*OM1*(+CI*(P1(2))-P1(1))+(-1d0/3d0 * CI*(P1(2))+1d0/3d0*(P1(1)))))
+    R1(18)= denom*CI * S3(3)*(F2(6)*(OM1*(P1(3)*(M1*M1*(OM1*-1d0/3d0*(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0))+ -5d0/3d0)+(P1(1)*P1(1)+P1(2)*P1(2)+P1(3)*P1(3)-P1(0)*P1(0)))-1d0/3d0*(P1(0)*M1*M1))+(+7d0/3d0*(P1(3))+1d0/3d0*(P1(0))))+F2(5)*(M1*1d0/3d0 * M1*OM1*(P1(1)+CI*(P1(2)))+(-1d0/3d0 * CI*(P1(2))-1d0/3d0*(P1(1)))))
 end
 
 
@@ -4234,7 +4384,21 @@ end
 """
         self.assertEqual(text.split('\n'), target.split('\n'))
             
- 
+    @set_global(loop=False, unitary=True, mp=True, cms=False)
+    def test_aloha_get_name(self):
+
+        FFV_M = UFOLorentz(name = 'FFVM',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'Gamma(3,1,\'s1\')*ProjM(\'s1\',2)')  
+        abstract = create_aloha.AbstractRoutineBuilder(FFV_M).compute_routine(3)
+        
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['P0','C1'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
+
+        name = aloha_writers.get_routine_name(abstract=abstract, tag=['C1','P0'])
+        
+        self.assertEqual(name, 'FFVMC1P0_3')
     
     @set_global(loop=True, unitary=True, mp=True, cms=False)
     def test_aloha_MP_mode(self):
@@ -4874,6 +5038,8 @@ def FFV2C1_0(F2,F1,V3,COUP):
         split_routine = routine.split('\n')
         self.assertEqual(split_solution,split_routine)
         self.assertEqual(len(split_routine), len(split_solution))
+
+
                  
             
 class test_aloha_wavefunctions(unittest.TestCase):

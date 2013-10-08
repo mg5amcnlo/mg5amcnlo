@@ -25,6 +25,7 @@ import re
 import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -200,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -218,6 +219,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -732,6 +734,26 @@ class Interaction(PhysicsObject):
         else:
             return False
         
+    def is_UVloop(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVloop')
+        else:
+            return False
+        
+    def is_UVtree(self):
+        """ Returns if the interaction is of UVmass type."""
+
+        # Precaution only useful because some tests have a predefined model
+        # bypassing the default_setup and for which type was not defined.
+        if 'type' in self.keys():
+            return (len(self['type'])>=6 and self['type'][:6]=='UVtree')
+        else:
+            return False
+        
     def is_UVCT(self):
         """ Returns if the interaction is of the UVCT type which means that 
         it has been selected as a possible UV counterterm interaction for this
@@ -896,7 +918,15 @@ class InteractionList(PhysicsObjectList):
 
     def get_UVmass(self):
         """ return all interactions in the list of type UVmass """
-        return InteractionList([int for int in self if int.is_UVmass()])    
+        return InteractionList([int for int in self if int.is_UVmass()])
+
+    def get_UVtree(self):
+        """ return all interactions in the list of type UVtree """
+        return InteractionList([int for int in self if int.is_UVtree()])
+    
+    def get_UVloop(self):
+        """ return all interactions in the list of type UVloop """
+        return InteractionList([int for int in self if int.is_UVloop()])
 
 #===============================================================================
 # Model
@@ -1126,9 +1156,9 @@ class Model(PhysicsObject):
         """create a dictionary name 2 part"""
         
         self.name2part = {}
-        for part in self.get("particle_dict"):
+        for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-            
+        
             
 
     def get_lorentz(self, name):
@@ -1479,7 +1509,8 @@ class Model(PhysicsObject):
             param_depend = self.get_parameter(expr)
             self.add_param(New_param, [param_depend])
             
-            
+        if not to_change:
+            return
             
             
         # So at this stage we still need to modify all parameters depending of
@@ -1498,6 +1529,8 @@ class Model(PhysicsObject):
                               isinstance(param, ParamCardVariable):
                     continue
                 param.type = 'complex'
+#                print param.expr,  to_change
+                
                 param.expr = pat.sub(replace, param.expr)
         
         # Modify the couplings        
@@ -2173,6 +2206,8 @@ class Process(PhysicsObject):
         self['overall_orders'] = {}
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
+        # Legs with decay chains substituted in
+        self['legs_with_decays'] = LegList()
         # Loop particles if the process is to be computed at NLO
         self['perturbation_couplings']=[]        
         # These orders restrict the order of the squared amplitude.
@@ -2188,7 +2223,7 @@ class Process(PhysicsObject):
     def filter(self, name, value):
         """Filter for valid process property values."""
 
-        if name == 'legs':
+        if name in ['legs', 'legs_with_decays'] :
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
@@ -2298,6 +2333,14 @@ class Process(PhysicsObject):
 
         return super(Process, self).set(name, value) # call the mother routine
 
+    def get(self, name):
+        """Special get for legs_with_decays"""
+        
+        if name == 'legs_with_decays':
+            self.get_legs_with_decays()
+
+        return super(Process, self).get(name) # call the mother routine
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
@@ -2305,6 +2348,7 @@ class Process(PhysicsObject):
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
+                'legs_with_decays',
                 'perturbation_couplings', 'has_born', 'NLO_mode']
 
     def nice_string(self, indent=0, print_weighted = True):
@@ -2319,7 +2363,7 @@ class Process(PhysicsObject):
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
-                # Separate initial and final legs by ">"
+                # Separate initial and final legs by >
                 mystr = mystr + '> '
                 # Add required s-channels
                 if self['required_s_channels'] and \
@@ -2500,17 +2544,30 @@ class Process(PhysicsObject):
         # Remove last space
         return mystr[:-1]
 
-    def shell_string(self, schannel=True, forbid=True, main=True):
+    def shell_string(self, schannel=True, forbid=True, main=True, pdg_order=False):
         """Returns process as string with '~' -> 'x', '>' -> '_',
         '+' -> 'p' and '-' -> 'm', including process number,
-        intermediate s-channels and forbidden particles"""
+        intermediate s-channels and forbidden particles,
+        pdg_order allow to order to leg order by pid."""
 
         mystr = ""
         if not self.get('is_decay_chain'):
             mystr += "%d_" % self['id']
         
         prevleg = None
-        for leg in self['legs']:
+        if pdg_order:
+            legs = [l for l in self['legs'][1:]]
+            def order_leg(l1,l2):
+                id1 = l1.get('id')
+                id2 = l2.get('id')
+                return id2-id1
+            legs.sort(cmp=order_leg)
+            legs.insert(0, self['legs'][0])
+        else:
+            legs = self['legs']
+        
+        
+        for leg in legs:
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
@@ -2547,19 +2604,20 @@ class Process(PhysicsObject):
         mystr = mystr.replace(' ', '')
 
         for decay in self.get('decay_chains'):
-            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False)
+            mystr = mystr + "_" + decay.shell_string(schannel,forbid, main=False,
+                                                     pdg_order=pdg_order)
 
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
-            
-            
-            
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 
@@ -2618,6 +2676,39 @@ class Process(PhysicsObject):
                        leg.get('number') == number,
                        self.get('legs'))[0].get('id')
 
+    def get_initial_final_ids(self):
+        """return a tuple of two tuple containing the id of the initial/final
+           state particles. Each list is ordered"""
+           
+        initial = []
+        final = [l.get('id') for l in self.get('legs')\
+              if l.get('state') or initial.append(l.get('id'))]
+        initial.sort()
+        final.sort()
+        return (tuple(initial), tuple(final))
+    
+    def get_final_ids_after_decay(self):
+        """Give the pdg code of the process including decay"""
+        
+        finals = self.get_final_ids()
+        for proc in self.get('decay_chains'):
+            init = proc.get_initial_ids()[0]
+            #while 1:
+            try:
+                pos = finals.index(init)
+            except:
+                break
+            finals[pos] = proc.get_final_ids_after_decay()
+        output = []
+        for d in finals:
+            if isinstance(d, list):
+                output += d
+            else:
+                output.append(d)
+        
+        return output
+    
+
     def get_final_legs(self):
         """Gives the final state legs"""
 
@@ -2628,13 +2719,15 @@ class Process(PhysicsObject):
         """Gives the pdg codes for final state particles"""
 
         return [l.get('id') for l in self.get_final_legs()]
+    
                 
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""
 
+        if self['legs_with_decays']:
+            return self['legs_with_decays']
+
         legs = copy.deepcopy(self.get('legs'))
-        if self.get('is_decay_chain'):
-            legs.pop(0)
         org_decay_chains = copy.copy(self.get('decay_chains'))
         sorted_decay_chains = []
         # Sort decay chains according to leg order
@@ -2652,13 +2745,18 @@ class Process(PhysicsObject):
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1
             decay_legs = decay.get_legs_with_decays()
-            legs = legs[:ileg] + decay_legs + legs[ileg+1:]
-            ileg = ileg + len(decay_legs)
+            legs = legs[:ileg] + decay_legs[1:] + legs[ileg+1:]
+            ileg = ileg + len(decay_legs) - 1
+
+        # Replace legs with copies
+        legs = [copy.copy(l) for l in legs]
 
         for ileg, leg in enumerate(legs):
             leg.set('number', ileg + 1)
             
-        return LegList(legs)
+        self['legs_with_decays'] = LegList(legs)
+
+        return self['legs_with_decays']
 
     def list_for_sort(self):
         """Output a list that can be compared to other processes as:
@@ -2770,6 +2868,7 @@ class ProcessDefinition(Process):
         self['legs'] = MultiLegList()
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessDefinitionList()
+        if 'legs_with_decays' in self: del self['legs_with_decays']
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2801,7 +2900,10 @@ class ProcessDefinition(Process):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return super(ProcessDefinition, self).get_sorted_keys()
+        keys = super(ProcessDefinition, self).get_sorted_keys()
+        keys.remove('legs_with_decays')                                  
+
+        return keys
 
     def get_minimum_WEIGHTED(self):
         """Retrieve the minimum starting guess for WEIGHTED order, to

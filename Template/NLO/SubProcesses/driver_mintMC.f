@@ -16,7 +16,7 @@ C
 C
 C     LOCAL
 C
-      integer i,nconfigs,j,l,l1,l2,ndim,nevts
+      integer i,j,l,l1,l2,ndim,nevts
       double precision tot,mean,sigma,res_abs
       integer npoints
       double precision y,jac,s1,s2,xmin
@@ -85,6 +85,10 @@ c For tests
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
+      integer i_momcmp_count
+      double precision xratmax
+      common/ccheckcnt/i_momcmp_count,xratmax
+
       double precision weight
 c For MINT:
       include "mint.inc"
@@ -106,17 +110,35 @@ c For MINT:
       common/SHevents/Hevents
       character*10 dum
 c statistics for MadLoop      
-      integer nunst, ntot
-      common/ups_stats/nunst, ntot
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+
+c general MadFKS parameters
+      include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
 C-----  
 c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+c
+c
 c     Read process number
 c
-      nunst=0
       ntot=0
+      nsun=0
+      nsps=0
+      nups=0
+      neps=0
+      n100=0
+      nddp=0
+      nqdp=0
+      nini=0
+      n10=0
+      n1=0
+      
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -134,7 +156,6 @@ c
       call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
-      nconfigs = 1
 c     
 c     Get user input
 c
@@ -162,7 +183,7 @@ c at the NLO)
         stop
       endif
 
-      write(*,*) "about to integrate ", ndim,ncall,itmax,nconfigs
+      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
 
       itotalpoints=0
       ivirtpoints=0
@@ -170,6 +191,9 @@ c at the NLO)
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
+
+      i_momcmp_count=0
+      xratmax=0.d0
 
       unwgt=.false.
 
@@ -233,15 +257,6 @@ c to save grids:
          close (12)
 
       elseif(imode.eq.1) then
-c$$$         open (unit=99,file='nevts',status='old',err=999)
-c$$$         read (99,*) nevts
-c$$$         close(99)
-c$$$         if(nevts.eq.0) then
-c$$$            write (*,*)
-c$$$     &           'No events needed for this channel...skipping it'
-c$$$            stop
-c$$$         endif
-c
          if(plotKin)then
             open(unit=99,file='MADatNLO.top',status='unknown')
             call initplot
@@ -390,33 +405,11 @@ c to restore grids:
       write(*,*)'Maximum weight found:',fksmaxwgt
       write(*,*)'Found for:',xisave,ysave
 
-
-c$$$ THIS INFORMATION IS NO LONGER UP-TO-DATE
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'Total points tried:                   ',
-c$$$     &     ncall*itmax
-c$$$      write (*,*) 'Total points passing generation cuts: ',
-c$$$     &     itotalpoints
-c$$$      write (*,*) 'Efficiency of events passing cuts:    ',
-c$$$     &     dble(itotalpoints)/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-c$$$      write (*,*) ''
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) 'number of except PS points:',ivirtpointsExcept,
-c$$$     &     'out of',ivirtpoints,'points'
-c$$$      write (*,*) '   treatment of exceptional PS points:'
-c$$$      write (*,*) '      maximum approximation:',
-c$$$     &     total_wgt_sum + dsqrt(total_wgt_sum_max)/dble(ncall*itmax)
-c$$$      write (*,*) '      minimum approximation:',
-c$$$     &     total_wgt_sum - dsqrt(total_wgt_sum_min)/dble(ncall*itmax)
-c$$$      write (*,*) '      taking the max/min average:',
-c$$$     &     total_wgt_sum/dble(ncall*itmax)
-c$$$      write (*,*) '----------------------------------------------------'
-c$$$      write (*,*) ''
-
-
+      if(i_momcmp_count.ne.0)then
+        write(*,*)'     '
+        write(*,*)'WARNING: genps_fks code 555555'
+        write(*,*)i_momcmp_count,xratmax
+      endif
 
       if(plotEv.or.plotKin)then
         call mclear
@@ -424,10 +417,31 @@ c$$$      write (*,*) ''
         close(99)
       endif
 
-      write(*,*) "Satisctics from MadLoop:"
-      write(*,*) "Total points tried: ", ntot
-      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
-     1 nunst
+      if (ntot.ne.0) then
+         write(*,*) "Satistics from MadLoop:"
+         write(*,*)
+     &        "  Total points tried:                              ",ntot
+         write(*,*)
+     &        "  Stability unknown:                               ",nsun
+         write(*,*)
+     &        "  Stable PS point:                                 ",nsps
+         write(*,*)
+     &        "  Unstable PS point (and rescued):                 ",nups
+         write(*,*)
+     &        "  Exceptional PS point (unstable and not rescued): ",neps
+         write(*,*)
+     &        "  Double precision used:                           ",nddp
+         write(*,*)
+     &        "  Quadruple precision used:                        ",nqdp
+         write(*,*)
+     &        "  Initialization phase-space points:               ",nini
+         write(*,*)
+     &        "  Unknown return code (100):                       ",n100
+         write(*,*)
+     &        "  Unknown return code (10):                        ",n10
+         write(*,*)
+     &        "  Unknown return code (1):                         ",n1
+      endif
       return
  999  write (*,*) 'nevts file not found'
       stop
@@ -460,6 +474,10 @@ c
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           use_cut
       common /to_weight/use_cut
 
@@ -558,12 +576,13 @@ c These should be ignored (but kept for 'historical reasons')
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel= 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
+      isum_hel = 0
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig
@@ -698,7 +717,7 @@ c From dsample_fks
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
-      double precision vol,sigintR,res,f_tot,rfract
+      double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
      $     ,nFKSprocess_all,i_fks_pdg_proc(fks_configs)
@@ -710,8 +729,11 @@ c From dsample_fks
       COMMON /SUBPROC/ PD, IPROC
       double precision unwgt_table(0:fks_configs,2,maxproc)
       common/c_unwgt_table/unwgt_table
-      integer maxproc_save
-      save maxproc_save,proc_map
+      save proc_map
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
 c
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -730,16 +752,16 @@ c Find the nFKSprocess for which we compute the Born-like contributions
                   nFKSprocessBorn(2)=nFKSprocess
                endif
             endif
-            if (doreweight) then
-               call reweight_settozero()
-               call reweight_settozero_all(nFKSprocess*2,.true.)
-               call reweight_settozero_all(nFKSprocess*2-1,.true.)
-            endif
 c Set Bjorken x's to some random value before calling the dlum() function
             xbk(1)=0.5d0
             xbk(2)=0.5d0
             lum=dlum()
             maxproc_save=max(maxproc_save,IPROC)
+            if (doreweight) then
+               call reweight_settozero()
+               call reweight_settozero_all(nFKSprocess*2,.true.)
+               call reweight_settozero_all(nFKSprocess*2-1,.true.)
+            endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
          write (*,*) 'For the Born we use nFKSprocesses  #',
@@ -929,6 +951,10 @@ c Sum over all j_fks initial (final) state
             write (*,*) i,'-->',proc_map(i,0),':',
      &           (proc_map(i,j),j=1,proc_map(i,0))
          enddo
+c For the S-events, we can combine processes when they give identical
+c processes at the Born. Make sure we check that we get indeed identical
+c IRPOC's
+         call find_iproc_map()
       endif
 
       fold=ifl
@@ -972,7 +998,7 @@ c Sum over all j_fks initial (final) state
 c
 c Compute the Born-like contributions with nbody=.true.
 c     
-         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol)
+         call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
          nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
                                                ! because it only matters
                                                ! which parton is j_fks
@@ -997,6 +1023,7 @@ c
             nFKSprocess=nFKSprocessBorn(2)
          endif
          nbody=.true.
+         fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
          nFKSprocess_used_Born=nFKSprocess
          call fks_inc_chooser()
@@ -1011,6 +1038,11 @@ c THIS CAN BE OPTIMIZED
          result(0,2)= w*dsigH
          f(1) = f(1)+result(0,1)
          f(2) = f(2)+result(0,2)
+         if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+            call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
+         endif
+
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
@@ -1032,7 +1064,7 @@ c
 c THIS CAN BE OPTIMIZED
                call setcuts
                call setfksfactor(iconfig)
-               wgt=1d0/vol
+               wgt=1d0/vol1
 c When sum=3, we can compute the nFKSprocesses without soft
 c singularities fewer number of PS points, because their contribution is
 c small. This should save some time, without degrading the uncertainty
@@ -1051,7 +1083,7 @@ c much. Do this by overwrite the 'wgt' variable
                endif
                call generate_momenta(ndim,iconfig,wgt,x,p)
                call dsigF(p,wgt,w,dsigS,dsigH)
-               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol*w
+               sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
                f(1) = f(1)+result(nFKSprocess,1)
@@ -1065,7 +1097,7 @@ c much. Do this by overwrite the 'wgt' variable
      $        ,f_abs)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-2) then
+     $           .gt.1d-1) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1120,35 +1152,21 @@ c reweighting
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
+      include 'run.inc'
       double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
      $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
      $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
       external ran2
       external dlum
-      integer maxproc_found,maxproc_found_first,iproc_save(fks_configs)
-     $     ,i,j,ii,jj,k,kk,proc_map(0:fks_configs,0:fks_configs)
-      save maxproc_found,iproc_save
+      integer i,j,ii,jj,k,kk
+     $     ,proc_map(0:fks_configs,0:fks_configs)
       logical unweight,firsttime
       data firsttime /.true./
       integer nFKSprocess_save,ifound,nFKSprocess_soft
-      integer id_current(nexternal,maxproc),id_first(nexternal,maxproc)
-     &     ,nequal,equal_to(maxproc,fks_configs),eto(maxproc
-     &     ,fks_configs),equal_to_inverse(maxproc,fks_configs)
-     &     ,etoi(maxproc,fks_configs)
-      save equal_to,equal_to_inverse,eto,etoi
-      character*100 buff
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SUBPROC/ PD, IPROC
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -1169,173 +1187,10 @@ c reweighting
       common/cto_LHE2/scale1_lhe,scale2_lhe
       double precision SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
 
-c For the S-events, we can combine processes when they give identical
-c processes at the Born. Make sure we check that we get indeed identical
-c IRPOC's
-      if (firsttime) then
-         nFKSprocess_save=nFKSprocess
-         do nFKSprocess=1,fks_configs
-            call fks_inc_chooser()
-            call leshouche_inc_chooser()
-            dummy=dlum()
-c 1. First map the IPROC's for this nFKSprocess to the underlying Born
-c to get the unique IPROC's
-            iproc_save(nFKSprocess)=iproc
-            do j=1,iproc
-               do i=1,nexternal-1
-                  if (i.eq.min(j_fks,i_fks)) then
-                     if (abs(idup(i_fks,j)).eq.abs(idup(j_fks,j))) then
-                        id_current(i,j)=21
-                     elseif(abs(particle_type(j_fks)).eq.3) then
-                        id_current(i,j)=idup(j_fks,j)
-                     elseif (abs(particle_type(i_fks)).eq.3) then
-                        id_current(i,j)=-idup(i_fks,j)
-                     else
-                        write (*,*) 'Error #1 in unwgt_table'
-                        stop
-                     endif
-                  elseif (i.lt.max(j_fks,i_fks)) then
-                     id_current(i,j)=idup(i,j)
-                  else
-                     id_current(i,j)=idup(i+1,j)
-                  endif
-               enddo
-c 1a. if IPROC not yet found, save it for checking. Also fill an array
-c equal_to() that maps the IPROC to the set of unique IPROCs
-               if (j.eq.1) then
-                  maxproc_found=1
-                  equal_to(j,nFKSprocess)=1
-                  equal_to_inverse(1,nFKSprocess)=j
-               elseif (j.gt.1) then
-                  do jj=1,maxproc_found
-                     nequal=0
-                     do ii=1,nexternal-1
-                        if (id_current(ii,j).eq.id_current(ii
-     &                       ,equal_to_inverse(jj,nFKSprocess))) then
-                           nequal=nequal+1
-                        endif
-                     enddo
-                     if (nequal.eq.nexternal-1) then
-                        equal_to(j,nFKSprocess)=jj
-                        exit
-                     endif
-                  enddo
-                  if (nequal.ne.nexternal-1) then
-                     maxproc_found=maxproc_found+1
-                     equal_to(j,nFKSprocess)=maxproc_found
-                     equal_to_inverse(maxproc_found,nFKSprocess)=j
-                  endif
-               endif
-            enddo
-c 2. Now that we have the unique IPROCs for a given nFKSprocess, we need
-c to check that they are equal among all nFKSprocesses.
-            if (nFKSprocess.eq.1) then
-               maxproc_found_first=maxproc_found
-               do j=1,iproc
-                  if (j.le.maxproc_found) then
-                     do i=1,nexternal-1
-                        id_first(i,j)=id_current(i,equal_to_inverse(j
-     &                       ,nFKSprocess))
-                     enddo
-                     eto(j,nFKSprocess)=equal_to(j,nFKSprocess)
-                     etoi(j,nFKSprocess)=equal_to_inverse(j,nFKSprocess)
-                  else
-                     eto(j,nFKSprocess)=equal_to(j,nFKSprocess)
-                  endif
-               enddo
-            else
-               if (maxproc_found.ne.maxproc_found_first) then
-                  write (*,*) 'Number of unique IPROCs not identical'/
-     $                 /' among nFKSprocesses',nFKSprocess,maxproc_found
-     $                 ,maxproc_found_first
-                  stop
-               endif
-c If order not equal: re-order them. This will fill the eto() and etoi()
-c arrays which map the processes for a given FKS dir to the 1st FKS dir
-               do j=1,iproc
-                  do jj=1,maxproc_found
-                     nequal=0
-                     do ii=1,nexternal-1
-                        if (id_current(ii,j) .eq. id_first(ii,jj)) then
-                           nequal=nequal+1
-                        endif
-                     enddo
-                     if (nequal.eq.nexternal-1) then
-                        eto(j,nFKSprocess)=jj
-                        etoi(jj,nFKSprocess)=j
-                     endif
-                  enddo
-               enddo
-c Should have the correct mapping now. Check that this is indeed the
-c case.
-               do j=1,maxproc_found
-                  do i=1,nexternal-1
-                     if (id_current(i,etoi(j,nFKSprocess)) .ne.
-     &                    id_first(i,j)) then
-                        write (*,*)'Particle IDs not equal (inverse)',j
-     &                       ,nFKSprocess,maxproc_found,iproc
-                        do jj=1,maxproc_found
-                           write (*,*) jj,etoi(jj,nFKSprocess)
-     &                          ,' current:', (id_current(ii,etoi(jj
-     &                          ,nFKSprocess)),ii=1,nexternal-1)
-                           write (*,*) jj,jj
-     &                          ,' saved  :', (id_first(ii
-     &                          ,jj),ii=1,nexternal-1)
-                        enddo
-                        stop
-                     endif
-                  enddo
-               enddo
-               do j=1,iproc
-                  do i=1,nexternal-1
-                     if (id_current(i,j) .ne. id_first(i,eto(j
-     &                    ,nFKSprocess))) then
-                        write (*,*)'Particle IDs not equal',j
-     &                       ,nFKSprocess,maxproc_found,iproc
-                        do jj=1,iproc
-                           write (*,*) jj,jj ,' current:',
-     &                          (id_current(ii,jj),ii=1 ,nexternal-1)
-                           write (*,*) jj,jj,' saved  :', (id_first(ii
-     &                          ,eto(jj,nFKSprocess)),ii=1,nexternal-1)
-                        enddo
-                        stop
-                     endif
-                  enddo
-               enddo
-            endif
-c Print the map to the screen
-            if (nFKSprocess.eq.1) 
-     &       write (*,*) '================================'
-            if (nFKSprocess.eq.1) write (*,*) 'process combination map '
-     &           //'(specified per FKS dir):'
-            write (buff(1:3),'(i3)') nFKSprocess
-            write (buff(4:13),'(a)') ' map     '
-            do j=1,iproc
-               write (buff(10+4*j:13+4*j),'(i4)') eto(j,nFKSprocess)
-            enddo
-            write (*,'(a)') buff(1:13+4*iproc)
-            write (buff(1:3),'(i3)') nFKSprocess
-            write (buff(4:13),'(a)') ' inv. map'
-            do j=1,maxproc_found
-               write (buff(10+4*j:13+4*j),'(i4)') etoi(j,nFKSprocess)
-            enddo
-            write (*,'(a)') buff(1:13+4*maxproc_found)
-            if (nFKSprocess.eq.fks_configs) 
-     &       write (*,*) '================================'
-         enddo
-         if (maxproc_found.ne.iproc_save(nFKSprocess_used_born)) then
-            write (*,*) 'ERROR #5 in unweight_table',maxproc_found
-     $           ,nFKSprocess_used_born
-     $           ,iproc_save(nFKSprocess_used_born)
-            stop
-         endif
-c Restore nFKSprocess
-         nFKSprocess=nFKSprocess_save
-         call fks_inc_chooser()
-         call leshouche_inc_chooser()
-         firsttime=.false.
-      endif
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
          if (unwgt_table(0,2,i).ne.0d0) then
@@ -1409,9 +1264,16 @@ c basic one to which we sum everything
                   nFKSprocess=proc_map(proc_map(0,1),k)
 c Add the n-body only once
                   if (nFKSprocess.eq.nFKSprocess_soft) then
-                     f_unwgt(nFKSprocess_soft,i) =
-     &                    f_unwgt(nFKSprocess_soft,i) +
-     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                     do j=1,iproc_save(nFKSprocess_used_born)
+                        if (eto(j,nFKSprocess_used_born).eq.i) then
+                           f_unwgt(nFKSprocess_soft,i) =
+     &                          f_unwgt(nFKSprocess_soft,i) +
+     &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                        endif
+                     enddo
+c$$$                     f_unwgt(nFKSprocess_soft,i) =
+c$$$     &                    f_unwgt(nFKSprocess_soft,i) +
+c$$$     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1548,6 +1410,9 @@ c contribution
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
          f=0d0
          nScontributions=0
+         do i=1,maxproc_found
+            f_unwgt(nFKSprocess_used_born,i)=0d0
+         enddo
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
             if (unwgt_table(0,2,j).ne.0d0) then
@@ -1561,7 +1426,9 @@ c and the n-body contributions
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
-                  f_unwgt(nFKSprocess_used_born,i)=unwgt_table(0,1,i)
+                  f_unwgt(nFKSprocess_used_born,i)=
+     &                 f_unwgt(nFKSprocess_used_born,i)+
+     &                 unwgt_table(0,1,i)
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))

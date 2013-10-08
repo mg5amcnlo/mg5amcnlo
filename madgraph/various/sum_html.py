@@ -60,8 +60,9 @@ class OneResult(object):
                     try:
                         return float(d)
                     except ValueError:
-                        if re.search(r'''[+-]?[\d.]*-\d*''', d):
-                            return 0.0
+                        m=re.search(r'''([+-]?[\d.]*)([+-]\d*)''', d)
+                        if m:
+                            return float(m.group(1))*10**(float(m.group(2)))
                         return 
                     
                 data = [secure_float(d) for d in line.split()]

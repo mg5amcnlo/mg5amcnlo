@@ -19,7 +19,9 @@ import madgraph
 import madgraph.interface.master_interface as cmd
 import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
+import madgraph.various.misc as misc
 import os
+import logging
 
 import tests.unit_tests.various.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
@@ -142,8 +144,6 @@ class TestValidCmd(unittest.TestCase):
     def test_InvalidCmd(self):
         """test that the Invalid Command are dealt with correctly"""
         
-
-        
         master = cmd.MasterCmd()
         self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
         try:
@@ -156,19 +156,16 @@ class TestValidCmd(unittest.TestCase):
         master = ms_cmd.MadSpinInterface()
         self.assertRaises(Exception, master.do_define,('aa'))
         
-        import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
-        tmp = cmd_madloop.TestCmdLoop
-        tmp.setup_logFile_for_logger('fatalerror', level='WARNING')
+        with misc.MuteLogger(['fatalerror'], [40],['/tmp/fatalerror.log'], keep=False):
+            try:
+                master.run_cmd('define aa')
+            except Exception, error:
+                self.assertTrue(False, 'error are not treated correctly: %s' % error)
+            text = open('/tmp/fatalerror.log').read()
+            self.assertTrue('{' not in text)
+            self.assertTrue('MS_debug' in text)
 
-        try:
-            master.run_cmd('define aa')
-        except Exception:
-            self.assertTrue(False, 'error are not treated correctly')
-        
-        text = open('/tmp/fatalerror.log').read()
-        self.assertTrue('{' not in text)
-        self.assertTrue('MS_debug' in text)
-        
+
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of
@@ -268,6 +265,47 @@ class TestExtendedCmd(unittest.TestCase):
         self.assertEqual(main.child, None)
         #ret = main.do_quit('')
         #self.assertEqual(ret, True)        
-         
-    
 
+class TestMadSpinFCT_in_interface(unittest.TestCase):
+    """ check if the ValidCmd works correctly """
+    
+    def setUp(self):
+        if not hasattr(self, 'cmd'):
+            TestMadSpinFCT_in_interface.cmd = cmd.MasterCmd()
+            TestMadSpinFCT_in_interface.cmd.exec_cmd('import model sm')
+            
+            
+    def test_get_final_part(self):
+        """ """
+        
+        output = self.cmd.get_final_part(' p p > e+ e-')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > e+ e- QED=2')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e-')
+        self.assertEqual(output, set([-11, 11]))        
+          
+        output = self.cmd.get_final_part(' p p > z > e+ e- / a')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > z > e+ e- [QCD]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13]))
+        
+        output = self.cmd.get_final_part(' p p > z j, z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
+        
+        output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
+        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
+        
+        

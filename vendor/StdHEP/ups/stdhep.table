@@ -1,0 +1,91 @@
+File=Table
+Product=stdhep
+#*************************************************
+Group:
+Flavor=ANY
+Qualifiers=
+
+Common:
+   Action=setup
+      proddir()
+      setupenv()
+      envSet(PDG_MASS_TBL, ${UPS_PROD_DIR}/mass_width_2006.mc)
+      envSet(MCFIO_DIR, ${UPS_PROD_DIR})
+      addAlias(Phase,${UPS_PROD_DIR}/bin/Phase)
+      addAlias(Space,${UPS_PROD_DIR}/bin/Space)
+      setupOptional(isajet v7_72a)
+      setupOptional(herwig v6_510a)
+      setupOptional(qq v9_2b)
+      setupOptional(pythia v6_413)
+      setupOptional(histo)
+      setupOptional(cern)
+      #setupOptional(gtools)
+      pathAppend(LD_LIBRARY_PATH, ${UPS_PROD_DIR}/lib)
+End:
+#*************************************************
+Group:
+Flavor=ANY
+Qualifiers=GCC3_4_3
+
+Common:
+   Action=setup
+      proddir()
+      setupenv()
+      envSet(PDG_MASS_TBL, ${UPS_PROD_DIR}/mass_width_2006.mc)
+      envSet(MCFIO_DIR, ${UPS_PROD_DIR})
+      addAlias(Phase,${UPS_PROD_DIR}/bin/Phase)
+      addAlias(Space,${UPS_PROD_DIR}/bin/Space)
+      setupOptional(isajet v7_72a -q GCC3_4_3)
+      setupOptional(herwig v6_510a -q GCC3_4_3)
+      setupOptional(qq v9_2b)
+      setupOptional(pythia v6_413 -q GCC3_4_3)
+      setupOptional(histo v5-0-5)
+      setupOptional(cern)
+      #setupOptional(gtools)
+      pathAppend(LD_LIBRARY_PATH, ${UPS_PROD_DIR}/lib)
+End:
+#*************************************************
+Group:
+Flavor=ANY
+Qualifiers=BUILD_GCC3_4_3
+
+Common:
+   Action=setup
+      proddir()
+      setupenv()
+      envSet(PDG_MASS_TBL, ${UPS_PROD_DIR}/mass_width_2006.mc)
+      envSet(MCFIO_DIR, ${UPS_PROD_DIR})
+      addAlias(Phase,${UPS_PROD_DIR}/bin/Phase)
+      addAlias(Space,${UPS_PROD_DIR}/bin/Space)
+      setupRequired(isajet v7_72a -q GCC3_4_3)
+      setupRequired(herwig v6_510a -q GCC3_4_3)
+      setupRequired(qq v9_2b)
+      setupRequired(pythia v6_413 -q GCC3_4_3)
+      setupOptional(histo v5-0-5)
+      setupOptional(cern)
+      setupRequired(gcc v3_4_3)
+      setupRequired(tex)
+      pathAppend(LD_LIBRARY_PATH, ${UPS_PROD_DIR}/lib)
+End:
+#*************************************************
+Group:
+Flavor=Darwin
+Qualifiers=
+
+Common:
+   Action=setup
+      proddir()
+      setupenv()
+      envSet(PDG_MASS_TBL, ${UPS_PROD_DIR}/mass_width_2006.mc)
+      envSet(MCFIO_DIR, ${UPS_PROD_DIR})
+      addAlias(Phase,${UPS_PROD_DIR}/bin/Phase)
+      addAlias(Space,${UPS_PROD_DIR}/bin/Space)
+      setupOptional(isajet v7_72a)
+      setupOptional(herwig v6_510a)
+      setupOptional(qq v9_2b)
+      setupOptional(pythia v6_413)
+      ##setupOptional(histo)
+      setupOptional(cern)
+      pathAppend(LD_LIBRARY_PATH, ${UPS_PROD_DIR}/lib)
+End:
+#*************************************************

@@ -111,11 +111,36 @@ C
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM
+C
+C     Keep track of whether cuts already calculated for this event
+C
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      DATA CUTSDONE,CUTSPASSED/.FALSE.,.FALSE./
 
 C $B$ MW_NEW_DEF $E$ !this is a tag for MadWeight
 
       double precision xqcutij(nexternal,nexternal),xqcuti(nexternal)
       common/to_xqcuts/xqcutij,xqcuti
+
+c jet cluster algorithm
+      integer nQCD !,NJET,JET(nexternal)
+c      double precision plab(0:3, nexternal)
+      double precision pQCD(0:3,nexternal)!,PJET(0:3,nexternal)
+c      double precision rfj,sycut,palg,fastjetdmerge
+c      integer njet_eta
+c     Photon isolation
+      integer nph,nem,k,nin
+      double precision ptg,chi_gamma_iso,iso_getdrv40
+      double precision Etsum(0:nexternal)
+      real drlist(nexternal)
+      double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
+      logical alliso
+C     Sort array of results: ismode>0 for real, isway=0 for ascending order
+      integer ismode,isway,izero,isorted(nexternal)
+      parameter (ismode=1)
+      parameter (isway=0)
+      parameter (izero=0)
 
       include 'coupl.inc'
 C
@@ -221,7 +246,15 @@ c     Put momenta in the common block to zero to start
             enddo
          enddo
          
+      ENDIF ! IF FIRSTTIME
+
+      IF (CUTSDONE) THEN
+         PASSCUTS=CUTSPASSED
+         RETURN
       ENDIF
+      CUTSDONE=.TRUE.
+      CUTSPASSED=.FALSE.
+
 c
 c     Make sure have reasonable 4-momenta
 c
@@ -239,6 +272,7 @@ c     Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+      
 c
 c     Limit S_hat
 c
@@ -740,6 +774,132 @@ c            write (*,*) hardj1,hardj2,rap(p(0,hardj1)),rap(p(0,hardj2))
          
          ENDIF
 
+c Begin photon isolation
+c NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+c     Use is made of parton cm frame momenta. If this must be
+c     changed, pQCD used below must be redefined
+c NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+c If we do not require a mimimum jet energy, there's no need to apply
+c jet clustering and all that.
+      if (ptgmin.ne.0d0) then
+
+c Put all (light) QCD partons in momentum array for jet clustering.
+c From the run_card.dat, maxjetflavor defines if b quark should be
+c considered here (via the logical variable 'is_a_jet').  nQCD becomes
+c the number of (light) QCD partons at the real-emission level (i.e. one
+c more than the Born).
+
+      nQCD=0
+      do j=nincoming+1,nexternal
+         if (is_a_j(j)) then
+            nQCD=nQCD+1
+            do i=0,3
+               pQCD(i,nQCD)=p(i,j) ! Use C.o.M. frame momenta
+            enddo
+         endif
+      enddo
+
+        nph=0
+        do j=nincoming+1,nexternal
+          if (is_a_a(j)) then
+            nph=nph+1
+            do i=0,3
+              pgamma(i,nph)=p(i,j) ! Use C.o.M. frame momenta
+            enddo
+          endif
+        enddo
+        if(nph.eq.0) goto 444
+
+        if(isoEM)then
+          nem=nph
+          do k=1,nem
+            do i=0,3
+              pem(i,k)=pgamma(i,k)
+            enddo
+          enddo
+          do j=nincoming+1,nexternal
+            if (is_a_l(j)) then
+              nem=nem+1
+              do i=0,3
+                pem(i,nem)=p(i,j) ! Use C.o.M. frame momenta
+              enddo
+            endif
+          enddo
+        endif
+
+        alliso=.true.
+
+        j=0
+        dowhile(j.lt.nph.and.alliso)
+c Loop over all photons
+          j=j+1
+
+          ptg=pt(pgamma(0,j))
+          if(ptg.lt.ptgmin)then
+            passcuts=.false.
+            return
+          endif
+
+c Isolate from hadronic energy
+          do i=1,nQCD
+            drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pQCD(0,i)))
+          enddo
+          call sortzv(drlist,isorted,nQCD,ismode,isway,izero)
+          Etsum(0)=0.d0
+          nin=0
+          do i=1,nQCD
+            if(dble(drlist(isorted(i))).le.R0gamma)then
+              nin=nin+1
+              Etsum(nin)=Etsum(nin-1)+pt(pQCD(0,isorted(i)))
+            endif
+          enddo
+          do i=1,nin
+            alliso=alliso .and.
+     #        Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+     #                                  R0gamma,xn,epsgamma,ptg)
+          enddo
+
+c Isolate from EM energy
+          if(isoEM.and.nem.gt.1)then
+            do i=1,nem
+              drlist(i)=sngl(iso_getdrv40(pgamma(0,j),pem(0,i)))
+            enddo
+            call sortzv(drlist,isorted,nem,ismode,isway,izero)
+c First of list must be the photon: check this, and drop it
+            if(isorted(1).ne.j.or.drlist(isorted(1)).gt.1.e-4)then
+              write(*,*)'Error #1 in photon isolation'
+              write(*,*)j,isorted(1),drlist(isorted(1))
+              stop
+            endif
+            Etsum(0)=0.d0
+            nin=0
+            do i=2,nem
+              if(dble(drlist(isorted(i))).le.R0gamma)then
+                nin=nin+1
+                Etsum(nin)=Etsum(nin-1)+pt(pem(0,isorted(i)))
+              endif
+            enddo
+            do i=1,nin
+              alliso=alliso .and.
+     #          Etsum(i).le.chi_gamma_iso(dble(drlist(isorted(i))),
+     #                                    R0gamma,xn,epsgamma,ptg)
+            enddo
+
+          endif
+
+c End of loop over photons
+        enddo
+
+        if(.not.alliso)then
+          passcuts=.false.
+          return
+        endif
+      endif
+
+ 444    continue
+c End photon isolation
+
+
 C...Set couplings if event passed cuts
 
       if(.not.fixed_ren_scale) then
@@ -784,7 +944,281 @@ c     Set couplings in model files
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '
       if(debug) write (*,*) '============================='
 
+      CUTSPASSED=.TRUE.
 
+      RETURN
+      END
+
+
+C
+C     FUNCTION FOR ISOLATION
+C
+
+      function iso_getdrv40(p1,p2)
+      implicit none
+      real*8 iso_getdrv40,p1(0:3),p2(0:3)
+      real*8 iso_getdr
+c
+      iso_getdrv40=iso_getdr(p1(0),p1(1),p1(2),p1(3),
+     #                       p2(0),p2(1),p2(2),p2(3))
+      return
+      end
+
+
+      function iso_getdr(en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2)
+      implicit none
+      real*8 iso_getdr,en1,ptx1,pty1,pl1,en2,ptx2,pty2,pl2,deta,dphi,
+     # iso_getpseudorap,iso_getdelphi
+c
+      deta=iso_getpseudorap(en1,ptx1,pty1,pl1)-
+     #     iso_getpseudorap(en2,ptx2,pty2,pl2)
+      dphi=iso_getdelphi(ptx1,pty1,ptx2,pty2)
+      iso_getdr=sqrt(dphi**2+deta**2)
+      return
+      end
+
+
+      function iso_getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 iso_getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      iso_getpseudorap=eta
+      return
+      end
+
+
+      function iso_getdelphi(ptx1,pty1,ptx2,pty2)
+      implicit none
+      real*8 iso_getdelphi,ptx1,pty1,ptx2,pty2,tiny,pt1,pt2,tmp
+      parameter (tiny=1.d-5)
+c
+      pt1=sqrt(ptx1**2+pty1**2)
+      pt2=sqrt(ptx2**2+pty2**2)
+      if(pt1.ne.0.d0.and.pt2.ne.0.d0)then
+        tmp=ptx1*ptx2+pty1*pty2
+        tmp=tmp/(pt1*pt2)
+        if(abs(tmp).gt.1.d0+tiny)then
+          write(*,*)'Cosine larger than 1'
+          stop
+        elseif(abs(tmp).ge.1.d0)then
+          tmp=sign(1.d0,tmp)
+        endif
+        tmp=acos(tmp)
+      else
+        tmp=1.d8
+      endif
+      iso_getdelphi=tmp
+      return
+      end
+
+      function chi_gamma_iso(dr,R0,xn,epsgamma,pTgamma)
+c Eq.(3.4) of Phys.Lett. B429 (1998) 369-374 [hep-ph/9801442]
+      implicit none
+      real*8 chi_gamma_iso,dr,R0,xn,epsgamma,pTgamma
+      real*8 tmp,axn
+c
+      axn=abs(xn)
+      tmp=epsgamma*pTgamma
+      if(axn.ne.0.d0)then
+        tmp=tmp*( (1-cos(dr))/(1-cos(R0)) )**axn
+      endif
+      chi_gamma_iso=tmp
+      return
+      end
+
+
+*
+* $Id: sortzv.F,v 1.1.1.1 1996/02/15 17:49:50 mclareni Exp $
+*
+* $Log: sortzv.F,v $
+* Revision 1.1.1.1  1996/02/15 17:49:50  mclareni
+* Kernlib
+*
+*
+c$$$#include "kerngen/pilot.h"
+      SUBROUTINE SORTZV (A,INDEX,N1,MODE,NWAY,NSORT)
+C
+C CERN PROGLIB# M101    SORTZV          .VERSION KERNFOR  3.15  820113
+C ORIG. 02/10/75
+C
+      DIMENSION A(N1),INDEX(N1)
+C
+C
+      N = N1
+      IF (N.LE.0)            RETURN
+      IF (NSORT.NE.0) GO TO 2
+      DO 1 I=1,N
+    1 INDEX(I)=I
+C
+    2 IF (N.EQ.1)            RETURN
+      IF (MODE)    10,20,30
+   10 CALL SORTTI (A,INDEX,N)
+      GO TO 40
+C
+   20 CALL SORTTC(A,INDEX,N)
+      GO TO 40
+C
+   30 CALL SORTTF (A,INDEX,N)
+C
+   40 IF (NWAY.EQ.0) GO TO 50
+      N2 = N/2
+      DO 41 I=1,N2
+      ISWAP = INDEX(I)
+      K = N+1-I
+      INDEX(I) = INDEX(K)
+   41 INDEX(K) = ISWAP
+   50 RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTF (A,INDEX,N1)
+C
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF (AI.LE.A (I22)) GO TO 3
+      INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (A(I22)-A(I222)) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (AI-A(I22)) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTI (A,INDEX,N1)
+C
+      INTEGER A,AI
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF (AI.LE.A (I22)) GO TO 3
+      INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (A(I22)-A(I222)) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (AI-A(I22)) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      SUBROUTINE SORTTC (A,INDEX,N1)
+C
+      INTEGER A,AI
+      DIMENSION A(N1),INDEX(N1)
+C
+      N = N1
+      DO 3 I1=2,N
+      I3 = I1
+      I33 = INDEX(I3)
+      AI = A(I33)
+    1 I2 = I3/2
+      IF (I2) 3,3,2
+    2 I22 = INDEX(I2)
+      IF(ICMPCH(AI,A(I22)))3,3,21
+   21 INDEX (I3) = I22
+      I3 = I2
+      GO TO 1
+    3 INDEX (I3) = I33
+    4 I3 = INDEX (N)
+      INDEX (N) = INDEX (1)
+      AI = A(I3)
+      N = N-1
+      IF (N-1) 12,12,5
+    5 I1 = 1
+    6 I2 = I1 + I1
+      IF (I2.LE.N) I22= INDEX(I2)
+      IF (I2-N) 7,9,11
+    7 I222 = INDEX (I2+1)
+      IF (ICMPCH(A(I22),A(I222))) 8,9,9
+    8 I2 = I2+1
+      I22 = I222
+    9 IF (ICMPCH(AI,A(I22))) 10,11,11
+   10 INDEX(I1) = I22
+      I1 = I2
+      GO TO 6
+   11 INDEX (I1) = I3
+      GO TO 4
+   12 INDEX (1) = I3
+      RETURN
+      END
+*     ========================================
+      FUNCTION ICMPCH(IC1,IC2)
+C     FUNCTION TO COMPARE TWO 4 CHARACTER EBCDIC STRINGS - IC1,IC2
+C     ICMPCH=-1 IF HEX VALUE OF IC1 IS LESS THAN IC2
+C     ICMPCH=0  IF HEX VALUES OF IC1 AND IC2 ARE THE SAME
+C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
+      I1=IC1
+      I2=IC2
+      IF(I1.GE.0.AND.I2.GE.0)GOTO 40
+      IF(I1.GE.0)GOTO 60
+      IF(I2.GE.0)GOTO 80
+      I1=-I1
+      I2=-I2
+      IF(I1-I2)80,70,60
+ 40   IF(I1-I2)60,70,80
+ 60   ICMPCH=-1
+      RETURN
+ 70   ICMPCH=0
+      RETURN
+ 80   ICMPCH=1
       RETURN
       END
 

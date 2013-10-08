@@ -117,6 +117,9 @@ class testFKSHelasObjects(unittest.TestCase):
                 {'process_definitions': my_process_definitions})
         my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = True)
 
+        self.assertEqual(my_helas_mp['has_isr'], True)
+        self.assertEqual(my_helas_mp['has_fsr'], False)
+
         for me in my_helas_mp['matrix_elements']:
             self.assertEqual(len(me.born_matrix_element['color_basis']), 1)
 

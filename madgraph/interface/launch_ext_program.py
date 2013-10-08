@@ -133,6 +133,12 @@ class MadLoopLauncher(ExtLauncher):
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
         self.cards = ['param_card.dat','MadLoopParams.dat']
 
+    def prepare_run(self):
+        """ Usually the user will not want to doublecheck the helicity filter."""
+        process_checks.LoopMatrixElementTimer.set_MadLoop_Params(
+                                os.path.join(self.card_dir,'MadLoopParams.dat'),
+                                        {'DoubleCheckHelicityFilter':'.FALSE.'})
+
     def treat_input_file(self, filename, default=None, msg='', dir_path=None):
         """ask to edit a file"""
 
@@ -191,7 +197,7 @@ class MadLoopLauncher(ExtLauncher):
                 self.treat_input_file('PS.input', default='n', 
                   msg='Phase-space point for process %s.'%shell_name,\
                                                              dir_path=curr_path)
-                # We use mu_r=1.0 to use the one defined by the user in the
+                # We use mu_r=-1.0 to use the one defined by the user in the
                 # param_car.dat
                 evaluator.fix_PSPoint_in_check(sub_path, 
                   read_ps = os.path.isfile(os.path.join(curr_path, 'PS.input')),
@@ -222,14 +228,53 @@ class MadLoopLauncher(ExtLauncher):
             return '%s%.16e'%('' if float<0.0 else ' ',float)
         
         ASCII_bar = ''.join(['='*96])
+        
+        ret_code_h = res['return_code']//100
+        ret_code_t = (res['return_code']-100*ret_code_h)//10
+        ret_code_u = res['return_code']%10
+        StabilityOutput=[]
+        if ret_code_h==1:
+            if ret_code_t==3 or ret_code_t==4:
+                StabilityOutput.append('| Unknown numerical stability because '+\
+                                      'MadLoop is in the initialization stage.')
+            else:
+                StabilityOutput.append('| Unknown numerical stability, check '+\
+                                        'CTRunMode value in MadLoopParams.dat.')
+        elif ret_code_h==2:
+            StabilityOutput.append('| Stable kinematic configuration (SPS).')
+        elif ret_code_h==3:
+            StabilityOutput.append('| Unstable kinematic configuration (UPS).')
+            StabilityOutput.append('| Quadruple precision rescue successful.')            
+        elif ret_code_h==4:
+            StabilityOutput.append('| Exceptional kinematic configuration (EPS).')
+            StabilityOutput.append('| Both double and quadruple precision'+\
+                                                  ' computations are unstable.')
+        
+        if ret_code_t==2 or ret_code_t==4:
+            StabilityOutput.append('| Quadruple precision was used for this'+\
+                                                                 'computation.')
+        if ret_code_h!=1:
+            if res['accuracy']>0.0:
+                StabilityOutput.append('| Estimated accuracy = %.1e'\
+                                                               %res['accuracy'])
+            elif res['accuracy']==0.0:
+                StabilityOutput.append('| Estimated accuracy = %.1e'\
+                             %res['accuracy']+' (i.e. beyond double precision)')
+            else:
+                StabilityOutput.append('| Estimated accuracy could not be '+\
+                                              'computed for an unknown reason.')
+
+        PS_point_spec = ['|| Phase-Space point specification (E,px,py,pz)','|']
+        PS_point_spec.append('\n'.join(['| '+' '.join(['%s'%\
+           special_float_format(pi) for pi in pmom]) for pmom in res['res_p']]))
+        PS_point_spec.append('|')
+        
         if res['export_format']=='Default':
             return '\n'.join(['\n'+ASCII_bar,
                   '|| Results for process %s',
-                  ASCII_bar,
-                  '|| Phase-Space point specification (E,px,py,pz)\n',
-                  '\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                     for pmom in res['res_p']]),
-                  '\n|| Born contribution (GeV^%d):'%res['gev_pow'],
+                  ASCII_bar]+PS_point_spec+StabilityOutput+[
+                  '|',
+                  '|| Born contribution (GeV^%d):'%res['gev_pow'],
                   '|    Born        = %s'%special_float_format(res['born']),
                   '|| Virtual contribution normalized with born*alpha_S/(2*pi):',
                   '|    Finite      = %s'%special_float_format(res['finite']),
@@ -239,13 +284,12 @@ class MadLoopLauncher(ExtLauncher):
         elif res['export_format']=='LoopInduced':
             return '\n'.join(['\n'+ASCII_bar,
                   '|| Results for process %s (Loop-induced)',
-                  ASCII_bar,
-                  '|| Phase-Space point specification (E,px,py,pz)\n',
-                  '\n'.join([' '.join(['%.16E'%pi for pi in pmom]) \
-                                                     for pmom in res['res_p']]),
-                  '\n|| Loop amplitude squared, must be finite:',
+                  ASCII_bar]+PS_point_spec+StabilityOutput+[
+                  '|',
+                  '|| Loop amplitude squared, must be finite:',
                   '|    Finite      = %s'%special_float_format(res['finite']),
                   ASCII_bar+'\n'])
+
 class SALauncher(ExtLauncher):
     """ A class to launch a simple Standalone test """
     

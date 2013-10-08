@@ -221,6 +221,11 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         for name in mg4_part.sorted_keys:
             if name in not_equiv:
                 continue
+            if name == 'propagator':
+                if mg4_part.get('mass') == 'ZERO':
+                    if ufo_part.get('propagator') == 0:
+                        continue
+            
             self.assertEqual(mg4_part.get(name), ufo_part.get(name), 
                     'fail for particle %s different property for %s, %s != %s' %
                     (mg4_part['name'], name, mg4_part.get(name), \

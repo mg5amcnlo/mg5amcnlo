@@ -564,7 +564,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None, **opt):
+            timeout = True, fct_timeout=None, ask_class=None, alias={},**opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -601,11 +601,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
+        if alias:
+            choices += alias.keys()
+        
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
+            if answer in alias:
+                answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
             return answer
@@ -614,6 +619,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
 
+        if value in alias:
+                value = alias[value]
         if value == default and ask_class:
             value = question_instance.default(default)
         return value
@@ -850,7 +857,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
-        if printcmd:
+        if printcmd and not line.startswith('#'):
             logger.info(line)
         if self.child:
             current_interface = self.child
@@ -925,6 +932,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if self.log:
             logger.info("History written to " + output_file.name)
+
+    def compile(self, *args, **opts):
+        """ """
+        
+        return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):
         """remove all line in history (but the last) starting with line.
@@ -1059,7 +1071,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 level = int(line) - 1
                 if level:
                     self.mother.lastcmd = 'quit %s' % level
-
+        logger.info(' ')
         return True
 
     # Aliases

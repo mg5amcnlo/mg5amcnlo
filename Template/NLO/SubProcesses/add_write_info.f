@@ -101,7 +101,7 @@ c For (n+1)-body this is the configuration mapping
 c For shifting QCD partons from zero to their mass-shell
       double precision x(99),p(0:3,99)
       integer mfail
-      double precision xmi,xmj,xm1,xm2,wgt
+      double precision xmi,xmj,xm1,xm2,emsum,tmpecm,dot,wgt
       double precision p1_cnt(0:3,nexternal,-2:2)
       double precision wgt_cnt(-2:2)
       double precision pswgt_cnt(-2:2)
@@ -284,7 +284,17 @@ c
          mfail=-1
 c fills the common block with the MC masses (special treatment of i_fks
 c and j_fks, because phase-space generation won't work in all cases).
-         call put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2)
+         call put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2,emsum)
+c Prevents the code from crashing in the extremely rare case in which
+c the cm energy is smaller than sum of masses - keep massless partons
+         tmpecm=min(dot(pp(0,1),pp(0,2)),
+     #              dot(p_born(0,1),p_born(0,2)))
+         tmpecm=sqrt(2d0*tmpecm)
+         if(tmpecm.lt.0.99*emsum)then
+           write (*,*) 'Momenta generation for put_on_MC_mshell failed'
+           mfail=1
+           goto 888
+         endif
          wgt=1d0
 c generate a phase-space point with the MC masses
          call generate_momenta(ndim,iconfig,wgt,x,p)
@@ -300,10 +310,11 @@ c include initial state masses
             call set_cms_stuff(izero)
             call put_on_MC_mshell_in(p1_cnt(0,1,0),xm1,xm2,mfail)
          endif
+ 888     continue
 c restore the common block for the masses to the original MG masses
          call put_on_MG_mshell()
          if (mfail.eq.0) then 
-c all went fine and we can copy the new momenta of the old ones.
+c all went fine and we can copy the new momenta onto the old ones.
             do i=1,nexternal
                do j=0,3
                   if(Hevents) then
@@ -316,8 +327,9 @@ c all went fine and we can copy the new momenta of the old ones.
                enddo
             enddo
          elseif(mfail.eq.1)then
-c Probably not need, but just to make sure: fill the momenta common
+c Probably not needed, but just to make sure: fill the momenta common
 c blocks again by call generate momenta again.
+            wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
             if(Hevents)then
               call set_cms_stuff(mohdr)
@@ -762,11 +774,15 @@ c     If mother and daughter have the same ID, remove one of them
                idenpart=0
                do j=1,2
                   ida(j)=itree(j,i)
-                  if(    (ida(j).lt.0.and.
-     &                        sprop_tree(i).eq.sprop_tree(ida(j)))
-     &               .or.(ida(j).gt.0.and.
-     &                        sprop_tree(i).eq.IDUP(ida(j))))
-     &                 idenpart=ida(j)    ! mother and daugher have same ID
+                  if(ida(j).lt.0) then
+                     if (sprop_tree(i).eq.sprop_tree(ida(j))) then
+                        idenpart=ida(j) ! mother and daugher have same ID
+                     endif
+                  elseif (ida(j).gt.0) then
+                     if (sprop_tree(i).eq.IDUP(ida(j))) then
+                        idenpart=ida(j) ! mother and daugher have same ID
+                     endif
+                  endif
                enddo
 c     Always remove if daughter final-state (and identical)
                if(idenpart.gt.0) then
@@ -1030,7 +1046,7 @@ c
 
 
 
-      subroutine put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2)
+      subroutine put_on_MC_mshell(Hevents,jpart,xmi,xmj,xm1,xm2,emsum)
 c Sets the common block /to_mass/emass, to be passed to one_tree
 c to generate a massive kinematics with efficiency 1.
 c
@@ -1040,7 +1056,7 @@ c This routines assumes that the mother of (i_fks,j_fks) has
 c label min(i_fks,j_fks)
       implicit none
       integer ip
-      double precision xmi,xmj,xm1,xm2
+      double precision xmi,xmj,xm1,xm2,emsum
       logical Hevents
 
       integer i,j,idpart,idparti,idpartj
@@ -1195,6 +1211,11 @@ c One may use equivalently a condition on maxjetflavor
           endif
           xmcmass(i)=tmpmass
         endif
+      enddo
+c
+      emsum=0.d0
+      do i=nincoming+1,nexternal
+        emsum=emsum+emass(i)
       enddo
 c
       if( xmi.eq.-1.d0.or.xmj.eq.-1.d0 .or.

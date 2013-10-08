@@ -65,11 +65,17 @@ c
       common /to_seed/ iseed
       integer nevents
 
+      character*7 event_norm
 c
 c----------
 c     start
 c----------
       include 'run_card.inc'
+      
+c MZ add the possibility to have shower_MC input lowercase
+      call to_upper(shower_MC)
+
+
 
 
 c*********************************************************************
@@ -77,7 +83,6 @@ c     Minimum pt's                                                   *
 c*********************************************************************
       ptb     = 0d0
       pta     = 0d0
-      ptl     = 0d0
       misset  = 0d0
       ptonium = 0d0
       
@@ -95,7 +100,6 @@ c     Maximum rapidity (absolute value)                              *
 c*********************************************************************
       etab=1d2
       etaa=1d2
-      etal=1d2
       etaonium=1d2
       etajmin=0d0
       etabmin=0d0
@@ -120,7 +124,6 @@ c     Minimum DeltaR distance                                        *
 c*********************************************************************
       drjj=0d0
       drbb=0d0
-      drll=0d0
       draa=0d0
       drbj=0d0
       draj=0d0
@@ -234,6 +237,21 @@ c For backward compatibility
       q2fact(2) = muF2_ref_fixed**2      ! fact scale**2 for pdf2     
       scalefact=muR_over_ref
       ellissextonfact=QES_over_ref
+
+c check that the event normalization input is reasoble
+      if (event_norm(1:7).ne.'average' .and. event_norm(1:3).ne.'sum')
+     $     then
+         write (*,*) 'Do not understand the event_norm parameter'/
+     &        /' in the run_card.dat. Possible options are'/
+     &        /' "average" or "sum". Current input is: ',event_norm
+         open(unit=26,file='../../error',status='unknown')
+         write (26,*) 'Do not understand the event_norm parameter'/
+     &        /' in the run_card.dat. Possible options are'/
+     &        /' "average" or "sum". Current input is: ',event_norm
+         
+         stop 1
+      endif
+
 
 c info for reweight
 
@@ -350,11 +368,16 @@ C-------------------------------------------------
       enddo
 
       if(mpdf.eq.-1) then
-        write(*,*)'pdf ',pdfin,' not implemented in get_pdfup.'
+        write(*,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
         write(*,*)'known pdfs are'
         write(*,*) pdflabs
-        write(*,*)'using ',pdflabs(12)
-        mpdf=numspdf(12)
+        open(unit=26,file='../../error',status='unknown')
+        write(26,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
+        write(26,*)'known pdfs are'
+        write(26,*) pdflabs
+        stop 1
+c$$$        write(*,*)'using ',pdflabs(12)
+c$$$        mpdf=numspdf(12)
       endif
 
       do i=1,2

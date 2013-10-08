@@ -543,7 +543,7 @@ V_UV1eps3G = CTVertex(name = 'V_UV1eps3G',
               lorentz = [ L.VVV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_3Gq,(0,0,1):C.UV_3Gb,(0,0,2):C.UV_3Gt,(0,0,3):C.UV_3Gg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gggg
 V_UV4G = CTVertex(name = 'V_UV1eps4G',
@@ -554,7 +554,7 @@ V_UV4G = CTVertex(name = 'V_UV1eps4G',
               couplings = {(0,0,0):C.UV_4Gq,(0,0,1):C.UV_4Gb,(0,0,2):C.UV_4Gt,(0,0,3):C.UV_4Gg,
                            (1,1,0):C.UV_4Gq,(1,1,1):C.UV_4Gb,(1,1,2):C.UV_4Gt,(1,1,3):C.UV_4Gg,
                            (2,2,0):C.UV_4Gq,(2,2,1):C.UV_4Gb,(2,2,2):C.UV_4Gt,(2,2,3):C.UV_4Gg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gdd~
 V_UVGDD = CTVertex(name = 'V_UVGDD',
@@ -563,7 +563,7 @@ V_UVGDD = CTVertex(name = 'V_UVGDD',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # guu~
 V_UVGUU = CTVertex(name = 'V_UVGUU',
@@ -572,7 +572,7 @@ V_UVGUU = CTVertex(name = 'V_UVGUU',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gcc~
 V_UVGCC = CTVertex(name = 'V_UVGCC',
@@ -581,7 +581,7 @@ V_UVGCC = CTVertex(name = 'V_UVGCC',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gss~
 V_UVGSS = CTVertex(name = 'V_UVGSS',
@@ -590,7 +590,7 @@ V_UVGSS = CTVertex(name = 'V_UVGSS',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gbb~
 V_UVGBB = CTVertex(name = 'V_UVGBB',
@@ -599,7 +599,7 @@ V_UVGBB = CTVertex(name = 'V_UVGBB',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gtt~
 V_UVGTT = CTVertex(name = 'V_UVGTT',
@@ -608,7 +608,7 @@ V_UVGTT = CTVertex(name = 'V_UVGTT',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # These are the mass renormalization vertices.
 
@@ -640,7 +640,7 @@ V_UVHtt = CTVertex(name = 'V_UVHtt',
               lorentz = [ L.FFS1 ],
               loop_particles = [[[P.G,P.t]]],                   
               couplings = {(0,0,0):C.UV_Htt},
-              type = 'UV')
+              type = 'UVtree')
 
 V_UVHbb = CTVertex(name = 'V_UVHbb',
               particles = [ P.b__tilde__, P.b, P.H ],
@@ -648,5 +648,5 @@ V_UVHbb = CTVertex(name = 'V_UVHbb',
               lorentz = [ L.FFS1 ],
               loop_particles = [[[P.G,P.b]]],
               couplings = {(0,0,0):C.UV_Hbb},
-              type = 'UV')
+              type = 'UVtree')
 

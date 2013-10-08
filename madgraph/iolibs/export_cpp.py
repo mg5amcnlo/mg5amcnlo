@@ -1148,16 +1148,16 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             return ""
         
         mass_strings = []
-        for i in range(2, len(process.get('legs'))):
-            if self.model.get_particle(process.get('legs')[i].get('id')).\
+        for i in range(2, len(process.get_legs_with_decays())):
+            if self.model.get_particle(process.get_legs_with_decays()[i].get('id')).\
                    get('mass') not in  ['zero', 'ZERO']:
                 mass_strings.append("int id%dMass() const {return %d;}" % \
-                                (i + 1, abs(process.get('legs')[i].get('id'))))
+                                (i + 1, abs(process.get_legs_with_decays()[i].get('id'))))
 
         return "\n".join(mass_strings)
 
     def get_resonance_lines(self):
-        """Return the lines which define the ids for the final state particles,
+        """Return the lines which define the ids for intermediate resonances
         for the Pythia phase space"""
 
         if self.nfinal == 1:
@@ -1173,48 +1173,60 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             res_strings.append("virtual int resonance%s() const {return %d;}"\
                                 % (res_letters[i], sid))
 
+        if schannel:
+           res_strings.append("virtual bool isSChannel() const {return true;}")
+
         if singleres != 0:
             res_strings.append("virtual int idSChannel() const {return %d;}" \
                                % singleres)
-        if schannel:
-            res_strings.append("virtual bool isSChannel() const {return true;}")
             
         return "\n".join(res_strings)
 
     def get_resonances(self):
         """Return the PIDs for any resonances in 2->2 and 2->3 processes."""
 
-        resonances = []
         model = self.matrix_elements[0].get('processes')[0].get('model')
         new_pdg = model.get_first_non_pdg()
         # Get a list of all resonant s-channel contributions
         diagrams = sum([me.get('diagrams') for me in self.matrix_elements], [])
+        resonances = []
+        no_t_channels = True
+        final_s_channels = []
         for diagram in diagrams:
             schannels, tchannels = diagram.get('amplitudes')[0].\
-                                   get_s_and_t_channels(self.ninitial, new_pdg)
-
+                                   get_s_and_t_channels(self.ninitial, model,
+                                                        new_pdg)
             for schannel in schannels:
                 sid = schannel.get('legs')[-1].get('id')
                 part = self.model.get_particle(sid)
                 if part:
                     width = self.model.get_particle(sid).get('width')
                     if width.lower() != 'zero':
-                        resonances.append(sid)
+                        # Only care about absolute value of resonance PIDs:
+                        resonances.append(abs(sid))
+                    else:
+                        sid = 0
+                    if len(tchannels) == 1 and schannel == schannels[-1]:
+                        final_s_channels.append(abs(sid))
+
+            if len(tchannels) > 1:
+                # There are t-channel diagrams
+                no_t_channels = False
+            
         resonance_set = set(resonances)
+        final_s_set = set(final_s_channels)
 
         singleres = 0
-        # singleres is set if all diagrams have the same resonance
-        if len(resonances) == len(diagrams) and len(resonance_set) == 1:
-            singleres = resonances[0]
+        # singleres is set if all diagrams have the same final resonance
+        if len(final_s_channels) == len(diagrams) and len(final_s_set) == 1 \
+                and final_s_channels[0] != 0:
+            singleres = final_s_channels[0]
 
-        # Only care about absolute value of resonance PIDs:
-        resonance_set = list(set([abs(pid) for pid in resonance_set]))
+        resonance_set = list(set([pid for pid in resonance_set]))
 
-        # schannel is True if all diagrams are s-channel and there are
+        # schannel is True if all diagrams are pure s-channel and there are
         # no QCD vertices
-        schannel = not any([\
-            len(d.get('amplitudes')[0].get_s_and_t_channels(self.ninitial, new_pdg)[0])\
-                 == 0 for d in diagrams]) and \
+        schannel = no_t_channels and \
                    not any(['QCD' in d.calculate_orders() for d in diagrams])
 
         return resonance_set, singleres, schannel
@@ -1292,14 +1304,14 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             final_mirror_id_list = []
             for (i, me) in beam_processes:
                 final_id_list.extend([tuple([l.get('id') for l in \
-                                             proc.get('legs') if l.get('state')]) \
+                                             proc.get_legs_with_decays() if l.get('state')]) \
                                       for proc in me.get('processes') \
                                       if beam_parts == \
                                       (proc.get('legs')[0].get('id'),
                                        proc.get('legs')[1].get('id'))])
             for (i, me) in beam_mirror_processes:
                 final_mirror_id_list.extend([tuple([l.get('id') for l in \
-                                             proc.get('legs') if l.get('state')]) \
+                                             proc.get_legs_with_decays() if l.get('state')]) \
                                       for proc in me.get_mirror_processes() \
                                       if beam_parts == \
                                       (proc.get('legs')[0].get('id'),
@@ -1322,7 +1334,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             for final_ids in final_id_list:
                 items = [(i, len([ p for p in me.get('processes') \
                              if [l.get('id') for l in \
-                             p.get('legs')] == \
+                             p.get_legs_with_decays()] == \
                              list(beam_parts) + list(final_ids)])) \
                        for (i, me) in beam_processes]
                 me_weight.append("+".join(["matrix_element[%i]*%i" % (i, l) for\
@@ -1335,7 +1347,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
 
             for final_ids in final_mirror_id_list:
                 items = [(i, len([ p for p in me.get_mirror_processes() \
-                             if [l.get('id') for l in p.get('legs')] == \
+                             if [l.get('id') for l in p.get_legs_with_decays()] == \
                              list(beam_parts) + list(final_ids)])) \
                        for (i, me) in beam_mirror_processes]
                 me_weight.append("+".join(["matrix_element[%i]*%i" % \
@@ -1394,7 +1406,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             res_lines.append("if(%s){" % \
                                  "||".join(["&&".join(["id%d == %d" % \
                                             (i+1, l.get('id')) for (i, l) in \
-                                            enumerate(p.get('legs'))])\
+                                            enumerate(p.get_legs_with_decays())])\
                                            for p in me.get('processes')]))
             if ime > 0:
                 res_lines[-1] = "else " + res_lines[-1]
@@ -1448,7 +1460,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             res_lines.append("else if(%s){" % \
                                  "||".join(["&&".join(["id%d == %d" % \
                                             (i+1, l.get('id')) for (i, l) in \
-                                            enumerate(p.get('legs'))])\
+                                            enumerate(p.get_legs_with_decays())])\
                                            for p in me.get_mirror_processes()]))
 
             proc = me.get('processes')[0]
@@ -1656,7 +1668,7 @@ class UFOModelConverterCPP(object):
         params_ext = []
         for key in keys:
             if key == ('external',):
-                params_ext += self.model['parameters'][key]
+                params_ext += [p for p in self.model['parameters'][key] if p.name]
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,
@@ -1895,7 +1907,7 @@ class UFOModelConverterCPP(object):
         if self.wanted_lorentz:
             aloha_model.compute_subset(self.wanted_lorentz)
         else:
-            aloha_model.compute_all(save=False)
+            aloha_model.compute_all(save=False, custom_propa=True)
             
         for abstracthelas in dict(aloha_model).values():
             h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
@@ -2121,7 +2133,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         params_ext = []
         for key in keys:
             if key == ('external',):
-                params_ext += self.model['parameters'][key]
+                params_ext += [p for p in self.model['parameters'][key] if p.name]
             elif 'aS' in key:
                 for p in self.model['parameters'][key]:
                     self.params_dep.append(base_objects.ModelVariable(p.name,

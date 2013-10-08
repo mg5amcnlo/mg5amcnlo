@@ -48,6 +48,8 @@ c Compile with makefile_rwgt
       logical AddInfoLHE
       external compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
      &     ,compute_rwgt_wgt_Hev
+      integer i_process
+      common/c_addwrite/i_process
 c
       call setrun                !Sets up run parameters
 
@@ -58,7 +60,7 @@ c
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        isave=8
+        isave=9
       else
         isave=0
       endif
@@ -206,6 +208,8 @@ c To keep track of the accumulated results:
            xsecPDFr_acc(n)=0d0
         enddo
 
+c Determine the flavor map between the NLO and Born
+      call find_iproc_map()
 
       do i=1,maxevt
         call read_lhef_event(ifile,
@@ -251,14 +255,19 @@ c To keep track of the accumulated results:
               wgtxsecmu(kr,kf)=0d0
               if(iSorH_lhe.eq.1)then
 c The nbody contributions
-                 if (kwgtinfo.eq.5) wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)
-     &                +compute_rwgt_wgt_Sev_nbody(pr_muR_over_ref
-     &                ,pr_muF1_over_ref, pr_muF2_over_ref
-     &                ,xQES_over_ref, kwgtinfo)
+                 if (kwgtinfo.eq.5) then
+                    call fill_reweight0inc_nbody(i_process)
+                    wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)
+     &                   +compute_rwgt_wgt_Sev_nbody(pr_muR_over_ref
+     &                   ,pr_muF1_over_ref, pr_muF2_over_ref
+     &                   ,xQES_over_ref, kwgtinfo)
+                    call reweight_settozero()
+                 endif
                  do ii=1,nScontributions
                     nFKSprocess_used=nFKSprocess_reweight(ii)
                     if (kwgtinfo.eq.5)
-     &                   call fill_reweight0inc(nFKSprocess_used*2-1)
+     &                   call fill_reweight0inc(nFKSprocess_used*2-1
+     $                   ,i_process)
                     wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
      &                   compute_rwgt_wgt_Sev(pr_muR_over_ref
      &                   ,pr_muF1_over_ref, pr_muF2_over_ref
@@ -267,7 +276,8 @@ c The nbody contributions
                  enddo
               elseif(iSorH_lhe.eq.2)then
                  if (kwgtinfo.eq.5)
-     &                call fill_reweight0inc(nFKSprocess_used*2)
+     &                call fill_reweight0inc(nFKSprocess_used*2,
+     &                i_process)
                  wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
      &                compute_rwgt_wgt_Hev(pr_muR_over_ref
      &                ,pr_muF1_over_ref, pr_muF2_over_ref
@@ -286,13 +296,13 @@ c
 
           if (kwgtinfo.eq.5) then
              if (iSorH_lhe.eq.1) then
-                wgtref=wgtref_nbody
+                wgtref=wgtref_nbody_all(i_process)
                 do ii=1,nScontributions
-                   wgtref=wgtref+
-     &                  wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                   wgtref=wgtref+ wgtref_all(nFKSprocess_reweight(ii)*2
+     $                  -1,i_process)
                 enddo
              else
-                wgtref=wgtref_all(nFKSprocess_used*2)
+                wgtref=wgtref_all(nFKSprocess_used*2,i_process)
              endif
           endif
 
@@ -315,14 +325,19 @@ c
 
              if(iSorH_lhe.eq.1)then
 c The nbody contributions
-                if (kwgtinfo.eq.5) wgtxsecPDF(n)=wgtxsecPDF(n)
-     &               +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
-     &               ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
-     &               kwgtinfo)
+                if (kwgtinfo.eq.5) then
+                   call fill_reweight0inc_nbody(i_process)
+                   wgtxsecPDF(n)=wgtxsecPDF(n)
+     $                  +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
+     $                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
+     $                  kwgtinfo)
+                   call reweight_settozero()
+                endif
                 do ii=1,nScontributions
                    nFKSprocess_used=nFKSprocess_reweight(ii)
                    if (kwgtinfo.eq.5)
-     &                  call fill_reweight0inc(nFKSprocess_used*2-1)
+     &                  call fill_reweight0inc(nFKSprocess_used*2-1
+     $                   ,i_process)
                    wgtxsecPDF(n)=wgtxsecPDF(n)+
      &                  compute_rwgt_wgt_Sev(xmuR_over_ref
      &                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
@@ -331,7 +346,8 @@ c The nbody contributions
                 enddo
              elseif(iSorH_lhe.eq.2)then
                 if (kwgtinfo.eq.5)
-     &               call fill_reweight0inc(nFKSprocess_used*2)
+     &               call fill_reweight0inc(nFKSprocess_used*2,
+     &               i_process)
                 wgtxsecPDF(n)=wgtxsecPDF(n)+
      &               compute_rwgt_wgt_Hev(xmuR_over_ref ,xmuF1_over_ref,
      &               xmuF2_over_ref ,xQES_over_ref, kwgtinfo)
@@ -343,12 +359,13 @@ c The nbody contributions
 c
              if (kwgtinfo.eq.5) then
                 if (iSorH_lhe.eq.1) then
-                   wgtref=wgtref_nbody
+                   wgtref=wgtref_nbody_all(i_process)
                    do ii=1,nScontributions
-                      wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)*2-1)
+                      wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)
+     $                     *2-1,i_process)
                    enddo
                 else
-                   wgtref=wgtref_all(nFKSprocess_used*2)
+                   wgtref=wgtref_all(nFKSprocess_used*2,i_process)
                 endif
              endif
              
@@ -412,6 +429,21 @@ c Keep track of the accumulated results:
            enddo
         endif
 
+c renormalize all the scale & PDF weights to have the same normalization
+c as XWGTUP
+        if(do_rwgt_scale)then
+           do kr=1,3
+              do kf=1,3
+                 wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)/wgtref*XWGTUP
+              enddo
+           enddo
+        endif
+        if(do_rwgt_pdf)then
+           do n=0,nsets
+              wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+           enddo
+        endif
+
 c Write event to disk:
         write(buff,200)'#',iSorH_lhe,ifks_lhe,jfks_lhe,
      #                     fksfather_lhe,ipartner_lhe,
@@ -422,7 +454,6 @@ c Write event to disk:
         call write_lhef_event(ofile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
 
       enddo
 
