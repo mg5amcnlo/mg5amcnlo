@@ -1201,9 +1201,10 @@ c Trivial check on the Born contribution
       if (doreweight) then
          nScontributions=proc_map(proc_map(0,1),0)
       endif
-c
+c*******************************************************************
 c Compute the total rate. This is simply the sum of all
 c
+      f=0d0
       if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') ) then
          f=0d0
@@ -1219,7 +1220,7 @@ c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
             f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
          enddo
-c
+c*******************************************************************
 c Compute the abs of the total rate. Need to take ABS of all
 c contributions separately, except when they give equal events
 c (i.e. equal momenta, particle IDs, color info and shower starting
@@ -1240,28 +1241,51 @@ c Nothing to combine for H-events, so need to sum them independently
             enddo
          enddo
 c Add the Born and the S-events
+c     loop over the processes combined in dlum():
          do i=1,maxproc_found
+c     loop over the (n+1)-configurations contributing to the current
+c     n-body:
             do k=1,proc_map(proc_map(0,1),0)
                nFKSprocess=proc_map(proc_map(0,1),k)
                if (proc_map(proc_map(0,1),0).gt.1) then
+c We are here if more than 1 (n+1)-body is contributing to a given
+c n-body process. In this case we can sum them before taking the abs()
+c value for unweighting, but we need to do this for each process in
+c dlum() ("iproc") separately
                   if (k.eq.1) then
                      do kk=2,proc_map(proc_map(0,1),0)
-c Find the process with the soft singularity and treat that as the
-c basic one to which we sum everything
+c Find the process with the soft singularity and treat that as the basic
+c one to which we sum everything. Simply look for i_fks being a gluon.
                         call fks_inc_chooser()
                         if (PDG_type(i_fks).eq.21) then
+c     this is the case if kk=1 would have been the correct one: here it
+c     corresponds to k=1 (and nFKSprocess=proc_map(proc_map(0,1),k))
                            nFKSprocess_soft=nFKSprocess
+                           exit
                         else
+c     the loop over kk, sets nFKSprocess: check for which i_fks is a
+c     gluon and use that one to define the iproc's to which we should
+c     sum all the others
                            nFKSprocess=proc_map(proc_map(0,1),kk)
                            call fks_inc_chooser()
                            if (PDG_type(i_fks).eq.21) then
                               nFKSprocess_soft=nFKSprocess
+                              exit
                            endif
                         endif
+                        if (kk.eq.proc_map(proc_map(0,1),0)) then
+c     we should have found the nFKSprocess_soft by now and exited the
+c     loop over kk. If not the case, raise an error
+                           write (*,*) 'ERROR: could not find '/
+     $                          /'nFKSprocess_soft in driver_mintMC.f'
+                           stop 1
+                        endif
                      enddo
+c     restore nFKSprocess to the one used before starting the kk loop.
+                     nFKSprocess=proc_map(proc_map(0,1),k)
                   endif
-                  nFKSprocess=proc_map(proc_map(0,1),k)
-c Add the n-body only once
+c Add the n-body only once (simply do it when nFKSprocess is equal to
+c nFKSprocess_soft)
                   if (nFKSprocess.eq.nFKSprocess_soft) then
                      do j=1,iproc_save(nFKSprocess_used_born)
                         if (eto(j,nFKSprocess_used_born).eq.i) then
@@ -1270,9 +1294,6 @@ c Add the n-body only once
      &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
                         endif
                      enddo
-c$$$                     f_unwgt(nFKSprocess_soft,i) =
-c$$$     &                    f_unwgt(nFKSprocess_soft,i) +
-c$$$     &                    unwgt_table(0,1,i)+unwgt_table(0,2,i)
                   endif
 c Add everything else
                   do j=1,iproc_save(nFKSprocess)
@@ -1283,21 +1304,29 @@ c Add everything else
                      endif
                   enddo
                else
-c Only one n+1-body configuration. Add it to the n-body
-                  f_unwgt(nFKSprocess,i)=
-     &                 unwgt_table(0,1,i)+unwgt_table(0,2,i)
+c Only one n+1-body configuration. First combine the n-body and then add
+c the n+1-body to it
+                  nFKSprocess_soft=nFKSprocess
+                  do j=1,iproc_save(nFKSprocess_used_born)
+                     if (eto(j,nFKSprocess_used_born).eq.i) then
+                        f_unwgt(nFKSprocess,i) = f_unwgt(nFKSprocess,i)
+     $                       +unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                     endif
+                  enddo
                   do j=1,iproc_save(nFKSprocess)
                      if (eto(j,nFKSprocess).eq.i) then
-                        f_unwgt(nFKSprocess,i)=f_unwgt(nFKSprocess,i)
+                        f_unwgt(nFKSprocess,i) = f_unwgt(nFKSprocess,i)
      $                       +unwgt_table(nFKSprocess,1,j)
                      endif
                   enddo
                endif
             enddo
-            if (proc_map(proc_map(0,1),0).gt.1)
-     &                           nFKSprocess=nFKSprocess_soft
-            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess,i))
+c Sum here all together for the S-event contributions
+            f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_soft,i))
          enddo
+c absolute values of total rate are now filled (including the f_unwgt
+c array for the S-event contributions)
+c*******************************************************************
 c Assign shower starting scale for S-events when combining FKS
 c directories (take the weighted average):
          if (proc_map(proc_map(0,1),0).gt.1) then
@@ -1321,6 +1350,7 @@ c directories (take the weighted average):
                endif
             enddo
          endif
+c*******************************************************************
          if (.not.unweight)then
 c just return the (correct) absolute value
             f_abs=f_abs_H+f_abs_S
@@ -1332,8 +1362,8 @@ c pick one at random and update reweight info and all that
                if (rnd.le.f_abs_H/f_abs) then
                   Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
-                  i_process=1
                   nFKSprocess=1
+                  i_process=1
                   current=abs(unwgt_table(1,2,1))
                   rnd=ran2()
                   do while (current.lt.rnd*f_abs_H .and.
@@ -1361,24 +1391,19 @@ c Pick one of the nFKSprocesses and one of the IPROC's
                else
                   Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
+                  nFKSprocess=nFKSprocess_soft
                   i_process=1
-                  nFKSprocess=1
-                  current=abs(f_unwgt(1,1))
+                  current=abs(f_unwgt(nFKSprocess,1))
                   rnd=ran2()
                   do while (current.lt.rnd*f_abs_S .and.
-     $                 (i_process.le.maxproc_found .or.
-     $                 nFKSprocess.le.fks_configs))
+     $                 i_process.le.iproc_save(nFKSprocess))
                      i_process=i_process+1
-                     if (i_process.gt.maxproc_found) then
-                        i_process=1
-                        nFKSprocess=nFKSprocess+1
-                     endif
                      current=current+abs(f_unwgt(nFKSprocess,i_process))
                   enddo
-                  if (i_process.gt.maxproc_found .or.
-     $                 nFKSprocess.gt.fks_configs) then
+                  if (i_process.gt.iproc_save(nFKSprocess)) then
                      write (*,*) 'ERROR #4 in unweight table',i_process
      $                    ,maxproc_found,nFKSprocess
+     $                    ,iproc_save(nFKSprocess)
                      stop
                   endif
                   evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
@@ -1400,14 +1425,13 @@ c contribution
                            nFKSprocess_reweight(j)=
      &                          proc_map(proc_map(0,1),i)
                         endif
-                        nScontributions=j
                      enddo
+                     nScontributions=j
                   endif
                endif
             endif
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
-         f=0d0
          nScontributions=0
          do i=1,maxproc_found
             f_unwgt(nFKSprocess_used_born,i)=0d0
