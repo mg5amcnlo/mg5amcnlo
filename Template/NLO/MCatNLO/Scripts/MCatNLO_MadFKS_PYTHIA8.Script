@@ -433,7 +433,7 @@ TimeShower:globalRecoil = on       ! All final-state particles recoil against th
 TimeShower:nMaxGlobalRecoil = 1    ! Number of splittings with TimeShower:globalRecoil = on
 TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first emission is FSR
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
-TimeShower:nPartonsInBorn = -1     ! Number of Born partons (only to treat H and S differently)
+TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
 TimeShower:QCDshower = on          ! QCD final-state shower
 TimeShower:nGluonToQuark = 5       ! Number if flavors allowed in g->qqbar
