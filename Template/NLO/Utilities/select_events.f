@@ -42,15 +42,15 @@ c
       if(itype.lt.3)then
          write(*,*)'Type the Born multiplicity.'
          write(*,*)'If the line after each event starts'
-         write(*,*)'with "#aMCatNLO", this is not used'
+         write(*,*)'with a hash, ''#'', this is not used'
          read(*,*)nBorn
       endif
 
       loc=index(event_file,' ')
       if(itype.eq.1)then
-         fname2=event_file(1:loc-1)//'.S_events'
+         fname2=event_file(1:loc-1)//'.S'
       elseif(itype.eq.2)then
-         fname2=event_file(1:loc-1)//'.H_events'
+         fname2=event_file(1:loc-1)//'.H'
       elseif(itype.eq.3)then
          write(*,*)'Enter first and last event to keep'
          read(*,*)nevmin0,nevmax0
@@ -116,7 +116,8 @@ c first round to establish ievts_ok
             else
                if(itype.eq.1+nup-nBorn)ievts_ok=ievts_ok+1
                if(nup-nBorn.ne.0.and.nup-nBorn.ne.1)then
-                  write(*,*)'Cannot extract S/H events from this file'
+                  write(*,*)'The Born multiplicity seems incorrect:'
+                  write(*,*)'cannot extract S/H events from this file'
                   stop
                endif
             endif
