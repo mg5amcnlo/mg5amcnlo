@@ -208,19 +208,23 @@ rm -f $thisdir/$EXEC_NAMEFF
 # new compilation step for PY8 mode
 export PYTHIA8LOCATION=$PY8PATH
 
-cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir
-cp -rf $thisdir/srcPythia8/Makefile $thisdir
+ln -ns $thisdir/lib/* $thisdir/../lib/
+if [ "$PY8UTI" != "" ]
+then
+ cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc
+ cp -rf $thisdir/srcPythia8/Makefile $thisdir/Makefile
+else
+ cp -rf $thisdir/srcPythia8/Pythia8_hep.cc $thisdir/Pythia8.cc
+ cp -rf $thisdir/srcPythia8/Makefile_hep $thisdir/Makefile
+fi
 if [ -f $thisdir/Pythia8.exe ]
 then
   rm -rf $thisdir/Pythia8.exe
 fi
 cp -rf $PYTHIA8LOCATION/xmldoc $thisdir
-if [ "$PY8UTI" != "" ]
-then
-  PY8UTIMAKE="PY8UTI="$PY8UTI
-  FORFILEMAKE="FORFILE="$PY8UTI
-  LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
-fi
+PY8UTIMAKE="PY8UTI="$PY8UTI
+FORFILEMAKE="FORFILE="$PY8UTI
+LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
 make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"
 
 cd $thisdir
