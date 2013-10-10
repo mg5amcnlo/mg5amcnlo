@@ -451,7 +451,7 @@ class HelpToCmd(object):
         self.run_options_help([])
         
     def help_compute_widths(self):
-        logger.info("syntax: compute_widths Particle [Particles] [Param_card] [--output=PATH]")
+        logger.info("syntax: compute_width Particle [Particles] [Param_card] [--output=PATH]")
         logger.info("-- Compute the widths (ONLY 1->2) for the particles specified.")
         logger.info("   By default, this takes the current param_card and overwrites it.")       
 
@@ -2798,11 +2798,9 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
         of particles"""
 
         warning_text = """Be carefull automatic computation of the width is 
-ONLY valid if all three (or more) body decay are negligeable. In doubt use a 
-calculator."""
+ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         
         logger.warning(warning_text)
-        logger.info('In a future version of MG5 those mode will also be taken into account')
       
         args = self.split_arg(line)
         # check the argument and return those in a dictionary format
@@ -2873,6 +2871,9 @@ calculator."""
                 to_refine[pid] = level
         
         if to_refine:
+            logger.info('Pass to numerical integration for computing the following widths:\n    %s'
+                        % '\n    '.join('%s at %i-body level' % i for i in to_refine.items()))
+            
             decay_info = self.get_partial_width_mg5(to_refine, decay_info, args['output'])
             self.update_width_in_param_card(decay_info, args['input'], args['output'])
     
@@ -2891,8 +2892,7 @@ calculator."""
         cmd.exec_cmd('import model %s' % pjoin(self.me_dir,'bin','internal','ufomodel'))
         cmd.exec_cmd('set automatic_html_opening False --no_save')
         for particle, level in particles.items():
-            print 'calculate width for %s' % particle
-            cmd.do_calculate_width('%s %s' % (particle, level),
+            cmd.do_decay_diagram('%s %s' % (particle, level),
                                                           skip_2body=skip_2body)
             decay_dir = pjoin(self.me_dir, 'decay_width_%s' % particle)
             cmd.exec_cmd('output %s -f' % decay_dir)

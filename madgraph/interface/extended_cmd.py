@@ -236,10 +236,10 @@ class BasicCmd(cmd.Cmd):
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
-        #print self.completion_matches
 
-        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
-                      and l or (l+' ')) for l in self.completion_matches if l]
+        self.completion_matches = [ l if l[-1] in [' ','@','=',os.path.sep]
+                                    else ((l + ' ') if not l.endswith('\\$') else l[:-2])
+                                  for l in self.completion_matches if l] 
         
         try:
             return self.completion_matches[state]

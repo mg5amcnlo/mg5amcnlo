@@ -343,7 +343,6 @@ class UFOMG5Converter(object):
                 particle.set(key,value, force=True)
             
         assert(12 == nb_property) #basic check that all the information is there         
-        
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
             particle.set('self_antipart', True)

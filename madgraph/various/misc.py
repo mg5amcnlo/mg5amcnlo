@@ -450,7 +450,93 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
+#===============================================================================
+# mute_logger (designed to work as with statement)
+#===============================================================================
+class MuteLogger(object):
+    """mute_logger (designed to work as with statement),
+       files allow to redirect the output of the log to a given file.
+    """
 
+    def __init__(self, names, levels, files=None, **opt):
+        assert isinstance(names, list)
+        assert isinstance(names, list)
+        
+        self.names = names
+        self.levels = levels
+        if files:
+            self.files = files
+        else:
+            self.files = [None] * len(names)
+        self.logger_saved_info = {}
+        self.opts = opt
+
+    def __enter__(self):
+        old_levels = []
+        for name, level, path in zip(self.names, self.levels, self.files):
+            if path:
+                self.setup_logFile_for_logger(path, name, **self.opts)
+            log_module = logging.getLogger(name)
+            old_levels.append(log_module.level)
+            log_module = logging.getLogger(name)
+            log_module.setLevel(level)
+        self.levels = old_levels
+        
+    def __exit__(self, ctype, value, traceback ):
+        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
+            if 'keep' in self.opts and not self.opts['keep']:
+                self.restore_logFile_for_logger(name, level, path=path)
+            else:
+                self.restore_logFile_for_logger(name, level)
+            
+            log_module = logging.getLogger(name)
+            log_module.setLevel(level)         
+        
+    def setup_logFile_for_logger(self, path, full_logname, **opts):
+        """ Setup the logger by redirecting them all to logfiles in tmp """
+        
+        logs = full_logname.split('.')
+        lognames = [ '.'.join(logs[:(len(logs)-i)]) for i in\
+                                            range(len(full_logname.split('.')))]
+        for logname in lognames:
+            try:
+                os.remove(path)
+            except Exception, error:
+                pass
+            my_logger = logging.getLogger(logname)
+            hdlr = logging.FileHandler(path)            
+            # I assume below that the orders of the handlers in my_logger.handlers
+            # remains the same after having added/removed the FileHandler
+            self.logger_saved_info[logname] = [hdlr, my_logger.handlers]
+            #for h in my_logger.handlers:
+            #    h.setLevel(logging.CRITICAL)
+            for old_hdlr in my_logger.handlers:
+                my_logger.removeHandler(old_hdlr)
+            my_logger.addHandler(hdlr)
+            #my_logger.setLevel(level)
+            my_logger.debug('Log of %s' % logname)
+
+    def restore_logFile_for_logger(self, full_logname, level, path=None, **opts):
+        """ Setup the logger by redirecting them all to logfiles in tmp """
+        
+        logs = full_logname.split('.')
+        lognames = [ '.'.join(logs[:(len(logs)-i)]) for i in\
+                                            range(len(full_logname.split('.')))]
+        for logname in lognames:
+            if path:
+                try:
+                    os.remove(path)
+                except Exception, error:
+                    pass
+            my_logger = logging.getLogger(logname)
+            if logname in self.logger_saved_info:
+                my_logger.removeHandler(self.logger_saved_info[logname][0])
+                for old_hdlr in self.logger_saved_info[logname][1]:
+                    my_logger.addHandler(old_hdlr)
+            else:
+                my_logger.setLevel(level)
+            #for i, h in enumerate(my_logger.handlers):
+            #    h.setLevel(cls.logger_saved_info[logname][2][i])
 
 
 #

@@ -1440,7 +1440,6 @@ class MultiProcess(base_objects.PhysicsObject):
                  if leg['state'] == False]
         fsids = [leg['ids'] for leg in process_definition['legs'] \
                  if leg['state'] == True]
-
         # Generate all combinations for the initial state
         
         for prod in itertools.product(*isids):
