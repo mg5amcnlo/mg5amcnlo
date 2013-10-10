@@ -115,6 +115,9 @@ c first round to establish ievts_ok
                if(itype.eq.iSorH_lhe)ievts_ok=ievts_ok+1
             else
                if(itype.eq.1+nup-nBorn)ievts_ok=ievts_ok+1
+c Comment the following if-statement if the file has more than two
+c multiplicities (for example when intermediate resonances are not
+c written in all the events)
                if(nup-nBorn.ne.0.and.nup-nBorn.ne.1)then
                   write(*,*)'The Born multiplicity seems incorrect:'
                   write(*,*)'cannot extract S/H events from this file'
