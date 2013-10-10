@@ -4991,6 +4991,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
+            logger.error('problem detected: %s' % e)
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))

@@ -295,6 +295,14 @@ def read_interactions_v4(fsock, ref_part_list):
                                                    color.f(0, 3, -1)])
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
+#                elif colors == [3, 3, 3]:
+#                    my_color_string = color.ColorString(\
+#                        [color.Epsilon(ind[0], ind[1], ind[2])])
+#                    myinter.set('color', [my_color_string])                    
+#                elif colors == [-3, -3, -3]:
+#                    my_color_string = color.ColorString(\
+#                        [color.EpsilonBar(ind[0], ind[1], ind[2])])
+#                    myinter.set('color', [my_color_string])
                 else:
                     logger.warning(\
                         "Color combination %s not yet implemented." % \

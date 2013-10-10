@@ -91,6 +91,10 @@ class ParamCardWriter(object):
         # one loop for the mass
         for p in all_particles:
             mass = self.param_dict[p["mass"]]
+            if isinstance(mass, base_objects.ParamCardVariable):
+                if mass.lhacode[0] != p['pdg_code']:
+                    self.duplicate_mass.append((p, mass))
+                    continue                    
             if mass in def_param:
                 self.duplicate_mass.append((p, mass))
                 continue
@@ -103,6 +107,10 @@ class ParamCardWriter(object):
         def_param = [] 
         for p in all_particles:
             width = self.param_dict[p["width"]]
+            if isinstance(width, base_objects.ParamCardVariable):
+                if width.lhacode[0] != p['pdg_code']:
+                    self.duplicate_width.append((p, width))
+                    continue 
             if width in def_param:
                 self.duplicate_width.append((p, width))
                 continue
