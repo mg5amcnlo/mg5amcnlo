@@ -330,6 +330,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
         
         cwd = os.getcwd()
         try:
@@ -1189,6 +1192,12 @@ Parameters              %(params)s\n\
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+
         # Extract glu_ij_lines
         ij_lines = self.get_ij_lines(fksborn)
         replace_dict['ij_lines'] = '\n'.join(ij_lines)
@@ -1634,6 +1643,12 @@ C
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
     
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)

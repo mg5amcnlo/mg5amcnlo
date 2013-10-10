@@ -157,7 +157,7 @@ C
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(18,NWAVEFUNCS), jamph(2, ncolor)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor)
 C  
 C GLOBAL VARIABLES
 C  
