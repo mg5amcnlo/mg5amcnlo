@@ -30,9 +30,12 @@ a) How to generate a process
 b) How to create output for aMC@NLO
 c) How to run the aMC@NLO output
 
-IMPORTANT NOTE: fastjet v3+ is needed for aMC@NLO to run.
-Please update the mg5_configuration file or type
+If you have FastJet (v3 or later) installed on your computer and you wish
+to link it, please update the mg5_configuration file or type
 mg5>set fastjet /path/to/fastjet-config
+Otherwise the basic fastjet functionalities inluded in FJcore (shipped
+with aMC@NLO) will be used.
+
 
 Let's start with the first point, how to generate a process at NLO:
 mg5>generate p p > e+ ve [QCD]

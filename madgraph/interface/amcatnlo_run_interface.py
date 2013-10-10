@@ -1652,7 +1652,48 @@ Integrated cross-section
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
         self.banner_to_mcatnlo(evt_file)
-        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+        # if fastjet has to be linked (in extralibs) then
+        # add lib /include dirs for fastjet if fastjet-config is present on the
+        # system, otherwise add fjcore to the files to combine
+        if 'fastjet' in self.shower_card['extralibs']:
+            #first, check that stdc++ is also linked
+            if not 'stdc++' in self.shower_card['extralibs']:
+                logger.warning('Linking FastJet: adding stdc++ to EXTRALIBS')
+                self.shower_card['extralibs'] += ' stdc++'
+            # then check if options[fastjet] corresponds to a valid fj installation
+            try:
+                #this is for a complete fj installation
+                p = subprocess.Popen([self.options['fastjet'], '--prefix'], \
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                # add lib/include paths
+                if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
+                    logger.warning('Linking FastJet: updating EXTRAPATHS')
+                    self.shower_card['extrapaths'] += ' ' + pjoin(output, 'lib')
+                if not pjoin(output, 'include') in self.shower_card['includepaths']:
+                    logger.warning('Linking FastJet: updating INCLUDEPATHS')
+                    self.shower_card['includepaths'] += ' ' + pjoin(output, 'include')
+                # to be changed in the fortran wrapper
+                include_line = '#include "fastjet/ClusterSequence.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fastjet;//NAMESPACE_FJ'
+            except Exception:
+                logger.warning('Linking FastJet: using fjcore')
+                # this is for FJcore, so no FJ library has to be linked
+                self.shower_card['extralibs'].replace('fasjtet', '')
+                if not 'fjcore.o' in self.shower_card['analyse']:
+                    self.shower_card['analyse'] += ' fjcore.o'
+                # to be changed in the fortran wrapper
+                include_line = '#include "fjcore.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fjcore;//NAMESPACE_FJ'
+            # change the fortran wrapper with the correct namespaces/include
+            fjwrapper_lines = open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc')).read().split('\n')
+            for line in fjwrapper_lines:
+                if '//INCLUDE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = include_line
+                if '//NAMESPACE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = namespace_line
+            open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
+                    '\n'.join(fjwrapper_lines) + '\n')
 
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
@@ -1664,6 +1705,7 @@ Integrated cross-section
             ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
+        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
@@ -2406,8 +2448,10 @@ Integrated cross-section
             except KeyError:
                 pass
 
-
-        os.environ['fastjet_config'] = self.options['fastjet']
+        try: 
+            os.environ['fastjet_config'] = self.options['fastjet']
+        except TypeError:
+            os.environ['fastjet_config'] = 'None'
         
         # make Source
         self.update_status('Compiling source...', level=None)
