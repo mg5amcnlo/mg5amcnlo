@@ -37,6 +37,8 @@ class NotImplemented(MadGraph5Error):
 
 
 multiple_try = misc.multiple_try
+pjoin = os.path.join
+
 
 def check_interupt(error=KeyboardInterrupt):
 
@@ -50,6 +52,18 @@ def check_interupt(error=KeyboardInterrupt):
         return deco_f_interupt
     return deco_interupt
 
+def store_input(arg=''):
+
+    def deco_store(f):
+        def deco_f_store(self, *args, **opt):
+            id = f(self, *args, **opt)
+            if self.nb_retry > 0:
+                self.retry_args[id] = (args, opt)
+            return id
+        return deco_f_store
+    return deco_store
+
+
 class Cluster(object):
     """Basic Class for all cluster type submission"""
     name = 'mother class'
@@ -61,13 +75,17 @@ class Cluster(object):
         self.finish = 0
         self.cluster_queue = cluster_queue
         self.temp_dir = temp_dir
+        # attribute to relaunch jobs if they failed to produce expected data
+        self.nb_retry = 1
+        self.retry_args = {}
     
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
+               log=None, nb_submit=0):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
 
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-                log=None, input_files=[], output_files=[]):
+                log=None, input_files=[], output_files=[], nb_submit=0):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
         
@@ -111,7 +129,7 @@ class Cluster(object):
         open(new_prog, 'w').write(text % dico)
         misc.Popen(['chmod','+x',new_prog],cwd=cwd)
         
-        return self.submit(new_prog, argument, cwd, stdout, stderr, log)
+        return self.submit(new_prog, argument, cwd, stdout, stderr, log, nb_submit)
         
 
     def control(self, me_dir=None):
@@ -153,7 +171,65 @@ class Cluster(object):
             time.sleep(30)
         self.submitted = 0
         self.submitted_ids = []
+        
+    def check_termination(self, job_id, nb_check=0):
+        """Check the termination of the jobs with job_id and relaunch it if needed."""
+        
+        if job_id not in self.retry_args:
+            if nb_check:
+                logger.info('output from job %s recovered after %s min' % (job_id, nb_check))
+            return
+        
+        args = self.retry_args[job_id]
+        for path in args[1]['required_output']:
+            if args['cwd']:
+                path = pjoin(args['cwd'], path)
+            if not os.path.exists(path):
+                break
+        else:
+            # all requested output are present
+            del self.retry_args[job_id]
+            self.submitted_ids.remove(job_id)
+            return
+        
+        if nb_check < 5:
+            if nb_check == 0:
+                logger.warning('''Job %s failed to produce expected output. Wait up to 5 min for filesystem update''' % job_id)
+            time.sleep(60)
+            self.check_termination(job_id, nb_check+1)
 
+        #jobs failed to be completed!!
+        if self.nb_retry < 0:
+            logger.critical('''Fail to run correctly job %s.
+            with argument: %s
+            with option: %s
+            file missing: %s''' % (job_id, args[0], args[1], path))
+            raw_input('press enter to continue.')
+        elif self.nb_retry == 0:
+            logger.critical('''Fail to run correctly job %s.
+            with argument: %s
+            with option: %s
+            file missing: %s
+            Stopping all runs.''' % (job_id, args[0], args[1], path))
+            self.remove()
+        elif args[1]['nb_submit'] >= self.nb_retry:
+            logger.critical('''Fail to run correctly job %s.
+            with argument: %s
+            with option: %s
+            file missing: %s
+            Fails %s times
+            Stopping all runs.''' % (job_id, args[0], args[1], path, args[1]['nb_submit']))
+            self.remove()
+        else:
+            args[1]['nb_submit'] += 1            
+            logger.warning('resubmit job (for the % times)' % args[1]['nb_submit'])
+            del self.retry_args[job_id]
+            self.submitted_ids.remove(job_id)
+            self.submit2(*args[0], **args[1])
+            
+            
+            
+            
     @check_interupt()
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
                                                          stderr=None, log=None):
@@ -267,6 +343,8 @@ class CondorCluster(Cluster):
         """Submit the job on the cluster NO SHARE DISK
            input/output file should be give relative to cwd
         """
+        
+        print '272', self.nb_retry
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
@@ -386,6 +464,7 @@ class CondorCluster(Cluster):
                     run += 1
                 elif status != 'C':
                     fail += 1
+                
 
         return idle, run, self.submitted - (idle+run+fail), fail
     
@@ -491,19 +570,25 @@ class PBSCluster(Cluster):
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
                   me_dir = 'a' + me_dir[1:]
-
+        
+        ongoing = []
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             if me_dir in line:
+                ongoing.append(line.split()[0])
                 status = line.split()[4]
                 if status in self.idle_tag:
                     idle += 1
                 elif status in self.running_tag:
                     run += 1
                 elif status in self.complete_tag:
-                    continue
+                    self.check_termination(line.split()[0].split('.')[0])
                 else:
                     fail += 1
+                    
+        for id in self.submitted_jobs:
+            if id not in ongoing:
+                self.check_termination(id)
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
@@ -771,6 +856,7 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
+                self.check_termination(id)
                 self.submitted_ids.remove(id)
             else:
                 fail += 1
@@ -893,8 +979,10 @@ class GECluster(Cluster):
                         run += 1
                     if statusflag == 'sh':
                         fail += 1
-
-        self.submitted_ids = ongoing
+        for id in list(self.submitted_ids):
+            if id not in ongoing:
+                self.check_termination(id)
+        #self.submitted_ids = ongoing
 
         return idle, run, self.submitted - idle - run - fail, fail
 
