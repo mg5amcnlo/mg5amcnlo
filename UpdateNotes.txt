@@ -1,7 +1,11 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.13 (xx/09/13) OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
-                      (tt~+4jets)
+1.5.13 (xx/09/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
+                      In case of failure, you can re-submitted the failing jobs automatically. The maximal 
+                      number of re-submission for a job can be parametrize (default 1).
+                      Supported cluster for this function: condor, lsf, pbs
+                  OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
+                      (tt~+4jets).
                   BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
                       Higgs interactions) 
                   OM: use evince by default to open eps file instead of gv.

@@ -3782,10 +3782,12 @@ calculator."""
                     for G in output_files:
                         if os.path.isdir(pjoin(cwd,G)):
                             input_files.append(G)
+                            required_output.append('%s/results.dat' % G)
                 
                 #submitting
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
             
             else:
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)

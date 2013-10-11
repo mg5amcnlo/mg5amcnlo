@@ -17,6 +17,7 @@ import hashlib
 import os
 import time
 import re
+import inspect
 
 logger = logging.getLogger('madgraph.cluster') 
 
@@ -55,10 +56,14 @@ def check_interupt(error=KeyboardInterrupt):
 def store_input(arg=''):
 
     def deco_store(f):
-        def deco_f_store(self, *args, **opt):
-            id = f(self, *args, **opt)
+        def deco_f_store(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+                input_files=[], output_files=[], required_output=[], nb_submit=0):
+            frame = inspect.currentframe()
+            args, i, j, values = inspect.getargvalues(frame)
+            args = dict([(i, values[i]) for i in args if i != 'self'])
+            id = f(self, **args)
             if self.nb_retry > 0:
-                self.retry_args[id] = (args, opt)
+                self.retry_args[id] = args
             return id
         return deco_f_store
     return deco_store
@@ -80,17 +85,19 @@ class Cluster(object):
         self.retry_args = {}
     
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-               log=None, nb_submit=0):
+               log=None, required_output=[], nb_submit=0):
         """How to make one submission. Return status id on the cluster."""
         raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
 
+    @store_input()
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-                log=None, input_files=[], output_files=[], nb_submit=0):
+                log=None, input_files=[], output_files=[], required_output=[],nb_submit=0):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir:
-            return self.submit(prog, argument, cwd, stdout, stderr, log)
+            return self.submit(prog, argument, cwd, stdout, stderr, log, 
+                               required_output=required_output, nb_submit=nb_submit)
         print self.temp_dir
         if cwd is None:
             cwd = os.getcwd()
@@ -129,7 +136,8 @@ class Cluster(object):
         open(new_prog, 'w').write(text % dico)
         misc.Popen(['chmod','+x',new_prog],cwd=cwd)
         
-        return self.submit(new_prog, argument, cwd, stdout, stderr, log, nb_submit)
+        return self.submit(new_prog, argument, cwd, stdout, stderr, log, 
+                               required_output=required_output, nb_submit=nb_submit)
         
 
     def control(self, me_dir=None):
@@ -164,7 +172,7 @@ class Cluster(object):
             if fail:
                 raise ClusterManagmentError('Some Jobs are in a Hold/... state. Please try to investigate or contact the IT team')
             if idle + run == 0:
-                time.sleep(20) #security to ensure that the file are really written on the disk
+                #time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
                 break
             fct(idle, run, finish)
@@ -176,57 +184,55 @@ class Cluster(object):
         """Check the termination of the jobs with job_id and relaunch it if needed."""
         
         if job_id not in self.retry_args:
-            if nb_check:
-                logger.info('output from job %s recovered after %s min' % (job_id, nb_check))
-            return
+            return True
         
         args = self.retry_args[job_id]
-        for path in args[1]['required_output']:
+        for path in args['required_output']:
             if args['cwd']:
                 path = pjoin(args['cwd'], path)
             if not os.path.exists(path):
                 break
         else:
             # all requested output are present
+            if nb_check > 0:
+                logger.info('Finally found the missing output. Continue!')
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
-            return
+            return True
         
-        if nb_check < 5:
+        if nb_check < 4:
             if nb_check == 0:
-                logger.warning('''Job %s failed to produce expected output. Wait up to 5 min for filesystem update''' % job_id)
-            time.sleep(60)
-            self.check_termination(job_id, nb_check+1)
+                logger.warning('''Job %s failed to produce expected output. Wait up to 2 min for filesystem update.\nMissing file:\n%s''' % (job_id,path))
+            time.sleep(30)
+            return self.check_termination(job_id, nb_check+1)
 
         #jobs failed to be completed!!
         if self.nb_retry < 0:
             logger.critical('''Fail to run correctly job %s.
-            with argument: %s
             with option: %s
-            file missing: %s''' % (job_id, args[0], args[1], path))
+            file missing: %s''' % (job_id, args, path))
             raw_input('press enter to continue.')
         elif self.nb_retry == 0:
             logger.critical('''Fail to run correctly job %s.
-            with argument: %s
             with option: %s
             file missing: %s
-            Stopping all runs.''' % (job_id, args[0], args[1], path))
+            Stopping all runs.''' % (job_id, args, path))
             self.remove()
-        elif args[1]['nb_submit'] >= self.nb_retry:
+        elif args['nb_submit'] >= self.nb_retry:
             logger.critical('''Fail to run correctly job %s.
-            with argument: %s
             with option: %s
             file missing: %s
             Fails %s times
-            Stopping all runs.''' % (job_id, args[0], args[1], path, args[1]['nb_submit']))
+            Stopping all runs.''' % (job_id, args, path, args['nb_submit']))
             self.remove()
         else:
-            args[1]['nb_submit'] += 1            
-            logger.warning('resubmit job (for the % times)' % args[1]['nb_submit'])
+            args['nb_submit'] += 1            
+            logger.warning('resubmit job (for the %s times)' % args['nb_submit'])
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
-            self.submit2(*args[0], **args[1])
-            
+            self.submit2(**args)
+            return False
+        return True
             
             
             
@@ -279,7 +285,8 @@ class CondorCluster(Cluster):
     job_id = 'CONDOR_ID'
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit a job prog to a Condor cluster"""
         
         text = """Executable = %(prog)s
@@ -337,14 +344,14 @@ class CondorCluster(Cluster):
         self.submitted_ids.append(id)
         return id
 
+    @store_input()
     @multiple_try()
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-                log=None, input_files=[], output_files=[]):
+                log=None, input_files=[], output_files=[], required_output=[], 
+                nb_submit=0):
         """Submit the job on the cluster NO SHARE DISK
            input/output file should be give relative to cwd
         """
-        
-        print '272', self.nb_retry
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
@@ -441,12 +448,14 @@ class CondorCluster(Cluster):
             return 0, 0, 0, 0
         
         packet = 15000
+        idle, run, fail = 0, 0, 0
+        ongoing = []
         for i in range(1+(len(self.submitted_ids)-1)//packet):
             start = i * packet
             stop = (i+1) * packet
-            cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
-            
-                
+            cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + \
+            "-format \'%-2s\  ' \'ClusterId\' " + \
+            " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
             
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
                                                              stderr=subprocess.PIPE)
@@ -454,17 +463,20 @@ class CondorCluster(Cluster):
             if status.returncode or error:
                 raise ClusterManagmentError, 'condor_q returns error: %s' % error
                 
-                
-            idle, run, fail = 0, 0, 0
             for line in status.stdout:
-                status = line.strip()
+                id, status = line.strip().split()
+                ongoing.append(int(id))
                 if status in ['I','U']:
                     idle += 1
                 elif status == 'R':
                     run += 1
                 elif status != 'C':
                     fail += 1
-                
+
+        for id in list(self.submitted_ids):
+            if id not in ongoing:
+                if not self.check_termination(id):
+                    idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
     
@@ -488,7 +500,8 @@ class PBSCluster(Cluster):
     complete_tag = ['C']
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit a job prog to a PBS cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
@@ -558,7 +571,7 @@ class PBSCluster(Cluster):
             return 'R' 
         return 'F'
         
-
+    
     @multiple_try()    
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
@@ -575,20 +588,22 @@ class PBSCluster(Cluster):
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
             if me_dir in line:
-                ongoing.append(line.split()[0])
+                ongoing.append(line.split()[0].split('.')[0])
                 status = line.split()[4]
                 if status in self.idle_tag:
                     idle += 1
                 elif status in self.running_tag:
                     run += 1
                 elif status in self.complete_tag:
-                    self.check_termination(line.split()[0].split('.')[0])
+                    if not self.check_termination(line.split()[0].split('.')[0]):
+                        idle += 1
                 else:
                     fail += 1
-                    
-        for id in self.submitted_jobs:
+        
+        for id in list(self.submitted_ids):
             if id not in ongoing:
-                self.check_termination(id)
+                if not self.check_termination(id):
+                    idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
 
@@ -620,7 +635,8 @@ class SGECluster(Cluster):
         return location
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit a job prog to an SGE cluster"""
 
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
@@ -758,7 +774,8 @@ class LSFCluster(Cluster):
     job_id = 'LSB_JOBID'
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit the job prog to an LSF cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
@@ -856,8 +873,8 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
-                self.check_termination(id)
-                self.submitted_ids.remove(id)
+                if not self.check_termination(id):
+                    idle += 1
             else:
                 fail += 1
 
@@ -881,7 +898,8 @@ class GECluster(Cluster):
     running_tag = ['r']
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit a job prog to a GE cluster"""
         
         text = ""
@@ -1005,7 +1023,8 @@ class SLURMCluster(Cluster):
     complete_tag = ['C']
 
     @multiple_try()
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
+               required_output=[], nb_submit=0):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
@@ -1097,7 +1116,6 @@ class SLURMCluster(Cluster):
         if not self.submitted_ids:
             return
         cmd = "scancel %s" % ' '.join(self.submitted_ids)
-        print 'cmd = ',cmd
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
 
