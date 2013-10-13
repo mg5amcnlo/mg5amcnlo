@@ -802,6 +802,10 @@ C     This routine can be accessed by an external user to set the squared split 
 C     This functionality is only available in the optimized mode, but for compatibility 
 C     purposes, a dummy version is also put in this default output.
 C
+C
+C     ARGUMENTS
+C
+      INTEGER SOTARGET
 C ----------
 C BEGIN CODE
 C ----------
