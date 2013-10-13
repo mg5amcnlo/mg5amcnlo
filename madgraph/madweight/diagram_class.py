@@ -764,23 +764,23 @@ class MG_diagram(diagram):
         mu_p_list=[-13]
         el_p_list=[-11]
         ta_p_list=[-15]
+        photon_list = [22]
 
         jet_list=[1,2,3,4,21]
         bjet_list=[5]
         inv_list=[12,14,16,18] #sm 
         inv_list+=[1000012,1000014,100016,1000022,1000023,1000024,1000025,1000035,1000037] #susy
         
-        content=[0    ,0        ,0        ,0        ,0        ,0        ,0        ,0        ,0       ]
-        list=[jet_list,bjet_list,el_m_list,el_p_list,mu_m_list,mu_p_list,ta_m_list,ta_p_list,inv_list]
-        auth_sign=[1  ,1        ,0        ,0        ,0        ,0        ,0        ,0        ,1       ] 
+        content=[0    ,0        ,0        ,0        ,0        ,0        ,0        ,0        ,0       ,0]
+        list=[jet_list,bjet_list,el_m_list,el_p_list,mu_m_list,mu_p_list,ta_m_list,ta_p_list,inv_list,photon_list]
+        auth_sign=[1  ,1        ,0        ,0        ,0        ,0        ,0        ,0        ,1       ,0] 
 
         for i in range(0,len(list)):
             for particle in self.ext_content:
-                if auth_sign[i] and abs(particle.pid)in list[i]:
+                if auth_sign[i] and abs(particle.pid) in list[i]:
                     content[i]+=1
                 elif particle.pid in list[i]:
                     content[i]+=1  
-                    
         return content
 
                 

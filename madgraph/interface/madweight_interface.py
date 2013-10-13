@@ -516,7 +516,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 os.remove(output)
             fsock.write('</subprocess>')
             fsock.close()
-        
+
         # 2. Special treatment for refine mode
         if '-refine' in args:
             xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
@@ -535,9 +535,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         cards = set()
         events = set()
         for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+            out_dir = pjoin(self.me_dir, 'Events', name, MW_dir)
+            xml_reader = MWParserXML()
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
-
             generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
             for card, event, obj in generator:
                 # update the full list of events/cards
@@ -558,6 +558,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 else:
                     likelihood[card] = float('Inf')
                     err_likelihood[card] = float('nan')
+
                 
         # write the weights file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'), 'w')

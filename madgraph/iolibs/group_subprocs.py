@@ -205,7 +205,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
 
         self.set('amplitudes', diagram_generation.AmplitudeList())
 
-    def generate_name(self, process):
+    def generate_name(self, process, criteria='madevent'):
         """Generate a convenient name for the group, based on  and
         masses"""
 
@@ -217,6 +217,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') != 1:
                 name += "q"
+            elif criteria == 'madweight':
+                 name += part.get_name().replace('~', 'x').\
+                            replace('+', 'p').replace('-', 'm')
             elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') == 1 and part.get('pdg_code') % 2 == 1:
                 name += "l"
@@ -232,6 +235,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
             if part.get('mass').lower() == 'zero' and part.get('color') != 1 \
                    and part.get('spin') == 2:
                 name += "q" # "j"
+            elif criteria == 'madweight':
+                name += part.get_name().replace('~', 'x').\
+                            replace('+', 'p').replace('-', 'm')
             elif part.get('mass').lower() == 'zero' and part.get('color') == 1 \
                    and part.get('spin') == 2:
                 if part.get('charge') == 0:
@@ -243,7 +249,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                             replace('+', 'p').replace('-', 'm')
         
         for dc in process.get('decay_chains'):
-            name += "_" + self.generate_name(dc)
+            name += "_" + self.generate_name(dc, criteria)
 
         return name
 
@@ -377,7 +383,8 @@ class SubProcessGroup(base_objects.PhysicsObject):
             group.set('number', group.get('amplitudes')[0].get('process').\
                                                                      get('id'))
             group.set('name', group.generate_name(\
-                                    group.get('amplitudes')[0].get('process')))
+                                    group.get('amplitudes')[0].get('process'),
+                                    criteria=criteria))
             ret_list.append(group)
 
         return ret_list
@@ -461,6 +468,37 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
         
         return helas_objects.HelasMultiProcess(
             {'matrix_elements': self.get_matrix_elements()}).get_used_couplings()
+            
+    def split_lepton_grouping(self):
+        """Return a list of grouping where they are no groupoing over the leptons."""
+        
+        output = SubProcessGroupList()
+        for group in self:
+            new_mes = {}
+            for me in group['matrix_elements']:
+                tags = {}
+                for proc in me['processes']:
+                    ids = proc.get_final_ids_after_decay()
+                    ids = tuple([t if abs(t) in [11, 13,15] else 0 for t in ids])
+                    if ids not in tags:
+                        tags[ids] = base_objects.ProcessList()
+                    tags[ids].append(proc)
+                for tag in tags:
+                    new_me = copy.copy(me)
+                    new_me['processes'] = tags[tag]
+                    if tag not in new_mes:
+                        new_mes[tag] = helas_objects.HelasMatrixElementList()
+                    new_mes[tag].append(new_me)
+            for tag in tags:
+                new_group = copy.copy(group)
+                new_group['matrix_elements'] = new_mes[tag]
+                new_group.set('name', new_group.generate_name(\
+                                    new_group['matrix_elements'][0]['processes'][0],
+                                    criteria='madweight'))
+                output.append(new_group)
+        return output
+        
+        
     
 #===============================================================================
 # DecayChainSubProcessGroup
@@ -528,6 +566,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
                 helas_objects.HelasMultiProcess.generate_matrix_elements(\
                               diagram_generation.AmplitudeList(\
                                             self.get('decay_chain_amplitudes')))
+
 
         # For each matrix element, check which group it should go into and
         # calculate diagram_maps

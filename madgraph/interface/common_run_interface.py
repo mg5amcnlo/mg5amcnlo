@@ -1698,7 +1698,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             
         #### RUN CARD
-        if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'param_card']:
+        if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_card.keys():
                 args[start] = [l for l in self.run_card.keys() \
                                                  if l.lower() == args[start]][0]

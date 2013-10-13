@@ -2339,7 +2339,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))        
+                  (len(self._curr_amps), ndiags))       
                 
   
     # Define a multiparticle label
@@ -5014,7 +5014,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Fortran MadGraph MadWeight
         if self._export_format == 'madweight':
+                        
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                #remove the merging between electron and muon
+                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping() 
+                
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
                     calls = calls + \
                          self._curr_exporter.generate_subprocess_directory_v4(\
@@ -5026,11 +5030,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     calls = calls + \
                             self._curr_exporter.generate_subprocess_directory_v4(\
                                 me, self._curr_fortran_model, me_number)
-
-#            for me in matrix_elements:
-#                calls = calls + \
-#                        self._curr_exporter.generate_subprocess_directory_v4(\
-#                            me, self._curr_fortran_model)
 
         # Fortran MadGraph Standalone
         if self._export_format in ['standalone', 'standalone_ms']:

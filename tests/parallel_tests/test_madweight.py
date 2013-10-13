@@ -127,7 +127,7 @@ class TestMadWeight(unittest.TestCase):
         cmd = """set automatic_html_opening False --no-save
                  set cluster_temp_path /tmp --no-save
                  generate p p > t t~, (t > w+ b, w+ > l+ vl), (t~ > w- b~, w- > j j)
-                 output madweight TEST_MW_TT_prod
+                 output madweight TEST_MW_TT_prod -f
                  launch
                  change_tf dbl_gauss_pt_jet
                  ./tests/input_files/mw_ttprod.lhco.gz
@@ -152,8 +152,10 @@ class TestMadWeight(unittest.TestCase):
         solution = self.get_result(data)
         expected = """# Weight (un-normalize) for each card/event
 # format: LHCO_event_number card_id value integration_error
-2 1 2.10407296143e-23 2.23193727155e-25 
-2 2 1.10783659513e-23 1.45410120216e-25
+2 1 1.06068538348e-23 6.39167252183e-26
+2 2 5.59862383052e-24 3.76145999572e-26
+9 1 6.92859060639e-25 6.04804891841e-27
+9 2 6.79399430333e-25 7.38824630883e-27
 """
         expected = self.get_result(expected)
         for key, (value,error) in expected.items():

@@ -73,26 +73,26 @@ class Testmadweight(unittest.TestCase):
         self.generate('p p > Z h , Z > mu+ mu- , h > b b~ ' , 'sm')
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
         
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix1.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/matrix2.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/auto_dsig1.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/auto_dsig2.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/auto_dsig.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/gen_ps.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/configs.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/coupl.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/driver.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/initialization.f'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/leshouche.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/madweight_param.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/makefile'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/nexternal.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/mirrorprocs.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/phasespace.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/pmass.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/props.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/run.inc'))
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_ll_h_bbx/setscales.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix1.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/matrix2.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig1.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig2.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/auto_dsig.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/gen_ps.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/configs.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/coupl.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/driver.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/initialization.f'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/leshouche.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/madweight_param.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/makefile'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/nexternal.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/mirrorprocs.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/phasespace.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/pmass.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/props.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/run.inc'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_qq_zh_z_mupmum_h_bbx/setscales.f'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/run_card_default.dat'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Cards/MadWeight_card_default.dat'))
 
@@ -112,7 +112,7 @@ class Testmadweight(unittest.TestCase):
         cmd = os.getcwd()
         self.generate('p p > t t~ , t > e+ ve b , ( t~ > W- b~ , W- > j j )' , 'sm')
         # test that each file in P0_qq_zh_z_ll_h_bbx has been correctly written
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_gg_ttx_t_lvlb_tx_wmbx_wm_qq'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/SubProcesses/P0_gg_ttx_t_epveb_tx_wmbx_wm_qq'))
                         
         # test that all libraries have been compiled
 
@@ -151,7 +151,7 @@ class TestMadWeight(unittest.TestCase):
         cmd = """set automatic_html_opening False --no-save
                  set cluster_temp_path /tmp --no-save
                  generate p p > w+, w+ > e+ ve
-                 output madweight TEST_MW_W_prod
+                 output madweight TEST_MW_W_prod -f
                  launch
                  change_tf all_delta
                  ./tests/input_files/mw_wprod.lhco.gz

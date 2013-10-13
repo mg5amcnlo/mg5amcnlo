@@ -115,7 +115,6 @@ class Lhco_filter:
 
         self.lhco_file=lhco_file
         self.partdef=self.find_particle_number()        # find number of particle of each type
-
         #define internal variable
         self.write_events=0
         if lhco_file and auto:
@@ -125,11 +124,8 @@ class Lhco_filter:
     def find_particle_number(self):
 
         # find number of particle of each type
-        if os.path.isfile(self.directory+'info_part.dat'): 
-            self.extract_file_info(self.directory)
-        else:
-            self.load_particle_number(self.directory)
-        self.nb_part['photon']=0
+        #self.nb_part['photon']=0
+        self.load_particle_number(self.directory)
         #define each type of particle
         partdef=lhco_all_particles_def()
         if not self.MWparam.info['mw_perm']['bjet_is_jet_for_selection']:
@@ -143,9 +139,10 @@ class Lhco_filter:
     def load_particle_number(self,directory):
         """ extract the number of particule from the iconfigs """
 
+        print 'load_particle_number'
         diag=diagram_class.MG_diagram(directory,1)
 
-        list=['jet','bjet','electron','positron','muon','amuon','tau','atau']#,'miss']
+        list=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
         content=diag.output_type_info()
         
         total=0
@@ -314,7 +311,7 @@ class Lhco_filter:
     	""" check if we have the correct number of input for each type of particle """
 
     	list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
-    	try:
+        try:
             for key in list_key:
                 if self.nb_part[key]==0:
                     if not nb_part.has_key(key):
