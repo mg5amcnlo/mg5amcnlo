@@ -454,7 +454,7 @@ class CondorCluster(Cluster):
             start = i * packet
             stop = (i+1) * packet
             cmd = "condor_q " + ' '.join(self.submitted_ids[start:stop]) + \
-            "-format \'%-2s\  ' \'ClusterId\' " + \
+            " -format \'%-2s\  ' \'ClusterId\' " + \
             " -format \'%-2s \\n\' \'ifThenElse(JobStatus==0,\"U\",ifThenElse(JobStatus==1,\"I\",ifThenElse(JobStatus==2,\"R\",ifThenElse(JobStatus==3,\"X\",ifThenElse(JobStatus==4,\"C\",ifThenElse(JobStatus==5,\"H\",ifThenElse(JobStatus==6,\"E\",string(JobStatus))))))))\'"
             
             status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE, 
