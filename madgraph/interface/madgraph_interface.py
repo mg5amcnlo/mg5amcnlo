@@ -21,6 +21,7 @@ import logging
 import optparse
 import os
 import pydoc
+import random
 import re
 import signal
 import subprocess
@@ -3063,11 +3064,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        try:
-            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
-            raise MadGraph5Error, '''Impossible to connect the server. 
+        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                     'http://madgraph.hep.uiuc.edu/package_info.dat']
+        r = random.randint(0,1)
+        r = [r, (1-r)]
+        for index in r:
+            cluster_path = data_path[index]
+            try:
+                data = urllib.urlopen(cluster_path)
+            except Exception:
+                continue
+            break
+        else:
+            raise MadGraph5Error, '''Impossible to connect any of us servers. 
             Please check your internet connection or retry later'''
+                
         for line in data: 
             split = line.split()   
             path[split[0]] = split[1]
