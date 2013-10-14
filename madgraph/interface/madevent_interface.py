@@ -2583,7 +2583,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                     mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
                     check_param_card.convert_to_mg5card(param_card, mg5_param)
                     check_param_card.check_valid_param_card(mg5_param)
-                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')            
+                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
+            else:
+                check_param_card.check_valid_param_card(opt['param_card'])            
             
             logger.debug('write compile file for card: %s' % opt['param_card']) 
             param_card = check_param_card.ParamCard(opt['param_card'])
