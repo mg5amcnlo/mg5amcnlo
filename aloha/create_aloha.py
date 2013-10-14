@@ -569,7 +569,6 @@ class AbstractALOHAModel(dict):
                  explicit_combine=False):
         """ load the UFO model and init the dictionary """
         
-        aloha_lib.KERNEL.clean()
         # Option
         self.explicit_combine = explicit_combine
         
