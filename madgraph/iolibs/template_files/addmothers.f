@@ -26,6 +26,9 @@
       double precision xtarget
       data iseed/0/
 
+      integer diag_number
+      common/to_diag_number/diag_number
+
 c     Variables for combination of color indices (including multipart. vert)
       integer maxcolmp
       parameter(maxcolmp=20)
@@ -103,14 +106,14 @@ c
       nc = int(jamp2(0))
       maxcolor=0
       if(nc.gt.0)then
-      if(icolamp(1,iconfig,iproc)) then
+      if(icolamp(1,%(iconfig)s,iproc)) then
         targetamp(1)=jamp2(1)
 c        print *,'Color flow 1 allowed for config ',iconfig
       else
         targetamp(1)=0d0
       endif
       do ic =2,nc
-        if(icolamp(ic,iconfig,iproc))then
+        if(icolamp(ic,%(iconfig)s,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
 c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
         else

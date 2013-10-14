@@ -1118,6 +1118,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         filename = pjoin(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
+        #
+        filename = pjoin(self.dir_path,'SubProcesses','addmothers.f')
+        self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
         
@@ -2047,6 +2050,20 @@ c           This is dummy particle used in multiparticle vertices
         return True
 
     #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'diag_number'}
+        writer.write(text)
+        
+        return True
+
+
+    #===========================================================================
     # write_combine_events
     #===========================================================================
     def write_combine_events(self, writer):
@@ -2713,6 +2730,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 me in matrix_elements])))
         # Write the file
         writer.writelines(lines)
+
+    #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'iconfig'}
+        writer.write(text)
+        
+        return True
+
 
     #===========================================================================
     # write_coloramps_file
