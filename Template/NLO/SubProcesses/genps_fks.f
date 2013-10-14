@@ -1906,7 +1906,7 @@ c Use 1/x^(nsamp) importance sampling above soft cut-off
          ximax0 = roHs**(-nsamp)
          ximin0 = 1.d0
          tmp  = ximin0 +(1d0-(x-fract)/(1d0-fract))*(ximax0-ximin0)
-         tau = tmp**(-1/dfloat(nsamp))
+         tau = tmp**(-1/dble(nsamp))
          jac= jac/nsamp*tau**(nsamp+1)*
      &        (ximax0-ximin0)/(1d0-fract)
       endif
@@ -1967,9 +1967,10 @@ c For e+e- collisions, set tau to one and y to zero
       double precision s(-max_branch:max_particles)
       double precision sqrtshat_born,totmass,xjac0
       integer itree(2,-max_branch:-1)
-      integer i,j
+      integer i,j,nsamp
+      parameter (nsamp=1)
       double precision smin,smax,xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn,bwdelf
-     &     ,totalmass
+     &     ,totalmass,tmp,ximin0,ximax0
       double precision xbwmass3,bwfunc
       external xbwmass3,bwfunc
       logical pass
@@ -2077,9 +2078,12 @@ c     normal BW
                xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
             endif
          else
-c not a Breit Wigner
-            s(i) = (smax-smin)*x(-i)+smin
-            xjac0 = xjac0*(smax-smin)
+c not a Breit Wigner, use 1/x^nsamp importance sampling
+            ximax0 = smin**(-nsamp)
+            ximin0 = smax**(-nsamp)
+            tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
+            s(i) = tmp**(-1/dble(nsamp))
+            xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
          endif
 
 c If numerical inaccuracy, quit loop

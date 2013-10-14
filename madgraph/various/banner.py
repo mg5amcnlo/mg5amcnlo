@@ -750,9 +750,9 @@ class RunCardNLO(RunCard):
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
         if self['pdlabel'] == 'lhapdf':
-            self.add_line('lhaid', 'int', 10042)
+            self.add_line('lhaid', 'int', 21100)
         else:
-            self.add_line('lhaid', 'int', 10042, log=10)
+            self.add_line('lhaid', 'int', 21100, log=10)
         
         self.fsock.close()
 

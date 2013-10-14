@@ -872,7 +872,7 @@ C
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(18,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(20,NWAVEFUNCS)
 C     
 C     COLOR DATA
 C     
@@ -1175,7 +1175,7 @@ C
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(18,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(20,NWAVEFUNCS)
      $ , JAMPH(2, NCOLOR)
 C     
 C     GLOBAL VARIABLES
@@ -1209,62 +1209,65 @@ C     ----------
       BORN = 0D0
       BORNTILDE = (0D0,0D0)
       BACK_HEL = NHEL(GLU_IJ)
+      BORNS(1) = 0D0
+      BORNS(2) = 0D0
       DO IHEL=-1,1,2
-        BORNS(2-(1-IHEL)/2)=0D0
-        NHEL(GLU_IJ) = IHEL
-        IF (.NOT. CALCULATEDBORN) THEN
-          CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-          CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-          CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-          CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
-          CALL VVV1P0_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,5))
-C         Amplitude(s) for diagram number 1
-          CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_11,AMP(1))
-          CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,5))
-C         Amplitude(s) for diagram number 2
-          CALL FFV1_0(W(1,4),W(1,5),W(1,2),GC_11,AMP(2))
-          CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,5))
-C         Amplitude(s) for diagram number 3
-          CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_11,AMP(3))
-          DO I=1,NGRAPHS
-            IF(IHEL.EQ.-1)THEN
-              SAVEAMP(I,HELL)=AMP(I)
-            ELSEIF(IHEL.EQ.1)THEN
-              SAVEAMP(I,HELL+SKIP(NFKSPROCESS))=AMP(I)
-            ELSE
-              WRITE(*,*) 'ERROR #1 in born.f'
-              STOP
-            ENDIF
+        IF (IHEL.EQ.-1.OR.NHEL(GLU_IJ).NE.0) THEN
+          IF (NHEL(GLU_IJ).NE.0) NHEL(GLU_IJ) = IHEL
+          IF (.NOT. CALCULATEDBORN) THEN
+            CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
+            CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
+            CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
+            CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
+            CALL VVV1P0_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,5))
+C           Amplitude(s) for diagram number 1
+            CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_11,AMP(1))
+            CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,5))
+C           Amplitude(s) for diagram number 2
+            CALL FFV1_0(W(1,4),W(1,5),W(1,2),GC_11,AMP(2))
+            CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,5))
+C           Amplitude(s) for diagram number 3
+            CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_11,AMP(3))
+            DO I=1,NGRAPHS
+              IF(IHEL.EQ.-1)THEN
+                SAVEAMP(I,HELL)=AMP(I)
+              ELSEIF(IHEL.EQ.1)THEN
+                SAVEAMP(I,HELL+SKIP(NFKSPROCESS))=AMP(I)
+              ELSE
+                WRITE(*,*) 'ERROR #1 in born.f'
+                STOP
+              ENDIF
+            ENDDO
+          ELSEIF (CALCULATEDBORN) THEN
+            DO I=1,NGRAPHS
+              IF(IHEL.EQ.-1)THEN
+                AMP(I)=SAVEAMP(I,HELL)
+              ELSEIF(IHEL.EQ.1)THEN
+                AMP(I)=SAVEAMP(I,HELL+SKIP(NFKSPROCESS))
+              ELSE
+                WRITE(*,*) 'ERROR #1 in born.f'
+                STOP
+              ENDIF
+            ENDDO
+          ENDIF
+          JAMP(1)=+IMAG1*AMP(1)-AMP(2)
+          JAMP(2)=-IMAG1*AMP(1)-AMP(3)
+          DO I = 1, NCOLOR
+            ZTEMP = (0.D0,0.D0)
+            DO J = 1, NCOLOR
+              ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
+            ENDDO
+            BORNS(2-(1-IHEL)/2)=BORNS(2-(1-IHEL)/2)+ZTEMP*DCONJG(JAMP(I
+     $       ))/DENOM(I)
           ENDDO
-        ELSEIF (CALCULATEDBORN) THEN
-          DO I=1,NGRAPHS
-            IF(IHEL.EQ.-1)THEN
-              AMP(I)=SAVEAMP(I,HELL)
-            ELSEIF(IHEL.EQ.1)THEN
-              AMP(I)=SAVEAMP(I,HELL+SKIP(NFKSPROCESS))
-            ELSE
-              WRITE(*,*) 'ERROR #1 in born.f'
-              STOP
-            ENDIF
+          DO I = 1, NGRAPHS
+            AMP2(I)=AMP2(I)+AMP(I)*DCONJG(AMP(I))
+          ENDDO
+          DO I = 1, NCOLOR
+            JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
+            JAMPH(2-(1-IHEL)/2,I)=JAMP(I)
           ENDDO
         ENDIF
-        JAMP(1)=+IMAG1*AMP(1)-AMP(2)
-        JAMP(2)=-IMAG1*AMP(1)-AMP(3)
-        DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR
-            ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
-          ENDDO
-          BORNS(2-(1-IHEL)/2)=BORNS(2-(1-IHEL)/2)+ZTEMP*DCONJG(JAMP(I)
-     $     )/DENOM(I)
-        ENDDO
-        DO I = 1, NGRAPHS
-          AMP2(I)=AMP2(I)+AMP(I)*DCONJG(AMP(I))
-        ENDDO
-        DO I = 1, NCOLOR
-          JAMP2(I)=JAMP2(I)+JAMP(I)*DCONJG(JAMP(I))
-          JAMPH(2-(1-IHEL)/2,I)=JAMP(I)
-        ENDDO
       ENDDO
       BORN=BORNS(1)+BORNS(2)
       DO I = 1, NCOLOR
@@ -1575,8 +1578,8 @@ C     CONSTANTS
 C     
       INTEGER     NGRAPHS
       PARAMETER ( NGRAPHS = 3 )
-      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-      PARAMETER (NWAVEFUNCS=7, NCOLOR1=2, NCOLOR2=3)
+      INTEGER NCOLOR1, NCOLOR2
+      PARAMETER (NCOLOR1=2, NCOLOR2=3)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1
