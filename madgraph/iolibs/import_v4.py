@@ -295,6 +295,8 @@ def read_interactions_v4(fsock, ref_part_list):
                                                    color.f(0, 3, -1)])
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
+#   The following line are expected to be correct but not physical validations
+#    have been performed. So we keep it commented for the moment.                    
 #                elif colors == [3, 3, 3]:
 #                    my_color_string = color.ColorString(\
 #                        [color.Epsilon(ind[0], ind[1], ind[2])])

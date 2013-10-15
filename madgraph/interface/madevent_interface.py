@@ -2200,7 +2200,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         elif args[0] in ['cluster_nb_retry']:
             self.cluster.nb_retry = int(args[1])
             self.options[args[0]] = int(args[1])
-            print '2203', 'set cluster_nb_retry'
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing

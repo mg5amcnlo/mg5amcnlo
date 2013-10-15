@@ -1156,7 +1156,6 @@ def check_valid_param_card(path, restrictpath=None):
             restrictpath = os.path.join(restrictpath, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
             if not os.path.exists(restrictpath):
-                print 'no restriction file', 
                 return True
     
     cardrule = ParamCardRule()

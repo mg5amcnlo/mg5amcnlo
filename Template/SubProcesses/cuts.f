@@ -734,7 +734,7 @@ c                  write (*,*) hardj1,hardj2,ptmax1,ptmax2
                endif
             enddo
             
-            if (hardj2.eq.0) goto 21 ! bypass vbf cut since not enoug jets
+            if (hardj2.eq.0) goto 21 ! bypass vbf cut since not enough jets
 
 C-- NOW APPLY THE CUT I            
 
