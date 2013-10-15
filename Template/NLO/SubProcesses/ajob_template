@@ -1,6 +1,15 @@
 #!/bin/bash
 script=ajob1.$1.$2.$3.$4
 
+function link1up {
+if [[ ! -e $1 && -e ../$1 ]] ; then
+    ln -sf ../$1 .
+fi
+}
+
+
+
+
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
     runnumber=0
@@ -53,9 +62,9 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
    
     if  [[ ! -e randinit ]] ; then
         if [[ -e ../randinit ]] ; then
-            ln -sf ../randinit .
+            cp ../randinit .
         else
-            ln -sf ../../randinit .
+            cp ../../randinit .
         fi
     fi
     if  [[ ! -e symfact.dat ]] ; then
@@ -66,34 +75,15 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 		fi
 
     fi
-    if  [[ ! -e MadLoopParams.dat ]] ; then
-	ln -sf ../MadLoopParams.dat .
-    fi
-	if  [[ ! -e HelFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../HelFilter.dat ]] ; then                                                                                     
-			ln -sf ../HelFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-	if  [[ ! -e LoopFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../LoopFilter.dat ]] ; then                                                                                     
-			ln -sf ../LoopFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-    if  [[ ! -e ColorDenomFactors.dat ]] ; then
-	ln -sf ../ColorDenomFactors.dat .
-    fi
-    if  [[ ! -e HelConfigs.dat ]] ; then
-	ln -sf ../HelConfigs.dat .
-    fi
-    if  [[ ! -e ColorNumFactors.dat ]] ; then
-	ln -sf ../ColorNumFactors.dat .
-    fi
-    if  [[ ! -e FKS_params.dat ]] ; then
-	ln -sf ../FKS_params.dat .
-    fi
-    if  [[ ! -e OLE_order.olc && -e ../OLE_order.olc ]] ; then
-	ln -sf ../OLE_order.olc .
-    fi
+    link1up MadLoopParams.dat
+    link1up HelFilter.dat 
+    link1up LoopFilter.dat                                                                                                 
+    link1up ColorDenomFactors.dat
+    link1up HelConfigs.dat
+    link1up ColorNumFactors.dat
+    link1up FKS_params.dat
+
+    link1up OLE_order.olc
     if  [[ ! -e param_card.dat ]] ; then
 	if [[ -e ../../Cards/param_card.dat ]] ; then
 	    ln -sf ../../Cards/param_card.dat .
@@ -151,7 +141,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         ../madevent_mintMC > log.txt <input_app.txt 2>&1
         status=$?
         T="$(($(date +%s)-T))"
-        rm -f randinit   
         echo "Time in seconds: ${T}" >>log.txt
         cp -f log.txt log_MINT$3.txt
     fi

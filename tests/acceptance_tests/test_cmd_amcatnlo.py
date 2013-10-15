@@ -115,6 +115,25 @@ class TestMECmdShell(unittest.TestCase):
             self.assertTrue(os.path.exists(exe))
 
 
+    def test_split_evt_gen(self):
+        """test that the event generation splitting works"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( ' -1 = nevt_job' in card)
+        card = card.replace(' -1 = nevt_job', '500 = nevt_job')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
+
     def test_check_ppwy(self):
         """test that the p p > w y (spin 2 graviton) process works with loops. This
         is needed in order to test the correct wavefunction size setting for spin2

@@ -1299,7 +1299,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             
 
             for i, status in enumerate(mcatnlo_status):
-                #check if need to split jobs (only on a cluster)
+                #check if need to split jobs 
                 # at least one channel must have enough events
                 try:
                     nevents_unweighted = open(pjoin(self.me_dir, 
@@ -1320,9 +1320,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(options, 2,mode)
                         return
 
-
                     if split:
-
                         # split the event generation
                         misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
                                    [self.run_card['nevt_job']],
@@ -1371,9 +1369,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
-         # if splitting the event generation, recombine the event file per integration channel   
-#        if split:
-#            self.combine_jobs(job_dict.keys(), folder_names[mode])
         if split:
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
                      pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
@@ -1381,43 +1376,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         event_norm=self.run_card['event_norm']
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
-
-
-    def combine_jobs(self, p_dirs, g_dirs):
-        """combine back the events generated with splitted jobs"""
-
-        misc.compile(['combine_jobs'], 
-                    cwd=pjoin(self.me_dir, 'SubProcesses'))
-        logger.info('Recombining event files for each integration channel...')
-        for p in p_dirs:
-            nevts_tar = tarfile.open(pjoin(self.me_dir, 'SubProcesses', p, 'nevents.tar'))
-            for g_dir in g_dirs:
-                for g in [d for d in os.listdir(pjoin(self.me_dir, 'SubProcesses',p)) if \
-                        os.path.isdir(pjoin(self.me_dir, 'SubProcesses',p,d)) and \
-                        d.startswith(g_dir.replace('*',''))]: 
-                    nevts_g = [f for f in nevts_tar.getnames() if g in f]
-                    this_dir = pjoin(self.me_dir, 'SubProcesses', p, g)
-                    for f in nevts_g:
-                        nevts_tar.extract(f, path=pjoin(self.me_dir, 'SubProcesses',p,g))
-                        files.mv(pjoin(this_dir, f), pjoin(this_dir, f.replace(g,'')))
-
-                    logfile = pjoin(this_dir, 'log_combine_jobs.txt')
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'combine_jobs'), this_dir)
-                    misc.call([pjoin(this_dir, 'combine_jobs')], cwd = this_dir,
-                          stdout = open(logfile, 'w'))
-                    #check that combine_job has gone through all the files, i.e. that none of
-                    # them is left in the dir.
-                    # otherwise some error occurred
-                    leftover_files = [f for f in os.listdir(this_dir) if f.startswith('events_')]
-                    if leftover_files:
-                        logger.info(' '.join(leftover_files)) 
-                        raise aMCatNLOError(('combine_jobs failed in %s.\n' % this_dir) + \
-                                    'Try to run it manually to find why.') 
-
-            nevts_tar.close()
-
-
-
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
@@ -2281,9 +2239,6 @@ Integrated cross-section
             self.wait_for_complete(run_type)
 
 
-
-
-
     def find_jobs_to_split(self, pdir, job, arg):
         """looks into the nevents_unweighed_splitted file to check how many
         split jobs are needed for this (pdir, job). arg is F, B or V"""
@@ -2302,7 +2257,6 @@ Integrated cross-section
         for m in matches:
             splittings.append(m)
         return splittings
-
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
@@ -2342,11 +2296,9 @@ Integrated cross-section
                 return self.cluster.submit2(exe, args, cwd=cwd, 
                                  input_files=input_files, output_files=output_files) 
 
-
         #this is for the cluster/multicore run
         elif 'ajob' in exe:
-            # check if args is a list of string or a list of lists
-            # in the second case, use the multiple submission function
+            # check if args is a list of string 
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
