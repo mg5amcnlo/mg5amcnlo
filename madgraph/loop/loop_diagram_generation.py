@@ -306,9 +306,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tgged first."
             valid_diag = True
-            if i not in [16,26] :valid_diag=False
-            if valid_diag :
-                print i, diag.get('tag')
+            if i not in [142] :valid_diag=False
+            #if valid_diag :
+            #    print i, diag.get('tag')
                 #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
             #if 22 in diag.get_loop_lines_pdgs():
             #     valid_diag=False

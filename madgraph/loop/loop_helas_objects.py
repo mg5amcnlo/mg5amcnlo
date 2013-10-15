@@ -1384,7 +1384,10 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         raise self.PhysicsObjectError, \
                           "The amplitude vertex of a loop diagram must be a "+\
                           "two point vertex with id=-1" 
-
+                    # adjust the fermion flow of external majorana loop wfs
+                    fix_lcut_majorana_fermion_flow(last_loop_wf,\
+                                               other_external_loop_wf)
+                    # fix the fermion flow
                     mothers=helas_objects.HelasWavefunctionList(\
                                 [last_loop_wf,other_external_loop_wf])
                     wfNumber = mothers.check_and_fix_fermion_flow(wavefunctions,
@@ -1448,6 +1451,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             def check_lcut_fermion_flow_consistency(lcut_wf1, lcut_wf2):
                 """Checks that the two L-cut loop helas wavefunctions have                                                                                                                               
                 a consistent fermion flow."""
+                
                 if lcut_wf1.is_boson():
                     if lcut_wf1.get('state')!='final' or\
                             lcut_wf2.get('state')!='final':
@@ -1462,11 +1466,31 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                             raise MadGraph5Error,\
                                 "Inconsistent flow in L-cut Dirac fermions."
                 elif lcut_wf1.is_majorana():
-                    if (lcut_wf1, lcut_wf2) not in \
+                    if (lcut_wf1.get('state'), lcut_wf2.get('state')) not in \
                             [('incoming','outgoing'),('outgoing','incoming')]:
                         raise MadGraph5Error,\
                             "Inconsistent flow in L-cut Majorana fermions."
-                                            
+                            
+            def fix_lcut_majorana_fermion_flow(last_loop_wf,\
+                                               other_external_loop_wf):
+                """Fix the fermion flow of the last external Majorana loop 
+                wavefunction through the fermion flow of the first external 
+                Majorana loop wavefunction."""
+                # skip the boson and Dirac fermions
+                if not other_external_loop_wf.is_majorana():return
+                loop_amp_wfs=helas_objects.HelasWavefunctionList(\
+                                                                [last_loop_wf,])
+                while loop_amp_wfs[-1].get('mothers'):
+                    loop_amp_wfs.append([lwf for lwf in \
+                    loop_amp_wfs[-1].get('mothers') if lwf['is_loop']][0])
+                loop_amp_wfs.append(other_external_loop_wf)
+                loop_amp_wfs.reverse()
+                # loop_amp_wfs[0] is the last external loop wavefunction
+                # while loop_amp_wfs[1] is the first external loop wavefunction
+                rep={'incoming':'outgoing','outgoing':'incoming'}
+                other_external_loop_wf['state']=rep[loop_amp_wfs[1]['state']]
+                return
+                                                            
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):
                 """Process the counterterms vertices defined in this loop
                    diagram."""

@@ -13,6 +13,13 @@ R2_QQ_2 = Lorentz(name = 'R2_QQ_2',
                spins = [ 2, 2 ],
                structure = 'Identity(1,2)')
 
+UUS1 = Lorentz(name = 'UUS1',
+               spins = [ 1, 1, 1 ],
+               structure = '1')
+
+UUV1 = Lorentz(name = 'UUV1',
+               spins = [ 1, 1, 3 ],
+               structure = 'P(3,2) + P(3,3)')
 
 SSS1 = Lorentz(name = 'SSS1',
                spins = [ 1, 1, 1 ],

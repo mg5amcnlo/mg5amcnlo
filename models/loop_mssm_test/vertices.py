@@ -4941,3 +4941,8 @@ V_822 = Vertex(name = 'V_822',
                lorentz = [ L.VVSS1 ],
                couplings = {(0,0):C.GC_338})
 
+V_823 = Vertex(name = 'V_823',
+              particles = [ P.ghG, P.ghG__tilde__, P.g ],
+              color = [ 'f(2,3,1)' ],
+              lorentz = [ L.UUV1 ],
+              couplings = {(0,0):C.GC_6})
