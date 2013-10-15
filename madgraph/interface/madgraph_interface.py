@@ -4694,10 +4694,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
                         'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
                 self.options[args[0]] = None
+                self.history.pop()
             elif int(output.split('.')[0]) < 3:
                 logger.warning('%s is not ' % args[1] + \
                         'v3 or greater. Please install FastJet v3+.')
                 self.options[args[0]] = None
+                self.history.pop()
             else: #everything is fine
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
