@@ -115,7 +115,6 @@ class TestMadWeight(unittest.TestCase):
         except Exception, error:
             pass
             
-            
     def test_short_mw_tt_semi(self):
         """checking that the weight for p p > t t~ semilept is working"""
 
@@ -167,6 +166,63 @@ class TestMadWeight(unittest.TestCase):
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
         try:
             shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
+        except Exception, error:
+            pass
+
+            
+    def test_short_mw_wa(self):
+        """checking that the weight for p p > w a, w > l- is working"""
+
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_WA_prod'))
+        except Exception, error:
+            pass
+        
+        cmd = """set automatic_html_opening False --no-save
+                 set cluster_temp_path /tmp --no-save
+                 generate p p > w- a , w- > e- ve~
+                 output madweight TEST_MW_WA_prod -f
+                 launch
+                 change_tf dbl_gauss_pt_jet
+                 ./tests/input_files/mw_wa_prod.lhco
+                 set nb_exp_events 1
+                 set log_level debug
+                 set nb_event_by_node 1
+                 set mw_parameter 12 23
+                 set mw_parameter 13 80 90
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        
+        devnull =open(os.devnull,'w')
+        start = time.time()
+        print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
+                         '/tmp/mg5_cmd'],
+                         cwd=pjoin(MG5DIR),
+                        stdout=devnull, stderr=devnull)
+        run_time =  time.time() - start
+        print 'wa takes %smin %is' % (run_time//60, run_time % 60)
+        data = open(pjoin(MG5DIR, 'TEST_MW_WA_prod', 'Events', 'fermi', 'weights.out')).read()
+
+
+        solution = self.get_result(data)
+        expected = """# Weight (un-normalize) for each card/event
+# format: LHCO_event_number card_id value integration_error
+# Weight (un-normalize) for each card/event
+# format: LHCO_event_number card_id value integration_error
+0 1 2.68641824739e-14 1.75587340837e-17
+0 2 1.10047493409e-13 4.9103491463e-16
+"""
+        expected = self.get_result(expected)
+        for key, (value,error) in expected.items():
+            assert key in solution
+            value2, error2 = solution[key]
+            
+            self.assertTrue(abs(value-value2) < 5* abs(error+error2))
+            self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
+            self.assertTrue(abs(error2)/abs(value2) < 0.02)
+        try:
+            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_WA_prod'))
         except Exception, error:
             pass
   

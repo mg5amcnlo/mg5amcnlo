@@ -1194,8 +1194,8 @@ C-------------------------------------------------------
 C     initialize tag value for LHCO MET 
 C-------------------------------------------------------
       include '../../nexternal.inc'
-      integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata   !number of jet,elec,muon, undetectable
-      COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata !particle in the final state
+      integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata,num_photon   !number of jet,elec,muon, undetectable
+      COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata,num_photon !particle in the final state
 
       integer met_lhco,opt_lhco
       common/LHCO_met_tag/met_lhco,opt_lhco

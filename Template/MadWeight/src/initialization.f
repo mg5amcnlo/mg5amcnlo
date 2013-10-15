@@ -22,9 +22,9 @@ c     particle index mapping
 
 C     info on final state particles
       integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,num_amu,
-     +        num_ta,num_ata   !number of jet,elec,muon, undetectable
+     +        num_ta,num_ata,num_photon   !number of jet,elec,muon, undetectable
       COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,
-     & num_mu,num_amu,num_ta,num_ata !particle in the final state
+     & num_mu,num_amu,num_ta,num_ata,num_photon !particle in the final state
       integer nparticles, num_invis
       COMMON/to_num_inv/nparticles,num_invis
 
@@ -218,8 +218,8 @@ C-------------------------------------------------------
       implicit none
 
       include 'nexternal.inc'
-      integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata   !number of jet,elec,muon, undetectable
-      COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata !particle in the final state    
+      integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata,num_photon   !number of jet,elec,muon, undetectable
+      COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,mum_amu,num_ta,num_ata,num_photon !particle in the final state
 
       integer met_lhco,opt_lhco
       common/LHCO_met_tag/met_lhco,opt_lhco
@@ -362,9 +362,9 @@ c           num_mu:number of muons
 c           num_amu:number of anti-muons
 c           num_ta:number of taus
 c           num_ata:number of anti-taus
-c
-c      common block: end_par_type
-c      --------------------------
+c           num_photon: number of photon
+c     local:
+c     ------
 c           jet(nexternal-2): containing madgraph number of the jets (last components set to 0)
 c           bjet(nexternal-2): containing madgraph number of the bjets (if not consider like jet for permutations)
 c           el(nexternal-2): containing madgraph number of the electrons (last components set to 0)
@@ -374,6 +374,7 @@ c           amu(nexternal-2): containing madgraph number of the anti-muons (last
 c           ta(nexternal-2): containing madgraph number of the muons (last components set to 0)
 c           ata(nexternal-2): containing madgraph number of the anti-muons (last components set to 0)
 c           neutrino(nexternal-2): containing madgraph number of the invisible particles (last components set to 0)
+c           photon(nexternal-2): containing madgraph number of the photon particles (last components set to 0)
 c
 c
 c     common block: madgraph_order_type
@@ -406,9 +407,9 @@ c      include './genps.inc'
       
       logical pass     					!type agreement
       integer num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,num_amu,
-     + num_ta,num_ata,num_notfind
+     + num_ta,num_ata,num_notfind, num_photon
       COMMON/num_part/num_inv,num_jet,num_bjet,num_e,num_ae,num_mu,
-     + num_amu,num_ta,num_ata
+     + num_amu,num_ta,num_ata,num_photon
       
       
       integer jet(nexternal-2)
@@ -420,7 +421,7 @@ c      include './genps.inc'
       integer ta(nexternal-2)
       integer ata(nexternal-2)
       integer neutrino(nexternal-2)
-      common/end_par_type/jet,bjet,el,ael,mu,amu,ta,ata,neutrino
+      integer photon(nexternal-2)
 c
 c     local
 c         
@@ -438,6 +439,7 @@ c     init all variable:
          ta(l)=0
          ata(l)=0
          neutrino(l)=0
+         photon(l) = 0
       enddo
       num_inv=0
       num_jet=0
@@ -448,6 +450,7 @@ c     init all variable:
       num_ae=0
       num_ta=0
       num_ata=0
+      num_photon=0
       num_notfind=0
 
 
@@ -598,6 +601,18 @@ c
             ata(num_ata)=l
          goto 20 !continue (next identification)
          endif
+c
+c      photon identification
+c
+         pass=.false.
+         if (IDUP(l,1,1).eq.22) pass=.true. !muon
+
+         if (pass)then
+            num_photon=num_photon+1
+            photon(num_photon)=l
+         goto 20 !continue (next identification)
+         endif
+
 
 c
 c        count un-identified particle 
@@ -633,6 +648,7 @@ c         write(*,*) "those are",(jet(i),i=1,num_jet)
          write(*,*) num_amu,' anti muons'
          write(*,*) num_ta,' taus'
          write(*,*) num_ata,' anti taus'
+         write(*,*) num_photon, 'photon'
 	 if(num_notfind.ge.1)then
             write(*,*) "!!!!!WARNING!!!!!" 
 	    write(*,*) num_notfind,'unknow particle detected'
@@ -697,6 +713,13 @@ c anti tau
          do l=1,nexternal-2
             if (ata(l).ne.0)then
                inv_matching_type_part(tag)=ata(l)
+               tag=tag+1
+           endif
+         enddo
+c photon
+         do l=1,nexternal-2
+            if (photon(l).ne.0)then
+               inv_matching_type_part(tag)=photon(l)
                tag=tag+1
            endif
          enddo

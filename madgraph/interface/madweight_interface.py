@@ -342,7 +342,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
     
     def do_check_events(self, line):
-        """MadWeight Function: check that the events are valid"""
+        """MadWeight Function: check that the events are valid
+        and write the events to MG mapping"""
         self.configure()
         evt_file = pjoin(self.me_dir,'Events','input.lhco')
         if not os.path.exists(evt_file):
@@ -363,6 +364,11 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 files.cp(input_file, evt_file)
             
         verif_event.verif_event(self.MWparam)
+        
+        
+        
+        
+        
         
     def check_launch_jobs(self, args):
         """format the argument to retrun a list with two argument,

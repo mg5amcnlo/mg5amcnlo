@@ -50,7 +50,7 @@ except ImportError:
     import internal.madweight.MW_info as MW_param
 
 go_to_main_dir = MW_param.go_to_main_dir
-
+pjoin = os.path.join
 
 #1 ##############################################
 def verif_event(MWparam):
@@ -69,7 +69,6 @@ def verif_event(MWparam):
         start=time.time()
         select=Lhco_filter(MW_dir,'input.lhco',MWparam)
         print 'time Lhco_filter',time.time()-start
-
 
 def restrict_event_passing_cut(MWparam):
     """ return the number of events in a (previous) run which pass the 'new' cut """
@@ -139,7 +138,6 @@ class Lhco_filter:
     def load_particle_number(self,directory):
         """ extract the number of particule from the iconfigs """
 
-        print 'load_particle_number'
         diag=diagram_class.MG_diagram(directory,1)
 
         list=['jet','bjet','electron','positron','muon','amuon','tau','atau', 'miss','photon']#,'miss']
@@ -337,6 +335,7 @@ class Lhco_filter:
             if self.write_events:   print 'key error'
             return 0
 
+    write_order=['begin','jet','bjet','electron','positron','muon','amuon','tau','atau', 'photon','miss','init']
     #2 ###############################################################################################################
     def write(self,list_part):
     	""" write the output file """
@@ -360,7 +359,7 @@ class Lhco_filter:
         #check wich output to update
         if hasattr(self,'f_out'): #output file is defined:
             
-            write_order=['begin','jet','bjet','electron','positron','muon','amuon','tau','atau','miss','init']
+            write_order = self.write_order
 
             for i in range(0,len(write_order)):
                 for j in range(0,len(list_part)):

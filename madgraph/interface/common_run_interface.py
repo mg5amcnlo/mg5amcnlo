@@ -2001,23 +2001,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
             else:
                 path = pjoin(me_dir,'Cards','delphes_trigger.dat')
-        else:
+        elif not '.lhco' in answer:
             path = pjoin(me_dir, 'Cards', answer)
+        else:
+            path = pjoin(me_dir, 'Events', answer)
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd, error:
-            print answer, dir(error)
             if str(error) != 'No default path for this file':
                 raise
             if answer == 'transfer_card.dat':
                 logger.warning('You have to specify a transfer function first!')
-            if answer == 'input.lhco':
+            elif answer == 'input.lhco':
+                path = pjoin(me_dir,'Events', 'input.lhco')
                 ff = open(path,'w')
                 ff.write('''No LHCO information imported at current time.
 To import a lhco file: Close this file and type the path of your file.
 You can also copy/paste, your event file here.''')
                 ff.close()
-                self.open_file(answer)
+                self.open_file(path)
+            else:
+                raise
                   
                 
 
