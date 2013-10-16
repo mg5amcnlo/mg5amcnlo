@@ -36,7 +36,8 @@
    to get the channels with final state number they request. Or they
    may run DecayModel.find_all_channels(final_state_number) to search
    the channels for all particles in the given model."""
-
+   
+from __future__ import division
 
 import array
 import cmath
@@ -68,7 +69,7 @@ ZERO = 0
 # Logger for decay_module
 #===============================================================================
 
-logger = logging.getLogger('madgraph.decay_objects')
+logger = logging.getLogger('madevent.decay_objects')
 
 
 #===============================================================================
@@ -808,7 +809,7 @@ class DecayParticle(base_objects.Particle):
 
         # If vertexlist has not been found before, run model.find_vertexlist
         if not model['vertexlist_found']:
-            logger.info("Vertexlist of this model has not been searched. Searching it automatically...")
+            logger.info("Process the model to add decay informations.")
             model.find_vertexlist()
 
         # Find stable particles of this model
@@ -870,14 +871,7 @@ class DecayParticle(base_objects.Particle):
             logger.info("Particle %s is stable." %self['name'] +\
                             "No channel search will not proceed.")
             return
-
-        # The initial vertex (identical vertex).-> Not used anymore
-        """
-        ini_vert = base_objects.Vertex({'id': 0, 'legs': base_objects.LegList([\
-                   base_objects.Leg({'id':self.get_anti_pdg_code(), 
-                                     'number':1, 'state': False}),
-                   base_objects.Leg({'id':self.get_pdg_code(), 'number':2})])})
-        """           
+          
         connect_channel_vertex = self.connect_channel_vertex
         check_repeat = self.check_repeat
 
@@ -908,8 +902,6 @@ class DecayParticle(base_objects.Particle):
                 if Channel.check_idlegs(temp_vert):
                     temp_channel['has_idpart'] = True
 
-                # Check gauge dependence
-                #temp_channel.check_gauge_dependence(model)
 
                 # Add width to total width if onshell
                 if temp_channel.get_onshell(model):
@@ -943,6 +935,7 @@ class DecayParticle(base_objects.Particle):
                     vlist_a = inter_part.get_vertexlist(vlevel, True)
                     vlist_b = inter_part.get_vertexlist(vlevel, False)
 
+
                     # Find appropriate vertex
                     for vert in (vlist_a + vlist_b):
                         # Connect sub_channel to the vertex
@@ -951,14 +944,15 @@ class DecayParticle(base_objects.Particle):
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
+                        
 
                         # Append this channel if it is new
                         if not self.check_repeat(clevel,
                                                  temp_c_o, temp_c):
 
                             # Check gauge dependence
-                            #temp_c.check_gauge_dependence(model)
-
+                            if not temp_c.check_gauge_dependence(model):
+                                continue
                             # Calculate the width if onshell
                             # Add to the apx_decaywidth of mother particle
                             if temp_c_o:
@@ -1098,7 +1092,7 @@ class DecayParticle(base_objects.Particle):
 #        return improper_decay_tag                
 
 
-    def group_channels_2_amplitudes(self, clevel, model):
+    def group_channels_2_amplitudes(self, clevel, model, precision=None):
         """ After the channels is found, combining channels with the same 
             final states into amplitudes.
             NO CALCULATION of branching ratio at this stage!
@@ -1119,7 +1113,13 @@ class DecayParticle(base_objects.Particle):
         # Sort the order of onshell channels according to their final mass list.
         self.get_channels(clevel, True).sort(channelcmp_final)
 
+        total_width = self.get('apx_decaywidth')
         for channel in self.get_channels(clevel, True):
+            
+            if precision:
+                width = channel.get_apx_decaywidth(model)
+                if (width / total_width) < 0.25 * precision:
+                    continue
             
             found = False
 
@@ -1688,16 +1688,16 @@ class DecayModel(model_reader.ModelReader):
             process['legs'] = leglist
             myprocdef = base_objects.ProcessDefinitionList()
             myprocdef.append(process) 
-            #with misc.MuteLogger(['madgraph'], ['WARNING']):
-            myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
-            to_remove = False
-            for amp in myproc['amplitudes']:
-                if to_remove:
-                    break
-                for proc in amp['diagrams']:
-                    if len(proc['vertices']) >1:
-                        to_remove = True
+            with misc.MuteLogger(['madgraph'], ['WARNING']):
+                myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
+                to_remove = False
+                for amp in myproc['amplitudes']:
+                    if to_remove:
                         break
+                    for proc in amp['diagrams']:
+                        if len(proc['vertices']) >1:
+                            to_remove = True
+                            break
             
             if to_remove:
                 for part in decay_parts:
@@ -2597,8 +2597,6 @@ class DecayModel(model_reader.ModelReader):
         # Find stable particles of this model
         self.get('stable_particles')
         logger.info("Found %s stable particles" % len(self['stable_particles']))
-        logger.info("Search for 2 body-decay for other particles")
-        start = time.time()
         # Run the width of all particles from 2-body decay so that the 3-body
         # decay could use the width from 2-body decay.
         for part in self.get('particles'):
@@ -2613,7 +2611,6 @@ class DecayModel(model_reader.ModelReader):
             part.find_channels_nextlevel(self)
             if generate_abstract:
                 self.generate_abstract_amplitudes(part, 2)
-        logger.info('done in %s s' % int(time.time()-start))
         for part in self.get('particles'):
             if max_partnum > 2:
                 # Skip search if this particle is stable
@@ -3133,7 +3130,7 @@ class Channel(base_objects.Diagram):
             And recalculate the apx_decaywidth_nextlevel if the 
             model is provided.
         """
-        
+
         if name == 'onshell':
             logger.info("It is suggested to get onshell property from get_onshell function")
 
@@ -3207,6 +3204,27 @@ class Channel(base_objects.Diagram):
             return self['ini_pid']
         else:
             raise self.PhysicsObjectError, "No model is provided to get initial id."
+
+    def check_gauge_dependence(self, model):
+        """ compare the vertex ids to see if anyone of them may be illed."""
+
+        parts = [model.get_particle(l['id']) for l in self.get_final_legs()]
+        initial = model.get_particle(self.get_anti_initial_id())
+        for i,part in enumerate(parts):
+            if part.get('spin') % 2 == 0:
+                continue
+            if model['parameter_dict'][part.get('mass')] == 0:
+                base = [l['id'] for l in self.get_final_legs()]
+                base.pop(i)
+                base.sort()
+                
+                for decay in initial.get_channels(len(base), True):
+                    tmp = [l['id'] for l in decay.get_final_legs()]
+                    tmp.sort()
+                    if base == tmp:
+                        return False
+        return True
+            
 
 
     def get_final_legs(self, force=False):

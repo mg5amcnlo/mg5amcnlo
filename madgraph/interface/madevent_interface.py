@@ -966,7 +966,7 @@ class CheckValidForCmd(object):
                                                for p in model.get('particles')])
         
         output = {'model': model, 'model':model, 'force': False, 'output': None, 
-                  'input':None, 'particles': set(), 'nbody':False}
+                  'input':None, 'particles': set(), 'precision':0.001}
         for arg in args:
             if arg.startswith('--output='):
                 output_path = arg.split('=',1)[1]
@@ -975,11 +975,13 @@ class CheckValidForCmd(object):
                 if not os.path.isfile(output_path):
                     output_path = pjoin(output_path, 'param_card.dat')
                 output['output'] = output_path
-            elif arg.startswith('--nbody='):
+            elif arg.startswith('--precision='):
                 nbody = arg.split('=',1)[1]
-                if not nbody.isdigit():
-                    raise self.InvalidCmd, '--nbody requires integer'
-                output['nbody'] = int(nbody)         
+                try:
+                    nbody = float(nbody)
+                except Exception:
+                    raise self.InvalidCmd, '--precision requires integer or a float'
+                output['precision'] = float(nbody)         
             elif arg == '-f':
                 output['force'] = True
             elif os.path.isfile(arg):
@@ -2352,7 +2354,8 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                         initial = pjoin(self.me_dir, 'Cards', 'param_card.dat'),
                         output=pjoin(self.me_dir, 'Events', run_name, "param_card.dat"))
     
-    def update_width_in_param_card(self, decay_info, initial=None, output=None):
+    @staticmethod
+    def update_width_in_param_card(decay_info, initial=None, output=None):
         # Open the param_card.dat and insert the calculated decays and BRs
         
         if not initial:
@@ -2574,7 +2577,10 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                                                                  'subproc.mg'))]
         P_zero_result = [] # check the number of times where they are no phase-space
 
+        nb_tot_proc = len(subproc)
         for nb_proc,subdir in enumerate(subproc):
+            self.update_status('Compiling for process %s/%s. <br> (previous processes already running)' % \
+                               (nb_proc+1,nb_tot_proc), level=None)
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses',subdir)
             logger.info('    %s ' % subdir)
@@ -2811,6 +2817,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         elif not args['force']: 
             self.ask_edit_cards(['param'], [], plot=False)
         
+        print args.keys(), args['precision']
         model = args['model']
 
         data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
@@ -2852,23 +2859,34 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         #
         # add info from decay module
         #
-        if args['nbody'] == 2:
+        if args['precision'] == 2:
             return
+        if int(args['precision']) == args['precision']:
+            to_find = int(args['precision'])
+        else:
+            to_find = 2 
         import mg5decay.decay_objects as decay_objects
         new_model = decay_objects.DecayModel(model)
         new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
         new_model.find_vertexlist()
-        new_model.find_all_channels(2)
+        new_model.find_all_channels(to_find)
         to_refine = {}
-        for pid in args['particles']:
-            particle = new_model.get_particle(pid)
-            level = 2
-            while particle.get('apx_decaywidth_err') > 0.001:
-                level += 1
-                particle.find_channels_nextlevel(new_model)
-                particle.update_decay_attributes(False, True, True, new_model)
-            if level != 2:
-                to_refine[pid] = level
+        if to_find == 2 and int(args['precision']) !=2:
+            for pid in args['particles']:
+                particle = new_model.get_particle(pid)
+                level = 2
+                while particle.get('apx_decaywidth_err') > 0.001:
+                    level += 1
+                    particle.find_channels_nextlevel(new_model)
+                    particle.update_decay_attributes(False, True, True, new_model)
+                else:
+                    total_width = particle.get('apx_decaywidth')
+                    if level !=2:
+                        for channel in particle.get_channels(level, True):
+                            width = channel.get_apx_decaywidth(new_model)
+                            print width, total_width, width/total_width
+                if level != 2:
+                    to_refine[pid] = level
         
         if to_refine:
             logger.info('Pass to numerical integration for computing the following widths:\n    %s'

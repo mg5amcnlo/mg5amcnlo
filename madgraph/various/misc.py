@@ -24,6 +24,7 @@ import sys
 import StringIO
 import sys
 import time
+import shutil
 
 try:
     # Use in MadGraph
@@ -539,6 +540,23 @@ class MuteLogger(object):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
 
 
+#===============================================================================
+# mute_logger (designed to work as with statement)
+#===============================================================================
+class TMP_directory(object):
+    """create a temporary directory and ensure this one to be cleaned.
+    """
+
+    def __init__(self, suffix='', prefix='tmp', dir=None):
+        import tempfile   
+        self.path = tempfile.mkdtemp(suffix, prefix, dir)
+
+
+    def __exit__(self, ctype, value, traceback ):
+        shutil.rmtree(self.path)
+        
+    def __enter__(self):
+        return self.path
 #
 # Global function to open supported file types
 #

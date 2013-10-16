@@ -15,8 +15,10 @@
 """A user friendly command line interface to access MadGraph features at LO.
    Uses the cmd package for command interpretation and tab completion.
 """
+from __future__ import division
 
 import atexit
+import cmath
 import logging
 import optparse
 import os
@@ -85,6 +87,7 @@ import mg5decay.decay_objects as decay_objects
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
+logger_mg = logging.getLogger('madgraph') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in  
                                             #order to learn MG5
@@ -1071,51 +1074,73 @@ This will take effect only in a NEW terminal
     
     def check_decay_diagram(self, args):
         """ check and format calculate decay width:
-        Expected format: NAME PREC/LEVEL [param_card]
+        Expected format: NAME [OTHER_NAMES] PREC/LEVEL [param_card]
         """    
+        
+        output = {'path': None, 'level':None, 'ids':set()}
         
         if len(args)<2:
             self.help_calculate_width()
             raise self.InvalidCmd('decay_diagram requires at least two arguments')
 
-        # check that the first argument is the particle name.
-        if args[0].isdigit():
-            p = self._curr_model.get_particle(int(args[0]))
-            if not p:
-                raise self.InvalidCmd('Model doesn\'t have pid %s for a particle' % args[0])
-            args[0] = int(args[0])
-        elif args[0] in self._multiparticles:
-            args[0] = set(abs(id) for id in self._multiparticles[args[0]])
-        else:
-            for p in self._curr_model['particles']:
-                if p['name'] == args[0] or p['antiname'] == args[0]:
-                    args[0] = abs(p.get_pdg_code())
-                    break
+        if len(args) >= 3:
+            if not os.path.exists(args[-1]):
+                if os.path.exists(pjoin(MG5DIR, args[-1])):
+                    output['path'] = pjoin(MG5DIR, args[-1])
+                elif self._model_v4_path and  os.path.exists(pjoin(self._model_v4_path, args[-1])):
+                         output['path'] = pjoin(self._curr_model_v4_path, args[-1])   
+                elif os.path.exists(pjoin(self._curr_model.path, args[-1])):
+                    output['path'] = pjoin(self._curr_model.path, args[-1])                
+                else:
+                    try:
+                        precision = float(args[-1])
+                    except Exception:
+                         raise self.InvalidCmd('%s is not a valid path /precision' % args[-1])
+                    else:
+                        output['level'] = precision
             else:
-                raise self.InvalidCmd('invalid particle name')
-    
-        try:
-            args[1] = float(args[1])
-        except:
-            self.help_decay_diagram()
-            raise self.InvalidCmd('second argument should be a number')
-        
-        if len(args) == 3:
-            if not os.path.exists(args[2]):
-                if os.path.exists(pjoin(MG5DIR, args[2])):
-                    args[2] = pjoin(MG5DIR, args[2])
-                elif self._model_v4_path and  os.path.exists(pjoin(self._model_v4_path, args[2])):
-                         args[2] = pjoin(self._curr_model_v4_path, args[2])   
-                elif os.path.exists(pjoin(self._curr_model.path, args[2])):
-                    args[2] = pjoin(self._curr_model.path, args[2])                
-                else: 
-                    raise self.InvalidCmd('%s is not a valid path' % args[2])
+                output['path'] = args[-1]
             # check that the path is indeed a param_card:
-            if madevent_interface.MadEventCmd.detect_card_type(args[2]) != 'param_card.dat':
-                raise self.InvalidCmd('%s should be a path to a param_card' % args[2])
+            if output['path'] and madevent_interface.MadEventCmd.detect_card_type(output['path']) != 'param_card.dat':
+                raise self.InvalidCmd('%s should be a path to a param_card' % output['path'])
         else:
-            args.append(None) 
+            try:
+                precision = float(args[-1])
+            except Exception:
+                 raise self.InvalidCmd('%s is not a valid path /precision' % args[-1])
+            else:
+                output['level'] = precision
+                
+
+        if not output['level']:
+            try:
+                precision = float(args[-2])
+            except Exception:
+                raise self.InvalidCmd('%s is not a float (expected for precision args)' % args[-2])
+            else:
+                output['level'] = precision            
+            max_pos = -2
+        else:
+            max_pos = -1
+
+        for arg in args[:max_pos]:
+            # check that the first argument is the particle name.
+            if arg.isdigit():
+                p = self._curr_model.get_particle(int(arg))
+                if not p:
+                    raise self.InvalidCmd('Model doesn\'t have pid %s for a particle' % arg)
+                output['ids'].add(int(arg))
+            elif arg in self._multiparticles:
+                output['ids'].update(set(abs(id) for id in self._multiparticles[arg]))
+            else:
+                for p in self._curr_model['particles']:
+                    if p['name'] == arg or p['antiname'] == arg:
+                        output['ids'].add(abs(p.get_pdg_code()))
+                        break
+                else:
+                    raise self.InvalidCmd('invalid particle name')
     
+        return output
         
     def check_compute_widths(self, args):
         """ check and format calculate decay width:
@@ -4520,7 +4545,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     
     # Calculate decay width
-    def do_compute_widths(self, line, skip_2body=False, model=None):
+    def do_compute_widths(self, line, model=None):
         """Not in help: Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
@@ -4538,37 +4563,58 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                - model: use the model pass in argument.
            
         """
-        
-        logger.info('not final!!!')
-        raise NotImplemented
 
         warning_text = """Be carefull automatic computation of the width is 
 ONLY valid in Narrow-Width Approximation and at Tree-Level."""
-        
         logger.warning(warning_text)
       
-        args = self.split_arg(line)
         # check the argument and return those in a dictionary format
-        args = self.check_compute_widths(args)
+        particles, opts = self.check_compute_widths(self.split_arg(line))
         
-        if args['input']:
-            files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
-        elif not args['force']: 
-            self.ask_edit_cards(['param'], [], plot=False)
+        if not opts['path']:
+            param_card_text = self._curr_model.write_param_card()
+            if not opts['output']:
+                dirpath = self._curr_model.get('modelpath')
+                opts['path'] = pjoin(dirpath, 'param_card.dat')
+            else:
+                opts['path'] = opts['output']
+            ff = open(opts['path'],'w')
+            ff.write(param_card_text)
+            ff.close()
+                
         
-        model = args['model']
+        # IF MSSM convert the card to SLAH1
+        if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
+            import models.check_param_card as translator
+            
+            # Check the format of the param_card for Pythia and make it correct
+            if out_path2:
+                translator.make_valid_param_card(out_path, out_path2)
+            translator.convert_to_slha1(out_path)
+             
+            
 
-        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                                              'param_card.dat'))
-        
-        # find UFO particles linked to the require names. 
+        precision = float(opts['precision'])
+        if not model:
+            modelname = self._curr_model['name']
+            with misc.MuteLogger(['madgraph'], ['INFO']):
+                model = import_ufo.import_model(modelname, decay=True)
+        data = model.set_parameters_and_couplings(opts['path'])
+                
+
+        # find UFO particles linked to the require names.
+        skip_2body = True
         decay_info = {}   
-        for pid in args['particles']:
+        for pid in particles:
             particle = model.get_particle(pid)
+            if not hasattr(particle, 'partial_widths'):
+                skip_2body = False
+                break
+            elif not decay_info:
+                logger_mg.info('Get two body decay from FeynRules formula')
             decay_info[pid] = []
             mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                            'param_card.dat'), scale= mass)
+            data = model.set_parameters_and_couplings(opts['path'], scale= mass)
             total = 0
             
             for mode, expr in particle.partial_widths.items():
@@ -4591,37 +4637,44 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                                    (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
                 decay_info[particle.get('pdg_code')].append([decay_to, value])
                 total += value
-        
-        self.update_width_in_param_card(decay_info, args['input'], args['output'])
+        else:
+            madevent_interface.MadEventCmd.update_width_in_param_card(decay_info, 
+                                                   opts['path'], opts['output'])
         
         #
         # add info from decay module
         #
-        if args['nbody'] == 2:
-            return
-        import mg5decay.decay_objects as decay_objects
-        new_model = decay_objects.DecayModel(model)
-        new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-        new_model.find_vertexlist()
-        new_model.find_all_channels(2)
-        to_refine = {}
-        for pid in args['particles']:
-            particle = new_model.get_particle(pid)
-            level = 2
-            while particle.get('apx_decaywidth_err') > 0.001:
-                level += 1
-                particle.find_channels_nextlevel(new_model)
-                particle.update_decay_attributes(False, True, True, new_model)
-            if level != 2:
-                to_refine[pid] = level
-        
-        if to_refine:
-            logger.info('Pass to numerical integration for computing the following widths:\n    %s'
-                        % '\n    '.join('%s at %i-body level' % i for i in to_refine.items()))
-            
-            decay_info = self.get_partial_width_mg5(to_refine, decay_info, args['output'])
-            self.update_width_in_param_card(decay_info, args['input'], args['output'])
 
+        self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]), 
+                                         precision), skip_2body=skip_2body)
+        
+        if self._curr_amps:
+            logger.info('Pass to numerical integration for computing the widths:')
+        else:
+            return decay_info
+
+        with misc.TMP_directory() as path:
+            decay_dir = pjoin(path,'temp_decay')
+            logger_mg.info('More info in temporary file: %s/crossx.html' % decay_dir)
+            with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
+                self.exec_cmd("set automatic_html_opening False --no-save")
+
+                self.exec_cmd('output %s -f' % decay_dir)
+                # Need to write the correct param_card in the correct place !!!
+                files.cp(opts['path'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                #files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
+                self.exec_cmd('launch -n decay -f')
+            param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
+        for pid in particles:
+            width = param['decay'].get((pid,)).value
+            if not pid in param['decay'].decay_table:
+                continue
+            for BR in param['decay'].decay_table[pid]:
+                decay_info[pid].append([BR.lhacode[1:], BR.value * width])
+        
+        madevent_interface.MadEventCmd.update_width_in_param_card(decay_info, 
+                                                   opts['path'], opts['output'])     
+        return
 
 
            
@@ -4653,11 +4706,11 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         args = self.split_arg(line)
         #check the validity of the arguments
-        self.check_decay_diagram(args)
+        args = self.check_decay_diagram(args)
         #print args
-        pids = args[0]
-        level = args[1]
-        param_card_path = args[2]
+        pids = args['ids']
+        level = args['level']
+        param_card_path = args['path']
             
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -4681,19 +4734,19 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             self._curr_decaymodel.read_param_card(param_card_path)
         else:
             self._curr_decaymodel = model
+        model = self._curr_decaymodel
         
         if  isinstance(pids, int):
             pids = [pids]
         
-        for pid in pids:
+        for part_nb,pid in enumerate(pids):
             part = self._curr_decaymodel.get_particle(pid)
-            print level, level //1 == level and level >1
+            logger_mg.info('get decay diagram for %s' % part['name'])
+            lastprint = time.time()
             # Find channels as requested
-            if level //1 == level and level >1:
+            if level // 1 == level and level >1:
                 level = int(level)
                 self._curr_decaymodel.find_channels(part, level)
-                logger.info("find decay of %s to %d-body decays" % (part.get('name'),level))
-                
                 if not skip_2body:
                     amp = part.get_amplitudes(2)
                     if amp:
@@ -4703,6 +4756,29 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     amp = part.get_amplitudes(l)
                     if amp:
                         self._curr_amps.extend(amp)
+            elif level < 1:
+                precision = level
+                if part_nb == 0:
+                    model.find_all_channels(2)
+                if not skip_2body:
+                    amp = part.get_amplitudes(2)
+                    if amp:
+                        self._curr_amps.extend(amp)
+                clevel = 2
+                while part.get('apx_decaywidth_err') > precision:
+                    clevel += 1
+                    if time.time() - lastprint > 1:
+                        logger_mg.info('    current estimated error: %s go to %s-body decay: ' %\
+                                (part.get('apx_decaywidth_err'), clevel))
+                        lastprint = time.time()
+                    part.find_channels_nextlevel(model)
+                    part.group_channels_2_amplitudes(clevel, model, precision)                 
+                    amp = part.get_amplitudes(clevel)
+                    if amp:
+                        self._curr_amps.extend(amp)
+                    part.update_decay_attributes(False, True, True, model)
+            else:
+                raise self.InvalidCmd('wrong type arguments!')
                 #logger.info(self._curr_amps.nice_string())
 
         # Set _generate_info

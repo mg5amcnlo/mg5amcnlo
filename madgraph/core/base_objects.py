@@ -781,7 +781,15 @@ class Model(PhysicsObject):
             if self['interactions']:
                 self['interactions'].synchronize_interactions_with_particles(\
                                                           self['particle_dict'])
-                
+        if name == 'modelpath':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            if os.path.exists(modeldir):
+                return modeldir
+            modeldir = os.path.join(os.path.dirname(modeldir),
+                                    os.path.basename(modeldir).rsplit("-",1)[0])
+            if os.path.exists(modeldir):
+                return modeldir 
+            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
