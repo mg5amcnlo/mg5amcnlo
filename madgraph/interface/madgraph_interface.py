@@ -1089,8 +1089,8 @@ This will take effect only in a NEW terminal
                     output['path'] = pjoin(MG5DIR, args[-1])
                 elif self._model_v4_path and  os.path.exists(pjoin(self._model_v4_path, args[-1])):
                          output['path'] = pjoin(self._curr_model_v4_path, args[-1])   
-                elif os.path.exists(pjoin(self._curr_model.path, args[-1])):
-                    output['path'] = pjoin(self._curr_model.path, args[-1])                
+                elif os.path.exists(pjoin(self._curr_model.get('modelpath'), args[-1])):
+                    output['path'] = pjoin(self._curr_model.get('modelpath'), args[-1])                
                 else:
                     try:
                         precision = float(args[-1])
@@ -4599,6 +4599,8 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             modelname = self._curr_model['name']
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
+        if not isinstance(model, model_reader.ModelReader):
+            model = model_reader.ModelReader(model)
         data = model.set_parameters_and_couplings(opts['path'])
                 
 
@@ -4669,6 +4671,8 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             width = param['decay'].get((pid,)).value
             if not pid in param['decay'].decay_table:
                 continue
+            if pid not in decay_info:
+                decay_info[pid] = []
             for BR in param['decay'].decay_table[pid]:
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
         
@@ -4738,9 +4742,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         
         if  isinstance(pids, int):
             pids = [pids]
-        
+            
+        first =True
         for part_nb,pid in enumerate(pids):
             part = self._curr_decaymodel.get_particle(pid)
+            if part.get('width').lower() == 'zero':
+                continue
             logger_mg.info('get decay diagram for %s' % part['name'])
             lastprint = time.time()
             # Find channels as requested
@@ -4758,8 +4765,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                         self._curr_amps.extend(amp)
             elif level < 1:
                 precision = level
-                if part_nb == 0:
+                if first:
                     model.find_all_channels(2)
+                    first = False
                 if not skip_2body:
                     amp = part.get_amplitudes(2)
                     if amp:
