@@ -719,7 +719,7 @@ class Test_DecayModel(unittest.TestCase):
         self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
                           self.my_testmodel.filter, 'vertexlist_found', 4)
                           
-    
+
     def test_particles_type(self):
         """Test if the DecayModel can convert the assign particle into
            decay particle"""
@@ -2082,6 +2082,8 @@ class Test_Channel(unittest.TestCase):
         self.assertFalse(Tag_d == Tag_f)
         self.assertFalse(Tag_e == Tag_f)
 
+
+
     def test_check_gauge_dependence(self):
         """ Test of the check of gauge dependence function."""
 
@@ -2259,6 +2261,7 @@ class Test_Channel(unittest.TestCase):
         result2 = higgs.get_channels(4, True)
         #print result2.nice_string()
         self.assertEqual((result2.count(channel_c)+ result2.count(channel_d)),1)
+
 
         """ Test on MSSM, to get a feeling on the execution time. """        
         mssm = import_ufo.import_model('mssm')
@@ -2593,6 +2596,7 @@ class Test_Channel(unittest.TestCase):
             1. unity of total branching ratio
             2. the apx_decaywidth_nextlevel comes from the right level."""
 
+        # Options for the test
         model_name = 'mssm'
         test_param_card = False
         test_param_card_suffix = 'test1'
@@ -2620,7 +2624,7 @@ class Test_Channel(unittest.TestCase):
                                             +'.dat')
         model.read_param_card(MG5_param_path)
 
-        # Find channels before read MG4 param_card (use smart function)
+        # Find channels before read MG4 param_card (option for use smart find)
         if smart_find:
             model.find_all_channels_smart(prec)
         else:
@@ -2637,7 +2641,7 @@ class Test_Channel(unittest.TestCase):
 
             model.read_MG4_param_card_decay(MG4_param_path)
 
-        # Write decay summary and the decay table
+        # Write the decay summary, decay table, and helas collection
         if test_param_card:
             model.write_summary_decay_table(model_name\
                                                 + '_decay_summary_'\
@@ -2648,12 +2652,18 @@ class Test_Channel(unittest.TestCase):
                                         + '_decaytable_'\
                                         + test_param_card_suffix \
                                         + '.dat')
+            model.write_helas_collection(model_name\
+                                             + '_helascollection_'\
+                                             + test_param_card_suffix \
+                                             + '.dat')
+
         else:
             # file name 1: default name
             model.write_summary_decay_table()
             model.write_decay_table(MG5_param_path, 'cmp')
+            model.write_helas_collection()
 
-
+        """ Actual Test """
         # Test the sum of branching ratios is unity
         part = model.get_particle(25)
         total_br = sum([sum([amp['apx_br'] for amp in part.get_amplitudes(i)]) \
@@ -2666,6 +2676,10 @@ class Test_Channel(unittest.TestCase):
                            for c in part.get_channels(part.get_max_level(), 
                                                       False)])
             self.assertAlmostEqual(err/part.get('apx_decaywidth'), part['apx_decaywidth_err'])
+
+
+
+        """ End of test """
 
         """# Test if the channels are find wisely
         for part in model['particles']:
@@ -2725,7 +2739,198 @@ class Test_Channel(unittest.TestCase):
         #    particle.get('apx_decaywidth')
         """
 
+#===============================================================================
+# Test_IdentifyHelasTag
+#===============================================================================
+class Test_IdentifyHelasTag(unittest.TestCase):
+    """ Test for IdentifyHelasTag, and all the related functions. """
 
+    my_testmodel_base = import_ufo.import_model('sm')
+    my_channel = decay_objects.Channel()
+    h_tt_bbmmvv = decay_objects.Channel()
+
+    def setUp(self):
+        """ Set up necessary objects for the test"""
+
+        #Import a model from my_testmodel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, True)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+
+        # Pids that will be removed
+        no_want_pid = [1, 2, 15, 16, 21]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
+        
+        # Set up vertexlist for my_testmodel
+        self.my_testmodel.find_vertexlist()
+    
+
+    def test_helas_comparison(self):
+        """Test the ability to identify Helas calls."""
+
+        # Turn higgs decay into 4-body
+        decay_objects.MH = 80
+
+        h = self.my_testmodel.get_particle(25)
+        t = self.my_testmodel.get_particle(6)
+
+        h.find_channels(4, self.my_testmodel)
+        
+        #print h.get_amplitudes(4).nice_string()
+
+        for c in h.get_channels(4, True):
+            pids = set([l['id'] for l in c.get_final_legs()])
+            # Z mediated hadronic decays
+            if pids == set([3, -3, 4, -4]) and \
+                    c['vertices'][0]['legs'][-1]['id'] == 23:
+                h_zz_sscc = c
+                h_zz_sscc_Tag = decay_objects.IdentifyHelasTag(h_zz_sscc, 
+                                                               self.my_testmodel)
+            if pids == set([3, -3, 3, -3]):
+                h_zz_ssss = c
+                h_zz_ssss_Tag = decay_objects.IdentifyHelasTag(h_zz_ssss, 
+                                                               self.my_testmodel)
+
+            if pids == set([5, -5, 5, -5]):
+                h_zz_bbbb = c
+                h_zz_bbbb_Tag = decay_objects.IdentifyHelasTag(h_zz_bbbb, 
+                                                               self.my_testmodel)
+            # Z mediated leptonic decays
+            if pids == set([11, -11, 12, -12]) and \
+                    c['vertices'][0]['legs'][-1]['id'] == 23:
+                h_zz_eeveve = c
+                h_zz_eeveve_Tag = decay_objects.IdentifyHelasTag(h_zz_eeveve, 
+                                                                 self.my_testmodel)
+            if pids == set([11, -11, 13, -13]):
+                h_zz_eemumu = c
+                h_zz_eemumu_Tag = decay_objects.IdentifyHelasTag(h_zz_eemumu, 
+                                                                 self.my_testmodel)
+            if pids == set([13, -13, 13, -13]):
+                h_zz_mumumumu = c
+                h_zz_mumumumu_Tag = decay_objects.IdentifyHelasTag(h_zz_mumumumu, 
+                                                                 self.my_testmodel)
+
+            # W mediated hadronic decays
+            if pids == set([3, -3, 4, -4]) and \
+                    abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                h_ww_sscc = c
+                h_ww_sscc_Tag = decay_objects.IdentifyHelasTag(h_ww_sscc, 
+                                                               self.my_testmodel)
+            # W mediated leptonic decays
+            if pids == set([11, -11, 12, -12]) and \
+                    abs(c['vertices'][0]['legs'][-1]['id']) == 24:
+                h_ww_eeveve = c
+                h_ww_eeveve_Tag = decay_objects.IdentifyHelasTag(h_ww_eeveve, 
+                                                               self.my_testmodel)
+
+
+        #print h_zz_eemumu_Tag, h_zz_eeveve_Tag
+        self.assertTrue(h_zz_ssss_Tag == h_zz_bbbb_Tag)
+        self.assertTrue(h_zz_eemumu_Tag == h_zz_mumumumu_Tag)
+        # Lorentz structure of z > e e~ != z > ve ve~
+        self.assertFalse(h_zz_eemumu_Tag == h_zz_eeveve_Tag)
+        # Lorentz structure of z > up-type up-type != z > down-type down-type
+        self.assertFalse(h_zz_ssss_Tag == h_zz_sscc_Tag)
+        self.assertFalse(h_zz_sscc_Tag == h_ww_sscc_Tag)
+        self.assertFalse(h_zz_sscc_Tag == h_zz_eemumu_Tag)
+
+        # Test diagram_from_tag
+        new_diagram = h_zz_ssss_Tag.diagram_from_tag(self.my_testmodel)
+        #print new_diagram.nice_string()
+        new_tag = diagram_generation.DiagramTag(new_diagram)
+        old_tag = diagram_generation.DiagramTag(h_zz_ssss)
+        #print new_tag, old_tag
+        self.assertTrue(new_tag == old_tag)
+
+    def test_helas_helpers(self):
+        """ Test related helpers in DecayModel, Channel, DecayParticles. """
+
+        t = self.my_testmodel.get_particle(6)
+        t.find_channels(2, self.my_testmodel)
+        t_bw = t.get_channels(2, True)[0]
+        
+        # Test get in Channel        
+        self.assertFalse(t_bw['helastag'] and t_bw['std_diagram'])
+        t_bw.get('helastag', self.my_testmodel)
+        self.assertTrue(t_bw['helastag'])
+        t_bw['helastag'] = None
+
+
+        # Test get_helas_properties in Channel
+        self.assertFalse(t_bw['helastag'] and t_bw['std_diagram'])
+        tag, std_diagram = t_bw.get_helas_properties(self.my_testmodel)
+        self.assertTrue(t_bw['helastag'] and t_bw['std_diagram'])
+        self.assertTrue(isinstance(tag, decay_objects.IdentifyHelasTag))
+        self.assertTrue(isinstance(std_diagram, base_objects.Diagram))
+        t_bw['helastag'] = None
+        t_bw['std_diagram'] = None
+
+
+        # Test get/add helascalls in DecayModel
+        self.assertEqual(self.my_testmodel.get_helascalls(4), [])
+        #     Error when input diagram has no helastag.
+        self.assertRaises(AssertionError, 
+                          self.my_testmodel.add_helascalls, 2, t_bw)
+        tag, std_diagram = t_bw.get_helas_properties(self.my_testmodel)
+        self.my_testmodel.add_helascalls(2, t_bw)
+        self.assertTrue(len(self.my_testmodel.get_helascalls(2))==1)
+        self.assertTrue(self.my_testmodel.get_helascalls(2)[0]['helastag'])
+
+        #     The helas calls should be a deepcopy of the argument.
+        std_diagram['vertices'] = []
+        self.assertTrue(self.my_testmodel.get_helascalls(2)[0]['vertices'])
+
+
+    
+
+
+    def test_collect_helascalls(self):
+        """ Test the collect_helascalls. """
+
+        # Turn top decay into 3-body
+        decay_objects.MT = 60
+
+        h = self.my_testmodel.get_particle(25)
+        t = self.my_testmodel.get_particle(6)
+
+        t.find_channels(3, self.my_testmodel)
+        #print t.get_channels(3, True).nice_string()
+
+        # Test exceptions
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.collect_helascalls, t, 'non-int')
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.collect_helascalls, 'non-part', 3)
+
+
+        self.my_testmodel.collect_helascalls(t, 3)
+        # helas calls contain leptonic and hadronic top decay
+        self.assertEqual(len(self.my_testmodel.get_helascalls(3)), 2)
+
+        # Test the properties set during collect_helascalls
+        t_beve = t.get_amplitude([-11, 12, 5])['diagrams'][0]
+        t_bmuvm = t.get_amplitude([-13, 14, 5])['diagrams'][0]
+        std_diagram = self.my_testmodel.get_helascalls(3)[t_beve['helas_number']]
+        self.assertEqual(t_beve['helas_number'],
+                         t_bmuvm['helas_number'])
+        self.assertTrue(std_diagram['helastag'] == t_bmuvm['helastag'])
+        
 
 #===============================================================================
 # Test_DecayAmplitude
@@ -4021,7 +4226,7 @@ class Test_AbstractModel(unittest.TestCase):
         normal_sm.read_param_card(param_path)
         #print normal_sm.get_interaction(59)        
         #normal_sm.generate_abstract_model()
-        normal_sm.find_all_channels(3, True)
+        normal_sm.find_all_channels(3, generate_abstract=True)
         #normal_sm.find_vertexlist()
         #normal_sm.generate_abstract_amplitudes(3)
         ab_model = normal_sm['ab_model']

@@ -1152,6 +1152,8 @@ class DecayParticle(base_objects.Particle):
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
 
 
+
+
     # This helper function is obselete in current algorithm...
     def generate_configlist(self, channel, partnum, model):
         """ Helper function to generate all the configuration to add
@@ -1253,6 +1255,7 @@ class DecayModel(model_reader.ModelReader):
                    'stable_particles', 'vertexlist_found',
                    'reduced_interactions', 'decay_groups', 'max_vertexorder',
                    'decaywidth_list', 
+                   'helascalls',
                    'ab_model', 'abmodel_generated', 'coupling_dict','parameter_dict'
                   ]
 
@@ -1294,6 +1297,7 @@ class DecayModel(model_reader.ModelReader):
         self['max_vertexorder'] = 0
         self['conj_int_dict'] = {}
 
+        self['helascalls'] = {}
         self['decay_groups'] = []
         self['reduced_interactions'] = []
         self['stable_particles'] = []
@@ -1414,6 +1418,67 @@ class DecayModel(model_reader.ModelReader):
                                             for p in self.get('particles')], [])
                                       )
         return self['max_vertexorder']
+
+    def get_helascalls(self, number):
+        """ Get the helascalls with the number of final particles. Return
+            empty list if such helascalls does not exist."""
+
+        return self.get('helascalls').get(number, [])
+
+    def add_helascalls(self, number, diagram):
+        """ Add the helascalls with the number of final particles. 
+            Use deepcopy of the diagram."""
+        
+        # diagram should have std_diagram already
+        assert diagram['std_diagram']
+
+        std_channel = Channel()
+        # Replace the vertices with standard expression 
+        # written by IdentifyHelasTagHelasTag.
+        std_channel['vertices'] = copy.deepcopy(diagram['std_diagram']['vertices'])
+        std_channel['helastag'] = diagram['helastag']
+
+
+        try:
+            self['helascalls'][number].append(std_channel)
+        except KeyError:
+            self['helascalls'][number] = base_objects.DiagramList([std_channel])
+
+
+    def collect_helascalls(self, part, number):
+        """ Collect diagrams from the ones in the given particle 
+            with given final state number that are not in 'helascalls'."""
+            
+        
+        if not isinstance(number, int) or not isinstance(part, DecayParticle):
+            raise self.PhysicsObjectError, \
+                "Wrong argument types."
+
+        amps = part.get_amplitudes(number)
+        diagrams = sum([[d for d in amp['diagrams']] for amp in amps],[])
+        calls = self.get_helascalls(number)
+
+        for d in diagrams:
+            helastag, std_d = d.get_helas_properties(self)
+
+            found = False
+            for num, call in enumerate(calls):
+                if not call['helastag']:
+                    raise self.PhysicsObjectError, \
+                        "The helastag of helascalls should exist."
+                if call['helastag'] == helastag:
+                    found = True
+                    d['helas_number'] = num
+                    break
+
+            if not found:
+                d['helas_number'] = len(calls)      
+                self.add_helascalls(number, d)
+                # for empty calls, update the calls to direct to the actual
+                # list rather than a fake empty list [].
+                if not calls:
+                    calls = self.get_helascalls(number)
+
 
     def generate_abstract_model(self, force=False):
         """ Generate the abstract particles in AbstractModel."""
@@ -2576,7 +2641,8 @@ class DecayModel(model_reader.ModelReader):
             Call the function in DecayParticle."""
         part.find_channels(max_partnum, self)
 
-    def find_all_channels(self, max_partnum, generate_abstract=False):
+    def find_all_channels(self, max_partnum, collect_helascalls = True,
+                          generate_abstract=False):
         """ Function that find channels for all particles in this model.
             Call the function in DecayParticle.
             It also write a file to compare the decay width from 
@@ -2611,6 +2677,9 @@ class DecayModel(model_reader.ModelReader):
             part.find_channels_nextlevel(self)
             if generate_abstract:
                 self.generate_abstract_amplitudes(part, 2)
+            if collect_helascalls:
+                self.collect_helascalls(part, 2)
+ 
         for part in self.get('particles'):
             if max_partnum > 2:
                 # Skip search if this particle is stable
@@ -2630,7 +2699,9 @@ class DecayModel(model_reader.ModelReader):
 
                     if generate_abstract:
                         self.generate_abstract_amplitudes(part, clevel)
-
+                    
+                    if collect_helascalls:
+                        self.collect_helascalls(part, clevel)
 
             # update the decay attributes for both max_partnum >2 or == 2.
             # The update should include branching ratios and apx_decaywidth_err
@@ -2638,7 +2709,9 @@ class DecayModel(model_reader.ModelReader):
             part.update_decay_attributes(False, True, True, self)
 
 
-    def find_all_channels_smart(self, precision, generate_abstract=False):
+    def find_all_channels_smart(self, precision, 
+                                collect_helascalls = True,
+                                generate_abstract=False):
         """ Function that find channels for all particles in this model.
             Decay channels more than three final particles are searched
             when the precision is not satisfied.
@@ -2683,6 +2756,8 @@ class DecayModel(model_reader.ModelReader):
             if generate_abstract:
                 self.generate_abstract_amplitudes(part, 2)
 
+            if collect_helascalls:
+                self.collect_helascalls(part, 2)
 
         # Search for higher final particle states, if the precision
         # is not satisfied.
@@ -2708,7 +2783,10 @@ class DecayModel(model_reader.ModelReader):
                                   part.get('name')))
                 part.find_channels_nextlevel(self)
                 if generate_abstract:
-                    self.generate_abstract_amplitudes(part, 2)
+                    self.generate_abstract_amplitudes(part, clevel)
+
+                if collect_helascalls:
+                    self.collect_helascalls(part, clevel)
 
                 # Note that the width is updated automatically in the
                 # find_nextlevel
@@ -2717,6 +2795,7 @@ class DecayModel(model_reader.ModelReader):
 
             # Finally, update the branching ratios
             part.update_decay_attributes(False, False, True)         
+
 
 
     def write_summary_decay_table(self, name=''):
@@ -2879,9 +2958,12 @@ class DecayModel(model_reader.ModelReader):
                      seperator+ \
                      '#%8s    Predicted \n' %'ID')
 
+        # Output order is based on pdg code
+        pids = sorted([p.get_pdg_code() for p in self['particles']])
 
+        for pid in pids:
+            p = self.get_particle(pid)
 
-        for p in self['particles']:
             # Write the table only for particles with finite width.
             if p.get('apx_decaywidth'):
                 nonspart += p.decaytable_string(format)
@@ -2953,6 +3035,60 @@ class DecayModel(model_reader.ModelReader):
             next level."""
 
         pass
+
+
+    # Helper function to review helas calls
+    def write_helas_collection(self, name = ''):
+        """ Functions that write the helascalls of the model, attached with
+            a list of actual diagrams that belong to the helas call. """
+
+
+        # Write the result to decaywidth_MODELNAME.dat in 'mg5decay' directory
+        path = os.path.join(MG5DIR, 'mg5decay')
+
+        if not name:
+            fdata = open(os.path.join(path,
+                                      (self['name']+'_helascollection.dat')),
+                         'w')
+            logger.info("\nWrite %s Helas collection to %s\n"\
+                            %(format, 
+                              str(os.path.join(path,
+                                               (self['name']+'_helascollection.dat')))))
+
+        elif isinstance(name, str):
+            fdata = open(os.path.join(path, name),'w')
+            logger.info("\nWrite %s Helas collection to %s\n"\
+                            %(format, 
+                              str(os.path.join(path,
+                                               name))))
+
+        else:
+            raise PhysicsObjectError,\
+                "The file name of the decay table must be str." % str(name)
+
+
+        collection = ''
+
+        # Output order is based on pdg code
+        pids = sorted([p.get_pdg_code() for p in self['particles']])
+        
+        for key in sorted(self['helascalls'].keys()):
+            collection += '%d-body decay: %d calls\n' %(key, len(self.get_helascalls(key)))
+            for num, call in enumerate(self.get_helascalls(key)):
+                collection += call.nice_string(decay_info=False)+'\n'
+                for pid in pids:
+                    p = self.get_particle(pid)
+                    for amp in p.get_amplitudes(key):
+                        for c in amp['diagrams']:
+                            if c['helas_number'] == num:
+                                collection += "   "+c.nice_string(decay_info=False)+'\n'
+            
+
+                    
+        # Print collection
+        fdata.write(collection)
+        fdata.close()
+
 
     # Helper Function for reading MG4 param_card
     # And compare with our apx_decaywidth
@@ -3060,7 +3196,9 @@ class Channel(base_objects.Diagram):
 
     sorted_keys = ['vertices',
                    'orders',
-                   'onshell', 'has_idpart', 'id_part_list',
+                   'onshell', 'ini_pid', 'final_legs',
+                   'has_idpart', 'id_part_list',
+                   'tag', 'helastag', 'helas_number', 'std_diagram',
                    'apx_matrixelement_sq', 'apx_psarea', 'apx_decaywidth',
                    'apx_decaywidth_nextlevel', 'apx_width_calculated']#,
                    #'potential_gauge_dependence']
@@ -3081,6 +3219,12 @@ class Channel(base_objects.Diagram):
 
         # (real) DiagramTag
         self['tag'] = []
+        # IdentifyHelasTag
+        self['helastag'] = []
+        # the number of the corresponding helas calls
+        self['helas_number'] = None
+        # diagram written by IdentifyHelasTag
+        self['std_diagram'] = None
 
         # old properties for check_channels_equiv, removable
         # The position of the identicle particles with pid as keys.
@@ -3140,6 +3284,9 @@ class Channel(base_objects.Diagram):
         if name == 'tag' and not self['tag']:
             self['tag'] = diagram_generation.DiagramTag(self)
 
+        if name == 'helastag' and not self['helastag'] and model:
+            self['helastag'] = IdentifyHelasTag(self, model)
+
         return super(Channel, self).get(name)
 
     def get_sorted_keys(self):
@@ -3165,10 +3312,10 @@ class Channel(base_objects.Diagram):
 
         self.set('orders', coupling_orders)
 
-    def nice_string(self):
+    def nice_string(self, decay_info=True):
         """ Add width/width_nextlevel to the nice_string"""
         mystr = super(Channel, self).nice_string()
-        if self['vertices']:
+        if self['vertices'] and decay_info:
             if self['onshell']:
                 mystr +=" (width = %.3e)" % self['apx_decaywidth']
             else:
@@ -3261,13 +3408,16 @@ class Channel(base_objects.Diagram):
 
         return self['onshell']
 
-    #def check_gauge_dependence(self, model):
-    #    """ compare the vertex ids to see if anyone of them may be illed."""
-    #
-    #    vids = [v['id'] for v in self['vertices']]
-    #    
-    #    if (set(vids) & set(model['potential_gaugedependence_ids'])):
-    #        self['potential_gauge_dependence'] = True
+    def get_helas_properties(self, model):
+        """ return helastag and std_diagram, construct them if necessary. """
+
+        if not self['helastag'] and model:
+            self['helastag'] = IdentifyHelasTag(self, model)
+
+        if not self['std_diagram'] and model:
+            self['std_diagram'] = self['helastag'].diagram_from_tag(model)
+
+        return self['helastag'], self['std_diagram']
 
     def get_fermion_factor(self, model):
         """ Get the fermion_factor, same as get_fermion_factor 
@@ -3431,16 +3581,7 @@ class Channel(base_objects.Diagram):
     def check_channels_equiv(channel_a, channel_b):
         """ Helper function to check if any channel is indeed identical to
             the given channel. (This may happens when identical particle in
-            channel.) This function check the final state first.
-            Then use DiagramTag for full comparison."""
-
-        # Get the final states of channels
-        final_pid_a = set([l.get('id') for l in channel_a.get_final_legs()])
-        final_pid_b = set([l.get('id') for l in channel_b.get_final_legs()])
-
-        # Return False if they are not the same
-        if final_pid_a != final_pid_b:
-            return False
+            channel.) Use DiagramTag for full comparison.""" 
 
         return channel_a.get('tag') == channel_b.get('tag')
 
@@ -4030,6 +4171,70 @@ class ChannelList(base_objects.DiagramList):
         """ Test if the object is a valid Channel for the list. """
         return isinstance(obj, Channel)
 
+
+#===============================================================================
+# ChannelList: List of all possible  channels for the decay
+#===============================================================================
+class IdentifyHelasTag(diagram_generation.DiagramTag):
+    """ DiagramTag daughter class to identify helas call. Model is necessary
+        for initialization.
+        Note: 1.) diagrams that are identical may have different type of
+                  mother particles, e.g. t > b w+ and w+ > c s~ are the same
+              2.) the output diagram still has the same leg number as its
+                  mother diagram. This means the diagrams within the same 
+                  amplitude still have consistent leg number.
+                  But the leg numbers in a std_diagram may be different
+                  from the numbers in model['helascalls'], though the structure
+                  is identical.
+              3.) in general, the last vertex of output diagram is not initial
+                  vertex; however, the initial leg can be found by looking for
+                  the end leg with number=1.
+    """
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify Helas calls
+        configs: ((spin, color), (leg id, leg number, leg state) 
+        N.B.: only spin and color are used for comparison."""
+
+
+        part = model.get_particle(leg.get('id'))
+
+
+        return [((part.get('spin'), part.get('color')),
+                 (leg.get('id'), leg.get('number'), leg.get('state')))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify Helas calls:
+        ((interaction lorentz, color, keys of couplings), ineraction id)
+        N.B.: interaction id is listed for reconstruction purpose,
+        but not used for comparison."""
+
+        inter = model.get_interaction(vertex.get('id'))
+
+        return ((inter['lorentz'], inter['color'], 
+                 sorted(inter['couplings'].keys())),
+                inter['id'])
+
+    @staticmethod
+    def leg_from_link(link):
+        """Return a leg from a link"""
+
+        if link.end_link:
+            # This is an external leg, info in links
+            return base_objects.Leg({'number':link.links[0][1][1],
+                                     'id':link.links[0][1][0],
+                                     'state':link.links[0][1][2],
+                                     'onshell':False})
+
+        # This shouldn't happen
+        assert False
+
+    @staticmethod
+    def id_from_vertex_id(vertex_id):
+        """Return the numerical vertex id from a link.vertex_id"""
+        return vertex_id[1]
 
 
 #===============================================================================
