@@ -1155,7 +1155,7 @@ This will take effect only in a NEW terminal
             If you want to compute the width of all particles, type \'compute_widths all\'''')
 
         particles = set()
-        options = {'precision': 0.001, 'path':None, 'output':None}
+        options = {'precision': 0.0025, 'path':None, 'output':None}
         # check that the firsts argument is valid
         for i,arg in enumerate(args):
             if arg.startswith('--'):
@@ -1199,7 +1199,19 @@ This will take effect only in a NEW terminal
             if madevent_interface.MadEventCmd.detect_card_type(options['path']) != 'param_card.dat':
                 raise self.InvalidCmd('%s should be a path to a param_card' % options['path'])
   
-        
+        if not options['path']:
+            param_card_text = self._curr_model.write_param_card()
+            if not options['output']:
+                dirpath = self._curr_model.get('modelpath')
+                options['path'] = pjoin(dirpath, 'param_card.dat')
+            else:
+                options['path'] = options['output']
+            ff = open(options['path'],'w')
+            ff.write(param_card_text)
+            ff.close()
+        if not options['output']:
+            options['output'] = options['path']
+
         return particles, options
                 
         
@@ -4571,29 +4583,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         # check the argument and return those in a dictionary format
         particles, opts = self.check_compute_widths(self.split_arg(line))
         
-        if not opts['path']:
-            param_card_text = self._curr_model.write_param_card()
-            if not opts['output']:
-                dirpath = self._curr_model.get('modelpath')
-                opts['path'] = pjoin(dirpath, 'param_card.dat')
-            else:
-                opts['path'] = opts['output']
-            ff = open(opts['path'],'w')
-            ff.write(param_card_text)
-            ff.close()
-                
-        
-        # IF MSSM convert the card to SLAH1
-        if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
-            import models.check_param_card as translator
-            
-            # Check the format of the param_card for Pythia and make it correct
-            if out_path2:
-                translator.make_valid_param_card(out_path, out_path2)
-            translator.convert_to_slha1(out_path)
-             
-            
-
         precision = float(opts['precision'])
         if not model:
             modelname = self._curr_model['name']
@@ -4657,13 +4646,15 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         with misc.TMP_directory() as path:
             decay_dir = pjoin(path,'temp_decay')
-            logger_mg.info('More info in temporary file: %s/crossx.html' % decay_dir)
+            logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
                 self.exec_cmd("set automatic_html_opening False --no-save")
 
                 self.exec_cmd('output %s -f' % decay_dir)
                 # Need to write the correct param_card in the correct place !!!
                 files.cp(opts['path'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
+                    check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 #files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
                 self.exec_cmd('launch -n decay -f')
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
@@ -4677,7 +4668,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
         
         madevent_interface.MadEventCmd.update_width_in_param_card(decay_info, 
-                                                   opts['path'], opts['output'])     
+                                                   opts['path'], opts['output'])
+        
+        if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):    
+            check_param_card.convert_to_slha1(opts['output'])
         return
 
 
@@ -4749,7 +4743,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             if part.get('width').lower() == 'zero':
                 continue
             logger_mg.info('get decay diagram for %s' % part['name'])
-            lastprint = time.time()
             # Find channels as requested
             if level // 1 == level and level >1:
                 level = int(level)
@@ -4775,10 +4768,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 clevel = 2
                 while part.get('apx_decaywidth_err') > precision:
                     clevel += 1
-                    if time.time() - lastprint > 1:
-                        logger_mg.info('    current estimated error: %s go to %s-body decay: ' %\
-                                (part.get('apx_decaywidth_err'), clevel))
-                        lastprint = time.time()
+                    if clevel > 3:
+                        logger_mg.info('    current estimated error: %s go to %s-body decay:' %\
+                                        (part.get('apx_decaywidth_err'), clevel))
                     part.find_channels_nextlevel(model)
                     part.group_channels_2_amplitudes(clevel, model, precision)                 
                     amp = part.get_amplitudes(clevel)

@@ -910,16 +910,20 @@ class DecayParticle(base_objects.Particle):
                 # Append this channel after all the setups.
                 self.get_channels(clevel, temp_channel.get_onshell(model)).\
                     append(temp_channel)
-                
+        
+        start = time.time()
+        repeat_time = 0
         # Go through sub-channels and try to add vertex to reach partnum
         for sub_clevel in range(max((clevel - model.get_max_vertexorder()+1),2),
  clevel):
             # The vertex level that should be combine with sub_clevel
             vlevel = clevel - sub_clevel+1
-
             # Go through each 'off-shell' channel in the given sub_clevel.
             # Decay of on-shell channel is not a new channel.
-            for sub_c in self.get_channels(sub_clevel, False):
+            tot = len(self.get_channels(sub_clevel, False))
+            for nb,sub_c in enumerate(self.get_channels(sub_clevel, False)):
+                if (nb + 1) % 100 == 0:
+                    logger.info('%i / %i: %ss (gauge: %ss)' % (nb+1, tot, int(time.time()-start), int(repeat_time)))
                 # Scan each leg to see if there is any appropriate vertex
                 for index, leg in enumerate(sub_c.get_final_legs()):
 
@@ -941,14 +945,13 @@ class DecayParticle(base_objects.Particle):
                         # Connect sub_channel to the vertex
                         # the connect_channel_vertex will
                         # inherit the 'has_idpart' from sub_c
+                        start_repeat = time.time()
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
-                        
-
+                        repeat_time += time.time() -start_repeat
                         # Append this channel if it is new
-                        if not self.check_repeat(clevel,
-                                                 temp_c_o, temp_c):
+                        if not self.check_repeat(clevel, temp_c_o, temp_c):
 
                             # Check gauge dependence
                             if not temp_c.check_gauge_dependence(model):
@@ -960,7 +963,8 @@ class DecayParticle(base_objects.Particle):
                                     get_apx_decaywidth(model)
                             
                             self.get_channels(clevel, temp_c_o).append(temp_c)
-
+                        
+            del self.check_repeat_tag
 
         # For two-body decay, record the maximal mass difference
         if clevel == 2:
@@ -1052,7 +1056,20 @@ class DecayParticle(base_objects.Particle):
         # To optimize the check, check if the final_mass is the same first
         # this will significantly reduce the number of call to
         # check_channels_equiv
+        
+        if not hasattr(self, 'check_repeat_tag') or not clevel in  self.check_repeat_tag.keys():
+            self.check_repeat_tag = {clevel:{channel.get('tag'): channel}}
+            return False
 
+        tag = channel.get('tag') 
+        if tag in self.check_repeat_tag:
+            return True
+        else:
+            self.check_repeat_tag[clevel][tag] = tag
+            return False
+                
+            
+            
 
         return any([Channel.check_channels_equiv(other_c, channel)\
                        for other_c in self.get_channels(clevel, onshell)
@@ -3286,6 +3303,7 @@ class Channel(base_objects.Diagram):
 
         if name == 'helastag' and not self['helastag'] and model:
             self['helastag'] = IdentifyHelasTag(self, model)
+            
 
         return super(Channel, self).get(name)
 

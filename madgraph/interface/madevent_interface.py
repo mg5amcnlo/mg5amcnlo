@@ -2537,8 +2537,11 @@ class MadEventCmd(CmdExtended, HelpToCmd, CompleteForCmd):
                 fsock.close()
                 return
             else:
-                subprocess.call(['python', 'write_param_card.py'], 
-                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
+                devnull = open(os.devnull,'w')
+                subprocess.call(['python', 'write_param_card.py'],
+                             cwd=pjoin(self.me_dir,'bin','internal','ufomodel'),
+                             stdout=devnull)
+                devnull.close()
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             param_card.write_inc_file(outfile, ident_card, default)
          

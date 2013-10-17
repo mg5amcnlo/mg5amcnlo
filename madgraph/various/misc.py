@@ -465,10 +465,10 @@ class MuteLogger(object):
         
         self.names = names
         self.levels = levels
-        if files:
+        if isinstance(files, list):
             self.files = files
         else:
-            self.files = [None] * len(names)
+            self.files = [files] * len(names)
         self.logger_saved_info = {}
         self.opts = opt
 
@@ -511,7 +511,7 @@ class MuteLogger(object):
             self.logger_saved_info[logname] = [hdlr, my_logger.handlers]
             #for h in my_logger.handlers:
             #    h.setLevel(logging.CRITICAL)
-            for old_hdlr in my_logger.handlers:
+            for old_hdlr in list(my_logger.handlers):
                 my_logger.removeHandler(old_hdlr)
             my_logger.addHandler(hdlr)
             #my_logger.setLevel(level)
@@ -536,6 +536,7 @@ class MuteLogger(object):
                     my_logger.addHandler(old_hdlr)
             else:
                 my_logger.setLevel(level)
+        
             #for i, h in enumerate(my_logger.handlers):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
 

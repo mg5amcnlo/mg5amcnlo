@@ -768,7 +768,10 @@ def convert_to_slha1(path, outputpath=None ):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
-
+    if not 'usqmix' in card:
+        #already slha1
+        card.write(outputpath)
+        return
         
     # Mass 
     #card.reorder_mass() # needed?
@@ -938,6 +941,10 @@ def convert_to_mg5card(path, outputpath=None, writting=True):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
+    if 'usqmix' in card:
+        #already mg5(slha2) format
+        card.write(outputpath)
+        return
 
         
     # SMINPUTS
