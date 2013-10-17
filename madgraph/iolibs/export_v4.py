@@ -50,7 +50,7 @@ import models.import_ufo as import_ufo
 import models.write_param_card as param_writer
 import models.check_param_card as check_param_card
 
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 from madgraph.iolibs.files import cp, ln, mv
 
 pjoin = os.path.join
@@ -121,7 +121,7 @@ class ProcessExporterFortran(object):
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
-                    subprocess.call([pjoin('bin', 'internal', 'clean_template')], \
+                    misc.call([pjoin('bin', 'internal', 'clean_template')], \
                                                                        cwd=self.dir_path)
                 except Exception, why:
                     raise MadGraph5Error('Failed to clean correctly %s: \n %s' \
@@ -554,10 +554,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 line = "AMP2(%(num)d)=AMP2(%(num)d)+" % \
                        {"num": (config_to_diag_dict[config][0] + 1)}
 
-                line += "+".join(["AMP(%(num)d)*dconjg(AMP(%(num)d))" % \
-                                  {"num": a.get('number')} for a in \
+                amp = "+".join(["AMP(%(num)d)" % {"num": a.get('number')} for a in \
                                   sum([diagrams[idiag].get('amplitudes') for \
                                        idiag in config_to_diag_dict[config]], [])])
+                
+                # Not using \sum |M|^2 anymore since this creates troubles
+                # when ckm is not diagonal due to the JIM mechanism.
+                if '+' in amp:
+                    line += "(%s)*dconjg(%s)" % (amp, amp)
+                else:
+                    line += "%s*dconjg(%s)" % (amp, amp)
                 ret_lines.append(line)
         else:
             for idiag, diag in enumerate(matrix_element.get('diagrams')):
@@ -758,7 +764,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         
         # Check for compiler
-        if misc.which(default_compiler):
+        if default_compiler and misc.which(default_compiler):
             compiler = default_compiler
         elif misc.which('gfortran'):
             compiler = 'gfortran'
@@ -766,28 +772,40 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             compiler = 'g77'
         elif misc.which('f77'):
             compiler = 'f77'
-        else:
+        elif default_compiler:
             logger.warning('No Fortran Compiler detected! Please install one')
-            compiler = default_compiler
+            compiler = default_compiler # maybe misc fail so try with it
+        else:
+            raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
         logger.info('Use Fortran compiler ' + compiler)
         self.replace_make_opt_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA'):
+        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
             self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template'))
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
+        mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)FC\s*=\s*.+\s*$')
+        FC_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
         for iline, line in enumerate(lines):
             FC_result = FC_re.match(line)
             if FC_result:
+                if compiler != FC_result.group(2):
+                    mod = True
                 lines[iline] = FC_result.group(1) + "FC=" + compiler
-        outfile = open(make_opts, 'w')
+        if not mod:
+            return
+        try:
+            outfile = open(make_opts, 'w')
+        except IOError:
+            if root_dir == self.dir_path:
+                logger.info('Fail to set compiler. Trying to continue anyway.')
+            return
         outfile.write('\n'.join(lines))
 
 #===============================================================================
@@ -1333,7 +1351,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
@@ -2572,7 +2590,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         self.write_symswap_file(writers.FortranWriter(filename),
                                 ident_perms)
 
-        filename = 'symfact.dat'
+        filename = 'symfact_orig.dat'
         self.write_symfact_file(writers.FortranWriter(filename),
                            symmetry)
 
@@ -3153,7 +3171,13 @@ class UFO_model_to_mg4(object):
                                             self.p_to_f.parse(param.expr)))
 
         fsock.write_comments("\nDefinition of the EW coupling used in the write out of aqed\n")
-        fsock.writelines(""" gal(1) = 1d0
+        if ('aEWM1',) in self.model['parameters']:
+            fsock.writelines(""" gal(1) = 3.5449077018110318 / DSQRT(aEWM1)
+                                 gal(2) = 1d0
+                         """)            
+        else:
+            logger.warning('$RED aEWM1 not define in MODEL. AQED will not be written correcty in LHE FILE')
+            fsock.writelines(""" gal(1) = 1d0
                              gal(2) = 1d0
                          """)
 

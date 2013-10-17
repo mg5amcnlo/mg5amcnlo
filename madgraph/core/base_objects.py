@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating','propagator',
                    'is_part', 'self_antipart']
 
     def default_setup(self):
@@ -219,6 +219,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
 
@@ -2106,11 +2107,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True)
             elif schannel:
-                return self.shell_string(False, False, False)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
             
             
             

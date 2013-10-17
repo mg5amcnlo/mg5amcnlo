@@ -963,8 +963,8 @@ class DecayParticle(base_objects.Particle):
                                     get_apx_decaywidth(model)
                             
                             self.get_channels(clevel, temp_c_o).append(temp_c)
-                        
-            del self.check_repeat_tag
+            if hasattr(self, 'check_repeat_tag'):          
+                del self.check_repeat_tag
 
         # For two-body decay, record the maximal mass difference
         if clevel == 2:

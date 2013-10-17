@@ -118,7 +118,7 @@ c     Set stot
 c
 c     Start reading use_config from symfact.dat written by MG5
 c
-      open(unit=25, file='symfact.dat', status='old')
+      open(unit=25, file='symfact_orig.dat', status='old')
       i=0
       do j=1,mapconfig(0)
          do while(i.lt.mapconfig(j))
@@ -667,8 +667,6 @@ c
       write(lun,20) 'cp $k log.txt'
       write(lun,20) 'cd ../'
       write(lun,15) 'done'
-      write(lun,15) 'rm -f run.$script'
-      write(lun,15) 'touch done.$script'
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)

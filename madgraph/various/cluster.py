@@ -559,6 +559,9 @@ class SGECluster(Cluster):
             stderr = '/dev/null'
         elif stderr == -2: # -2 is subprocess.STDOUT
             stderr = stdout
+        else:
+            stderr = self.def_get_path(stderr)
+            
         if log is None:
             log = '/dev/null'
         else:
@@ -768,7 +771,7 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
-                pass
+                self.submitted_ids.remove(id)
             else:
                 fail += 1
 
@@ -904,7 +907,113 @@ class GECluster(Cluster):
         cmd = "qdel %s" % ' '.join(self.submitted_ids)
         status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
 
+class SLURMCluster(Cluster):
+    """Basic class for dealing with cluster submission"""
+
+    name = 'slurm'
+    job_id = 'SLURM_JOBID'
+    idle_tag = ['Q','PD','S','CF']
+    running_tag = ['R']
+    complete_tag = ['C']
+
+    @multiple_try()
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
+        """Submit a job prog to a SLURM cluster"""
+        
+        me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
+        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+
+        if not me_dir[0].isalpha():
+            me_dir = 'a' + me_dir[1:]
+        
+        if cwd is None:
+            cwd = os.getcwd()
+        if stdout is None:
+            stdout = '/dev/null'
+        if stderr is None:
+            stderr = '/dev/null'
+        elif stderr == -2: # -2 is subprocess.STDOUT
+            stderr = stdout
+        if log is None:
+            log = '/dev/null'
+        
+        command = ['sbatch','-o', stdout,
+                   '-J', me_dir, 
+                   '-e', stderr, prog]
+                   
+        a = misc.Popen(command, stdout=subprocess.PIPE, 
+                                      stderr=subprocess.STDOUT,
+                                      stdin=subprocess.PIPE, cwd=cwd)
+
+        output = a.communicate()
+        output_arr = output[0].split(' ')
+        id = output_arr[3].rstrip()
+
+        if not id.isdigit():
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+
+        self.submitted += 1
+        self.submitted_ids.append(id)
+        return id
+
+    @multiple_try()
+    def control_one_job(self, id):
+        """ control the status of a single job with it's cluster id """
+        cmd = 'squeue j'+str(id)
+        status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
+                                  stderr=open(os.devnull,'w'))
+        
+        for line in status.stdout:
+            line = line.strip()
+            if 'Invalid' in line:
+                return 'F'
+            elif line.startswith(str(id)):
+                status = line.split()[4]
+        if status in self.idle_tag:
+            return 'I' 
+        elif status in self.running_tag:                
+            return 'R' 
+        return 'F'
+        
+    @multiple_try()    
+    def control(self, me_dir):
+        """ control the status of a single job with it's cluster id """
+        cmd = "squeue"
+        status = misc.Popen([cmd], stdout=subprocess.PIPE)
+
+        if me_dir.endswith('/'):
+           me_dir = me_dir[:-1]    
+        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+        if not me_dir[0].isalpha():
+                  me_dir = 'a' + me_dir[1:]
+
+        idle, run, fail = 0, 0, 0
+        for line in status.stdout:
+            if me_dir in line:
+                status = line.split()[4]
+                if status in self.idle_tag:
+                    idle += 1
+                elif status in self.running_tag:
+                    run += 1
+                elif status in self.complete_tag:
+                    continue
+                else:
+                    fail += 1
+
+        return idle, run, self.submitted - (idle+run+fail), fail
+
+    @multiple_try()
+    def remove(self, *args):
+        """Clean the jobs on the cluster"""
+        
+        if not self.submitted_ids:
+            return
+        cmd = "scancel %s" % ' '.join(self.submitted_ids)
+        print 'cmd = ',cmd
+        status = misc.Popen([cmd], shell=True, stdout=open(os.devnull,'w'))
+
+
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
-             'lsf': LSFCluster, 'ge':GECluster}
+             'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster}
 
 

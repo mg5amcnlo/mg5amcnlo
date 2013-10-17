@@ -31,6 +31,7 @@ import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.helas_call_writers as helas_call_writer
 import models.import_ufo as import_ufo
 import madgraph.iolibs.save_load_object as save_load_object
+import madgraph.iolibs.group_subprocs as group_subprocs
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
@@ -1024,89 +1025,486 @@ double Sigma_sm_qq_six::matrix_uu_six()
         #print open(self.give_pos('test.cc')).read()
         self.assertFileContains('test.cc', goal_string)
 
-    def test_write_dec_process_cc_file(self):
-        """Test writing the .cc C++ standalone file for u u~ > go go"""
+    def test_write_dec_multiprocess_files(self):
+        """Test writing the .cc C++ standalone file for p p > z j, z > j j"""
 
-        myleglist = base_objects.LegList()
+        # Setup a model
+
+        mypartlist = base_objects.ParticleList()
+        myinterlist = base_objects.InteractionList()
+
+        # A gluon
+        mypartlist.append(base_objects.Particle({'name':'g',
+                      'antiname':'g',
+                      'spin':3,
+                      'color':8,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'g',
+                      'antitexname':'g',
+                      'line':'curly',
+                      'charge':0.,
+                      'pdg_code':21,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+
+        g = mypartlist[-1]
+
+        # A quark U and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'u',
+                      'antiname':'u~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'u',
+                      'antitexname':'\bar u',
+                      'line':'straight',
+                      'charge':2. / 3.,
+                      'pdg_code':2,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        u = mypartlist[-1]
+        antiu = copy.copy(u)
+        antiu.set('is_part', False)
+
+        # A quark S and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'s',
+                      'antiname':'s~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':3,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        s = mypartlist[-1]
+        antis = copy.copy(s)
+        antis.set('is_part', False)
+
+        # A quark D and its antiparticle
+        mypartlist.append(base_objects.Particle({'name':'d',
+                      'antiname':'d~',
+                      'spin':2,
+                      'color':3,
+                      'mass':'zero',
+                      'width':'zero',
+                      'texname':'d',
+                      'antitexname':'\bar d',
+                      'line':'straight',
+                      'charge':-1. / 3.,
+                      'pdg_code':1,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':False}))
+        d = mypartlist[-1]
+        antid = copy.copy(d)
+        antid.set('is_part', False)
+
+        # A Z
+        mypartlist.append(base_objects.Particle({'name':'z',
+                      'antiname':'z',
+                      'spin':3,
+                      'color':1,
+                      'mass':'MZ',
+                      'width':'WZ',
+                      'texname':'Z',
+                      'antitexname':'Z',
+                      'line':'wavy',
+                      'charge':0.,
+                      'pdg_code':23,
+                      'propagating':True,
+                      'is_part':True,
+                      'self_antipart':True}))
+        z = mypartlist[-1]
+
+        # Gluon and photon couplings to quarks
+        myinterlist.append(base_objects.Interaction({
+                      'id': 1,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 2,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        myinterlist.append(base_objects.Interaction({
+                      'id': 3,
+                      'particles': base_objects.ParticleList(\
+                                            [antis, \
+                                             s, \
+                                             g]),
+                      'color': [color.ColorString([color.T(2,1,0)])],
+                      'lorentz':['FFV1'],
+                      'couplings':{(0, 0):'GQQ'},
+                      'orders':{'QCD':1}}))
+
+        # Coupling of Z to quarks
         
-        myleglist.append(base_objects.Leg({'id':2,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':-2,
-                                         'state':False}))
-        myleglist.append(base_objects.Leg({'id':23,
-                                         'state':True}))
-        myleglist.append(base_objects.Leg({'id':21,
-                                         'state':True}))
-        
-        myleglist2 = base_objects.LegList()
-        
-        myleglist2.append(base_objects.Leg({'id':23,
-                                         'state':False}))
-        myleglist2.append(base_objects.Leg({'id':-2,
-                                         'state':True}))
-        myleglist2.append(base_objects.Leg({'id':2,
-                                         'state':True}))
-        
-        mydec =  base_objects.Process({'legs':myleglist2,
-                                       'model':self.mymodel,
-                                       'is_decay_chain':True})
-        
-        myproc = base_objects.Process({'legs':myleglist,
-                                       'model':self.mymodel,
-                                       'decay_chains':base_objects.ProcessList([mydec])})
+        myinterlist.append(base_objects.Interaction({
+                      'id': 6,
+                      'particles': base_objects.ParticleList(\
+                                            [antiu, \
+                                             u, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GUZ1', (0, 1):'GUZ2'},
+                      'orders':{'QED':1}}))
 
-        my_decay_chain_amps = diagram_generation.DecayChainAmplitude(\
-                                                  myproc)
+        myinterlist.append(base_objects.Interaction({
+                      'id': 7,
+                      'particles': base_objects.ParticleList(\
+                                            [antid, \
+                                             d, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                      'orders':{'QED':1}}))
 
-        my_dc_process = helas_objects.HelasDecayChainProcess(\
-                                      my_decay_chain_amps)
+        myinterlist.append(base_objects.Interaction({
+                      'id': 8,
+                      'particles': base_objects.ParticleList(\
+                                            [antis, \
+                                             s, \
+                                             z]),
+                      'color': [color.ColorString([color.T(1,0)])],
+                      'lorentz':['FFV1', 'FFV2'],
+                      'couplings':{(0, 0):'GDZ1', (0, 0):'GDZ2'},
+                      'orders':{'QED':1}}))
 
-        matrix_element = my_dc_process.combine_decay_chain_processes()
+        mymodel = base_objects.Model()
+        mymodel.set('particles', mypartlist)
+        mymodel.set('interactions', myinterlist)        
+        mymodel.set('name', 'sm')
 
+        # Set parameters
+        external_parameters = [\
+            base_objects.ParamCardVariable('zero', 0.,'DUM', 1),
+            base_objects.ParamCardVariable('MZ', 91.,'MASS', 23),
+            base_objects.ParamCardVariable('WZ', 2.,'DECAY', 23)]
+        couplings = [\
+            base_objects.ModelVariable('GQQ', '1.', 'complex'),
+            base_objects.ModelVariable('GQED', '0.1', 'complex'),
+            base_objects.ModelVariable('G', '1.', 'complex'),
+            base_objects.ModelVariable('GUZ1', '0.1', 'complex'),
+            base_objects.ModelVariable('GUZ2', '0.1', 'complex'),
+            base_objects.ModelVariable('GDZ1', '0.05', 'complex'),
+            base_objects.ModelVariable('GDZ2', '0.05', 'complex'),
+            base_objects.ModelVariable('ZZQQ', '0.01', 'complex')]
+        mymodel.set('parameters', {('external',): external_parameters})
+        mymodel.set('couplings', {(): couplings})
+        mymodel.set('functions', [])
+        p = [21,1,2,3,-1,-2,-3]
+        q = [1,2,-1,-2]
+        procs = [[p,p,[23],p]]
+        decays = [[[23],p,p]]
+        my_processes = base_objects.ProcessDefinitionList()
+        decayprocs = base_objects.ProcessDefinitionList()
 
-        #decay_chain = diagram_generation.DecayChainAmplitude(myproc)
+        for proc in procs:
+            # Define the multiprocess
+            my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id, 'state': True}) for id in proc])
 
-        #matrix_element = helas_objects.HelasMultiProcess(diagram_generation.AmplitudeList([decay_chain]))
-        #matrix_element.get('matrix_elements')[0].set('has_mirror_process',
-        #                                             True)
+            my_leglist[0].set('state', False)
+            my_leglist[1].set('state', False)
 
+            my_process = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel})
+            my_processes.append(my_process)
 
-        exporter = export_cpp.ProcessExporterPythia8(matrix_element,
+        for proc in decays:
+            # Define the decays
+            my_leglist = base_objects.MultiLegList([\
+                base_objects.MultiLeg({'ids': id, 'state': True}) for id in proc])
+
+            my_leglist[0].set('state', False)
+
+            my_process = base_objects.ProcessDefinition({'legs':my_leglist,
+                                                         'model':mymodel,
+                                                         'is_decay_chain': True})
+            decayprocs.append(my_process)
+
+        for proc in my_processes:
+            proc.set('decay_chains', decayprocs)
+            
+        decay_chains = diagram_generation.MultiProcess(my_processes,
+                                                       collect_mirror_procs = True)
+
+        dc_subproc_group = group_subprocs.DecayChainSubProcessGroup.\
+              group_amplitudes(diagram_generation.DecayChainAmplitudeList(\
+                               decay_chains.get('amplitudes')))
+
+        subproc_groups = \
+                       dc_subproc_group.generate_helas_decay_chain_subproc_groups()
+
+        # Check number of groups
+        self.assertEqual(len(subproc_groups), 2)
+        self.assertEqual([g.get('name') for g in subproc_groups],
+                         ['gq_zq_z_qq','qq_zg_z_qq'])
+
+        subprocess_group = subproc_groups[0]
+        matrix_elements = subprocess_group.get('matrix_elements')
+
+        exporter = export_cpp.ProcessExporterPythia8(matrix_elements,
                                                  self.mycppwriter)
+
+        # Test .h file output
+        exporter.write_process_h_file(\
+            writers.CPPWriter(self.give_pos('test.h')))
+
+        goal_string = """//==========================================================================
+// This file has been automatically generated for Pythia 8
+// MadGraph 5 v. %(version)s, %(date)s
+// By the MadGraph Development Team
+// Please visit us at https://launchpad.net/madgraph5
+//==========================================================================
+
+#ifndef Pythia8_Sigma_sm_gd_ddxd_H
+#define Pythia8_Sigma_sm_gd_ddxd_H
+
+#include <complex> 
+
+#include "SigmaProcess.h"
+#include "Parameters_sm.h"
+
+using namespace std; 
+
+namespace Pythia8 
+{
+//==========================================================================
+// A class for calculating the matrix elements for
+// Process: g d > z d WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g s > z s WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g d > z d WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+// Process: g s > z s WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+// Process: g d > z d WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g s > z s WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g u > z u WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g u > z u WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g u > z u WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+// Process: g d~ > z d~ WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g s~ > z s~ WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g d~ > z d~ WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+// Process: g s~ > z s~ WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+// Process: g d~ > z d~ WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g s~ > z s~ WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g u~ > z u~ WEIGHTED=3
+// *   Decay: z > d d~ WEIGHTED=2
+// Process: g u~ > z u~ WEIGHTED=3
+// *   Decay: z > s s~ WEIGHTED=2
+// Process: g u~ > z u~ WEIGHTED=3
+// *   Decay: z > u u~ WEIGHTED=2
+//--------------------------------------------------------------------------
+
+class Sigma_sm_gd_ddxd : public Sigma3Process 
+{
+  public:
+
+    // Constructor.
+    Sigma_sm_gd_ddxd() {}
+
+    // Initialize process.
+    virtual void initProc(); 
+
+    // Calculate flavour-independent parts of cross section.
+    virtual void sigmaKin(); 
+
+    // Evaluate sigmaHat(sHat).
+    virtual double sigmaHat(); 
+
+    // Select flavour, colour and anticolour.
+    virtual void setIdColAcol(); 
+
+    // Evaluate weight for decay angles.
+    virtual double weightDecay(Event& process, int iResBeg, int iResEnd); 
+
+    // Info on the subprocess.
+    virtual string name() const {return "g d > d d~ d (sm)";}
+
+    virtual int code() const {return 10000;}
+
+    virtual string inFlux() const {return "qg";}
+
+    virtual int resonanceA() const {return 23;}
+    // Tell Pythia that sigmaHat returns the ME^2
+    virtual bool convertM2() const {return true;}
+
+  private:
+
+    // Private functions to calculate the matrix element for all subprocesses
+    // Calculate wavefunctions
+    void calculate_wavefunctions(const int perm[], const int hel[]); 
+    static const int nwavefuncs = 13; 
+    std::complex<double> w[nwavefuncs][18]; 
+    static const int namplitudes = 18; 
+    std::complex<double> amp[namplitudes]; 
+    double matrix_gd_zd_z_ddx(); 
+    double matrix_gd_zd_z_uux(); 
+    double matrix_gd_zd_z_ssx(); 
+    double matrix_gu_zu_z_ddx(); 
+    double matrix_gu_zu_z_uux(); 
+    double matrix_gdx_zdx_z_ddx(); 
+    double matrix_gdx_zdx_z_uux(); 
+    double matrix_gdx_zdx_z_ssx(); 
+    double matrix_gux_zux_z_ddx(); 
+    double matrix_gux_zux_z_uux(); 
+
+    // Constants for array limits
+    static const int nexternal = 5; 
+    static const int nprocesses = 20; 
+
+    // Store the matrix element value from sigmaKin
+    double matrix_element[nprocesses]; 
+
+    // Color flows, used when selecting color
+    double * jamp2[nprocesses]; 
+
+    // Pointer to the model parameters
+    Parameters_sm * pars; 
+
+}; 
+
+}  // end namespace Pythia
+
+#endif  // Pythia8_Sigma_sm_gd_ddxd_H
+""" % misc.get_pkg_info()
+        #print open(self.give_pos('test.h')).read()
+        self.assertFileContains('test.h', goal_string)
+
+        # Test .cc file output
 
         text = exporter.get_process_function_definitions()
 
         goal_string = """//==========================================================================
 // Class member functions for calculating the matrix elements for
-# Process: u u~ > Z g
-# *   Decay: Z > u~ u
+# Process: g d > z d WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g s > z s WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g d > z d WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
+# Process: g s > z s WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
+# Process: g d > z d WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g s > z s WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g u > z u WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g u > z u WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g u > z u WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
+# Process: g d~ > z d~ WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g s~ > z s~ WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g d~ > z d~ WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
+# Process: g s~ > z s~ WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
+# Process: g d~ > z d~ WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g s~ > z s~ WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g u~ > z u~ WEIGHTED=3
+# *   Decay: z > d d~ WEIGHTED=2
+# Process: g u~ > z u~ WEIGHTED=3
+# *   Decay: z > s s~ WEIGHTED=2
+# Process: g u~ > z u~ WEIGHTED=3
+# *   Decay: z > u u~ WEIGHTED=2
 
 //--------------------------------------------------------------------------
 // Initialize process. 
   
-void Sigma_sm_uux_uxug::initProc() {
+void Sigma_sm_gd_ddxd::initProc() {
 // Instantiate the model class and set parameters that stay fixed during run
     pars = Parameters_sm::getInstance();
     pars->setIndependentParameters(particleDataPtr, couplingsPtr, slhaPtr);
     pars->setIndependentCouplings();
     // Set massive/massless matrix elements for c/b/mu/tau
-mcME = particleDataPtr->m0(4);
+mcME = 0.;
 mbME = 0.;
 mmuME = 0.;
 mtauME = 0.;
 jamp2[0] = new double[1];
+jamp2[1] = new double[1];
+jamp2[2] = new double[1];
+jamp2[3] = new double[1];
+jamp2[4] = new double[1];
+jamp2[5] = new double[1];
+jamp2[6] = new double[1];
+jamp2[7] = new double[1];
+jamp2[8] = new double[1];
+jamp2[9] = new double[1];
 } 
 
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, part independent of incoming flavour. 
 
-void Sigma_sm_uux_uxug::sigmaKin() { 
+void Sigma_sm_gd_ddxd::sigmaKin() { 
     // Set the parameters which change event by event
     pars->setDependentParameters(particleDataPtr, couplingsPtr, slhaPtr, alpS);
     pars->setDependentCouplings();
     // Reset color flows
     for(int i=0;i < 1; i++)
             jamp2[0][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[1][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[2][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[3][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[4][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[5][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[6][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[7][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[8][i]=0.;
+for(int i=0;i < 1; i++)
+            jamp2[9][i]=0.;
 
     // Local variables and constants
 const int ncomb = 32;
@@ -1118,7 +1516,7 @@ double t[nprocesses];
 // Helicities for the process
 static const int helicities[ncomb][nexternal] = {{-1,-1,-1,-1,-1},{-1,-1,-1,-1,1},{-1,-1,-1,1,-1},{-1,-1,-1,1,1},{-1,-1,1,-1,-1},{-1,-1,1,-1,1},{-1,-1,1,1,-1},{-1,-1,1,1,1},{-1,1,-1,-1,-1},{-1,1,-1,-1,1},{-1,1,-1,1,-1},{-1,1,-1,1,1},{-1,1,1,-1,-1},{-1,1,1,-1,1},{-1,1,1,1,-1},{-1,1,1,1,1},{1,-1,-1,-1,-1},{1,-1,-1,-1,1},{1,-1,-1,1,-1},{1,-1,-1,1,1},{1,-1,1,-1,-1},{1,-1,1,-1,1},{1,-1,1,1,-1},{1,-1,1,1,1},{1,1,-1,-1,-1},{1,1,-1,-1,1},{1,1,-1,1,-1},{1,1,-1,1,1},{1,1,1,-1,-1},{1,1,1,-1,1},{1,1,1,1,-1},{1,1,1,1,1}};
 // Denominators: spins, colors and identical particles
-const int denominators[nprocesses] = {36};
+const int denominators[nprocesses] = {96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96,96};
 
 ntry=ntry+1;
 
@@ -1135,8 +1533,8 @@ for(int i = 0; i < nexternal; i++){
 }
 
 // For now, call setupForME() here
-id1 = 2;
-id2 = -2;
+id1 = 21;
+id2 = 1;
 if(!setupForME()){
     return;
 }
@@ -1146,8 +1544,35 @@ if (sum_hel == 0 || ntry < 10){
   for(int ihel = 0; ihel < ncomb; ihel ++){
     if (goodhel[ihel] || ntry < 2){
       calculate_wavefunctions(perm, helicities[ihel]);
-      t[0]=matrix_uux_Zg_Z_uxu();
-
+      t[0]=matrix_gd_zd_z_ddx();
+t[1]=matrix_gd_zd_z_uux();
+t[2]=matrix_gd_zd_z_ssx();
+t[3]=matrix_gu_zu_z_ddx();
+t[4]=matrix_gu_zu_z_uux();
+t[5]=matrix_gdx_zdx_z_ddx();
+t[6]=matrix_gdx_zdx_z_uux();
+t[7]=matrix_gdx_zdx_z_ssx();
+t[8]=matrix_gux_zux_z_ddx();
+t[9]=matrix_gux_zux_z_uux();
+             // Mirror initial state momenta for mirror process
+                perm[0]=1;
+                perm[1]=0;
+                // Calculate wavefunctions
+                calculate_wavefunctions(perm, helicities[ihel]);
+                // Mirror back
+                perm[0]=0;
+                perm[1]=1;
+                // Calculate matrix elements
+                t[10]=matrix_gd_zd_z_ddx();
+t[11]=matrix_gd_zd_z_uux();
+t[12]=matrix_gd_zd_z_ssx();
+t[13]=matrix_gu_zu_z_ddx();
+t[14]=matrix_gu_zu_z_uux();
+t[15]=matrix_gdx_zdx_z_ddx();
+t[16]=matrix_gdx_zdx_z_uux();
+t[17]=matrix_gdx_zdx_z_ssx();
+t[18]=matrix_gux_zux_z_ddx();
+t[19]=matrix_gux_zux_z_uux();
       double tsum = 0;
       for(int iproc = 0;iproc < nprocesses; iproc++){
          matrix_element[iproc]+=t[iproc];
@@ -1155,9 +1580,9 @@ if (sum_hel == 0 || ntry < 10){
       }
       // Store which helicities give non-zero result
       if (tsum != 0. && !goodhel[ihel]){
-    goodhel[ihel]=true;
-    ngood ++;
-    igood[ngood] = ihel;
+	goodhel[ihel]=true;
+	ngood ++;
+	igood[ngood] = ihel;
       }
     }
   }
@@ -1173,8 +1598,35 @@ else
     double hwgt = double(ngood)/double(sum_hel);
     int ihel = igood[jhel];
     calculate_wavefunctions(perm, helicities[ihel]);
-    t[0]=matrix_uux_Zg_Z_uxu();
-
+    t[0]=matrix_gd_zd_z_ddx();
+t[1]=matrix_gd_zd_z_uux();
+t[2]=matrix_gd_zd_z_ssx();
+t[3]=matrix_gu_zu_z_ddx();
+t[4]=matrix_gu_zu_z_uux();
+t[5]=matrix_gdx_zdx_z_ddx();
+t[6]=matrix_gdx_zdx_z_uux();
+t[7]=matrix_gdx_zdx_z_ssx();
+t[8]=matrix_gux_zux_z_ddx();
+t[9]=matrix_gux_zux_z_uux();
+             // Mirror initial state momenta for mirror process
+                perm[0]=1;
+                perm[1]=0;
+                // Calculate wavefunctions
+                calculate_wavefunctions(perm, helicities[ihel]);
+                // Mirror back
+                perm[0]=0;
+                perm[1]=1;
+                // Calculate matrix elements
+                t[10]=matrix_gd_zd_z_ddx();
+t[11]=matrix_gd_zd_z_uux();
+t[12]=matrix_gd_zd_z_ssx();
+t[13]=matrix_gu_zu_z_ddx();
+t[14]=matrix_gu_zu_z_uux();
+t[15]=matrix_gdx_zdx_z_ddx();
+t[16]=matrix_gdx_zdx_z_uux();
+t[17]=matrix_gdx_zdx_z_ssx();
+t[18]=matrix_gux_zux_z_ddx();
+t[19]=matrix_gux_zux_z_uux();
     for(int iproc = 0;iproc < nprocesses; iproc++){
       matrix_element[iproc]+=t[iproc]*hwgt;
     }
@@ -1191,11 +1643,55 @@ for (int i=0;i < nprocesses; i++)
 //--------------------------------------------------------------------------
 // Evaluate |M|^2, including incoming flavour dependence. 
 
-double Sigma_sm_uux_uxug::sigmaHat() {  
+double Sigma_sm_gd_ddxd::sigmaHat() {  
     // Select between the different processes
-if(id1 == 2 && id2 == -2){
-// Add matrix elements for processes with beams (2, -2)
-return matrix_element[0];
+if(id1 == 21 && id2 == -2){
+// Add matrix elements for processes with beams (21, -2)
+return matrix_element[8]*2+matrix_element[9];
+}
+else if(id1 == -2 && id2 == 21){
+// Add matrix elements for processes with beams (-2, 21)
+return matrix_element[18]*2+matrix_element[19];
+}
+else if(id1 == -1 && id2 == 21){
+// Add matrix elements for processes with beams (-1, 21)
+return matrix_element[15]+matrix_element[16]+matrix_element[17];
+}
+else if(id1 == 1 && id2 == 21){
+// Add matrix elements for processes with beams (1, 21)
+return matrix_element[10]+matrix_element[11]+matrix_element[12];
+}
+else if(id1 == 21 && id2 == 1){
+// Add matrix elements for processes with beams (21, 1)
+return matrix_element[0]+matrix_element[1]+matrix_element[2];
+}
+else if(id1 == 2 && id2 == 21){
+// Add matrix elements for processes with beams (2, 21)
+return matrix_element[13]*2+matrix_element[14];
+}
+else if(id1 == 21 && id2 == 2){
+// Add matrix elements for processes with beams (21, 2)
+return matrix_element[3]*2+matrix_element[4];
+}
+else if(id1 == 21 && id2 == -3){
+// Add matrix elements for processes with beams (21, -3)
+return matrix_element[5]+matrix_element[6]+matrix_element[7];
+}
+else if(id1 == 21 && id2 == 3){
+// Add matrix elements for processes with beams (21, 3)
+return matrix_element[0]+matrix_element[1]+matrix_element[2];
+}
+else if(id1 == 21 && id2 == -1){
+// Add matrix elements for processes with beams (21, -1)
+return matrix_element[5]+matrix_element[6]+matrix_element[7];
+}
+else if(id1 == -3 && id2 == 21){
+// Add matrix elements for processes with beams (-3, 21)
+return matrix_element[15]+matrix_element[16]+matrix_element[17];
+}
+else if(id1 == 3 && id2 == 21){
+// Add matrix elements for processes with beams (3, 21)
+return matrix_element[10]+matrix_element[11]+matrix_element[12];
 }
 else {
 // Return 0 if not correct initial state assignment
@@ -1205,13 +1701,158 @@ else {
 //--------------------------------------------------------------------------
 // Select identity, colour and anticolour.
 
-void Sigma_sm_uux_uxug::setIdColAcol() {
-    if(id1 == 2 && id2 == -2){
-// Pick one of the flavor combinations (21, -2, 2)
-int flavors[1][3] = {{21,-2,2}};
+void Sigma_sm_gd_ddxd::setIdColAcol() {
+    if(id1 == 21 && id2 == -2){
+// Pick one of the flavor combinations (1, -1, -2), (2, -2, -2), (3, -3, -2)
+int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
 vector<double> probs;
-double sum = ;
-probs.push_back(/sum);
+double sum = matrix_element[8]+matrix_element[9]+matrix_element[8];
+probs.push_back(matrix_element[8]/sum);
+probs.push_back(matrix_element[9]/sum);
+probs.push_back(matrix_element[8]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == -2 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{1,-1,-2},{2,-2,-2},{3,-3,-2}};
+vector<double> probs;
+double sum = matrix_element[18]+matrix_element[19]+matrix_element[18];
+probs.push_back(matrix_element[18]/sum);
+probs.push_back(matrix_element[19]/sum);
+probs.push_back(matrix_element[18]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == -1 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{1,-1,-1},{2,-2,-1},{3,-3,-1}};
+vector<double> probs;
+double sum = matrix_element[15]+matrix_element[16]+matrix_element[17];
+probs.push_back(matrix_element[15]/sum);
+probs.push_back(matrix_element[16]/sum);
+probs.push_back(matrix_element[17]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 1 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
+vector<double> probs;
+double sum = matrix_element[12]+matrix_element[11]+matrix_element[10];
+probs.push_back(matrix_element[12]/sum);
+probs.push_back(matrix_element[11]/sum);
+probs.push_back(matrix_element[10]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == 1){
+// Pick one of the flavor combinations (3, -3, 1), (2, -2, 1), (1, -1, 1)
+int flavors[3][3] = {{3,-3,1},{2,-2,1},{1,-1,1}};
+vector<double> probs;
+double sum = matrix_element[2]+matrix_element[1]+matrix_element[0];
+probs.push_back(matrix_element[2]/sum);
+probs.push_back(matrix_element[1]/sum);
+probs.push_back(matrix_element[0]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 2 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
+vector<double> probs;
+double sum = matrix_element[13]+matrix_element[13]+matrix_element[14];
+probs.push_back(matrix_element[13]/sum);
+probs.push_back(matrix_element[13]/sum);
+probs.push_back(matrix_element[14]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == 2){
+// Pick one of the flavor combinations (3, -3, 2), (1, -1, 2), (2, -2, 2)
+int flavors[3][3] = {{3,-3,2},{1,-1,2},{2,-2,2}};
+vector<double> probs;
+double sum = matrix_element[3]+matrix_element[3]+matrix_element[4];
+probs.push_back(matrix_element[3]/sum);
+probs.push_back(matrix_element[3]/sum);
+probs.push_back(matrix_element[4]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == -3){
+// Pick one of the flavor combinations (2, -2, -3), (1, -1, -3), (3, -3, -3)
+int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
+vector<double> probs;
+double sum = matrix_element[6]+matrix_element[5]+matrix_element[7];
+probs.push_back(matrix_element[6]/sum);
+probs.push_back(matrix_element[5]/sum);
+probs.push_back(matrix_element[7]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == 3){
+// Pick one of the flavor combinations (3, -3, 3), (1, -1, 3), (2, -2, 3)
+int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
+vector<double> probs;
+double sum = matrix_element[2]+matrix_element[0]+matrix_element[1];
+probs.push_back(matrix_element[2]/sum);
+probs.push_back(matrix_element[0]/sum);
+probs.push_back(matrix_element[1]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 21 && id2 == -1){
+// Pick one of the flavor combinations (1, -1, -1), (2, -2, -1), (3, -3, -1)
+int flavors[3][3] = {{1,-1,-1},{2,-2,-1},{3,-3,-1}};
+vector<double> probs;
+double sum = matrix_element[5]+matrix_element[6]+matrix_element[7];
+probs.push_back(matrix_element[5]/sum);
+probs.push_back(matrix_element[6]/sum);
+probs.push_back(matrix_element[7]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == -3 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{2,-2,-3},{1,-1,-3},{3,-3,-3}};
+vector<double> probs;
+double sum = matrix_element[16]+matrix_element[15]+matrix_element[17];
+probs.push_back(matrix_element[16]/sum);
+probs.push_back(matrix_element[15]/sum);
+probs.push_back(matrix_element[17]/sum);
+int choice = rndmPtr->pick(probs);
+id3 = flavors[choice][0];
+id4 = flavors[choice][1];
+id5 = flavors[choice][2];
+}
+else if(id1 == 3 && id2 == 21){
+// Pick one of the flavor combinations 
+int flavors[3][3] = {{3,-3,3},{1,-1,3},{2,-2,3}};
+vector<double> probs;
+double sum = matrix_element[12]+matrix_element[10]+matrix_element[11];
+probs.push_back(matrix_element[12]/sum);
+probs.push_back(matrix_element[10]/sum);
+probs.push_back(matrix_element[11]/sum);
 int choice = rndmPtr->pick(probs);
 id3 = flavors[choice][0];
 id4 = flavors[choice][1];
@@ -1219,16 +1860,193 @@ id5 = flavors[choice][2];
 }
 setId(id1,id2,id3,id4,id5);
 // Pick color flow
-int ncolor[1] = {1};
-if(id1 == 2&&id2 == -2&&id3 == 21&&id4 == -2&&id5 == 2){
-setColAcol(0,0,0,0,0,0);
+int ncolor[10] = {1,1,1,1,1,1,1,1,1,1};
+if(id1 == 21&&id2 == 1&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 1&&id4 == -1&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[0][0];
+                  for(int i=0;i<ncolor[0];i++)
+                  probs.push_back(jamp2[0][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == 1&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 2&&id4 == -2&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[1][0];
+                  for(int i=0;i<ncolor[1];i++)
+                  probs.push_back(jamp2[1][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == 1&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 3&&id4 == -3&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[2][0];
+                  for(int i=0;i<ncolor[2];i++)
+                  probs.push_back(jamp2[2][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == 2&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 21&&id2 == 2&&id3 == 3&&id4 == -3&&id5 == 2){
+vector<double> probs;
+                  double sum = jamp2[3][0];
+                  for(int i=0;i<ncolor[3];i++)
+                  probs.push_back(jamp2[3][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == 2&&id3 == 2&&id4 == -2&&id5 == 2){
+vector<double> probs;
+                  double sum = jamp2[4][0];
+                  for(int i=0;i<ncolor[4];i++)
+                  probs.push_back(jamp2[4][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == -1&&id3 == 1&&id4 == -1&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 1&&id4 == -1&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[5][0];
+                  for(int i=0;i<ncolor[5];i++)
+                  probs.push_back(jamp2[5][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == -1&&id3 == 2&&id4 == -2&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 2&&id4 == -2&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[6][0];
+                  for(int i=0;i<ncolor[6];i++)
+                  probs.push_back(jamp2[6][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == -1&&id3 == 3&&id4 == -3&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 3&&id4 == -3&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[7][0];
+                  for(int i=0;i<ncolor[7];i++)
+                  probs.push_back(jamp2[7][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == -2&&id3 == 1&&id4 == -1&&id5 == -2||id1 == 21&&id2 == -2&&id3 == 3&&id4 == -3&&id5 == -2){
+vector<double> probs;
+                  double sum = jamp2[8][0];
+                  for(int i=0;i<ncolor[8];i++)
+                  probs.push_back(jamp2[8][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 21&&id2 == -2&&id3 == 2&&id4 == -2&&id5 == -2){
+vector<double> probs;
+                  double sum = jamp2[9][0];
+                  for(int i=0;i<ncolor[9];i++)
+                  probs.push_back(jamp2[9][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[0][0];
+                  for(int i=0;i<ncolor[0];i++)
+                  probs.push_back(jamp2[0][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[1][0];
+                  for(int i=0;i<ncolor[1];i++)
+                  probs.push_back(jamp2[1][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 3){
+vector<double> probs;
+                  double sum = jamp2[2][0];
+                  for(int i=0;i<ncolor[2];i++)
+                  probs.push_back(jamp2[2][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 2){
+vector<double> probs;
+                  double sum = jamp2[3][0];
+                  for(int i=0;i<ncolor[3];i++)
+                  probs.push_back(jamp2[3][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == 2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 2){
+vector<double> probs;
+                  double sum = jamp2[4][0];
+                  for(int i=0;i<ncolor[4];i++)
+                  probs.push_back(jamp2[4][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == -1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[5][0];
+                  for(int i=0;i<ncolor[5];i++)
+                  probs.push_back(jamp2[5][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == -1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[6][0];
+                  for(int i=0;i<ncolor[6];i++)
+                  probs.push_back(jamp2[6][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == -1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -3){
+vector<double> probs;
+                  double sum = jamp2[7][0];
+                  for(int i=0;i<ncolor[7];i++)
+                  probs.push_back(jamp2[7][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == -2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -2||id1 == -2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -2){
+vector<double> probs;
+                  double sum = jamp2[8][0];
+                  for(int i=0;i<ncolor[8];i++)
+                  probs.push_back(jamp2[8][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
+}
+else if(id1 == -2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -2){
+vector<double> probs;
+                  double sum = jamp2[9][0];
+                  for(int i=0;i<ncolor[9];i++)
+                  probs.push_back(jamp2[9][i]/sum);
+                  int ic = rndmPtr->pick(probs);
+static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
+setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
 }
 
 //--------------------------------------------------------------------------
 // Evaluate weight for angles of decay products in process 
 
-double Sigma_sm_uux_uxug::weightDecay(Event& process, int iResBeg, int iResEnd) {
+double Sigma_sm_gd_ddxd::weightDecay(Event& process, int iResBeg, int iResEnd) {
     // Just use isotropic decay (default)
 return 1.;
 }
@@ -1239,7 +2057,7 @@ return 1.;
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void Sigma_sm_uux_uxug::calculate_wavefunctions(const int perm[], const int hel[]){
+void Sigma_sm_gd_ddxd::calculate_wavefunctions(const int perm[], const int hel[]){
 // Calculate wavefunctions for all processes
 double p[nexternal][4];
 int i;
@@ -1253,23 +2071,44 @@ for(i=0;i < nexternal;i++){
 }
 
 // Calculate all wavefunctions
-ixxxxx(p[perm[0]],mME[0],hel[0],+1,w[0]);
-oxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
-ixxxxx(p[perm[2]],mME[2],hel[2],-1,w[2]);
-oxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);
-FFV2_5_3(w[2],w[3],pars->GC_35,pars->GC_47,pars->MZ,pars->WZ,w[4]);
-vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[5]);
-FFV2_5_2(w[0],w[4],pars->GC_35,pars->GC_47,pars->ZERO,pars->ZERO,w[6]);
-FFV1_2(w[0],w[5],pars->GC_10,pars->ZERO,pars->ZERO,w[7]);
+vxxxxx(p[perm[0]],mME[0],hel[0],-1,w[0]);
+ixxxxx(p[perm[1]],mME[1],hel[1],+1,w[1]);
+oxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
+ixxxxx(p[perm[3]],mME[3],hel[3],-1,w[3]);
+FFV1_3(w[3],w[2],pars->GDZ2,pars->MZ,pars->WZ,w[4]);
+oxxxxx(p[perm[4]],mME[4],hel[4],+1,w[5]);
+FFV1_2(w[1],w[0],pars->GQQ,pars->zero,pars->zero,w[6]);
+FFV1_1(w[5],w[0],pars->GQQ,pars->zero,pars->zero,w[7]);
+FFV1_2_3(w[3],w[2],pars->GUZ1,pars->GUZ2,pars->MZ,pars->WZ,w[8]);
+oxxxxx(p[perm[1]],mME[1],hel[1],-1,w[9]);
+ixxxxx(p[perm[4]],mME[4],hel[4],-1,w[10]);
+FFV1_2(w[10],w[0],pars->GQQ,pars->zero,pars->zero,w[11]);
+FFV1_1(w[9],w[0],pars->GQQ,pars->zero,pars->zero,w[12]);
 
 // Calculate all amplitudes
 # Amplitude(s) for diagram number 0
-FFV1_0(w[6],w[1],w[5],pars->GC_10,amp[0]);
-FFV2_5_0(w[7],w[1],w[4],pars->GC_35,pars->GC_47,amp[1]);
+FFV1_0(w[6],w[5],w[4],pars->GDZ2,amp[0]);
+FFV1_0(w[1],w[7],w[4],pars->GDZ2,amp[1]);
+FFV1_0(w[6],w[5],w[8],pars->GDZ2,amp[2]);
+FFV1_0(w[1],w[7],w[8],pars->GDZ2,amp[3]);
+FFV1_2_0(w[6],w[5],w[4],pars->GUZ1,pars->GUZ2,amp[4]);
+FFV1_2_0(w[1],w[7],w[4],pars->GUZ1,pars->GUZ2,amp[5]);
+FFV1_2_0(w[6],w[5],w[8],pars->GUZ1,pars->GUZ2,amp[6]);
+FFV1_2_0(w[1],w[7],w[8],pars->GUZ1,pars->GUZ2,amp[7]);
+FFV1_0(w[11],w[9],w[4],pars->GDZ2,amp[8]);
+FFV1_0(w[10],w[12],w[4],pars->GDZ2,amp[9]);
+FFV1_0(w[11],w[9],w[8],pars->GDZ2,amp[10]);
+FFV1_0(w[10],w[12],w[8],pars->GDZ2,amp[11]);
+FFV1_0(w[11],w[9],w[4],pars->GDZ2,amp[12]);
+FFV1_0(w[10],w[12],w[4],pars->GDZ2,amp[13]);
+FFV1_2_0(w[11],w[9],w[4],pars->GUZ1,pars->GUZ2,amp[14]);
+FFV1_2_0(w[10],w[12],w[4],pars->GUZ1,pars->GUZ2,amp[15]);
+FFV1_2_0(w[11],w[9],w[8],pars->GUZ1,pars->GUZ2,amp[16]);
+FFV1_2_0(w[10],w[12],w[8],pars->GUZ1,pars->GUZ2,amp[17]);
 
 
 }
-double Sigma_sm_uux_uxug::matrix_uux_Zg_Z_uxu() { 
+double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ddx() { 
 int i, j;
 // Local variables
 const int ngraphs = 2;
@@ -1277,11 +2116,11 @@ const int ncolor = 1;
 std::complex<double> ztemp;
 std::complex<double> jamp[ncolor];
 // The color matrix;
-static const double denom[1] = {1.};
-static const double cf[1][1] = {1.};
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
 
 // Calculate color flows
-jamp[0]=+amp[0]+amp[1];
+jamp[0]=-amp[0]-amp[1];
 
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
@@ -1295,6 +2134,276 @@ for(i=0;i < ncolor; i++){
 // Store the leading color flows for choice of color
 for(i=0;i < ncolor; i++)
     jamp2[0][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gd_zd_z_uux() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=-amp[2]-amp[3];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[1][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gd_zd_z_ssx() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=-amp[0]-amp[1];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[2][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gu_zu_z_ddx() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=-amp[4]-amp[5];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[3][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gu_zu_z_uux() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=-amp[6]-amp[7];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[4][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ddx() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=+amp[8]+amp[9];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[5][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_uux() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=+amp[10]+amp[11];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[6][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gdx_zdx_z_ssx() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=+amp[12]+amp[13];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[7][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gux_zux_z_ddx() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=+amp[14]+amp[15];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[8][i] += real(jamp[i]*conj(jamp[i]));
+    
+return matrix;
+}
+
+double Sigma_sm_gd_ddxd::matrix_gux_zux_z_uux() { 
+int i, j;
+// Local variables
+const int ngraphs = 2;
+const int ncolor = 1;
+std::complex<double> ztemp;
+std::complex<double> jamp[ncolor];
+// The color matrix;
+static const double denom[ncolor] = {1};
+static const double cf[ncolor][ncolor] = {{12}};
+
+// Calculate color flows
+jamp[0]=+amp[16]+amp[17];
+
+// Sum and square the color flows to get the matrix element
+double matrix = 0;
+for(i=0;i < ncolor; i++){
+  ztemp = 0.;
+  for(j = 0; j < ncolor; j++)
+    ztemp = ztemp + cf[i][j]*jamp[j];
+  matrix = matrix+real(ztemp*conj(jamp[i]))/denom[i];
+}
+
+// Store the leading color flows for choice of color
+for(i=0;i < ncolor; i++)
+    jamp2[9][i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }

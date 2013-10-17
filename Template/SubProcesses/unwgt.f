@@ -432,7 +432,7 @@ c
       include 'leshouche.inc'
       data iseed /0/
 
-      double precision pmass(nexternal)
+      double precision pmass(nexternal), tmp
       common/to_mass/  pmass
 
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps)
@@ -554,6 +554,10 @@ c     Need to flip after addmothers, since color might get overwritten
          ptcltmp(1)=ptclus(1)
          ptclus(1)=ptclus(2)
          ptclus(2)=ptcltmp(1)
+c        flip mass of the initial state
+         tmp = pb(4,1)
+         pb(4,1) = pb(4,2)
+         pb(4,2) = tmp
       endif
 
 c

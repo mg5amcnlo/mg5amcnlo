@@ -614,7 +614,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-c      write(*,*) 'Number of t_channels',nt_channel,ns_channel,nbranch
 
 c
 c     Determine masses for all intermediate states.  Starting
@@ -709,10 +708,11 @@ c
          totmass=totmass+m(itree(2,ibranch))
       enddo
       m(-ns_channel-1) = dsqrt(S(-nbranch))
-      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass 
+      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -722,7 +722,6 @@ c
      &        smin/stot,smax/stot)
 
          m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
-
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
          if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
@@ -962,7 +961,7 @@ c
          if (pp .gt. 0) then
             PP=SQRT(pp)*0.5d0
          else
-            write(*,*) 'Error creating momentum in gentcms',pp
+            write(*,*) 'Error gentcms',pp, M1,m2,MD2, ESUM
             jac=-1
             return
          endif

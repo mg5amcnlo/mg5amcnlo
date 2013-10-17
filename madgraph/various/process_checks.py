@@ -287,9 +287,9 @@ class MatrixElementEvaluator(object):
         if nincoming == 1:
 
             # Momenta for the incoming particle
-            p.append([m1, 0., 0., 0.])
+            p.append([abs(m1), 0., 0., 0.])
 
-            p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+            p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
 
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
             for i in range(1, nfinal+1):
