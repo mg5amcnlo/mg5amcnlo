@@ -283,7 +283,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
                   ELSE
                      BRR(JJ,II)=BRR(JJ,II)/(1-SUMBR(JJ,II))
                   ENDIF
-                  CALL HWMODK(IMOTH(II),BRR(JJ,II),-1,IDAUGHT(II,1),
+                  CALL HWMODK(IMOTH(II),BRR(JJ,II),100,IDAUGHT(II,1),
      &                    IDAUGHT(II,2),IDAUGHT(II,3),IDAUGHT(II,4),
      &                                                IDAUGHT(II,5))
                ENDIF
