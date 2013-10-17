@@ -151,6 +151,16 @@ fi
 
 whichpdflib $PDFLIBRARY
 whichlhapdf $LHALINK
+# stdhep is not used: do not look for libraries
+IFS=' ' read -a exlibs <<< "${EXTRALIBS}"
+for i in ${!exlibs[@]}
+do
+ if [[ "${exlibs[i]}" == "stdhep" || "${exlibs[i]}" == "Fmcfio" ]]
+ then
+   unset exlibs[$i]
+ fi
+done
+EXTRALIBS="$(echo ${exlibs[@]})"
 nameextralib "$EXTRALIBS"
 pathextralib "$EXTRAPATHS"
 pathextralibdyn "$EXTRAPATHS"
@@ -208,7 +218,6 @@ rm -f $thisdir/$EXEC_NAMEFF
 # new compilation step for PY8 mode
 export PYTHIA8LOCATION=$PY8PATH
 
-ln -ns $thisdir/lib/* $thisdir/../lib/
 if [ "$PY8UTI" != "" ]
 then
  cp -rf $thisdir/srcPythia8/Pythia8.cc $thisdir/Pythia8.cc
