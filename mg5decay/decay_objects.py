@@ -1056,25 +1056,28 @@ class DecayParticle(base_objects.Particle):
         # To optimize the check, check if the final_mass is the same first
         # this will significantly reduce the number of call to
         # check_channels_equiv
-        
-        if not hasattr(self, 'check_repeat_tag') or not clevel in  self.check_repeat_tag.keys():
-            self.check_repeat_tag = {clevel:{channel.get('tag'): channel}}
-            return False
+
+        if not hasattr(self, 'check_repeat_tag'):
+            self.check_repeat_tag = {(clevel,onshell): 
+                        [c.get('tag') for c in self.get_channels(clevel, onshell)]}
+        elif not (clevel,onshell) in  self.check_repeat_tag.keys():
+            self.check_repeat_tag[(clevel,onshell)] = \
+                    [c.get('tag') for c in self.get_channels(clevel, onshell)]
+
+            
+        #previous_answer = any([Channel.check_channels_equiv(other_c, channel)\
+        #               for other_c in self.get_channels(clevel, onshell)
+        #               if abs(sum(other_c['final_mass_list'])-\
+        #               sum(channel['final_mass_list']))< 0.01])
 
         tag = channel.get('tag') 
-        if tag in self.check_repeat_tag:
+        if tag in self.check_repeat_tag[(clevel,onshell)]:
+            #assert previous_answer == True
             return True
         else:
-            self.check_repeat_tag[clevel][tag] = tag
+            self.check_repeat_tag[(clevel,onshell)].append(tag)
+            #assert previous_answer == False
             return False
-                
-            
-            
-
-        return any([Channel.check_channels_equiv(other_c, channel)\
-                       for other_c in self.get_channels(clevel, onshell)
-                       if abs(sum(other_c['final_mass_list'])-\
-                       sum(channel['final_mass_list']))< 0.01])
 
 #    def check_gauge_dependence(self, final_pids):
 #        """ Check processes that are potentially gauge dependent, i.e.
