@@ -289,7 +289,10 @@ class ParamCard(dict):
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
-                cur_block.append(param)
+                try:
+                    cur_block.append(param)
+                except InvalidParamCard:
+                    pass
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)

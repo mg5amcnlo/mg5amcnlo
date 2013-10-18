@@ -4596,21 +4596,44 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                - model: use the model pass in argument.
            
         """
-
+        
         warning_text = """Be carefull automatic computation of the width is 
 ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         logger.warning(warning_text)
-      
-        # check the argument and return those in a dictionary format
-        particles, opts = self.check_compute_widths(self.split_arg(line))
-        
-        precision = float(opts['precision'])
+
         if not model:
             modelname = self._curr_model['name']
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
+        else:
+            self._curr_model = model
+            self._curr_fortran_model = \
+                      helas_call_writers.FortranUFOHelasCallWriter(\
+                                                               self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
+      
+      
+        # check the argument and return those in a dictionary format
+        particles, opts = self.check_compute_widths(self.split_arg(line))
+        
+        if opts['path']:
+            correct = True
+            param_card = check_param_card.ParamCard(opts['path'])
+            for param in param_card['decay']:
+                if param.value == "auto":
+                    param.value = 1
+                    param.format = 'float'
+                    correct = False
+            if not correct:
+                if opts['output']:
+                    param_card.write(opts['output'])
+                    opts['path'] = opts['output']
+                else:
+                    param_card.write(opts['path'])
+        
+        precision = float(opts['precision'])
+
         data = model.set_parameters_and_couplings(opts['path'])
                 
 
@@ -4663,7 +4686,8 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
         else:
-            return decay_info
+            logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
+            return 
 
         with misc.TMP_directory() as path:
             decay_dir = pjoin(path,'temp_decay')
@@ -4677,6 +4701,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 #files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
+                #me_cmd = madevent_interface.MadEventCmd(decay_dir)
+                #me_cmd.debug_output = pjoin(os.getcwd(),'MG5_DEBUG')
+                #me.cmd.exec_cmd('launch -n decay -f')
                 self.exec_cmd('launch -n decay -f')
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
         for pid in particles:

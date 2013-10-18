@@ -451,9 +451,11 @@ class HelpToCmd(object):
         self.run_options_help([])
         
     def help_compute_widths(self):
-        logger.info("syntax: compute_width Particle [Particles] [Param_card] [--output=PATH]")
-        logger.info("-- Compute the widths (ONLY 1->2) for the particles specified.")
-        logger.info("   By default, this takes the current param_card and overwrites it.")       
+        logger.info("syntax: compute_widths Particle [Particles] [--precision=] [--path=Param_card] [--output=PATH]")
+        logger.info("-- Compute the widths for the particles specified.")
+        logger.info("   By default, this takes the current param_card and overwrites it.") 
+        logger.info("   Precision allows to define when to include three/four/... body decays.")
+        logger.info("   If this number is an integer then all N-body decay will be included.")      
 
     def help_store_events(self):
         """ """
@@ -930,7 +932,7 @@ class CheckValidForCmd(object):
     
     def check_compute_widths(self, args):
         """check that the model is loadable and check that the format is of the
-        type: PART PATH --output=PATH -f --nbody=N
+        type: PART PATH --output=PATH -f --precision=N
         return the model.
         """
         
@@ -959,10 +961,7 @@ class CheckValidForCmd(object):
         else:
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal', 'ufomodel'),
                                         decay=True)
-            
-        if not hasattr(model.get('particles')[0], 'partial_widths'):
-            raise self.InvalidCmd, 'The UFO model does not include widths information. Impossible to compute widths automatically'
-            
+                    
         # check if the name are passed to default MG5
         if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
             model.pass_particles_name_in_mg_default()        
@@ -970,7 +969,7 @@ class CheckValidForCmd(object):
         particles_name = dict([(p.get('name'), p.get('pdg_code'))
                                                for p in model.get('particles')])
         
-        output = {'model': model, 'model':model, 'force': False, 'output': None, 
+        output = {'model': model, 'force': False, 'output': None, 
                   'input':None, 'particles': set(), 'precision':0.001}
         for arg in args:
             if arg.startswith('--output='):
@@ -994,6 +993,12 @@ class CheckValidForCmd(object):
                 if type != 'param_card.dat':
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
                 output['input'] = arg
+            elif arg.startswith('--path='):
+                arg = arg.split('=',1)[1]
+                type = self.detect_card_type(arg)
+                if type != 'param_card.dat':
+                    raise self.InvalidCmd , '%s is not a valid param_card.' % arg
+                output['input'] = arg               
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
@@ -2601,7 +2606,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 return
             else:
                 devnull = open(os.devnull,'w')
-                subprocess.call([sys,executable, 'write_param_card.py'],
+                subprocess.call([sys.executable, 'write_param_card.py'],
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'),
                              stdout=devnull)
                 devnull.close()
@@ -2904,131 +2909,33 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-        warning_text = """Be carefull automatic computation of the width is 
-ONLY valid in Narrow-Width Approximation and at Tree-Level."""
-        
-        logger.warning(warning_text)
-      
-        args = self.split_arg(line)
-        # check the argument and return those in a dictionary format
-        args = self.check_compute_widths(args)
-        
-        if args['input']:
-            files.cp(args['input'], pjoin(self.me_dir, 'Cards'))
-        elif not args['force']: 
-            self.ask_edit_cards(['param'], [], plot=False)
-        
-        print args.keys(), args['precision']
-        model = args['model']
 
-        data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                                              'param_card.dat'))
+        args = self.split_arg(line)
+        opts = self.check_compute_widths(args)
         
-        # find UFO particles linked to the require names. 
-        decay_info = {}   
-        for pid in args['particles']:
-            particle = model.get_particle(pid)
-            decay_info[pid] = []
-            mass = abs(eval(str(particle.get('mass')), data).real)
-            data = model.set_parameters_and_couplings(pjoin(self.me_dir,'Cards', 
-                                            'param_card.dat'), scale= mass)
-            total = 0
-            
-            for mode, expr in particle.partial_widths.items():
-                tmp_mass = mass    
-                for p in mode:
-                    tmp_mass -= abs(eval(str(p.mass), data))
-                if tmp_mass <=0:
-                    continue
-                
-                decay_to = [p.get('pdg_code') for p in mode]
-                value = eval(expr,{'cmath':cmath},data).real
-                if -1e-10 < value < 0:
-                    value = 0
-                if -1e-5 < value < 0:
-                    logger.warning('Partial width for %s > %s negative: %s automatically set to zero' %
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value))
-                    value = 0
-                elif value < 0:
-                    raise Exception, 'Partial width for %s > %s negative: %s' % \
-                                   (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                decay_info[particle.get('pdg_code')].append([decay_to, value])
-                total += value
         
-        self.update_width_in_param_card(decay_info, args['input'], args['output'])
-        
-        #
-        # add info from decay module
-        #
-        if args['precision'] == 2:
-            return
-        if int(args['precision']) == args['precision']:
-            to_find = int(args['precision'])
-        else:
-            to_find = 2 
-        import mg5decay.decay_objects as decay_objects
-        new_model = decay_objects.DecayModel(model)
-        new_model.read_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-        new_model.find_vertexlist()
-        new_model.find_all_channels(to_find)
-        to_refine = {}
-        if to_find == 2 and int(args['precision']) !=2:
-            for pid in args['particles']:
-                particle = new_model.get_particle(pid)
-                level = 2
-                while particle.get('apx_decaywidth_err') > 0.001:
-                    level += 1
-                    particle.find_channels_nextlevel(new_model)
-                    particle.update_decay_attributes(False, True, True, new_model)
-                else:
-                    total_width = particle.get('apx_decaywidth')
-                    if level !=2:
-                        for channel in particle.get_channels(level, True):
-                            width = channel.get_apx_decaywidth(new_model)
-                            print width, total_width, width/total_width
-                if level != 2:
-                    to_refine[pid] = level
-        
-        if to_refine:
-            logger.info('Pass to numerical integration for computing the following widths:\n    %s'
-                        % '\n    '.join('%s at %i-body level' % i for i in to_refine.items()))
-            
-            decay_info = self.get_partial_width_mg5(to_refine, decay_info, args['output'])
-            self.update_width_in_param_card(decay_info, args['input'], args['output'])
-    
-    @misc.mute_logger()
-    def get_partial_width_mg5(self, particles, decay_info, card):
-        """use the decay package to compute the additional partial width"""
-    
-        from madgraph.interface.master_interface import MasterCmd   
-        
-        if decay_info:
-            skip_2body = True
-        else:
-            skip_2body = False
-        
+        from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
-        cmd.exec_cmd('import model %s' % pjoin(self.me_dir,'bin','internal','ufomodel'))
+        self.define_child_cmd_interface(cmd, interface=False)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
-        for particle, level in particles.items():
-            cmd.do_decay_diagram('%s %s' % (particle, level),
-                                                          skip_2body=skip_2body)
-            decay_dir = pjoin(self.me_dir, 'decay_width_%s' % particle)
-            cmd.exec_cmd('output %s -f' % decay_dir)
-            if card:
-                files.cp(card, pjoin(decay_dir, 'Cards', 'param_card.dat'))
-            files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
-            # Need to write the correct param_card in the correct place !!!
-            cmd.exec_cmd('launch -n decay -f')
-            param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
-            width = param['decay'].get((particle,)).value
-            for BR in param['decay'].decay_table[particle]:
-                decay_info[particle].append([BR.lhacode[1:], BR.value * width])
+        if not opts['input']:
+            opts['input'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
+            if not opts['force'] :
+                self.ask_edit_cards(['param'],[], plot=False)
         
-        return decay_info
-        #decay_info[particle.get('pdg_code')].append([decay_to, value])
-    
-    
+        
+        
+        #output = {'model': model, 'force': False, 'output': None, 
+        #          'input':None, 'particles': set(), 'precision':0.001}
+        line = 'compute_widths %s --path=%s --precision=%s %s' % \
+                           (' '.join([`i` for i in opts['particles']]), 
+                           opts['input'], opts['precision'],
+                           '--output=%s' % opts['output'] if opts['output'] else '')
+        
+        cmd.exec_cmd(line, model=opts['model'])
+        self.child = None
+        del cmd
+        
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""

@@ -923,7 +923,7 @@ class DecayParticle(base_objects.Particle):
             tot = len(self.get_channels(sub_clevel, False))
             for nb,sub_c in enumerate(self.get_channels(sub_clevel, False)):
                 if (nb + 1) % 100 == 0:
-                    logger.info('%i / %i: %ss (gauge: %ss)' % (nb+1, tot, int(time.time()-start), int(repeat_time)))
+                    logger.info('%i / %i: %ss (repeat: %ss)' % (nb+1, tot, int(time.time()-start), int(repeat_time)))
                 # Scan each leg to see if there is any appropriate vertex
                 for index, leg in enumerate(sub_c.get_final_legs()):
 
@@ -945,13 +945,16 @@ class DecayParticle(base_objects.Particle):
                         # Connect sub_channel to the vertex
                         # the connect_channel_vertex will
                         # inherit the 'has_idpart' from sub_c
-                        start_repeat = time.time()
+
                         temp_c = self.connect_channel_vertex(sub_c, index, 
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
-                        repeat_time += time.time() -start_repeat
+                        
                         # Append this channel if it is new
-                        if not self.check_repeat(clevel, temp_c_o, temp_c):
+                        start_repeat = time.time()
+                        status = self.check_repeat(clevel, temp_c_o, temp_c)
+                        repeat_time += time.time() -start_repeat
+                        if not status:
 
                             # Check gauge dependence
                             if not temp_c.check_gauge_dependence(model):
@@ -1059,10 +1062,10 @@ class DecayParticle(base_objects.Particle):
 
         if not hasattr(self, 'check_repeat_tag'):
             self.check_repeat_tag = {(clevel,onshell): 
-                        [c.get('tag') for c in self.get_channels(clevel, onshell)]}
+                        set([c.get('tag') for c in self.get_channels(clevel, onshell)])}
         elif not (clevel,onshell) in  self.check_repeat_tag.keys():
             self.check_repeat_tag[(clevel,onshell)] = \
-                    [c.get('tag') for c in self.get_channels(clevel, onshell)]
+                    set([c.get('tag') for c in self.get_channels(clevel, onshell)])
 
             
         #previous_answer = any([Channel.check_channels_equiv(other_c, channel)\
@@ -1075,7 +1078,7 @@ class DecayParticle(base_objects.Particle):
             #assert previous_answer == True
             return True
         else:
-            self.check_repeat_tag[(clevel,onshell)].append(tag)
+            self.check_repeat_tag[(clevel,onshell)].add(tag)
             #assert previous_answer == False
             return False
 
@@ -1733,6 +1736,7 @@ class DecayModel(model_reader.ModelReader):
         #fdata.write(str(vertexlist_dict))
         #fdata.close()
 
+    @misc.mute_logger(names=['madgraph.diagram_generation'], levels=[40])
     def gauge_dependence_helper(self):
         """ Check the potential gauge dependence of vertices, i.e.
             3-pt interaction + radiation. 
@@ -1746,6 +1750,7 @@ class DecayModel(model_reader.ModelReader):
         """
         logger.info('remove N-body interactions which are not LO for the width computation')
         start = time.time()
+
         for interaction in self['interactions']:
             nb_part = len(interaction['particles'])
             if nb_part < 4:
@@ -1773,16 +1778,15 @@ class DecayModel(model_reader.ModelReader):
             process['legs'] = leglist
             myprocdef = base_objects.ProcessDefinitionList()
             myprocdef.append(process) 
-            with misc.MuteLogger(['madgraph'], ['WARNING']):
-                myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
-                to_remove = False
-                for amp in myproc['amplitudes']:
-                    if to_remove:
+            myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
+            to_remove = False
+            for amp in myproc['amplitudes']:
+                if to_remove:
+                    break
+                for proc in amp['diagrams']:
+                    if len(proc['vertices']) >1:
+                        to_remove = True
                         break
-                    for proc in amp['diagrams']:
-                        if len(proc['vertices']) >1:
-                            to_remove = True
-                            break
             
             if to_remove:
                 for part in decay_parts:
@@ -1799,7 +1803,7 @@ class DecayModel(model_reader.ModelReader):
                                 part.get_vertexlist(3, True).remove(v)
                                 assert(v not in part.get_vertexlist(3, False))
                                 break
-                    
+                
                     
         logger.info('Done in %s s' % int(time.time()-start))
             
