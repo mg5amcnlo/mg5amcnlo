@@ -2579,8 +2579,6 @@ calculator."""
         # forbid this function to create an empty item in results.
         if self.results.current['cross'] == 0 and self.run_name:
             self.results.delete_run(self.run_name, self.run_tag)
-        #else:
-        #    print 'last tag', self.run_tag, self.results.current['cross']
 
         # load the name of the event file
         args = self.split_arg(line) 
