@@ -176,7 +176,7 @@ class HelasCallWriter(base_objects.PhysicsObject):
             res_UVCT.append("# Amplitude(s) for UVCT diagram with ID %d" % \
                        diagram.get('number'))
             for ctamp in diagram.get('amplitudes'):
-                res_UVCT.append(self.get_amplitude_call(amplitude))
+                res_UVCT.append(self.get_amplitude_call(ctamp))
                 res_UVCT.extend(self.get_sqso_target_skip_code(ctamp.get('number'), 
                   sqso_max_uvctamp, 3000, split_orders, squared_orders,
                   "# At this point, all UVCT amps needed for %s are computed."))
