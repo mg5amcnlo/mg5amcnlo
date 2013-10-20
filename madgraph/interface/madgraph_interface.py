@@ -405,28 +405,52 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_compute_widths(self):
         logger.info("syntax: calculate_width PART [other particles] [OPTIONS]")
-        logger.info("Generate amplitudes for decay width calculation.")
+        logger.info("  Computes the width and partial width for a set of particles")
+        logger.info("  Returns a valid param_card with this information.")
+        logger.info(" ")
         logger.info("  PART: name of the particle you want to calculate width")
         logger.info("        you can enter either the name or pdg code.\n")
         logger.info("  Various options:\n")
-        logger.info("  --precision=XX: required precision for width")
-        logger.info("        if an integer is provide it means the max number of decay products")
-        logger.info("        default: 0.001")
-        logger.info("  --path=XX: path for param_card (if not default)")
-        logger.info("  --output=XX: path where to writte the resulting card. ")
-        logger.info("        default: overwritte current default card.")
+        logger.info("  --body_decay=X: Parameter to control the precision of the computation")
+        logger.info("        if X is an integer, we compute all channels up to X-body decay.")
+        logger.info("        if X <1, then we stop when the estimated error is lower than X.")
+        logger.info("        if X >1 BUT not an integer, then we X = N + M, with M <1 and N an integer")
+        logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
+        logger.info("        default: 4.0025")
+        logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("  --precision_channel=X: requested numerical precision for each channel")
+        logger.info("        default: 0.01")
+        logger.info("  --path=X: path for param_card")
+        logger.info("        default: take value from the model")
+        logger.info("  --output=X: path where to write the resulting card. ")
+        logger.info("        default: overwrite input file. If no input file, write it in the model directory")
         logger.info("")
-        logger.info(" example: calculate_width h --precision=2 --output=./param_card")
+        logger.info(" example: calculate_width h --body_decay=2 --output=./param_card")
         
     def help_decay_diagram(self):
-        logger.info("syntax: decay_diagram PART PRECISION [PARAM_CARD_PATH]")
-        logger.info("Generate amplitudes for decay width calculation.")
+        logger.info("syntax: decay_diagram PART [other particles] [OPTIONS]")
+        logger.info("  Returns the amplitude required for the computation of the widths")
+        logger.info(" ")
         logger.info("  PART: name of the particle you want to calculate width")
-        logger.info("  PRECISION: required precision for width")
-        logger.info("             if an integer is provide it means the max number of decay products")
-        logger.info("  PARAM_CARD_PATH: path for param_card (if not default)")
+        logger.info("        you can enter either the name or pdg code.\n")
+        logger.info("  Various options:\n")
+        logger.info("  --body_decay=X: Parameter to control the precision of the computation")
+        logger.info("        if X is an integer, we compute all channels up to X-body decay.")
+        logger.info("        if X <1, then we stop when the estimated error is lower than X.")
+        logger.info("        if X >1 BUT not an integer, then we X = N + M, with M <1 and N an integer")
+        logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
+        logger.info("        default: 4.0025")
+        logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("  --precision_channel=X: requested numerical precision for each channel")
+        logger.info("        default: 0.01")
+        logger.info("  --path=X: path for param_card")
+        logger.info("        default: take value from the model")
+        logger.info("  --output=X: path where to write the resulting card. ")
+        logger.info("        default: overwrite input file. If no input file, write it in the model directory")
         logger.info("")
-        logger.info(" example: decay_diagram h 2 ./param_card")
+        logger.info(" example: calculate_width h --body_decay=2 --output=./param_card")
         
     def help_add(self):
 
@@ -1075,76 +1099,7 @@ This will take effect only in a NEW terminal
                     
         self._export_dir = os.path.realpath(self._export_dir)
     
-    def check_decay_diagram(self, args):
-        """ check and format calculate decay width:
-        Expected format: NAME [OTHER_NAMES] PREC/LEVEL [param_card]
-        """    
-        
-        output = {'path': None, 'level':None, 'ids':set()}
-        
-        if len(args)<2:
-            self.help_calculate_width()
-            raise self.InvalidCmd('decay_diagram requires at least two arguments')
-
-        if len(args) >= 3:
-            if not os.path.exists(args[-1]):
-                if os.path.exists(pjoin(MG5DIR, args[-1])):
-                    output['path'] = pjoin(MG5DIR, args[-1])
-                elif self._model_v4_path and  os.path.exists(pjoin(self._model_v4_path, args[-1])):
-                         output['path'] = pjoin(self._curr_model_v4_path, args[-1])   
-                elif os.path.exists(pjoin(self._curr_model.get('modelpath'), args[-1])):
-                    output['path'] = pjoin(self._curr_model.get('modelpath'), args[-1])                
-                else:
-                    try:
-                        precision = float(args[-1])
-                    except Exception:
-                         raise self.InvalidCmd('%s is not a valid path /precision' % args[-1])
-                    else:
-                        output['level'] = precision
-            else:
-                output['path'] = args[-1]
-            # check that the path is indeed a param_card:
-            if output['path'] and madevent_interface.MadEventCmd.detect_card_type(output['path']) != 'param_card.dat':
-                raise self.InvalidCmd('%s should be a path to a param_card' % output['path'])
-        else:
-            try:
-                precision = float(args[-1])
-            except Exception:
-                 raise self.InvalidCmd('%s is not a valid path /precision' % args[-1])
-            else:
-                output['level'] = precision
-                
-
-        if not output['level']:
-            try:
-                precision = float(args[-2])
-            except Exception:
-                raise self.InvalidCmd('%s is not a float (expected for precision args)' % args[-2])
-            else:
-                output['level'] = precision            
-            max_pos = -2
-        else:
-            max_pos = -1
-
-        for arg in args[:max_pos]:
-            # check that the first argument is the particle name.
-            if arg.isdigit():
-                p = self._curr_model.get_particle(int(arg))
-                if not p:
-                    raise self.InvalidCmd('Model doesn\'t have pid %s for a particle' % arg)
-                output['ids'].add(int(arg))
-            elif arg in self._multiparticles:
-                output['ids'].update(set(abs(id) for id in self._multiparticles[arg]))
-            else:
-                for p in self._curr_model['particles']:
-                    if p['name'] == arg or p['antiname'] == arg:
-                        output['ids'].add(abs(p.get_pdg_code()))
-                        break
-                else:
-                    raise self.InvalidCmd('invalid particle name')
-    
-        return output
-        
+            
     def check_compute_widths(self, args):
         """ check and format calculate decay width:
         Expected format: NAME [other names] [--options]
@@ -1158,7 +1113,8 @@ This will take effect only in a NEW terminal
             If you want to compute the width of all particles, type \'compute_widths all\'''')
 
         particles = set()
-        options = {'precision': 0.0025, 'path':None, 'output':None}
+        options = {'path':None, 'output':None,
+                   'min_br':None, 'body_decay':4.0025, 'precision_channel':0.01}
         # check that the firsts argument is valid
         for i,arg in enumerate(args):
             if arg.startswith('--'):
@@ -1220,9 +1176,12 @@ This will take effect only in a NEW terminal
         if not options['output']:
             options['output'] = options['path']
 
+        if not options['min_br']:
+            options['min_br'] = (float(options['body_decay']) % 1) / 5
         return particles, options
                 
         
+    check_decay_diagram = check_compute_widths
 
     def get_default_path(self):
         """Set self._export_dir to the default (\'auto\') path"""
@@ -1430,21 +1389,6 @@ class CompleteForCmd(cmd.CompleteCmd):
         #return self.list_completion(text, self._particle_names + \
         #                            self._multiparticles.keys() + couplings)
 
-    def complete_decay_diagram(self, text, line, begidx, endidx):
-        "Complete the add command"
-
-        args = self.split_arg(line[0:begidx])
-
-        # Format
-        if len(args) <= 1:
-            return self.model_completion(text, '')
-        elif len(args) == 2:
-            return self.list_completion(text, ['2','3','4','0.'])
-        elif len(args) == 3:
-            return self.path_completion(text)
-        else:
-            return self.path_completion(text, pjoin(*[a for a in args \
-                                                    if a.endswith(os.path.sep)]))
 
     def complete_compute_widths(self, text, line, begidx, endidx):
         "Complete the compute_widths command"
@@ -1460,15 +1404,16 @@ class CompleteForCmd(cmd.CompleteCmd):
             if current_dir.startswith('--output='):
                 current_dir = current_dir[9:]                
             completion = {'path': self.path_completion(text, current_dir)}
-        elif args[-1].startswith('--precision='):
-            completion = {'precision': self.list_completion(text, ['2','3','4','0.\$'])}
         else:
             completion = {}            
             completion['options'] = self.list_completion(text, 
-                            ['--precision=', '--path=', '--output='])
+                            ['--path=', '--output=', '--min_br=0.\$'
+                             '--precision_channel=0.\$', '--body_decay='])
             completion['particles'] = self.model_completion(text, '')            
         
         return self.deal_multiple_categories(completion)
+    
+    complete_decay_diagram = complete_compute_widths
 
     def complete_add(self, text, line, begidx, endidx):
         "Complete the add command"
@@ -4592,8 +4537,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             - particle/other particles can also be multiparticle name (can also be
            pid of the particle)
           
-           --precision=X [default=0.001] allow to choose the precision.
-                if X>1 this is means compute all X body decay
+           --body_decay=X [default=4.0025] allow to choose the precision.
+                if X is an integer: compute all X body decay
+                if X is a float <1: compute up to the time that total error < X
+                if X is a float >1: stops at the first condition.
             
            --path=X. Use a given file for the param_card. (default UFO built-in)
            
@@ -4638,8 +4585,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 else:
                     param_card.write(opts['path'])
         
-        precision = float(opts['precision'])
-
         data = model.set_parameters_and_couplings(opts['path'])
                 
 
@@ -4687,7 +4632,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         #
 
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]), 
-                                         precision), skip_2body=skip_2body)
+                                         ' '.join('--%s=%s' % (key,value) 
+                                                  for key,value in opts.items()
+                                                  if key not in ['precision_channel'])
+                                         ), skip_2body=skip_2body)
         
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
@@ -4695,6 +4643,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
             return 
 
+        # Do the MadEvent integration!!
         with misc.TMP_directory() as path:
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
@@ -4704,10 +4653,30 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                # call a ME interface and define as it as child for correct error handling
                 me_cmd = madevent_interface.MadEventCmd(decay_dir)
-                me_cmd.model_name = self._curr_model['name']
+                #self.define_child_cmd_interface(me_cmd, interface=False) 
+                me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False
-                me_cmd.exec_cmd('launch decay -f') 
+                # run the survey
+                #me_cmd.exec_cmd('calculate_decay_widths --accuracy=%s' % (
+                #                                     opts['precision_channel']))
+                
+                
+                
+                me_opts=[('accuracy', opts['precision_channel']), # default 0.01
+                         ('points', 1000),
+                         ('iterations',9)]
+                me_cmd.exec_cmd('survey decay -f %s' % (
+                       " ".join(['--%s=%s' % val for val in me_opts])),
+                      postcmd=False)
+                me_cmd.exec_cmd('combine_events', postcmd=False)
+                #me_cmd.exec_cmd('store_events', postcmd=False)
+                me_cmd.collect_decay_widths()
+                #me_cmd.do_quit()
+                # cleaning
+                del me_cmd
+                
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
         for pid in particles:
             width = param['decay'].get((pid,)).value
@@ -4757,11 +4726,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         args = self.split_arg(line)
         #check the validity of the arguments
-        args = self.check_decay_diagram(args)
+        particles, args = self.check_decay_diagram(args)
         #print args
-        pids = args['ids']
-        level = args['level']
+        pids = particles
+        level = float(args['body_decay'])
         param_card_path = args['path']
+        min_br = float(args['min_br'])
             
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
@@ -4809,8 +4779,11 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     amp = part.get_amplitudes(l)
                     if amp:
                         self._curr_amps.extend(amp)
-            elif level < 1:
-                precision = level
+            else:
+                max_level = level // 1
+                if max_level < 2:
+                    max_level = 999
+                precision = level % 1
                 if first:
                     model.find_all_channels(2)
                     first = False
@@ -4821,18 +4794,19 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 clevel = 2
                 while part.get('apx_decaywidth_err') > precision:
                     clevel += 1
+                    if clevel > max_level:
+                        logger_mg('    stop to %s body-decay. approximate error: %s' %
+                                   (max_level, part.get('apx_decaywidth_err')) )
                     if clevel > 3:
                         logger_mg.info('    current estimated error: %s go to %s-body decay:' %\
                                         (part.get('apx_decaywidth_err'), clevel))
                     part.find_channels_nextlevel(model)
-                    part.group_channels_2_amplitudes(clevel, model, precision)                 
+                    part.group_channels_2_amplitudes(clevel, model, min_br)                 
                     amp = part.get_amplitudes(clevel)
                     if amp:
                         self._curr_amps.extend(amp)
                     part.update_decay_attributes(False, True, True, model)
-            else:
-                raise self.InvalidCmd('wrong type arguments!')
-                #logger.info(self._curr_amps.nice_string())
+
 
         # Set _generate_info
         if len(self._curr_amps) > 0:

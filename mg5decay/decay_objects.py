@@ -1112,7 +1112,7 @@ class DecayParticle(base_objects.Particle):
 #        return improper_decay_tag                
 
 
-    def group_channels_2_amplitudes(self, clevel, model, precision=None):
+    def group_channels_2_amplitudes(self, clevel, model, min_br=0):
         """ After the channels is found, combining channels with the same 
             final states into amplitudes.
             NO CALCULATION of branching ratio at this stage!
@@ -1136,9 +1136,9 @@ class DecayParticle(base_objects.Particle):
         total_width = self.get('apx_decaywidth')
         for channel in self.get_channels(clevel, True):
             
-            if precision:
+            if min_br:
                 width = channel.get_apx_decaywidth(model)
-                if (width / total_width) < 0.25 * precision:
+                if (width / total_width) < min_br:
                     continue
             
             found = False

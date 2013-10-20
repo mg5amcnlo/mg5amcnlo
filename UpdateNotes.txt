@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.6.0 (XX/XX/XX)  OM+JA+Chia: Implement MadDecay (automatic/smart computation of the widths)
+                  OM: Change model restriction behavior: two widths with identical are not merged anymore.
+
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.
                   OM: Add a command print_results in the madevent interface. This command print the 
