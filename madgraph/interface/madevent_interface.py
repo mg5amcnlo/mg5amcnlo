@@ -968,6 +968,8 @@ class CheckValidForCmd(object):
         model = model_reader.ModelReader(model)
         particles_name = dict([(p.get('name'), p.get('pdg_code'))
                                                for p in model.get('particles')])
+        particles_name.update(dict([(p.get('antiname'), p.get('pdg_code'))
+                                               for p in model.get('particles')]))        
         
         output = {'model': model, 'force': False, 'output': None, 
                   'input':None, 'particles': set(), 'precision':0.001}
@@ -1007,6 +1009,7 @@ class CheckValidForCmd(object):
             elif arg == 'all':
                 output['particles'] = ['all']
             else:
+                print particles_name
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
 
@@ -2912,7 +2915,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
-
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
         
@@ -2931,7 +2933,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         #output = {'model': model, 'force': False, 'output': None, 
         #          'input':None, 'particles': set(), 'precision':0.001}
         line = 'compute_widths %s --path=%s --precision=%s %s' % \
-                           (' '.join([`i` for i in opts['particles']]), 
+                           (' '.join([str(i) for i in opts['particles']]), 
                            opts['input'], opts['precision'],
                            '--output=%s' % opts['output'] if opts['output'] else '')
         
@@ -4479,7 +4481,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                     path = pjoin(self.me_dir,'Cards','delphes_trigger.dat')
                 self.exec_cmd('open %s' % path)
                 if answer == 'param':
-                    self.check_param_card(path)                                    
+                    self.check_param_card(path, run=False)                                    
             else:
                 # detect which card is provide
                 card_name = self.detect_card_type(answer)
@@ -4747,7 +4749,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         else:
             return 'unknown'
 
-    def check_param_card(self, path):
+    def check_param_card(self, path, run=True):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
@@ -4755,9 +4757,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         text = open(path).read()
         pdg = pattern.findall(text)
         if pdg:
-            logger.info('Computing the width set on auto in the param_card.dat')
-            self.do_compute_widths('%s %s' % (' '.join(pdg), path))
-
+            if run:
+                logger.info('Computing the width set on auto in the param_card.dat')
+                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+            else:
+                logger.info('''Some width are on Auto in the card. 
+    Those will be computed as soon as you have finish the edition of the cards.
+    If you want to force the computation right now and being able to re-edit
+    the cards afterwards, you can type \"compute_wdiths\".''')
 #===============================================================================
 # MadEventCmd
 #===============================================================================
@@ -5319,6 +5326,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('     set run_card default')
         logger.info('********************* HELP SET ***************************')
     
-    
+    def do_compute_widths(self, line):
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','param_card.dat')
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        line = '%s %s' % (line, ' '.join(pdg))
+        if not '--path' in line:
+            line += ' --path=%s' % path
+        try:
+            return self.mother_interface.do_compute_widths(line)
+        except InvalidCmd, error:
+            logger.error("Invalid command: %s " % error)
+    def help_compute_widths(self):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.help_compute_widths()
+    def complete_compute_widths(self):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.complete_compute_widths()
 
 

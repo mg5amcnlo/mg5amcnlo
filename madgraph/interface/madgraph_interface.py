@@ -1179,11 +1179,16 @@ This will take effect only in a NEW terminal
                 particles.update([abs(id) for id in self._multiparticles[args[0]]])
             else:
                 for p in self._curr_model['particles']:
-                    if p['name'] == args[0] or p['antiname'] == arg:
+                    if p['name'] == arg or p['antiname'] == arg:
                         particles.add(abs(p.get_pdg_code()))
                         break
                 else:
-                    raise self.InvalidCmd('%s invalid particle name' % arg)
+                    if arg == 'all':
+                        #sometimes the multiparticle all is not define
+                        particles.update([abs(p.get_pdg_code()) 
+                                        for p in self._curr_model['particles']])
+                    else:
+                        raise self.InvalidCmd('%s invalid particle name' % arg)
     
         if options['path'] and not os.path.isfile(options['path']):
 
@@ -3744,7 +3749,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(self, args[1], options=self.options, **options)
         elif args[0] == 'madevent':
-            print '3747 is interactive?',options
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
@@ -4712,6 +4716,8 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             if pid not in decay_info:
                 decay_info[pid] = []
             for BR in param['decay'].decay_table[pid]:
+                if len(BR.lhacode) == 3 and skip_2body:
+                    continue
                 decay_info[pid].append([BR.lhacode[1:], BR.value * width])
         
         madevent_interface.MadEventCmd.update_width_in_param_card(decay_info, 
