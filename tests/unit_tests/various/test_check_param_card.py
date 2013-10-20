@@ -387,7 +387,7 @@ DECAY 25 2.441404e+00 #  wh
         self.assertEqual(base_model.rule_card.zero, target_zero)
         target_one = []
         self.assertEqual(base_model.rule_card.one, target_one)
-        target_identical = [('mass', [25], [23], ''), ('decay', [25], [23], '')]                
+        target_identical = [('mass', [25], [23], '')]                
         self.assertEqual(base_model.rule_card.identical, target_identical)
         target_rule = []
         self.assertEqual(base_model.rule_card.rule, target_rule)
@@ -419,7 +419,6 @@ DECAY 25 2.441404e+00 #  wh
 </one>
 <identical>
      mass 25 : 23 # 
-     decay 25 : 23 # 
 </identical>
 <opposite>
 </opposite>

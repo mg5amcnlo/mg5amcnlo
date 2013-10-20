@@ -4769,7 +4769,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             # Find channels as requested
             if level // 1 == level and level >1:
                 level = int(level)
-                self._curr_decaymodel.find_channels(part, level)
+                self._curr_decaymodel.find_channels(part, level, min_br)
                 if not skip_2body:
                     amp = part.get_amplitudes(2)
                     if amp:
@@ -4785,7 +4785,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     max_level = 999
                 precision = level % 1
                 if first:
-                    model.find_all_channels(2)
+                    model.find_all_channels(2,generate_abstract=False)
                     first = False
                 if not skip_2body:
                     amp = part.get_amplitudes(2)
@@ -4800,8 +4800,8 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     if clevel > 3:
                         logger_mg.info('    current estimated error: %s go to %s-body decay:' %\
                                         (part.get('apx_decaywidth_err'), clevel))
-                    part.find_channels_nextlevel(model)
-                    part.group_channels_2_amplitudes(clevel, model, min_br)                 
+                    part.find_channels_nextlevel(model, min_br)
+                    #part.group_channels_2_amplitudes(clevel, model, min_br)                 
                     amp = part.get_amplitudes(clevel)
                     if amp:
                         self._curr_amps.extend(amp)
