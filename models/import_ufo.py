@@ -1061,6 +1061,9 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
+            if param.lhablock.lower() == 'decay':
+                continue
+            
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
             if key in block_value_to_var:

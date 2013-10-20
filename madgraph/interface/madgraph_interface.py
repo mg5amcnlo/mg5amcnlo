@@ -3744,6 +3744,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0].startswith('standalone'):
             ext_program = launch_ext.SALauncher(self, args[1], options=self.options, **options)
         elif args[0] == 'madevent':
+            print '3747 is interactive?',options
             if options['interactive']:
                 if hasattr(self, 'do_shell'):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
@@ -3769,6 +3770,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 options=self.options,**options)
             else:
                 # This is a width computation
+                print 'call external launcher'
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
                                 options=self.options,**options)
@@ -4693,18 +4695,15 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd("set automatic_html_opening False --no-save")
-
                 self.exec_cmd('output %s -f' % decay_dir)
                 # Need to write the correct param_card in the correct place !!!
-                files.cp(opts['path'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
+                files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
                 if self._curr_model['name'] == 'mssm' or self._curr_model['name'].startswith('mssm-'):
                     check_param_card.convert_to_slha1(pjoin(decay_dir, 'Cards', 'param_card.dat'))
-                #files.cp(pjoin(self.me_dir, 'Cards','run_card.dat'), pjoin(decay_dir, 'Cards', 'run_card.dat'))
-                #me_cmd = madevent_interface.MadEventCmd(decay_dir)
-                #me_cmd.debug_output = pjoin(os.getcwd(),'MG5_DEBUG')
-                #me.cmd.exec_cmd('launch -n decay -f')
-                self.exec_cmd('launch -n decay -f')
+                me_cmd = madevent_interface.MadEventCmd(decay_dir)
+                me_cmd.model_name = self._curr_model['name']
+                me_cmd.options['automatic_html_opening'] = False
+                me_cmd.exec_cmd('launch decay -f') 
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
         for pid in particles:
             width = param['decay'].get((pid,)).value

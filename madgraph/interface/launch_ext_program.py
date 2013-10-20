@@ -245,6 +245,7 @@ the computation of the width.'''
             os.remove('ME5_debug')
         except:
            pass
+
         launch.run_cmd(command)
         launch.run_cmd('quit')
         

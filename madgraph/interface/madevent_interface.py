@@ -1004,6 +1004,8 @@ class CheckValidForCmd(object):
                 output['particles'].add(particles_name[arg])
             elif arg.isdigit() and int(arg) in particles_name.values():
                 output['particles'].add(eval(arg))
+            elif arg == 'all':
+                output['particles'] = ['all']
             else:
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
@@ -2362,7 +2364,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         """Main commands:launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
 
-        
         args = self.split_arg(line)
         # Check argument's validity
         accuracy = self.check_calculate_decay_widths(args)
@@ -2373,6 +2374,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         else:
             self.set_run_name(args[0], reload_card=True)
             args.pop(0)
+
+        self.configure_directory()
         
         # Running gridpack warmup
         opts=[('accuracy', accuracy), # default 0.01
@@ -5154,7 +5157,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 card = args[0]
             start=1
             if len(args) < 3:
-                logger.warning('invalid set command: %s' % line)
+                logger.warning('invalid set command: %s (bug id: 5159)' % line)
                 return
 
         #### RUN CARD
@@ -5210,7 +5213,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
-                    logger.warning('invalid set command %s' % line)
+                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                        for key in self.param_card[args[start]].param_dict:
+                            if (args[start], key) in self.restricted_value:
+                                continue
+                            else:
+                                self.setP(args[start], key, args[-1])
+                        self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        return
+                    logger.warning('invalid set command %s (5215)' % line)
                     return 
 
             if key in self.param_card[args[start]].param_dict:

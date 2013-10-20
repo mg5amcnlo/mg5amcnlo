@@ -923,7 +923,7 @@ class DecayParticle(base_objects.Particle):
             tot = len(self.get_channels(sub_clevel, False))
             for nb,sub_c in enumerate(self.get_channels(sub_clevel, False)):
                 if (nb + 1) % 100 == 0:
-                    logger.info('%i / %i: %ss (repeat: %ss)' % (nb+1, tot, int(time.time()-start), int(repeat_time)))
+                    logger.info('%i / %i: %ss' % (nb+1, tot, int(time.time()-start)))
                 # Scan each leg to see if there is any appropriate vertex
                 for index, leg in enumerate(sub_c.get_final_legs()):
 
@@ -951,10 +951,7 @@ class DecayParticle(base_objects.Particle):
                         temp_c_o = temp_c.get_onshell(model)
                         
                         # Append this channel if it is new
-                        start_repeat = time.time()
-                        status = self.check_repeat(clevel, temp_c_o, temp_c)
-                        repeat_time += time.time() -start_repeat
-                        if not status:
+                        if not self.check_repeat(clevel, temp_c_o, temp_c):
 
                             # Check gauge dependence
                             if not temp_c.check_gauge_dependence(model):
@@ -1756,8 +1753,9 @@ class DecayModel(model_reader.ModelReader):
             if nb_part < 4:
                 continue
             decay_parts = [p for p in interaction['particles'] 
-                            for v in p.get_vertexlist(3, True) + p.get_vertexlist(3, False)
+                            for v in p.get_vertexlist(nb_part-1, True) + p.get_vertexlist(nb_part-1, False)
                             if interaction['id'] == v['id']]
+
             if not decay_parts:
                 continue
 
@@ -1792,16 +1790,16 @@ class DecayModel(model_reader.ModelReader):
                 for part in decay_parts:
                     new_vlist_onshell = base_objects.VertexList()
                     new_vlist_offshell = base_objects.VertexList()
-                    for v in part.get_vertexlist(3, False):
+                    for v in part.get_vertexlist(nb_part-1, False):
                         if v['id'] == interaction['id']: 
-                            part.get_vertexlist(3, False).remove(v)
-                            assert(v not in part.get_vertexlist(3, False))
+                            part.get_vertexlist(nb_part-1, False).remove(v)
+                            assert(v not in part.get_vertexlist(nb_part-1, False))
                             break 
                     else:
-                        for v in part.get_vertexlist(3, True):
+                        for v in part.get_vertexlist(nb_part-1, True):
                             if v['id'] == interaction['id']:  
-                                part.get_vertexlist(3, True).remove(v)
-                                assert(v not in part.get_vertexlist(3, False))
+                                part.get_vertexlist(nb_part-1, True).remove(v)
+                                assert(v not in part.get_vertexlist(nb_part-1, False))
                                 break
                 
                     
