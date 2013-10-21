@@ -281,9 +281,14 @@ c update the upper bounding envelope
                prod=prod*ymax(ncell(kdim),kdim)
             enddo
             prod=(f(1)/prod)
-            if(prod.gt.1) then
-c This guarantees a 10% increase of the upper bound in this cell
-               prod=1+0.1d0/ndim
+            if (prod.gt.1) then
+c Weight for this PS point is larger than current upper bound. Increase
+c the bound so that it is equal to the current max weight.  If the new
+c point is more than twice as large as current upper bound, increase
+c bound by factor 2 only to prevent a single unstable points to
+c completely screw up the efficiency
+               prod=min(2d0,prod)
+               prod=(prod)**(1d0/dble(ndim))
                do kdim=1,ndim
                   ymax(ncell(kdim),kdim)=ymax(ncell(kdim),kdim)*prod
                enddo
