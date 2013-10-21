@@ -1376,7 +1376,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                           helas_objects.HelasWavefunction(leg, 0, model, decay_ids)
 #                        other_external_loop_wf.set('number',wfNumber)
                         break
-#                diagram_wavefunctions.append(other_external_loop_wf)
+#               diagram_wavefunctions.append(other_external_loop_wf)
                 
                 for last_loop_wf, color_list in zip(last_loop_wfs,color_lists):
                     # Now generate HelasAmplitudes from the last vertex.
@@ -1384,9 +1384,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         raise self.PhysicsObjectError, \
                           "The amplitude vertex of a loop diagram must be a "+\
                           "two point vertex with id=-1" 
+                    # skip the boson and Dirac fermions
                     # adjust the fermion flow of external majorana loop wfs
-                    fix_lcut_majorana_fermion_flow(last_loop_wf,\
-                                               other_external_loop_wf)
+                    if other_external_loop_wf.is_majorana():
+                        fix_lcut_majorana_fermion_flow(last_loop_wf,\
+                                                       other_external_loop_wf)
                     # fix the fermion flow
                     mothers=helas_objects.HelasWavefunctionList(\
                                 [last_loop_wf,other_external_loop_wf])
@@ -1477,7 +1479,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 wavefunction through the fermion flow of the first external 
                 Majorana loop wavefunction."""
                 # skip the boson and Dirac fermions
-                if not other_external_loop_wf.is_majorana():return
+                # if not other_external_loop_wf.is_majorana():return
                 loop_amp_wfs=helas_objects.HelasWavefunctionList(\
                                                                 [last_loop_wf,])
                 while loop_amp_wfs[-1].get('mothers'):
@@ -1489,6 +1491,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 # while loop_amp_wfs[1] is the first external loop wavefunction
                 rep={'incoming':'outgoing','outgoing':'incoming'}
                 other_external_loop_wf['state']=rep[loop_amp_wfs[1]['state']]
+                # other_external_loop_wf['fermionflow']=1
                 return
                                                             
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):

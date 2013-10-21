@@ -49,7 +49,11 @@ HCR_processes_long =  [
                        ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('u u~ > g a',{},['QCD QED'],{}),
-                       ('g g > h h',{},['QCD'],{})]
+                       ('g g > h h',{},['QCD'],{}),
+                       # for splitting orders
+                       ('u u~ > u u~',{},['QCD QED'],{'QCD':99,'QED':99}),
+                       ('u u~ > u u~ g',{},['QCD QED'],{'QCD':99,'QED':99}),
+                       ('u u~ > u u~ a',{},['QCD QED'],{'QCD':99,'QED':99})]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                for elem in HCR_processes_long)
@@ -76,7 +80,11 @@ ML5EW_processes_long =  [
                        ('a a > t t~ a',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('h h > h h h',{'QCD':0,'QED':3},['QED'],{'QCD':0,'QED':8}),
                        ('u u~ > g a',{},['QCD QED'],{}),
-                         ('g g > h h',{},['QCD'],{})]
+                         ('g g > h h',{},['QCD'],{}),
+                         # for splitting orders
+                       ('u u~ > u u~',{},['QCD QED'],{'QCD':99,'QED':99}),
+                       ('u u~ > u u~ g',{},['QCD QED'],{'QCD':99,'QED':99}),
+                       ('u u~ > u u~ a',{},['QCD QED'],{'QCD':99,'QED':99})]
 
 ML5EW_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                 for elem in ML5EW_processes_long)
@@ -376,7 +384,33 @@ class ML5EWTest(unittest.TestCase):
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = True)
+        
+    # test splitting orders (now only test the sum)
+    # ('u u~ > u u~',{},['QCD QED'],{'QCD':99,'QED':99}
+    def test_long_sm_vs_stored_HCR_uux_uux_QCD_QED(self):
+        proc = 'uux_uux_QCD_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = True)
+        
+    # test splitting orders (now only test the sum)
+    # ('u u~ > u u~ g',{},['QCD QED'],{'QCD':99,'QED':99}
+    def test_long_sm_vs_stored_HCR_uux_uuxg_QCD_QED(self):
+        proc = 'uux_uuxg_QCD_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = True)
 
+    # test splitting orders (now only test the sum)
+    # ('u u~ > u u~ a',{},['QCD QED'],{'QCD':99,'QED':99}
+    def test_long_sm_vs_stored_HCR_uux_uuxa_QCD_QED(self):
+        proc = 'uux_uuxa_QCD_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = True)
 
 if '__main__' == __name__:
     # Get full logging info
