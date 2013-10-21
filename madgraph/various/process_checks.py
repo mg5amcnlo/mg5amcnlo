@@ -1951,6 +1951,10 @@ def generate_loop_matrix_element(process_definition, reuse,
     start=time.time()
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
+    # Here, the alohaModel used for analytica computations and for the aloha
+    # subroutine output will be different, so that some optimization is lost.
+    # But that is ok for the check functionality.
+    matrix_element.compute_all_analytic_information()
     timing['HelasDiagrams_generation']=time.time()-start
     
     if loop_optimized_output:

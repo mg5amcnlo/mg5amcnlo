@@ -193,10 +193,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
-         
+
         super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
                                                wanted_lorentz, wanted_couplings)
-         
+        
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))

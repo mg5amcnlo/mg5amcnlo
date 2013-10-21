@@ -1578,11 +1578,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
-                
-        # As a final step, we compute the analytic information for the loop
-        # wavefunctions and amplitudes building this loop matrix element.
-        self.compute_all_analytic_information()
-        
 
     def find_max_loop_coupling(self):
         """ Find the maximum number of loop couplings appearing in any of the
