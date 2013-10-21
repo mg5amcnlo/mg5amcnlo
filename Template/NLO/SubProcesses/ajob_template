@@ -54,8 +54,11 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
                 if [[ ! -e ../${j}_$4 ]]; then
                     mkdir ../${j}_$4
                 fi
-                cp * ../${j}_$4
                 cd ../${j}_$4
+                ln -sf ../${j}/mint_grids 
+                ln -sf ../${j}/mint_grids_NLO 
+                ln -sf ../${j}/grid.MC_integer
+                ln -sf ../${j}/res_1
             fi
         fi
     fi
@@ -69,12 +72,12 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
     if  [[ ! -e symfact.dat ]] ; then
     	if [[  -e ../symfact.dat ]] ; then
-			ln -sf ../symfact.dat .
-		else
-			ln -sf ../../symfact.dat .    
-		fi
-
+	    ln -sf ../symfact.dat .
+	else
+	    ln -sf ../../symfact.dat .    
+	fi
     fi
+
     link1up MadLoopParams.dat
     link1up HelFilter.dat 
     link1up LoopFilter.dat                                                                                                 
@@ -94,21 +97,21 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
 #   check where is the basic file for the creation of input_app.txt
 #       
- 	if [[ $1 == '0' ]]; then
- 		if  [[  -e ../madin.$2 ]] ; then
- 			input_template=../madin.$2
- 		else
- 			input_template=../../madin.$2
- 		fi 
+    if [[ $1 == '0' ]]; then
+ 	if  [[  -e ../madin.$2 ]] ; then
+ 	    input_template=../madin.$2
+ 	else
+ 	    input_template=../../madin.$2
+        fi 
     elif [[ $1 == '2' ]]; then
     	if [[ $3 == '0' || $3 == '2' ]]; then
-    		if  [[  -e ../madinMMC_$2.2 ]] ; then
- 				input_template=../madinMMC_$2.2
- 			else
- 				input_template=../../madinMMC_$2.2
- 			fi
- 		else
-			input_template=./madinM1
+    	    if [[  -e ../madinMMC_$2.2 ]] ; then
+ 		input_template=../madinMMC_$2.2
+ 	    else
+ 		input_template=../../madinMMC_$2.2
+ 	    fi
+ 	else
+	    input_template=./madinM1
     	fi
     fi
     
@@ -125,7 +128,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ $runnumber != 0 ]]; then
             tar --extract --file=../nevents.tar nevts_${j}_$runnumber
             mv  nevts_${j}_$runnumber nevts
-            
             echo "$runnumber" >& moffset.dat
         fi
         if [[ $3 == '0' || $3 == '2' ]]; then
