@@ -30,7 +30,6 @@ class ShowerCard(dict):
     logical_vars = ['ue_enabled', 'hadronize', 'b_stable', 'pi_stable', 'wp_stable', 
                     'wm_stable', 'z_stable', 'h_stable', 'tap_stable', 'tam_stable', 
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar']
-    path_vars = ['hwpppath', 'thepegpath', 'hepmcpath', 'lhapdfpath', 'py8path']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         dmstring='dm_'+str(i)
@@ -102,14 +101,6 @@ class ShowerCard(dict):
                 else:
                     raise ShowerCardError('%s is not a valid value for %s' % \
                             (value, key))
-            elif key in self.path_vars:
-                if os.path.isdir(value):
-                    self[key] = value
-                elif value.lower() == 'none':
-                    self[key] = None
-                else:
-                    raise ShowerCardError('%s is not a valid directory' % \
-                            (value))
             elif key in self.string_vars:
                 if value.lower() == 'none':
                     self[key] = ''
@@ -153,7 +144,7 @@ class ShowerCard(dict):
                     value = bool_dict_num[value]
                 else:
                     value = bool_dict[value]
-            elif key in self.path_vars or key in self.string_vars:
+            elif key in self.string_vars:
                 # deal in a special way with analyse
                 if key == 'analyse':
                     if value is None or not value:

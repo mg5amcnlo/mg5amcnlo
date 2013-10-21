@@ -2134,6 +2134,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
+                       'hwpp_path': './herwigPP',
+                       'thepeg_path': './thepeg',
+                       'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
@@ -4215,17 +4218,36 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return self.options # the return is usefull for unittest
 
         # Treat each expected input
-        # 1: Pythia8_path
-        # try relative path
+        # 1: Pythia8_path and hewrig++ paths
+        # try absolute and relative path
         for key in self.options:
-            if key == 'pythia8_path':
-                if self.options['pythia8_path'] in ['None', None]:
-                    self.options['pythia8_path'] = None
+            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']:
+                if self.options[key] in ['None', None]:
+                    self.options[key] = None
                     continue
-                pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
-                if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
+                path = self.options[key]
+                #this is for pythia8
+                if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Pythia.h')):
                         self.options['pythia8_path'] = None
+                    else:
+                        continue
+                #this is for hw++
+                elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                        self.options['hwpp_path'] = None
+                    else:
+                        continue
+                # this is for thepeg
+                elif key == 'thepeg_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                        self.options['thepeg_path'] = None
+                    else:
+                        continue
+                # this is for hepmc
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                        self.options['hepmc_path'] = None
                     else:
                         continue
 
@@ -5193,9 +5215,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.options['fortran_compiler'])
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            to_keep = {}
+            for opt in opts_to_keep:
+                if self.options[opt]:
+                    to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'lhapdf': self.options['lhapdf'],
-                               'fastjet': self.options['fastjet']})
+                    to_keep = to_keep)
 
             # check if stdhep has to be compiled (only the first time)
             if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \

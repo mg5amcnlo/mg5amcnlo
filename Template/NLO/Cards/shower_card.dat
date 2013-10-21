@@ -43,26 +43,7 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
 ################################################################################
-################################################################################
-#
-# HERWIG++ PATHS
-# The following lines need to be set only for Herwig++. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-HWPPPATH   = None   # Path to the dir where Herwig++ is installed
-THEPEGPATH = None   # Path to the dir where ThePeg is installed
-HEPMCPATH  = None   # Path to the dir where HepMC is installed
-################################################################################
-#
-# PYTHIA8 PATH
-# The following line need to be set only for Pythia8. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-PY8PATH    = None   # Path to the dir where Pythia8 is installed
+
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
@@ -82,4 +63,5 @@ INCLUDEPATHS=                       # Path to the dirs containing header files n
                                     # Directory names are separated by white spaces
 ANALYSE     =                       # User's analysis and histogramming routines 
                                     # (please use .o as extension and use spaces to separate files)
+
 

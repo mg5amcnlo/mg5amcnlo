@@ -1700,9 +1700,9 @@ Integrated cross-section
         if shower == 'HERWIGPP':
             try:
                 misc.call(['ln -s %s %s' % \
-                (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
             except Exception:
-                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
+                raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
@@ -1714,7 +1714,7 @@ Integrated cross-section
         if shower=='PYTHIA8':
             open(pjoin(rundir, exe), 'w').write(\
                  '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
-                % pjoin(self.shower_card['py8path'], 'examples', 'config.sh'))
+                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
             os.system('chmod  +x %s' % pjoin(rundir,exe))
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
@@ -2003,6 +2003,15 @@ Integrated cross-section
             #overwrite the PDFCODE variable in order to use internal lhapdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+        # add the pythia8/hwpp path(s)
+        if self.options['pythia8_path']:
+            content+='PY8PATH=%s\n' % self.options['pythia8_path']
+        if self.options['hwpp_path']:
+            content+='HWPPPATH=%s\n' % self.options['hwpp_path']
+        if self.options['thepeg_path']:
+            content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
+        if self.options['hepmc_path']:
+            content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
 
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
