@@ -87,6 +87,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     link1up FKS_params.dat
 
     link1up OLE_order.olc
+    if  [[ ! -e param_card.dat ]] ; then
+	if [[ -e ../../Cards/param_card.dat ]] ; then
+	    ln -sf ../../Cards/param_card.dat .
+	elif [[ -e ../../../Cards/param_card.dat ]] ; then
+	    ln -sf ../../../Cards/param_card.dat .
+	fi
+    fi
     
 #   check where is the basic file for the creation of input_app.txt
 #       
