@@ -164,7 +164,7 @@ def import_full_model(model_path, decay=False):
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
-    ufo_model = ufomodels.load_model(model_path)
+    ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
     
@@ -183,7 +183,7 @@ def import_full_model(model_path, decay=False):
         for ufo_part in ufo_model.all_particles:
             name =  ufo_part.name
             if ufo2mg5_converter.use_lower_part_names:
-               name = name.lower() 
+                name = name.lower() 
             p = model['particles'].find_name(name)
             if hasattr(ufo_part, 'partial_widths'):
                 p.partial_widths = ufo_part.partial_widths

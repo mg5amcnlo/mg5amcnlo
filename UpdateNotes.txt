@@ -10,6 +10,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       Higgs interactions) 
                   OM: use evince by default to open eps file instead of gv.
 		  OM: Fix a problem with the set command for the card edition for the mssm model.
+                  OM: Update EWdim6 paper according to the snowmass paper. (3 more operator)
+                      The default model is restricted in order to exclude those operators. In order
+                      to have those you have to use import model EWdim6-full
 
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.
