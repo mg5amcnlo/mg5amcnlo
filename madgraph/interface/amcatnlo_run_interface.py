@@ -1661,7 +1661,7 @@ Integrated cross-section
         for path in self.shower_card['extrapaths'].split():
             ldlibrarypath += ':%s' % path
         if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
         self.shower_card.write_card(shower, shower_card_path)
