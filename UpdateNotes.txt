@@ -13,6 +13,8 @@ Update notes for MadGraph 5 (in reverse time order)
                   OM: Update EWdim6 paper according to the snowmass paper. (3 more operator)
                       The default model is restricted in order to exclude those operators. In order
                       to have those you have to use import model EWdim6-full
+                  OM: Fix bug #1243189, impossible to load v4 model if a local directory has the name of
+                      the models (which is present in the models directory)
 
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.

@@ -36,19 +36,23 @@ logger = logging.getLogger('madgraph.import_v4')
 #===============================================================================
 # import_v4model
 #===============================================================================
-def import_model(model_path, mgme_dir = MG4DIR):
+def import_model(model_path, mgme_dir = MG4DIR, absolute=True):
     """create a model from a MG4 model directory."""
 
     # Check for a valid directory
-    model_path = find_model_path(model_path, mgme_dir)
+    model_path_old = model_path
+    model_path = find_model_path(model_path, mgme_dir, absolute)
 
     files_list = [os.path.join(model_path, 'particles.dat'),\
                   os.path.join(model_path, 'interactions.dat')]
     
     for filepath in files_list:
         if not os.path.isfile(filepath):
-            raise InvalidCmd,  "%s directory is not a valid v4 model" % \
+            if not absolute:
+                raise InvalidCmd,  "%s directory is not a valid v4 model" % \
                                                                     (model_path)
+            else:
+                return import_model(model_path_old, mgme_dir, False)
                                                                 
     # use pickle files if defined
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
@@ -75,11 +79,11 @@ def import_model(model_path, mgme_dir = MG4DIR):
     return model, model_path  
 
     
-def find_model_path(model_path, mgme_dir):
+def find_model_path(model_path, mgme_dir, absolute=True):
     """Find the path to the model, starting with path model_path."""
 
     # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
-    if os.path.isdir(model_path):
+    if os.path.isdir(model_path) and absolute:
         return model_path
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
                                                  model_path + "_v4")):
