@@ -1979,7 +1979,7 @@ c For e+e- collisions, set tau to one and y to zero
      &     cBW_width(-nexternal:-1,-1:1)
       double precision b(-1:1),x0
       double precision s_mass(-nexternal:-1),xi,fract
-      parameter (fract=0.05d0)
+      parameter (fract=0.1d0)
       common/to_phase_space_s_channel/s_mass
       pass=.true.
       totalmass=totmass
@@ -2101,7 +2101,7 @@ c     s_mass(i)
                if (x(-i).lt.fract) then
                   xi=x(-i)/fract ! between 0 and 1
                   xjac0=xjac0/fract
-                  s(i) = (s_mass(i)-smin)*x(-i)+smin
+                  s(i) = (s_mass(i)-smin)*xi+smin
                   xjac0 = xjac0*(s_mass(i)-smin)
                else
                   xi=(x(-i)-fract)/(1d0-fract) ! between 0 and 1
