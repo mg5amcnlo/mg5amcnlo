@@ -20,9 +20,9 @@ QED = CouplingOrder(name = 'QED',
 
 HIG = CouplingOrder(name = 'HIG',
                     expansion_order = 1,
-                    hierarchy = 1)
+                    hierarchy = 2)
 
 HIW = CouplingOrder(name = 'HIW',
                     expansion_order = 1,
-                    hierarchy = 1)
+                    hierarchy = 2)
 
