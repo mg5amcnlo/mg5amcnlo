@@ -18,17 +18,18 @@
 !---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
       INCLUDE "MadLoopParams.inc"
+      INCLUDE "nsquaredSO.inc"
 
 !     
 !     LOCAL
 !     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 SQRTS,MATELEM(3),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
+      REAL*8 SQRTS,MATELEM(0:3,0:NSQUAREDSO),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
       CHARACTER*1 EX 
-      INTEGER HELCHOICE
+      INTEGER HELCHOICE, SOCHOICE
 
 !     
 !     EXTERNAL
@@ -81,6 +82,11 @@
         endif
         write(*,*) "Enter Helicity tag, -1 = summed. For loops only."
         read(*,*) HELCHOICE
+        write(*,*) "Enter split_orders choice, -1 = all."
+        read(*,*) SOCHOICE
+        IF (SOCHOICE.NE.-1) THEN
+          CALL SET_COUPLINGORDERS_TARGET(SOCHOICE)
+        ENDIF
 !---  Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
 !     
@@ -97,7 +103,7 @@
         enddo
         write (*,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
         write (*,'(a4,1x,1e25.15)') 'BORN',0.0d0
-        write (*,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)
+        write (*,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)
         write (*,'(a4,1x,1e25.15)') '1EPS',0.0d0
         write (*,'(a4,1x,1e25.15)') '2EPS',0.0d0
         write (*,*) 'Export_Format LoopInduced'

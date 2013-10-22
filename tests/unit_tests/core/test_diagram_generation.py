@@ -3791,3 +3791,39 @@ class TestDiagramTag(unittest.TestCase):
 
         self.assertEqual(diagram_generation.DiagramTag.reorder_permutation(\
             perm1, perm2), goal)
+
+    def test_diagram_tag_to_diagram_uux_nglue(self):
+        """Test diagrams from DiagramTags for u u~ > n g
+        """
+
+        # Test 2, 3, 4 and 5 gluons in the final state
+        for ngluon in range (2, 4):
+
+            # Create the amplitude
+            myleglist = base_objects.LegList([\
+                base_objects.Leg({'id':2, 'state':False}),
+                base_objects.Leg({'id':-2, 'state':False})])
+
+            myleglist.extend([base_objects.Leg({'id':21,
+                                              'state':True})] * ngluon)
+
+            myproc = base_objects.Process({'legs':myleglist,
+                                           'orders':{'QCD':ngluon, 'QED': 0},
+                                           'model':self.base_model})
+
+            myamplitude = diagram_generation.Amplitude(myproc)
+            diagrams = myamplitude.get('diagrams')
+            diagram_tags = [diagram_generation.DiagramTag(d) \
+                            for d in diagrams]
+
+            #print myamplitude.get('process').nice_string()
+            
+            for i,(d,dtag) in enumerate(zip(diagrams, diagram_tags)):
+                #print '%3r: ' % (i+1),d.nice_string()
+                #print 'new: ',dtag.diagram_from_tag(self.base_model).nice_string()
+                # Check that the resulting diagram is recreated in the same way
+                # from the diagram tag (by checking the diagram tag)
+                self.assertEqual(dtag,
+                                 diagram_generation.DiagramTag(\
+                                     dtag.diagram_from_tag(self.base_model)))
+

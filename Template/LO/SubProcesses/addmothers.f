@@ -117,6 +117,16 @@ c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
           targetamp(ic)=targetamp(ic-1)
         endif
       enddo
+c     ensure that at least one leading color is different of zero if not allow
+c     all subleading color. 
+      if (targetamp(nc).eq.0)then
+       targetamp(1)=jamp2(1)
+       do ic =2,nc
+           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
+       enddo
+      endif
+
+
       xtarget=ran1(iseed)*targetamp(nc)
 
       ic = 1

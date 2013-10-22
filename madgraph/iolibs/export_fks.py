@@ -422,6 +422,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'add_write_info.f',
                      'coupl.inc',
                      'cuts.f',
+                     'FKS_params.dat',
+                     'FKSParams.inc',
+                     'FKSParamReader.f',
                      'cuts.inc',
                      'dbook.inc',
                      'driver_mintMC.f',
@@ -454,6 +457,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'reweight_xsec.f',
                      'reweight_xsec_events.f',
                      'reweight_xsec_events_pdf_dummy.f',
+                     'iproc_map.f',
                      'run.inc',
                      'setcuts.f',
                      'setscales.f',
@@ -731,6 +735,11 @@ end
                              matrix_element,
                              fortran_model)
 
+        filename = 'born_hel.f'
+        self.write_born_hel(writers.FortranWriter(filename),\
+                             matrix_element,
+                             fortran_model)
+
 
         filename = 'born_conf.inc'
         nconfigs, mapconfigs, s_and_t_channels = \
@@ -868,7 +877,6 @@ end
         for file in linkfiles:
             ln('../../%s' % file)
 
-        os.system("ln -s ../../check_sa_loop.f check_sa.f")
         os.system("ln -s ../../makefile_loop makefile")
 
         linkfiles = ['mpmodule.mod']
@@ -1031,13 +1039,96 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/born_fks_tilde_from_born.inc')).read()
+                          'iolibs/template_files/born_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
         writer.writelines(file)
     
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+
+
+    def write_born_hel(self, writer, fksborn, fortran_model):
+        """Export a matrix element to a born_hel.f file in MadFKS format"""
+
+        matrix_element = fksborn.born_matrix_element
+        
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+    
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+    
+        replace_dict = {}
+    
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+    
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+        
+    
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+    
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+    
+        # Extract IC line
+        ic_line = self.get_ic_line(matrix_element)
+        replace_dict['ic_line'] = ic_line
+    
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        #den_factor_line = get_den_factor_line(matrix_element)
+    
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+    
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+    
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+    
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+   
+        # Extract amp2 lines
+        amp2_lines = self.get_amp2_lines(matrix_element)
+        replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+    
+        # Extract JAMP lines
+        jamp_lines = self.get_JAMP_lines(matrix_element)
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        # Extract den_factor_lines
+        den_factor_lines = self.get_den_factor_lines(fksborn)
+        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+    
+        # Extract the number of FKS process
+        replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
+
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/born_fks_hel.inc')).read()
+        file = file % replace_dict
+        
+        # Write the file
+        writer.writelines(file)
+    
+        return
 
 
     #===============================================================================
@@ -1203,7 +1294,7 @@ c     this subdir has no soft singularities
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/b_sf_xxx_fks_from_born.inc')).read()
+                          'iolibs/template_files/b_sf_xxx_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
@@ -1401,7 +1492,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
     
         realfile = open(os.path.join(_file_path, \
-                          'iolibs/template_files/realmatrix_fks_born.inc')).read()
+                             'iolibs/template_files/realmatrix_fks.inc')).read()
 
         realfile = realfile % replace_dict
         
@@ -1441,10 +1532,14 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         process_lines = self.get_process_info_lines(matrix_element)
         replace_dict['process_lines'] = process_lines
     
-        pdf_lines = self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
+        pdf_vars, pdf_data, pdf_lines = \
+                self.get_pdf_lines_mir(matrix_element, ninitial, False, False)
+        replace_dict['pdf_vars'] = pdf_vars
+        replace_dict['pdf_data'] = pdf_data
         replace_dict['pdf_lines'] = pdf_lines
 
-        pdf_lines_mirr = self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
+        pdf_vars_mirr, pdf_data_mirr, pdf_lines_mirr = \
+                self.get_pdf_lines_mir(matrix_element, ninitial, False, True)
         replace_dict['pdf_lines_mirr'] = pdf_lines_mirr
     
         file = open(os.path.join(_file_path, \
@@ -1554,6 +1649,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
 #        new_pdg = model.get_first_non_pdg()
     
         base_diagrams = matrix_element.get('base_amplitude').get('diagrams')
+        model = matrix_element.get('base_amplitude').get('process').get('model')
         minvert = min([max([len(vert.get('legs')) for vert in \
                             diag.get('vertices')]) for diag in base_diagrams])
     
@@ -1574,7 +1670,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards
             schannels, tchannels = helas_diag.get('amplitudes')[0].\
-                                         get_s_and_t_channels(ninitial, 990)
+                                         get_s_and_t_channels(ninitial, model, 990)
     
             s_and_t_channels.append([schannels, tchannels])
     
@@ -1793,7 +1889,10 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         """Generate the PDF lines for the auto_dsig.f file"""
 
         processes = matrix_element.get('processes')
+        model = processes[0].get('model')
 
+        pdf_definition_lines = ""
+        pdf_data_lines = ""
         pdf_lines = ""
 
         if ninitial == 1:
@@ -1802,24 +1901,45 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 process_line = proc.base_string()
                 pdf_lines = pdf_lines + "IPROC=IPROC+1 ! " + process_line
                 pdf_lines = pdf_lines + "\nPD(IPROC) = 1d0\n"
+                pdf_lines = pdf_lines + "\nPD(0)=PD(0)+PD(IPROC)\n"
         else:
-            # Set notation for the variables used for different particles
-            pdf_codes = {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b',
-                         21: 'g', 22: 'a'}
-            # Set conversion from PDG code to number used in PDF calls
-            pdgtopdf = {21: 0, 22: 7}
-            # Fill in missing entries
-            for key in pdf_codes.keys():
-                if key < 21:
-                    pdf_codes[-key] = pdf_codes[key] + 'b'
-                    pdgtopdf[key] = key
-                    pdgtopdf[-key] = -key
-
             # Pick out all initial state particles for the two beams
             initial_states = [sorted(list(set([p.get_initial_pdg(1) for \
                                                p in processes]))),
                               sorted(list(set([p.get_initial_pdg(2) for \
                                                p in processes])))]
+
+            # Prepare all variable names
+            pdf_codes = dict([(p, model.get_particle(p).get_name()) for p in \
+                              sum(initial_states,[])])
+            for key,val in pdf_codes.items():
+                pdf_codes[key] = val.replace('~','x').replace('+','p').replace('-','m')
+
+            # Set conversion from PDG code to number used in PDF calls
+            pdgtopdf = {21: 0, 22: 7}
+            # Fill in missing entries of pdgtopdf
+            for pdg in sum(initial_states,[]):
+                if not pdg in pdgtopdf and not pdg in pdgtopdf.values():
+                    pdgtopdf[pdg] = pdg
+                elif pdg not in pdgtopdf and pdg in pdgtopdf.values():
+                    # If any particle has pdg code 7, we need to use something else
+                    pdgtopdf[pdg] = 6000000 + pdg
+
+            # Get PDF variable declarations for all initial states
+            for i in [0,1]:
+                pdf_definition_lines += "DOUBLE PRECISION " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in \
+                                                 initial_states[i]]) + \
+                                                 "\n"
+
+            # Get PDF data lines for all initial states
+            for i in [0,1]:
+                pdf_data_lines += "DATA " + \
+                                       ",".join(["%s%d" % (pdf_codes[pdg],i+1) \
+                                                 for pdg in initial_states[i]]) + \
+                                                 "/%d*1D0/" % len(initial_states[i]) + \
+                                                 "\n"
 
             # Get PDF values for the different initial states
             for i, init_states in enumerate(initial_states):
@@ -1871,7 +1991,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                 pdf_lines = pdf_lines[:-1] + "\n"
 
         # Remove last line break from pdf_lines
-        return pdf_lines[:-1]
+        return pdf_definition_lines[:-1], pdf_data_lines[:-1], pdf_lines[:-1]
 
 
     #test written
@@ -2168,8 +2288,6 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         os.system("ln -s "+name+"/HelConfigs.dat ../")
         os.system("ln -s "+name+"/ColorNumFactors.dat ../")
 
-
-        os.system("ln -s ../../check_sa_loop.f check_sa.f")
         os.system("ln -s ../../makefile_loop makefile")
 
         linkfiles = ['mpmodule.mod']

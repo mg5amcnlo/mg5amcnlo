@@ -25,13 +25,13 @@ class SaveObjectError(Exception):
     object to file."""
     pass
 
-def save_to_file(filename, object):
+def save_to_file(filename, object, log=True):
     """Save any Python object to file filename"""
 
     if not isinstance(filename, basestring):
         raise SaveObjectError, "filename must be a string"
 
-    files.write_to_file(filename, pickle_object, object)
+    files.write_to_file(filename, pickle_object, object, log=log)
 
     return True
     

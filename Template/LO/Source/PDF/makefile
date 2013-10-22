@@ -23,5 +23,7 @@ all: $(LIBDIR)$(LIBRARY)
 $(LIBDIR)$(LIBRARY): $(PDF)
 	$(call CREATELIB, $@, $^)
 
+clean_lhapdf:
+	rm -f $(LIBDIR)$(LIBRARY)
 clean:
 	$(RM) *.o $(LIBDIR)$(LIBRARY)

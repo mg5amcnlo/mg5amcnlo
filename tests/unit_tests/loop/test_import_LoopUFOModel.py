@@ -62,6 +62,7 @@ def loadLoopToyModel():
                   'charge':0.,
                   'pdg_code':21,
                   'propagating':True,
+                  'propagator':0,                                             
                   'is_part':True,
                   'counterterm':{('QCD', ((6,),)): {0: 'UVWfct_G_1', -1: 'UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'UVWfct_G_0', -1: 'UVWfct_G_0_1eps'}},
                   'self_antipart':True}))
@@ -79,6 +80,7 @@ def loadLoopToyModel():
                   'charge':2. / 3.,
                   'pdg_code':2,
                   'propagating':True,
+                  'propagator':'',                                             
                   'is_part':True,
                   'self_antipart':False}))
     antiu = copy.copy(mypartlist[1])
@@ -97,6 +99,7 @@ def loadLoopToyModel():
                   'charge':-1. / 3.,
                   'pdg_code':1,
                   'propagating':True,
+                  'propagator':'',
                   'is_part':True,
                   'self_antipart':False}))
     antid = copy.copy(mypartlist[2])

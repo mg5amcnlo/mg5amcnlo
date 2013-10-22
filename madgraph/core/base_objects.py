@@ -199,7 +199,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -217,6 +217,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -2237,6 +2238,16 @@ class Process(PhysicsObject):
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
         self['NLO_mode'] = 'tree'
+        # The user might want to have the individual matrix element evaluations
+        # for specific values of the coupling orders. The list below specifies
+        # what are the coupling names which need be individually treated.
+        # For example, for the process p p > j j [] QED=2 (QED=2 is 
+        # then a squared order constraint), then QED will appear in the 
+        # 'split_orders' list so that the subroutine in matrix.f return the
+        # evaluation of the matrix element individually for the pure QCD 
+        # contribution 'QCD=4 QED=0', the pure interference 'QCD=2 QED=2' and
+        # the pure QED contribution of order 'QCD=0 QED=4'.
+        self['split_orders'] = []
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2248,6 +2259,15 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'split_orders':
+            if not isinstance(value, list):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid list" % str(value)
+            for order in value:
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid string" % str(value)
 
         if name == 'model':
             if not isinstance(value, Model):
@@ -2366,8 +2386,8 @@ class Process(PhysicsObject):
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
-                'legs_with_decays',
-                'perturbation_couplings', 'has_born', 'NLO_mode']
+                'legs_with_decays', 'perturbation_couplings', 'has_born', 
+                'NLO_mode','split_orders']
 
     def nice_string(self, indent=0, print_weighted = True):
         """Returns a nicely formated string about current process
@@ -2628,11 +2648,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 
@@ -2662,6 +2685,20 @@ class Process(PhysicsObject):
         return mystr
 
     # Helper functions
+
+    def are_negative_orders_present(self):
+        """ Check iteratively that no coupling order constraint include negative
+        values."""
+
+        if any(val<0 for val in self.get('orders').values()+\
+                                           self.get('squared_orders').values()):
+            return True
+        
+        for procdef in self['decay_chains']:
+            if procdef.are_negative_orders_present():
+                return True
+
+        return False
 
     def are_decays_perturbed(self):
         """ Check iteratively that the decayed processes are not perturbed """
@@ -3064,6 +3101,29 @@ class ProcessDefinition(Process):
 
         return mystr
 
+    def get_process_with_legs(self, LegList):
+        """ Return a Process object which has the same properties of this 
+            ProcessDefinition but with the specified LegList as legs attribute. 
+            """
+            
+        return Process({\
+            'legs': LegList,
+            'model':self.get('model'),
+            'id': self.get('id'),
+            'orders': self.get('orders'),
+            'squared_orders': self.get('squared_orders'),
+            'has_born': self.get('has_born'),
+            'required_s_channels': self.get('required_s_channels'),
+            'forbidden_onsh_s_channels': self.get('forbidden_onsh_s_channels'),            
+            'forbidden_s_channels': self.get('forbidden_s_channels'),
+            'forbidden_particles': self.get('forbidden_particles'),
+            'perturbation_couplings': self.get('perturbation_couplings'),
+            'is_decay_chain': self.get('is_decay_chain'),
+            'overall_orders': self.get('overall_orders'),
+            'split_orders': self.get('split_orders'),
+            'NLO_mode': self.get('NLO_mode')
+            })
+            
     def get_process(self, initial_state_ids, final_state_ids):
         """ Return a Process object which has the same properties of this 
             ProcessDefinition but with the specified given leg ids. """
@@ -3079,19 +3139,9 @@ class ProcessDefinition(Process):
         for i, fs_id in enumerate(final_state_ids):
             assert fs_id in my_fsids[i]
         
-        return Process({\
-            'legs': LegList(\
+        return self.get_process_with_legs(LegList(\
                [Leg({'id': id, 'state':False}) for id in initial_state_ids] + \
-               [Leg({'id': id, 'state':True}) for id in final_state_ids]),
-            'model':self.get('model'),
-            'id': self.get('id'),
-            'orders': self.get('orders'),
-            'required_s_channels': self.get('required_s_channels'),
-            'forbidden_s_channels': self.get('forbidden_s_channels'),
-            'forbidden_particles': self.get('forbidden_particles'),
-            'perturbation_couplings': self.get('perturbation_couplings'),
-            'is_decay_chain': self.get('is_decay_chain'),
-            'overall_orders': self.get('overall_orders')})
+               [Leg({'id': id, 'state':True}) for id in final_state_ids]))
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison

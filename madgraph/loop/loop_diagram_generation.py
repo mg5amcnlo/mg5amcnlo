@@ -298,46 +298,54 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
         return
-        
+
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
-        for i,diag in enumerate(self['loop_diagrams']):
+        for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tgged first."
+                       "make sure that the loop diagrams have been tagged first."
             valid_diag = True
-            if i not in [20] :valid_diag=False
-            #if valid_diag :
-            #    print i, diag.get('tag')
-                #if i in [1,3,10,12,19,21,29,30,33,34,46,48]:valid_diag=False
-            #if 22 in diag.get_loop_lines_pdgs():
-            #     valid_diag=False
+            
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-            #if len(diag.get_loop_lines_pdgs())!=4:
-            #    valid_diag=False
+#            if len(diag.get_loop_lines_pdgs())!=4:
+#                valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-            # if 23 in diag.get_pdgs_attached_to_loop(structs)
-            #    valid_diag=False
-            #if set([abs(pdg) for pdg in diag.get_loop_lines_pdgs()]).intersection(set([23,24,250,251,25,9000002,9000003,9000004])):
-            #    valid_diag=False
-            #if set(diag.get_pdgs_attached_to_loop(structs)).intersection(set([23,250,251,25,-251,24,-24,9000002,-9000002,9000003,-9000003,9000004,-9000004])):
-            #    valid_diag=False
+#            if 23 in diag.get_pdgs_attached_to_loop(structs):
+#                valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
             #        the PDG. 
             #        In this example, only massive parts. are allowed in the loop.
-
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            #if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-            #    valid_diag=False
-            
+#                valid_diag=False
+          
+            # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
+            #        of two vertices being the four gluon vertex and the effective
+            #        glu-glu-Higgs vertex.
+#            if len(diag.get_loop_lines_pdgs())==2:
+#                bubble_lines_pdgs=[abs(diag.get('canonical_tag')[0][0]),
+#                                   abs(diag.get('canonical_tag')[0][0])]
+#                first_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[0][1]]
+#                second_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[1][1]]
+#                first_vertex_pdgs.sort()
+#                second_vertex_pdgs.sort()
+#                bubble_vertices=[first_vertex_pdgs,second_vertex_pdgs]
+#                bubble_vertices.sort()
+#                if bubble_vertices==[[21,21,21,21],[21,21,25]]:
+#                    valid_diag=False
+                
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
 
@@ -381,22 +389,18 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # least one coupling order building the loop which is in the list
             # of the perturbed order.
             valid_diag=True
-            if (diag.get_loop_line_types()-set(allowedpart))!=set():
+            if (diag.get_loop_line_types()-set(allowedpart))!=set() or \
+                                                       pert_loop_order==set([]):
                 valid_diag=False
                 if not warned:
                     logger.warning(warning_msg)
                     warned=True
-            # HSS, 17/03/2013
-            if len([col for col in [self['process'].get('model').get_particle(pdg).get('color') \
-                                                      for pdg in diag.get_pdgs_attached_to_loop(\
-                                                    self['structure_repository'])] if col!=1])==1:
+            if len([col for col in [
+                   self['process'].get('model').get_particle(pdg).get('color') \
+                                     for pdg in diag.get_pdgs_attached_to_loop(\
+                                  self['structure_repository'])] if col!=1])==1:
                 valid_diag=False
-            # HSS        
-            # HSS, 13/12/2012
-            #if sum([loop_orders[order] for order in pert_loop_order])< (2 if self['process']['perturbation_couplings']==['QCD'] else 1):
-            # HSS
-#            if sum([loop_orders[order] for order in pert_loop_order])< 2:
-#                valid_diag=False
+            
             if valid_diag:
                 newloopselection.append(diag)
         self['loop_diagrams']=newloopselection
@@ -496,6 +500,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # two if they are perturbed. It is a temporary change that will be 
         # reverted after loop diagram generation.
         user_orders=copy.copy(self['process']['orders'])
+        user_squared_orders=copy.copy(self['process']['squared_orders'])
         
         # If the user did not specify any order, we can expect him not to be an
         # expert. So we must make sure the born all factorize the same powers of
@@ -681,6 +686,19 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # user_filter() function which by default does nothing but in which you
         # will find examples of common filters.
         self.user_filter(self['process']['model'],self['structure_repository'])
+
+        # Now revert the squared order. This function typically adds to the 
+        # squared order list the target WEIGHTED order which has been detected.
+        # This is typically not desired because if the used types in directly
+        # what it sees on the screen, it does not get back the same process.
+        # for example, u u~ > d d~ [virt=QCD] becomes
+        # u u~ > d d~ [virt=QCD] WEIGHTED=6
+        # but of course the photon-gluon s-channel born interference is not
+        # counted in.
+        # However, if you type it in generate again with WEIGHTED=6, you will
+        # get it.
+        self['process']['squared_orders'].clear()
+        self['process']['squared_orders'].update(user_squared_orders)
 
         # Give some info about the run
         nLoopDiag = 0
@@ -1222,38 +1240,108 @@ class LoopAmplitude(diagram_generation.Amplitude):
     # Helper function
 
     def check_squared_orders(self, sq_order_constrains):
-        """ Filters loop diagrams according to the constraints on the squared
+        """ Filters the diagrams according to the constraints on the squared
             orders in argument and wether the process has a born or not. """
 
         diagRef=base_objects.DiagramList()
         AllLoopDiagrams=base_objects.DiagramList(self['loop_diagrams']+\
-                                                 self['loop_UVCT_diagrams'])
+                                                     self['loop_UVCT_diagrams'])
+        AllBornDiagrams=base_objects.DiagramList(self['born_diagrams'])
         if self['process']['has_born']:
-            diagRef=self['born_diagrams']
+            diagRef=AllBornDiagrams
         else:
             diagRef=AllLoopDiagrams
 
         for order, value in sq_order_constrains.items():
+            if len(diagRef)==0:
+                # If no born contributes but they were supposed to ( in the
+                # case of self['process']['has_born']=True) then it means that
+                # the loop cannot be squared against anything and none should
+                # contribute either. The squared order constraints are just to 
+                # tight for anything to contribute.
+                AllLoopDiagrams = base_objects.DiagramList()
+                break
             if order.upper()=='WEIGHTED':
                 max_wgt=value-diagRef.get_min_order('WEIGHTED')
                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in\
                   AllLoopDiagrams if diag.get_order('WEIGHTED')<=max_wgt])
+                if self['process']['has_born']:
+                    AllBornDiagrams=base_objects.DiagramList([diag for diag in\
+                        AllBornDiagrams if diag.get_order('WEIGHTED')<=max_wgt])
             else:
                 max_order = 0
                 if value>=0:
                     # Fixed squared order
                     max_order=value-diagRef.get_min_order(order)
                 else:
-                    # ask for the N^(-value) Leading Order in tha coupling
+                    # ask for the N^(-value) Leading Order in the coupling
                     max_order=diagRef.get_min_order(order)+2*(-value-1)                    
                 AllLoopDiagrams=base_objects.DiagramList([diag for diag in \
                     AllLoopDiagrams if diag.get_order(order)<=max_order])
+                if self['process']['has_born']:
+                    AllBornDiagrams=base_objects.DiagramList([diag for diag in \
+                           AllBornDiagrams if diag.get_order(order)<=max_order])
         
+        if self['process']['has_born']:
+            self['born_diagrams'] = AllBornDiagrams
         self['loop_diagrams']=[diag for diag in AllLoopDiagrams if not \
             isinstance(diag,loop_base_objects.LoopUVCTDiagram)]
         self['loop_UVCT_diagrams']=[diag for diag in AllLoopDiagrams if \
             isinstance(diag,loop_base_objects.LoopUVCTDiagram)]
+
+    def order_diagram_set(self, diag_set, split_orders):
+        """ This is a helper function for order_diagrams_according_to_split_orders
+        and intended to be used from LoopHelasAmplitude only"""
         
+        # The dictionary below has keys being the tuple (split_order<i>_values)
+        # and values being diagram lists sharing the same split orders. 
+        diag_by_so = {}
+        
+        for diag in diag_set:
+            so_key = tuple([diag.get_order(order) for order in split_orders])
+            try:
+                diag_by_so[so_key].append(diag)
+            except KeyError:
+                diag_by_so[so_key]=base_objects.DiagramList([diag,])
+
+        so_keys = diag_by_so.keys()
+        # Complete the order hierarchy by possibly missing defined order for
+        # which we set the weight to zero by default (so that they are ignored).
+        order_hierarchy = self.get('process').get('model').get('order_hierarchy')
+        order_weights = copy.copy(order_hierarchy)
+        for so in split_orders:
+            if so not in order_hierarchy.keys():
+                order_weights[so]=0
+
+        # Now order the keys of diag_by_so by the WEIGHT of the split_orders
+        # (and only those, the orders not included in the split_orders do not
+        # count for this ordering as they could be mixed in any given group).
+        so_keys = sorted(so_keys, key = lambda elem: (sum([power*order_weights[\
+                      split_orders[i]] for i,power in enumerate(elem)])))
+        
+        # Now put the diagram back, ordered this time, in diag_set
+        diag_set[:] = []
+        for so_key in so_keys:
+            diag_set.extend(diag_by_so[so_key])
+        
+
+    def order_diagrams_according_to_split_orders(self, split_orders):
+        """ Reorder the loop and Born diagrams (if any) in group of diagrams
+        sharing the same coupling orders are put together and these groups are
+        order in decreasing WEIGHTED orders.
+        Notice that this function is only called for now by the
+        LoopHelasMatrixElement instances at the output stage.
+        """
+        
+        # If no split order is present (unlikely since the 'corrected order'
+        # normally is a split_order by default, then do nothing
+        if len(split_orders)==0:
+            return
+        
+        self.order_diagram_set(self['born_diagrams'], split_orders)
+        self.order_diagram_set(self['loop_diagrams'], split_orders)
+        self.order_diagram_set(self['loop_UVCT_diagrams'], split_orders)
+
 #===============================================================================
 # LoopMultiProcess
 #===============================================================================

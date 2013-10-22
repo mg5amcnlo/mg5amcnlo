@@ -416,7 +416,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
     def do_output(self, line):
         """Main commands:Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -595,7 +595,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
     def ML5finalize(self, nojpeg, online = False):
         """Copy necessary sources and output the ps representation of 
         the diagrams, if needed"""
-        
+
         if self._export_format in ['standalone']:
             logger.info('Export UFO model to MG4 format')
             # wanted_lorentz are the lorentz structures which are
@@ -667,8 +667,12 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if argss[0] in ['stability', 'profile']:
             stab_statistics = int(argss[1])
             argss = argss[:1]+argss[2:]
+        # Remove the extra options
+        i=-1
+        while argss[i].startswith('--'):
+            i=i-1
         # Now make sure the process is acceptable
-        proc = " ".join(argss[1:-1])
+        proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
 	# HSS, 13/11/2012
 	# Is it useless ?

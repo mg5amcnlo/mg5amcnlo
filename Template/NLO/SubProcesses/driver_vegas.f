@@ -95,17 +95,34 @@ c For tests of virtuals
 
       integer n_mp, n_disc
 c statistics for MadLoop      
-      integer nunst, ntot
-      common/ups_stats/nunst, ntot
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+
+c general MadFKS parameters
+      include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
-C-----  
+C-----
+c
+c     Read general MadFKS parameters
+c
+      call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
 c
 c     Read process number
 c
-      nunst=0
       ntot=0
+      nsun=0
+      nsps=0
+      nups=0
+      neps=0
+      n100=0
+      nddp=0
+      nqdp=0
+      nini=0
+      n10=0
+      n1=0
+
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -260,13 +277,31 @@ c
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
 
-c Uncomment for getting CutTools statistics
-c$$$      call ctsstatistics(n_mp,n_disc)
-c$$$      write(*,*) 'n_mp  =',n_mp,'    n_disc=',n_disc
-      write(*,*) "Satisctics from MadLoop:"
-      write(*,*) "Total points tried: ", ntot
-      write(*,*) "Unstable points (check UPS.log for the first 10:) ",
-     1 nunst
+      if (ntot.ne.0) then
+         write(*,*) "Satistics from MadLoop:"
+         write(*,*)
+     &        "  Total points tried:                              ",ntot
+         write(*,*)
+     &        "  Stability unknown:                               ",nsun
+         write(*,*)
+     &        "  Stable PS point:                                 ",nsps
+         write(*,*)
+     &        "  Unstable PS point (and rescued):                 ",nups
+         write(*,*)
+     &        "  Exceptional PS point (unstable and not rescued): ",neps
+         write(*,*)
+     &        "  Double precision used:                           ",nddp
+         write(*,*)
+     &        "  Quadruple precision used:                        ",nqdp
+         write(*,*)
+     &        "  Initialization phase-space points:               ",nini
+         write(*,*)
+     &        "  Unknown return code (100):                       ",n100
+         write(*,*)
+     &        "  Unknown return code (10):                        ",n10
+         write(*,*)
+     &        "  Unknown return code (1):                         ",n1
+      endif
 
       if(savegrid)call initplot
       call mclear
@@ -319,11 +354,12 @@ c From dsample_fks
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer itotalpoints
       common/ctotalpoints/itotalpoints
-
-      integer xBW
-      common /c_xBW/xBW
 c
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
@@ -394,6 +430,7 @@ c
          nFKSprocess=nFKSprocessBorn(2)
       endif
       nbody=.true.
+      fillh=.false.  ! this is set to true in BinothLHA if doing MC over helicities
       nFKSprocess_used=nFKSprocess
       nFKSprocess_used_Born=nFKSprocess
       call fks_inc_chooser()
@@ -403,6 +440,11 @@ c
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
+
+      if (mc_hel.ne.0 .and. fillh) then
+c Fill the importance sampling array
+         call fill_MC_integer(2,ihel,abs(sigint*peso*volh))
+      endif
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -468,6 +510,10 @@ c
 c
 c     Global
 c
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -545,12 +591,13 @@ c-----
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
       if (i .eq. 0) then
-         isum_hel = 0
-         write(*,*) 'Explicitly summing over helicities'
+         mc_hel = 0
+         write(*,*) 'Explicitly summing over helicities for virt'
       else
-         isum_hel= i
-         write(*,*) 'Summing over',i,' helicities/event'
+         mc_hel= i
+         write(*,*) 'Summing over',i,' helicities/event for virt'
       endif
+      isum_hel=0
 
       write(*,10) 'Enter Configuration Number: '
       read(*,*) dconfig

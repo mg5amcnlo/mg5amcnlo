@@ -47,8 +47,9 @@ class ParticleTest(unittest.TestCase):
                       'propagating':True,
                       'is_part':True,
                       'ghost':False,
-                      'self_antipart':False,
-                      'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}}}
+                      'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}},
+                      'propagator':'',
+                      'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -162,12 +163,13 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
+        goal = goal + "    \'propagator\': '',\n"
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False,\n"        
         goal = goal + "    \'ghost\': False,\n"
         goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
-        self.assertEqual(goal, str(self.mypart))
+        self.assertEqual(goal.split('\n'), str(self.mypart).split('\n'))
 
     def test_get_pdg_code(self):
         """Test the get_pdg_code function of Particle"""
@@ -1524,7 +1526,8 @@ class ProcessTest(unittest.TestCase):
                        'squared_orders': {},
                        'has_born': True,
                        'overall_orders': {},
-                       'NLO_mode':'tree'}
+                       'NLO_mode':'tree',
+                       'split_orders':[]}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1609,7 +1612,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'legs_with_decays\': %s,\n" % repr(self.myleglist)
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
-        goal = goal + "    \'NLO_mode\': 'tree'\n}"
+        goal = goal + "    \'NLO_mode\': 'tree',\n"
+        goal = goal + "    \'split_orders\': []\n}"
 
         for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
             self.assertEqual(a,b)
@@ -1716,7 +1720,8 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'squared_orders':{},
                        'has_born': True,
                        'overall_orders':{},
-                       'NLO_mode':'tree'}
+                       'NLO_mode':'tree',
+                       'split_orders':[]}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -1799,7 +1804,8 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'decay_chains\': [],\n"
         goal = goal + "    \'perturbation_couplings\': [],\n"
         goal = goal + "    \'has_born\': True,\n"
-        goal = goal + "    \'NLO_mode\': 'tree'\n}"        
+        goal = goal + "    \'NLO_mode\': 'tree',\n"
+        goal = goal + "    \'split_orders\': []\n}"                
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

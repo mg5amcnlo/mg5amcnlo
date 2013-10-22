@@ -103,7 +103,7 @@ class FortranWriter(FileWriter):
 
     # Parameters defining the output of the Fortran writer
     keyword_pairs = {'^if.+then\s*$': ('^endif', 2),
-                     '^do\s+': ('^enddo\s*$', 2),
+                     '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
@@ -263,13 +263,28 @@ class FortranWriter(FileWriter):
                 if index >= 0:
                     split_at = self.line_length - self.max_split + index
                     break
-
-            res_lines.append(line_start + \
-                             res_lines[-1][split_at:])
-            res_lines[-2] = res_lines[-2][:split_at]
-
+            newline = res_lines[-1][split_at:]
+            nquotes = self.count_number_of_quotes(newline)
+            res_lines.append(line_start + 
+              ('//\''+res_lines[-1][(split_at-1):] if nquotes%2==1 else 
+               ''+res_lines[-1][split_at:]))
+            res_lines[-2] = (res_lines[-2][:(split_at-1)]+'\'' if nquotes%2==1 \
+                                                  else res_lines[-2][:split_at])
         return res_lines
-
+    
+    def count_number_of_quotes(self, line):
+        """ Count the number of real quotes (not escaped ones) in a line. """
+        
+        splitline = line.split('\'')
+        i = 0
+        while i < len(splitline):
+           if i % 2 == 1:
+                # This is a quote - check for escaped \'s
+                while  splitline[i] and splitline[i][-1] == '\\':
+                    splitline[i] = splitline[i] + '\'' + splitline.pop(i + 1)
+           i = i + 1
+        return len(splitline)-1
+        
 #===============================================================================
 # CPPWriter
 #===============================================================================
@@ -704,14 +719,24 @@ class CPPWriter(FileWriter):
 
         while len(res_lines[-1]) > self.line_length:
             long_line = res_lines[-1]
-            split_at = self.line_length
+            split_at = -1
             for character in split_characters:
                 index = long_line[(self.line_length - self.max_split): \
                                       self.line_length].rfind(character)
                 if index >= 0:
                     split_at = self.line_length - self.max_split + index + 1
                     break
-            
+                
+            # no valid breaking so find the first breaking allowed:
+            if split_at == -1:
+                split_at = len(long_line)
+                for character in split_characters:
+                    split = long_line[self.line_length].find(character)
+                    if split > 0:
+                        split_at = min(split, split_at)
+            if split_at == len(long_line):
+                break
+                    
             # Don't allow split within quotes
             quotes = self.quote_chars.findall(long_line[:split_at])
             if quotes and len(quotes) % 2 == 1:

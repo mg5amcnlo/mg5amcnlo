@@ -18,17 +18,19 @@
 !---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
       INCLUDE "MadLoopParams.inc"
+      INCLUDE "nsquaredSO.inc"
 
 !     
 !     LOCAL
 !     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 SQRTS,MATELEM(3),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
+      REAL*8 SQRTS,MATELEM(0:3,0:NSQUAREDSO),BORNELEM,AO2PI           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
       CHARACTER*1 EX 
       INTEGER HELCHOICE
+      INTEGER SOCHOICE
 
 !     
 !     EXTERNAL
@@ -79,14 +81,18 @@
         if (MU_R.lt.0.0d0) then
           MU_R=SQRTS            
         endif
-        write(*,*) "Enter Helicity tag, -1 = summed. For loops only."
+        write(*,*) "Enter Helicity tag, -1 = summed."
         read(*,*) HELCHOICE
+        write(*,*) "Enter split_orders choice, -1 = all."
+        read(*,*) SOCHOICE
+        IF (SOCHOICE.NE.-1) THEN
+          CALL SET_COUPLINGORDERS_TARGET(SOCHOICE)
+        ENDIF
 !---  Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
 !     
 !     Now we can call the matrix element!
 !
-        CALL SMATRIX(P,BORNELEM) 
         IF (HELCHOICE.EQ.-1) THEN
           CALL SLOOPMATRIX(P,MATELEM)
         ELSE
@@ -97,10 +103,13 @@
           write (*,'(a2,1x,5e25.15)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
         enddo
         write (*,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
-        write (*,'(a4,1x,1e25.15)') 'BORN',BORNELEM
-        write (*,'(a3,1x,1e25.15)') 'FIN',MATELEM(1)/BORNELEM/AO2PI
-        write (*,'(a4,1x,1e25.15)') '1EPS',MATELEM(2)/BORNELEM/AO2PI
-        write (*,'(a4,1x,1e25.15)') '2EPS',MATELEM(3)/BORNELEM/AO2PI
+        write (*,'(a4,1x,1e25.15)') 'BORN',MATELEM(0,0)
+        write (*,'(a3,1x,1e25.15)') 'FIN',
+     &MATELEM(1,0)/MATELEM(0,0)/AO2PI
+        write (*,'(a4,1x,1e25.15)') '1EPS',
+     &MATELEM(2,0)/MATELEM(0,0)/AO2PI
+        write (*,'(a4,1x,1e25.15)') '2EPS',
+     &MATELEM(3,0)/MATELEM(0,0)/AO2PI
         write (*,*) 'Export_Format Default'
         write(*,*) '##TAG#RESULT_STOP#TAG##'      
       enddo

@@ -559,7 +559,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- define a multiparticle",'$MG:color:BLUE')
         logger.info("Syntax:  define multipart_name [=] part_name_list")
         logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
-        
+        logger.info("Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("-- set options for generation or output.",'$MG:color:BLUE')
@@ -703,7 +704,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             
     def check_check(self, args):
         """check the validity of args"""
-        
+                
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -727,7 +728,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 args.insert(1, '-no_reuse')
         else:
             args.append('-no_reuse')
-            
+
         if args[0] in ['timing'] and os.path.isfile(args[2]):
             param_card = args.pop(2)
             misc.sprint(param_card)
@@ -745,11 +746,22 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
+        i=-1
+        options_list = {'--energy':'1000','--split_orders':'-1'}
+        user_options={}
+        while args[i].startswith('--'):
+            option=args[i].split('=')
+            user_options[option[0]]=option[1]
+            i=i-1
         
-        if not args[-1].startswith('--energy='):
-            args.append('--energy=1000')
+        for option, default_value in options_list.items():
+            if option not in user_options.keys():
+                user_options[option]=default_value    
         
-        self.check_process_format(" ".join(args[1:-1]))
+        for option, value in user_options.items():
+            args.append('%s=%s'%(option,value))
+        
+        self.check_process_format(" ".join(args[1:-len(options_list.keys())]))
 
         return param_card
     
@@ -864,7 +876,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -1068,6 +1080,9 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output']:
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
@@ -2105,7 +2120,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
                      'MCatNLO-utilities','update', 'Delphes2']
-    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
+    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix',
+                          'standalone_rw'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2149,7 +2165,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'nb_core': None,
+                         'nb_core': None
                          }
 
 
@@ -2167,8 +2183,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'MG5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if os.access(MG5DIR, os.W_OK): # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -2222,7 +2239,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
 
-        self._v4_export_formats = ['madevent', 'standalone','standalone_ms', 'matrix'] 
+        self._v4_export_formats = ['madevent', 'standalone','standalone_ms',
+                                    'matrix', 'standalone_rw'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
     
@@ -2234,7 +2252,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if os.access(MG5DIR, os.W_OK): #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
+        print
 
         return value
         
@@ -2268,9 +2288,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
             # Extract process from process definition
             if ',' in line:
-                myprocdef, line = self.extract_decay_chain_process(line)
-                if myprocdef.are_decays_perturbed():
-                    raise MadGraph5Error("Decay processes cannot be perturbed")
+                if ']' in line or '[' in line:
+                    error_msg=\
+"""The '[' and ']' syntax cannot be used in cunjunction with decay chains.
+This implies that with decay chains:
+  > Squared coupling order limitations are not available.
+  > Loop corrections cannot be considered."""
+                    raise MadGraph5Error(error_msg)
+                else:
+                    myprocdef, line = self.extract_decay_chain_process(line)
+                    # Redundant with above, but not completely as in the future
+                    # one might think of allowing the core process to be 
+                    # corrected by loops.
+                    if myprocdef.are_decays_perturbed():
+                        raise MadGraph5Error("Decay processes cannot be perturbed.")
+                    if myprocdef.are_negative_orders_present():
+                        raise MadGraph5Error("Decay processes include negative"+\
+                                                " coupling orders constraints.")                    
             else:
                 myprocdef = self.extract_process(line)
 
@@ -2283,6 +2317,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                myprocdef.get_ninitial():
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
             
+            # Negative coupling order contraints can be given on at most one
+            # coupling order (and either in squared orders or orders, not both)
+            if len([1 for val in myprocdef.get('orders').values()+\
+                          myprocdef.get('squared_orders').values() if val<0])>1:
+                raise MadGraph5Error("Negative coupling order constraints"+\
+                  " can only be given on one type of coupling and either on"+\
+                               " squared orders or amplitude orders, not both.")
+
             cpu_time1 = time.time()
 
             # Generate processes
@@ -2340,16 +2382,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except ValueError:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
@@ -2761,7 +2815,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
-        options['reuse'] = args[1]=="-reuse"       
+        options['reuse'] = args[1]=="-reuse"
         args = args[:1]+args[2:] 
         # For the stability check the user can specify the statistics (i.e
         # number of trial PS points) as a second argument
@@ -2769,19 +2823,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
 
-        options['energy'] = float(args[-1].split('=')[1])
-        args = args[:-1]        
+        i=-1
+        while args[i].startswith('--'):
+            option = args[i].split('=')
+            if option[0] =='--energy':
+                options['energy']=float(option[1])
+            elif option[0]=='--split_orders':
+                options['split_orders']=int(option[1])
+            i=i-1
+        args = args[:i+1]
+        
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
-
+        
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
-	# HSS, 13/11/2012
-        if args[0]=='gauge' and 'QED' in myprocdef.get('perturbation_couplings') and not self.options['gauge']=='Feynman':
-	# HSS
-            raise self.InvalidCmd("Processes involving loops with QED corrections can only be"+
-                                                 " evaluated in Feynman gauge.")
 
         if args[0] in ['timing','stability', 'profile'] and not \
                                         myprocdef.get('perturbation_couplings'):
@@ -3050,7 +3107,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check basic validity of the line
         if not line.count('>') in [1,2]:
             self.do_help('generate')
-            print
             raise self.InvalidCmd('Wrong use of \">\" special character.')
         
 
@@ -3074,9 +3130,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Now check for squared orders, specified after the perturbation orders.
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
-        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
+        # The 'split_orders' (i.e. those for which individual matrix element
+        # evalutations must be provided for each corresponding order value) are
+        # defined from the orders specified in between [] and any order for
+        # which there are squared order constraints.
+        split_orders = []
         while squared_order_re:
             squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
             line = squared_order_re.group(1)
@@ -3104,28 +3165,46 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        "Valid modes are %s. "%str(self._valid_nlo_modes)
             else:
                 LoopOption='all'
+
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
 
-        # Now if perturbation orders are defined, we will scan for the 
-        # amplitudes orders. If not we will use the squared orders above instead.
+        # Now if perturbation orders placeholders [] have been found,
+        # we will scan for the amplitudes orders. If not we will use the 
+        # squared orders above instead.
         orders = {}
-        if perturbation_couplings == "":
+        if not perturbation_couplings_re:
             for order in squared_orders:
                 orders[order]=squared_orders[order]
             squared_orders={}
         else:
             # We take the coupling orders (identified by "=")
-            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(\d+)\s*$")
+            # Notice that one can have a negative value of the squared order to
+            # indicate that one should take the N^{n}LO contribution into account.
+            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
                 orders[order_re.group(2)] = int(order_re.group(3))
                 line = order_re.group(1)
                 order_re = order_pattern.match(line)
-        # if the squared orders are defined but not the orders, assume orders=sq_orders
+
+        # if the squared orders are defined but not the orders, assume 
+        # orders=sq_orders. In case the squared order has a negative value,
+        # the the order is correspondingly set to be maximal (99) since there is
+        # no way to knwo, during generation, if the amplitude being contstructed
+        # will be leading or not.
         if not orders and squared_orders:
             for order in squared_orders:
-                orders[order]=squared_orders[order]
+                if squared_orders[order]>=0:
+                    orders[order]=squared_orders[order]
+                else:
+                    orders[order]=99
+        
+        # Now add any order for which there is a squard order constraint to the
+        # 'split_order' list if it was not already present.
+        for sq_order in squared_orders.keys():
+            if sq_order not in split_orders:
+                split_orders.append(sq_order)
 
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
@@ -3206,6 +3285,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             perturbation_couplings_list = perturbation_couplings.split()
             if perturbation_couplings_list==['']:
                 perturbation_couplings_list=[]
+            # Correspondingly set 'split_order' from the squared orders and the
+            # perturbation couplings list
+            split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
+            # If the loopOption is 'tree' then the user used the syntax 
+            # [tree= Orders] for the sole purpose of setting split_orders. We
+            # then empty the perturbation_couplings_list at this stage.
+            if LoopOption=='tree':
+                perturbation_couplings_list = []
             if perturbation_couplings_list and LoopOption!='real':
                 if not isinstance(self._curr_model,loop_base_objects.LoopModel):
                     raise self.InvalidCmd(\
@@ -3216,7 +3303,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             raise self.InvalidCmd(\
                                 "Perturbation order %s is not among" % pert_order + \
                                 " the perturbation orders allowed for by the loop model.")
-                                                        
+            
+            if not self.options['loop_optimized_output'] and \
+                         LoopOption not in ['tree','real'] and split_orders!=[]:
+                logger.info('The default output mode (loop_optimized_output'+\
+                  ' = False) does not support evaluations for given power of'+\
+                  ' coupling orders. MadLoop output will therefore not be'+\
+                  ' able to provide such quantities.')
+                split_orders = []
+                       
             # Now extract restrictions
             forbidden_particle_ids = \
                               self.extract_particle_ids(forbidden_particles)
@@ -3259,9 +3354,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                               'overall_orders': overall_orders,
                               'perturbation_couplings': perturbation_couplings_list,
                               'has_born':HasBorn,
-                              'NLO_mode':LoopOption
+                              'NLO_mode':LoopOption,
+                              'split_orders':split_orders
                               })
         #                       'is_decay_chain': decay_process\
+
 
     @staticmethod
     def split_process_line(procline):
@@ -3914,7 +4011,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
                 compiler = 'gfortran'
@@ -4050,6 +4147,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return 
+        
+        if not misc.which('patch'):
+            error_text = """Not able to find program \'patch\'. Please reload a clean version
+            or install that program and retry."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            return            
         
         
         # read the data present in .autoupdate
@@ -4828,8 +4932,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #################
         ## Other Output #
         #################
-        if not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone']:
+        # Configuration of what to do:
+        # check: check status of the directory
+        # exporter: which exporter to use (v4/cpp/...)
+        # output: [Template/dir/None] copy the Template, just create dir or do nothing
+        config = {}
+        config['madevent'] =      {'check': True,  'exporter': 'v4',  'output':'Template'}
+        config['matrix'] =        {'check': False, 'exporter': 'v4',  'output':'dir'}
+        config['standalone'] =    {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_ms'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_rw'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_cpp'] ={'check': False, 'exporter': 'cpp', 'output': 'Template'}
+        config['pythia8'] =       {'check': False, 'exporter': 'cpp', 'output':'dir'}
+        
+        
+        options = config[self._export_format]
+        # check
+        if not noclean and os.path.isdir(self._export_dir) and options['check']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)
@@ -4842,19 +4961,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 shutil.rmtree(self._export_dir)
 
-        # Make a Template Copy
-        if self._export_format in ['madevent', 'standalone','standalone_ms', 'matrix']:
+        #Exporter + Template
+        if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
-        elif self._export_format == 'standalone_cpp':
+            if options['output'] == 'Template':
+                self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+        if  options['exporter'] == 'cpp' and options['output'] == 'Template':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        if self._export_format not in \
-                ['madevent', 'standalone', 'standalone_cpp', 'standalone_ms'] and \
-                not os.path.isdir(self._export_dir):
+            
+            
+        if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
-
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
-
+            
+            
         # Reset _done_export, since we have new directory
         self._done_export = False
 
@@ -4878,7 +4997,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             """Helper function to generate the matrix elements before
             exporting"""
 
-            if self._export_format == 'standalone_ms':
+            if self._export_format in ['standalone_ms', 'standalone_mw']:
                 to_distinguish = []
                 for part in self._curr_model.get('particles'):
                     if part.get('name') in args and part.get('antiname') in args and\
@@ -4935,7 +5054,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
                     mode = {}
-                    if self._export_format == 'standalone_ms':
+                    if self._export_format in ['standalone_ms', 'standalone_rw']:
                         mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
                        helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
@@ -4958,7 +5077,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 'standalone_ms']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 
+                                   'standalone_ms', 'standalone_rw']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -5029,7 +5149,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
-        if self._export_format in ['standalone', 'standalone_ms']:
+        if self._export_format in ['standalone', 'standalone_ms', 'standalone_rw']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -5092,7 +5212,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 
+                                   'standalone_rw', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -5126,7 +5247,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
 
             try:
                 p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
@@ -5167,12 +5287,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            fj_lhapdf_lines = \
-                 ['fastjet_config=%s' % self.options['fastjet'],
-                  'lhapdf_config=%s' % self.options['lhapdf']]
-            text = '\n'.join(fj_lhapdf_lines) + '\n'
-            fj_lhapdf_file.write(text)
-            fj_lhapdf_file.close()
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
@@ -5201,7 +5315,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_ms',
+                                   'standalone_rw']:
             
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,

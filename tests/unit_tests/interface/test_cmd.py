@@ -19,6 +19,7 @@ import madgraph
 import madgraph.interface.master_interface as cmd
 import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
+import madgraph.various.misc as misc
 import os
 import logging
 
@@ -155,19 +156,15 @@ class TestValidCmd(unittest.TestCase):
         master = ms_cmd.MadSpinInterface()
         self.assertRaises(Exception, master.do_define,('aa'))
         
-        import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
-        tmp = cmd_madloop.TestCmdLoop
-        tmp.setup_logFile_for_logger('fatalerror', level=logging.WARNING)
-        try:
-            master.run_cmd('define aa')
-        except Exception:
-            self.assertTrue(False, 'error are not treated correctly')
-        
-        text = open('/tmp/fatalerror.log').read()
-        self.assertTrue('{' not in text)
-        self.assertTrue('MS_debug' in text)
-        tmp.setup_logFile_for_logger('fatalerror', restore=True, \
-                                                  level=logging.WARNING)
+        with misc.MuteLogger(['fatalerror'], [40],['/tmp/fatalerror.log'], keep=False):
+            try:
+                master.run_cmd('define aa')
+            except Exception, error:
+                self.assertTrue(False, 'error are not treated correctly: %s' % error)
+            text = open('/tmp/fatalerror.log').read()
+            self.assertTrue('{' not in text)
+            self.assertTrue('MS_debug' in text)
+
 
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
