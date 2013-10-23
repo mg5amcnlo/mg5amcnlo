@@ -2858,38 +2858,38 @@ c
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
 c xmcsubt note
-            z(npartner)=ztmp
-            xi(npartner)=xitmp
-            xjac(npartner)=xjactmp
+         z(npartner)=ztmp
+         xi(npartner)=xitmp
+         xjac(npartner)=xjactmp
 
 c Compute deadzones
-            lzone(npartner)=.true.
-            parp67=1d0
-            mstp67=2
-            if(ileg.le.2)then
-               lzcc=.false.
-               thetac=0d0
-               ycc=1-parp67*x/(2*(1-x)**2)
-               if(mstp67.eq.0)then
+         lzone(npartner)=.true.
+         parp67=1d0
+         mstp67=2
+         if(ileg.le.2)then
+            lzcc=.false.
+            thetac=0d0
+            ycc=1-parp67*x/(2*(1-x)**2)
+            if(mstp67.eq.0)then
+               lzcc=.true.
+               thetac=1d0
+            elseif(mstp67.eq.1)then
+               if(yi.ge.ycc)then
                   lzcc=.true.
                   thetac=1d0
-               elseif(mstp67.eq.1)then
-                  if(yi.ge.ycc)then
-                     lzcc=.true.
-                     thetac=1d0
-                  endif
-               elseif(mstp67.eq.2)then
-                  lzcc=.true.
-                  thetac=min(1d0,(1d0-ycc)/(1d0-yi))
-               else
-                  write(*,*)'Unknown mstp67 ',mstp67
-                  stop
                endif
-               if(.not.lzcc)lzone(npartner)=.false.
+            elseif(mstp67.eq.2)then
+               lzcc=.true.
+               thetac=min(1d0,(1d0-ycc)/(1d0-yi))
             else
-               write(*,*)'No way'
+               write(*,*)'Unknown mstp67 ',mstp67
                stop
             endif
+            if(.not.lzcc)lzone(npartner)=.false.
+         else
+            write(*,*)'No way'
+            stop
+         endif
          max_scale(npartner)=scalemax
          max_scale(npartner)=
      &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
