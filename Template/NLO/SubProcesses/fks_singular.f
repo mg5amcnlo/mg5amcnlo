@@ -5316,9 +5316,6 @@ c Check to see if this channel needs to be included in the multi-channeling
             diagramsymmetryfactor=1d0
          endif
  12      continue
-c Setup the Binoth interface for the virtual corrections
-         filename="contract.file"
-         call BinothLHAInit(filename)
 c Setup for parton-level NLO reweighting
          if(doNLOscaleunc.or.doNLOPDFunc) call setup_fill_rwgt_NLOplot()
          firsttime=.false.

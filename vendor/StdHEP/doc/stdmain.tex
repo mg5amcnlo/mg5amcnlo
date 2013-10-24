@@ -1,0 +1,42 @@
+% this is latex
+\documentclass[twoside,12pt]{article}
+\setlength{\textheight}{230mm}
+\setlength{\topmargin}{0mm}
+
+%define page size: 
+\setlength{\headheight}{5mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{5mm}
+\setlength{\textwidth}{170mm}
+\setlength{\oddsidemargin}{0mm}
+\setlength{\evensidemargin}{0mm}
+
+\raggedbottom
+
+%line spacing
+%%\renewcommand{\baselinestretch}{1.5}
+\newcommand{\tstrut}{\protect\rule{0in}{0.2in}\hspace{1em}}
+
+\input pslogos
+
+\begin{document}
+
+\input intro
+
+\input body
+\input routines
+\input history
+\input refer
+
+\setlength{\textheight}{240mm}
+\setlength{\oddsidemargin}{-15mm}
+\setlength{\evensidemargin}{-15mm}
+\begin{appendix}
+\input elem
+\input meson
+\input baryon
+\input isthep
+\end{appendix}
+
+\end{document}
+

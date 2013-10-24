@@ -836,8 +836,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
-        if self.check_mcatnlo_dir():
-            self.run_mcatnlo(evt_file)
+        self.run_mcatnlo(evt_file)
 
     ################################################################################
     def do_plot(self, line):
@@ -1004,7 +1003,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and not options['parton']:
+        if not options['parton']:
             self.run_mcatnlo(evt_file)
 
     ############################################################################
@@ -1056,7 +1055,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
-        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] and self.check_mcatnlo_dir() \
+        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file)
         elif mode == 'noshower':
@@ -1087,25 +1086,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
 
-    def check_mcatnlo_dir(self, printmsg=True):
-        """Check that the MCatNLO dir (with files to run the parton-shower has 
-        been copied inside the exported direcotry"""
-        if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
-            #the folder has been exported after installation of MCatNLO-utilities
-            return True
-        elif self.options['MCatNLO-utilities_path']:
-            # if the option is not none, the path should already exist
-            # the folder has been exported before installation of MCatNLO-utilities
-            # and they have been installed
-            files.cp(pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)
-            return True
-
-        else:
-            if printmsg:
-                logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
-                'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
-                ' shell')
-            return False
 
     def update_status(self, status, level, makehtml=False, force=True, 
                       error=False, starttime = None, update_results=False):
@@ -2228,6 +2208,9 @@ Integrated cross-section
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
+        
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
+            input_files.append(pjoin(cwd, 'OLE_order.olc'))
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2448,7 +2431,8 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card:
+        if not '[real=QCD]' in proc_card and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
@@ -2475,7 +2459,8 @@ Integrated cross-section
             mypool.map(compile_dir,
                     ((self.me_dir, p_dir, mode, options, 
                         tests, exe, self.options['run_mode']) for p_dir in p_dirs))
-            mypool.close()
+            time.sleep(1) # sleep one second to make sure all ajob* files are written
+            mypool.terminate() # kill all the members of the multiprocessing pool
         except ImportError: 
             self.nb_core = 1
             logger.info('Multiprocessing module not found. Compiling on 1 core')
@@ -2649,12 +2634,11 @@ Integrated cross-section
         
         # Init the switch value according to the current status
         available_mode = ['0', '1', '2']
-        if self.check_mcatnlo_dir(printmsg=False):
-            available_mode.append('3')
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-                switch['shower'] = 'ON'
-            else:
-                switch['shower'] = 'OFF'
+        available_mode.append('3')
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            switch['shower'] = 'ON'
+        else:
+            switch['shower'] = 'OFF'
                 
         if not aMCatNLO or self.options['mg5_path']:
             available_mode.append('4')
@@ -2801,13 +2785,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
             self.shower_card = shower_card.ShowerCard(shower_card_path)
         
-        # check if we need to install the shower
-        if 'aMC@' in mode and not self.options['MCatNLO-utilities_path']:
-            error = '''MCatNLO-utilities needs to be installed in order to run the shower.
-    You can install this program by typing "install MCatNLO-utilities" in the MG5 interface.
-            '''
-            raise self.InvalidCmd(error)
-        
         if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
             logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
             raise self.InvalidCmd(error)
@@ -2830,6 +2807,7 @@ read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 #                    raise aMCatNLOError(error)
         
         return mode
+
 
     def do_quit(self, line):
         """ """

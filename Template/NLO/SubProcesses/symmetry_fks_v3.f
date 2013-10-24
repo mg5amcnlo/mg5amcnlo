@@ -230,7 +230,7 @@ c Call the Born twice to make sure that all common blocks are correctly filled.
       call sborn(p_born,wgt1)
       call sborn(p_born,wgt1)
       do j = 1 , mapconfig(0)
-         saveamp(j) = amp2(j)
+         saveamp(mapconfig(j)) = amp2(mapconfig(j))
       enddo
       write (*,*) 'born momenta'
       do j=1,nexternal-1

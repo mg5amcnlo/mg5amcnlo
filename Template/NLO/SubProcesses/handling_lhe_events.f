@@ -795,11 +795,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+                 call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+              call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
@@ -822,7 +822,6 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
- 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -1010,11 +1009,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+                call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+             call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
@@ -1037,7 +1036,6 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
- 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -1052,14 +1050,14 @@ c
       buff2=' '
       do while(.true.)
          read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)write(outfile,*)buff2
+         if(index(buff2,'= nevents').eq.0)write(outfile,'(a)')buff2
          if(index(buff2,'= nevents').ne.0)exit
       enddo
       write(outfile,*)
      &nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
-         write(outfile,*)buff2
+         write(outfile,'(a)')buff2
       enddo
 c
       return
@@ -1126,4 +1124,22 @@ c
       return
       end
 
+
+      subroutine read_rwgt_line(unit,id,wgt)
+c read a line in the <rwgt> tag. The syntax should be
+c  <wgt id='1001'> 0.1234567e+01 </wgt>
+c The id should be exactly 4 digits long.
+      implicit none
+      integer unit,id,wgt_start,id_start
+      double precision wgt
+      character*100 buff
+      read (unit,'(a)') buff
+c Use char() to make sure that the non-standard characters are compiler
+c independent (char(62)=">", char(61)="=", char(39)="'")
+      wgt_start=index(buff,CHAR(39)//CHAR(62))+2
+      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
+      read (buff(id_start:100),'(i4)') id
+      read (buff(wgt_start:100),*) wgt
+      return
+      end
 

@@ -1675,6 +1675,163 @@ class ProcessTest(unittest.TestCase):
         self.assertTrue(len(self.myprocess.shell_string()) < 70)
         self.assertEqual(goal_str, self.myprocess.shell_string())
         
+    def test_get_final_ids_after_decay(self):
+        """check that we get the correct ids and in the correct order"""
+        
+        mymodel = base_objects.Model()
+        mypartlist = base_objects.ParticleList([
+                     base_objects.Particle({'name':'c',
+                                             'antiname':'c~',
+                                             'pdg_code':3}),
+                     base_objects.Particle({'name':'l',
+                                             'antiname':'l~',
+                                             'pdg_code':11}),
+                     base_objects.Particle({'name':'H',
+                                             'antiname':'H',
+                                             'pdg_code':25}),                                                                                                
+                                                ])
+        
+        mymodel.set('particles', mypartlist)
+
+        # Check for c c~ > h c, h > l l~
+
+        myleglist = base_objects.LegList(\
+            [base_objects.Leg({'id':3,
+                                         'number':1,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':3,
+                                         'number':2,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':25,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':3,
+                                         'number':4,
+                                         'state':True,
+                                         'from_group':False})])
+
+        mylegdecay = base_objects.LegList(\
+            [base_objects.Leg({'id':25,
+                                         'number':1,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':11,
+                                         'number':2,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':-11,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False})])
+        
+        mydecay = {'legs':mylegdecay,
+                  'orders':{'QCD':5, 'QED':1},
+                  'model':mymodel,
+                  'id': 1,
+                  'uid':0,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_onsh_s_channels':[],
+                       'forbidden_particles':[],
+                       'perturbation_couplings':[],
+                       'is_decay_chain': False,
+                       'decay_chains': base_objects.ProcessList(),
+                       'legs_with_decays': [],
+                       'squared_orders': {},
+                       'has_born': True,
+                       'overall_orders': {},
+                       'NLO_mode':'tree'}
+            
+
+        mydecay = base_objects.Process(mydecay)
+        
+        myprocess = copy.copy(mydecay)
+        myprocess['legs'] = myleglist
+        myprocess['is_decay_chain'] = True
+        proclist = base_objects.ProcessList()
+        proclist.append(mydecay)
+        myprocess['decay_chains'] = proclist
+        
+        # checking
+        output = myprocess.get_final_ids_after_decay()
+        self.assertEqual(output, [11, -11, 3])
+        
+        ## c c~ > c h c~ h c, h > l l, h > l~ l~ 
+        myleglist = base_objects.LegList(\
+            [base_objects.Leg({'id':3,
+                                         'number':1,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':-3,
+                                         'number':2,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':3,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':25,
+                                         'number':4,
+                                         'state':True,
+                                         'from_group':False}),
+            base_objects.Leg({'id':-3,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':25,
+                                         'number':4,
+                                         'state':True,
+                                         'from_group':False}),
+              base_objects.Leg({'id':3,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False})])
+
+        mylegdecay = base_objects.LegList(\
+            [base_objects.Leg({'id':25,
+                                         'number':1,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':11,
+                                         'number':2,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':11,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False})])        
+        mydecay['legs'] = mylegdecay
+        
+        mylegdecay2 = base_objects.LegList(\
+            [base_objects.Leg({'id':25,
+                                         'number':1,
+                                         'state':False,
+                                         'from_group':False}),
+             base_objects.Leg({'id':-11,
+                                         'number':2,
+                                         'state':True,
+                                         'from_group':False}),
+             base_objects.Leg({'id':-11,
+                                         'number':3,
+                                         'state':True,
+                                         'from_group':False})]) 
+        mydecay2 = copy.copy(mydecay)
+        mydecay2['legs'] = mylegdecay2
+        
+        
+        myprocess['legs'] = myleglist
+        myprocess['is_decay_chain'] = True
+        proclist = base_objects.ProcessList()
+        proclist.append(mydecay)
+        proclist.append(mydecay2)
+        myprocess['decay_chains'] = proclist       
+        # checking
+        output = myprocess.get_final_ids_after_decay()
+        self.assertEqual(output, [3, 11, 11, -3,-11,-11,3])
+        
 #===============================================================================
 # ProcessDefinitionTest
 #===============================================================================

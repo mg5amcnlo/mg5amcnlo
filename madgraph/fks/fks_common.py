@@ -285,7 +285,8 @@ def ij_final(pair):
 def insert_legs(leglist_orig, leg, split):
     """Returns a new leglist with leg splitted into split.
     The convention is to remove leg ij, replace it with leg j, and put
-    i at the end of the group of legs with the same color representation
+    i at the end of the group of massless legs with the same color 
+    representation
     """
     # the deepcopy statement is crucial
     leglist = FKSLegList(copy.deepcopy(leglist_orig))         
@@ -302,13 +303,13 @@ def insert_legs(leglist_orig, leg, split):
         col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if l['color'] == col and l['massless']])
     for col in set([abs(l['color']) for l in leglist[firstfinal:] if not l['massless']]):
         mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if abs(l['color']) == col and not l['massless']])
-    #no need to keep info on particles with color > i
+    #no need to keep info on massless particles with color > i
     for col in copy.copy(col_maxindex.keys()):
         if abs(col) > abs(split[1]['color']):
             del col_maxindex[col]
-    for col in copy.copy(mass_col_maxindex.keys()):
-        if abs(col) > abs(split[1]['color']):
-            del mass_col_maxindex[col]
+###    for col in copy.copy(mass_col_maxindex.keys()):
+###        if abs(col) > abs(split[1]['color']):
+###            del mass_col_maxindex[col]
     #also remove antiquarks if i is a quark
     if split[1]['color'] > 0:
         try:
@@ -318,6 +319,7 @@ def insert_legs(leglist_orig, leg, split):
     #so now the maximum of the max_col entries should be the position to insert leg i
 
     leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
+###    leglist.insert(max(col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
 #        leglist.insert(i, sleg)
 #        #keep track of the number for initial state legs
@@ -496,6 +498,7 @@ def find_color_links(leglist, symm = False): #test written
                             'legs': [leg1, leg2],
                             'string': col_dict['string'],
                             'replacements': col_dict['replacements']})
+
     return color_links
              
 
@@ -548,6 +551,14 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
         elif leg1.get('color') * icol == - 3:
             string = color_algebra.ColorString(
                      [color_algebra.T(iglu, iglu, min_index-1, num)])
+        elif leg1.get('color') == 8:
+            string = color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index-1,iglu,min_index)], 
+                               is_imaginary =True)
+            string.product(color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index,iglu,num)], 
+                               is_imaginary =True))
+
         string.coeff = string.coeff * fractions.Fraction(1, 2) 
     dict['replacements'] = replacements
     dict['string'] = string
@@ -634,22 +645,34 @@ class FKSLegList(MG.LegList):
             raise FKSProcessError('Too many initial legs')
         #find color representations
         colors = sorted(set([abs(l['color']) for l in final_legs]))
+        # first put massless particles, without any rearrangment
+        if 1 in colors:
+            sorted_leglist.extend(sorted(\
+                    [l for l in final_legs if l['color'] == 1], key = itemgetter('number')))
+            colors.remove(1)
+
+        #now go for colored legs, put first all massive legs, then all massless legs
+        massless_dict = {}
+        massive_dict = {}
         for col in colors:
             col_legs = FKSLegList([l for l in final_legs if abs(l['color']) == col])
             #find massive and massless legs in this color repr
-            massive_legs = [l for l in col_legs if not l['massless']]
-            massless_legs = [l for l in col_legs if l['massless']]
-            # sorting may be different for massive and massless particles
-            # for color singlets, do not change order
-            if col == 1:
-                keys = [itemgetter('number'), itemgetter('number')]
-                reversing = False
-            else:
-                keys = [itemgetter('id'), itemgetter('id')]
-                reversing = True
+            massive_dict[col] = [l for l in col_legs if not l['massless']]
+            massless_dict[col] = [l for l in col_legs if l['massless']]
 
-            for i, list in enumerate([massive_legs, massless_legs]):
+        for i_m, dict in enumerate([massive_dict, massless_dict]):
+            for col in colors:
+                # sorting may be different for massive and massless particles
+                # for color singlets, do not change order
+                if col == 1:
+                    keys = [itemgetter('number'), itemgetter('number')]
+                    reversing = False
+                else:
+                    keys = [itemgetter('id'), itemgetter('id')]
+                    reversing = True
+
                 init_pdg_legs = []
+                list = dict[col]
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
                     for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
@@ -658,20 +681,19 @@ class FKSLegList(MG.LegList):
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = keys[i], reverse=reversing)
+                            init_pdg_legs.sort(key = keys[i_m], reverse=reversing)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
                     other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = keys[i], reverse=reversing)
+                    other_legs.sort(key = keys[i_m], reverse=reversing)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = keys[i], reverse=reversing)
+                    list.sort(key = keys[i_m], reverse=reversing)
                     sorted_leglist.extend(FKSLegList(list))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
-
 
 
 

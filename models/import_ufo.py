@@ -21,7 +21,8 @@ import os
 import re
 import sys
 
-from madgraph import MadGraph5Error, MG5DIR
+
+from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.color_algebra as color
@@ -201,8 +202,9 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
             
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model,
-                                  log=False) 
+    if ReadWrite:
+        save_load_object.save_to_file(os.path.join(model_path, pickle_name),
+                                   model, log=False) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
@@ -403,8 +405,9 @@ class UFOMG5Converter(object):
                 loop_particles = value
             elif key == 'counterterm':
                 counterterms = value
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
-                # add charge -we will check later if those are conserved 
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstone',
+                                             'goldstoneboson','partial_widths'):
+                # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
         
