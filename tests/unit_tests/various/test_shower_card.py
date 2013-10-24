@@ -70,27 +70,6 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
 ################################################################################
-################################################################################
-#
-# HERWIG++ PATHS
-# The following lines need to be set only for Herwig++. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-HWPPPATH   = None   # Path to the dir where Herwig++ is installed
-THEPEGPATH = None   # Path to the dir where ThePeg is installed
-HEPMCPATH  = None   # Path to the dir where HepMC is installed
-################################################################################
-#
-# PYTHIA8 PATH
-# The following line need to be set only for Pythia8. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-PY8PATH    = None   # Path to the dir where Pythia8 is installed
-################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
@@ -158,27 +137,6 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
 ################################################################################
-################################################################################
-#
-# HERWIG++ PATHS
-# The following lines need to be set only for Herwig++. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-HWPPPATH   = None   # Path to the dir where Herwig++ is installed
-THEPEGPATH = None   # Path to the dir where ThePeg is installed
-HEPMCPATH  = None   # Path to the dir where HepMC is installed
-################################################################################
-#
-# PYTHIA8 PATH
-# The following line need to be set only for Pythia8. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-PY8PATH    = None   # Path to the dir where Pythia8 is installed
-################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
@@ -205,10 +163,11 @@ ANALYSE     =                       # User's analysis and histogramming routines
         """test that the py8 card is correctly written"""
         goal = \
 """NEVENTS=-1
-UE_PY8=.TRUE.
+UE_PY8=.FALSE.
+PDFCODE=0
 HADRONIZE_PY8=.TRUE.
 MAXPR_PY8=2
-ERR_FR_PY8=0.010
+ERR_FR_PY8=0.100
 B_STABLE_PY8=.FALSE.
 PI_STABLE_PY8=.TRUE.
 WP_STABLE_PY8=.FALSE.
@@ -220,10 +179,8 @@ TAUM_STABLE_PY8=.FALSE.
 MUP_STABLE_PY8=.FALSE.
 MUM_STABLE_PY8=.FALSE.
 RNDEVSEED_PY8=0
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
+LAMBDAPYTH=-1.000
+B_MASS=-1.000
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -238,10 +195,11 @@ PY8UTI=""
         """test that the py8 card is correctly written"""
         goal = \
 """NEVENTS=-1
-UE_PY8=.TRUE.
+UE_PY8=.FALSE.
+PDFCODE=0
 HADRONIZE_PY8=.TRUE.
 MAXPR_PY8=2
-ERR_FR_PY8=0.010
+ERR_FR_PY8=0.100
 B_STABLE_PY8=.FALSE.
 PI_STABLE_PY8=.TRUE.
 WP_STABLE_PY8=.FALSE.
@@ -253,14 +211,12 @@ TAUM_STABLE_PY8=.FALSE.
 MUP_STABLE_PY8=.FALSE.
 MUM_STABLE_PY8=.FALSE.
 RNDEVSEED_PY8=0
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
+LAMBDAPYTH=-1.000
+B_MASS=-1.000
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
-PY8UTI="myanalyse.o"
+PY8UTI=""
 """
         text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -289,10 +245,6 @@ MUM_STABLE_HWPP=.FALSE.
 RNDEVSEED_HWPP=0
 LAMBDAHERW=-1.000
 B_MASS=-1.000
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -326,10 +278,6 @@ MUM_STABLE_HWPP=.FALSE.
 RNDEVSEED_HWPP=0
 LAMBDAHERW=-1.000
 B_MASS=-1.000
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -366,10 +314,6 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -406,10 +350,6 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -444,10 +384,6 @@ RNDEVSEED_PY=0
 LAMBDAPYTH=-1.000
 B_MASS=-1.000
 IS_4L_PY=.FALSE.
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -482,10 +418,6 @@ RNDEVSEED_PY=0
 LAMBDAPYTH=-1.000
 B_MASS=-1.000
 IS_4L_PY=.FALSE.
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
-PY8PATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
