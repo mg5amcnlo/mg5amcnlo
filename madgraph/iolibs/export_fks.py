@@ -833,20 +833,33 @@ end
             retcode = subprocess.call(['./makevirt'],cwd=virtual_path, 
                             stdout=virt_generation_log, stderr=virt_generation_log)
             virt_generation_log.close()
-            files_to_check = ['olp_module.mod',str(pjoin('lib','libgolem_olp.so'))]
+            # Check what extension is used for the share libraries on this system
+            possible_other_extensions = ['so','dylib']
+            shared_lib_ext='so'
+            for ext in possible_other_extensions:
+                if os.path.isfile(pjoin(virtual_path,'Virtuals','lib',
+                                                            'libgolem_olp.'+ext)):
+                    shared_lib_ext = ext
+
+            # Now check that everything got correctly generated
+            files_to_check = ['olp_module.mod',str(pjoin('lib',
+                                                'libgolem_olp.'+shared_lib_ext))]
             if retcode != 0 or any([not os.path.exists(pjoin(virtual_path,
                                        'Virtuals',f)) for f in files_to_check]):
                 raise fks_common.FKSProcessError(fail_msg)
             # link the library to the lib folder
-            ln(pjoin(virtual_path,'Virtuals','lib','libgolem_olp.so'),
+            ln(pjoin(virtual_path,'Virtuals','lib','libgolem_olp.'+shared_lib_ext),
                                                        pjoin(export_path,'lib'))
             
         # Specify in make_opts the right library necessitated by the OLP
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
+            # apparently -rpath=../$(LIBDIR) is not necessary.
+            #make_opts_content=make_opts_content.replace('libOLP=',
+            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
             make_opts_content=make_opts_content.replace('libOLP=',
-                                   'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
+                                                          'libOLP=-Wl,-lgolem_olp')
         make_opts.write(make_opts_content)
         make_opts.close()
 
