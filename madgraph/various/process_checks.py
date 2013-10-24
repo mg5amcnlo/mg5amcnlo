@@ -1951,6 +1951,10 @@ def generate_loop_matrix_element(process_definition, reuse,
     start=time.time()
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
+    # Here, the alohaModel used for analytica computations and for the aloha
+    # subroutine output will be different, so that some optimization is lost.
+    # But that is ok for the check functionality.
+    matrix_element.compute_all_analytic_information()
     timing['HelasDiagrams_generation']=time.time()-start
     
     if loop_optimized_output:
@@ -1971,7 +1975,7 @@ def generate_loop_matrix_element(process_definition, reuse,
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, param_card = None,cuttools="",
-                            options = None, cmd = FakeInterface()):
+                            options = {}, cmd = FakeInterface()):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
@@ -2009,11 +2013,12 @@ def check_profile(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_stability(process_definition, param_card = None,cuttools="", 
-                               options=None,nPoints=100, reuse=False, cmd = FakeInterface()):
+                               options=None,nPoints=100, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
     
     
+    reuse=options['reuse']
     keep_folder = reuse
     model=process_definition.get('model')
 
@@ -2039,7 +2044,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_timing(process_definition, param_card= None, cuttools="",
-                                          options=None, cmd = FakeInterface()):
+                                          options={}, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 

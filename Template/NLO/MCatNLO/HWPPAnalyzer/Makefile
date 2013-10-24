@@ -19,7 +19,8 @@ HEPMC  = $(HEPMCPATH)
 HEPMCINCLUDE = -I$(HEPMC)/include
 HEPMCLIB =   -L$(HEPMC)/lib -lHepMC 
 HEPMCFIO =   -L$(HEPMC)/lib -lHepMCfio 
-
+TOPDIR = ../
+INCDIR = include
 CXX = g++
 F77 = gfortran -w -fno-automatic -ffixed-line-length-132
 
@@ -32,16 +33,16 @@ ALLCCFILES=$(shell echo *.cc)
 all : HepMCFortran.so
 
 %.o: ../HWAnalyzer/%.f
-	$(F77) -c $< -fPIC -o $@
+	$(F77) -c $< -fPIC -I$(TOPDIR)/$(INCDIR) -o $@
 
 %.o: ../srcHerwig/%.f
-	$(F77) -c $< -fPIC -o $@
+	$(F77) -c $< -fPIC -I$(TOPDIR)/$(INCDIR) -o $@
 
 %.o: %.f
-	$(F77) -c $< -fPIC -o $@
+	$(F77) -c $< -fPIC -I$(TOPDIR)/$(INCDIR) -o $@
 
 %.o: %.cc
-	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
+	$(CXX) -c $< -fPIC $(INCLOPTION) -I$(TOPDIR)/$(INCDIR) -o $@
 
 HepMCFortran.so : HepMCFortran.cc HepMCFortran.h $(FORFILE)
 	$(CXX) -shared -fPIC $(CXXFLAGS) $(LDFLAGS) $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $(HEPMCINCLUDE) $(HEPMCLIB) $(HEPMCFIO) $< -o $@ $(FORFILE)

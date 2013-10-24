@@ -2078,12 +2078,18 @@ c     normal BW
                xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
             endif
          else
+            if (smin.eq.0d0) then
+c not a Breit Wigner
+               s(i) = (smax-smin)*x(-i)+smin
+               xjac0 = xjac0*(smax-smin)
+            else
 c not a Breit Wigner, use 1/x^nsamp importance sampling
-            ximax0 = smin**(-nsamp)
-            ximin0 = smax**(-nsamp)
-            tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
-            s(i) = tmp**(-1/dble(nsamp))
-            xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+               ximax0 = smin**(-nsamp)
+               ximin0 = smax**(-nsamp)
+               tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
+               s(i) = tmp**(-1/dble(nsamp))
+               xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+            endif
          endif
 
 c If numerical inaccuracy, quit loop

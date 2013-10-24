@@ -411,7 +411,8 @@ c      include "fks.inc"
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),zHW6,xiHW6,xjacHW6_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,
-     # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2
+     # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2,
+     # max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -657,6 +658,11 @@ c Compute deadzones
      &      E0sq(npartner),ileg,npartner
           stop
         endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(ptHW6.gt.max_scale(npartner))lzone(npartner)=.false.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
@@ -1123,7 +1129,7 @@ c      include "fks.inc"
      # xjac(nexternal),zHWPP,xiHWPP,xjacHWPP_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2,
-     # xitmp,xjactmp,ztmp,upper_scale2,xmp2,lambda
+     # xitmp,xjactmp,ztmp,upper_scale2,xmp2,lambda,max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1363,6 +1369,11 @@ c Compute deadzones
            stop
          endif
          if(xi(npartner).lt.upper_scale2)lzone(npartner)=.true.
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
@@ -1823,7 +1834,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2,xma2
+     # xmrec2,www,massmax,massmin,ma2,xma2,max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -2087,6 +2098,13 @@ c$$$ is useless
                if(theta2.ge.theta2_cc)lzone(npartner)=.false.
             endif
          endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         xifake(npartner)=xi(npartner)
+         if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+         if(xifake(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -2617,7 +2635,7 @@ c      include "fks.inc"
      # beta,xfact,prefact,kn,knbar,kn0,betad,betas,parp67,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,thetac,ycc,
-     # p_born_partner(0:3),p_born_fksfather(0:3)
+     # p_born_partner(0:3),p_born_fksfather(0:3),max_scale(nexternal-1)
       logical lzcc
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -2840,39 +2858,43 @@ c
       do npartner=1,ipartners(0)
 c This loop corresponds to the sum over colour lines l in the
 c xmcsubt note
-            z(npartner)=ztmp
-            xi(npartner)=xitmp
-            xjac(npartner)=xjactmp
+         z(npartner)=ztmp
+         xi(npartner)=xitmp
+         xjac(npartner)=xjactmp
 
 c Compute deadzones
-            lzone(npartner)=.true.
-            parp67=1d0
-            mstp67=2
-            if(ileg.le.2)then
-               lzcc=.false.
-               thetac=0d0
-               ycc=1-parp67*x/(2*(1-x)**2)
-               if(mstp67.eq.0)then
+         lzone(npartner)=.true.
+         parp67=1d0
+         mstp67=2
+         if(ileg.le.2)then
+            lzcc=.false.
+            thetac=0d0
+            ycc=1-parp67*x/(2*(1-x)**2)
+            if(mstp67.eq.0)then
+               lzcc=.true.
+               thetac=1d0
+            elseif(mstp67.eq.1)then
+               if(yi.ge.ycc)then
                   lzcc=.true.
                   thetac=1d0
-               elseif(mstp67.eq.1)then
-                  if(yi.ge.ycc)then
-                     lzcc=.true.
-                     thetac=1d0
-                  endif
-               elseif(mstp67.eq.2)then
-                  lzcc=.true.
-                  thetac=min(1d0,(1d0-ycc)/(1d0-yi))
-               else
-                  write(*,*)'Unknown mstp67 ',mstp67
-                  stop
                endif
-               if(.not.lzcc)lzone(npartner)=.false.
+            elseif(mstp67.eq.2)then
+               lzcc=.true.
+               thetac=min(1d0,(1d0-ycc)/(1d0-yi))
             else
-               write(*,*)'No way'
+               write(*,*)'Unknown mstp67 ',mstp67
                stop
             endif
-
+            if(.not.lzcc)lzone(npartner)=.false.
+         else
+            write(*,*)'No way'
+            stop
+         endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -3348,7 +3370,7 @@ c      include "fks.inc"
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
      # xmrec2,www,massmax,massmin,ma2,p_mum(0:3),p_partner(0:3,nexternal-1),
      # p_dip(0:3,nexternal-1),m_dip(nexternal-1),m_partner(nexternal-1),m_mum,
-     # m2_dipole(nexternal-1),max_scale(nexternal-1)
+     # m2_dipole(nexternal-1),m_dipole(nexternal-1),max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -3572,6 +3594,7 @@ c xmcsubt note
 c
 c Compute deadzones
          lzone(npartner)=.true.
+c impose pT < min(scalup,mDipole/2) for FSR
          if(ileg.gt.2)then
             do i=0,3
                p_mum(i)=p_born(i,fksfather)
@@ -3583,11 +3606,15 @@ c Compute deadzones
             m_mum=0d0
             if(ileg.eq.3)m_mum=sqrt(xm12)
             m2_dipole(npartner)=(m_dip(npartner)-m_partner(npartner))**2-m_mum**2
-            max_scale(npartner)=min(sqrt(m2_dipole(npartner)/4d0),
-     &                              shower_S_scale(nFKSprocess*2-1))
-            max_scale(npartner)=max(max_scale(npartner),3d0)
-            if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
+            m_dipole(npartner)=sqrt(m2_dipole(npartner))
+            max_scale(npartner)=min(scalemax,m_dipole(npartner)/2d0)
+         else
+            max_scale(npartner)=scalemax
          endif
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)

@@ -1,9 +1,8 @@
-from __future__ import division
-__date__ = "10 Dec 2012"
+
+__date__ = "3 june 2010"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from function_library import *
-
 
 class ParamCardWriter(object):
     
@@ -29,7 +28,6 @@ class ParamCardWriter(object):
         self.fsock.write(self.header)
         
         self.write_card(list_of_parameters)
-        self.fsock.close()
     
     def define_not_dep_param(self, list_of_parameters):
         """define self.dep_mass and self.dep_width in case that they are 
@@ -164,11 +162,12 @@ class ParamCardWriter(object):
             text += self.data % {'pdg': part.pdg_code,
                                  'name': part.name,
                                  'charge': 3 * part.charge,
-                                 'spin': part.spin,
+                                 'spin': 2 * part.spin + 1,
                                  'color': part.color,
                                  'antipart': part.name != part.antiname and 1 or 0}
         
         self.fsock.write(text)
+        
         
             
             

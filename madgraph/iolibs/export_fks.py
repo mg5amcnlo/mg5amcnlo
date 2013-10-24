@@ -193,10 +193,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
-         
+
         super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
                                                wanted_lorentz, wanted_couplings)
-         
+        
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
@@ -330,6 +330,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
         
         cwd = os.getcwd()
         try:
@@ -831,20 +834,33 @@ end
             retcode = subprocess.call(['./makevirt'],cwd=virtual_path, 
                             stdout=virt_generation_log, stderr=virt_generation_log)
             virt_generation_log.close()
-            files_to_check = ['olp_module.mod',str(pjoin('lib','libgolem_olp.so'))]
+            # Check what extension is used for the share libraries on this system
+            possible_other_extensions = ['so','dylib']
+            shared_lib_ext='so'
+            for ext in possible_other_extensions:
+                if os.path.isfile(pjoin(virtual_path,'Virtuals','lib',
+                                                            'libgolem_olp.'+ext)):
+                    shared_lib_ext = ext
+
+            # Now check that everything got correctly generated
+            files_to_check = ['olp_module.mod',str(pjoin('lib',
+                                                'libgolem_olp.'+shared_lib_ext))]
             if retcode != 0 or any([not os.path.exists(pjoin(virtual_path,
                                        'Virtuals',f)) for f in files_to_check]):
                 raise fks_common.FKSProcessError(fail_msg)
             # link the library to the lib folder
-            ln(pjoin(virtual_path,'Virtuals','lib','libgolem_olp.so'),
+            ln(pjoin(virtual_path,'Virtuals','lib','libgolem_olp.'+shared_lib_ext),
                                                        pjoin(export_path,'lib'))
             
         # Specify in make_opts the right library necessitated by the OLP
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
+            # apparently -rpath=../$(LIBDIR) is not necessary.
+            #make_opts_content=make_opts_content.replace('libOLP=',
+            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
             make_opts_content=make_opts_content.replace('libOLP=',
-                                   'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
+                                                          'libOLP=-Wl,-lgolem_olp')
         make_opts.write(make_opts_content)
         make_opts.close()
 
@@ -1186,6 +1202,12 @@ Parameters              %(params)s\n\
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
 
         # Extract glu_ij_lines
         ij_lines = self.get_ij_lines(fksborn)
@@ -1632,6 +1654,12 @@ C
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
     
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)

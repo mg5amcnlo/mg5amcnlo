@@ -1290,7 +1290,7 @@ class SLURMCluster(Cluster):
         """Submit a job prog to a SLURM cluster"""
         
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
-        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+        me_dir = misc.digest(me_dir)[-8:]
 
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
@@ -1351,8 +1351,8 @@ class SLURMCluster(Cluster):
         status = misc.Popen([cmd], stdout=subprocess.PIPE)
 
         if me_dir.endswith('/'):
-           me_dir = me_dir[:-1]    
-        me_dir = hashlib.md5(me_dir).hexdigest()[-8:]
+           me_dir = me_dir[:-1]   
+        me_dir = misc.digest(me_dir)[-8:]
         if not me_dir[0].isalpha():
                   me_dir = 'a' + me_dir[1:]
 
