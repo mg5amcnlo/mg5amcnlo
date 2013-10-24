@@ -387,6 +387,9 @@ def recover_banner(results_object, level, run=None, tag=None):
 class RunCard(dict):
     """A class object for the run_card"""
 
+    #list of paramater which are allowed BUT not present in the _default file.
+    hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
+
     def __init__(self, run_card):
         """ """
         
@@ -447,16 +450,23 @@ class RunCard(dict):
             template = output_file
         
         text = ""
-        for line in file(template,'r'):
+        for line in file(template,'r'):                  
             nline = line.split('#')[0]
             nline = nline.split('!')[0]
             comment = line[len(nline):]
             nline = nline.split('=')
             if len(nline) != 2:
                 text += line
-            else:
+            elif nline[1].strip() in self:
                 text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
+            else:
+                logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
+                text += line 
         
+        for param in self.hidden_param:
+            if param in self:
+                text += '  %s\t= %s \n' % (self[param],param) 
+
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
@@ -740,9 +750,9 @@ class RunCardNLO(RunCard):
         #  Collider pdf
         self.add_line('pdlabel','str','cteq6_m')
         if self['pdlabel'] == 'lhapdf':
-            self.add_line('lhaid', 'int', 10042)
+            self.add_line('lhaid', 'int', 21100)
         else:
-            self.add_line('lhaid', 'int', 10042, log=10)
+            self.add_line('lhaid', 'int', 21100, log=10)
         
         self.fsock.close()
 

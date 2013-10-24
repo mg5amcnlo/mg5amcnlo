@@ -1,0 +1,873 @@
+#!/bin/bash
+# finds out architecture name, defines system files, and construct
+# the relevant directory for run, if not present. If the architecture
+# cannot be figured out, defines ./Run as working directory, and use 
+# sun as system file -- it should work in most of the cases
+function architecture {
+PATH=".:""$PATH"
+thisdir=`pwd`
+homedir=$HOME
+case `uname` in
+Linux*) ARCHNAME=LinuxPP ; DBGFLAG='DEBUG=-ggdb' ; EXTRA='EXTRAOBJ=linux.o' ;
+        EXMAKE=make ; CPOPT=pu ;;
+OSF*)  ARCHNAME=AlphaPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=alpha.o' ;
+       EXMAKE=gmake ; CPOPT=p ;;
+Sun*) ARCHNAME=SunPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+      EXMAKE=gmake ; CPOPT=p ;;
+Darwin*) ARCHNAME=DarwinPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+         EXMAKE=make ; CPOPT=p ;;
+*) ARCHNAME=RunPP ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;;
+esac
+#
+}
+
+# $? is the value of last executed command. A call to this function
+# after a failure will cause the program to quit the script
+function teststatus {
+rc=$?
+if [ 0 = $rc ]
+then
+:
+else
+echo $* did not succeed, exit status=$rc 
+exit $rc
+fi
+}
+
+# returns a string which identifies the target
+# for the Makefile
+function getSTRmake {
+stringmake=MadFKS
+}
+
+# utility function for dothelinks
+function stripextension {
+echo $1 | sed "s/\..*\$//"
+}
+
+# utility function for dothelinks
+function capitalize {
+echo $1 | sed "y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/"
+}
+
+# creates logical links for the PDF grid files. By P. Nason
+function dothelinks {
+if [ -d $PDFPATH ]
+then
+for i in ${PDFPATH}/*.dat ${PDFPATH}/*.tbl
+do
+if [ -f $i ]
+then
+name=`basename $i`
+name=`stripextension $name`
+case $name in
+mrst200*) ;;
+*mrs*|grpol|grvdm|lac1|pion[1-3]) name=`capitalize $name`;;
+esac
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
+then
+ln -sf $i $thisdir/$name
+fi
+fi
+done
+for i in ${PDFPATH}/a02.*
+do
+if [ -f $i ]
+then
+name=`basename $i`
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
+then
+ln -sf $i $thisdir/$name
+fi
+fi
+done
+fi
+}
+
+# creates logical links for LHAPDF, and replaced PDF group name (unused
+# by LHAPDF) with a LHAPDF-specific string
+function linklhapdf {
+case $LHAOFL in
+FREEZE|freeze) PDFGROUP=LHAPDF ;;
+EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
+*) echo "no such option; failure in linklhapdf" ; exit 1 ;;
+esac
+source ../Source/fj_lhapdf_opts
+}    
+
+# converts pdg numbers to names, relevant for decays
+function name {
+# quarks
+if [ $1 == 1 ] ; then echo 'd' ; fi
+if [ $1 == 2 ] ; then echo 'u' ; fi
+if [ $1 == 3 ] ; then echo 's' ; fi
+if [ $1 == 4 ] ; then echo 'c' ; fi
+if [ $1 == 5 ] ; then echo 'b' ; fi
+if [ $1 == 6 ] ; then echo 't' ; fi
+# antiquarks
+if [ $1 == -1 ] ; then echo 'dbar' ; fi
+if [ $1 == -2 ] ; then echo 'ubar' ; fi
+if [ $1 == -3 ] ; then echo 'sbar' ; fi
+if [ $1 == -4 ] ; then echo 'cbar' ; fi
+if [ $1 == -5 ] ; then echo 'bbar' ; fi
+if [ $1 == -6 ] ; then echo 'tbar' ; fi
+# leptons
+if [ $1 == 11 ] ; then echo 'e-' ; fi
+if [ $1 == 12 ] ; then echo 'nu_e' ; fi
+if [ $1 == 13 ] ; then echo 'mu-' ; fi
+if [ $1 == 14 ] ; then echo 'nu_mu' ; fi
+if [ $1 == 15 ] ; then echo 'tau-' ; fi
+if [ $1 == 16 ] ; then echo 'nu_tau' ; fi
+# antileptons
+if [ $1 == -11 ] ; then echo 'e+' ; fi
+if [ $1 == -12 ] ; then echo 'nu_ebar' ; fi
+if [ $1 == -13 ] ; then echo 'mu+' ; fi
+if [ $1 == -14 ] ; then echo 'nu_mubar' ; fi
+if [ $1 == -15 ] ; then echo 'tau+' ; fi
+if [ $1 == -16 ] ; then echo 'nu_taubar' ; fi
+# bosons
+if [ $1 == 21 ] ; then echo 'g' ; fi
+if [ $1 == 22 ] ; then echo 'gamma' ; fi
+if [ $1 == 23 ] ; then echo 'Z0' ; fi
+if [ $1 == 24 ] ; then echo 'W+' ; fi
+if [ $1 == -24 ] ; then echo 'W-' ; fi
+if [ $1 == 25 ] ; then echo 'h0' ; fi
+}
+
+# creates the executable for NLO and MC; the entry of the function
+# is either NLO or MC, depending on which executable one wants to obtain;
+# PDFLIB or private PDF library is linked, depending on the value of
+# the parameter UsedPdfLib, which is set by the function whichpdflib.
+# Extra libraries are listed in the shell variable EXTRALIBS; do NOT
+# remove the double quotes in the call to nameextralib, otherwise only
+# the first library of the list is taken
+function compile {
+architecture
+
+EVTDIR=`pwd`"/../Events"
+# stops if event file is not in the /Events folder
+EVT_NAMEF="$EVPREFIX"
+if [ ! -f $EVTDIR/$EVT_NAMEF ]
+then
+  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
+  exit 1
+fi
+
+if [ "$PDFCODE" -ne 0 ]
+then
+  HERPDF='EXTPDF'
+  PDFLIBRARY='LHAPDF'
+  UsedPdfLib='LHAPDF'
+  cp -f $LHAPDFPATH"/lib/libLHAPDF.a" `pwd`"/../lib"
+  LHALIBPATH=`pwd`"/../"
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+  if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
+  if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
+  linklhapdf
+# convert PDF number to name reading PDFsets.index
+  while read pdfline
+  do 
+    pdfinfo=($(echo ${pdfline}))
+    if [ "$PDFSET" == "${pdfinfo[0]}" ]
+    then
+       PDFSETN="${pdfinfo[4]}"
+    fi
+  done < $LHAPDFPATH/share/lhapdf/PDFsets.index
+elif [ "$PDFCODE" -eq 0 ]
+then
+  HERPDF='DEFAULT'
+  PDFLIBRARY='THISLIB'
+  UsedPdfLib='THISLIB'
+# the following is dummy
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+else
+  echo 'Invalid PDFCODE' $PDFCODE
+  exit 1
+fi
+
+whichpdflib $PDFLIBRARY
+whichlhapdf $LHALINK
+nameextralib "$EXTRALIBS"
+pathextralib "$EXTRAPATHS"
+pathextralibdyn "$EXTRAPATHS"
+pathextraincl "$INCLUDEPATHS"
+EXEC_NAME=
+EXEC_NAMEF=
+EXEC_NAMEFF=
+if [ "$HWPPUTI" != "" ]; then HWPPUTIMAKE="HWPPUTI="$HWPPUTI; fi
+HERWGMAKE="HERWIGVER="$HERWIGVER
+LIBSMAKE="EXTRALIBS="$ExtraLibs
+LIBSMAKEP="EXTRAPATHS="$ExtraPaths
+INCLMAKE="INCLOPTION="$ExtraIncl
+INCDIRMK="INCDIR="`pwd`"/include"
+COMSRCMK="COMSRC="`pwd`"/srcCommon"
+EVTDIR=`pwd`"/../Events"
+
+if [ "$LD_LIBRARY_PATH" = "" ]
+then
+  LD_LIBRARY_PATH="$ExtraPathsDyn"
+else
+  if [ "$ExtraPathsDyn" != "" ]
+  then
+    LD_LIBRARY_PATH="$ExtraPathsDyn"":""$LD_LIBRARY_PATH"
+  fi
+fi
+LIBSLHA="LHALIB="
+case $1 in
+NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
+MC) if [ $UsedPdfLib = "PDFLIB" ]
+     then
+       EXEC_NAMEF="HWPP_EXE_DEFAULT"
+     elif [ $UsedPdfLib = "THISLIB" ]
+     then
+       EXEC_NAMEF="HWPP_EXE_DEFAULT"
+     elif [ $UsedPdfLib = "LHAPDF" ]
+     then
+       EXEC_NAMEF="HWPP_EXE_LHAPDF"
+     else
+       echo "fatal error in compile"; exit 1
+     fi ;;
+*) echo "do not know what to do in function compile" ; exit 1 ;;
+esac
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HEPMCPATH/lib
+if [ $1 = "NLO" ]
+then
+  getSTRmake
+  EXEC_NAME=$stringmake$EXEC_NAMEF
+elif [ $1 = "MC" ]
+then
+  EXEC_NAME="$EXEC_NAMEF"
+fi
+EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
+rm -f $thisdir/$EXEC_NAMEFF
+# new compilation step for HW++ mode
+  # compile the analyzer & link it into the EXE directory
+  # TODO: Stream via Inputs script
+HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
+if [ "$HWPPUTI" != "" ]
+then
+  HWPPUTIMAKE="HWPPUTI="$HWPPUTI
+  FORFILEMAKE="FORFILE="$HWPPUTI
+  HWPPANALYZER=HepMCFortran
+  if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
+  then
+    echo $HWPPANALYZER compilation did not succeed, exiting.
+    exit -1 
+  fi
+  ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir
+fi
+  # link the HW++ executable into the EXE directoy
+  # ln -sf $HWPPPATH/bin/Herwig++ $thisdir
+  # link the stupid LHAPDF index, if necessary
+  whichherpdf $HERPDF
+  if [ $pdftype = 1 ]
+  then
+    mkdir -p $thisdir/PDF
+    ln -sf $THEPEGPATH/share/ThePEG/PDFsets.index $thisdir/PDF/PDFsets.index
+  fi
+
+runfile="MCATNLO_"$MCMODE
+  # create executable if eveything is ok
+  echo "#!/bin/bash" > $thisdir/$EXEC_NAMEFF
+  echo "./Herwig++ read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
+  echo "./Herwig++ run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
+  chmod +x $thisdir/$EXEC_NAMEFF
+teststatus Compilation
+}
+
+# foolproof utility function, to be called by the user
+function compileMC {
+compile MC
+}
+
+# wrapper for the functions which run and compile MC codes
+function runMC {
+compile MC
+
+# NEW FOR aMC@NLO5
+
+# Link event file in the running directory
+#if [ -f $EVTDIR/$EVT_NAMEF ]
+#then
+#  rm $EVTDIR/$EVT_NAMEF
+#fi
+#ln -ns $EVTDIR/$EVT_NAMEF $thisdir
+
+#put MCMODE to upper case
+MCMODE=`echo $MCMODE | tr '[a-z]' '[A-Z]' `
+# Check correspondence between MCMODE and what written in the event file
+if [ $MCMODE != "HERWIGPP" ]
+then
+  echo "Error! HERWIGPP Script called with MCMODE not equal to HERWIGPP"
+  exit 1
+fi
+
+
+UMASSHW=$UMASS
+DMASSHW=$DMASS
+SMASSHW=$SMASS
+CMASSHW=$CMASS
+if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSHW=$BMASS; fi
+if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSHW=$B_MASS; fi
+GMASSHW=$GMASS
+
+if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
+elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
+elif [ $BEAM1 == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
+exit 1; fi
+if [ $BEAM2 == 1 ]; then PART2="P"; elif [ $BEAM2 == -1 ]; then PART2="PBAR";
+elif [ $BEAM2 == 0 ]; then PART2="E-"; elif [ $BEAM2 == 2 ]; then PART2="N";
+elif [ $BEAM2 == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
+exit 1; fi
+# Check the previous!
+
+whichherpdf $HERPDF
+if [ $pdftype = 1 ]
+then
+  whichpdflib $PDFLIBRARY
+  if [ $UsedPdfLib = "THISLIB" ]
+  then
+    dothelinks
+  elif [ $UsedPdfLib = "LHAPDF" ]
+  then
+    linklhapdf
+  fi
+fi
+ERR_NUM_HWPP=$(echo "$ERR_FR_HWPP * $NEVENTS" | bc)
+ERR_NUM_HWPP=${ERR_NUM_HWPP/.*}
+let "ERR_NUM_HWPP += 1"
+
+echo " "
+echo "*****   All parameters read from event file $EVT_NAMEF"
+echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo " "
+runMCMadFKS
+teststatus runMC
+}
+
+# compiles and runs the MC
+function runMCMadFKS {
+ifile="MCATNLO_"$MCMODE"_input"
+exefile="MCATNLO_"$MCMODE"_EXE"
+if [ -f ./$ifile ]
+then
+\rm ./$ifile 
+fi
+mv $EXEC_NAMEFF $exefile
+
+# create input file
+cat <<EOF > ./$ifile
+#
+#  Create the Les Houches handler for MC@NLO
+#
+
+library LesHouches.so
+
+# --------------------------------------------------------------------- #
+# 1.) NECESSARY SETTINGS FOR RUNNING WITH MC@NLO EVENTS (DO NOT MODIFY)
+
+set /Herwig/Shower/Evolver:HardVetoMode 1
+set /Herwig/Shower/Evolver:HardVetoScaleSource 1
+set /Herwig/Shower/Evolver:MECorrMode 0
+
+
+# create the Handler & Reader
+create ThePEG::LesHouchesFileReader /Herwig/EventHandlers/LHEReader
+create ThePEG::LesHouchesEventHandler /Herwig/EventHandlers/LHEHandler 
+insert /Herwig/EventHandlers/LHEHandler:LesHouchesReaders 0 /Herwig/EventHandlers/LHEReader
+
+set /Herwig/EventHandlers/LHEReader:AllowedToReOpen 0
+set /Herwig/EventHandlers/LHEReader:MomentumTreatment RescaleEnergy
+set /Herwig/EventHandlers/LHEReader:WeightWarnings 0
+
+set /Herwig/EventHandlers/LHEHandler:WeightOption VarNegWeight
+set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/QCDExtractor
+set /Herwig/EventHandlers/LHEHandler:CascadeHandler /Herwig/Shower/ShowerHandler 
+set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler
+set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
+insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
+
+set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
+set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS
+set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
+set /Herwig/Generators/LHCGenerator:PrintEvent $MAXPR_HWPP
+set /Herwig/Generators/LHCGenerator:MaxErrors $ERR_NUM_HWPP 
+set /Herwig/Generators/LHCGenerator:DebugLevel 1
+
+EOF
+
+whichherpdf $HERPDF
+if [ $pdftype = 1 ]
+then
+
+cat <<EOF >> ./$ifile
+
+# Define PDF from MCatNLO.inputs PDFSET number
+mkdir /LHAPDF
+create ThePEG::LHAPDF /LHAPDF/MCNLOPDF ThePEGLHAPDF.so
+
+#set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
+set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
+set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
+
+set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
+set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
+set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF
+set /Herwig/Particles/pbar-:PDF /LHAPDF/MCNLOPDF
+set /Herwig/Shower/ShowerHandler:PDFA /LHAPDF/MCNLOPDF
+set /Herwig/Shower/ShowerHandler:PDFB /LHAPDF/MCNLOPDF
+
+EOF
+
+else
+
+cat <<EOF >> ./$ifile
+
+# Use internal HW++ defualt PDF sets
+set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
+set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
+set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO
+set /Herwig/Particles/pbar-:PDF /Herwig/Partons/MRST-NLO
+set /Herwig/Shower/ShowerHandler:PDFA /Herwig/Partons/MRST-NLO
+set /Herwig/Shower/ShowerHandler:PDFB /Herwig/Partons/MRST-NLO
+
+EOF
+fi
+
+cat <<EOF >> ./$ifile 
+
+# DEFINE THE INPUT EVENT FILE
+set /Herwig/EventHandlers/LHEReader:FileName $SCRTCH$EVPREFIX
+
+# --------------------------------------------------------------------- #
+# 2.) DEFINE PHYSICS PARAMETERS FROM FILE <MCatNLO_MadFKS.inputs> (DO NOT MODIFY)
+
+# TODO set the correct incoming particles
+
+# set the masses and widths
+set /Herwig/Particles/W+:NominalMass $WMASS
+set /Herwig/Particles/W+:Width $WWIDTH
+set /Herwig/Particles/W-:NominalMass $WMASS
+set /Herwig/Particles/W-:Width $WWIDTH
+set /Herwig/Particles/Z0:NominalMass $ZMASS
+set /Herwig/Particles/Z0:Width $ZWIDTH
+set /Herwig/Particles/t:NominalMass $TMASS
+set /Herwig/Particles/t:Width $TWIDTH
+set /Herwig/Particles/tbar:NominalMass $TMASS
+set /Herwig/Particles/tbar:Width $TWIDTH
+set /Herwig/Particles/h0:NominalMass $HGGMASS
+set /Herwig/Particles/h0:Width $HGGWIDTH
+#set /Herwig/Particles/b:NominalMass $BMASS
+#set /Herwig/Particles/bbar:NominalMass $BMASS
+# --------------------------------------------------------------------- #
+# 3.) ADDITIONAL SETTINGS
+
+# SHOWER SETTINGS
+set /Herwig/Shower/Evolver:IntrinsicPtGaussian 2.2*GeV
+EOF
+
+if ((`bc <<< "$LAMBDAHERW >= 0.0"`))
+then
+LAMBDAHERW=$(echo "$LAMBDAHERW * 1000" | bc)
+cat<<EOF >> ./$ifile
+#set /Herwig/Shower/AlphaQCD:NPAlphaS 5
+#set /Herwig/Shower/AlphaQCD:Qmin 3.0*GeV
+#set /Herwig/Shower/AlphaQCD:AlphaMaxNP 3
+
+set /Herwig/Shower/AlphaQCD:InputOption LambdaQCD
+set /Herwig/Shower/AlphaQCD:LambdaQCD  $LAMBDAHERW*MeV
+set /Herwig/Shower/AlphaQCD:NumberOfLoops 2
+#set /Herwig/EventHandlers/LHEReader:ShowerAlpha  AlphaQCD
+EOF
+fi
+
+cat<<EOF >> ./$ifile
+# CREATE AND APPLY CUTS
+create ThePEG::Cuts /Herwig/Cuts/NoCuts 
+set /Herwig/EventHandlers/LHEReader:Cuts /Herwig/Cuts/NoCuts
+EOF
+
+if [ $UE_HWPP = ".FALSE." ]
+then
+cat <<EOF >> ./$ifile
+# Switching off MPI
+set /Herwig/Shower/ShowerHandler:MPIHandler NULL
+
+EOF
+fi
+
+
+if [ $HADRONIZE_HWPP = ".FALSE." ]
+then
+cat <<EOF >> ./$ifile
+# Hadronization off 
+set /Herwig/EventHandlers/LHEHandler:HadronizationHandler NULL
+EOF
+fi
+
+cat <<EOF >> ./$ifile
+# HERE YOU CAN TURN ON/OFF DECAY
+# If DecayHandler is set equal to NULL, then set CheckQuark equal to 0, to 
+# prevent a lot of warnings
+#set /Herwig/EventHandlers/LHEHandler:DecayHandler NULL
+#set /Herwig/Analysis/Basics:CheckQuark 0
+EOF
+
+arr=()
+numDM=0
+iDM=0
+for i in {1..99}
+do
+ eval arr_elem='$'DM_$i
+ if [ "$arr_elem" != "" ]
+ then
+  arr=("${arr[@]}" "$arr_elem")
+ fi
+done
+
+numDM=${#arr[@]}
+for DM in "${arr[@]}"
+do
+ DM=( $DM )
+cat <<EOF >> ./$ifile
+do /Herwig/Particles/$(name ${DM[0]}):SelectDecayModes none
+EOF
+done
+
+for DM in "${arr[@]}"
+do
+ let "iDM+=1"
+ DM=( $DM )
+ num_of_part=$(echo ${#DM[@]})
+ let "num_of_part-=4"
+
+ if [ $num_of_part = 2 ]
+ then
+cat <<EOF >> ./$ifile
+set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]});:OnOff On
+EOF
+ elif  [ $num_of_part = 3 ]
+ then
+cat <<EOF >> ./$ifile
+set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]});:OnOff On
+EOF
+ elif  [ $num_of_part = 4 ]
+ then
+cat <<EOF >> ./$ifile
+set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]}),$(name ${DM[5]});:OnOff On
+EOF
+ elif  [ $num_of_part = 5 ]
+ then
+cat <<EOF >> ./$ifile
+set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]}),$(name ${DM[5]}),$(name ${DM[6]});:OnOff On
+EOF
+  fi
+done
+
+
+if [ $B_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+#511
+set /Herwig/Particles/B0:Stable Stable
+set /Herwig/Particles/Bbar0:Stable Stable
+#521
+set /Herwig/Particles/B+:Stable Stable
+set /Herwig/Particles/B-:Stable Stable
+#531
+set /Herwig/Particles/B_s0:Stable Stable
+set /Herwig/Particles/B_sbar0:Stable Stable
+#541
+set /Herwig/Particles/B_c+:Stable Stable
+set /Herwig/Particles/B_c-:Stable Stable
+#
+#5112
+set /Herwig/Particles/Sigma_b-:Stable Stable
+set /Herwig/Particles/Sigma_bbar+:Stable Stable
+#5122
+set /Herwig/Particles/Lambda_b0:Stable Stable
+set /Herwig/Particles/Lambda_bbar0:Stable Stable
+#5132
+set /Herwig/Particles/Xi_b-:Stable Stable
+set /Herwig/Particles/Xi_bbar+:Stable Stable
+#5222
+set /Herwig/Particles/Sigma_b+:Stable Stable
+set /Herwig/Particles/Sigma_bbar-:Stable Stable
+#5232
+set /Herwig/Particles/Xi_b0:Stable Stable
+set /Herwig/Particles/Xi_bbar0:Stable Stable
+#5332
+set /Herwig/Particles/Omega_b-:Stable Stable
+set /Herwig/Particles/Omega_bbar+:Stable Stable
+#
+#553
+set /Herwig/Particles/Upsilon:Stable Stable
+
+EOF
+fi
+
+if [ $PI_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# pi0 
+set /Herwig/Particles/pi0:Stable Stable
+
+EOF
+fi
+
+if [ $WP_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# W+ 
+set /Herwig/Particles/W+:Stable Stable
+
+EOF
+fi
+
+if [ $WM_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# W- 
+set /Herwig/Particles/W-:Stable Stable
+
+EOF
+fi
+
+if [ $Z_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# Z0 
+set /Herwig/Particles/Z0:Stable Stable
+
+EOF
+fi
+
+if [ $MUP_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# mu+ 
+set /Herwig/Particles/mu+:Stable Stable
+
+EOF
+fi
+
+if [ $MUM_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# mu- 
+set /Herwig/Particles/mu-:Stable Stable
+
+EOF
+fi
+
+if [ $TAUP_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# tau+ 
+set /Herwig/Particles/tau+:Stable Stable
+
+EOF
+fi
+
+if [ $TAUM_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in Herwig++/src/default/mesons.in or similar
+#
+
+# tau- 
+set /Herwig/Particles/tau-:Stable Stable
+
+EOF
+fi
+
+if [ $H_STABLE_HWPP = ".TRUE." ]
+then
+cat <<EOF >> ./$ifile
+
+#
+# Prevent particles from decaying
+# Particle names can be found in ThePEG/PDT/EnumParticles.h
+#
+
+# Higgs 
+set /Herwig/Particles/h0:Stable Stable
+
+EOF
+fi
+
+cat <<EOF >> ./$ifile
+# 4.) HW++ SETTINGS THAT ARE NOT ALLOWED TO BE TOUCHED BY THE USER
+
+#Boost and reconstruction stuff
+set /Herwig/Shower/KinematicsReconstructor:ReconstructionOption General
+set /Herwig/Shower/KinematicsReconstructor:InitialInitialBoostOption LongTransBoost
+
+# --------------------------------------------------------------------- #
+# 5.) CREATE THE ANALYZER AND SAVE THE RUN (DO NOT MODIFY)
+
+EOF
+
+if [ "$HWPPUTI" != "" ]
+then
+cat <<EOF >> ./$ifile
+create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
+insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 $HWPPANALYZER
+
+EOF
+else
+cat <<EOF >> ./$ifile
+#create MCatNLO::hepfortr hepfortr hepfortr.so
+#insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 hepfortr
+
+#  Useful analysis handlers for HepMC related output
+##################################################
+# Schematic overview of an event (requires --with-hepmc to be set at configure time
+# and the graphviz program 'dot' to produce a plot)
+#create MCatNLO::$HWPPANALYZER $HWPPANALYZER $HWPPANALYZER.so
+#insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 $HWPPANALYZER
+# insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/Plot
+# A HepMC dump file (requires --with-hepmc to be set at configure time)
+# insert LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
+insert /Herwig/Generators/LHCGenerator:AnalysisHandlers 0 /Herwig/Analysis/HepMCFile
+set /Herwig/Analysis/HepMCFile:PrintEvent $NEVENTS
+set /Herwig/Analysis/HepMCFile:Format GenEvent
+set /Herwig/Analysis/HepMCFile:Units GeV_mm
+
+EOF
+fi
+
+cat <<EOF >> ./$ifile
+saverun $runfile /Herwig/Generators/LHCGenerator
+EOF
+
+( cd . ;\
+     $exefile )
+
+mv $thisdir/MCATNLO_HERWIGPP.hepmc $thisdir/"$EVT_NAMEF".hepmc
+}
+
+# this function set the parameter pdftype according to the value 
+# of HERPDF (the entry of this function) given in input
+function whichherpdf {
+case $1 in
+DEFAULT|default) pdftype=0 ;;
+EXTPDF|extpdf) pdftype=1 ;;
+*) echo "error in whichherpdf: no such option" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to PDFLIBRAY in input is meaningful
+function whichpdflib {
+case $1 in
+THISLIB|thislib) UsedPdfLib=THISLIB ;;
+PDFLIB|pdflib) UsedPdfLib=PDFLIB ;;
+LHAPDF|lhapdf) UsedPdfLib=LHAPDF ;;
+*) echo "no such library for PDFS; failure in whichpdflib" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to LHALINK in input is meaningful
+function whichlhapdf {
+case $1 in
+STATIC|static) UsedLhaPdf=lhasta ;;
+DYNAMIC|dynamic) UsedLhaPdf=lhadyn ;;
+*) echo "no such option for LHAPDF; failure in whichlhapdf" ; exit 1 ;;
+esac
+}
+
+# prepends -l to library names
+function nameextralib {
+ExtraLibs="$1"
+ilen1=${#ExtraLibs}
+if [ $ilen1 -ne 0 ]
+then
+  ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
+  ExtraLibs="-l""$ExtraLibs"
+fi
+}
+
+# prepends -L to library paths
+function pathextralib {
+ExtraPaths="$1"
+ilen2=${#ExtraPaths}
+if [ $ilen2 -ne 0 ]
+then
+  ExtraPaths=`echo $ExtraPaths | sed "s/ / -L/g"`
+  ExtraPaths="-L""$ExtraPaths"
+fi
+}
+
+# separate library names with columns
+function pathextralibdyn {
+ExtraPathsDyn="$1"
+ilen3=${#ExtraPathsDyn}
+if [ $ilen3 -ne 0 ]
+then
+  ExtraPathsDyn=`echo $ExtraPathsDyn | sed "s/ /:/g"`
+fi
+}
+
+# prepends -I to include paths
+function pathextraincl {
+ExtraIncl="$1"
+ilen4=${#ExtraIncl}
+if [ $ilen4 -ne 0 ]
+then
+  ExtraIncl=`echo $ExtraIncl | sed "s/ / -I/g"`
+  ExtraIncl="-I""$ExtraIncl"
+fi
+}

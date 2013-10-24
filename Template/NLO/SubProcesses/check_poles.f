@@ -21,6 +21,7 @@ C
       parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3, nexternal)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -40,6 +41,11 @@ C
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 cc
       include 'run.inc'
       include 'coupl.inc'
@@ -82,7 +88,12 @@ C-----
           pmass_rambo(i-nincoming) = pmass(i)
       enddo
 
-      nfksprocess=1
+c Find the nFKSprocess for which we compute the Born-like contributions,
+c ie. which is a Born+g real-emission process
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (particle_type(i_fks).eq.8) exit
+      enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)

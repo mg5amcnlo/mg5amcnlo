@@ -121,7 +121,8 @@ if '__main__' == __name__:
     HCRvalue.setup(my_proc_list,my_res_list,model)
     # Create a MERunner object for GoSam
     #GoSam = loop_me_comparator.GoSamRunner()
-    #GoSam.setup('/Users/erdissshaw/Works/GoSam/gosam_dir')
+    # GoSam.setup('/Users/erdissshaw/Works/GoSam/gosam_dir')
+    # GoSam.setup('/Users/valentin/Documents/HEP_softs/GoSam/gosam-2.0.beta')
 
     # Create a MERunner object for MadLoop 5 optimized
     ML5_opt = loop_me_comparator.LoopMG5Runner()

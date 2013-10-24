@@ -1698,10 +1698,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         for loopdiag in self.get_loop_diagrams():
             for loopamp in loopdiag.get_loop_amplitudes():
                 loopamp.set_mothers_and_pairing()
-    
+ 
         # As a final step, we compute the analytic information for the loop
         # wavefunctions and amplitudes building this loop matrix element.
-        self.compute_all_analytic_information()
+        # Because we want to have the same AlohaModel used for various
+        # HelasMatrix elements, we perform the computation belows in the
+        # export which will use its AlohaModel for several HelasME's.
+        # self.compute_all_analytic_information()
     
     def get_split_orders_mapping(self):
         """This function returns a list and a dictionary:

@@ -2005,6 +2005,10 @@ def generate_loop_matrix_element(process_definition, reuse,
     
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
+    # Here, the alohaModel used for analytica computations and for the aloha
+    # subroutine output will be different, so that some optimization is lost.
+    # But that is ok for the check functionality.
+    matrix_element.compute_all_analytic_information()
     timing['HelasDiagrams_generation']=time.time()-start
     
     if loop_optimized_output:
@@ -2272,8 +2276,6 @@ def check_process(process, evaluator, quick, options):
         try:
             if newproc.get('perturbation_couplings')==[]:
                 amplitude = diagram_generation.Amplitude(newproc)
-                if order != range(1,len(legs) + 1):
-                    stop
             else:
                 # Change the cutting method every two times.
                 loop_base_objects.cutting_method = 'optimal' if \

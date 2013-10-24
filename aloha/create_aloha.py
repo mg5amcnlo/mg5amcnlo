@@ -141,6 +141,8 @@ class AbstractRoutineBuilder(object):
         self.model = model
         self.denominator = None
 #        assert model
+
+        self.lastprint = 0 # to avoid that ALOHA makes too many printout
         
         
     
@@ -257,7 +259,12 @@ in presence of majorana particle/flow violation"""
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
-            logger.info('aloha creates %s routines' % self.name)
+            if self.tag == []:
+                logger.info('aloha creates %s routines' % self.name)
+            elif AbstractALOHAModel.lastprint < time.time() - 1:
+                AbstractALOHAModel.lastprint = time.time()
+                logger.info('aloha creates %s set of routines with options: %s' \
+                            % (self.name, ','.join(self.tag)) )
             try:
                 lorentz = self.parse_expression()  
                 self.routine_kernel = lorentz
@@ -285,7 +292,7 @@ in presence of majorana particle/flow violation"""
                 elif propa == []:
                     massless = False
                 else:
-                    lorentz *= self.get_custom_propa(propa[0], spin, id)
+                    lorentz *= complex(0,1) * self.get_custom_propa(propa[0], spin, id)
                     continue
                 
                 
@@ -298,10 +305,10 @@ in presence of majorana particle/flow violation"""
                         id += _conjugate_gap + id % 2 - (id +1) % 2
                     if (id % 2):
                         #propagator outcoming
-                        lorentz *= SpinorPropagatorout(id, 'I2', outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorout(id, 'I2', outgoing)
                     else:
                     #    #propagator incoming
-                        lorentz *= SpinorPropagatorin('I2', id, outgoing)
+                        lorentz *= complex(0,1) * SpinorPropagatorin('I2', id, outgoing)
                 elif spin == 3 :
                     if massless or not aloha.unitary_gauge: 
                         lorentz *= VectorPropagatorMassless(id, 'I2', id)
@@ -315,21 +322,21 @@ in presence of majorana particle/flow violation"""
                         spin_id = id
                     nb_spinor += 1
                     if not massless and (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorout(id, 'I2', spin_id,'I3', outgoing)
                     elif not massless and not (spin_id % 2):
-                        lorentz *= Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorin('I2', id , 'I3', spin_id, outgoing)
                     elif spin_id %2:
-                        lorentz *= Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessOut(id, 'I2', spin_id,'I3', outgoing)
                     else :
-                        lorentz *= Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
+                        lorentz *= complex(0,1) * Spin3halfPropagatorMasslessIn('I2', id, 'I3', spin_id, outgoing)
           
                 elif spin == 5 :
                     #lorentz *= 1 # delayed evaluation (fastenize the code)
                     if massless:
-                        lorentz *= Spin2masslessPropagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2masslessPropagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3')
                     else:
-                        lorentz *= Spin2Propagator(_spin2_mult + id, \
+                        lorentz *= complex(0,1) * Spin2Propagator(_spin2_mult + id, \
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
@@ -557,12 +564,12 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
+    lastprint = 0
 
     def __init__(self, model_name, write_dir=None, format='Fortran', 
                  explicit_combine=False):
         """ load the UFO model and init the dictionary """
         
-        aloha_lib.KERNEL.clean()
         # Option
         self.explicit_combine = explicit_combine
         
@@ -667,6 +674,10 @@ class AbstractALOHAModel(dict):
         If the cached option is set to true, then the result is stored and
         recycled if possible.
         """
+
+        if not aloha.loop_mode and any(t.startswith('L') for t in tag):
+            aloha.loop_mode = True
+
 
         returned_dict = {}        
         # Make sure the input argument is a list

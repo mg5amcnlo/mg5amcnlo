@@ -80,8 +80,8 @@ C CONSTANTS
 C  
       INTEGER     NGRAPHS
       PARAMETER ( NGRAPHS = %(ngraphs)d ) 
-      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-      PARAMETER (NWAVEFUNCS=%(nwavefuncs)d, NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
+      INTEGER NCOLOR1, NCOLOR2
+      PARAMETER (NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       complex*16 imag1

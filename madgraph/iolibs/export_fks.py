@@ -28,6 +28,7 @@ import copy
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.core.base_objects as base_objects
+import madgraph.fks.fks_helas_objects as fks_helas_objects
 import madgraph.fks.fks_base as fks
 import madgraph.fks.fks_common as fks_common
 import madgraph.iolibs.drawing_eps as draw
@@ -192,10 +193,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
-         
+
         super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
                                                wanted_lorentz, wanted_couplings)
-         
+        
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
         try:
             shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
@@ -325,10 +326,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     # generate_directories_fks
     #===============================================================================
     def generate_directories_fks(self, matrix_element, fortran_model, me_number,
-                                 path=os.getcwd()):
+                                                path=os.getcwd(),OLP='MadLoop'):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
+
+        if not self.model:
+            self.model = matrix_element.get('processes')[0].get('model')
         
         cwd = os.getcwd()
         try:
@@ -354,8 +358,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.generate_born_fks_files(matrix_element,
                 fortran_model, me_number, path)
 
-        filename = 'OLE_order.lh'
-        self.write_lh_order(filename, matrix_element)
+        # With NJET you want to generate the order file per subprocess and most
+        # likely also generate it for each subproc.
+        if OLP=='NJET':
+            filename = 'OLE_order.lh'
+            self.write_lh_order(filename, matrix_element, OLP)
         
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
@@ -423,6 +430,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'coupl.inc',
                      'cuts.f',
                      'FKS_params.dat',
+                     'OLE_order.olc',
                      'FKSParams.inc',
                      'FKSParamReader.f',
                      'cuts.inc',
@@ -483,6 +491,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.system("ln -s ../makefile_fks_dir ./makefile")
         if matrix_element.virt_matrix_element:
             os.system("ln -s ../BinothLHA.f ./BinothLHA.f")
+        elif OLP!='MadLoop':
+            os.system("ln -s ../BinothLHA_OLP.f ./BinothLHA.f")
         else:
             os.system("ln -s ../BinothLHA_user.f ./BinothLHA.f")
 
@@ -771,7 +781,7 @@ end
     
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
-                            nconfigs)
+                    matrix_element.born_matrix_element.get_number_of_amplitudes())
 
         filename = 'coloramps.inc'
         self.write_coloramps_file(writers.FortranWriter(filename),
@@ -793,7 +803,147 @@ end
                          matrix_element, i,
                          fortran_model)
 
+    def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
+        """Generates the library for computing the loop matrix elements
+        necessary for this process using the OLP specified."""
+        
+        # Start by writing the BLHA order file
+        virtual_path = pjoin(export_path,'OLP_virtuals')
+        if not os.path.exists(virtual_path):
+            os.makedirs(virtual_path)
+        filename = os.path.join(virtual_path,'OLE_order.lh')
+        self.write_lh_order(filename, FKSHMultiproc.get('matrix_elements'),OLP)
 
+        fail_msg='Generation of the virtuals with %s failed.\n'%OLP+\
+            'Please check the virt_generation.log file in %s.'\
+                                 %str(pjoin(virtual_path,'virt_generation.log'))
+
+        # Perform some tasks specific to certain OLP's
+        if OLP=='GoSam':
+            cp(pjoin(self.mgme_dir,'Template','loop_material','OLP_specifics',
+                             'GoSam','makevirt'),pjoin(virtual_path,'makevirt'))
+            cp(pjoin(self.mgme_dir,'Template','loop_material','OLP_specifics',
+                             'GoSam','gosam.rc'),pjoin(virtual_path,'gosam.rc'))
+            ln(pjoin(export_path,'Cards','param_card.dat'),virtual_path)
+            # Now generate the process
+            logger.info('Generating the loop matrix elements with %s...'%OLP)
+            virt_generation_log = \
+                            open(pjoin(virtual_path,'virt_generation.log'), 'w')
+            retcode = subprocess.call(['./makevirt'],cwd=virtual_path, 
+                            stdout=virt_generation_log, stderr=virt_generation_log)
+            virt_generation_log.close()
+            # Check what extension is used for the share libraries on this system
+            possible_other_extensions = ['so','dylib']
+            shared_lib_ext='so'
+            for ext in possible_other_extensions:
+                if os.path.isfile(pjoin(virtual_path,'Virtuals','lib',
+                                                            'libgolem_olp.'+ext)):
+                    shared_lib_ext = ext
+
+            # Now check that everything got correctly generated
+            files_to_check = ['olp_module.mod',str(pjoin('lib',
+                                                'libgolem_olp.'+shared_lib_ext))]
+            if retcode != 0 or any([not os.path.exists(pjoin(virtual_path,
+                                       'Virtuals',f)) for f in files_to_check]):
+                raise fks_common.FKSProcessError(fail_msg)
+            # link the library to the lib folder
+            ln(pjoin(virtual_path,'Virtuals','lib','libgolem_olp.'+shared_lib_ext),
+                                                       pjoin(export_path,'lib'))
+            
+        # Specify in make_opts the right library necessitated by the OLP
+        make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
+        make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
+        if OLP=='GoSam':
+            # apparently -rpath=../$(LIBDIR) is not necessary.
+            #make_opts_content=make_opts_content.replace('libOLP=',
+            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
+            make_opts_content=make_opts_content.replace('libOLP=',
+                                                          'libOLP=-Wl,-lgolem_olp')
+        make_opts.write(make_opts_content)
+        make_opts.close()
+
+        # A priori this is generic to all OLP's
+        
+        # Parse the contract file returned and propagate the process label to
+        # the include of the BinothLHA.f file            
+        proc_to_label = self.parse_contract_file(
+                                            pjoin(virtual_path,'OLE_order.olc'))
+
+        self.write_BinothLHA_inc(FKSHMultiproc,proc_to_label,\
+                                              pjoin(export_path,'SubProcesses'))
+        
+        # Link the contract file to within the SubProcess directory
+        ln(pjoin(virtual_path,'OLE_order.olc'),pjoin(export_path,'SubProcesses'))
+        
+    def write_BinothLHA_inc(self, FKSHMultiproc, proc_to_label, SubProcPath):
+        """ Write the file Binoth_proc.inc in each SubProcess directory so as 
+        to provide the right process_label to use in the OLP call to get the
+        loop matrix element evaluation. The proc_to_label is the dictionary of
+        the format of the one returned by the function parse_contract_file."""
+        
+        for matrix_element in FKSHMultiproc.get('matrix_elements'):
+            proc = matrix_element.get('processes')[0]
+            name = "P%s"%proc.shell_string()
+            proc_pdgs=(tuple([leg.get('id') for leg in proc.get('legs') if \
+                                                         not leg.get('state')]),
+                       tuple([leg.get('id') for leg in proc.get('legs') if \
+                                                             leg.get('state')]))                             
+            incFile = open(pjoin(SubProcPath, name,'Binoth_proc.inc'),'w')
+            try:
+                incFile.write(
+"""      INTEGER PROC_LABEL
+      PARAMETER (PROC_LABEL=%d)"""%(proc_to_label[proc_pdgs]))
+            except KeyError:
+                raise fks_common.FKSProcessError('Could not found the target'+\
+                  ' process %s > %s in '%(str(proc_pdgs[0]),str(proc_pdgs[1]))+\
+                          ' the proc_to_label argument in write_BinothLHA_inc.')
+            incFile.close()
+
+    def parse_contract_file(self, contract_file_path):
+        """ Parses the BLHA contract file, make sure all parameters could be 
+        understood by the OLP and return a mapping of the processes (characterized
+        by the pdg's of the initial and final state particles) to their process
+        label. The format of the mapping is {((in_pdgs),(out_pdgs)):proc_label}.
+        """
+        
+        proc_def_to_label = {}
+        
+        if not os.path.exists(contract_file_path):
+            raise fks_common.FKSProcessError('Could not find the contract file'+\
+                                 ' OLE_order.olc in %s.'%str(contract_file_path))
+
+        comment_re=re.compile(r"^\s*#")
+        proc_def_re=re.compile(
+            r"^(?P<in_pdgs>(\s*-?\d+\s*)+)->(?P<out_pdgs>(\s*-?\d+\s*)+)\|"+
+            r"\s*(?P<proc_class>\d+)\s*(?P<proc_label>\d+)\s*$")
+        line_OK_re=re.compile(r"^.*\|\s*OK")
+        for line in file(contract_file_path):
+            # Ignore comments
+            if not comment_re.match(line) is None:
+                continue
+            # Check if it is a proc definition line
+            proc_def = proc_def_re.match(line)
+            if not proc_def is None:
+                if int(proc_def.group('proc_class'))!=1:
+                    raise fks_common.FKSProcessError(
+'aMCatNLO can only handle loop processes generated by the OLP which have only '+\
+' process class attribute. Found %s instead in: \n%s'\
+                                           %(proc_def.group('proc_class'),line))
+                in_pdgs=tuple([int(in_pdg) for in_pdg in \
+                                             proc_def.group('in_pdgs').split()])
+                out_pdgs=tuple([int(out_pdg) for out_pdg in \
+                                            proc_def.group('out_pdgs').split()])
+                proc_def_to_label[(in_pdgs,out_pdgs)]=\
+                                               int(proc_def.group('proc_label'))
+                continue
+            # For the other types of line, just make sure they end with | OK
+            if line_OK_re.match(line) is None:
+                raise fks_common.FKSProcessError(
+                      'The OLP could not process the following line: \n%s'%line)
+        
+        return proc_def_to_label
+            
+                                
     def generate_virt_directory(self, loop_matrix_element, fortran_model, dir_name):
         """writes the V**** directory inside the P**** directories specified in
         dir_name"""
@@ -906,10 +1056,26 @@ end
     # write_lh_order
     #===============================================================================
     #test written
-    def write_lh_order(self, filename, fksborn):
+    def write_lh_order(self, filename, matrix_elements, OLP):
         """Creates the OLE_order.lh file. This function should be edited according
-        to the OLP which is used. NOW FOR NJET"""
-        orders = fksborn.orders 
+        to the OLP which is used. For now it is generic."""
+        
+        if isinstance(matrix_elements,fks_helas_objects.FKSHelasProcess):
+            fksborns=fks_helas_objects.FKSHelasProcessList([matrix_elements])
+        elif isinstance(matrix_elements,fks_helas_objects.FKSHelasProcessList):
+            fksborns= matrix_elements
+        else:
+            raise fks_common.FKSProcessError('Wrong type of argument for '+\
+                                  'matrix_elements in function write_lh_order.')
+        
+        if len(fksborns)==0:
+            raise fks_common.FKSProcessError('No matrix elements provided to '+\
+                                                 'the function write_lh_order.')
+            return
+        
+        # We assume the orders to be common to all Subprocesses
+        
+        orders = fksborns[0].orders 
         if 'QED' in orders.keys() and 'QCD' in orders.keys():
             QED=orders['QED']
             QCD=orders['QCD']
@@ -921,16 +1087,21 @@ end
             QCD=orders['QCD']
         else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
-                    fksborn.born_matrix_element.get_nexternal_ninitial()[0],
+                    fksborns[0].born_matrix_element.get_nexternal_ninitial()[0],
                     orders['WEIGHTED'])
 
         replace_dict = {}
-        replace_dict['mesq'] = 'CHsummed'
-        replace_dict['corr'] = fksborn.perturbation
+        replace_dict['mesq'] = 'CHaveraged'
+        replace_dict['corr'] = 'QCD'
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED
-        replace_dict['pdgs'] = fksborn.get_lh_pdg_string()
+        replace_dict['modelfile'] = './param_card.dat'
+        replace_dict['params'] = 'alpha_s'
+        proc_lines=[]
+        for fksborn in fksborns:
+            proc_lines.append(fksborn.get_lh_pdg_string())
+        replace_dict['pdgs'] = '\n'.join(proc_lines)
         replace_dict['symfin'] = 'Yes'
         content = \
 "#OLE_order written by MadGraph 5\n\
@@ -941,6 +1112,8 @@ IRregularisation        %(irreg)s\n\
 AlphasPower             %(aspow)d\n\
 AlphaPower              %(aepow)d\n\
 NJetSymmetrizeFinal     %(symfin)s\n\
+ModelFile               %(modelfile)s\n\
+Parameters              %(params)s\n\
 \n\
 # process\n\
 %(pdgs)s\n\
@@ -1026,6 +1199,12 @@ NJetSymmetrizeFinal     %(symfin)s\n\
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
 
         # Extract glu_ij_lines
         ij_lines = self.get_ij_lines(fksborn)
@@ -1485,6 +1664,12 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         # Extract amp2 lines
         amp2_lines = self.get_amp2_lines(matrix_element)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
     
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
@@ -1661,11 +1846,11 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             iconfig = iconfig + 1
             helas_diag = matrix_element.get('diagrams')[idiag]
             mapconfigs.append(helas_diag.get('number'))
-            lines.append("# Diagram %d" % \
-                         (helas_diag.get('number')))
+            lines.append("# Diagram %d, Amplitude %d" % \
+                         (helas_diag.get('number'),helas_diag.get('amplitudes')[0]['number']))
             # Correspondance between the config and the amplitudes
             lines.append("data mapconfig(%4d)/%4d/" % (iconfig,
-                                                     helas_diag.get('number')))
+                                                     helas_diag.get('amplitudes')[0]['number']))
     
             # Need to reorganize the topology so that we start with all
             # final state external particles and work our way inwards

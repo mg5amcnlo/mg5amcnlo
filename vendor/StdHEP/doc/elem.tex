@@ -1,0 +1,260 @@
+\section { Elementary Particle Identification Code Listing}
+\label{elem}
+
+\small
+
+Numbers which have changed since StdHep 5.05 and PDG 2004 are in bold text. \newline
+
+\begin{tabular}{lcl}
+\multicolumn{3}{l}{Useful conversion functions (see section \ref{conversion routines})} \\
+cnv1998to2000 &-& convert between PDG 1998 and PDG 2000 numbers \\
+cnv2000to2004 &-& convert between PDG 2000 and PDG 2004 numbers \\
+ & & use cnv2000to2004 when reading files written by StdHep 5.01 \\
+cnv2004to2006 &-& convert between PDG 2004 and PDG 2006 numbers \\
+ & & use cnv2004to2006 when reading files written by StdHep 5.03.xx to 5.05.xx \\
+\end{tabular}
+
+\vspace{0.2in}
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Quarks and Leptons} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$d$                   & 2       & 1  & 1                     & -2,-8  & 1  & 1 \\ \hline
+$u$                   & 1       & 2  & 2                     & -1,-7  & 2  & 2 \\ \hline
+$s$                   & 3       & 3  & 3                     & -3,-9  & 3  & 3 \\ \hline
+$c$                   & 4       & 4  & 4                     & -4,-10 & 4  & 4 \\ \hline
+$b$                   & 5       & 5  & 5                     & -5,-11 & 5  & 5 \\ \hline
+$t$                   & 6       & 6  & 6                     & -6,-12 & 6  & 6 \\ \hline
+$b^\prime$            & 7 ($y$) & 7  & 7 ($v$ \& $h$)        &        & 7  & 7 \\ \hline
+$t^\prime$            & 8 ($x$) & 8  & 8 ($a$ \& $h^\prime$) &        & 8  & 8 \\ \hline \hline
+$e^-$                 & 12      & 11 & 11                    & 7,8    & 11 & 11 \\ \hline
+$\nu_e$               & 11      & 12 & 12                    & 9,10   & 12 & 12 \\ \hline
+$\mu^-$               & 14      & 13 & 13                    & 11,12  & 13 & 13 \\ \hline
+$\nu_\mu$             & 13      & 14 & 14                    & 13,14  & 14 & 14 \\ \hline
+$\tau^-$              & 16      & 15 & 15                    & 15,16  & 15 & 15 \\ \hline
+$\nu_\tau$            & 15      & 16 & 16                    & 17,18  & 16 & 16 \\ \hline
+$\tau^{\prime -}$     &         & 17 &                       &        & 17 & 17 \\ \hline
+$\nu_{\tau^\prime}$   &         & 18 &                       &        & 18 & 18 \\ \hline
+\end{tabular}
+\vfill\eject
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Gauge and Higgs Bosons} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$g$                      &            9 & 21    & 21 & -13   & 21 (9) & 21 (9) \\ \hline
+$\gamma$                 &           10 & 22    & 22 & 1     &  22    & 22 \\ \hline
+$\gamma_{virtual}$       &              &       &    &       &        & 10022 \\ \hline
+$Cerenkov$               &              &       &    &       &        & 20022 \\ \hline
+$Z^0$                    &           90 & 23    & 23 & 2     &  23    & 23 \\ \hline
+$W^+$                    &           80 & 24    & 24 & 3,4   &  24    & 24 \\ \hline
+$h^0/H_1^0$              &           81 & 25    & 25 &       &  25    & 25 \\ \hline \hline
+$Z^{\prime}/Z_2^0$       &              & 32    & 32 &       &  32    & 32 \\ \hline
+$Z^{\prime\prime}/Z_3^0$ &              & 33    &    &       &  33    & 33 \\ \hline
+$W^{\prime}/W_2^+$       &              & 34    &    &       &  34    & 34 \\ \hline
+$H^0/H_2^0$              & 83 ($H_H^0$) & 35    & 35 &       &  35    & 35 \\ \hline
+$A^0/H_3^0$              & 84 ($H_A^0$) & 36    & 36 &       &  36    & 36 \\ \hline
+$H^+$                    &           86 & 37    & 37 &       &  37    & 37 \\ \hline
+$H_1^{++}$               &           88 &       &    &       &        & 52 \\ \hline
+$H_2^+$                  &           87 &       &    &       &        & 53 \\ \hline
+$H_2^{++}$               &           89 &       &    &       &        & 54 \\ \hline
+$H_4^0$                  &           85 &       &    &       &        & 55 \\ \hline
+$H_5^0$                  &              &       &    &       &        &    \\ \hline
+$H_L^0$$^{NOTE}$         &           82 &       & 26 &       &        & 51 \\ \hline \hline
+\multicolumn{7}{|c@{\tstrut}|}{Special Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$G$ (graviton)           & 92           & 39       & 39      &       &  39    & 39 \\ \hline
+$R^0$                    &              & 41       &         &       &  41    & 41 \\ \hline
+$LQ^c$                   &              & 42       &         &       &  42    & 42 \\ \hline 
+$reggeon$                &              & 110      &         &       &  110   & 110 \\ \hline
+$pomeron$                &              & 990      &         &       &  990   & 990 \\ \hline
+$odderon$                &              &          &         &       & 9990   & 9990 \\ \hline \hline
+internal code            &              & 81-99    &   81-91 & 82-93 & 81-100 & 81-100 \\ \hline \hline
+\multicolumn{7}{|l@{\tstrut}|}{NOTE: $H_L^0$ is redundant with $h^0/H_1^0$,
+but is given a different number in Isajet and Herwig. } \\ \hline
+\end{tabular}
+
+\vfill\eject
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Supersymmetric Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$\tilde d_L$                      & 22 & 1000001 & 1000001 &  & 1000001 & 1000001 \\ \hline
+$\tilde u_L$                      & 21 & 1000002 & 1000002 &  & 1000002 & 1000002 \\ \hline
+$\tilde s_L$                      & 23 & 1000003 & 1000003 &  & 1000003 & 1000003 \\ \hline
+$\tilde c_L$                      & 24 & 1000004 & 1000004 &  & 1000004 & 1000004 \\ \hline
+$\tilde b_1/\tilde b_L$           & 25 & 1000005 & 1000005 &  & 1000005 & 1000005 \\ \hline
+$\tilde t_1/\tilde t_L$           & 26 & 1000006 & 1000006 &  & 1000006 & 1000006 \\ \hline
+$\tilde e_L^-$                    & 32 & 1000011 & 1000011 &  & 1000011 & 1000011 \\ \hline
+$\tilde \nu_{e L}$                & 31 & 1000012 & 1000012 &  & 1000012 & 1000012 \\ \hline
+$\tilde \mu_L^-$                  & 34 & 1000013 & 1000013 &  & 1000013 & 1000013 \\ \hline
+$\tilde \nu_{\mu L}$              & 33 & 1000014 & 1000014 &  & 1000014 & 1000014 \\ \hline
+$\tilde \tau_1^-/\tilde \tau_L^-$ & 36 & 1000015 & 1000015 &  & 1000015 & 1000015 \\ \hline
+$\tilde \nu_{\tau L}$             & 35 & 1000016 & 1000016 &  & 1000016 & 1000016 \\ \hline\hline
+$\tilde d_R$                      & 42 & 2000001 & 2000001 &  & 2000001 & 2000001 \\ \hline
+$\tilde u_R$                      & 41 & 2000002 & 2000002 &  & 2000002 & 2000002 \\ \hline
+$\tilde s_R$                      & 43 & 2000003 & 2000003 &  & 2000003 & 2000003 \\ \hline
+$\tilde c_R$                      & 44 & 2000004 & 2000004 &  & 2000004 & 2000004 \\ \hline
+$\tilde b_2/\tilde b_R$           & 45 & 2000005 & 2000005 &  & 2000005 & 2000005 \\ \hline
+$\tilde t_2/\tilde t_R$           & 46 & 2000006 & 2000006 &  & 2000006 & 2000006 \\ \hline
+$\tilde e_R^-$                    & 52 & 2000011 & 2000011 &  & 2000011 & 2000011 \\ \hline
+$\tilde \nu_{e R}$                & 51 & 2000012 & 2000012 &  &         & 2000012 \\ \hline
+$\tilde \mu_R^-$                  & 54 & 2000013 & 2000013 &  & 2000013 & 2000013 \\ \hline
+$\tilde \nu_{\mu R}$              & 53 & 2000014 & 2000014 &  &         & 2000014 \\ \hline
+$\tilde \tau_2^-/\tilde \tau_R^-$ & 56 & 2000015 & 2000015 &  & 2000015 & 2000015 \\ \hline
+$\tilde \nu_{\tau R}$             & 55 & 2000016 & 2000016 &  &         & 2000016 \\ \hline
+\end{tabular}
+
+\vfill\eject
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Supersymmetric Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$\tilde g$                     & 29               & 1000021 & 1000021 &  & 1000021 & 1000021 \\ \hline 
+$\tilde \chi_1^0/\tilde\gamma$ & 30 ($Z_1^{ss}$)  & 1000022 & 1000022 &  & 1000022 & 1000022 \\ \hline
+$\tilde \chi_2^0/\tilde Z^0$   & 40 ($Z_2^{ss}$)  & 1000023 & 1000023 &  & 1000023 & 1000023 \\ \hline
+$\tilde \chi_1^+/\tilde W^+$   & 39 ($W_1^{+ss}$) & 1000024 & 1000024 &  & 1000024 & 1000024 \\ \hline
+$\tilde \chi_3^0/\tilde H^0_1$ & 50 ($Z_3^{ss}$)  & 1000025 & 1000025 &  & 1000025 & 1000025 \\ \hline
+$\tilde \chi_4^0/\tilde H^0_2$ & 60 ($Z_4^{ss}$)  & 1000035 & 1000035 &  & 1000035 & 1000035 \\ \hline
+$\tilde \chi_2^+/\tilde H^+$   & 49 ($W_2^{+ss}$) & 1000037 & 1000037 &  & 1000037 & 1000037 \\ \hline
+$\tilde G$                     & 91               & 1000039 & 1000039 &  & 1000039 & 1000039 \\ \hline\hline
+\end{tabular}
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{R-Hadrons} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$R^0_{\tilde gg}$         &  &  &  &  & \bf{1000993} & \bf{1000993} \\ \hline
+$R^0_{\tilde gd\bar d}$   &  &  &  &  & \bf{1009113} & \bf{1009113} \\ \hline
+$R^+_{\tilde gu\bar d}$   &  &  &  &  & \bf{1009213} & \bf{1009213} \\ \hline
+$R^0_{\tilde gu\bar u}$   &  &  &  &  & \bf{1009223} & \bf{1009223} \\ \hline
+$R^0_{\tilde gd\bar s}$   &  &  &  &  & \bf{1009313} & \bf{1009313} \\ \hline
+$R^+_{\tilde gu\bar s}$   &  &  &  &  & \bf{1009323} & \bf{1009323} \\ \hline
+$R^0_{\tilde gs\bar s}$   &  &  &  &  & \bf{1009333} & \bf{1009333} \\ \hline
+$R^-_{\tilde gddd}$       &  &  &  &  & \bf{1091114} & \bf{1091114} \\ \hline
+$R^0_{\tilde gudd}$       &  &  &  &  & \bf{1092114} & \bf{1092114} \\ \hline
+$R^+_{\tilde guud}$       &  &  &  &  & \bf{1092214} & \bf{1092214} \\ \hline
+$R^{++}_{\tilde guuu}$    &  &  &  &  & \bf{1092224} & \bf{1092224} \\ \hline
+$R^-_{\tilde gsdd}$       &  &  &  &  & \bf{1093114} & \bf{1093114} \\ \hline
+$R^0_{\tilde gsud}$       &  &  &  &  & \bf{1093214} & \bf{1093214} \\ \hline
+$R^+_{\tilde gsuu}$       &  &  &  &  & \bf{1093224} & \bf{1093224} \\ \hline
+$R^-_{\tilde gssd}$       &  &  &  &  & \bf{1093314} & \bf{1093314} \\ \hline
+$R^0_{\tilde gssu}$       &  &  &  &  & \bf{1093324} & \bf{1093324} \\ \hline
+$R^-_{\tilde gsss}$       &  &  &  &  & \bf{1093334} & \bf{1093334} \\ \hline\hline
+$R^+_{\tilde t_1\bar d}$  &  &  &  &  & \bf{1000612} & \bf{1000612} \\ \hline
+$R^0_{\tilde t_1\bar u}$  &  &  &  &  & \bf{1000622} & \bf{1000622} \\ \hline
+$R^+_{\tilde t_1\bar s}$  &  &  &  &  & \bf{1000632} & \bf{1000632} \\ \hline
+$R^0_{\tilde t_1\bar c}$  &  &  &  &  & \bf{1000642} & \bf{1000642} \\ \hline
+$R^+_{\tilde t_1\bar b}$  &  &  &  &  & \bf{1000652} & \bf{1000652} \\ \hline
+$R^0_{\tilde t_1dd_1}$    &  &  &  &  & \bf{1006113} & \bf{1006113} \\ \hline
+$R^+_{\tilde t_1ud_0}$    &  &  &  &  & \bf{1006211} & \bf{1006211} \\ \hline
+$R^+_{\tilde t_1ud_1}$    &  &  &  &  & \bf{1006213} & \bf{1006213} \\ \hline
+$R^{++}_{\tilde t_1uu_1}$ &  &  &  &  & \bf{1006223} & \bf{1006223} \\ \hline
+$R^0_{\tilde t_1sd_0}$    &  &  &  &  & \bf{1006311} & \bf{1006311} \\ \hline
+$R^0_{\tilde t_1sd_1}$    &  &  &  &  & \bf{1006313} & \bf{1006313} \\ \hline
+$R^+_{\tilde t_1su_0}$    &  &  &  &  & \bf{1006321} & \bf{1006321} \\ \hline
+$R^+_{\tilde t_1su_1}$    &  &  &  &  & \bf{1006323} & \bf{1006323} \\ \hline
+$R^0_{\tilde t_1ss_1}$    &  &  &  &  & \bf{1006333} & \bf{1006333} \\ \hline
+\end{tabular}
+
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Diquarks} \\ \hline
+Diquark & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$(ud)_0$  &  1200 & 2101 & 2101 & &  2101 & 2101 \\ \hline 
+$(sd)_0$  &  2300 & 3101 & 3101 & &  3101 & 3101 \\ \hline 
+$(su)_0$  &  1300 & 3201 & 3201 & &  3201 & 3201 \\ \hline 
+$(cd)_0$  & -2400 & 4101 &      & &  4101 & 4101 \\ \hline 
+$(cu)_0$  & -1400 & 4201 &      & &  4201 & 4201 \\ \hline 
+$(cs)_0$  & -3400 & 4301 &      & &  4301 & 4301 \\ \hline 
+$(bd)_0$  &  2500 & 5101 &      & &  5101 & 5101 \\ \hline 
+$(bu)_0$  &  1500 & 5201 &      & &  5201 & 5201 \\ \hline 
+$(bs)_0$  &  3500 & 5301 &      & &  5301 & 5301 \\ \hline 
+$(bc)_0$  &  4500 & 5401 &      & &  5401 & 5401 \\ \hline
+$(dd)_1$  &  2200 & 1103 & 1103 & &  1103 & 1103 \\ \hline
+$(ud)_1$  &       & 2103 &      & &  2103 & 2103 \\ \hline
+$(uu)_1$  &  1100 & 2203 & 2203 & &  2203 & 2203 \\ \hline
+$(sd)_1$  &       & 3103 &      & &  3103 & 3103 \\ \hline
+$(su)_1$  &       & 3203 &      & &  3203 & 3203 \\ \hline
+$(ss)_1$  &  3300 & 3303 & 3303 & &  3303 & 3303 \\ \hline
+$(cd)_1$  &       & 4103 &      & &  4103 & 4103 \\ \hline
+$(cu)_1$  &       & 4203 &      & &  4203 & 4203 \\ \hline
+$(cs)_1$  &       & 4303 &      & &  4303 & 4303 \\ \hline
+$(cc)_1$  &  4400 & 4403 &      & &  4403 & 4403 \\ \hline
+$(bd)_1$  &       & 5103 &      & &  5103 & 5103 \\ \hline
+$(bu)_1$  &       & 5203 &      & &  5203 & 5203 \\ \hline
+$(bs)_1$  &       & 5303 &      & &  5303 & 5303 \\ \hline
+$(bc)_1$  &       & 5403 &      & &  5403 & 5403 \\ \hline
+$(bb)_1$  &  5500 & 5503 &      & &  5503 & 5503 \\ \hline
+\end{tabular}
+
+\vfill\eject
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Technicolor Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b & PDG 2006 & StdHep 5.06 \\ \hline
+$\pi_{tech}^0$                  &   & 3000111 &  &  & 3000111 & 3000111  \\ \hline
+$\pi_{tech}^+$                  &   & 3000211 &  &  & 3000211 & 3000211  \\ \hline
+$\pi^{\prime0}_{tech}$$^{NOTE}$ &   & 3000221 &  &  & 3000221 & 3000221  \\ \hline
+$\eta_{tech}^0$$^{NOTE}$        &   & 3000331 &  &  & 3100221 & 3100221 \\ \hline
+$\rho_{tech}^0$                 &   & 3000113 &  &  & 3000113 & 3000113  \\ \hline
+$\rho_{tech}^+$                 &   & 3000213 &  &  & 3000213 & 3000213  \\ \hline
+$\omega_{tech}^0$               &   & 3000223 &  &  & 3000223 & 3000223  \\ \hline
+$V_8$                           &   & 3100021 &  &  & 3100021 & 3100021  \\ \hline
+$\pi_{tech_{22}}^1$             &   & 3100111 &  &  & 3060111 & 3060111 \\ \hline
+$\pi_{tech_{22}}^8$             &   & 3200111 &  &  & 3160111 & 3160111 \\ \hline
+$\rho_{tech_{11}}$              &   & 3100113 &  &  & 3130113 & 3130113 \\ \hline
+$\rho_{tech_{12}}$              &   & 3200113 &  &  & 3140113 & 3140113 \\ \hline
+$\rho_{tech_{21}}$              &   & 3300113 &  &  & 3150113 & 3150113 \\ \hline
+$\rho_{tech_{22}}$              &   & 3400113 &  &  & 3160113 & 3160113 \\ \hline
+\multicolumn{7}{|l@{\tstrut}|}{NOTE: 
+Newer technicolor models use $\pi^{\prime0}_{tech}$ instead of $\eta_{tech}^0$. } \\ \hline\hline
+\multicolumn{7}{|c@{\tstrut}|}{Excited Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b & PDG 2006 & StdHep 5.06 \\ \hline
+$d^*$                  &    & 4000001      &  &  & 4000001 & 4000001   \\ \hline
+$u^*$                  &    & 4000002      &  &  & 4000002 & 4000002   \\ \hline
+$e^*$                  &    & 4000011      &  &  & 4000011 & 4000011   \\ \hline
+$\nu_e^*$              &    & 4000012      &  &  & 4000012 & 4000012   \\ \hline
+$G^*$                  &    & 5000039      &  &  &         & 4000039   \\ \hline
+\multicolumn{7}{|c@{\tstrut}|}{Other Exotics} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$\nu_{Re}$             &    & 9900012 &  &  &  & 9900012   \\ \hline
+$\nu_{R\mu}$           &    & 9900014 &  &  &  & 9900014   \\ \hline
+$\nu_{R\tau}$          &    & 9900016 &  &  &  & 9900016   \\ \hline
+$Z_R^0$                &    & 9900023 &  &  &  & 9900023   \\ \hline
+$W_R^+$                &    & 9900024 &  &  &  & 9900024   \\ \hline
+$H_L^{++}$             &    & 9900041 &  &  &  & 9900061   \\ \hline
+$H_R^{++}$             &    & 9900042 &  &  &  & 9900062   \\ \hline\hline
+\end{tabular}
+
+\vfill\eject
+
+\begin{tabular}{|l@{\tstrut}|r|r|r|c|r|r|} \hline
+\multicolumn{7}{|c@{\tstrut}|}{Pentaquarks} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$\Theta^+$              &    &         &  &  & 9221132 & 9221132   \\ \hline
+$\Phi^{--}$             &    &         &  &  & 9331122 & 9331122   \\ \hline
+\multicolumn{7}{|c@{\tstrut}|}{Miscellaneous Particles} \\ \hline
+Particle & Isajet 7.72 & Pythia 6.413 & Herwig 6.510 & QQ 9.2b &  PDG 2006 & StdHep 5.06 \\ \hline
+$\rho_{diffr}^0$   &  & 9900110      &      &  &   & 9910113 \\ \hline
+$\pi_{diffr}^+$    &  & 9900210      &      &  &   & 9910211 \\ \hline
+$\omega_{diffr}^0$ &  & 9900220      &      &  &   & 9910223 \\ \hline
+$\phi_{diffr}^0$   &  & 9900330      &      &  &   & 9910333 \\ \hline
+$J/\psi_{diffr}^0$ &  & 9900440      &      &  &   & 9910443 \\ \hline
+$n_{diffr}^0$      &  & 9902110      &      &  &   & 9912112 \\ \hline
+$p_{diffr}^+$      &  & 9902210      &      &  &   & 9912212 \\ \hline\hline
+$ccbar[1S0(8)]$    &  & 9900441      &      &  &   & 9900441 \\ \hline
+$ccbar[3S1(8)]$    &  & 9900443      &      &  &   & 9900443 \\ \hline
+$ccbar[3P0(8)]$    &  & 9910441      &      &  &   & 9910441 \\ \hline
+$bbbar[1S0(8)]$    &  & 9900551      &      &  &   & 9900551 \\ \hline
+$bbbar[3S1(8)]$    &  & 9900553      &      &  &   & 9900553 \\ \hline
+$bbbar[3P0(8)]$    &  & 9910551      &      &  &   & 9910551 \\ \hline\hline
+remnant photon     &  &              &   98 &  &   & 9920022 \\ \hline
+remnant nucleon    &  &              &   99 &  &   & 9922212 \\ \hline\hline
+Hydrogen           &  &              &      &  &   & 1001001002 \\ \hline
+Deuterium          &  &              &      &  &   & 1002001002 \\ \hline
+Tritium            &  &              &      &  &   & 1003001002 \\ \hline
+$He^3$             &  &              &      &  &   & 1003002001 \\ \hline
+$\alpha$           &  &              &      &  &   & 1004002001 \\ \hline
+geantino           &  &              &      &  &   &   \\ \hline
+\end{tabular}
+
+\vfill\eject

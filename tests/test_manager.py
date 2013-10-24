@@ -78,10 +78,47 @@ _hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
 _hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
 _hc_comparison_modif_log = pjoin(_input_file_path,'IOTestsRefModifs.log')
 
+
+class MyTextTestRunner(unittest.TextTestRunner):
+    
+    bypassed = []
+
+    def run(self, test):
+        "Run the given test case or test suite."
+        MyTextTestRunner.stream = self.stream
+        result = self._makeResult()
+        startTime = time.time()
+        test(result)
+        stopTime = time.time()
+        timeTaken = float(stopTime - startTime)
+        result.printErrors()
+        self.stream.writeln(result.separator2)
+        run = result.testsRun
+        self.stream.writeln("Ran %d test%s in %.3fs" %
+                            (run, run != 1 and "s" or "", timeTaken))
+        self.stream.writeln()
+        if not result.wasSuccessful():
+            self.stream.write("FAILED (")
+            failed, errored = map(len, (result.failures, result.errors))
+            if failed:
+                self.stream.write("failures=%d" % failed)
+            if errored:
+                if failed: self.stream.write(", ")
+                self.stream.write("errors=%d" % errored)
+            self.stream.writeln(")")
+        else:
+            self.stream.writeln("OK")
+        if self.bypassed:
+            self.stream.writeln("Bypassed %s:" % len(self.bypassed))
+            self.stream.writeln(" ".join(self.bypassed))
+        return result 
+
+            
 #===============================================================================
 # run
 #===============================================================================
-def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
+def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
+        timelimit=0):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -90,6 +127,7 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
     #init a test suite
     testsuite = unittest.TestSuite()
     collect = unittest.TestLoader()
+    TestSuiteModified.time_limit =  float(timelimit)
     for test_fct in TestFinder(package=package, expression=expression, \
                                    re_opt=re_opt):
         data = collect.loadTestsFromName(test_fct)        
@@ -97,8 +135,17 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1):
         data.__class__ = TestSuiteModified
         testsuite.addTest(data)
         
-    return unittest.TextTestRunner(verbosity=verbosity).run(testsuite)
+    output =  MyTextTestRunner(verbosity=verbosity).run(testsuite)
+    
+    
+    
+    
+    if TestSuiteModified.time_limit < 0:
+        ff = open(pjoin(root_path,'tests','time_db'), 'w')
+        ff.write('\n'.join(['%s %s' % a  for a in TestSuiteModified.time_db.items()]))
+        ff.close()
 
+    return output
     #import tests
     #print 'runned %s checks' % tests.NBTEST
     #return out
@@ -327,6 +374,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     if path.isdir(hc_comparison_files_BackUp):
         shutil.rmtree(hc_comparison_files_BackUp)
 
+class TimeLimit(Exception): pass
 #===============================================================================
 # TestSuiteModified
 #===============================================================================
@@ -336,10 +384,39 @@ class TestSuiteModified(unittest.TestSuite):
     everytime the TestSuite is __call__'ed., hence avoiding side effects from 
     them."""
     
+    time_limit = 1
+    time_db = {}
+    
     @set_global()
     def __call__(self, *args, **kwds):
-        super(TestSuiteModified,self).__call__(*args,**kwds)
+    
+        time_db = TestSuiteModified.time_db
+        time_limit = TestSuiteModified.time_limit
+        if not time_db and time_limit > 0:
+            if not os.path.exists(pjoin(root_path, 'tests','time_db')):
+                TestSuiteModified.time_limit = -1
+            else:
+                #for line in open(pjoin(root_path, 'tests','time_db')):
+                #        print line.split()
+                TestSuiteModified.time_db = dict([(' '.join(line.split()[:-1]), float(line.split()[-1]))  
+                         for line in open(pjoin(root_path, 'tests','time_db'))
+                         ])
+                time_db = TestSuiteModified.time_db
+            
+        if str(self) in time_db and time_db[str(self)] > abs(time_limit):
+            MyTextTestRunner.stream.write('T')
+            #print dir(self._tests[0]), type(self._tests[0]),self._tests[0] 
+            MyTextTestRunner.bypassed.append(str(self._tests[0]).split()[0])
+            return
 
+        
+        start = time.time()
+        super(TestSuiteModified,self).__call__(*args,**kwds)
+        if not str(self) in time_db:
+            TestSuiteModified.time_db[str(self)] = time.time() - start
+            TestSuiteModified.time_limit *= -1
+        
+        
 #===============================================================================
 # TestFinder
 #===============================================================================
@@ -716,6 +793,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     parser.add_option("-s", "--synchronize", action="store_true", default=False,
           help="Replace the IOTestsComparison.tar.bz2 tarball with the "+\
                                       "content of the folder IOTestsComparison")
+    parser.add_option("-t", "--timed", default="Auto",
+          help="limit the duration of each test. Negative number re-writes the information file.")    
     
     (options, args) = parser.parse_args()
 
@@ -736,6 +815,16 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         options.path = 'tests/parallel_tests'
     elif options.path == 'A':
         options.path = 'tests/acceptance_tests'
+        
+    if options.timed == "Auto":
+        if options.path == 'tests/unit_tests':
+            options.timed = 2
+        elif options.path == 'tests/parallel_tests':
+            options.timed = 400
+        elif options.path == 'tests/acceptance_tests':
+            options.timed = 30
+        else:
+            options.timed = 0 
 
 
     try:
@@ -750,7 +839,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     if options.IOTests=='No' and not options.synchronize:
         #logging.basicConfig(level=vars(logging)[options.logging])
         run(args, re_opt=options.reopt, verbosity=options.verbose, \
-            package=options.path)
+            package=options.path, timelimit=options.timed)
     else:
         if options.IOTests=='L':
             print "Listing all tests defined in the reference tarball..."
