@@ -1686,7 +1686,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                          'cluster_queue':'madgraph',
                          'nb_core': None,
                          'cluster_temp_path':None,
-                         'cluster_nb_retry':1}
+                         'cluster_nb_retry':1,
+                         'cluster_retry_wait':300}
     
     helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
@@ -2197,9 +2198,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             opt = self.options
             self.cluster = cluster.from_name[opt['cluster_type']](\
                                  opt['cluster_queue'], opt['cluster_temp_path'])
-        elif args[0] in ['cluster_nb_retry']:
-            self.cluster.nb_retry = int(args[1])
+            self.cluster.nb_retry = self.options['cluster_nb_retry']
+            self.cluster_retry_wait = self.options['cluster_retry_wait']
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
             self.options[args[0]] = int(args[1])
+            if args[0] == 'cluster_nb_retry':
+                self.cluster.nb_retry = int(args[1])
+            else:
+                self.cluster_retry_wait = int(args[1])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing

@@ -180,13 +180,18 @@ class Cluster(object):
         self.submitted = 0
         self.submitted_ids = []
         
-    def check_termination(self, job_id, nb_check=0):
+    def check_termination(self, job_id):
         """Check the termination of the jobs with job_id and relaunch it if needed."""
         
         if job_id not in self.retry_args:
             return True
-        
+
         args = self.retry_args[job_id]
+        if 'time_check' in args:
+            time_check = args['time_check']
+        else:
+            time_check = 0
+
         for path in args['required_output']:
             if args['cwd']:
                 path = pjoin(args['cwd'], path)
@@ -194,19 +199,21 @@ class Cluster(object):
                 break
         else:
             # all requested output are present
-            if nb_check > 0:
-                logger.info('Finally found the missing output. Continue!')
+            if time_check > 0:
+                logger.info('Job %s Finally found the missing output.' % (job_id))
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
             return True
         
-        if nb_check < 4:
-            if nb_check == 0:
-                logger.warning('''Job %s failed to produce expected output. Wait up to 2 min for filesystem update.\nMissing file:\n%s''' % (job_id,path))
-            time.sleep(30)
-            return self.check_termination(job_id, nb_check+1)
+        if time_check == 0:
+            logger.warning('''Job %s failed to produce expected output. Waiting for filesystem update.\nMissing file:\n%s''' % (job_id,path))
+            args['time_check'] = time.time()
+            return 'wait'
+        elif self.cluster_retry_wait < time.time() - time_check:    
+            return 'wait'
+        
 
-        #jobs failed to be completed!!
+        #jobs failed to be completed even after waiting time!!
         if self.nb_retry < 0:
             logger.critical('''Fail to run correctly job %s.
             with option: %s
@@ -230,9 +237,11 @@ class Cluster(object):
             logger.warning('resubmit job (for the %s times)' % args['nb_submit'])
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
+            if 'time_check' in args: 
+                del args['time_check']
             self.submit2(**args)
-            return False
-        return True
+            return 'resubmit'
+        return 'done'
             
             
             
@@ -475,7 +484,10 @@ class CondorCluster(Cluster):
 
         for id in list(self.submitted_ids):
             if id not in ongoing:
-                if not self.check_termination(id):
+                status = self.check_termination(id)
+                if status == 'wait':
+                    run += 1
+                elif status == 'resubmit':
                     idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -599,10 +611,13 @@ class PBSCluster(Cluster):
                         idle += 1
                 else:
                     fail += 1
-        
+            
         for id in list(self.submitted_ids):
             if id not in ongoing:
-                if not self.check_termination(id):
+                status = self.check_termination(id)
+                if status == 'wait':
+                    run += 1
+                elif status == 'resubmit':
                     idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -873,7 +888,10 @@ class LSFCluster(Cluster):
             elif status == 'PEND':
                 idle += 1
             elif status == 'DONE':
-                if not self.check_termination(id):
+                status = self.check_termination(id)
+                if status == 'wait':
+                    run += 1
+                elif status == 'resubmit':
                     idle += 1
             else:
                 fail += 1

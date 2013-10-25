@@ -1795,7 +1795,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
-                       'cluster_nb_retry':1
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3920,7 +3921,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
-        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry']:
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+                         'cluster_retry_wait']:
                 self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:

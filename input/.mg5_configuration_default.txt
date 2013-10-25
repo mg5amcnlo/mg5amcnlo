@@ -87,6 +87,8 @@
 #! How to deal with failed submission (can occurs on cluster mode)
 #! 0: crash, -1: print error, hangs the program up to manual instructions, N(>0) retry up to N times.
 # cluster_nb_retry = 1
+#! How much time to wait for the output file before resubmission/crash (filesystem can be very slow)
+# cluster_retry_wait = 300
 
 #! Nb_core to use (None = all) This is use only for multicore run
 #! This correspond also to the number core used for code compilation for cluster mode
