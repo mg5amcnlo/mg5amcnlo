@@ -965,8 +965,6 @@ class Model(PhysicsObject):
         """Return the maximum WEIGHTED order for any interaction in the model,
         for equivalent 3-particle vertices. Note that it can be fractional."""
 
-        print 'max_weight', max([inter.get_WEIGHTED_order(self) for inter in \
-                        self.get('interactions')])
         return max([inter.get_WEIGHTED_order(self) for inter in \
                         self.get('interactions')])
             
