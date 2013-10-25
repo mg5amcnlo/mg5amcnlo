@@ -1267,8 +1267,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
 
-            #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
@@ -1653,7 +1652,8 @@ Integrated cross-section
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
         self.banner_to_mcatnlo(evt_file)
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
-
+        
+        # set environmental variables for the run
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
         else:
@@ -1661,7 +1661,7 @@ Integrated cross-section
         for path in self.shower_card['extrapaths'].split():
             ldlibrarypath += ':%s' % path
         if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
         self.shower_card.write_card(shower, shower_card_path)
@@ -1672,7 +1672,8 @@ Integrated cross-section
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
         exe = 'MCATNLO_%s_EXE' % shower
-        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)):
+        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
+            not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
@@ -1688,15 +1689,20 @@ Integrated cross-section
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
-        files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
-        files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        if shower != 'PYTHIA8':
+            files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        # special treatment for pythia8
+        else:
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
                 misc.call(['ln -s %s %s' % \
-                (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
             except Exception:
-                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
+                raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
@@ -1704,8 +1710,18 @@ Integrated cross-section
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
             pjoin(rundir,self.run_name))], shell=True)
-
-        misc.call(['./%s' % exe], cwd = rundir, 
+        # special treatment for pythia8
+        if shower=='PYTHIA8':
+            open(pjoin(rundir, exe), 'w').write(\
+                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
+                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
+            os.system('chmod  +x %s' % pjoin(rundir,exe))
+            misc.call(['./%s' % exe], cwd = rundir, 
+                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                shell=True)
+        else:
+            misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
@@ -1736,6 +1752,22 @@ Integrated cross-section
 
                 misc.call(['mv %s %s' % \
                     (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
+            #this is for pythia8
+            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
+                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
+
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 misc.call(['gzip %s' % hep_file], shell=True)
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
@@ -1971,6 +2003,15 @@ Integrated cross-section
             #overwrite the PDFCODE variable in order to use internal lhapdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+        # add the pythia8/hwpp path(s)
+        if self.options['pythia8_path']:
+            content+='PY8PATH=%s\n' % self.options['pythia8_path']
+        if self.options['hwpp_path']:
+            content+='HWPPPATH=%s\n' % self.options['hwpp_path']
+        if self.options['thepeg_path']:
+            content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
+        if self.options['hepmc_path']:
+            content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
 
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')

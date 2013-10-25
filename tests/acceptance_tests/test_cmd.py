@@ -124,8 +124,9 @@ class TestCmdShell1(unittest.TestCase):
 #                    'td_path': './td', 
 #                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
-#                    'madanalysis_path': './MadAnalysis', 
-                    'cluster_temp_path': None, 
+#                    'madanalysis_path': './MadAnalysis',
+                    'cluster_temp_path': None,
+                    'cluster_status_update': (600, 30),
                     'fortran_compiler': None, 
 #                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
@@ -139,6 +140,7 @@ class TestCmdShell1(unittest.TestCase):
                     'fastjet': 'fastjet-config',
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
+                    'OLP': 'MadLoop',
                     'auto_update': 7
                     }
 
