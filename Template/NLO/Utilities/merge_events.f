@@ -17,6 +17,8 @@ c merge_events.f handling_lhe_events.f fill_MC_mshell.f
       character*10 MonteCarlo,mc
       character*3 str
       integer evts,leftover,loc,loc1,loc2,num_file,sumevt
+      integer numscales,numPDFpairs,isc,ipdf
+      common/cwgxsec1/numscales,numPDFpairs
 c
       write(*,*)'pref of the files (in the form pref.001, ...) '
       read(*,*)pref
@@ -34,7 +36,9 @@ c
          if (i.gt.99.and.i.le.999) write (str(1:3),'(i3)') i
          fname1=pref(1:loc-1)//'.'//str
          open(unit=ifile,file=fname1(1:loc+3),status='unknown')
-         call read_lhef_header(ifile,evts,MonteCarlo)
+         call read_lhef_header_full(ifile,evts,isc,ipdf,MonteCarlo)
+         numscales=int(sqrt(dble(isc)))
+         numPDFpairs=ipdf/2
          if(i.eq.1)then
             mc=MonteCarlo
             call read_lhef_init(ifile,
@@ -50,7 +54,7 @@ c
 
       ofile=34
       ifile=35         
-      open(unit=ofile,file=pref(1:loc-1),status='unknown')
+      open(unit=ofile,file=pref(1:loc-1)//'.complete',status='unknown')
       open(unit=ifile,file=pref(1:loc-1)//'.001',status='old')
       call copy_header(ifile,ofile,sumevt)
       close(ifile)

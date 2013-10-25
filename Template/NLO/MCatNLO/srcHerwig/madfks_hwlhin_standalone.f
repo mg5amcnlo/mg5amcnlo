@@ -22,7 +22,7 @@ C---Les Houches Event Common Block
       PARAMETER (IUNIT=61)
       CHARACTER*80 STRING
       CHARACTER*140 BUFF
-      CHARACTER*1 CH1
+      CHARACTER*9 CH1
       INTEGER I
 c
       DOUBLE PRECISION PCM(5),PTR,XSCALE
@@ -47,7 +47,7 @@ C---Les Houches expects mean weight to be the cross section in pb
       enddo
       read(iunit,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe
         read(iunit,'(a)')string
@@ -80,7 +80,6 @@ c$$$      IF(ISORH_LHE.EQ.2)THEN
 c$$$c H events
 c$$$        IF(SCALE2_LHE.GT.0.D0)SCALUP=SCALE2_LHE
 c$$$      ENDIF
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8))
  503  format(1x,i2,1x,i6,4(1x,d14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,d14.8),2(1x,d10.4))
       END
