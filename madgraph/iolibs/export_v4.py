@@ -3752,7 +3752,7 @@ class UFO_model_to_mg4(object):
         real_parameters += [param.name for param in self.params_ext 
                             if param.type == 'real'and 
                                is_valid(param.name)]
-        
+
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
@@ -3828,9 +3828,21 @@ class UFO_model_to_mg4(object):
                                  %(mp_prefix)sgal(2) = 1d0 
                                  """ %{'mp_prefix':self.mp_prefix})
                 pass
+        # HSS 27/10/2013
+        # in Gmu scheme, aEWM1 is not external but Gf is an exteranl variable
+        elif ('Gf',) in self.model['parameters']:
+            if dp:
+                fsock.writelines(""" gal(1) = 2.3784142300054421*MW*SW*DSQRT(Gf)
+                                 gal(2) = 1d0
+                         """)
+            elif mp:
+                fsock.writelines(""" %(mp_prefix)sgal(1) = 2*MP__MW*MP__SW*SQRT(SQRT(2e0_16)*MP__Gf)
+                                 %(mp_prefix)sgal(2) = 1d0
+                                 """ %{'mp_prefix':self.mp_prefix})
+                pass
         else:
             if dp:
-                logger.warning('$RED aEWM1 not define in MODEL. AQED will not be written correcty in LHE FILE')
+                logger.warning('$RED aEWM1 and Gf not define in MODEL. AQED will not be written correcty in LHE FILE')
                 fsock.writelines(""" gal(1) = 1d0
                                  gal(2) = 1d0
                              """)

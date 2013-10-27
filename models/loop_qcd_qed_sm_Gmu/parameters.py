@@ -327,7 +327,7 @@ aEW = Parameter(name = 'aEW',
 aEWM1 = Parameter(name = 'aEWM1',
                   nature = 'internal',
                   type = 'real',
-                  value = '1/aEW',
+                  value = '1./aEW',
                   texname = '\\text{aEWM1}')
 
 G = Parameter(name = 'G',
