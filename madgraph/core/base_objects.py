@@ -25,6 +25,7 @@ import re
 import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -200,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -218,6 +219,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -2608,11 +2610,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 
@@ -2686,17 +2691,22 @@ class Process(PhysicsObject):
         """Give the pdg code of the process including decay"""
         
         finals = self.get_final_ids()
-        to_add = []
         for proc in self.get('decay_chains'):
             init = proc.get_initial_ids()[0]
-            while 1:
-                try:
-                    finals.remove(init)
-                except:
-                    break
-            to_add += proc.get_final_ids_after_decay()
-        finals += to_add
-        return finals 
+            #while 1:
+            try:
+                pos = finals.index(init)
+            except:
+                break
+            finals[pos] = proc.get_final_ids_after_decay()
+        output = []
+        for d in finals:
+            if isinstance(d, list):
+                output += d
+            else:
+                output.append(d)
+        
+        return output
     
 
     def get_final_legs(self):

@@ -29,6 +29,12 @@
                stop 'IRPoleCheckThreshold must be >= -1.0d0.'
              endif 
 
+           elseif (buff .eq. '#PrecisionVirtualAtRunTime') then
+             read(666,*,end=999) PrecisionVirtualAtRunTime
+             if (IRPoleCheckThreshold .lt. -1.01d0 ) then
+               stop 'PrecisionVirtualAtRunTime must be >= -1.0d0.'
+             endif 
+
            else if (buff .eq. '#NHelForMCoverHels') then
              read(666,*,end=999) NHelForMCoverHels
              if (NHelForMCoverHels .lt. -1) then
@@ -71,6 +77,8 @@ C     a non existing or malformed parameter file
       write(*,*)
      & '==============================================================='
       write(*,*) ' > IRPoleCheckThreshold      = ',IRPoleCheckThreshold
+      write(*,*) ' > PrecisionVirtualAtRunTime = '
+     $     ,PrecisionVirtualAtRunTime
       write(*,*) ' > NHelForMCoverHels         = ',NHelForMCoverHels
       write(*,*)
      & '==============================================================='
@@ -90,5 +98,5 @@ C     a non existing or malformed parameter file
 
       IRPoleCheckThreshold=1.0d-5
       NHelForMCoverHels=5
-
+      PrecisionVirtualAtRunTime=1d-3
       end

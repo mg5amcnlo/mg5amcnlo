@@ -161,7 +161,10 @@ class AllResults(dict):
             if not tag:
                 self.current = self[run][-1]
             else:
-                self.current = self[run][tag]
+                assert tag in self[run].tags
+                index = self[run].tags.index(tag)
+                self.current = self[run][index]
+                
         else:
             self.current = None
     
@@ -573,7 +576,8 @@ class OneTagResults(dict):
         self['cross_pythia'] = ''
         self['nb_event_pythia'] = 0
         self['error'] = 0
-        self.parton = [] 
+        self.parton = []
+        self.reweight = [] 
         self.pythia = []
         self.pgs = []
         self.delphes = []
@@ -586,6 +590,7 @@ class OneTagResults(dict):
     def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
 
+        import misc as misc
         exists = os.path.exists
         run = self['run_name']
         tag =self['tag']
@@ -598,6 +603,11 @@ class OneTagResults(dict):
             if 'gridpack' not in self.parton and \
                     exists(pjoin(path,os.pardir ,os.pardir,"%s_gridpack.tar.gz" % run)):
                 self.parton.append('gridpack')
+        # Check if the output of the last status exists
+        if level in ['reweight','all']:
+            if 'plot' not in self.reweight and \
+                         exists(pjoin(html_path,"plots_%s.html" % tag)):
+                self.reweight.append('plot')
         
         if level in ['parton','all'] and 'parton' not in nolevel:
             
@@ -727,6 +737,10 @@ class OneTagResults(dict):
 
             return out % self
         
+        if level == 'reweight':
+            if 'plot' in self.reweight:
+                out += ' <a href="./HTML/%(run_name)s/plots_%(tag)s.html">plots</a>'           
+            return out % self
         if level == 'pythia':          
             if 'log' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
@@ -782,7 +796,7 @@ class OneTagResults(dict):
     def get_nb_line(self):
         
         nb_line = 0
-        for i in [self.parton, self.pythia, self.pgs, self.delphes]:
+        for i in [self.parton, self.reweight, self.pythia, self.pgs, self.delphes]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -807,6 +821,13 @@ class OneTagResults(dict):
         <td> %(links)s</td>
         <td> %(action)s</td>
         </tr>"""
+        
+        sub_part_template_reweight = """
+        <td rowspan=%(cross_span)s><center> %(cross).4g </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""        
         
         sub_part_template_pgs = """
         <td> %(type)s </td>
@@ -839,15 +860,17 @@ class OneTagResults(dict):
         
         first = None
         subresults_html = ''
-        for type in ['parton', 'pythia', 'pgs', 'delphes']:
+        for type in ['parton', 'pythia', 'pgs', 'delphes','reweight']:
             data = getattr(self, type)
             if not data:
                 continue
             
             local_dico = {'type': type, 'run': self['run_name']}
-
             if not first:
-                template = sub_part_template_parton
+                if type == 'reweight':
+                    template = sub_part_template_reweight
+                else:
+                    template = sub_part_template_parton
                 first = type
                 if type=='parton' and self['cross_pythia']:
                     local_dico['cross_span'] = 1
@@ -885,7 +908,7 @@ class OneTagResults(dict):
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
             else:
-               template = sub_part_template_pgs             
+                template = sub_part_template_pgs   
             
             # Fill the links
             local_dico['links'] = self.get_links(type)

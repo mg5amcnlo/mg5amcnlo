@@ -559,7 +559,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- define a multiparticle",'$MG:color:BLUE')
         logger.info("Syntax:  define multipart_name [=] part_name_list")
         logger.info("Example: define p = g u u~ c c~ d d~ s s~ b b~",'$MG:color:GREEN')
-        
+        logger.info("Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("-- set options for generation or output.",'$MG:color:BLUE')
@@ -607,6 +608,10 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
+        logger.info("OLP ProgramName",'$MG:color:BLACK')
+        logger.info(" > (default 'MadLoop') [Used for virtual generation]")
+        logger.info(" > Chooses what One-Loop Program to use for the virtual")
+        logger.info(" > matrix element generation via the BLAH accord.")
        
 #===============================================================================
 # CheckValidForCmd
@@ -864,7 +869,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -1068,6 +1073,9 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output']:
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
@@ -1123,7 +1131,10 @@ This will take effect only in a NEW terminal
         if args[0] in ['timeout']:
             if not args[1].isdigit():
                 raise self.InvalidCmd('timeout values should be a integer')
-            
+        
+        if args[0] in ['OLP']:
+            if args[1] not in MadGraphCmd._OLP_supported:
+                raise self.InvalidCmd('timeout values should be a integer')    
 
             
     def check_open(self, args):
@@ -1883,9 +1894,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, self._multiparticles.keys())
             elif args[1] == 'gauge':
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
+            elif args[1] == 'OLP':
+                return self.list_completion(text, MadGraphCmd._OLP_supported)
             elif args[1] == 'stdout_level':
-                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR','CRITICAL','default'])
-        
+                return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
+                                                          'CRITICAL','default'])
             elif args[1] == 'fortran_compiler':
                 return self.list_completion(text, ['f77','g77','gfortran','default'])
             elif args[1] == 'nb_core':
@@ -2104,8 +2117,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'MCatNLO-utilities','update', 'Delphes2']
-    _v4_export_formats = ['madevent', 'standalone', 'standalone_ms', 'matrix'] 
+                     'update', 'Delphes2']
+    _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
+                          'matrix', 'standalone_rw'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2115,16 +2129,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _OLP_supported = ['MadLoop', 'GoSam']
 
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
+                       'hwpp_path': './herwigPP',
+                       'thepeg_path': './thepeg',
+                       'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -2137,7 +2154,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'lhapdf':'lhapdf-config',
-                       'cluster_temp_path':None
+                       'cluster_temp_path':None,
+                       'OLP': 'MadLoop',
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2167,8 +2185,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'MG5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if madgraph.ReadWrite: # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -2222,7 +2241,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()    
 
-        self._v4_export_formats = ['madevent', 'standalone','standalone_ms', 'matrix'] 
+        self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
+                                   'matrix', 'standalone_rw'] 
         self._export_formats = self._v4_export_formats + ['standalone_cpp', 'pythia8']
         self._nlo_modes_for_completion = ['all','virt','real']
     
@@ -2234,7 +2254,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if madgraph.ReadWrite: #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
+        print
 
         return value
         
@@ -2337,19 +2359,33 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Define a multiparticle"""
 
         self.avoid_history_duplicate('define %s' % line, ['define'])
+        if not self._curr_model:
+            self.do_import('model sm')
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except ValueError:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
@@ -3655,7 +3691,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]
                 if not mother[0] > 0:
-                    child = [-id for id in child]
+                    child = [x if self._curr_model.get_particle(x)['self_antipart'] 
+                             else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
 
@@ -3672,6 +3709,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     for decay in amp.get('decay_chains'):
                         remove_amp(decay.get('amplitudes'))
         remove_amp(self._curr_amps) 
+        
     
     def import_ufo_model(self, model_name):
         """ import the UFO model """
@@ -3807,8 +3845,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes', 
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis', 
-                'MCatNLO-utilities':'MCatNLO-utilities'}
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis'}
         name = name[args[0]]
 
         try:
@@ -3859,20 +3896,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             text = open(path).read()
             text = text.replace('MBITS=32','MBITS=64')
             open(path, 'w').writelines(text)
-        elif args[0] == "MCatNLO-utilities" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
-            text = open(path).read()
-            text = text.replace('MBITS=32','MBITS=64')
-            open(path, 'w').writelines(text)
-            to_copy = [os.path.join('SubProcesses', 'reweight0.inc')]
-            for f in to_copy:
-                files.cp(os.path.join(MG5DIR, 'Template', 'NLO', f), \
-                        os.path.join(MG5DIR, 'MCatNLO-utilities', 'MCatNLO', 'srcCommon'))
+            if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
+                os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
             
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
                 compiler = 'gfortran'
@@ -3887,8 +3917,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
             elif args[0] == 'MadAnalysis':
                 path = os.path.join(MG5DIR, 'MadAnalysis', 'makefile')
-            elif args[0] == 'MCatNLO-utilities':
-                path = os.path.join(MG5DIR, 'MCatNLO-utilities', 'StdHEP', 'src', 'make_opts')
             
             if path:
                 text = open(path).read()
@@ -3902,13 +3930,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
             except Exception:
                 pass
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
             except Exception:
                 pass
-            status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
+            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('Compilation succeeded')
         else:
@@ -3948,9 +3982,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
                     
-            if args[0] == 'MCatNLO-utilities':
-                self.do_set('MCatNLO-utilities_path %s/MCatNLO-utilities' % MG5DIR)
-            
         if args[0] == 'Delphes2':
             data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
             data = data.replace('data/', 'DELPHESDIR/data/')
@@ -4008,6 +4039,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return 
+        
+        if not misc.which('patch'):
+            error_text = """Not able to find program \'patch\'. Please reload a clean version
+            or install that program and retry."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            return            
         
         
         # read the data present in .autoupdate
@@ -4180,17 +4218,36 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return self.options # the return is usefull for unittest
 
         # Treat each expected input
-        # 1: Pythia8_path
-        # try relative path
+        # 1: Pythia8_path and hewrig++ paths
+        # try absolute and relative path
         for key in self.options:
-            if key == 'pythia8_path':
-                if self.options['pythia8_path'] in ['None', None]:
-                    self.options['pythia8_path'] = None
+            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']:
+                if self.options[key] in ['None', None]:
+                    self.options[key] = None
                     continue
-                pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
-                if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
+                path = self.options[key]
+                #this is for pythia8
+                if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Pythia.h')):
                         self.options['pythia8_path'] = None
+                    else:
+                        continue
+                #this is for hw++
+                elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                        self.options['hwpp_path'] = None
+                    else:
+                        continue
+                # this is for thepeg
+                elif key == 'thepeg_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                        self.options['thepeg_path'] = None
+                    else:
+                        continue
+                # this is for hepmc
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                        self.options['hepmc_path'] = None
                     else:
                         continue
 
@@ -4591,14 +4648,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             # They are a valid model
             able_to_mod = True
             if args[1] == 'unitary':
-                if 1 in self._curr_model.get('gauge'):		   
+                if 0 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = True
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
 		                                     % self._curr_model.get('name'))
             else:
-                if 0 in self._curr_model.get('gauge'):		   
+                if 1 in self._curr_model.get('gauge'):		   
                     aloha.unitary_gauge = False
                 else:
                     able_to_mod = False
@@ -4692,6 +4749,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             
             self.options[args[0]] = (int(first), int(second))
              
+        elif args[0] == 'OLP':
+            # Reset the amplitudes, MatrixElements and exporter as they might
+            # depend on this option
+            self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+            self._curr_exporter = None
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -4786,8 +4851,24 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         #################
         ## Other Output #
         #################
-        if not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['madevent', 'standalone']:
+        # Configuration of what to do:
+        # check: check status of the directory
+        # exporter: which exporter to use (v4/cpp/...)
+        # output: [Template/dir/None] copy the Template, just create dir or do nothing
+        config = {}
+        config['madevent'] =       {'check': True,  'exporter': 'v4',  'output':'Template'}
+        config['matrix'] =         {'check': False, 'exporter': 'v4',  'output':'dir'}
+        config['standalone'] =     {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_msF'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_msP'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
+        config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
+        
+        
+        options = config[self._export_format]
+        # check
+        if not noclean and os.path.isdir(self._export_dir) and options['check']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)
@@ -4800,18 +4881,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             else:
                 shutil.rmtree(self._export_dir)
 
-        # Make a Template Copy
-        if self._export_format in ['madevent', 'standalone','standalone_ms', 'matrix']:
+        #Exporter + Template
+        if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
-        elif self._export_format == 'standalone_cpp':
+            if options['output'] == 'Template':
+                self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+        if  options['exporter'] == 'cpp' and options['output'] == 'Template':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        if self._export_format not in \
-                ['madevent', 'standalone', 'standalone_cpp', 'standalone_ms'] and \
-                not os.path.isdir(self._export_dir):
+
+        if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -4836,7 +4916,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             """Helper function to generate the matrix elements before
             exporting"""
 
-            if self._export_format == 'standalone_ms':
+            if self._export_format in ['standalone_msP', 'standalone_msF', 'standalone_mw']:
                 to_distinguish = []
                 for part in self._curr_model.get('particles'):
                     if part.get('name') in args and part.get('antiname') in args and\
@@ -4893,7 +4973,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                             me.get('processes')[0].set('uid', uid)
                 else: # Not grouped subprocesses
                     mode = {}
-                    if self._export_format == 'standalone_ms':
+                    if self._export_format in [ 'standalone_msP' , 'standalone_msF', 'standalone_rw']:
                         mode['mode'] = 'MadSpin'
                     self._curr_matrix_elements = \
                        helas_objects.HelasMultiProcess(self._curr_amps, matrix_element_opts=mode)
@@ -4916,7 +4996,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 'standalone_ms']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 
+                                   'standalone_msP', 'standalone_msF', 'standalone_rw']:
             path = pjoin(path, 'SubProcesses')
             
         cpu_time1 = time.time()
@@ -4987,7 +5068,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         self._curr_matrix_elements.get_matrix_elements()
 
         # Fortran MadGraph Standalone
-        if self._export_format in ['standalone', 'standalone_ms']:
+        if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
                             me, self._curr_fortran_model)
@@ -5050,7 +5131,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
         
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
+                                   'standalone_msF', 'standalone_rw', 'NLO']:
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -5084,7 +5166,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-            fj_lhapdf_file = open(os.path.join(self._export_dir,'Source','fj_lhapdf_opts'),'w')
 
             try:
                 p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
@@ -5125,12 +5206,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         ('%s/Source/fj_lhapdf_opts file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            fj_lhapdf_lines = \
-                 ['fastjet_config=%s' % self.options['fastjet'],
-                  'lhapdf_config=%s' % self.options['lhapdf']]
-            text = '\n'.join(fj_lhapdf_lines) + '\n'
-            fj_lhapdf_file.write(text)
-            fj_lhapdf_file.close()
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
                                            [self.history_header] + \
@@ -5140,18 +5215,49 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.options['fortran_compiler'])
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            to_keep = {}
+            for opt in opts_to_keep:
+                if self.options[opt]:
+                    to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'MCatNLO-utilities_path': './MCatNLO-utilities',
-                               'lhapdf': self.options['lhapdf'],
-                               'fastjet': self.options['fastjet']})
+                    to_keep = to_keep)
 
-            # copy the MCatNLO directory from mcatnlo-utils inside the exported dir
-            if os.path.isdir(pjoin(MG5DIR, 'MCatNLO-utilities')):
-                files.cp(pjoin(MG5DIR, 'MCatNLO-utilities', 'MCatNLO'), self._export_dir)
-            else:
-                logger.warning('MCatNLO-utilities is not installed.')
-                logger.warning('If you want to shower events ' + \
-                        'with MC@NLO please install it by typing "install MCatNLO-utilities"')
+            # check if stdhep has to be compiled (only the first time)
+            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
+                logger.info('Compiling StdHEP. This has to be done only once.')
+                # this is for 64-bit systems
+                if sys.maxsize > 2**32:
+                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+                    text = open(path).read()
+                    text = text.replace('MBITS=32','MBITS=64')
+                    open(path, 'w').writelines(text)
+                # Set the correct fortran compiler
+                if 'FC' not in os.environ or not os.environ['FC']:
+                    if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
+                        compiler = self.options['fortran_compiler']
+                    elif misc.which('gfortran'):
+                        compiler = 'gfortran'
+                    elif misc.which('g77'):
+                        compiler = 'g77'
+                    else:
+                        raise self.InvalidCmd('Require g77 or Gfortran compiler')
+                    path = None
+                    base_compiler= ['FC=g77','FC=gfortran']
+                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+                    text = open(path).read()
+                    for base in base_compiler:
+                        text = text.replace(base,'FC=%s' % compiler)
+                    open(path, 'w').writelines(text)
+
+                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
+                logger.info('Done.')
+            #then link the libraries in the exported dir
+            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a'), \
+               pjoin(self._export_dir, 'MCatNLO', 'lib'))
+            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
+               pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
         elif self._export_format == 'madevent':          
             # Create configuration file [path to executable] for madevent
@@ -5159,7 +5265,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, 
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_ms']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
+                                   'standalone_rw']:
             
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,

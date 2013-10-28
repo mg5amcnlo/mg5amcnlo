@@ -32,14 +32,15 @@ def ixxxxx(p,fmass,nhel,nsf):
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
-            sqm = sqrt(abs(fmass)) 
-            ip = (1+nh)/2 
-            im = (1-nh)/2 
+            sqm = [sqrt(abs(fmass))]
+            sqm.append(sign(sqm[0],fmass)) 
+            ip = (1+nh)//2 
+            im = (1-nh)//2 
 
-            fi[2] = ip*sqm
-            fi[3] = im*nsf*sqm
-            fi[4] = ip*nsf*sqm
-            fi[5] = im*sqm
+            fi[2] = ip*sqm[ip]
+            fi[3] = im*nsf*sqm[ip]
+            fi[4] = ip*nsf*sqm[im]
+            fi[5] = im*sqm[im]
 
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]
@@ -90,14 +91,15 @@ def oxxxxx(p,fmass,nhel,nsf):
     if (fmass != 0.):
         pp = min(p[0],sqrt(p[1]**2 + p[2]**2 + p[3]**2 ))
         if (pp == 0.): 
-            sqm = sqrt(abs(fmass)) 
-            ip = -((1+nh)/2) 
-            im = (1-nh)/2 
-
-            fo[2] = im*sqm
-            fo[3] = ip*nsf*sqm
-            fo[4] = im*nsf*sqm
-            fo[5] = ip*sqm
+            sqm = [sqrt(abs(fmass))]
+            sqm.append( sign(sqm[0], fmass)) 
+            ip = int(-((1-nh)//2) * nhel)
+            im = int((1+nh)//2 * nhel)
+            
+            fo[2] = im*sqm[abs(im)]
+            fo[3] = ip*nsf*sqm[abs(im)]
+            fo[4] = im*nsf*sqm[abs(ip)]
+            fo[5] = ip*sqm[abs(ip)]
 
         else:
             sf = [(1+nsf+(1-nsf)*nh)*0.5,(1+nsf-(1-nsf)*nh)*0.5]
@@ -380,20 +382,20 @@ def irxxxx(p, mass, nhel, nsr):
             #ep[0] = 0
             ep[3] = pt/pp*sqh
             if pt:
-               pzpt = p[3]/(pp*pt)*sqh
-               ep[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
-               ep[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
+                pzpt = p[3]/(pp*pt)*sqh
+                ep[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
+                ep[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
             else:
-               ep[1] = -sqh 
-               ep[2] = complex( 0 , nsv*sign(sqh,p[3]) )
+                ep[1] = -sqh 
+                ep[2] = complex( 0 , nsv*sign(sqh,p[3]) )
         else:
             #ep[0] = 0d0
             ep[1] = -sqh
-            ep[2] = complex(0, nsv * sign(sqh,p(3)))
+            ep[2] = complex(0, nsv * sqh)
             #ep[3] = 0d0
 
          
-    if ( nhel <= 0 ): 
+    if ( nhel < 0 ): 
         #construct eps-
         em = [0] * 4
         if ( pp == 0 ):
@@ -405,12 +407,12 @@ def irxxxx(p, mass, nhel, nsr):
             #em[0] = 0
             em[3] = -pt/pp*sqh
             if pt:
-               pzpt = -p[3]/(pp*pt)*sqh
-               em[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
-               em[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
+                pzpt = -p[3]/(pp*pt)*sqh
+                em[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
+                em[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
             else:
-               em[1] = sqh
-               em[2] = complex( 0 , nsv*sign(sqh,p[3]) )            
+                em[1] = sqh
+                em[2] = complex( 0 , nsv*sign(sqh,p[3]) )            
                 
     if ( abs(nhel) <= 1 ):  
         #construct eps0
@@ -453,8 +455,8 @@ def irxxxx(p, mass, nhel, nsr):
                 sf[1] = float(1+nsr-(1-nsr)*nh)*0.5
                 omega[0] = sqrt(p[0]+pp)
                 omega[1] = mass/omega[0]
-                ip = (1+nh)//2 
-                im = (1-nh)//2 
+                ip = ((3+nh)//2) -1 # -1 since they are index 
+                im = ((3-nh)//2) -1 # -1 since they are index
                 sfomeg[0] = sf[0]*omega[ip]
                 sfomeg[1] = sf[1]*omega[im]
                 pp3 = max([pp+p[3],0])
@@ -614,7 +616,6 @@ def orxxxx(p, mass, nhel, nsr):
     pt2 = p[1]**2 + p[2]**2
     pp = min([p[0], sqrt(pt2+p[3]**2)])
     pt = min([pp,sqrt(pt2)])
-    
     rc = {}
     rc[(4,0)] = complex(p[0],p[3])*nsr
     rc[(5,0)] = complex(p[1],p[2])*nsr
@@ -629,12 +630,12 @@ def orxxxx(p, mass, nhel, nsr):
             #ep[0] = 0
             ep[3] = pt/pp*sqh
             if pt:
-               pzpt = p[3]/(pp*pt)*sqh
-               ep[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
-               ep[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
+                pzpt = p[3]/(pp*pt)*sqh
+                ep[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
+                ep[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
             else:
-               ep[1] = -sqh 
-               ep[2] = complex( 0 , nsv*sign(sqh,p[3]) )
+                ep[1] = -sqh 
+                ep[2] = complex( 0 , nsv*sign(sqh,p[3]) )
         else:
             #ep[0] = 0d0
             ep[1] = -sqh
@@ -653,12 +654,12 @@ def orxxxx(p, mass, nhel, nsr):
             #em[0] = 0
             em[3] = -pt/pp*sqh
             if pt:
-               pzpt = -p[3]/(pp*pt)*sqh
-               em[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
-               em[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
+                pzpt = -p[3]/(pp*pt)*sqh
+                em[1] = complex( -p[1]*pzpt , -nsv*p[2]/pt*sqh )
+                em[2] = complex( -p[2]*pzpt ,  nsv*p[1]/pt*sqh )
             else:
-               em[1] = sqh
-               em[2] = complex( 0 , nsv*sign(sqh,p[3]) )            
+                em[1] = sqh
+                em[2] = complex( 0 , nsv*sign(sqh,p[3]) )            
                 
     if ( abs(nhel) <= 1 ):  
         #construct eps0
@@ -701,8 +702,8 @@ def orxxxx(p, mass, nhel, nsr):
                 sf[1] = (1+nsr-(1-nsr)*nh)*0.5
                 omega[0] = sqrt(p[0]+pp)
                 omega[1] = mass/omega[0]
-                ip = (1+nh)//2 
-                im = (1-nh)//2 
+                ip = (3+nh)//2  -1 # -1 since this is index
+                im = (3-nh)//2  -1 # -1 since this is index 
                 sfomeg[0] = sf[0]*omega[ip]
                 sfomeg[1] = sf[1]*omega[im]
                 pp3 = max([pp+p[3],0])
@@ -757,10 +758,10 @@ def orxxxx(p, mass, nhel, nsr):
                 ip = -((1+nh)/2)
                 im =  (1-nh)/2
             
-                fom[1] = im     * sqm[im]
-                fom[2] = ip*nsr * sqm[im]
-                fom[3] = im*nsr * sqm[-ip]
-                fom[4] = ip     * sqm[-ip]
+                fom[0] = im     * sqm[im]
+                fom[1] = ip*nsr * sqm[im]
+                fom[2] = im*nsr * sqm[-ip]
+                fom[3] = ip     * sqm[-ip]
             
             else:
                 pp = min([p[0],sqrt(p[1]**2+p[2]**2+p[3]**2)])
@@ -768,8 +769,8 @@ def orxxxx(p, mass, nhel, nsr):
                 sf[1] = (1+nsr-(1-nsr)*nh)*0.5
                 omega[0] = sqrt(p[0]+pp)
                 omega[1] = mass/omega[0]
-                ip = (1+nh)//2
-                im = (1-nh)//2
+                ip = (3+nh)//2 -1 #-1 since ip is an index
+                im = (3-nh)//2 -1 
                 sfomeg[0] = sf[0]*omega[ip]
                 sfomeg[1] = sf[1]*omega[im]
                 pp3 = max([pp+p[3], 0])
@@ -802,8 +803,8 @@ def orxxxx(p, mass, nhel, nsr):
             else:
                 #fom[1] = 0
                 #fom[2] = 0
-                fom[3] = chi[1]
-                fom[4] = chi[0]
+                fom[2] = chi[1]
+                fom[3] = chi[0]
 
     cond1 = ( pt==0 and p[3]>=0)
     cond2= (pt==0 and p[3]<0)

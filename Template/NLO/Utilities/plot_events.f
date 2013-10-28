@@ -23,7 +23,7 @@ c         any-dependencies-in-madfksplot
       parameter (zero=0.d0)
       character*80 event_file
       character*140 buff
-      character*1 ch1
+      character*9 ch1
       logical AddInfoLHE
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
@@ -31,9 +31,12 @@ c         any-dependencies-in-madfksplot
       common/citmax/itmax,ncall
 
       include "genps.inc"
+      include "nexternal.inc"
       integer j,k
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
       character*10 MonteCarlo
+      integer numscales,numPDFpairs,isc,ipdf
+      common/cwgxsec1/numscales,numPDFpairs
 
       usexinteg=.false.
       mint=.false.
@@ -48,7 +51,9 @@ c         any-dependencies-in-madfksplot
       open (unit=ifile,file=event_file,status='old')
       AddInfoLHE=.false.
 
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numscales=int(sqrt(dble(isc)))
+      numPDFpairs=ipdf/2
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
@@ -68,7 +73,7 @@ c         any-dependencies-in-madfksplot
              write(*,*)'Inconsistency in event file',i,' ',buff
              stop
            endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
      #                       scale1_lhe,scale2_lhe,
      #                       jwgtinfo,mexternal,iwgtnumpartn,
@@ -96,7 +101,6 @@ c         any-dependencies-in-madfksplot
       close(99)
 
       write (*,*) 'The sum of the weights is:',sum_wgt
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       end
 
@@ -107,6 +111,7 @@ c works in any frame
       implicit none
       integer nev,npart,maxmom
       include "genps.inc"
+      include "nexternal.inc"
       real*8 xmass(3*nexternal),xmom(0:3,3*nexternal)
       real*8 tiny,vtiny,xm,xlen4,den,xsum(0:3),xsuma(0:3),
      # xrat(0:3),ptmp(0:3)

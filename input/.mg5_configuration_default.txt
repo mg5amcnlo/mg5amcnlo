@@ -54,10 +54,19 @@
 #timeout = 60
 
 # Pythia8 Path.
-# Define the path to the pythia8 directory.
-# relative path start from mg5 directory
+# define the path to the pythia8 directory.
+# paths can be absolute or relative from mg5 directory
 
-#pythia8_path = ./pythia8
+#pythia8_path = 
+
+#Herwig++ paths
+# specify here the paths also to HepMC ant ThePEG
+# define the path to the herwig++, thepeg and hepmc directories.
+# paths can be absolute or relative from mg5 directory
+
+#hwpp_path = 
+#thepeg_path = 
+#hepmc_path = 
 
 # Control when MG5 checks if he is up-to-date.
 # Enter the number of day between two check (0 means never)
@@ -82,7 +91,7 @@
 
 #run_mode = 2
 
-# Cluster Type [pbs|sge|condor|lsf|ge] Use for cluster run only
+# Cluster Type [pbs|sge|condor|lsf|ge|slurm] Use for cluster run only
 # And cluster queue
 
 #cluster_type = condor
@@ -142,7 +151,6 @@
 # relative path starting from main directory
 # MCatNLO-utilities_path = ./MCatNLO-utilities
 
-
-
-
+# Set what OLP to use for the loop ME generation
+# OLP = MadLoop
 

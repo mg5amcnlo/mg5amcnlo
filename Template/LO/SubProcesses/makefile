@@ -36,6 +36,9 @@ $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 $(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
 	cd ../../Source; make
 
+$(LIBDIR)libpdf.$(libext): 
+	cd ../../Source/PDF; make
+
 # Dependencies
 
 driver.f: genps.inc qmass.inc
