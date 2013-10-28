@@ -264,9 +264,12 @@ class CmdExtended(common_run.CommonRunCmd):
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
         try:
+            if hasattr(self, 'cluster'):
+                logger.info('rm jobs on queue')
+                self.cluster.remove()
             if hasattr(self, 'results'):
                 self.update_status('Stop by the user', level=None, makehtml=True, error=True)
-                self.add_error_log_in_html()
+                self.add_error_log_in_html(KeyboardInterrupt)
         except:
             pass
     
@@ -1098,11 +1101,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
         self.update_status('', level='all', update_results=True)
 
-    def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None, update_results=False):
-        
-        common_run.CommonRunCmd.update_status(self, status, level, makehtml, 
-                                        force, error, starttime, update_results)
 
 
     def update_random_seed(self):
@@ -1854,7 +1852,7 @@ Integrated cross-section
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
 
-        self.update_status('Run completed', level='hadron', update_results=True)
+        self.update_status('Run completed', level='parton', update_results=True)
 
 
 
@@ -2459,6 +2457,8 @@ Integrated cross-section
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+
+        self.results.add_detail('run_mode', mode) 
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')

@@ -20,6 +20,7 @@ import math
 import re
 import pickle
 import re
+import glob
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
@@ -92,7 +93,7 @@ function check_link(url,alt, id){
 """
 
 status_template = """
-<H2 ALIGN=CENTER> Currently Running </H2>
+<H2 ALIGN=CENTER> Currently Running %(run_mode_string)s</H2>
 <TABLE BORDER=2 ALIGN=CENTER>
     <TR ALIGN=CENTER>
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Run Name </TH>
@@ -298,7 +299,7 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia']
+                        'nb_event_pythia','error_pythia', 'run_mode']
 
         if not run and not self.current:
             return
@@ -314,6 +315,8 @@ class AllResults(dict):
             run[name] = int(value)
         elif name == 'nb_event_pythia':
             run[name] = int(value)
+        elif name == 'run_mode':
+            run[name] = value
         else:    
             run[name] = float(value)    
     
@@ -336,6 +339,18 @@ class AllResults(dict):
                             'run_name': self.current['run_name'],
                             'tag_name': self.current['tag'],
                             'unit': self[self.current['run_name']].info['unit']}
+            # add the run_mode_string for amcatnlo_run
+            if 'run_mode' in self.current.keys():
+                run_mode_string = {'aMC@NLO': '(aMC@NLO)',
+                                   'aMC@LO': '(aMC@LO)',
+                                   'noshower': '(aMC@NLO)',
+                                   'noshowerLO': '(aMC@LO)',
+                                   'NLO': '(NLO f.o.)',
+                                   'LO': '(LO f.o.)'}
+                status_dict['run_mode_string'] = run_mode_string[self.current['run_mode']]
+            else:
+                status_dict['run_mode_string'] = ''
+
 
             if exists(pjoin(self.path, 'HTML',self.current['run_name'], 
                         'results.html')):
@@ -404,8 +419,6 @@ class AllResults(dict):
 class AllResultsNLO(AllResults):
     """Store the results for a NLO run of a given directory"""
     pass
-
-
        
 
 class RunResults(list):
@@ -444,7 +457,6 @@ class RunResults(list):
     
     def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
-
         try:
             self.web = opt['web']
             self.info['web'] = self.web
@@ -473,8 +485,8 @@ class RunResults(list):
             
             text = text % self.info
 
-
         return text
+
     
     def return_tag(self, name):
         
@@ -583,8 +595,7 @@ class OneTagResults(dict):
         self.delphes = []
         # data 
         self.status = ''
-        
-    
+
     
     
     def update_status(self, level='all', nolevel=[]):
@@ -629,6 +640,19 @@ class OneTagResults(dict):
             if 'param_card' not in self.parton and \
                                     exists(pjoin(path, "param_card.dat")):
                 self.parton.append('param_card')
+
+            # this is for hep/top files fromamcatnlo
+            if glob.glob(pjoin(path,"*.hep")) + \
+               glob.glob(pjoin(path,"*.hep.gz")):
+                self.parton.append('hep')
+
+            if glob.glob(pjoin(path,"*.hepmc")) + \
+               glob.glob(pjoin(path,"*.hepmc.gz")):
+                self.parton.append('hepmc')
+
+            if glob.glob(pjoin(path,"*.top")):
+                self.parton.append('top')
+
                 
         if level in ['pythia', 'all']:
             
@@ -735,6 +759,14 @@ class OneTagResults(dict):
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
 
+            # this is to add the link to the results after shower for amcatnlo
+            for type in ['hep', 'hepmc', 'top']:
+                if type in self.parton:
+                    for f in \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + type)) + \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + type + '.gz')):
+                        out += " <a href=\"%s\">%s</a> " % (f, type.upper())
+
             return out % self
         
         if level == 'reweight':
@@ -791,6 +823,8 @@ class OneTagResults(dict):
             if 'plot' in self.delphes:
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             return out % self
+
+
                 
     
     def get_nb_line(self):
@@ -817,7 +851,7 @@ class OneTagResults(dict):
         
         sub_part_template_parton = """
         <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g </a></center></td>
-        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s %(run_mode)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
         </tr>"""
@@ -866,6 +900,10 @@ class OneTagResults(dict):
                 continue
             
             local_dico = {'type': type, 'run': self['run_name']}
+            if 'run_mode' in self.keys():
+                local_dico['run_mode'] = self['run_mode']
+            else:
+                local_dico['run_mode'] = ""
             if not first:
                 if type == 'reweight':
                     template = sub_part_template_reweight
@@ -935,7 +973,13 @@ class OneTagResults(dict):
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
                                                                        % (self['run_name'], self['tag']))
-                    local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    # this the detector simulation and pythia should be available only for madevent
+                    if os.path.exists(os.path.join(self.me_dir, 'bin', 'madevent')): 
+                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    elif os.path.exists(os.path.join(self.me_dir, 'bin', 'aMCatNLO')): 
+                        print 'MZ: update buttons for amcatnlo'
+                        pass
+
             elif type == 'pythia':
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
@@ -1019,7 +1063,8 @@ class OneTagResults(dict):
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
-                           'action': action
+                           'action': action,
+                           'run_mode': ''
                            }                                
                                   
         if self.debug is KeyboardInterrupt:
