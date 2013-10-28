@@ -500,7 +500,7 @@ c Compute the results of the last three iterations
      $              ,j).eq.0d0)) then
                   ans_l3(i)=0d0
                   unc_l3(i)=0d0
-                  chi2_l3=0d0
+                  chi2_l3(i)=0d0
                else
                   ans_l3(i)=(ans_l3(i)/unc_l3(i)+ans3(i,j)/unc3(i,j))/
      &                 (1/unc_l3(i)+1/unc3(i,j))
