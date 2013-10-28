@@ -1108,7 +1108,7 @@ This will take effect only in a NEW terminal
         """    
         
         if len(args)<1:
-            self.help_calculate_width()
+            self.help_compute_widths()
             raise self.InvalidCmd('''compute_widths requires at least the name of one particle.
             If you want to compute the width of all particles, type \'compute_widths all\'''')
 
@@ -1407,7 +1407,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             completion = {}            
             completion['options'] = self.list_completion(text, 
-                            ['--path=', '--output=', '--min_br=0.\$'
+                            ['--path=', '--output=', '--min_br=0.\$',
                              '--precision_channel=0.\$', '--body_decay='])
             completion['particles'] = self.model_completion(text, '')            
         
@@ -4626,6 +4626,10 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         else:
             madevent_interface.MadEventCmd.update_width_in_param_card(decay_info, 
                                                    opts['path'], opts['output'])
+            if float(opts['body_decay']) == 2:
+                return
+        
+        
         
         #
         # add info from decay module
@@ -4673,11 +4677,12 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 me_cmd.exec_cmd('combine_events', postcmd=False)
                 #me_cmd.exec_cmd('store_events', postcmd=False)
                 me_cmd.collect_decay_widths()
-                #me_cmd.do_quit()
+                me_cmd.do_quit('')
                 # cleaning
                 del me_cmd
                 
             param = check_param_card.ParamCard(pjoin(decay_dir, 'Events', 'decay','param_card.dat'))
+
         for pid in particles:
             width = param['decay'].get((pid,)).value
             if not pid in param['decay'].decay_table:

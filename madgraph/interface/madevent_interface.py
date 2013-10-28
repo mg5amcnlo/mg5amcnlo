@@ -972,7 +972,8 @@ class CheckValidForCmd(object):
                                                for p in model.get('particles')]))        
         
         output = {'model': model, 'force': False, 'output': None, 
-                  'input':None, 'particles': set(), 'precision':0.001}
+                  'path':None, 'particles': set(), 'body_decay':4.0025,
+                  'min_br':None, 'precision_channel':0.01}
         for arg in args:
             if arg.startswith('--output='):
                 output_path = arg.split('=',1)[1]
@@ -980,27 +981,27 @@ class CheckValidForCmd(object):
                     raise self.InvalidCmd, 'Invalid Path for the output. Please retry.'
                 if not os.path.isfile(output_path):
                     output_path = pjoin(output_path, 'param_card.dat')
-                output['output'] = output_path
-            elif arg.startswith('--precision='):
-                nbody = arg.split('=',1)[1]
-                try:
-                    nbody = float(nbody)
-                except Exception:
-                    raise self.InvalidCmd, '--precision requires integer or a float'
-                output['precision'] = float(nbody)         
+                output['output'] = output_path       
             elif arg == '-f':
                 output['force'] = True
             elif os.path.isfile(arg):
                 type = self.detect_card_type(arg)
                 if type != 'param_card.dat':
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
-                output['input'] = arg
+                output['path'] = arg
             elif arg.startswith('--path='):
                 arg = arg.split('=',1)[1]
                 type = self.detect_card_type(arg)
                 if type != 'param_card.dat':
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
-                output['input'] = arg               
+                output['path'] = arg
+            elif arg.startswith('--'):
+                name, value = arg.split('=',1)
+                try:
+                    value = float(value)
+                except Exception:
+                    raise self.InvalidCmd, '--%s requires integer or a float' % name
+                output[name[2:]] = float(value)                
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
@@ -1009,7 +1010,6 @@ class CheckValidForCmd(object):
             elif arg == 'all':
                 output['particles'] = ['all']
             else:
-                print particles_name
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
 
@@ -1018,7 +1018,7 @@ class CheckValidForCmd(object):
             the related width'''
             
         if output['output'] is None:
-            output['output'] = output['input']
+            output['output'] = output['path']
 
         return output
     
@@ -1494,6 +1494,27 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.complete_generate_events(*args, **opts)
 
+    def complete_compute_widths(self, text, line, begidx, endidx):
+        "Complete the compute_widths command"
+
+        args = self.split_arg(line[0:begidx])
+        
+        if args[-1] in  ['--path=', '--output=']:
+            completion = {'path': self.path_completion(text)}
+        elif line[begidx-1] == os.path.sep:
+            current_dir = pjoin(*[a for a in args if a.endswith(os.path.sep)])
+            if current_dir.startswith('--path='):
+                current_dir = current_dir[7:]
+            if current_dir.startswith('--output='):
+                current_dir = current_dir[9:]                
+            completion = {'path': self.path_completion(text, current_dir)}
+        else:
+            completion = {}            
+            completion['options'] = self.list_completion(text, 
+                            ['--path=', '--output=', '--min_br=0.\$'
+                             '--precision_channel=0.\$', '--body_decay='])            
+        
+        return self.deal_multiple_categories(completion)
 
     def complete_calculate_decay_widths(self, text, line, begidx, endidx):
         """ Complete the calculate_decay_widths command"""
@@ -2148,6 +2169,15 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         """Not in help:Print the cross-section/ number of events for a given run"""
         
         args = self.split_arg(line)
+        options={'path':None, 'mode':'w'}
+        for arg in list(args):
+            if arg.startswith('--') and '=' in arg:
+                name,value=arg.split('=',1)
+                name = name [2:]
+                options[name] = value
+                args.remove(arg)
+        
+        
         if len(args) > 0:
             run_name = args[0]
         else:
@@ -2158,6 +2188,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         if run_name not in self.results:
             raise self.InvalidCmd('%s is not a valid run_name or it doesn\'t have any information' \
                                   % run_name)
+
+            
         if len(args) == 2:
             tag = args[1]
             if tag.isdigit():
@@ -2171,7 +2203,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         else:
             data = self.results[run_name].return_tag(None) # return the last
         
-        self.print_results_in_shell(data)
+        if options['path']:
+            self.print_results_in_file(data, options['path'], options['mode'])
+        else:
+            self.print_results_in_shell(data)
         
 
     ############################################################################
@@ -2361,6 +2396,30 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
         logger.info(" " )
+
+    def print_results_in_file(self, data, path, mode='w'):
+        """Have a nice results prints in the shell,
+        data should be of type: gen_crossxhtml.OneTagResults"""
+        if not data:
+            return
+        
+        fsock = open(path, mode)
+        
+        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
+                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
+        
+        if self.ninitial == 1:
+            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
+        else:
+            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
+        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
+        if data['cross_pythia'] and data['nb_event_pythia']:
+            if self.ninitial == 1:
+                fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
+            else:
+                fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
+            fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
+        fsock.write(" \n" )
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
@@ -2923,19 +2982,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
-        if not opts['input']:
-            opts['input'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
+        if not opts['path']:
+            opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
             if not opts['force'] :
                 self.ask_edit_cards(['param'],[], plot=False)
         
         
-        
-        #output = {'model': model, 'force': False, 'output': None, 
-        #          'input':None, 'particles': set(), 'precision':0.001}
-        line = 'compute_widths %s --path=%s --precision=%s %s' % \
-                           (' '.join([str(i) for i in opts['particles']]), 
-                           opts['input'], opts['precision'],
-                           '--output=%s' % opts['output'] if opts['output'] else '')
+        line = 'compute_widths %s %s' % \
+                (' '.join([str(i) for i in opts['particles']]),
+                 ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
+                        if key not in ['model', 'force', 'particles'] and value))
         
         cmd.exec_cmd(line, model=opts['model'])
         self.child = None

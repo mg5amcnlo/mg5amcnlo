@@ -1110,14 +1110,7 @@ class DecayParticle(base_objects.Particle):
 
         total_width = self.get('apx_decaywidth')
         for channel in self.get_channels(clevel, True):
-            
-            if min_br:
-                width = channel.get_apx_decaywidth(model)
-                if (width / total_width) < min_br:
-                    continue
-            
             found = False
-
             # Record the final particle id.
             final_pid = sorted([l.get('id') for l in channel.get_final_legs()])
         
@@ -1139,11 +1132,17 @@ class DecayParticle(base_objects.Particle):
                 #print 'start : ', channel.nice_string()
                 self.get_amplitudes(clevel).append(DecayAmplitude(channel,
                                                                   model))
-
+        if min_br:
+            total_width = self.get('apx_decaywidth')
         # calculate the apx_decaywidth and for every amplitude.
         # apr_br WILL NOT be calculated!
-        for amp in self.get_amplitudes(clevel):
-            amp.get('apx_decaywidth')
+        for amp in list(self.get_amplitudes(clevel)):
+            approx_width = amp.get('apx_decaywidth')
+            if min_br:
+                br = approx_width / total_width
+                if br < min_br:
+                    self.decay_amplitudes[clevel].remove(amp)
+                
         self.get_amplitudes(clevel).sort(amplitudecmp_width)
 
 
@@ -3802,6 +3801,35 @@ class Channel(base_objects.Diagram):
 #        return id_part_configs
 
 
+
+    def simplify_lorentz(self, match):
+        #
+        all = match.group('var')
+        var = all.split('(')[0]
+        if var in ['P','PSlash']:
+            nb = int(all.split(',')[1][:-1].strip())
+            return '%%(q%s)s' % nb
+        else:
+            return '1'
+        
+    @classmethod
+    def init_regular_expression(cls):
+        dico = dict((`i`, '%s' % ','.join(["\s*-?'?[\w\s]*'?\s*"]*i)) for i in range(1,6))
+        cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
+                                        Gamma\(%(3)s\)|
+                                        Sigma\(%(4)s\)|
+                                        Gamma5\(%(3)s\)|
+                                        C\(%(2)s\)|
+                                        Epsilon\(%(4)s\)|
+                                        Metric\(%(2)s\)|
+                                        Identity\(%(2)s\)|
+                                        ProjM\(%(2)s\)|
+                                        ProjP\(%(2)s\)|
+                                        P\(%(2)s\)
+                                )
+        """ % dico, re.VERBOSE)
+
+
     def get_apx_matrixelement_sq(self, model):
         """ Calculate the apx_matrixelement_sq, the estimation for each leg
             is in get_apx_fnrule.
@@ -3813,7 +3841,6 @@ class Channel(base_objects.Diagram):
 
         # To ensure the final_mass_list is setup, run get_onshell first
         self.get_onshell(model)
-
         # Setup the value of matrix element square and the average energy
         # q_dict is to record the flow of energy
         apx_m = 1
@@ -3822,34 +3849,47 @@ class Channel(base_objects.Diagram):
         avg_q = (abs(eval(ini_part.get('mass'))) - sum(self['final_mass_list']))/len(self.get_final_legs())
         q_dict = {}
 
+        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+            print '3833', self.get_onshell(model), avg_q 
         # Estimate the width of normal onshell decay.
         if self.get_onshell(model):
             # Go through each vertex and assign factors to apx_m
             # Do not run the identical vertex
             for i, vert in enumerate(self['vertices']):
+                
                 # Total energy of this vertex
+                if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+                    if i == 0 :
+                        print '*******************START************'
+                    print 'current approx', apx_m, [l['id'] for l in vert['legs']]
                 q_total = 0
                 # Color multiplcity
                 final_color = []
 
+                q_dict_lor = {}
                 # Assign value to apx_m except the mother leg (last leg)
-                for leg in vert['legs'][:-1]:
+                for lnb,leg in enumerate(vert['legs'][:-1]):
                     # Case for final legs
                     if leg in self.get_final_legs():
                         mass  = abs(eval(model.get_particle(leg.get('id')).\
                                              get('mass')))
                         q_total += (mass + avg_q)
+                        q_dict_lor['q%s'%(lnb+1)] = mass + avg_q
                         apx_m *= self.get_apx_fnrule(leg.get('id'),
                                                      avg_q+mass, True, model)
+                        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+                            print 'call apx_fnrule for', leg.get('id'), avg_q+mass, '->', apx_m
                     # If this is only internal leg, calculate the energy
                     # it accumulated. 
                     # (The value of this leg is assigned before.)
                     else:
                         q_total += q_dict[(leg.get('id'), leg.get('number'))]
-
+                        q_dict_lor['q%s'%(lnb+1)]= q_dict[(leg.get('id'), leg.get('number'))]
                     # Record the color content
                     final_color.append(model.get_particle(leg.get('id')).\
                                            get('color'))
+                else:
+                    q_dict_lor['q%s'%(lnb+2)] = q_total
 
                 # The energy for mother leg is sum of the energy of its product.
                 # Set the q_dict
@@ -3860,15 +3900,26 @@ class Channel(base_objects.Diagram):
                 if i < len(self.get('vertices'))-1: 
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
                                                  q_total, False, model)
+
                 else:
                     apx_m *=self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
                                                 abs(eval(ini_part.get('mass'))),
                                                 True, model)
 
                 # Evaluate the coupling strength
-                apx_m *= sum([abs(eval(v)) ** 2 for key, v in \
-                                  model.get('interaction_dict')[\
-                            abs(vert.get('id'))]['couplings'].items()])
+                vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
+                lorentz_factor = 0
+                for key, v in vertex['couplings'].items():
+                    if not hasattr(model, 'lorentz_dict'):
+                        model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
+                        self.init_regular_expression()
+                        
+                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
+                    new_structure = self.lor_pattern.sub(self.simplify_lorentz,
+                                                         structure)
+                    lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
+
+                apx_m *= lorentz_factor
 
                 # If final_color contain non-singlet,
                 # get the color multiplicity.
@@ -3888,14 +3939,15 @@ class Channel(base_objects.Diagram):
                         if not found:
                             apx_m *= self.get_color_multiplicity(ini_color,
                                                                  final_color, 
-                                                                 model, True)
+                                                                 model, True)                         
                     # Call the get_color_multiplicity if the final_color
                     # cannot be found directly in the color_dict.
                     except KeyError:
                         apx_m *= self.get_color_multiplicity(ini_color,
                                                              final_color, 
                                                              model, True)
-
+                        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+                            print 'color_mult2->', apx_m 
                         
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
@@ -3908,6 +3960,7 @@ class Channel(base_objects.Diagram):
             # This will take all propagators into accounts.
             # Do not run the identical vertex
             for i, vert in enumerate(self['vertices']):
+                
                 # Assign the value if the leg is not initial leg.
                 # q is assumed as 1M
                 if i < len(self.get('vertices'))-1: 
@@ -3921,6 +3974,7 @@ class Channel(base_objects.Diagram):
 
 
                 # Evaluate the coupling strength
+
                 apx_m *= sum([abs(eval(v)) ** 2 for key, v in \
                                   model.get('interaction_dict')[\
                             abs(vert.get('id'))]['couplings'].items()])
@@ -3933,7 +3987,8 @@ class Channel(base_objects.Diagram):
         # For both on-shell and off-shell cases,
         # Correct the factor of spin/color sum of initial particle (average it)
         apx_m *= 1./(ini_part.get('spin'))
-
+        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+            print 3948, 'final', apx_m
         self['apx_matrixelement_sq'] = apx_m
         return apx_m
             
@@ -3953,12 +4008,14 @@ class Channel(base_objects.Diagram):
             if not est:
                 value = 1./((q ** 2 - mass ** 2) ** 2 + \
                                 mass **2 * part.get('apx_decaywidth') **2)
+                if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+                    print 'propa suppression', value
             # Rough estimation on propagator. Avoid the large propagator when
             # q is close to mass
             else:
                 m_large = max([q, mass])
                 value = 1./(0.5* m_large**2)**2
-        
+
         # Set the value according the particle type
         # vector boson case
         if part.get('spin') == 3:
@@ -3975,12 +4032,11 @@ class Channel(base_objects.Diagram):
         # fermion case
         elif part.get('spin') == 2:
             if onshell:
-                value *= 2.*q
+                value *= 2.*q + mass
             else:
                 value *= q **2
 
         # Do nothing for scalar
-
         return value
 
     def get_color_multiplicity(self, ini_color, final_color, model, base=False):
@@ -4053,6 +4109,8 @@ class Channel(base_objects.Diagram):
             # The initial particle mass
             mass_list = copy.copy(self['final_mass_list'])
             self['apx_psarea'] = self.calculate_apx_psarea(M, mass_list)
+            if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
+                print '4066', self['apx_psarea'],"self['apx_psarea']"
 
         return self['apx_psarea']
 
@@ -4319,6 +4377,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
         # When apx_decaywidth is requested, recalculate it if needed.
         # Calculate br in the same time.
         if name == 'apx_decaywidth' and not self[name]:
+            model = self['process']['model']
             self['apx_decaywidth'] = sum([c.get('apx_decaywidth') \
                                   for c in self['diagrams']])
 

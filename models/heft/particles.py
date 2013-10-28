@@ -1,11 +1,13 @@
-# This file was automatically created by FeynRules 1.7.55
+# This file was automatically created by FeynRules 1.7.152
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (October 6, 2011)
-# Date: Wed 8 Aug 2012 14:16:24
+# Date: Wed 20 Mar 2013 08:14:35
 
 
 from __future__ import division
 from object_library import all_particles, Particle
 import parameters as Param
+
+import propagators as Prop
 
 ve = Particle(pdg_code = 12,
               name = 've',
@@ -72,7 +74,7 @@ c = Particle(pdg_code = 4,
              antiname = 'c~',
              spin = 2,
              color = 3,
-             mass = Param.ZERO,
+             mass = Param.MC,
              width = Param.ZERO,
              texname = 'c',
              antitexname = 'c~',
@@ -290,7 +292,7 @@ phi0 = Particle(pdg_code = 250,
                 spin = 1,
                 color = 1,
                 mass = Param.MZ,
-                width = Param.ZERO,
+                width = Param.WZ,
                 texname = 'phi0',
                 antitexname = 'phi0',
                 GoldstoneBoson = True,
@@ -304,7 +306,7 @@ phi__plus__ = Particle(pdg_code = 251,
                        spin = 1,
                        color = 1,
                        mass = Param.MW,
-                       width = Param.ZERO,
+                       width = Param.MW,
                        texname = '\\phi^+',
                        antitexname = '\\phi^-',
                        GoldstoneBoson = True,
@@ -334,7 +336,7 @@ m__minus__ = Particle(pdg_code = 13,
                       antiname = 'm+',
                       spin = 2,
                       color = 1,
-                      mass = Param.ZERO,
+                      mass = Param.MM,
                       width = Param.ZERO,
                       texname = 'm-',
                       antitexname = 'm+',
