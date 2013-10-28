@@ -2,6 +2,15 @@
 ! The name of the variable to define must start with the '#' sign and then
 ! the value should be put immediately on the next line.
 
+!     
+#MLReductionLib
+1
+! Default :: 1
+!     The tensor integral reduction library.The current choices are:
+!     1 | CutTools
+!     2 | PJFry++
+!     3 | IREGI  
+
 !     =================================================================================
 !     The parameters below set the stability checks of MadLoop at run time
 !     =================================================================================
@@ -78,7 +87,7 @@
 !     The parameters below set two CutTools internal parameters accessible to the user. 
 !     =================================================================================
 
-!     Choose here what library to chose for CutTools to compute the scalar loops of the
+!     Choose here what library to chose for CutTools/TIR to compute the scalar loops of the
 !     master integral basis. The choices are as follows:
 !     2 | AVH
 !     3 | QCDLoop

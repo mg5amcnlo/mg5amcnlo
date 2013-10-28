@@ -98,6 +98,12 @@
      &           ImprovePSPoint .gt. 2 ) then
                stop 'ImprovePSPoint must be >= -1 and <=2.'
              endif
+          else if (buff .eq. '#MLReductionLib') then
+             read(666,*,end=999) MLReductionLib
+             if (MLReductionLib .lt. 1 .or. 
+     &            MLReductionLib .gt. 3) then
+                stop 'MLReductionLib must be >=1 and <=3.'
+             endif
 
           else
              write(*,*) 'The parameter name ',buff(2:),
