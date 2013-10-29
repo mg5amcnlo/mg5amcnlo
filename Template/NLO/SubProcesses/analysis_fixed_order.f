@@ -140,6 +140,11 @@ c The ibody variable is:
 c     ibody=1 : (n+1)-body contribution
 c     ibody=2 : n-body contribution (excluding the Born)
 c     ibody=3 : Born contribution
+c The histograms need to be filled for all these contribution to get the
+c physics NLO results. (Note that the adaptive phase-space integration
+c is optimized using the sum of the contributions, therefore plotting
+c them separately might lead to larger than expected statistical
+c fluctuations).
       integer ibody
 c local variables
       double precision wgt,var
