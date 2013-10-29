@@ -1,67 +1,69 @@
-c
-c
-c Plotting routines
-c
-c
+c Wrapper routines for the fixed order analyses
       subroutine initplot
       implicit none
-c Book histograms in this routine. Use mbook or bookup. The entries
-c of these routines are real*8
-      double precision emax,ebin,etamin,etamax,etabin
-      integer i,kk
       include 'run.inc'
-      character*5 cc(2)
-      data cc/' NLO ',' Born'/
-c
-      emax=dsqrt(ebeam(1)*ebeam(2))
-      ebin=emax/50.d0
-      etamin=-5.d0
-      etamax=5.d0
-      etabin=0.2d0
-c resets histograms
-      call inihist
-c
-      do i=1,2
-        kk=(i-1)*50
-        call bookup(kk+1,'total rate'//cc(i),1.0d0,0.5d0,5.5d0)
-      enddo
+      include 'reweight0.inc'
+      integer nwgt,max_weight
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      nwgt=1
+      weights_info(nwgt)="central value  "
+      if (do_rwgt_scale) then
+         nwgt=nwgt+9
+         if (numscales.ne.3) then
+            write (*,*) 'ERROR #1 in initplot:',numscales
+            stop 1
+         endif
+         write (weights_info(nwgt-8),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",1.0,"muF=",1d0
+         write (weights_info(nwgt-7),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",1.0,"muF=",rw_Fscale_up
+         write (weights_info(nwgt-6),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",1.0,"muF=",rw_Fscale_down
+         write (weights_info(nwgt-5),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_up,"muF=",1d0
+         write (weights_info(nwgt-4),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
+         write (weights_info(nwgt-3),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
+         write (weights_info(nwgt-2),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_down,"muF=",1d0
+         write (weights_info(nwgt-1),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
+         write (weights_info(nwgt  ),'(a4,e3.1,x,a4,e3.1)')
+     &        "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
+      endif
+      if (do_rwgt_pdf) then
+         npdfs=pdf_set_max-pdf_set_min+1
+         if (nwgt+npdfs.gt.max_weight) then
+            write (*,*) "ERROR in initplot: "/
+     $           /"too many scales in reweighting"
+            stop 1
+         endif
+         do i=nwgt+1,nwgt+npdfs
+            write(weights_info(i),'(a4,i8,a3)')
+     &           'PDF=',pdf_set_min-1+i,'   '
+         enddo
+         nwgt=nwgt+npdfs
+      endif
+      call analysis_begin(nwgt,weights_info)
       return
       end
 
 
       subroutine topout
       implicit none
-      character*14 ytit
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
       integer itmax,ncall
       common/citmax/itmax,ncall
-      real*8 xnorm1,xnorm2
-      logical unwgt
-      double precision evtsgn
-      common /c_unwgt/evtsgn,unwgt
-      integer i,kk
-      include 'dbook.inc'
-c
-      if (unwgt) then
-         ytit='events per bin'
-      else
-         ytit='sigma per bin '
+      real*8 xnorm
+      if(usexinteg.and..not.mint) then
+         xnorm=1.d0/float(itmax)
+      elseif(mint) then
+         xnorm=1.d0/float(ncall*itmax)
       endif
-      xnorm1=1.d0/float(itmax)
-      xnorm2=1.d0/float(ncall*itmax)
-      do i=1,NPLOTS
-        if(usexinteg.and..not.mint) then
-           call mopera(i,'+',i,i,xnorm1,0.d0)
-        elseif(mint) then
-           call mopera(i,'+',i,i,xnorm2,0.d0)
-        endif
-        call mfinal(i)
-      enddo
-      do i=1,2
-        kk=(i-1)*50
-        call multitop(kk+1,3,2,'total rate',ytit,'LIN')
-      enddo
+      call analysis_end(xnorm)
       return                
       end
 
@@ -87,44 +89,38 @@ C
 C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       implicit none
       include 'nexternal.inc'
-      real*8 pp(0:3,nexternal),ybst_til_tolab,www
+      include 'run.inc'
+      include 'reweight0.inc'
+      double precision pp(0:3,nexternal),ybst_til_tolab,www
       integer itype
-      real*8 var
-      real*8 ppevs(0:3,nexternal)
-
-      real*8 getrapidity,getpseudorap,chybst,shybst,chybstmo
-      real*8 xd(1:3)
-      data (xd(i),i=1,3)/0,0,1/
-      real*8 pplab(0:3,nexternal)
-      double precision ppcl(4,nexternal),y(nexternal)
-      double precision pjet(0:3,nexternal)
-      double precision cthjet(nexternal)
-      integer nn,njet,nsub,jet(nexternal)
-      real*8 emax,getcth,cpar,dpar,thrust,dot,shat
-      integer i,j,kk,imax
-
-      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      LOGICAL  IS_A_PH(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
-c masses
+      double precision p(0:4,nexternal),pplab(0:3,nexternal),chybst
+     $     ,shybst,chybstmo
+      integer i
+      double precision xd(3)
+      data (xd(i),i=1,3) /0d0,0d0,1d0/
+      integer istatus(nexternal),iPDG(nexternal)
       double precision pmass(nexternal)
-      double precision  pt1, eta1, y1, pt2, eta2, y2, pt3, eta3, y3, ht
-
       common/to_mass/pmass
-      double precision ppkt(0:3,nexternal),ecut,djet
-      double precision ycut, palg
-      integer ipartjet(nexternal)
-
-c
-      if(itype.eq.11.or.itype.eq.12)then
-        kk=0
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     &     icolup(2,nexternal,maxflow)
+      common /c_leshouche_inc/idup,mothup,icolup
+      integer nwgt,max_weight
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision wgts(max_weight)
+c Born, n-body or (n+1)-body contribution:
+      if(itype.eq.11) then
+         ibody=2 ! (n+1)-body
+      elseif(itype.eq.12)then
+         ibody=1 ! n-body
       elseif(itype.eq.20)then
-        kk=50
+         ibody=0 ! Born
       else
-        write(*,*)'Error in outfun: unknown itype',itype
-        stop
+         write(*,*)'Error in outfun: unknown itype',itype
+         stop
       endif
-
+c Boost the momenta to the lab frame:
       chybst=cosh(ybst_til_tolab)
       shybst=sinh(ybst_til_tolab)
       chybstmo=chybst-1.d0
@@ -132,50 +128,36 @@ c
         call boostwdir2(chybst,shybst,chybstmo,xd,
      #                  pp(0,i),pplab(0,i))
       enddo
-
-
-        var=1.d0
-        call mfill(kk+1,var,www)
-
+c Fill the arrays (momenta, status and PDG):
+      do i=1,nexternal
+         if (i.le.nincoming) then
+            istatus(i)=-1
+         else
+            istatus(i)=1
+         endif
+         do j=0,3
+            p(j,i)=pplab(j,i)
+         enddo
+         p(4,i)=pmass(i)
+         ipdg(i)=idup(i)
+      enddo
+c The weights comming from reweighting:
+      nwgt=1
+      wgts(1)=www
+      if (do_rwgt_scale) then
+         do i=1,numscales
+            do j=1,numscales
+               nwgt=nwgt+1
+               wgts(nwgt)=wgtxsecmu(i,j)
+            enddo
+         enddo
+      endif
+      if (do_rwgt_pdf) then
+         do i=1,2*numPDFpairs
+            nwgt=nwgt+1
+            wgts(nwgt)=wgtxsecPDF(i)
+         enddo
+      endif
+      call analysis_fill(p,istatus,ipdg,wgts,ibody)
  999  return      
       end
-
-
-      function getrapidity(en,px,py,pl)
-      implicit none
-      real*8 getrapidity,en,px,py,pl,tiny,xplus,xminus,y
-      parameter (tiny=1.d-8)
-      if (abs(en).lt.abs(pl)) en = dsqrt(px**2+py**2+pl**2)
-c
-      xplus=en+pl
-      xminus=en-pl
-      if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
-      endif
-      getrapidity=y
-      return
-      end
-
-
-      function getpseudorap(en,ptx,pty,pl)
-      implicit none
-      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
-      parameter (tiny=1.d-5)
-c
-      pt=sqrt(ptx**2+pty**2)
-      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
-        eta=sign(1.d0,pl)*1.d8
-      else
-        th=atan2(pt,pl)
-        eta=-log(tan(th/2.d0))
-      endif
-      getpseudorap=eta
-      return
-      end
-

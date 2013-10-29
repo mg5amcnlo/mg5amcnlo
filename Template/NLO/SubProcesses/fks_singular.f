@@ -798,7 +798,7 @@ c Plot observables for event
 c Plot observables for counterevents and Born
          plot_wgt=( cnt_wgt*fkssymmetryfactor +
      &              cnt_swgt*fkssymmetryfactor +
-     &              bsv_wgt*fkssymmetryfactorBorn +
+     &              (bsv_wgt-born_wgt)*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
      &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt
          if(abs(plot_wgt).gt.1.d-20) then
@@ -1929,12 +1929,16 @@ c Plot observables for counterevents and Born
          if (.not.unwgt) then
             plot_wgt=( (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &           cnt_swgt*fkssymmetryfactor +
-     &           bsv_wgt*fkssymmetryfactorBorn +
+     &           (bsv_wgt-born_wgt)*fkssymmetryfactorBorn +
      &           deg_wgt*fkssymmetryfactorDeg +
      &           deg_swgt*fkssymmetryfactorDeg )*vegaswgt
             if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
      &           (plotEv.or.plotKin) )
      &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_cnt)
+            plot_wgt=(born_wgt*fkssymmetryfactorBorn)*vegaswgt
+            if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
+     &           (plotEv.or.plotKin) )
+     &           call outfun(p1_cnt(0,1,0),ybst_til_tolab,plot_wgt,iplot_born)
          endif
 
          dsigH = totH_wgt*fkssymmetryfactor
