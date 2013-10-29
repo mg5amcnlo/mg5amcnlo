@@ -163,7 +163,7 @@ c     parameters do_rwgt_scale and do_rwgt_pdf):
          l=(kk-1)*2
 c     always fill the total rate
          call mfill(l+1,var,wgt)
-c     only fill the total rate for the Born when ibody=0
+c     only fill the total rate for the Born when ibody=3
          if (ibody.eq.3) call mfill(l+2,var,wgt)
       enddo
       return
