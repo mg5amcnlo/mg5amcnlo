@@ -11,15 +11,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c This subroutine is called once at the start of each run. Here the
 c histograms should be declared. 
-      implicit none
-c When including scale and/or PDF uncertainties the total number of
-c weights considered is nwgt
-      integer nwgt
-c In the weights_info, there is an text string that explains what each
-c weight will mean. The size of this array of strings is equal to nwgt.
-      character*(*) weights_info(*)
-c Initialize the histogramming package (hbook):
-      call inithist
 c
 c Declare the histograms using 'bookup'.
 c     o) The first argument is an integer that labels the histogram. In
@@ -34,8 +25,35 @@ c     bin. There is a maximum of 100 bins per histogram.
 c     o) When including scale and/or PDF uncertainties, fill a histogram
 c     for each weight, and compute the uncertainties from the final set
 c     of histograms
-      call bookup(1,'total rate      ',1.0d0,0.5d0,5.5d0)
-      call bookup(2,'total rate Born ',1.0d0,0.5d0,5.5d0)
+c
+      implicit none
+c When including scale and/or PDF uncertainties the total number of
+c weights considered is nwgt
+      integer nwgt
+c In the weights_info, there is an text string that explains what each
+c weight will mean. The size of this array of strings is equal to nwgt.
+      character*(*) weights_info(*)
+c Local variables
+      integer kk,l,nwgt_analysis
+      common/c_analysis/nwgt_analysis
+c Initialize the histogramming package (hbook):
+      call inihist
+c Fill the c_analysis common block with the number of weights that will
+c be computed
+      nwgt_analysis=nwgt
+c
+c     loop over all the weights that are computed (depends on run_card
+c     parameters do_rwgt_scale and do_rwgt_pdf):
+      do kk=1,nwgt_analysis
+c     make sure that there is a separate histogram initialized for each
+c     weight
+         l=(kk-1)*2
+c     declare (book) the histograms
+         call bookup(l+1,'total rate      '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+         call bookup(l+2,'total rate Born '//weights_info(kk),
+     &        1.0d0,0.5d0,5.5d0)
+      enddo
       return
       end
 
@@ -49,21 +67,8 @@ c integration channel separately. There is an external script that will
 c read the top drawer files in each of the integration channels and
 c combines them by summing all the bins in a final single top-drawer
 c file to be put in the Events/run_XX directory.
-      implicit none
-      character*14 ytit
-      double precision xnorm
-      integer i
-      include 'dbook.inc'
-c Do not touch the folloing lines. These lines make sure that the
-c histograms will have the correct overall normalisation: cross section
-c (in pb) per bin.
-      do i=1,NPLOTS
-         call mopera(i,'+',i,i,xnorm,0.d0)
-         call mfinal(i)
-      enddo
-      ytit='sigma per bin '
 c      
-c Here the histograms are put in a format to be written to file. Use the
+c The histograms are put in a format to be written to file. Use the
 c multitop() subroutine.
 c     o) The first argument is the histogram label
 c     o) The second and third arguments are not used (keep them to the
@@ -72,8 +77,30 @@ c     o) Fourth argument is the label for the x-axis
 c     o) Fifth argument is the y-axis
 c     o) Final argument declares if the y-axis should be a linear 'LIN'
 c     or logarithmic 'LOG' scale.
-      do i=1,2
-         call multitop(i,3,2,'total rate',ytit,'LIN')
+      implicit none
+      character*14 ytit
+      double precision xnorm
+      integer i
+c Local variables
+      integer kk,l,nwgt_analysis
+      common/c_analysis/nwgt_analysis
+c This defines NPLOTS:
+      include 'dbook.inc'
+c Do not touch the folloing 5 lines. These lines make sure that the
+c histograms will have the correct overall normalisation: cross section
+c (in pb) per bin.
+      do i=1,NPLOTS
+         call mopera(i,'+',i,i,xnorm,0.d0)
+         call mfinal(i)
+      enddo
+      ytit='sigma per bin '
+c Loop over the plots that are declared with bookup
+      do kk=1,nwgt_analysis
+         l=(kk-1)*2
+         do i=1,2
+c convert them to a format suitable for writing
+            call multitop(l+i,3,2,'total rate',ytit,'LIN')
+         enddo
       enddo
       return
       end
@@ -110,22 +137,29 @@ c the array contains the list of weights in the same order as described
 c by the weigths_info strings in analysis_begin
       double precision wgts(*)
 c The ibody variable is:
-c     ibody=0 : Born contribution
-c     ibody=1 : n-body contribution (excluding the Born)
-c     ibody=2 : (n+1)-body contribution
+c     ibody=1 : (n+1)-body contribution
+c     ibody=2 : n-body contribution (excluding the Born)
+c     ibody=3 : Born contribution
       integer ibody
 c local variables
       double precision wgt,var
+      integer kk,l,nwgt_analysis
+      common/c_analysis/nwgt_analysis
 c
 c Fill the histograms here using a call to the mfill() subroutine. The
 c first argument is the histogram label, the second is the numerical
 c value of the variable to plot for the current phase-space point and
 c the final argument is the weight of the current phase-space point.
       var=1d0
-      wgt=wgts(1)
+c     loop over all the weights that are computed (depends on run_card
+c     parameters do_rwgt_scale and do_rwgt_pdf):
+      do kk=1,nwgt_analysis
+         wgt=wgts(kk)
+         l=(kk-1)*2
 c     always fill the total rate
-      call mfill(1,var,wgt)
+         call mfill(l+1,var,wgt)
 c     only fill the total rate for the Born when ibody=0
-      if (ibody.eq.0) call mfill(2,var,wgt)
+         if (ibody.eq.3) call mfill(l+2,var,wgt)
+      enddo
       return
       end

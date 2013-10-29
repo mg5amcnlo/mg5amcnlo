@@ -193,6 +193,8 @@ c at the NLO)
       i_momcmp_count=0
       xratmax=0.d0
 
+c Setup for parton-level NLO reweighting
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
       if(savegrid)then
          call integrate(initplot,sigint,idstring,itmax,irestart,ndim
      &        ,ncall,res,err,chi2a,savegrid)

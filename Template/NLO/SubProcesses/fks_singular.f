@@ -475,7 +475,7 @@ c points)
       plot_wgt=0.d0
       iplot=-3
 
-      if(doNLOreweight)then
+      if(doreweight)then
         call reweight_settozero()
         ifill2=0
         ifill3=0
@@ -486,7 +486,7 @@ c points)
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
-      if(doNLOreweight)then
+      if(doreweight)then
         wgtxbj(1,1)=xbk(1)
         wgtxbj(2,1)=xbk(2)
       endif
@@ -500,7 +500,7 @@ c Set the ybst_til_tolab before applying the cuts.
            xlum_ev = dlum()
            xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt
            ev_wgt = xlum_ev*xsec
-           if(doNLOreweight)then
+           if(doreweight)then
              wgtmuR2(1)=muR2_current/muR_over_ref**2
              wgtmuF12(1)=muF12_current/muF1_over_ref**2
              wgtmuF22(1)=muF22_current/muF2_over_ref**2
@@ -520,7 +520,7 @@ c for the collinear, soft and/or soft-collinear subtraction terms
      #     nocntevents ) goto 547
 
       call set_alphaS(p1_cnt(0,1,0))
-      if(doNLOreweight)then
+      if(doreweight)then
         wgtqes2(2)=QES2
         wgtqes2(3)=QES2
         wgtqes2(4)=QES2
@@ -538,7 +538,7 @@ c Collinear subtraction term:
       if( y_ij_fks_ev.gt.1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(ione)
-         if(doNLOreweight)then
+         if(doreweight)then
            wgtxbj(1,3)=xbk(1)
            wgtxbj(2,3)=xbk(2)
          endif
@@ -558,7 +558,7 @@ c Collinear subtraction term:
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
      #                      xlum_c
             iplot=1
-            if(doNLOreweight)then
+            if(doreweight)then
               call reweight_fillkin(pp,ithree)
               ifill3=1
               wgtwreal(3)=-xsec/g**(nint(2*wgtbpower+2.d0))
@@ -576,7 +576,7 @@ c Soft subtraction term:
  545  continue
       if (xi_i_fks_ev .lt. max(xiScut_used,xiBSVcut_used)) then
          call set_cms_stuff(izero)
-         if(doNLOreweight)then
+         if(doreweight)then
            wgtxbj(1,2)=xbk(1)
            wgtxbj(2,2)=xbk(2)
            if(ifill2.ne.1)then
@@ -596,7 +596,7 @@ c Soft subtraction term:
               cnt_s=xlum_s*xsec
               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
-              if(doNLOreweight)
+              if(doreweight)
      #          wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
      #                      g**(nint(2*wgtbpower+2.d0))
             endif
@@ -608,7 +608,7 @@ c Soft subtraction term:
      #             rwgt
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,born_wgt)
-              if(doNLOreweight)then
+              if(doreweight)then
                 if(wgtbpower.gt.0)then
                   wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
                 else
@@ -634,7 +634,7 @@ c Soft-Collinear subtraction term:
      #    y_ij_fks_ev .gt. 1d0-deltaS .and.
      #    pmass(j_fks).eq.0.d0 )then
          call set_cms_stuff(itwo)
-         if(doNLOreweight)then
+         if(doreweight)then
            wgtxbj(1,4)=xbk(1)
            wgtxbj(2,4)=xbk(2)
          endif
@@ -661,7 +661,7 @@ c Soft-Collinear subtraction term:
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))*
      #                     xlum_sc
             if(iplot.ne.0)iplot=2
-            if(doNLOreweight)then
+            if(doreweight)then
               call reweight_fillkin(pp,ifour)
               ifill4=1
               wgtwreal(4)=xsec*(prefact_c+prefact_coll+
@@ -756,7 +756,7 @@ c
          call unweight_function(p_born,unwgtfun)
          dsig=dsig*unwgtfun
 
-         if(doNLOreweight)then
+         if(doreweight)then
            if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4
              stop
@@ -775,9 +775,9 @@ c
              endif
            enddo
            call reweight_fill_extra()
-           if(check_reweight.and.doNLOreweight)
+           if(check_reweight.and.doreweight)
      #       call check_rwgt_wgt("NLO")
-           if(doNLOscaleunc.or.doNLOPDFunc)call fill_rwgt_NLOplot()
+           if(do_rwgt_scale.or.do_rwgt_pdf)call fill_rwgt_NLOplot()
 c Example of reweighted cross section (scale changed)
 c           dsig_new=compute_rwgt_wgt_NLO(new_muR_fact,new_muF1_fact,
 c     #                                   new_muF2_fact,new_QES_fact,
@@ -3069,7 +3069,7 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
 c Do not include this contribution for final-state branchings
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         if(doNLOreweight.or.doreweight)then
+         if(doreweight)then
            wgtdegrem_xi=0.d0
            wgtdegrem_lxi=0.d0
            wgtdegrem_muF=0.d0
@@ -3082,7 +3082,7 @@ c Unphysical kinematics: set matrix elements equal to zero
          write (*,*) "No born momenta in sreal_deg"
          collrem_xi=0.d0
          collrem_lxi=0.d0
-         if(doNLOreweight.or.doreweight)then
+         if(doreweight)then
            wgtdegrem_xi=0.d0
            wgtdegrem_lxi=0.d0
            wgtdegrem_muF=0.d0
@@ -3126,7 +3126,7 @@ c has to be inserted here
       collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
       collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
 
-      if(doNLOreweight.or.doreweight)then
+      if(doreweight)then
         wgtdegrem_xi=ap*log(shat*delta_used/(2*QES2)) -
      #               apprime - xkkern 
         wgtdegrem_xi=oo2pi * born_wgt * wgtdegrem_xi * xnorm
@@ -4189,7 +4189,7 @@ c eq.(MadFKS.C.14)
 
  549     continue
 
-         if(doNLOreweight.or.doreweight)then
+         if(doreweight)then
            wgtwnstmpmuf=0.d0
            if(abrv.ne.'born' .and. abrv.ne.'grid')then
              if(abrv(1:2).eq.'vi')then
@@ -4264,7 +4264,7 @@ c            stop
       else
          bsv_wgt=0d0
          born_wgt=0d0
-         if(doNLOreweight.or.doreweight)then
+         if(doreweight)then
            wgtnstmp=0d0
            wgtwnstmpmuf=0d0
            wgtwnstmpmur=0d0
@@ -4866,7 +4866,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include 'reweight0.inc'
-      include 'reweightNLO.inc'
+      include 'run.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
@@ -5127,8 +5127,6 @@ c Check to see if this channel needs to be included in the multi-channeling
             diagramsymmetryfactor=1d0
          endif
  12      continue
-c Setup for parton-level NLO reweighting
-         if(doNLOscaleunc.or.doNLOPDFunc) call setup_fill_rwgt_NLOplot()
          firsttime=.false.
       endif
 
