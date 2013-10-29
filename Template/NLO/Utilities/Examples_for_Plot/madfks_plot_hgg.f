@@ -1,74 +1,113 @@
 c
+c Example analysis for "p p > t t~ [QCD]" process.
 c
-c Plotting routines
-c
-c
-      subroutine initplot
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      subroutine analysis_begin(nwgt,weights_info)
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-c Book histograms in this routine. Use mbook or bookup. The entries
-c of these routines are real*8
-      double precision emax,ebin,etamin,etamax,etabin
-      integer i,kk,j
-      include 'run.inc'
-      real * 8 xmh0
-      real * 8 xmhi,xmhs
+      integer nwgt
+      character*(*) weights_info(*)
+      integer i,kk,l,nwgt_analysis
+      common/c_analysis/nwgt_analysis
       character*5 cc(2)
-      data cc/'     ',' cuts'/
-c
-      xmh0=125d0
-      xmhi=(xmh0-25d0)
-      xmhs=(xmh0+25d0)
+      data cc/'     ',' Born'/
+      include 'dbook.inc'
       call inihist
-      do j=1,1
-      kk=(j-1)*50
-      call bookup(kk+1,'Higgs pT'//cc(j),2.d0,0.d0,200.d0)
-      call bookup(kk+2,'Higgs pT'//cc(j),5.d0,0.d0,500.d0)
-      call bookup(kk+3,'Higgs log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call bookup(kk+4,'Higgs pT,  |y_H| < 2'//cc(j),2.d0,0.d0,200.d0)
-      call bookup(kk+5,'Higgs pT,  |y_H| < 2'//cc(j),5.d0,0.d0,500.d0)
-      call bookup(kk+6,'Higgs log(pT),  |y_H| < 2'//cc(j),
-     #                                           0.05d0,0.1d0,5.d0)
+      nwgt_analysis=nwgt
+      if (nwgt_analysis*76.gt.nplots/4) then
+         write (*,*) 'error in analysis_begin: '/
+     &        /'too many histograms, increase NPLOTS to',
+     &        nwgt_analysis*76*4
+         stop 1
+      endif
+      do kk=1,nwgt_analysis
+      do i=1,2
+      l=(kk-1)*76+(i-1)*38
+      call bookup(kk+1,'Higgs pT                  '//weights_info(kk)
+     $     //cc(i),2.d0,0.d0,200.d0)
+      call bookup(kk+2,'Higgs pT                  '//weights_info(kk)
+     $     //cc(i),5.d0,0.d0,500.d0)
+      call bookup(kk+3,'Higgs log(pT)             '//weights_info(kk)
+     $     //cc(i),0.05d0,0.1d0,5.d0)
+      call bookup(kk+4,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
+     $     //cc(i),2.d0,0.d0,200.d0)
+      call bookup(kk+5,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
+     $     //cc(i),5.d0,0.d0,500.d0)
+      call bookup(kk+6,'Higgs log(pT),  |y_H| < 2 '//weights_info(kk)
+     $     //cc(i),0.05d0,0.1d0,5.d0)
 
-      call bookup(kk+7,'H jet pT'//cc(j),2.d0,0.d0,200.d0)
-      call bookup(kk+8,'H jet pT'//cc(j),5.d0,0.d0,500.d0)
-      call bookup(kk+9,'H jet log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call bookup(kk+10,'H jet pT,  |y_Hj| < 2'//cc(j),2.d0,0.d0,200.d0)
-      call bookup(kk+11,'H jet pT,  |y_Hj| < 2'//cc(j),5.d0,0.d0,500.d0)
-      call bookup(kk+12,'H jet log(pT),  |y_Hj| < 2'//cc(j),
-     #                                             0.05d0,0.1d0,5.d0)
+      call bookup(kk+7,'H jet pT                    '//weights_info(kk)
+     $     //cc(i),2.d0,0.d0,200.d0)
+      call bookup(kk+8,'H jet pT                    '//weights_info(kk)
+     $     //cc(i),5.d0,0.d0,500.d0)
+      call bookup(kk+9,'H jet log(pT)               '//weights_info(kk)
+     $     //cc(i),0.05d0,0.1d0,5.d0)
+      call bookup(kk+10,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
+     $     //cc(i),2.d0,0.d0,200.d0)
+      call bookup(kk+11,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
+     $     //cc(i),5.d0,0.d0,500.d0)
+      call bookup(kk+12,'H jet log(pT),  |y_Hj| < 2 '//weights_info(kk)
+     $     //cc(i),0.05d0,0.1d0,5.d0)
 
-      call bookup(kk+13,'Inc jet pT'//cc(j),2.d0,0.d0,200.d0)
-      call bookup(kk+14,'Inc jet pT'//cc(j),5.d0,0.d0,500.d0)
-      call bookup(kk+15,'Inc jet log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call bookup(kk+16,'Inc jet pT,  |y_Ij| < 2'//cc(j),2.d0,0.d0,2.d2)
-      call bookup(kk+17,'Inc jet pT,  |y_Ij| < 2'//cc(j),5.d0,0.d0,5.d2)
-      call bookup(kk+18,'Inc jet log(pT),  |y_Ij| < 2'//cc(j),
-     #                                               0.05d0,0.1d0,5.d0)
+      call bookup(kk+13,'Inc jet pT                   '
+     $     //weights_info(kk)//cc(i),2.d0,0.d0,200.d0)
+      call bookup(kk+14,'Inc jet pT                   '
+     $     //weights_info(kk)//cc(i),5.d0,0.d0,500.d0)
+      call bookup(kk+15,'Inc jet log(pT)              '
+     $     //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+      call bookup(kk+16,'Inc jet pT,  |y_Ij| < 2      '
+     $     //weights_info(kk)//cc(i),2.d0,0.d0,2.d2)
+      call bookup(kk+17,'Inc jet pT,  |y_Ij| < 2      '
+     $     //weights_info(kk)//cc(i),5.d0,0.d0,5.d2)
+      call bookup(kk+18,'Inc jet log(pT),  |y_Ij| < 2 '
+     $     //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
 
-      call bookup(kk+19,'Higgs y',0.2d0,-6.d0,6.d0)
-      call bookup(kk+20,'Higgs y,  pT_H > 10 GeV',0.12d0,-6.d0,6.d0)
-      call bookup(kk+21,'Higgs y,  pT_H > 30 GeV',0.12d0,-6.d0,6.d0)
-      call bookup(kk+22,'Higgs y,  pT_H > 50 GeV',0.12d0,-6.d0,6.d0)
-      call bookup(kk+23,'Higgs y,  pT_H > 70 GeV',0.12d0,-6.d0,6.d0)
-      call bookup(kk+24,'Higgs y,  pt_H > 90 GeV',0.12d0,-6.d0,6.d0)
 
-      call bookup(kk+25,'H jet y',0.2d0,-6.d0,6.d0)
-      call bookup(kk+26,'H jet y,  pT_Hj > 10 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+27,'H jet y,  pT_Hj > 30 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+28,'H jet y,  pT_Hj > 50 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+29,'H jet y,  pT_Hj > 70 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+30,'H jet y,  pT_Hj > 90 GeV',0.2d0,-6.d0,6.d0)
+      call bookup(kk+19,'Higgs y                '//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+20,'Higgs y,  pT_H > 10 GeV'//weights_info(kk)
+     $     //cc(i),0.12d0,-6.d0,6.d0)
+      call bookup(kk+21,'Higgs y,  pT_H > 30 GeV'//weights_info(kk)
+     $     //cc(i),0.12d0,-6.d0,6.d0)
+      call bookup(kk+22,'Higgs y,  pT_H > 50 GeV'//weights_info(kk)
+     $     //cc(i),0.12d0,-6.d0,6.d0)
+      call bookup(kk+23,'Higgs y,  pT_H > 70 GeV'//weights_info(kk)
+     $     //cc(i),0.12d0,-6.d0,6.d0)
+      call bookup(kk+24,'Higgs y,  pt_H > 90 GeV'//weights_info(kk)
+     $     //cc(i),0.12d0,-6.d0,6.d0)
 
-      call bookup(kk+31,'H-Hj y',0.2d0,-6.d0,6.d0)
-      call bookup(kk+32,'H-Hj y,  pT_Hj > 10 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+33,'H-Hj y,  pT_Hj > 30 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+34,'H-Hj y,  pT_Hj > 50 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+35,'H-Hj y,  pT_Hj > 70 GeV',0.2d0,-6.d0,6.d0)
-      call bookup(kk+36,'H-Hj y,  pT_Hj > 90 GeV',0.2d0,-6.d0,6.d0)
+      call bookup(kk+25,'H jet y                 '//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+26,'H jet y,  pT_Hj > 10 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+27,'H jet y,  pT_Hj > 30 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+28,'H jet y,  pT_Hj > 50 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+29,'H jet y,  pT_Hj > 70 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+30,'H jet y,  pT_Hj > 90 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
 
-      call bookup(kk+37,'njets',1.d0,-0.5d0,10.5d0)
-      call bookup(kk+38,'njets, |y_j| < 2.5 GeV',1.d0,-0.5d0,10.5d0)
+      call bookup(kk+31,'H-Hj y                 '//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+32,'H-Hj y,  pT_Hj > 10 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+33,'H-Hj y,  pT_Hj > 30 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+34,'H-Hj y,  pT_Hj > 50 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+35,'H-Hj y,  pT_Hj > 70 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      call bookup(kk+36,'H-Hj y,  pT_Hj > 90 GeV'//weights_info(kk)
+     $     //cc(i),0.2d0,-6.d0,6.d0)
+      
+      call bookup(kk+37,'njets                 '//weights_info(kk)
+     $     //cc(i),1.d0,-0.5d0,10.5d0)
+      call bookup(kk+38,'njets, |y_j| < 2.5 GeV'//weights_info(kk)
+     $     //cc(i),1.d0,-0.5d0,10.5d0)
 
+      enddo
       enddo
       return
       end
@@ -246,28 +285,28 @@ C
       endif
 c
       if(njet.ge.1)then
-      call mfill(kk+7,(ptj1),(WWW))
-      call mfill(kk+8,(ptj1),(WWW))
-      if(ptj1.gt.0.d0)call mfill(kk+9,(log10(ptj1)),(WWW))
-      if(abs(yj1).le.2.d0)then
-         call mfill(kk+10,(ptj1),(WWW))
-         call mfill(kk+11,(ptj1),(WWW))
-         if(ptj1.gt.0.d0)call mfill(kk+12,(log10(ptj1)),
-     &                                          (WWW))
-      endif
-c
-      do nj=1,njet
-         call mfill(kk+13,(ptj1),(WWW))
-         call mfill(kk+14,(ptj1),(WWW))
-         if(ptj1.gt.0.d0)call mfill(kk+15,(log10(ptj1)),
-     &                                                (WWW))
+         call mfill(kk+7,(ptj1),(WWW))
+         call mfill(kk+8,(ptj1),(WWW))
+         if(ptj1.gt.0.d0)call mfill(kk+9,(log10(ptj1)),(WWW))
          if(abs(yj1).le.2.d0)then
-            call mfill(kk+16,(ptj1),(WWW))
-            call mfill(kk+17,(ptj1),(WWW))
-            if(ptj1.gt.0d0)call mfill(kk+18,(log10(ptj1)),
-     &                                                   (WWW))
+            call mfill(kk+10,(ptj1),(WWW))
+            call mfill(kk+11,(ptj1),(WWW))
+            if(ptj1.gt.0.d0)call mfill(kk+12,(log10(ptj1)),
+     &           (WWW))
          endif
-      enddo
+c
+         do nj=1,njet
+            call mfill(kk+13,(ptj1),(WWW))
+            call mfill(kk+14,(ptj1),(WWW))
+            if(ptj1.gt.0.d0)call mfill(kk+15,(log10(ptj1)),
+     &           (WWW))
+            if(abs(yj1).le.2.d0)then
+               call mfill(kk+16,(ptj1),(WWW))
+               call mfill(kk+17,(ptj1),(WWW))
+               if(ptj1.gt.0d0)call mfill(kk+18,(log10(ptj1)),
+     &              (WWW))
+            endif
+         enddo
       endif
 c
       call mfill(kk+19,(yh),(WWW))
