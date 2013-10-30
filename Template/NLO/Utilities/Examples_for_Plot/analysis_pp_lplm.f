@@ -133,7 +133,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       include 'nexternal.inc'
-      include 'coupl.inc'
       integer istatus(nexternal)
       integer iPDG(nexternal)
       double precision p(0:4,nexternal)
@@ -208,7 +207,6 @@ c
       xmll=xmv
       detallb=etal-etalb
 c
-      kk=0
       do kk=1,nwgt_analysis
       www=wgts(kk)
       l=(kk-1)*42
