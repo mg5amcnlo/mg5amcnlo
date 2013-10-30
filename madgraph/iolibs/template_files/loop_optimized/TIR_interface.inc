@@ -15,7 +15,7 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
       INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loopmaxcoefs)d)
+      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       LOGICAL checkPConservation
@@ -26,7 +26,7 @@ C
 C ARGUMENTS 
 C
       INTEGER I_SQSO,I_LOOPGROUP
-      INTEGER NLOOPLINE, RANK, LOOPMAXCOEFS
+      INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
@@ -186,7 +186,7 @@ C
 C CONSTANTS
 C
             INTEGER LOOPMAXCOEFS
-            PARAMETER (LOOPMAXCOEFS=%(loopmaxcoefs)d)
+            PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 C ARGUMENTS
             INTEGER RANK,NLOOPCOEFS
 	    %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
@@ -225,7 +225,7 @@ C
 C CONSTANTS
 C
             INTEGER LOOPMAXCOEFS,MAXRANK
-            PARAMETER (LOOPMAXCOEFS=%(loopmaxcoefs)d)
+            PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
 	    PARAMETER (MAXRANK=%(maxrank)d)
 C
 C ARGUMENTS

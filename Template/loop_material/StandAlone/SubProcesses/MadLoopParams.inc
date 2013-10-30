@@ -17,4 +17,5 @@
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
-     &DoubleCheckHelicityFilter,ZeroThres,HelInitStartOver,MLReductionLib
+     &DoubleCheckHelicityFilter,ZeroThres,HelInitStartOver,
+     &MLReductionLib

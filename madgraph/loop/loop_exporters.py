@@ -779,7 +779,7 @@ PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])
 
     def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
-        the loop HELAS-like calls along with the general interfacing subroutine. """
+         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
 
@@ -1197,7 +1197,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
+        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
         the optimized FortranModel"""
         # Create the necessary files for the loop matrix element subroutine
         
@@ -1223,6 +1223,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             
         # Now some features specific to the optimized output        
         max_loop_rank=matrix_element.get_max_loop_rank()
+        self.general_replace_dict['maxrank']=max_loop_rank
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
@@ -1281,6 +1282,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
+            
+            filename = 'TIR_interface.f'
+            self.write_TIR_interface(writers.FortranWriter(filename),
+                                    matrix_element)
 
             filename = 'loop_num.f'
             self.write_loop_num(writers.FortranWriter(filename),\
@@ -1306,6 +1311,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
+        
+    def write_TIR_interface(self, writer, matrix_element):
+        """ Create the file TIR_interface.f which contains the subroutine defining
+         the loop HELAS-like calls along with the general interfacing subroutine. """
+
+        # First write TIR_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        
+        file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
+
+        file = file % replace_dict
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling
