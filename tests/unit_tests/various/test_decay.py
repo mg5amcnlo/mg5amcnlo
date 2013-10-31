@@ -2256,6 +2256,7 @@ class Test_Channel(unittest.TestCase):
         self.assertEqual(h_ww_weve.get_apx_fnrule(11, q_onshell, 
                                                   True, self.my_testmodel),
                          q_onshell*2)
+
         self.assertEqual(h_ww_weve.get_apx_fnrule(6, q_onshell, 
                                                   True, self.my_testmodel),
                          q_onshell*2)

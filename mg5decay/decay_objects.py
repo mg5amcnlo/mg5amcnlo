@@ -3849,8 +3849,6 @@ class Channel(base_objects.Diagram):
         avg_q = (abs(eval(ini_part.get('mass'))) - sum(self['final_mass_list']))/len(self.get_final_legs())
         q_dict = {}
 
-        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-            print '3833', self.get_onshell(model), avg_q 
         # Estimate the width of normal onshell decay.
         if self.get_onshell(model):
             # Go through each vertex and assign factors to apx_m
@@ -3858,10 +3856,6 @@ class Channel(base_objects.Diagram):
             for i, vert in enumerate(self['vertices']):
                 
                 # Total energy of this vertex
-                if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-                    if i == 0 :
-                        print '*******************START************'
-                    print 'current approx', apx_m, [l['id'] for l in vert['legs']]
                 q_total = 0
                 # Color multiplcity
                 final_color = []
@@ -3877,8 +3871,6 @@ class Channel(base_objects.Diagram):
                         q_dict_lor['q%s'%(lnb+1)] = mass + avg_q
                         apx_m *= self.get_apx_fnrule(leg.get('id'),
                                                      avg_q+mass, True, model)
-                        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-                            print 'call apx_fnrule for', leg.get('id'), avg_q+mass, '->', apx_m
                     # If this is only internal leg, calculate the energy
                     # it accumulated. 
                     # (The value of this leg is assigned before.)
@@ -3946,8 +3938,6 @@ class Channel(base_objects.Diagram):
                         apx_m *= self.get_color_multiplicity(ini_color,
                                                              final_color, 
                                                              model, True)
-                        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-                            print 'color_mult2->', apx_m 
                         
         # A quick estimate of the next-level decay of a off-shell decay
         # Consider all legs are onshell.
@@ -3987,8 +3977,6 @@ class Channel(base_objects.Diagram):
         # For both on-shell and off-shell cases,
         # Correct the factor of spin/color sum of initial particle (average it)
         apx_m *= 1./(ini_part.get('spin'))
-        if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-            print 3948, 'final', apx_m
         self['apx_matrixelement_sq'] = apx_m
         return apx_m
             
@@ -4008,8 +3996,6 @@ class Channel(base_objects.Diagram):
             if not est:
                 value = 1./((q ** 2 - mass ** 2) ** 2 + \
                                 mass **2 * part.get('apx_decaywidth') **2)
-                if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-                    print 'propa suppression', value
             # Rough estimation on propagator. Avoid the large propagator when
             # q is close to mass
             else:
@@ -4032,7 +4018,7 @@ class Channel(base_objects.Diagram):
         # fermion case
         elif part.get('spin') == 2:
             if onshell:
-                value *= 2.*q + mass
+                value *= 2.*q 
             else:
                 value *= q **2
 
@@ -4109,8 +4095,6 @@ class Channel(base_objects.Diagram):
             # The initial particle mass
             mass_list = copy.copy(self['final_mass_list'])
             self['apx_psarea'] = self.calculate_apx_psarea(M, mass_list)
-            if [l['id'] for l in self.get_final_legs()] == [1000024, 5, -24]:
-                print '4066', self['apx_psarea'],"self['apx_psarea']"
 
         return self['apx_psarea']
 

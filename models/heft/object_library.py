@@ -8,11 +8,7 @@
 ##
 
 import cmath
-import re
 
-class UFOError(Exception):
-        """Exception raised if when inconsistencies are detected in the UFO model."""
-        pass
 
 class UFOBaseClass(object):
     """The class from which all FeynRules classes are derived."""
@@ -64,19 +60,20 @@ class UFOBaseClass(object):
 
 all_particles = []
 
+    
+
 class Particle(UFOBaseClass):
     """A standard Particle"""
 
     require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge']
 
-    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname','counterterm','charge', 'line', 'propagating', 'goldstoneboson', 'propagator']
+    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'line', 'propagating', 'goldstoneboson']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, charge , line=None, propagating=True, counterterm=None, goldstoneboson=False, 
-                 propagator=None, **options):
+                 antitexname, charge , line=None, propagating=True, goldstoneboson=False, **options):
 
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
-                antitexname, float(charge))
+                 antitexname, float(charge))
 
         UFOBaseClass.__init__(self, *args,  **options)
 
@@ -87,17 +84,14 @@ class Particle(UFOBaseClass):
         self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
-        if not line:                                                                                                                                                                                   
+        if 1: #not line:
             self.line = self.find_line_type()
         else:
             self.line = line
 
-        if propagator:
-            if isinstance(propagator, dict):
-                self.propagator = propagator
-            else:
-                self.propagator = {0: propagator, 1: propagator}
-             
+
+
+
     def find_line_type(self):
         """ find how we draw a line if not defined
         valid output: dashed/straight/wavy/curly/double/swavy/scurly
@@ -128,7 +122,7 @@ class Particle(UFOBaseClass):
             return 'dotted'
         else:
             return 'dashed' # not supported yet
-        
+
     def anti(self):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
@@ -168,37 +162,6 @@ class Parameter(UFOBaseClass):
         self.lhablock = lhablock
         self.lhacode = lhacode
 
-all_CTparameters = []
-
-class CTParameter(UFOBaseClass):
-
-    require_args=['name', 'nature,', 'type', 'value', 'texname']
-
-    def __init__(self, name, type, value, texname):
-
-        args = (name,'internal',type,value,texname)
-
-        UFOBaseClass.__init__(self, *args)
-
-        args=(name,'internal',type,value,texname)
-
-        self.nature='interal'
-
-        global all_CTparameters
-        all_CTparameters.append(self)
-
-    def finite(self):
-        try:
-            return self.value[0]
-        except KeyError:
-            return 'ZERO'
-    
-    def pole(self, x):
-        try:
-            return self.value[-x]
-        except KeyError:
-            return 'ZERO'
-
 all_vertices = []
 
 class Vertex(UFOBaseClass):
@@ -216,30 +179,11 @@ class Vertex(UFOBaseClass):
         global all_vertices
         all_vertices.append(self)
 
-all_CTvertices = []
-
-class CTVertex(UFOBaseClass):
-
-    require_args=['name', 'particles', 'color', 'lorentz', 'couplings', 'type', 'loop_particles']
-
-    def __init__(self, name, particles, color, lorentz, couplings, type, loop_particles, **opt):
- 
-        args = (name, particles, color, lorentz, couplings, type, loop_particles)
-
-        UFOBaseClass.__init__(self, *args, **opt)
-
-        args=(particles,color,lorentz,couplings, type, loop_particles)
-        
-        global all_CTvertices
-        all_CTvertices.append(self)
-
 all_couplings = []
 
 class Coupling(UFOBaseClass):
 
     require_args=['name', 'value', 'order']
-
-    require_args_all=['name', 'value', 'order', 'loop_particles', 'counterterm']
 
     def __init__(self, name, value, order, **opt):
 
@@ -247,45 +191,8 @@ class Coupling(UFOBaseClass):
         UFOBaseClass.__init__(self, *args, **opt)
         global all_couplings
         all_couplings.append(self)
+  
 
-    def value(self):
-        return self.pole(0)
-
-    def pole(self, x):
-        """ the self.value attribute can be a dictionary directly specifying the Laurent serie using normal
-        parameter or just a string which can possibly contain CTparameter defining the Laurent serie."""
-        
-        if isinstance(self.value,dict):
-            if -x in self.value.keys():
-                return self.value[-x]
-            else:
-                return 'ZERO'
-
-        CTparam=None
-        for param in all_CTparameters:
-           pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\()(?P<name>"+param.name+r")(?P<second>\Z|\*|\+|\-|\))")
-           numberOfMatches=len(pattern.findall(self.value))
-           if numberOfMatches==1:
-               if not CTparam:
-                   CTparam=param
-               else:
-                   raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the couplings values."
-           elif numberOfMatches>1:
-               raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the couplings values."
-
-        if not CTparam:
-            if x==0:
-                return self.value
-            else:
-                return 'ZERO'
-        else:
-            if CTparam.pole(x)=='ZERO':
-                return 'ZERO'
-            else:
-                def substitution(matchedObj):
-                    return matchedObj.group('first')+"("+CTparam.pole(x)+")"+matchedObj.group('second')
-                pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\()(?P<name>"+CTparam.name+r")(?P<second>\Z|\*|\+|\-|\))")
-                return pattern.sub(substitution,self.value)
 
 all_lorentz = []
 
@@ -333,7 +240,6 @@ class CouplingOrder(object):
         self.name = name
         self.expansion_order = expansion_order
         self.hierarchy = hierarchy
-        self.perturbative_expansion = perturbative_expansion
 
 all_decays = []
 
@@ -350,28 +256,4 @@ class Decay(UFOBaseClass):
         # Add the information directly to the particle
         particle.partial_widths = partial_widths
 
-all_form_factors = []
-
-class FormFactor(UFOBaseClass):
-    require_args = ['name','type','value']
-
-    def __init__(self, name, type, value, **opt):
-        args = (name, type, value)
-        UFOBaseClass.__init__(self, *args, **opt)
-
-        global all_form_factors
-        all_form_factors.append(self)
-
         
-all_propagators = []
-
-class Propagator(UFOBaseClass):
-    
-    require_args = ['name','numerator','denominator']
-
-    def __init__(self, name, numerator, denominator=None, **opt):
-        args = (name, numerator, denominator)
-        UFOBaseClass.__init__(self, *args, **opt)
-
-        global all_propagators
-        all_propagators.append(self)
