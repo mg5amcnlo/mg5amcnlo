@@ -3501,6 +3501,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         Execute the code (madevent/standalone/...)
         """
         
+        current_options = dict([(name, self.options[name]) for name in self.options_madgraph])
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3551,7 +3552,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
-        
+        # ensure that MG options are not changed!
+        for key, value in current_options.items():
+            self.options[key] = value
         
         
     

@@ -3122,7 +3122,7 @@ class UFO_model_to_mg4(object):
         # Write complex mass for complex mass scheme (if activated)
         if self.opt['complex_mass']:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
-            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
+            fsock.writelines('common/complex_mass/ '+', '.join(complex_mass)+'\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """

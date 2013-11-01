@@ -1236,7 +1236,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
-                outstr += misc.nice_representation(var, nb_space=4)                
+                outstr += misc.nice_representation(var, nb_space=4)
+            split =  args[1].split('.')
+            for i, name in enumerate(split):
+                try:
+                    __import__('.'.join(split[:i+1]))                    
+                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
+                except ImportError:
+                    try:
+                        var = eval(args[1])
+                    except Exception, error:
+                        outstr += 'EXTERNAL:\nVariable %s is not a external variable\n' % args[1]
+                        break
+                    else:
+                        outstr += 'EXTERNAL:\n'
+                        outstr += misc.nice_representation(var, nb_space=4)                        
+                else:
+                    var = eval(args[1])
+                    outstr += 'EXTERNAL:\n'
+                    outstr += misc.nice_representation(var, nb_space=4)                        
             
             pydoc.pager(outstr)
     

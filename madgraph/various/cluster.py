@@ -203,7 +203,7 @@ class Cluster(object):
                 logger.info('Job %s Finally found the missing output.' % (job_id))
             del self.retry_args[job_id]
             self.submitted_ids.remove(job_id)
-            return True
+            return 'done'
         
         if time_check == 0:
             logger.warning('''Job %s failed to produce expected output. Waiting for filesystem update.\nMissing file:\n%s''' % (job_id,path))
@@ -222,7 +222,7 @@ class Cluster(object):
         elif self.nb_retry == 0:
             logger.critical('''Fail to run correctly job %s.
             with option: %s
-            file missing: %s
+            file missing: %s.
             Stopping all runs.''' % (job_id, args, path))
             self.remove()
         elif args['nb_submit'] >= self.nb_retry:
@@ -230,7 +230,7 @@ class Cluster(object):
             with option: %s
             file missing: %s
             Fails %s times
-            Stopping all runs.''' % (job_id, args, path, args['nb_submit']))
+            No resubmition. ''' % (job_id, args, path, args['nb_submit']))
             self.remove()
         else:
             args['nb_submit'] += 1            

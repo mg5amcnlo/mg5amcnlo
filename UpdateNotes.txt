@@ -1,8 +1,9 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.5.13 (xx/09/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
+1.5.13 (01/10/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
                       In case of failure, you can re-submitted the failing jobs automatically. The maximal 
-                      number of re-submission for a job can be parametrize (default 1).
+                      number of re-submission for a job can be parametrize (default 1) and how long you have to
+                      wait before this resubmission [to avoid slow filesystem problem, i.e. condor](default 300s)
                       Supported cluster for this function: condor, lsf, pbs
                   OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
                       (tt~+4jets).
@@ -15,6 +16,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       to have those you have to use import model EWdim6-full
                   OM: Fix bug #1243189, impossible to load v4 model if a local directory has the name of
                       the models (which is present in the models directory)
+                  OM: Fix a bug in the complex mass scheme in the reading of the param_card (it was clearly stated)
 
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.

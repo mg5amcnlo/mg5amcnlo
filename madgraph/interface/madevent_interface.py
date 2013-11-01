@@ -642,7 +642,7 @@ class CheckValidForCmd(object):
                         
     def check_set(self, args):
         """ check the validity of the line"""
-        
+
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -1910,14 +1910,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+                             'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except self.InvalidCmd:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
-        
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
           
