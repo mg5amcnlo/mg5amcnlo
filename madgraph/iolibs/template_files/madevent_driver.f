@@ -194,7 +194,8 @@ c
 c
 c     Arguments
 c
-      integer ncall,itmax,itmin,iconfig
+      integer ncall,itmax,itmin,iconfig, diag_number
+      common/to_diag_number/diag_number
 c
 c     Local
 c
@@ -257,6 +258,7 @@ c     ncode is number of digits needed for the BW code
       ncode=int(dlog10(3d0)*(max_particles-3))+1
       iconfig = int(dconfig*(1+10**(-ncode)))
       write(*,12) 'Running Configuration Number: ',iconfig
+      diag_number = iconfig
 c
 c     Here I want to set up with B.W. we map and which we don't
 c

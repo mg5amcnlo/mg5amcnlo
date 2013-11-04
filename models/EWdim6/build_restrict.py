@@ -38,11 +38,11 @@ first_category.add_options(name='diagonal ckm', # name
                                   ('WOLFENSTEIN',[4], 0.0)]
                            )
 
-#first_category.add_options(name='c mass = 0', # name
-#                           default=True,        # default
-#                           rules=[('MASS',[4], 0.0),
-#                                  ('YUKAWA',[4], 0.0)]
-#                           )
+first_category.add_options(name='c mass = 0', # name
+                           default=True,        # default
+                           rules=[('MASS',[4], 0.0),
+                                  ('YUKAWA',[4], 0.0)]
+                           )
 
 first_category.add_options(name='b mass = 0',
                            default=False,
@@ -56,11 +56,11 @@ first_category.add_options(name='tau mass = 0',
                                   ('YUKAWA',[15], 0.0)]
                            )
 
-#first_category.add_options(name='muon mass = 0',
-#                           default=True,
-#                           rules=[('MASS',[13], 0.0),
-#                                  ('YUKAWA',[13], 0.0)]
-#                           )
+first_category.add_options(name='muon mass = 0',
+                           default=True,
+                           rules=[('MASS',[13], 0.0),
+                                  ('YUKAWA',[13], 0.0)]
+                           )
 
 #first_category.add_options(name='electron mass = 0',
 #                           default=True,
@@ -99,6 +99,21 @@ dim6_category.add_options(name='CWWW CP violating',
 dim6_category.add_options(name='CW CP violating',
                           default=True,
                           rules=[('DIM6',[5], 0.0)],
+                          inverted_display=True
+                          )
+dim6_category.add_options(name='Cphid',
+                          default=True,
+                          rules=[('DIM6',[6], 0.0)],
+                          inverted_display=True
+                          )
+dim6_category.add_options(name='CphiW',
+                          default=True,
+                          rules=[('DIM6',[7], 0.0)],
+                          inverted_display=True
+                          )
+dim6_category.add_options(name='CphiB',
+                          default=True,
+                          rules=[('DIM6',[8], 0.0)],
                           inverted_display=True
                           )
 

@@ -852,8 +852,8 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          pswgt = pswgt*.5D0*PI*SQRT(MAX(LAMBDA(ONE,XA2,XB2),0d0))/(4.D0*PI)
          call mom2cx(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
      &        p(0,itree(1,i)),p(0,itree(2,i)))
-         call boostx(p(0,itree(1,i)),p(0,i),p(0,itree(1,i)))
-         call boostx(p(0,itree(2,i)),p(0,i),p(0,itree(2,i)))
+         call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
+         call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
       jac = jac*wgt
       if (.not. pass) jac = -99
