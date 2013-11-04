@@ -98,6 +98,37 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd(line, errorhandling=False,precmd=True)
 
 
+    def test_check_singletop_fastjet(self):
+        cmd = os.getcwd()
+        self.generate(['p p > t j [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
+
+        card = open('/tmp/MGPROCESS/Cards/shower_card_default.dat').read()
+        self.assertTrue( 'ANALYSE     =' in card)
+        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwanstp.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
+        card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
+        open('/tmp/MGPROCESS/Cards/shower_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/shower_card_default.dat /tmp/MGPROCESS/Cards/shower_card.dat')
+
+        os.system('rm -rf /tmp/MGPROCESS/RunWeb')
+        os.system('rm -rf /tmp/MGPROCESS/Events/run_*')
+        self.do('generate_events -f')
+        # test the lhe event file and plots exist
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/plot_HERWIG6_1_0.top'))
+
+
+
     def test_check_ppzjj(self):
         """test that p p > z j j is correctly output without raising errors"""
         
@@ -143,7 +174,8 @@ class TestMECmdShell(unittest.TestCase):
         card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
-        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+        open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
@@ -172,7 +204,8 @@ class TestMECmdShell(unittest.TestCase):
                     card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
                     self.assertTrue( '10000 = nevents' in card)
                     card = card.replace('10000 = nevents', '100 = nevents')
-                    open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+                    open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+                    os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
                     os.system('cp  /tmp/MGPROCESS/Cards/shower_card_default.dat /tmp/MGPROCESS/Cards/shower_card.dat')
                     
                     return

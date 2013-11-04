@@ -4709,19 +4709,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 res = 0
-                logger.info('set fastjet to %s' % args[1])
-                self.options[args[0]] = args[1]
             except Exception:
                 res = 1
 
             if res != 0 or error:
                 logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
+                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                self.options[args[0]] = None
+                self.history.pop()
             elif int(output.split('.')[0]) < 3:
                 logger.warning('%s is not ' % args[1] + \
-                        'v3 or greater. Please install FastJet v3+.' + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
+                        'v3 or greater. Please install FastJet v3+.')
+                self.options[args[0]] = None
+                self.history.pop()
+            else: #everything is fine
+                logger.info('set fastjet to %s' % args[1])
+                self.options[args[0]] = args[1]
 
         elif args[0] == 'lhapdf':
             try:
@@ -5166,33 +5169,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-
-            try:
-                p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE)
-                output, error = p.communicate()
-                res = 0
-            except Exception:
-                res = 1
-                pass
-
-            if res != 0 or error:
-                logger.warning('The value for "fastjet" in the current configuration does not ' + \
-                        'correspond to a valid executable.\nPlease make sure you have FastJet ' + \
-                        'v3 or greater installed, then set the variable correctly either in ' + \
-                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
-                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
-                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
-            elif int(output.split('.')[0]) < 3:
-                logger.warning('The value for "fastjet" in the current configuration is not ' + \
-                        'v3 or greater. Please install FastJet v3+, then set the variable ' + \
-                        'correctly either in ' + \
-                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
-                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
-                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
-
             try:
                 res = misc.call([self.options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
