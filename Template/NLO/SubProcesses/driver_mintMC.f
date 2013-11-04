@@ -327,6 +327,7 @@ c$$$         putonshell=.false.
          open (unit=99,file='nevts',status='old',err=999)
          read (99,*) nevts
          close(99)
+         write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
             write (*,*)
      &           'No events needed for this channel...skipping it'

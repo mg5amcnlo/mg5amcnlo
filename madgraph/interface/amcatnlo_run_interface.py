@@ -32,6 +32,7 @@ import sys
 import traceback
 import time
 import signal
+import tarfile
 
 try:
     import readline
@@ -1160,14 +1161,24 @@ Please, shower the Les Houches events before using them for physics analyses."""
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation'] and not options['reweightonly']:
-                for obj in folder_names[mode]:
-                    to_rm = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith(obj[:-1]) and \
-                                (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+            #find old folders to be removed
+            for obj in folder_names[mode]:
+                to_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                #always clean dirs for the splitted event generation
+                to_always_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and
+                             '_' in file and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
+
+                if not options['only_generation'] and not options['reweightonly']:
+                    to_always_rm.extend(to_rm)
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -1287,6 +1298,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
             
 
             for i, status in enumerate(mcatnlo_status):
+                #check if need to split jobs 
+                # at least one channel must have enough events
+                try:
+                    nevents_unweighted = open(pjoin(self.me_dir, 
+                                                'SubProcesses', 
+                                                'nevents_unweighted')).read().split('\n')
+                except IOError:
+                    nevents_unweighted = []
+
+                split = i == 2 and \
+                        int(self.run_card['nevt_job']) > 0 and \
+                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
+                            for l in nevents_unweighted if l])
+
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
                     # skip mint step 2
@@ -1294,20 +1319,36 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(options, 2,mode)
                         return
 
+                    if split:
+                        # split the event generation
+                        misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
+                                   [self.run_card['nevt_job']],
+                                   stdout = devnull,
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
+                        assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
+                            'nevents_unweighted_splitted'))
+
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        self.run_all(job_dict, 
+                                     [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], 
+                                     status, split_jobs = split)
                         
                     elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, 
+                                     [['2', 'B', '%d' % i]], 
+                                     '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
-                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
-                            stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
+                    p = misc.Popen(['./combine_results.sh'] + \
+                                   ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
+                                   folder_names[mode],
+                                   stdout=subprocess.PIPE, 
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
                     files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
@@ -1317,12 +1358,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(options, i, mode)
 
+                #check that split jobs are all correctly terminated
+                if split:
+                    self.check_event_files()
+
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
             self.update_status(
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
+        if split:
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
+                     pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+
 
         event_norm=self.run_card['event_norm']
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
@@ -2168,20 +2217,87 @@ Integrated cross-section
             self.cluster.remove()
             raise
 
-    def run_all(self, job_dict, arg_list, run_type='monitor'):
+    def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+        njob_split = 0
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
+
+        #  this is to keep track, if splitting evt generation, of the various 
+        # folders/args in order to resubmit the jobs if some of them fail
+        self.split_folders = {}
+
         for args in arg_list:
             for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    if not split_jobs:
+                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    else:
+                        for n in self.find_jobs_to_split(Pdir, job, args[1]):
+                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                            njob_split += 1
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
+        if njob_split > 0:
+            self.njobs = njob_split
         self.wait_for_complete(run_type)
+
+
+
+    def check_event_files(self):
+        """check the integrity of the event files after splitting, and resubmit 
+        those which are not nicely terminated"""
+        to_resubmit = []
+        for dir in self.split_folders.keys():
+            last_line = ''
+            try:
+                last_line = subprocess.Popen('tail -n1 %s ' % \
+                    pjoin(dir, 'events.lhe'), \
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            except IOError:
+                pass
+
+            if last_line != "</LesHouchesEvents>":
+                to_resubmit.append(dir)
+
+        self.njobs = 0
+        if to_resubmit:
+            run_type = 'Resubmitting broken jobs'
+            logger.info('Some event files are broken, corresponding jobs will be resubmitted.')
+            logger.debug('Resubmitting\n' + '\n'.join(to_resubmit) + '\n')
+            for dir in to_resubmit:
+                files.rm([dir])
+                job = self.split_folders[dir][0]
+                args = self.split_folders[dir][1:]
+                run_type = 'monitor'
+                cwd = os.path.split(dir)[0]
+                self.run_exe(job, args, run_type, cwd=cwd )
+                self.njobs +=1
+
+            self.wait_for_complete(run_type)
+
+
+    def find_jobs_to_split(self, pdir, job, arg):
+        """looks into the nevents_unweighed_splitted file to check how many
+        split jobs are needed for this (pdir, job). arg is F, B or V"""
+        # find the number of the integration channel
+        splittings = []
+        ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
+        pattern = re.compile('for i in (\d+) ; do')
+        match = re.search(pattern, ajob)
+        channel = match.groups()[0]
+        # then open the nevents_unweighted_splitted file and look for the 
+        # number of splittings to be done
+        nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        pattern = re.compile(r"%s_(\d+)/events.lhe" % \
+                          pjoin(pdir, 'G%s%s' % (arg,channel)))
+        matches = re.findall(pattern, nevents_file)
+        for m in matches:
+            splittings.append(m)
+        return splittings
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
@@ -2221,12 +2337,22 @@ Integrated cross-section
                 return self.cluster.submit2(exe, args, cwd=cwd, 
                                  input_files=input_files, output_files=output_files) 
 
-            #this is for the cluster/multicore run
+        #this is for the cluster/multicore run
         elif 'ajob' in exe:
-            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
-            #submitting
-            self.cluster.submit2(exe, args, cwd=cwd, 
-                         input_files=input_files, output_files=output_files)
+            # check if args is a list of string 
+            if type(args[0]) == str:
+                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                #submitting
+                for f in input_files:
+                    if not os.path.exists(f):
+                        print 'DONT EXIST', f
+                self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+
+                # keep track of folders and arguments for splitted evt gen
+                if len(args) == 4 and '_' in output_files[-1]:
+                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
 
@@ -2241,6 +2367,9 @@ Integrated cross-section
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
+
+        if os.path.exists(pjoin(cwd,'nevents.tar')):
+            input_files.append(pjoin(cwd,'nevents.tar'))
         
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
@@ -2316,7 +2445,8 @@ Integrated cross-section
                                           starting_dir=pjoin(cwd,current))
                 elif len(args) ==4:
                     keep_fourth_arg = True
-               
+                    # this is for the split event generation
+                    output_files.append('G%s%s_%s' % (args[1], i, args[3]))
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
