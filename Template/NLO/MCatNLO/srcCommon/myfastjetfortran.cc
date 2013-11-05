@@ -29,9 +29,9 @@
 //ENDHEADER
 
 #include <iostream>
-#include "fastjet/ClusterSequence.hh"
+#include "fastjet/ClusterSequence.hh"//INCLUDE_FJ
 
-namespace fj = fastjet;
+namespace fj = fastjet;//NAMESPACE_FJ
 using namespace std;
 bool _first_time = true;
 auto_ptr<fj::ClusterSequence> cs;

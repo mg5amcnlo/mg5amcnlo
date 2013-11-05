@@ -71,6 +71,10 @@ class Parameter (object):
         except:
             self.format = 'str'
             pass
+        else:
+            if self.lhablock == 'modsel':
+                self.format = 'int'
+                self.value = int(self.value)
 
 
     def load_decay(self, text):
@@ -108,7 +112,8 @@ class Parameter (object):
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
-        
+        elif self.format == 'int':
+            return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         else:
             if self.lhablock == 'decay':
                 return 'DECAY %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)

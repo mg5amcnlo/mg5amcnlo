@@ -90,7 +90,6 @@ class Cluster(object):
         self.options = dict(opts)
         self.retry_args = {}
 
-    
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None, required_output=[], nb_submit=0):
         """How to make one submission. Return status id on the cluster."""
@@ -359,8 +358,8 @@ class MultiCore(Cluster):
         return misc.call([prog] + argument, stdout=stdout, stderr=stderr, cwd=cwd) 
     
     
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
-               log=None):
+    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None,
+               log=None, required_output=[], nb_submit=0):
         """submit a job on multicore machine"""
         
         self.submitted +=1
@@ -652,6 +651,8 @@ class CondorCluster(Cluster):
     
     name = 'condor'
     job_id = 'CONDOR_ID'
+
+
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
