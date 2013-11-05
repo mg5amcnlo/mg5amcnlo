@@ -1395,7 +1395,7 @@ class SLURMCluster(Cluster):
         
         command = ['sbatch','-o', stdout,
                    '-J', me_dir, 
-                   '-e', stderr, prog]
+                   '-e', stderr, prog] + argument
                    
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,
