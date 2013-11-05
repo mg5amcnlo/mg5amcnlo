@@ -76,7 +76,6 @@ class Parameter (object):
                 self.format = 'int'
                 self.value = int(self.value)
 
-
     def load_decay(self, text):
         """ initialize the decay information from a str"""
 
@@ -108,6 +107,8 @@ class Parameter (object):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+        elif self.format == 'int':
+            return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif self.format == 'str':
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
@@ -165,7 +166,6 @@ class Block(list):
                 raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
                     (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
             return
-        
         list.append(self, obj)
         # update the dictionary of key
         self.param_dict[tuple(obj.lhacode)] = obj
@@ -234,7 +234,6 @@ class Block(list):
             text += 'BLOCK %s Q= %e # %s\n' % (self.name.upper(), self.scale, self.comment)
         
         text += '\n'.join([str(param) for param in self])
-            
         return text + '\n'
 
 

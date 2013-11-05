@@ -573,6 +573,7 @@ BLOCK SPINFO #  spectrum calculator information
 ###################################
 BLOCK MODSEL #  model selection
       1 1 sugra # 
+      2 1 #  fake line for the formating line point of view
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
