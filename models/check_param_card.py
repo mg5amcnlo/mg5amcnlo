@@ -187,13 +187,16 @@ class Block(list):
         data = data.lower()
         data = data.split()
         self.name = data[1] # the first part of data is model
-        
         if len(data) == 3:
             if data[2].startswith('q='):
                 #the last part should be of the form Q=
                 self.scale = float(data[2][2:])
             elif self.name == 'qnumbers':
                 self.name += ' %s' % data[2]
+        elif len(data) == 4 and data[2] == 'q=':
+            #the last part should be of the form Q=
+            self.scale = float(data[3])                
+            
         return self
     
     def keys(self):
@@ -207,15 +210,15 @@ class Block(list):
         text = """###################################""" + \
                """\n## INFORMATION FOR %s""" % self.name.upper() +\
                """\n###################################\n"""
-        
+
         #special case for decay chain
         if self.name == 'decay':
             for param in self:
-                id = param.lhacode[0]
+                pid = param.lhacode[0]
                 param.set_block('decay')
                 text += str(param)+ '\n'
-                if self.decay_table.has_key(id):
-                    text += str(self.decay_table[id])+'\n'
+                if self.decay_table.has_key(pid):
+                    text += str(self.decay_table[pid])+'\n'
             return text
         elif self.name.startswith('decay'):
             text = '' # avoid block definition
@@ -301,7 +304,7 @@ class ParamCard(dict):
                 param.set_block(cur_block.name)
                 param.load_str(line)
                 cur_block.append(param)
-                    
+                  
         return self
     
     def write(self, outpath):
@@ -309,7 +312,6 @@ class ParamCard(dict):
   
         # order the block in a smart way
         blocks = self.order_block()
-        
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
@@ -376,6 +378,7 @@ class ParamCard(dict):
         self[obj.name] = obj
         if not obj.name.startswith('decay_table'): 
             self.order.append(obj)
+        
         
         
     def has_block(self, name):
@@ -1204,8 +1207,12 @@ def check_valid_param_card(path, restrictpath=None):
         restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
-            return True
-        
+            restrictpath = os.path.dirname(path)
+            restrictpath = os.path.join(restrictpath, os.pardir, 'Source', 
+                                                 'MODEL', 'param_card_rule.dat')
+            if not os.path.exists(restrictpath):
+                return True
+    
     cardrule = ParamCardRule()
     cardrule.load_rule(restrictpath)
     cardrule.check_param_card(path, modify=False)

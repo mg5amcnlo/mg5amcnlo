@@ -753,6 +753,8 @@ c                  write (*,*) hardj1,hardj2,ptmax1,ptmax2
                endif
             enddo
             
+            if (hardj2.eq.0) goto 21 ! bypass vbf cut since not enough jets
+
 C-- NOW APPLY THE CUT I            
 
             if (abs(rap(p(0,hardj1))) .lt. xetamin
@@ -902,7 +904,7 @@ c End photon isolation
 
 C...Set couplings if event passed cuts
 
-      if(.not.fixed_ren_scale) then
+ 21   if(.not.fixed_ren_scale) then
          call set_ren_scale(P,scale)
          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
       endif

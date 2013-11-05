@@ -999,20 +999,20 @@ C
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact_orig.dat')).read(),
-                         """ 1    1
- 2    -1
- 3    -1
- 4    -1
- 5    1
- 6    -5
- 7    -5
- 8    -5
- 9    1
- 10   -9
- 11   -9
- 12   -9
-""")
+                                           'symfact_orig.dat')).read().split('\n'),
+                         """ 1   1
+ 2  -1
+ 3  -1
+ 4  -1
+ 5   1
+ 6  -5
+ 7  -5
+ 8  -5
+ 9   1
+10  -9
+11  -9
+12  -9
+""".split('\n'))
 
         # Compile the Source directory
         status = subprocess.call(['make'],

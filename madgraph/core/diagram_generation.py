@@ -1792,7 +1792,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     # Set summed coupling order according to max_order_now
                     # subtracting the removed gluons
                     coupling_orders_now = {coupling: max_order_now - \
-                                           nglue}
+                                           nglue * model['order_hierarchy']['QCD']}
 
                     # Setup process
                     process = base_objects.Process({\

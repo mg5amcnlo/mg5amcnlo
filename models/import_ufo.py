@@ -175,7 +175,7 @@ def import_full_model(model_path, decay=False):
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
 
     # Load basic information
-    ufo_model = ufomodels.load_model(model_path)
+    ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
     

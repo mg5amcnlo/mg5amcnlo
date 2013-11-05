@@ -90,6 +90,7 @@ class MadEventError(Exception):
 
 class ZeroResult(MadEventError):
     pass
+MadEventAlreadyRunning = common_run.MadEventAlreadyRunning
 
 #===============================================================================
 # CmdExtended
@@ -571,6 +572,112 @@ class CheckValidForCmd(object):
                     args.insert(1, pjoin(self.options['mg5_path'],'input','mg5_configuration.txt'))  
                 else:
                     args.insert(1, pjoin(self.me_dir,'Cards','me5_configuration.txt'))  
+
+    def check_set(self, args):
+        """ check the validity of the line"""
+
+        if len(args) < 2:
+            self.help_set()
+            raise self.InvalidCmd('set needs an option and an argument')
+
+        if args[0] not in self._set_options + self.options.keys():
+            self.help_set()
+            raise self.InvalidCmd('Possible options for set are %s' % \
+                                  self._set_options)
+        
+        if args[0] in ['stdout_level']:
+            if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] \
+                                                       and not args[1].isdigit():
+                raise self.InvalidCmd('output_level needs ' + \
+                                      'a valid level')  
+                
+        if args[0] in ['timeout']:
+            if not args[1].isdigit():
+                raise self.InvalidCmd('timeout values should be a integer')   
+            
+    def check_open(self, args):
+        """ check the validity of the line """
+        
+        if len(args) != 1:
+            self.help_open()
+            raise self.InvalidCmd('OPEN command requires exactly one argument')
+
+        if args[0].startswith('./'):
+            if not os.path.isfile(args[0]):
+                raise self.InvalidCmd('%s: not such file' % args[0])
+            return True
+
+        # if special : create the path.
+        if not self.me_dir:
+            if not os.path.isfile(args[0]):
+                self.help_open()
+                raise self.InvalidCmd('No MadEvent path defined. Unable to associate this name to a file')
+            else:
+                return True
+            
+        path = self.me_dir
+        if os.path.isfile(os.path.join(path,args[0])):
+            args[0] = os.path.join(path,args[0])
+        elif os.path.isfile(os.path.join(path,'Cards',args[0])):
+            args[0] = os.path.join(path,'Cards',args[0])
+        elif os.path.isfile(os.path.join(path,'HTML',args[0])):
+            args[0] = os.path.join(path,'HTML',args[0])
+        # special for card with _default define: copy the default and open it
+        elif '_card.dat' in args[0]:   
+            name = args[0].replace('_card.dat','_card_default.dat')
+            if os.path.isfile(os.path.join(path,'Cards', name)):
+                files.cp(os.path.join(path,'Cards', name), os.path.join(path,'Cards', args[0]))
+                args[0] = os.path.join(path,'Cards', args[0])
+            else:
+                raise self.InvalidCmd('No default path for this file')
+        elif not os.path.isfile(args[0]):
+            raise self.InvalidCmd('No default path for this file') 
+    
+    def check_treatcards(self, args):
+        """check that treatcards arguments are valid
+           [param|run|all] [--output_dir=] [--param_card=] [--run_card=]
+        """
+        
+        opt = {'output_dir':pjoin(self.me_dir,'Source'),
+               'param_card':pjoin(self.me_dir,'Cards','param_card.dat'),
+               'run_card':pjoin(self.me_dir,'Cards','run_card.dat')}
+        mode = 'all'
+        for arg in args:
+            if arg.startswith('--') and '=' in arg:
+                key,value =arg[2:].split('=',1)
+                if not key in opt:
+                    self.help_treatcards()
+                    raise self.InvalidCmd('Invalid option for treatcards command:%s ' \
+                                          % key)
+                if key in ['param_card', 'run_card']:
+                    if os.path.isfile(value):
+                        card_name = self.detect_card_type(value)
+                        if card_name != key:
+                            raise self.InvalidCmd('Format for input file detected as %s while expecting %s' 
+                                                  % (card_name, key))
+                        opt[key] = value
+                    elif os.path.isfile(pjoin(self.me_dir,value)):
+                        card_name = self.detect_card_type(pjoin(self.me_dir,value))
+                        if card_name != key:
+                            raise self.InvalidCmd('Format for input file detected as %s while expecting %s' 
+                                                  % (card_name, key))                        
+                        opt[key] = value
+                    else:
+                        raise self.InvalidCmd('No such file: %s ' % value)
+                elif key in ['output_dir']:
+                    if os.path.isdir(value):
+                        opt[key] = value
+                    elif os.path.isdir(pjoin(self.me_dir,value)):
+                        opt[key] = pjoin(self.me_dir, value)
+                    else:
+                        raise self.InvalidCmd('No such directory: %s' % value)
+            elif arg in ['param','run','all']:
+                mode = arg
+            else:
+                self.help_treatcards()
+                raise self.InvalidCmd('Unvalid argument %s' % arg)
+                        
+        return mode, opt 
     
     
     def check_survey(self, args, cmd='survey'):
@@ -1544,6 +1651,110 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return False
             
     ############################################################################
+    def set_configuration(self, config_path=None, final=True, initdir=None):
+        """ assign all configuration variable from file 
+            ./Cards/mg5_configuration.txt. assign to default if not define """
+
+        if not hasattr(self, 'options') or not self.options:  
+            self.options = dict(self.options_configuration)
+            self.options.update(self.options_madgraph)
+            self.options.update(self.options_madevent) 
+        if not config_path:
+            if os.environ.has_key('MADGRAPH_BASE'):
+                config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
+                self.set_configuration(config_path, final)
+                return
+            if 'HOME' in os.environ:
+                config_path = pjoin(os.environ['HOME'],'.mg5', 
+                                                        'mg5_configuration.txt')
+                if os.path.exists(config_path):
+                    self.set_configuration(config_path, final=False)
+            me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
+            self.set_configuration(me5_config, final=False, initdir=self.me_dir)
+                
+            if self.options.has_key('mg5_path'):
+                MG5DIR = self.options['mg5_path']
+                config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+                self.set_configuration(config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
+            return self.set_configuration(me5_config, final,initdir=self.me_dir)
+
+        config_file = open(config_path)
+
+        # read the file and extract information
+        logger.info('load configuration from %s ' % config_file.name)
+        for line in config_file:
+            if '#' in line:
+                line = line.split('#',1)[0]
+            line = line.replace('\n','').replace('\r\n','')
+            try:
+                name, value = line.split('=')
+            except ValueError:
+                pass
+            else:
+                name = name.strip()
+                value = value.strip()
+                if name.endswith('_path'):
+                    path = value
+                    if os.path.isdir(path):
+                        self.options[name] = os.path.realpath(path)
+                        continue
+                    if not initdir:
+                        continue
+                    path = pjoin(initdir, value)
+                    if os.path.isdir(path):
+                        self.options[name] = os.path.realpath(path)
+                        continue
+                else:
+                    self.options[name] = value
+                    if value.lower() == "none":
+                        self.options[name] = None
+
+        if not final:
+            return self.options # the return is usefull for unittest
+
+
+        # Treat each expected input
+        # delphes/pythia/... path
+        for key in self.options:
+            # Final cross check for the path
+            if key.endswith('path'):
+                path = self.options[key]
+                if path is None:
+                    continue
+                if os.path.isdir(path):
+                    self.options[key] = os.path.realpath(path)
+                    continue
+                path = pjoin(self.me_dir, self.options[key])
+                if os.path.isdir(path):
+                    self.options[key] = os.path.realpath(path)
+                    continue
+                elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
+                    path = pjoin(self.options['mg5_path'], self.options[key])
+                    if os.path.isdir(path):
+                        self.options[key] = os.path.realpath(path)
+                        continue
+                self.options[key] = None
+            elif key.startswith('cluster'):
+                pass              
+            elif key == 'automatic_html_opening':
+                if self.options[key] in ['False', 'True']:
+                    self.options[key] =eval(self.options[key])
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+                             'complex_mass_scheme', 'gauge', 'group_subprocesses']:
+                # Default: try to set parameter
+                try:
+                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
+                except self.InvalidCmd:
+                    logger.warning("Option %s from config file not understood" \
+                                   % key)
+        # Configure the way to open a file:
+        misc.open_file.configure(self.options)
+          
+        return self.options
+
+    ############################################################################
     def do_add_time_of_flight(self, line):
 
         args = self.split_arg(line)
@@ -1772,7 +1983,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             data = self.results[run_name].return_tag(None) # return the last
         
         self.print_results_in_shell(data)
-         
+
+
     def post_set(self, stop, line):
         """Check if we need to save this in the option file"""
         try:
@@ -1996,7 +2208,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 if particle and particle not in decay_info:
                     # No decays given, only total width       
                     decay_info[particle] = [[[], width]]
-            else: # Not decay                              
+            else: # Not decay
                 line_number += 1
         # Clean out possible remaining comments at the end of the card
         while not param_card[-1] or param_card[-1].startswith('#'):
@@ -2114,7 +2326,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
                     check_param_card.convert_to_mg5card(param_card, mg5_param)
                     check_param_card.check_valid_param_card(mg5_param)
-                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')            
+                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
+            else:
+                check_param_card.check_valid_param_card(opt['param_card'])            
             
             logger.debug('write compile file for card: %s' % opt['param_card']) 
             param_card = check_param_card.ParamCard(opt['param_card'])
@@ -3011,7 +3225,7 @@ calculator."""
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
- 
+
     def launch_job(self,exe, cwd=None, stdout=None, argument = [], remaining=0, 
                     run_type='', mode=None, **opt):
         """ """
@@ -3044,6 +3258,8 @@ calculator."""
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
+                required_output = []
+                
 
                 #Find the correct PDF input file
                 input_files.append(self.get_pdf_input_filename())
@@ -3063,14 +3279,17 @@ calculator."""
                     data = ' '.join(data).split()
                     for nb in data:
                         output_files.append('G%s' % nb)
+                        required_output.append('G%s/results.dat' % nb)
                 else:
                     for G in output_files:
                         if os.path.isdir(pjoin(cwd,G)):
                             input_files.append(G)
+                            required_output.append('%s/results.dat' % G)
                 
                 #submitting
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
             
             else:
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)
@@ -3917,5 +4136,6 @@ class GridPackCmd(MadEventCmd):
 
 
 AskforEditCard = common_run.AskforEditCard
+
 
 

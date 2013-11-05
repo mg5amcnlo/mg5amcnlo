@@ -17,7 +17,7 @@
 import os
 import sys
 
-def load_model(name):
+def load_model(name, decay=False):
     
     # avoid final '/' in the path
     if name.endswith('/'):
@@ -37,5 +37,14 @@ def load_model(name):
 
     sys.path.insert(0, os.sep.join(path_split[:-1]))
     __import__(path_split[-1])
+    output = sys.modules[path_split[-1]]
+    if decay:
+        dec_name = '%s.decays' % path_split[-1]
+        __import__(dec_name)
+        output.all_decays = sys.modules[dec_name].all_decays
+    
     sys.path.pop(0)
+    
+    
+    
     return sys.modules[path_split[-1]]

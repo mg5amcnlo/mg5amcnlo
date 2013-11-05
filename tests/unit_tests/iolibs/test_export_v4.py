@@ -673,9 +673,9 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    1
- 2    2
- 3    -2
+        goal_symfact_dat = """ 1   1
+ 2   2
+ 3  -2
 """
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_symfact_dat)
@@ -1481,12 +1481,12 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    1
- 2    1
- 3    1
- 4    1
- 5    1
- 6    1
+        goal_symfact_dat = """ 1   1
+ 2   1
+ 3   1
+ 4   1
+ 5   1
+ 6   1
 """
         self.assertFileContains('test', goal_symfact_dat)
 
@@ -2763,14 +2763,14 @@ C     Number of configs
             symmetry)
         
         #print open(self.give_pos('test')).read()
-        goal_symfact_dat = """ 1    1
- 2    -1
- 3    -1
- 4    -1
- 5    -1
- 6    -1
- 7    -1
- 8    -1
+        goal_symfact_dat = """ 1   1
+ 2  -1
+ 3  -1
+ 4  -1
+ 5  -1
+ 6  -1
+ 7  -1
+ 8  -1
 """
         self.assertFileContains('test', goal_symfact_dat)
 
@@ -3648,12 +3648,12 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    2
- 2    -1
- 3    2
- 4    -3
- 5    2
- 6    -5
+        goal_symfact_dat = """ 1   2
+ 2  -1
+ 3   2
+ 4  -3
+ 5   2
+ 6  -5
 """
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_symfact_dat)

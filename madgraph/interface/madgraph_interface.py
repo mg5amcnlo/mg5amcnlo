@@ -22,6 +22,7 @@ import logging
 import optparse
 import os
 import pydoc
+import random
 import re
 import signal
 import subprocess
@@ -1216,7 +1217,7 @@ This will take effect only in a NEW terminal
             forbiden_chars = ['>','<',';','&']
             for char in forbiden_chars:
                 if char in path:
-                    raise self.invalidCmd('%s is not allowed in the output path' % char)
+                    raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
@@ -2156,6 +2157,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3840,6 +3843,26 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         import urllib
         path = {}
 
+        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                     'http://madgraph.hep.uiuc.edu/package_info.dat']
+        r = random.randint(0,1)
+        r = [r, (1-r)]
+        for index in r:
+            cluster_path = data_path[index]
+            try:
+                data = urllib.urlopen(cluster_path)
+            except Exception:
+                continue
+            break
+        else:
+            raise MadGraph5Error, '''Impossible to connect any of us servers. 
+            Please check your internet connection or retry later'''
+                
+        for line in data: 
+            split = line.split()   
+            path[split[0]] = split[1]
+        
+        
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
         
@@ -3847,15 +3870,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs', 
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis'}
         name = name[args[0]]
-
-        try:
-            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except Exception:
-            raise MadGraph5Error, '''Impossible to connect the server. 
-            Please check your internet connection or retry later'''
-        for line in data: 
-            split = line.split()   
-            path[split[0]] = split[1]
+        
         
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
@@ -4295,6 +4310,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Main commands: Ask for editing the parameter and then 
         Execute the code (madevent/standalone/...)
         """
+
+        #ensure that MG option are not modified by the launch routine        
+        current_options = dict([(name, self.options[name]) for name in self.options_madgraph])
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -4351,8 +4369,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if hasattr(self, 'do_shell'):
                     ME = amcatnlo_run.aMCatNLOCmdShell(me_dir=args[1], options=self.options)
                 else:
-                     ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
-                     ME.pass_in_web_mode()
+                    ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
+                    ME.pass_in_web_mode()
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:
@@ -4367,6 +4385,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
+        # ensure that MG options are not changed!
+        for key, value in current_options.items():
+            self.options[key] = value
         
     def do_load(self, line):
         """Not in help: Load information from file"""
@@ -4736,7 +4757,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                         'executable. Please enter the full PATH/TO/lhapdf-config (including lhapdf-config).\n' + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-        elif args[0] in ['timeout', 'auto_update']:
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+                         'cluster_retry_wait']:
                 self.options[args[0]] = int(args[1]) 
         
         elif args[0] == 'cluster_status_update':
