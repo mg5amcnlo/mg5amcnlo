@@ -385,8 +385,6 @@ c
      #                IDWTUP,NPRUP
       read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
       read(ifile,'(a)')string
-c 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
-c 502  format(3(1x,d14.8),1x,i6)
 c
       return
       end
@@ -400,7 +398,7 @@ c
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*140 buff
       integer ifile,i
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -454,7 +452,7 @@ c
       enddo
       if(buff(1:1).eq.'#' .and. .not.rwgt_skip) then
         write(ifile,'(a)') buff(1:len_trim(buff))
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -599,7 +597,6 @@ c$$$                 enddo
         endif
       endif
       write(ifile,'(a)') '  </event>'
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -628,7 +625,7 @@ c
       character*80 string
       character*12 dummy12
       character*2 dummy2
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -647,7 +644,7 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -795,7 +792,6 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -824,7 +820,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       character*80 string
       character*12 dummy12
       character*2 dummy2
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -853,7 +849,7 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -1001,7 +997,6 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))

@@ -54,10 +54,19 @@
 #timeout = 60
 
 # Pythia8 Path.
-# Define the path to the pythia8 directory.
-# relative path start from mg5 directory
+# define the path to the pythia8 directory.
+# paths can be absolute or relative from mg5 directory
 
-#pythia8_path = ./pythia8
+#pythia8_path = 
+
+#Herwig++ paths
+# specify here the paths also to HepMC ant ThePEG
+# define the path to the herwig++, thepeg and hepmc directories.
+# paths can be absolute or relative from mg5 directory
+
+#hwpp_path = 
+#thepeg_path = 
+#hepmc_path = 
 
 # Control when MG5 checks if he is up-to-date.
 # Enter the number of day between two check (0 means never)

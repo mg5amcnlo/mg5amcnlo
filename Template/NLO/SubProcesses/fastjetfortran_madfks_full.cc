@@ -46,7 +46,7 @@ namespace fwrapper {
   auto_ptr<ClusterSequence> cs;
 
   /// helper routine to transfer fortran input particles into 
-  void transfer_input_particles(const double * p, const int & npart) {
+  void amcatnlo_transfer_input_particles(const double * p, const int & npart) {
     input_particles.resize(0);
     input_particles.reserve(npart);
     for (int i=0; i<npart; i++) {
@@ -63,7 +63,7 @@ namespace fwrapper {
   }
 
   /// helper routine to help transfer jets -> f77jets[4*ijet+0..3]
-  void transfer_jets(double * f77jets, int & njets) {
+  void amcatnlo_transfer_jets(double * f77jets, int & njets) {
     njets = jets.size();
     for (int i=0; i<njets; i++) {
       for (int j=0;j<=3; j++) {
@@ -77,7 +77,7 @@ namespace fwrapper {
   
   /// helper routine packaging the transfers, the clustering
   /// and the extraction of the jets
-  void transfer_cluster_transfer(const double * p, const int & npart, 
+  void amcatnlo_transfer_cluster_transfer(const double * p, const int & npart, 
                                  const JetDefinition & jet_def,
                                  const double & ptmin,
 				 double * f77jets, int & njets, int * whichjet,
@@ -85,7 +85,7 @@ namespace fwrapper {
 				 const int & nrepeat = 0, const double & ghost_area = 0.0) {
 
     // transfer p[4*ipart+0..3] -> input_particles[i]
-    transfer_input_particles(p, npart);
+    amcatnlo_transfer_input_particles(p, npart);
 
     // perform the clustering
     if ( ghost_maxrap == 0.0 ) {
@@ -101,7 +101,7 @@ namespace fwrapper {
     jets = sorted_by_pt(cs->inclusive_jets(ptmin));
 
     // transfer jets -> f77jets[4*ijet+0..3]
-    transfer_jets(f77jets, njets);
+    amcatnlo_transfer_jets(f77jets, njets);
  
     // Determine which parton/particle ended-up in which jet
     // set all jet entrie to zero first
@@ -255,7 +255,7 @@ void fastjetsisconewitharea_(const double * p, const int & npart,
 // the transpose of the Pythia array and drop the fifth component
 // (particle mass).
 //
-void fastjetppgenkt_(const double * p, const int & npart,                   
+void amcatnlo_fastjetppgenkt_(const double * p, const int & npart,                   
                      const double & R, const double & ptjetmin,
                      const double & palg,
                      double * f77jets, int & njets, int * whichjet) {
@@ -272,7 +272,7 @@ void fastjetppgenkt_(const double * p, const int & npart,
     }
 
     // do everything
-    transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets,whichjet);
+    amcatnlo_transfer_cluster_transfer(p,npart,jet_def,ptjetmin,f77jets,njets,whichjet);
 }
 
 
@@ -407,7 +407,7 @@ double fastjetarea_(const int & ijet) {
 //   DOUBLE PRECISION FASTJETDMERGE
 //   INTEGER N
 //   
-double fastjetdmerge_(const int & n) {
+double amcatnlo_fastjetdmerge_(const int & n) {
   assert(cs.get() != 0);
   return cs->exclusive_dmerge(n);
 }
@@ -424,7 +424,7 @@ double fastjetdmerge_(const int & n) {
 //   DOUBLE PRECISION FASTJETDMERGEMAX
 //   INTEGER N
 //   
-double fastjetdmergemax_(const int & n) {
+double amcatnlo_fastjetdmergemax_(const int & n) {
   assert(cs.get() != 0);
   return cs->exclusive_dmerge_max(n);
 }

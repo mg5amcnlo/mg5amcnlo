@@ -86,7 +86,7 @@ c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
       double precision plab(0:3, nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmerge
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
 c Photon isolation
       integer nph,nem,k,nin
@@ -283,7 +283,7 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-         call fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
 c
 c******************************************************************************
 

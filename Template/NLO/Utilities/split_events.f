@@ -3,7 +3,8 @@ c Split events files into event files with lower number of events
 c gfortran -I../SubProcesses/P0_<anydir> -o split_events split_events.f
 c handling_lhe_events.f fill_MC_mshell.f
       implicit none
-      integer maxevt,ifile,ofile,i,j,npart,mgfile,ifile2
+      integer maxevt,ifile,ofile,i,j,npart,mgfile,ifile2,ione
+      parameter(ione=1)
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP,LPRUP
       INTEGER MAXNUP
@@ -16,11 +17,11 @@ c handling_lhe_events.f fill_MC_mshell.f
       character*140 buff
       character*10 MonteCarlo
       character*3 str
-      integer evts,leftover,loc,loc1,loc2,isc,ipdf
+      integer evts,leftover,loc,loc1,loc2,isc,ipdf,jmax
       integer numscales,numPDFpairs
       common/cwgxsec1/numscales,numPDFpairs
 c
-      write (*,*) 'give the name of the original event file'
+      write (*,*) 'Give the name of the original event file'
       read (*,*) event_file
       ifile=34
       open(unit=ifile,file=event_file,status='old')
@@ -30,17 +31,18 @@ c
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
       close(34)
-      write (*,*) 'file contains ',maxevt,' events'
+      write (*,*) 'File contains ',maxevt,' events'
       write (*,*) 'Give the number of splitted files you want (< 999)'
       read (*,*) npart
       if (npart.gt.999) then
-         write (*,*) 'too many event files (999 is max)', npart
+         write (*,*) 'Too many event files (999 is max)', npart
          stop
       endif
       evts=int(dble(maxevt)/dble(npart))
       leftover=maxevt-evts*npart
-      write (*,*) 'events per file:', evts
-      write (*,*) 'left-over events:', leftover
+      write (*,*) npart,' files will have',evts,' events each'
+      write (*,*) ione,' file will have',leftover,' events'
+      write (*,*) ' '
 
 c$$$      mgfile=36
 c$$$      open (unit=mgfile,file='mcatnlo.cmd',status='unknown')
@@ -67,7 +69,11 @@ c$$$      read (*,*) inputfile
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
-      do i=1,npart
+
+      do i=1,npart+1
+         jmax=evts
+         if(leftover.eq.0.and.i.eq.npart+1)cycle
+         if(leftover.ne.0.and.i.eq.npart+1)jmax=leftover
          str='000'
          if (i.le.9) write (str(3:3),'(i1)') i
          if (i.gt.9.and.i.le.99) write (str(2:3),'(i2)') i
@@ -78,11 +84,11 @@ c$$$      read (*,*) inputfile
          ifile2=44
          open(unit=ofile,file=fname1,status='unknown')
          open(unit=ifile2,file='headfile',status='old')
-         call copy_header(ifile2,ofile,evts)
+         call copy_header(ifile2,ofile,jmax)
          call write_lhef_init(ofile,
      &        IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &        XSECUP,XERRUP,XMAXUP,LPRUP)
-         do j=1,evts
+         do j=1,jmax
             call read_lhef_event(ifile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)

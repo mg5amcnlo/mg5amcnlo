@@ -29,6 +29,7 @@ import os
 import sys
 import re
 import shutil
+import random
 import glob
 import re
 import subprocess
@@ -684,7 +685,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             return {'m2': finite_m2, output:[]}
 
     def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False,
-                                                                  MLOptions={}):
+                                 DoubleCheckHelicityFilter=False, MLOptions={}):
         """ Set parameters in MadLoopParams.dat suited for these checks.MP
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
@@ -708,16 +709,16 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             else:
                 logger.error("Key %s is not a valid MadLoop option."%key)
 
-        # Mandatory option specificaitons
+        # Mandatory option specifications
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
-                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)                
+                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
-                                 "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
+                            "#DoubleCheckHelicityFilter\n%s"%('.TRUE.' if 
+                             DoubleCheckHelicityFilter else '.FALSE.'),MLParams)
 
-
-        # Write out the modfied MadLoop option card
+        # Write out the modified MadLoop option card
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
         file.write(MLParams)
         file.close()
@@ -1627,12 +1628,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             p, w_rambo = self.get_momenta(proc, options)
             if options['events']:
                 return p
-            while not pass_cuts(p):
+            # For 2>1 process, we don't check the cuts of course
+            while (not pass_cuts(p) and  len(p)>3):
                 p, w_rambo = self.get_momenta(proc, options)
-            return p                
+                
+            # For a 2>1 process, it would always be the same PS point,
+            # so here we bring in so boost along the z-axis, just for the sake
+            # of it.
+            if len(p)==3:
+                p = boost_momenta(p,3,random.uniform(0.0,0.99))
+            return p
 
         # First create the stability check fortran driver executable if not 
         # already present.
+        
         if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
             # Use the presence of the file born_matrix.f to check if this output
             # is a loop_induced one or not.
@@ -1651,6 +1660,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             os.remove(os.path.join(dir_path,'loop_matrix.o'))
         misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
                                               mode='fortran', job_specs = False)
+
+        # Now for 2>1 processes, because the HelFilter was setup in for always
+        # identical PS points with vec(p_1)=-vec(p_2), it is best not to remove
+        # the helicityFilter double check
+        if len(process['legs'])==3:
+            self.fix_MadLoopParamCard(dir_path, mp=False, 
+                              loop_filter=False, DoubleCheckHelicityFilter=True)
 
         StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
@@ -2029,7 +2045,7 @@ def generate_loop_matrix_element(process_definition, reuse,
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, param_card = None,cuttools="",
-                            options = None, cmd = FakeInterface()):
+                            options = {}, cmd = FakeInterface()):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
@@ -2067,11 +2083,12 @@ def check_profile(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_stability(process_definition, param_card = None,cuttools="", 
-                               options=None,nPoints=100, reuse=False, cmd = FakeInterface()):
+                               options=None,nPoints=100, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
     
     
+    reuse=options['reuse']
     keep_folder = reuse
     model=process_definition.get('model')
 
@@ -2097,7 +2114,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_timing(process_definition, param_card= None, cuttools="",
-                                          options=None, cmd = FakeInterface()):
+                                          options={}, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
