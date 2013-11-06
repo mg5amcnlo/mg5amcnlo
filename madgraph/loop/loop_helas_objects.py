@@ -1846,7 +1846,17 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         
         # Temporarily we set squared_orders to be a dictionary with keys being
         # the actual contributing squared_orders and the values are the list 
-        # [max_contrib_amp_number,max_contrib_ref_amp_number]
+        # [max_contrib_uvctamp_number,max_contrib_ct_amp_number,
+        #  max_contrib_loop_amp_number,
+        #  max_contrib_ref_amp_number]
+        
+        # In the event where they would be no contributing amplitude in one of 
+        # the four class above, then the list on which the function max will be
+        # called will be empty and we need to have the function not crash but
+        # return -1 instead. 
+        def smax(AmpNumList):
+            return -1 if len(AmpNumList)==0 else max(AmpNumList)
+            
         squared_orders = {}
         for ref_order in ref_orders:
             for uvct_order in uvct_amp_orders:
@@ -1854,38 +1864,40 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                                                     ref_order)])
                 try:
                     # Finding the max_contrib_uvct_amp_number
-                    squared_orders[key][0] = max([squared_orders[key][0]]+
+                    squared_orders[key][0] = smax([squared_orders[key][0]]+
                                                             list(uvct_order[1]))
                 except KeyError:
-                    squared_orders[key] = [max(list(uvct_order[1])),-1,-1,-1]
+                    squared_orders[key] = [smax(list(uvct_order[1])),-1,-1,-1]
 
             for ct_order in ct_amp_orders:
                 key = tuple([ord1 + ord2 for ord1,ord2 in zip(ct_order[0],
                                                                     ref_order)])
                 try:
                     # Finding the max_contrib_ct_amp_number
-                    squared_orders[key][1] = max([squared_orders[key][1]]+
+                    squared_orders[key][1] = smax([squared_orders[key][1]]+
                                                               list(ct_order[1]))
                 except KeyError:
-                    squared_orders[key] = [-1,max(list(ct_order[1])),-1,-1]
+                    squared_orders[key] = [-1,smax(list(ct_order[1])),-1,-1]
 
             for loop_order in loop_orders:
                 key = tuple([ord1 + ord2 for ord1,ord2 in zip(loop_order[0],
                                                                     ref_order)])
                 try:
                     # Finding the max_contrib_loop_amp_number
-                    squared_orders[key][2] = max([squared_orders[key][2]]+
+                    squared_orders[key][2] = smax([squared_orders[key][2]]+
                                                          list(loop_order[1][0]))
                     # Finding the max_contrib_loop_id
-                    squared_orders[key][3] = max([squared_orders[key][3]]+
+                    squared_orders[key][3] = smax([squared_orders[key][3]]+
                                                          list(loop_order[1][1]))
                 except KeyError:
-                    squared_orders[key] = [-1,-1,max(list(loop_order[1][0])),
-                                                    max(list(loop_order[1][1]))]
+                    squared_orders[key] = [-1,-1,smax(list(loop_order[1][0])),
+                                                    smax(list(loop_order[1][1]))]
 
         # To sort the squared_orders, we now turn it into a list instead of a
         # dictionary. Each element of the list as the format
-        #   ( squared_so_powers_tuple, (max_amp_number, max_ref_amp_number) )
+        #   ( squared_so_powers_tuple, 
+        #     (max_uvct_amp_number, max_ct_amp_number,
+        #      max_loop_amp_number, max_loop_id) )
         squared_orders = [(sqso[0],tuple(sqso[1])) for sqso in \
                                                          squared_orders.items()]
         # Sort the squared orders if the hierarchy defines them all.
