@@ -8,7 +8,6 @@ IREGIDIR = /Users/erdissshaw/Works/TIR/iregi-ML5/iregi/
 ONELOOPDIR=$(IREGIDIR)/oneloop/
 QCDLOOPDIR=$(IREGIDIR)/qcdloop/ql/
 FFDIR=$(IREGIDIR)/qcdloop/ff/
-FFLAGS=-I$(IREGIDIR)
 # EDN HSS
 PROG   = check
 STABCHECKDRIVER = StabilityCheckDriver

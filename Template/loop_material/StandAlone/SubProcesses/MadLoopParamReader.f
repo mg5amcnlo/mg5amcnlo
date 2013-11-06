@@ -104,7 +104,14 @@
      &            MLReductionLib .gt. 3) then
                 stop 'MLReductionLib must be >=1 and <=3.'
              endif
-
+          else if (buff .eq. '#IREGIRECY') then
+             read(666,*,end=999) IREGIRECY
+          else if (buff .eq. '#IREGIMODE') then
+             read(666,*,end=999) IREGIMODE
+             if (IREGIMODE .lt. 0 .or.
+     &            IREGIMODE .gt.2) then
+                stop 'IREGIMODE must be >=0 and <=2.'
+             endif
           else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
@@ -142,6 +149,9 @@ C     a non existing or malformed parameter file
       endif
       write(*,*)
      & '==============================================================='
+      write(*,*) ' > MLReductionLib            = ',MLReductionLib
+      write(*,*) ' > IREGIMODE                 = ',IREGIMODE
+      write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
       write(*,*) ' > MLStabThres               = ',MLStabThres
       write(*,*) ' > NRotations_DP             = ',NRotations_DP
@@ -173,6 +183,9 @@ C     a non existing or malformed parameter file
       
       include "MadLoopParams.inc"
 
+      MLReductionLib=1
+      IREGIMODE=2
+      IREGIRECY=.TRUE.
       CTModeInit=0
       CTModeRun=-1
       NRotations_DP=1

@@ -1313,13 +1313,22 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                             self, writer, matrix_element,optimized_output=True)
         
     def write_TIR_interface(self, writer, matrix_element):
-        """ Create the file TIR_interface.f which contains the subroutine defining
-         the loop HELAS-like calls along with the general interfacing subroutine. """
+        """ Create the file TIR_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
 
         # First write TIR_interface which interfaces MG5 with TIR.
         replace_dict=copy.copy(self.general_replace_dict)
         
-        
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['finalize_TIR']='\n'.join([\
+         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
+        else:
+            replace_dict['finalize_TIR']='\n'.join([\
+                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
+            
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
         file = file % replace_dict

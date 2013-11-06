@@ -12,6 +12,23 @@
 !     3 | IREGI  
 
 !     =================================================================================
+!     The parameters below set the parameters for IREGI
+!     =================================================================================
+
+#IREGIMODE
+2
+! Default :: 2
+!     IMODE=0, IBP reduction
+!     IMODE=1, PaVe reduction
+!     IMODE=2, PaVe reduction with stablility improved by IBP reduction
+
+#IREGIRECY
+.TRUE.
+! Default :: .TRUE.
+!     Use RECYCLING OR NOT IN IREGI
+!
+
+!     =================================================================================
 !     The parameters below set the stability checks of MadLoop at run time
 !     =================================================================================
 
