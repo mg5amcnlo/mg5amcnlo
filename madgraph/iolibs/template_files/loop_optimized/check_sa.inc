@@ -29,6 +29,7 @@ C particle masses
       REAL*8 PMASS(NEXTERNAL)      
 C integer    n_max_cg
       INCLUDE "ngraphs.inc" 
+      INCLUDE "MadLoopParams.inc"
 
 C     
 C     LOCAL
@@ -138,7 +139,8 @@ C     In standalone mode, always use sqrt_s as the renormalization scale.
 
 C     Update the couplings with the new MU_R
       CALL UPDATE_AS_PARAM()
-
+C     Free storing when using IREGI
+      IF(MLReductionLib.EQ.3.AND.IREGIRECY)CALL IREGI_FREE_PS
 C
 C     Now we can call the matrix element
 C
