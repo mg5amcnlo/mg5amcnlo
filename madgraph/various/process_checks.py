@@ -705,6 +705,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             elif key == "ForceMP":
                 if MLOptions[key]:
                     mode = 4
+            elif key == "MLReductionLib":
+                MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%d"\
+                            %(MLOptions[key] if MLOptions[key] else 1),MLParams)
             else:
                 logger.error("Key %s is not a valid MadLoop option."%key)
 
@@ -1203,7 +1206,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
 
     def setup_process(self, matrix_element, export_dir, reusing = False,
-                                                             param_card = None):
+                                                param_card = None,MLOptions={}):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -1272,7 +1275,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
                                                    read_ps = False, npoints = 4)
         self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
-                                                 mp = False, loop_filter = True)
+                            mp = False, loop_filter = True,MLOptions=MLOptions)
         
         shell_name = None
         directories = glob.glob(os.path.join(export_dir, 'SubProcesses','P0_*'))
@@ -1301,7 +1304,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         return infos
 
     def time_matrix_element(self, matrix_element, reusing = False,
-                       param_card = None, keep_folder = False, options=None):
+                       param_card = None, keep_folder = False, options=None,
+                       MLOptions = {}):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
@@ -1326,7 +1330,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                 temp_dir_prefix+"_%s"%proc_name)
 
         res_timings = self.setup_process(matrix_element,export_dir, \
-                                                            reusing, param_card)
+                                    reusing, param_card,MLOptions = MLOptions)
         
         if res_timings == None:
             return None
@@ -1438,7 +1442,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 #===============================================================================
 
     def check_matrix_element_stability(self, matrix_element, options=None,
-                          infos = None, param_card = None, keep_folder = False):
+                          infos = None, param_card = None, keep_folder = False,
+                          MLOptions = {}):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
         If infos are provided, then the matrix element output is skipped and 
@@ -1488,7 +1493,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                 temp_dir_prefix+"_%s"%proc_name)
         if not infos:
             infos = self.setup_process(matrix_element,export_dir, \
-                                                            reusing, param_card)
+                                                reusing, param_card,MLOptions)
             if not infos:
                 return None
         dir_path=infos['dir_path']
@@ -2029,7 +2034,7 @@ def generate_loop_matrix_element(process_definition, reuse,
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, param_card = None,cuttools="",
-                            options = None, cmd = FakeInterface()):
+                            options = None, cmd = FakeInterface(),MLOptions={}):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
@@ -2044,8 +2049,13 @@ def check_profile(process_definition, param_card = None,cuttools="",
     myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myProfiler.loop_optimized_output=False
+    if not myProfiler.loop_optimized_output:
+        MLoptions={}
+    else:
+        MLoptions=MLOptions
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
-                            param_card, keep_folder=keep_folder,options=options)
+                            param_card, keep_folder=keep_folder,options=options,
+                            MLOptions = MLoptions)
     
     if timing2 == None:
         return None, None
@@ -2055,7 +2065,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
 
     stability = myProfiler.check_matrix_element_stability(matrix_element,                                            
                             options=options, infos=timing,param_card=param_card,
-                                                      keep_folder = keep_folder)
+                                                      keep_folder = keep_folder,
+                                                      MLOptions = MLoptions)
     if stability == None:
         return None, None
     else:
@@ -2067,7 +2078,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_stability(process_definition, param_card = None,cuttools="", 
-                               options=None,nPoints=100, reuse=False, cmd = FakeInterface()):
+                               options=None,nPoints=100, reuse=False, 
+                               cmd = FakeInterface(), MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
     
@@ -2083,9 +2095,14 @@ def check_stability(process_definition, param_card = None,cuttools="",
                                                             model=model,cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myStabilityChecker.loop_optimized_output=False
+    if not myStabilityChecker.loop_optimized_output:
+        MLoptions = {}
+    else:
+        MLoptions = MLOptions
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
-                                                        keep_folder=keep_folder)
+                                                        keep_folder=keep_folder,
+                                                        MLOptions=MLoptions)
     
     if stability == None:
         return None
@@ -2097,7 +2114,8 @@ def check_stability(process_definition, param_card = None,cuttools="",
 # check_timing for loop processes
 #===============================================================================
 def check_timing(process_definition, param_card= None, cuttools="",
-                                          options=None, cmd = FakeInterface()):
+                                          options=None, cmd = FakeInterface(),
+                                          MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
@@ -2110,8 +2128,13 @@ def check_timing(process_definition, param_card= None, cuttools="",
     myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myTimer.loop_optimized_output=False
+    if not myTimer.loop_optimized_output:
+        MLoptions = {}
+    else:
+        MLoptions = MLOptions
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
-                                     keep_folder = keep_folder, options=options)
+                                     keep_folder = keep_folder, options=options,
+                                     MLOptions = MLoptions)
     
     if timing2 == None:
         return None

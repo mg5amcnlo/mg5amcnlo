@@ -2834,7 +2834,8 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-
+            
+        MLoptions={}
         i=-1
         while args[i].startswith('--'):
             option = args[i].split('=')
@@ -2842,6 +2843,8 @@ This implies that with decay chains:
                 options['energy']=float(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
+            elif option[0]=='--reduction':
+                MLoptions['MLReductionLib']=int(option[1])
             i=i-1
         args = args[:i+1]
         
@@ -2915,6 +2918,7 @@ This implies that with decay chains:
                                                   cuttools=CT_dir,
                                                   options = options,
                                                   cmd = self,
+                                                  MLOptions = MLoptions
                                                   )        
 
         if args[0] in ['stability']:
@@ -2922,7 +2926,8 @@ This implies that with decay chains:
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
-                                                  cmd = self)
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
@@ -2931,7 +2936,8 @@ This implies that with decay chains:
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
-                                                  cmd = self)
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
 
 
     #if args[0] in  ['permutation', 'full']:
