@@ -142,7 +142,7 @@ class TestCmdShell1(unittest.TestCase):
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
                     'OLP': 'MadLoop',
-                    'auto_update': 7
+                    'auto_update': 7,
                     'cluster_nb_retry': 1,
                     'cluster_retry_wait': 300
                     }
