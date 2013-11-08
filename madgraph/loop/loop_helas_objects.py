@@ -491,9 +491,8 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
             amp.get('fermionfactor')
 
     def calculate_loopsymmetryfactor(self):
-        """ Calculate the loop symmetry factor. For now it is hard-coded function valid
-        for the SM only where all symmetry factors are 1 except for the gluon bubble which
-        exhibits a factor 2."""
+        """ Calculate the loop symmetry factor. For one-loop matrix elements,
+        it is always 2 for bubble with identical particles and 1 otherwise."""
         
         # HSS 27/09/2012
         #print len(self.get('wavefunctions'))
