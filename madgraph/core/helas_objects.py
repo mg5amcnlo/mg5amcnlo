@@ -2603,12 +2603,10 @@ class HelasAmplitude(base_objects.PhysicsObject):
         bosons = filter(lambda wf: wf.is_boson(), self.get('mothers'))
 
         fermion_number_list = []
-        fermion_number_list2 = []
 
         # If there are fermion line pairs, append them as
         # [NI,NO,n1,n2,...]
         fermion_numbers = [f.get_fermion_order() for f in fermions]
-        fermion_numbers_save = copy.copy(fermion_numbers)
 
         # Apply the right sign correction for anti-commutating ghost loops
         if self.get('type')=='loop':
@@ -2653,53 +2651,53 @@ class HelasAmplitude(base_objects.PhysicsObject):
                 # We have a closed loop fermion flow here, so we just append
                 # [lwf2_number,lwf1_number] or [lwf2_number,lwf1_number]
                 # depending on which one is incoming or outgoing
-                fermion_number_list2.extend([fermion_numbers[0][0],
+                fermion_number_list.extend([fermion_numbers[0][0],
                                                          fermion_numbers[1][0]])
-                fermion_number_list2.extend(fermion_numbers[iferm_to_replace][1])
+                fermion_number_list.extend(fermion_numbers[iferm_to_replace][1])
             else:
                 # The fermion flow escape the loop in this case.
-                fermion_number_list2 = \
+                fermion_number_list = \
                                  copy.copy(fermion_numbers[iferm_to_replace][1])
                 # We must find to which external fermion the lcut_wf1 is 
                 # connected (i.e. 5 being connected to 3(resp. 4) in the example 
                 # of diagram 22 (resp. 21) above)
-                i_connected_fermion = fermion_number_list2.index(lcut_wf1_number)
-                fermion_number_list2[i_connected_fermion] = \
+                i_connected_fermion = fermion_number_list.index(lcut_wf1_number)
+                fermion_number_list[i_connected_fermion] = \
                                             fermion_numbers[iferm_to_replace][0]
-#        else:
-        for iferm in range(0, len(fermion_numbers), 2):
-            fermion_number_list.append(fermion_numbers[iferm][0])
-            fermion_number_list.append(fermion_numbers[iferm+1][0])
-            fermion_number_list.extend(fermion_numbers[iferm][1])
-            fermion_number_list.extend(fermion_numbers[iferm+1][1])
+        else:
+            for iferm in range(0, len(fermion_numbers), 2):
+                fermion_number_list.append(fermion_numbers[iferm][0])
+                fermion_number_list.append(fermion_numbers[iferm+1][0])
+                fermion_number_list.extend(fermion_numbers[iferm][1])
+                fermion_number_list.extend(fermion_numbers[iferm+1][1])
 
         # Bosons are treated in the same way for a bosonic loop than for tree
         # level kind of amplitudes.
         for boson in bosons:
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
-            fermion_number_list2.extend(boson.get_fermion_order())
 
-        if not hasattr(HelasAmplitude,"counter"):
-            HelasAmplitude.counter=1
-            print "MMMMME"
-        save1 = copy.copy(fermion_number_list)
-        save2 = copy.copy(fermion_number_list2)
-        save3 = copy.copy(fermion_number_list)
-        save4 = copy.copy(fermion_number_list2)
-        if HelasAmplitude.counter<500000 and self.get('type')=='loop' and \
-          HelasAmplitude.sign_flips_to_order(save1)*HelasAmplitude.sign_flips_to_order(save2)==-1:
-            print "Before %i=%s"%(HelasAmplitude.counter,str(fermion_numbers_save))
-            print "FOOOOR %i=%s"%(HelasAmplitude.counter,str(fermion_number_list))
-            print "NEW %i=%s"%(HelasAmplitude.counter,str(fermion_number_list2))
-            print "Relative sign =%d"%(HelasAmplitude.sign_flips_to_order(save3)*HelasAmplitude.sign_flips_to_order(save4))
-        HelasAmplitude.counter=self.counter+1
+#         if not hasattr(HelasAmplitude,"counter"):
+#             HelasAmplitude.counter=1
+#             print "MMMMME"
+#         save1 = copy.deepcopy(fermion_number_list)
+#         save2 = copy.deepcopy(fermion_number_list2)
+#         save3 = copy.deepcopy(fermion_number_list)
+#         save4 = copy.deepcopy(fermion_number_list2)
+#         if HelasAmplitude.counter<500000 and self.get('type')=='loop' and \
+#           HelasAmplitude.sign_flips_to_order(save1)*HelasAmplitude.sign_flips_to_order(save2)==-1:
+#             print "Before %i=%s"%(HelasAmplitude.counter,str(fermion_numbers_save))
+#             print "FOOOOR %i=%s"%(HelasAmplitude.counter,str(fermion_number_list))
+#             print "NEW %i=%s"%(HelasAmplitude.counter,str(fermion_number_list2))
+#             print "Relative sign =%d"%(HelasAmplitude.sign_flips_to_order(save3)*HelasAmplitude.sign_flips_to_order(save4))
+#         HelasAmplitude.counter=self.counter+1
 
-        fermion_number_list = fermion_number_list2
+        #fermion_number_list = fermion_number_list2
 
         fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
         
         self['fermionfactor'] = fermion_factor*ghost_factor
+#        print "foooor %i ="%HelasAmplitude.counter, fermion_factor, self.get('type')
 
     @staticmethod
     def sign_flips_to_order(fermions):
