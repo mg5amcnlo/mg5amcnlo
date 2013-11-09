@@ -1008,7 +1008,7 @@ class CheckValidForCmd(object):
             elif arg.isdigit() and int(arg) in particles_name.values():
                 output['particles'].add(eval(arg))
             elif arg == 'all':
-                output['particles'] = ['all']
+                output['particles'] = set(['all'])
             else:
                 self.help_compute_widths()
                 raise self.InvalidCmd, '%s is not a valid argument for compute_widths' % arg
@@ -5398,8 +5398,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def help_compute_widths(self):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.help_compute_widths()
-    def complete_compute_widths(self):
+    def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
-        return self.mother_interface.complete_compute_widths()
+        return self.mother_interface.complete_compute_widths(*args,**opts)
 
 

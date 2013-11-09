@@ -966,6 +966,61 @@ class DecayParticle(base_objects.Particle):
                                     get_apx_decaywidth(model)
                             
                             self.get_channels(clevel, temp_c_o).append(temp_c)
+            
+            # add valid 3-body decay which start from a valid 2-body decay but 
+            #where the sub-decay is forbidden S1 > S2 (S2 > S3 S3)
+            #with 2* MS2 < MS1 but 2*MS3> MS2 so S2 is not onshell!
+            tot = len(self.get_channels(sub_clevel, True))
+            for nb,sub_c in enumerate(self.get_channels(sub_clevel, True)):
+                if (nb + 1) % 100 == 0:
+                    logger.info('%i / %i: %ss' % (nb+1, tot, int(time.time()-start)))
+                # Scan each leg to see if there is any appropriate vertex
+                for index, leg in enumerate(sub_c.get_final_legs()):
+
+                    # Get the particle even for anti-particle leg.
+                    inter_part = model.get_particle(abs(leg['id']))
+
+                    # If this inter_part is stable, do not attach vertices to it
+                    if inter_part.get('is_stable'):
+                        continue
+                    # Get the vertexlist in vlevel
+                    # ONLY off-shell vertex should be considered.
+                    vlist_b = inter_part.get_vertexlist(vlevel, False)
+
+
+                    # Find appropriate vertex
+                    for vert in vlist_b:
+                        # Connect sub_channel to the vertex
+                        # the connect_channel_vertex will
+                        # inherit the 'has_idpart' from sub_c
+
+                        temp_c = self.connect_channel_vertex(sub_c, index, 
+                                                             vert, model)
+                        temp_c_o = temp_c.get_onshell(model)
+                        if not temp_c_o:
+                            # if offshell, this starts to be extremelly tricky
+                            #and time consuming to found all the fake onshell
+                            #decay. We therefore neglect all of them. This starts 
+                            #to be problematic for 4 body decay (for valid 2-body)
+                            #so this should be fine.
+                            continue
+                        
+                        # Append this channel if it is new
+                        rstart = time.time()
+                        status = self.check_repeat(clevel, temp_c_o, temp_c)
+                        repeat_time += time.time() - rstart
+                        if not status:
+                            # Check gauge dependence
+                            if not temp_c.check_gauge_dependence(model):
+                                continue
+                            # Calculate the width if onshell
+                            # Add to the apx_decaywidth of mother particle
+                            self['apx_decaywidth'] += temp_c.\
+                                    get_apx_decaywidth(model)
+                            
+                            self.get_channels(clevel, temp_c_o).append(temp_c)               
+            
+            
             if hasattr(self, 'check_repeat_tag'):          
                 del self.check_repeat_tag
 

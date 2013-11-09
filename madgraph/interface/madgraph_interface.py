@@ -4662,11 +4662,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 #self.define_child_cmd_interface(me_cmd, interface=False) 
                 me_cmd.model_name = self._curr_model['name'] #needed for mssm
                 me_cmd.options['automatic_html_opening'] = False
-                # run the survey
-                #me_cmd.exec_cmd('calculate_decay_widths --accuracy=%s' % (
-                #                                     opts['precision_channel']))
-                
-                
                 
                 me_opts=[('accuracy', opts['precision_channel']), # default 0.01
                          ('points', 1000),
