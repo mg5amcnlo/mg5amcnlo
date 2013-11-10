@@ -72,12 +72,7 @@ class Cluster(object):
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
         """how to make one submission. return status id on the cluster."""
-        raise notimplemented, 'no implementation of how to submit a job to cluster \'%s\'' % self.name
-
-    def submit_multi(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None, 
-            input_files=[], output_files=[]):
-        """how to make one submission. return status id on the cluster."""
-        raise notimplemented, 'no implementation of how to submit a job to cluster \'%s\'' % self.name
+        raise NotImplemented, 'no implementation of how to submit a job to cluster \'%s\'' % self.name
 
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                 log=None, input_files=[], output_files=[]):

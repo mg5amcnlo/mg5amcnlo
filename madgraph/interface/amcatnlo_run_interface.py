@@ -2623,7 +2623,7 @@ Integrated cross-section
 
         try: 
             os.environ['fastjet_config'] = self.options['fastjet']
-        except TypeError:
+        except (TypeError, KeyError):
             os.environ['fastjet_config'] = 'None'
         
         # make Source
