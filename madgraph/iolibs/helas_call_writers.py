@@ -1219,6 +1219,14 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                         for coup in lwf.get('coupling'):
                             couplings.append("LC(%d)"%couplingNumber)
                             couplingNumber=couplingNumber+1
+                        # for 4-gluon vertex, there are many amplitudes in one diag
+                        # delete the attributes of octet_majorana_flip to let it flip
+                        # sign in set_octet_majorana_coupling_sign
+                        # otherwise, the second and third amplitudes cannot be 
+                        # flipped sign again
+                        # It is important to make it work with g g > go go [virt=QCD]
+                        if hasattr(lwf,"octet_majorana_flip"):
+                            del lwf.octet_majorana_flip
                         lwf.set('coupling',couplings)
                     for mother in lwf.get('mothers'):
                         if not mother.get('is_loop'):
@@ -1231,6 +1239,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 # And now for all the other wavefunctions
                 res.extend([ self.get_wavefunction_call(wf) for \
                           wf in lamp.get('wavefunctions') if wf.get('mothers')])
+
                 # Get the last wf generated and the corresponding loop
                 # wavefunction number
                 for lwf in lamp.get('amplitudes')[0].get('mothers'):
