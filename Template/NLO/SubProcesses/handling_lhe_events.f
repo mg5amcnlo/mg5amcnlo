@@ -509,7 +509,8 @@ c
               write(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               write(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              write(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  write(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -535,7 +536,10 @@ c$$$                 enddo
                     write(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-                 
+                 write(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 write(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               write(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -554,12 +558,16 @@ c$$$                 enddo
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    write(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+              write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 write(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              write(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              write(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
@@ -701,7 +709,8 @@ c
               read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              read(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -729,7 +738,10 @@ c
                     read(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-              
+                 read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -748,12 +760,16 @@ c
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+              read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
@@ -906,7 +922,8 @@ c
               read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              read(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -934,7 +951,10 @@ c
                     read(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-                 
+                 read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -949,16 +969,20 @@ c
                  read(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
               enddo
               read(ifile,402)
-     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
-     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
-     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
-     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+     &             wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &             wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &             wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &             wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+              read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop

@@ -1373,7 +1373,7 @@ class TestFKSCommon(unittest.TestCase):
 # TestLinkRBConfHEFT
 #===============================================================================
 class TestLinkRBConfHEFT(unittest.TestCase):
-    """Class to test the link_rb_conf function for various processes, using SM
+    """Class to test the link_rb_configs function for various processes, using SM
     (only processes with 3 point interactions)"""
 
     def setUp(self):
@@ -1408,11 +1408,11 @@ class TestLinkRBConfHEFT(unittest.TestCase):
         ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
                     {'i': 4, 'j':2, 'ij':2}]
 
-        links =[[{'born_conf':0, 'real_conf':3}],
-                [{'born_conf':0, 'real_conf':2}] ]
+        links =[[{'born_conf':0, 'real_conf':2}],
+                [{'born_conf':0, 'real_conf':1}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
     def test_link_gghgg_gghg(self):
         """tests that the real emission process gg>hgg and born process gg>hg are
@@ -1452,24 +1452,24 @@ class TestLinkRBConfHEFT(unittest.TestCase):
                     {'i': 5, 'j':2, 'ij':2}, 
                     {'i': 5, 'j':4, 'ij':4} ]
 
-        links =[[{'born_conf':1, 'real_conf':11},
-                 {'born_conf':2, 'real_conf':10},
-                 {'born_conf':3, 'real_conf':9} ],
-                [{'born_conf':1, 'real_conf':18},
-                 {'born_conf':2, 'real_conf':5},
-                 {'born_conf':3, 'real_conf':14}],
-                [{'born_conf':1, 'real_conf':15},
-                 {'born_conf':2, 'real_conf':14},
-                 {'born_conf':3, 'real_conf':13}],
-                [{'born_conf':1, 'real_conf':19},
-                 {'born_conf':2, 'real_conf':6},
-                 {'born_conf':3, 'real_conf':10}],
-                [{'born_conf':1, 'real_conf':3},
-                 {'born_conf':2, 'real_conf':7},
-                 {'born_conf':3, 'real_conf':17}] ]
+        links =[[{'born_conf':0, 'real_conf':8},
+                 {'born_conf':1, 'real_conf':7},
+                 {'born_conf':2, 'real_conf':6} ],
+                [{'born_conf':0, 'real_conf':13},
+                 {'born_conf':1, 'real_conf':3},
+                 {'born_conf':2, 'real_conf':10}],
+                [{'born_conf':0, 'real_conf':11},
+                 {'born_conf':1, 'real_conf':10},
+                 {'born_conf':2, 'real_conf':9}],
+                [{'born_conf':0, 'real_conf':14},
+                 {'born_conf':1, 'real_conf':4},
+                 {'born_conf':2, 'real_conf':7}],
+                [{'born_conf':0, 'real_conf':2},
+                 {'born_conf':1, 'real_conf':5},
+                 {'born_conf':2, 'real_conf':12}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
     def test_sort_proc(self):
         """tests that the legs of a process are correctly sorted"""
@@ -1506,12 +1506,45 @@ class TestLinkRBConfHEFT(unittest.TestCase):
 # TestLinkRBConfSM
 #===============================================================================
 class TestLinkRBConfSM(unittest.TestCase):
-    """Class to test the link_rb_conf function for various processes, using SM
+    """Class to test the link_rb_confing function for various processes, using SM
     (only processes with 3 point interactions)"""
 
     def setUp(self):
         if not hasattr(self, 'base_model'):
             TestLinkRBConfSM.base_model = import_ufo.import_model('sm')
+
+    def test_link_udxwpg_udxwp(self):
+        """tests that the real emission process ud~>w+g and born process u u~>w+ are
+        correctly linked"""
+
+        myleglist_r = MG.LegList()
+        myleglist_r.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':-1, 'state':False}))
+        myleglist_r.append(MG.Leg({'id':24, 'state':True}))
+        myleglist_r.append(MG.Leg({'id':21, 'state':True}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':1}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+        myleglist_b = MG.LegList()
+        myleglist_b.append(MG.Leg({'id':2, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':-1, 'state':False}))
+        myleglist_b.append(MG.Leg({'id':24, 'state':True}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':0, 'QED':1}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
+                    {'i': 4, 'j':2, 'ij':2}]
+
+        links =[[{'born_conf':0, 'real_conf':1}],
+                [{'born_conf':0, 'real_conf':0}]]
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
 
     def test_link_uuddg_uudd(self):
         """tests that the real emission process uu~>dd~g and born process uu~>dd~ are
@@ -1551,7 +1584,7 @@ class TestLinkRBConfSM(unittest.TestCase):
                 [{'born_conf':0, 'real_conf':2}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
 
     def test_link_uuddg_uugg(self):
@@ -1593,7 +1626,7 @@ class TestLinkRBConfSM(unittest.TestCase):
                  {'born_conf':2, 'real_conf':4}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
 
     def test_link_uuuug_guug(self):
@@ -1635,7 +1668,7 @@ class TestLinkRBConfSM(unittest.TestCase):
                  {'born_conf':2, 'real_conf':3}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
 
     def test_link_butdg_butd(self):
@@ -1677,7 +1710,7 @@ class TestLinkRBConfSM(unittest.TestCase):
                 [{'born_conf':0, 'real_conf':1}] ]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
 
     def test_link_gutdb_butd(self):
@@ -1712,7 +1745,7 @@ class TestLinkRBConfSM(unittest.TestCase):
         links =[[{'born_conf':0, 'real_conf':3}]]
 
         for conf, link in zip(ij_conf, links):
-            self.assertEqual(link, fks_common.link_rb_conf(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
 
 
 #===============================================================================
