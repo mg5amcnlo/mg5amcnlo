@@ -1963,55 +1963,6 @@ class Test_Channel(unittest.TestCase):
         self.assertFalse(Tag_d == Tag_f)
         self.assertFalse(Tag_e == Tag_f)
 
-
-
-    def test_check_gauge_dependence(self):
-        """ Test of the check of gauge dependence function."""
-
-        # Add two interactions to the SM:
-        # t b w+ a QED=2 => should be remove by the test
-        # t b w+ a QED=1 QCD=1 => should be kept by the test
-        for interaction in self.my_testmodel.get('interactions'):
-            pids = set([p.get_pdg_code() for p in interaction.get('particles')])
-            if pids == set([-6, 24, 5]):
-                new_inter1 = copy.deepcopy(interaction)
-                new_inter2 = copy.deepcopy(interaction)       
-                new_inter3 = copy.deepcopy(interaction)
- 
-        # t > w+ b a, potentially gauge-dependent
-        new_inter1['id'] = 1001
-        new_inter1['particles'].append(self.my_testmodel.get_particle(22))
-        new_inter1['orders'] = {'QED':2, 'QCD':0}
-        self.my_testmodel['interactions'].append(new_inter1)
-        
-        # t > w+ b a, not gauge-dependent
-        new_inter2['id'] = 1002
-        new_inter2['particles'].append(self.my_testmodel.get_particle(22))
-        new_inter2['orders'] = {'QCD':1, 'QED':1}
-        
-        self.my_testmodel['interactions'].append(new_inter2)        
-
-        # t > w+ b a, not gauge-dependent
-        new_inter3['id'] = 1003
-        new_inter3['particles'].append(self.my_testmodel.get_particle(22))
-        new_inter3['orders'] = {'QCD':2}
-        self.my_testmodel['interactions'].append(new_inter3)
-
-        # Reset everything
-        self.my_testmodel['vertexlist_found'] = False
-        self.my_testmodel.reset_dictionaries()
-        self.my_testmodel['coupling_orders'] = None
-        self.my_testmodel['order_hierarchy'] = None
-        for p in self.my_testmodel['particles']:
-            p['decay_vertexlist'] = {}
-        
-        # ask for the top channel
-        top = self.my_testmodel.get_particle(6)
-        top.find_channels(2, self.my_testmodel)
-        all_top_dec = [v['id'] for v in top.get_vertexlist(3, True) + top.get_vertexlist(3, False)]
-        self.assertFalse(1001 in all_top_dec) 
-        self.assertTrue(1002 in all_top_dec)
-        self.assertTrue(1003 in all_top_dec)
         
     def test_findchannels(self):
         """ Test of the find_channels functions."""
@@ -3823,10 +3774,11 @@ class Test_AbstractModel(unittest.TestCase):
         self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zee,
                                                    ab_amp_2['ab2real_dicts'][-1]))
         ab_amp_2['ab2real_dicts'].append(decay_objects.Ab2RealDict())
-        self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_ww_weve,
-                                                  ab_amp_2['ab2real_dicts'][-1]))
-        self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zbb,
-                                                   ab_amp_2['ab2real_dicts'][-1]))
+        
+        #self.assertTrue(ab_model.compare_diagrams(ab_dia_2, h_ww_weve,
+        #                                          ab_amp_2['ab2real_dicts'][-1]))
+        #self.assertFalse(ab_model.compare_diagrams(ab_dia_2, h_zz_zbb,
+        #                                           ab_amp_2['ab2real_dicts'][-1]))
 
 
 
