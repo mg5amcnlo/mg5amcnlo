@@ -68,8 +68,8 @@ c others: same as 1 (for now)
       include "mint.inc"
       include "FKSParams.inc"
       integer i,j,ncalls0,ndim,nitmax,imode
-      real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim)
-     $     ,ans(nintegrals),unc(nintegrals),ans3(nintegrals,3)
+      real * 8 fun,xgrid(0:nintervals,ndimmax),xint,ymax(nintervals
+     $     ,ndimmax),ans(nintegrals),unc(nintegrals),ans3(nintegrals,3)
      $     ,unc3(nintegrals,3),ans_l3(nintegrals),unc_l3(nintegrals)
      $     ,chi2_l3(nintegrals),ans1,unc1,ans2,unc2,chi21
       real * 8 x(ndimmax),vol

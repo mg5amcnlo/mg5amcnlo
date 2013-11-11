@@ -2187,8 +2187,9 @@ c
 c jet cluster algorithm
       integer NN,NJET,JET(nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
-     &     ,palg,fastjetdmergemax,di_ev(nexternal),di_cnt(nexternal)
-      external fastjetdmergemax
+     &     ,palg,amcatnlo_fastjetdmergemax,
+     &     di_ev(nexternal),di_cnt(nexternal)
+      external amcatnlo_fastjetdmergemax
 c
       NN=0
       do j=nincoming+1,nexternal
@@ -2233,9 +2234,9 @@ c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
             rfj=0.4d0           ! the radius parameter
-            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
-               di_cnt(i)=sqrt(fastjetdmergemax(i-1))
+               di_cnt(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
                   if (di_cnt(i).gt.di_cnt(i-1))then
                      write (*,*) 'Error in set_shower_scale_noshape '/
@@ -2269,9 +2270,9 @@ c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
             rfj=0.4d0           ! the radius parameter
-            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             do i=1,NN
-               di_ev(i)=sqrt(fastjetdmergemax(i-1))
+               di_ev(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
                   if (di_ev(i).gt.di_ev(i-1)) then
                      write (*,*) 'Error in set_shower_scale_noshape '/

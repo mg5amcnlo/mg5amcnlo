@@ -172,7 +172,7 @@ if nevents>=0:
 
     content_evts = ''
     for proc in processes:
-        content_evts+= ' '+proc['lhefile']+'              %(nevents)10d            %(resultABS)10.8e \n' %  proc
+        content_evts+= ' '+proc['lhefile']+'              %(nevents)10d            %(resultABS)10.8e        1.0 \n' %  proc
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()

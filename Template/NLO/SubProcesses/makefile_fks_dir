@@ -2,11 +2,16 @@ include ../../Source/make_opts
 
 LIBDIR = ../../lib/
 
-FASTJET_CONFIG = $(fastjet_config)
-CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
-FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
-#FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
-#FJLIBS=
+#check if fastjet-config is set
+ifeq ($(fastjet_config),None) 
+    fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o
+    FJLIBS += -lstdc++
+else
+    FASTJET_CONFIG = $(fastjet_config)
+    CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
+    FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
+    fastjetfortran_madfks=fastjetfortran_madfks_full.o
+endif
 
 NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # Uncomment the line below to compile with MadLoop without setting the environnement 
@@ -21,7 +26,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
-	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
+	 $(fastjetfortran_madfks) ktclusdble.o fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 FKSParamReader.o MC_integer.o 
 
@@ -55,7 +60,7 @@ SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
+	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o iproc_map.o  \
 	fks_inc_chooser.o leshouche_inc_chooser.o
 

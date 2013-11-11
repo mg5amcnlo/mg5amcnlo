@@ -26,8 +26,10 @@
 # (relative) accuracy on the Xsec.                                     *
 # These values are ignored for fixed order runs                        *
 #***********************************************************************
-  10000 = nevents    ! Number of unweighted events requested 
-     -1 = req_acc    ! Required accuracy (-1=auto determined from nevents)
+ 10000 = nevents ! Number of unweighted events requested 
+    -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
+    -1 = nevt_job! Max number of events per job in event generation. 
+                 !  (-1= no split).
 average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
@@ -57,7 +59,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   21100    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT)                   *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   HERWIG6   = parton_shower

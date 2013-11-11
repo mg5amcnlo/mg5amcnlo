@@ -189,7 +189,7 @@ c
 
       if(AddInfoLHE)then
         if(.not.doreweight)then
-           write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
@@ -201,7 +201,7 @@ c
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          write(buff,200)'#',iSorH_lhe,ifks_lhe(nFKSprocess)
+          write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &         ,scale2_lhe(nFKSprocess),iwgtinfo,nexternal,iwgtnumpartn
@@ -246,7 +246,7 @@ c********************************************************************
      #    NUP,IDPRUP,XWGTUP,scale,AQEDUP,AQCDUP,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+ 201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
       return
       end
 
