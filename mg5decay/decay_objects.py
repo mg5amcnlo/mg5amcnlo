@@ -881,6 +881,10 @@ class DecayParticle(base_objects.Particle):
             for vert in (self.get_vertexlist(clevel, True) + \
                              self.get_vertexlist(clevel, False)):
                 
+                if len(vert.get('legs')) >3:
+                    if not model.keep_Npoint(vert, self):
+                        continue
+                
                 temp_channel = Channel()
                 temp_vert = copy.deepcopy(vert)
 
@@ -1355,6 +1359,7 @@ class DecayModel(model_reader.ModelReader):
         # Properties for abstract model
         self['ab_model'] = AbstractModel()
         self['abmodel_generated'] = False
+        self['invalid_Npoint'] = []
         
 
     def get_sorted_keys(self):
@@ -1763,6 +1768,111 @@ class DecayModel(model_reader.ModelReader):
         #fdata.close()
 
     @misc.mute_logger(names=['madgraph.diagram_generation'], levels=[40])
+    def keep_Npoint(self, vertex, initpart):
+        """ """
+        get_mass = lambda x: eval(self.get_particle(x['id']).get('mass'))
+        init_mass = eval(initpart.get('mass'))
+
+        if vertex['id'] in self['invalid_Npoint']:
+            return False
+
+        interaction = self.get('interaction_dict')[vertex['id']]
+        decay_parts = [p for p in interaction['particles']]
+        
+        if len([1 for p in decay_parts if abs(p['pdg_code'])==abs(initpart['pdg_code'])]) >1:
+            self['invalid_Npoint'].append(vertex['id'])
+            return False
+
+        # create a process:
+        process = base_objects.ProcessDefinition()
+        process['model'] = self
+        process['orders'] = interaction['orders']
+        for order in self.get('coupling_orders'):
+            if order not in interaction['orders']:
+                process['orders'][order] = 0
+        leglist = base_objects.MultiLegList()
+        for i,particle in enumerate(interaction['particles']):
+            newleg = base_objects.MultiLeg({#'number': i+1,
+                                       'ids': [particle['pdg_code'] * (1 if particle['is_part'] else -1)],
+                                       'state': True
+                                       })
+            if abs(newleg['ids'][0]) == abs(initpart['pdg_code']):
+                leglist.insert(0, newleg)
+            else:
+                leglist.append(newleg)
+            
+            
+            
+        process['legs'] = leglist
+        
+        myprocdef = base_objects.ProcessDefinitionList()
+        myprocdef.append(process) 
+        myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
+
+        one_offshell = False
+        one_subdiag = False
+        for amp in myproc['amplitudes']:
+            for proc in amp['diagrams']:
+                # check if they are substructure
+                if not one_subdiag and len(proc['vertices']) >1:
+                    one_subdiag = True
+                else:
+                    continue
+                
+                #check that all substructure are valid
+                #remove if any radiation and two times the same particle in a vertex
+                for v in proc['vertices']:
+                    if any([get_mass(l)==0 for l in v.get('legs')]):
+                        self['invalid_Npoint'].append(vertex['id'])
+                        return False
+
+                    ids = set(abs(l['id']) for l in v.get('legs'))
+                    if len(ids) != len(vertex.get('legs')):
+                        self['invalid_Npoint'].append(vertex['id'])
+                        return False
+
+                # check onshell/offshell status                
+                prev_mass = 0
+                for v in proc['vertices'][:-1]:
+                    propa =  v.get('legs')[-1]
+                    if propa['number'] == 1:
+                        other_mass = sum([get_mass(p) for p in v.get('legs')[1:]])
+                        if init_mass.real > other_mass.real + prev_mass:
+                            # update the mass for the nex propagator
+                            prev_mass = sum([get_mass(p) for p in v.get('legs')[1:-1]])
+                            # special for 3 body to check for fake onshell
+                            if len(vertex['legs']) == 4:
+                                propa_mass = get_mass(v.get('legs')[-1])
+                                other_v = proc['vertices'][-1]
+                                end_mass = sum([get_mass(p) for p in other_v['legs']
+                                                if p['number']!=1])
+                                if propa_mass.real < end_mass.real:
+                                    one_offshell = True
+                                    continue
+                                
+                        else:
+                            one_offshell = True
+                            continue
+                                
+                                
+                            
+                            
+                
+        
+        if not one_subdiag:
+            return True
+        elif one_offshell:
+            return True
+        else:
+            return False                
+                        
+
+                                        
+                     
+        
+
+
+
     def gauge_dependence_helper(self):
         """ Check the potential gauge dependence of vertices, i.e.
             3-pt interaction + radiation. 
@@ -1773,66 +1883,11 @@ class DecayModel(model_reader.ModelReader):
             1) generate a process object (same particles and same order)
             2) reject the diagram if some of the diagrams have more than one 
             interactions.
-        """
-        logger.info('remove N-body interactions which are not LO for the width computation')
-        start = time.time()
-
-        for interaction in self['interactions']:
-            nb_part = len(interaction['particles'])
-            if nb_part < 4:
-                continue
-            decay_parts = [p for p in interaction['particles'] 
-                            for v in p.get_vertexlist(nb_part-1, True) + p.get_vertexlist(nb_part-1, False)
-                            if interaction['id'] == v['id']]
-
-            if not decay_parts:
-                continue
-
-            # create a process:
-            process = base_objects.ProcessDefinition()
-            process['model'] = self
-            process['orders'] = interaction['orders']
-            for order in self.get('coupling_orders'):
-                if order not in interaction['orders']:
-                    process['orders'][order] = 0
-            leglist = base_objects.MultiLegList()
-            for i,particle in enumerate(interaction['particles']):
-                newleg = base_objects.MultiLeg({#'number': i+1,
-                                           'ids': [particle['pdg_code'] * (1 if particle['is_part'] else -1)],
-                                           'state': True
-                                           })
-                leglist.append(newleg)
-            process['legs'] = leglist
-            myprocdef = base_objects.ProcessDefinitionList()
-            myprocdef.append(process) 
-            myproc = diagram_generation.MultiProcess(myprocdef, optimize=False)
-            to_remove = False
-            for amp in myproc['amplitudes']:
-                if to_remove:
-                    break
-                for proc in amp['diagrams']:
-                    if len(proc['vertices']) >1:
-                        to_remove = True
-                        break
             
-            if to_remove:
-                for part in decay_parts:
-                    new_vlist_onshell = base_objects.VertexList()
-                    new_vlist_offshell = base_objects.VertexList()
-                    for v in part.get_vertexlist(nb_part-1, False):
-                        if v['id'] == interaction['id']: 
-                            part.get_vertexlist(nb_part-1, False).remove(v)
-                            assert(v not in part.get_vertexlist(nb_part-1, False))
-                            break 
-                    else:
-                        for v in part.get_vertexlist(nb_part-1, True):
-                            if v['id'] == interaction['id']:  
-                                part.get_vertexlist(nb_part-1, True).remove(v)
-                                assert(v not in part.get_vertexlist(nb_part-1, False))
-                                break
-                
-                    
-        logger.info('Done in %s s' % int(time.time()-start))
+            REPLACE BY check_Npoint with a check of onshell/offshell in addiation
+        """
+        return
+
             
 
     def color_multiplicity_def(self, colorlist):
@@ -4429,7 +4484,8 @@ class DecayAmplitude(diagram_generation.Amplitude):
                 self['apx_br'] = self.get('apx_decaywidth')/ \
                     ini_part['apx_decaywidth']
             except ZeroDivisionError:
-                logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % ini_part.get('name'))
+                pass
+                #logger.warning("Try to get branch ratio from a zero width particle %s. No action proceed." % ini_part.get('name'))
 
         return super(DecayAmplitude, self).get(name)
 

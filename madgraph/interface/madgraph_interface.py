@@ -4795,8 +4795,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                 while part.get('apx_decaywidth_err') > precision:
                     clevel += 1
                     if clevel > max_level:
-                        logger_mg('    stop to %s body-decay. approximate error: %s' %
+                        logger_mg.info('    stop to %s body-decay. approximate error: %s' %
                                    (max_level, part.get('apx_decaywidth_err')) )
+                        break
                     if clevel > 3:
                         logger_mg.info('    current estimated error: %s go to %s-body decay:' %\
                                         (part.get('apx_decaywidth_err'), clevel))
