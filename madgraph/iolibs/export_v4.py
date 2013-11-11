@@ -117,7 +117,7 @@ class ProcessExporterFortran(object):
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([pjoin('bin', 'internal', 'clean_template'),
+                misc.call([pjoin('bin', 'internal', 'clean_template'),
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
@@ -1118,6 +1118,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         filename = pjoin(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
+        #
+        filename = pjoin(self.dir_path,'SubProcesses','addmothers.f')
+        self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
         
@@ -1352,8 +1355,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         # Generate diagrams
         filename = "matrix.ps"
@@ -1461,18 +1463,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             for Pdir in P_dir_list:
                 os.chdir(Pdir)
                 try:
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 except:
                     os.system('chmod +x %s ' % pjoin(old_pos, self.dir_path, 'bin', 'internal', '*'))
-                    subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull)
                 os.chdir(os.path.pardir)
 
         logger.info("Generate web pages")
         # Create the WebPage using perl script
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
 
         os.chdir(os.path.pardir)
@@ -1493,17 +1495,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             output_file.write(text)
             output_file.close()
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin('SubProcesses', 'subproc.mg')):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
-            subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
+            misc.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull)
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         #return to the initial dir
@@ -2048,6 +2050,20 @@ c           This is dummy particle used in multiparticle vertices
         return True
 
     #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'diag_number'}
+        writer.write(text)
+        
+        return True
+
+
+    #===========================================================================
     # write_combine_events
     #===========================================================================
     def write_combine_events(self, writer):
@@ -2364,9 +2380,9 @@ c           This is dummy particle used in multiparticle vertices
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
         lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
-
         # Write the file
-        writer.writelines(lines)
+        writer.write('\n'.join(lines))
+        writer.write('\n')
 
         return True
 
@@ -2591,8 +2607,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
@@ -2715,6 +2730,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 me in matrix_elements])))
         # Write the file
         writer.writelines(lines)
+
+    #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'iconfig'}
+        writer.write(text)
+        
+        return True
+
 
     #===========================================================================
     # write_coloramps_file
@@ -3093,7 +3122,7 @@ class UFO_model_to_mg4(object):
         # Write complex mass for complex mass scheme (if activated)
         if self.opt['complex_mass']:
             fsock.writelines('double complex '+', '.join(complex_mass)+'\n')
-            fsock.writelines('common/couplings/ '+', '.join(complex_mass)+'\n')            
+            fsock.writelines('common/complex_mass/ '+', '.join(complex_mass)+'\n')            
         
     def create_write_couplings(self):
         """ write the file coupl_write.inc """

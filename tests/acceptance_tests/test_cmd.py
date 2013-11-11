@@ -109,34 +109,37 @@ class TestCmdShell1(unittest.TestCase):
     def test_config(self):
         """check that configuration file is at default value"""
         self.maxDiff=None
+        self.cmd.options = {} #reset to None
         config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
         config =dict(config)
         del config['stdout_level']
-        for key in config.keys():
-            if key.endswith('_path') and key != 'cluster_temp_path':
-                del config[key]
+#        for key in config.keys():
+#            if key.endswith('_path') and key != 'cluster_temp_path':
+#                del config[key]
         expected = {'web_browser': None, 
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
                     'run_mode': 2,
-#                    'pythia-pgs_path': './pythia-pgs', 
-#                    'td_path': './td', 
-#                    'delphes_path': './Delphes', 
+                    'pythia-pgs_path': './pythia-pgs', 
+                    'td_path': './td', 
+                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
-#                    'madanalysis_path': './MadAnalysis', 
+                    'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
                     'fortran_compiler': None, 
-#                    'exrootanalysis_path': './ExRootAnalysis', 
+                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': True, 
-#                    'pythia8_path': None,
+                    'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
                     'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
                     'timeout': 60,
-                    'auto_update': 7
+                    'auto_update': 7,
+                    'cluster_nb_retry': 1,
+                    'cluster_retry_wait': 300
                     }
 
         self.assertEqual(config, expected)
@@ -1010,20 +1013,20 @@ C
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact_orig.dat')).read(),
-                         """ 1    1
- 2    -1
- 3    -1
- 4    -1
- 5    1
- 6    -5
- 7    -5
- 8    -5
- 9    1
- 10   -9
- 11   -9
- 12   -9
-""")
+                                           'symfact_orig.dat')).read().split('\n'),
+                         """ 1   1
+ 2  -1
+ 3  -1
+ 4  -1
+ 5   1
+ 6  -5
+ 7  -5
+ 8  -5
+ 9   1
+10  -9
+11  -9
+12  -9
+""".split('\n'))
 
         # Compile the Source directory
         status = subprocess.call(['make'],

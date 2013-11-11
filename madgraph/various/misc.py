@@ -613,7 +613,7 @@ class open_file(object):
         
         # first for eps_viewer
         if not cls.eps_viewer:
-           cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
+           cls.eps_viewer = cls.find_valid(['evince','gv', 'ggv'], 'eps viewer') 
             
         # Second for web browser
         if not cls.web_browser:

@@ -644,7 +644,7 @@ class CheckValidForCmd(object):
                         
     def check_set(self, args):
         """ check the validity of the line"""
-        
+
         if len(args) < 2:
             self.help_set()
             raise self.InvalidCmd('set needs an option and an argument')
@@ -1721,7 +1721,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'nb_core': None,
-                         'cluster_temp_path':None}
+                         'cluster_temp_path':None,
+                         'cluster_nb_retry':1,
+                         'cluster_retry_wait':300}
     
     helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
@@ -1944,14 +1946,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+                             'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
                 except self.InvalidCmd:
                     logger.warning("Option %s from config file not understood" \
                                    % key)
-        
         # Configure the way to open a file:
         misc.open_file.configure(self.options)
           
@@ -2246,6 +2248,14 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             opt = self.options
             self.cluster = cluster.from_name[opt['cluster_type']](\
                                  opt['cluster_queue'], opt['cluster_temp_path'])
+            self.cluster.nb_retry = self.options['cluster_nb_retry']
+            self.cluster_retry_wait = self.options['cluster_retry_wait']
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
+            self.options[args[0]] = int(args[1])
+            if args[0] == 'cluster_nb_retry':
+                self.cluster.nb_retry = int(args[1])
+            else:
+                self.cluster_retry_wait = int(args[1])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -2540,7 +2550,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 if particle and particle not in decay_info:
                     # No decays given, only total width       
                     decay_info[particle] = [[[], width]]
-            else: # Not decay                              
+            else: # Not decay
                 line_number += 1
         # Clean out possible remaining comments at the end of the card
         while not param_card[-1] or param_card[-1].startswith('#'):
@@ -2654,7 +2664,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                     mg5_param = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
                     check_param_card.convert_to_mg5card(param_card, mg5_param)
                     check_param_card.check_valid_param_card(mg5_param)
-                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')            
+                    opt['param_card'] = pjoin(self.me_dir, 'Source', 'MODEL', 'MG5_param.dat')
+            else:
+                check_param_card.check_valid_param_card(opt['param_card'])            
             
             logger.debug('write compile file for card: %s' % opt['param_card']) 
             param_card = check_param_card.ParamCard(opt['param_card'])
@@ -3707,8 +3719,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                         cwd=pjoin(self.me_dir,'Events'))
         else:
             delphes_log = open(pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag),'w')
-            misc.call([prog, delphes_dir, 
-                                self.run_name, tag, str(cross)],
+            misc.call([prog, delphes_dir, self.run_name, tag, str(cross)],
                                 stdout= delphes_log, stderr=subprocess.STDOUT,
                                 cwd=pjoin(self.me_dir,'Events'))
                 
@@ -3791,6 +3802,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 output_files = []
+                required_output = []
+                
 
                 #Find the correct PDF input file
                 if self.pdffile:
@@ -3824,14 +3837,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                     data = ' '.join(data).split()
                     for nb in data:
                         output_files.append('G%s' % nb)
+                        required_output.append('G%s/results.dat' % nb)
                 else:
                     for G in output_files:
                         if os.path.isdir(pjoin(cwd,G)):
                             input_files.append(G)
+                            required_output.append('%s/results.dat' % G)
                 
                 #submitting
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
-                             input_files=input_files, output_files=output_files)
+                             input_files=input_files, output_files=output_files,
+                             required_output=required_output)
             
             else:
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)
@@ -5047,14 +5063,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
         run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
         try:
-            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
-        except check_param_card.InvalidParamCard:
+            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+        except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
+            logger.error('problem detected: %s' % e)
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-    
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -5215,6 +5232,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
                         pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                if args[0] == 'param_card':
+                    self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+                elif args[0] == 'run_card':
+                    self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
                 return
             else:
                 card = args[0]

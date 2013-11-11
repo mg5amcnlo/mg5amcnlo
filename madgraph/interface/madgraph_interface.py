@@ -23,6 +23,7 @@ import logging
 import optparse
 import os
 import pydoc
+import random
 import re
 import signal
 import subprocess
@@ -1075,7 +1076,7 @@ This will take effect only in a NEW terminal
             forbiden_chars = ['>','<',';','&']
             for char in forbiden_chars:
                 if char in path:
-                    raise self.invalidCmd('%s is not allowed in the output path' % char)
+                    raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
@@ -1976,6 +1977,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -3256,11 +3259,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        try:
-            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
-            raise MadGraph5Error, '''Impossible to connect the server. 
+        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                     'http://madgraph.hep.uiuc.edu/package_info.dat']
+        r = random.randint(0,1)
+        r = [r, (1-r)]
+        for index in r:
+            cluster_path = data_path[index]
+            try:
+                data = urllib.urlopen(cluster_path)
+            except Exception:
+                continue
+            break
+        else:
+            raise MadGraph5Error, '''Impossible to connect any of us servers. 
             Please check your internet connection or retry later'''
+                
         for line in data: 
             split = line.split()   
             path[split[0]] = split[1]
@@ -3682,6 +3695,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         Execute the code (madevent/standalone/...)
         """
         
+        current_options = dict([(name, self.options[name]) for name in self.options_madgraph])
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3733,7 +3747,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
-        
+        # ensure that MG options are not changed!
+        for key, value in current_options.items():
+            self.options[key] = value
         
         
     
@@ -4103,7 +4119,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
-        elif args[0] in ['timeout', 'auto_update']:
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+                         'cluster_retry_wait']:
                 self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
