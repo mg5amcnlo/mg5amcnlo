@@ -32,6 +32,7 @@ clean:
 	rm -f *.log
 	cd Source; make clean
 	rm -f SubProcesses/collect_events
+	rm -f SubProcesses/combine_jobs
 	rm -f SubProcesses/*.o
 	for dir in `ls -d SubProcesses/P*`; do cd $$dir; make clean; cd ../../;\
 	    done

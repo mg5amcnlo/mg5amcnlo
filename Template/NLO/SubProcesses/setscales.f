@@ -227,7 +227,7 @@ c for 'geometric mean'
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       integer NN,NJET,JET(nexternal),iqcd
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmergemax
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
      &     ,tmp1,tmp2,xm2
 c FxFx
       integer nFxFx_ren_scales
@@ -291,7 +291,7 @@ c geometric mean (to reweight alphaS)
             palg=1.d0
             rfj=0.4d0
             sycut=0d0
-            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/
@@ -303,7 +303,7 @@ c  clustering values of the jets compute the geometric mean for the
 c  scale. Don't include the softest d_ij, because that corresponds to
 c  the 'real-emission parton'
                do i=1,nint(wgtbpower)
-                  tmp2=tmp2*sqrt(fastjetdmergemax(nn-i-1))
+                  tmp2=tmp2*sqrt(amcatnlo_fastjetdmergemax(nn-i-1))
                enddo
                tmp=tmp2**(1d0/wgtbpower)
             elseif (nn-1.lt.nint(wgtbpower)) then
@@ -317,7 +317,7 @@ c  particles (e.g. top quarks or Higgs) into account.
                      tmp1=tmp1+sqrt(pt(pp(0,i))**2+xm2)
                   else
                      iqcd=iqcd+1
-                     tmp2=tmp2*sqrt(fastjetdmergemax(nn-iqcd-1))
+                     tmp2=tmp2*sqrt(amcatnlo_fastjetdmergemax(nn-iqcd-1))
                   endif
                enddo
                tmp=tmp2*tmp1**(nint(wgtbpower)-iqcd)

@@ -27,7 +27,7 @@ c  reweight0.inc dbook.inc
       common/crndec/rndec
       character*80 event_file
       character*140 buff
-      character*1 ch1
+      character*9 ch1
       logical AddInfoLHE
       logical keepevent,rescale,doscale
       integer kr,kf,npdfset
@@ -45,6 +45,7 @@ c  reweight0.inc dbook.inc
       integer j,k
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
       character*10 MonteCarlo
+      integer isc,ipdf
 
       usexinteg=.false.
       mint=.false.
@@ -91,7 +92,9 @@ c evtsgn and unwgt used by plotting routines. Sort of fake values here
       open (unit=ifile,file=event_file,status='old')
       AddInfoLHE=.false.
 
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numscales=int(sqrt(dble(isc)))
+      numPDFpairs=ipdf/2
 c Showered LH files have maxevt<0; in that case, it is not the number of
 c events, but its upper bound
       if(maxevt.gt.0)then
@@ -139,7 +142,7 @@ c events, but its upper bound
              write(*,*)'Inconsistency in event file',i,' ',buff
              stop
            endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
      #                       scale1_lhe,scale2_lhe,
      #                       jwgtinfo,mexternal,iwgtnumpartn,
@@ -177,8 +180,6 @@ c Don't check momentum conservation
       if(rescale)
      #  write (*,*) 'The sum of rescaled weights is:',sum_wgt_resc
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
-
       end
 
 
@@ -205,3 +206,25 @@ c Dummy subroutine (normally used with vegas when resuming plots)
       END
 
 
+      subroutine boostwdir2(chybst,shybst,chybstmo,xd,xin,xout)
+c chybstmo = chybst-1; if it can be computed analytically it improves
+c the numerical accuracy
+      implicit none
+      real*8 chybst,shybst,chybstmo,xd(1:3),xin(0:3),xout(0:3)
+      real*8 tmp,en,pz
+      integer i
+c
+      if(abs(xd(1)**2+xd(2)**2+xd(3)**2-1).gt.1.d-6)then
+        write(*,*)'Error #1 in boostwdir2',xd
+        stop
+      endif
+c
+      en=xin(0)
+      pz=xin(1)*xd(1)+xin(2)*xd(2)+xin(3)*xd(3)
+      xout(0)=en*chybst-pz*shybst
+      do i=1,3
+        xout(i)=xin(i)+xd(i)*(pz*chybstmo-en*shybst)
+      enddo
+c
+      return
+      end

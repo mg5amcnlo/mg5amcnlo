@@ -310,6 +310,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
+                       'hwpp_path': './herwigPP',
+                       'thepeg_path': './thepeg',
+                       'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',

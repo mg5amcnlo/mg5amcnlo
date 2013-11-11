@@ -1787,11 +1787,11 @@ class DiagramDrawer(object):
     def draw_diagram(self, diagram=None, number=0):
         """Building the diagram Line after Line. 
         This is the key routine of 'draw'."""
-
+        
         # If No diagram set, use the one use at init
         if diagram is None:
             diagram = self.diagram
-                
+
         # drawing the vertex
         [self.draw_vertex(vertex) for vertex in diagram.vertexList]
 
@@ -1814,6 +1814,7 @@ class DiagramDrawer(object):
         # Finalize information related to the graph. First, associate a diagram
         #position to the diagram representation.
         self.put_diagram_number(number)
+        
 
         # Then If a file exist write the text in it                 
         if self.file:
@@ -1878,10 +1879,13 @@ class DiagramDrawer(object):
             
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
-        self.associate_name(line, name)
-        
-        #store begin for helping future curving
-        self.curved_part_start = (line.begin.pos_x, line.begin.pos_y)
+        if self.curved_part_start == (line.begin.pos_x, line.begin.pos_y):
+            self.associate_name(line, name, loop=True, reverse=True)
+            self.curved_part_start = (line.end.pos_x, line.end.pos_y)
+        else:
+            self.associate_name(line, name, loop=True)
+            #store begin for helping future curving
+            self.curved_part_start = (line.begin.pos_x, line.begin.pos_y)
 
     def draw_vertex(self, vertex):
         """default vertex style"""

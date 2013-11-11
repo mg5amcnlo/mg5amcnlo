@@ -189,6 +189,16 @@ fi
 
 whichpdflib $PDFLIBRARY
 whichlhapdf $LHALINK
+# stdhep is not used: do not look for libraries
+IFS=' ' read -a exlibs <<< "${EXTRALIBS}"
+for i in ${!exlibs[@]}
+do
+ if [[ "${exlibs[i]}" == "stdhep" || "${exlibs[i]}" == "Fmcfio" ]]
+ then
+   unset exlibs[$i]
+ fi
+done
+EXTRALIBS="$(echo ${exlibs[@]})"
 nameextralib "$EXTRALIBS"
 pathextralib "$EXTRAPATHS"
 pathextralibdyn "$EXTRAPATHS"

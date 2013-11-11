@@ -2134,6 +2134,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
+                       'hwpp_path': './herwigPP',
+                       'thepeg_path': './thepeg',
+                       'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
@@ -4215,17 +4218,36 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             return self.options # the return is usefull for unittest
 
         # Treat each expected input
-        # 1: Pythia8_path
-        # try relative path
+        # 1: Pythia8_path and hewrig++ paths
+        # try absolute and relative path
         for key in self.options:
-            if key == 'pythia8_path':
-                if self.options['pythia8_path'] in ['None', None]:
-                    self.options['pythia8_path'] = None
+            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']:
+                if self.options[key] in ['None', None]:
+                    self.options[key] = None
                     continue
-                pythia8_dir = pjoin(MG5DIR, self.options['pythia8_path'])
-                if not os.path.isfile(pjoin(pythia8_dir, 'include', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(self.options['pythia8_path'], 'include', 'Pythia.h')):
+                path = self.options[key]
+                #this is for pythia8
+                if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Pythia.h')):
                         self.options['pythia8_path'] = None
+                    else:
+                        continue
+                #this is for hw++
+                elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                    if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                        self.options['hwpp_path'] = None
+                    else:
+                        continue
+                # this is for thepeg
+                elif key == 'thepeg_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'ThePEG', 'ACDC', 'ACDCGenCell.h')):
+                        self.options['thepeg_path'] = None
+                    else:
+                        continue
+                # this is for hepmc
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                        self.options['hepmc_path'] = None
                     else:
                         continue
 
@@ -4687,19 +4709,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stderr=subprocess.PIPE)
                 output, error = p.communicate()
                 res = 0
-                logger.info('set fastjet to %s' % args[1])
-                self.options[args[0]] = args[1]
             except Exception:
                 res = 1
 
             if res != 0 or error:
                 logger.warning('%s does not seem to correspond to a valid fastjet-config ' % args[1] + \
-                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n' + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
+                        'executable (v3+). Please enter the full PATH/TO/fastjet-config (including fastjet-config).\n')
+                self.options[args[0]] = None
+                self.history.pop()
             elif int(output.split('.')[0]) < 3:
                 logger.warning('%s is not ' % args[1] + \
-                        'v3 or greater. Please install FastJet v3+.' + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
+                        'v3 or greater. Please install FastJet v3+.')
+                self.options[args[0]] = None
+                self.history.pop()
+            else: #everything is fine
+                logger.info('set fastjet to %s' % args[1])
+                self.options[args[0]] = args[1]
 
         elif args[0] == 'lhapdf':
             try:
@@ -5144,33 +5169,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file
             devnull = os.open(os.devnull, os.O_RDWR)
-
-            try:
-                p = subprocess.Popen([self.options['fastjet'], '--version'], stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE)
-                output, error = p.communicate()
-                res = 0
-            except Exception:
-                res = 1
-                pass
-
-            if res != 0 or error:
-                logger.warning('The value for "fastjet" in the current configuration does not ' + \
-                        'correspond to a valid executable.\nPlease make sure you have FastJet ' + \
-                        'v3 or greater installed, then set the variable correctly either in ' + \
-                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
-                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
-                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
-            elif int(output.split('.')[0]) < 3:
-                logger.warning('The value for "fastjet" in the current configuration is not ' + \
-                        'v3 or greater. Please install FastJet v3+, then set the variable ' + \
-                        'correctly either in ' + \
-                        'input/mg5_configuration or with "set fastjet /path/to/fastjet-config" ' + \
-                        'and regenrate the process. To avoid regeneration, manually edit the ' + \
-                        ('%s/Source/fj_lhapdf_opts file\n' % self._export_dir) + \
-                        'You will NOT be able to run aMC@NLO otherwise.\n')
-
             try:
                 res = misc.call([self.options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -5193,9 +5191,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.options['fortran_compiler'])
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            to_keep = {}
+            for opt in opts_to_keep:
+                if self.options[opt]:
+                    to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
-                    to_keep = {'lhapdf': self.options['lhapdf'],
-                               'fastjet': self.options['fastjet']})
+                    to_keep = to_keep)
 
             # check if stdhep has to be compiled (only the first time)
             if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \

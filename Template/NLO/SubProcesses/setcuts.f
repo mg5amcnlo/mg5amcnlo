@@ -184,6 +184,10 @@ c BW stuff
      &     cBW_width(-nexternal:-1,-1:1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+      double precision s_mass(-nexternal:-1)
+     $     ,s_mass_FKS(fks_configs,-nexternal:nexternal)
+      save s_mass_FKS
+      common/to_phase_space_s_channel/s_mass
 c
       real*8         emass(nexternal)
       common/to_mass/emass
@@ -354,6 +358,17 @@ c the previous iteration of the loop
             enddo
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c Determine the "minimal" s-channel invariant masses
+            do i=nincoming+1,nexternal-1
+               s_mass_FKS(iFKS,i)=xm(i)**2
+            enddo
+            do i=-1,-(nexternal-3),-1 ! All propagators
+               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
+               s_mass_FKS(iFKS,i)=(sqrt(s_mass_FKS(iFKS,itree(1,i)))
+     $              +sqrt(s_mass_FKS(iFKS,itree(2,i))))**2
+            enddo
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
             do i=nincoming+1,nexternal-1
@@ -456,6 +471,7 @@ c
             cBW_mass(i,j)=cBW_FKS_mass(nFKSprocess,i,j)
             cBW_width(i,j)=cBW_FKS_width(nFKSprocess,i,j)
          enddo
+         s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess)
          
