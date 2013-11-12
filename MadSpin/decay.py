@@ -2443,7 +2443,15 @@ class decay_all_events:
                 commandline+="add process %s;" % (process)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        result = re.split('([/$@])', process, 1)
+                        if 'QCD=' in process:
+                            result=re.split(' ',process)
+                            process=''
+                            for r in result:
+                                if 'QCD=' in r:
+                                    ior=re.split('=',r)
+                                    r='QCD=%i' % (int(ior[1])+1)
+                                process=process+r+' '
+                        result = re.split('([/$@]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
                             commandline+="add process %s j %s%s ;" % (process, split, rest)
@@ -2523,7 +2531,15 @@ class decay_all_events:
                 commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        result = re.split('([/$])', process, 1)
+                        if 'QCD=' in process:
+                            result=re.split(' ',process)
+                            process=''
+                            for r in result:
+                                if 'QCD=' in r:
+                                    ior=re.split('=',r)
+                                    r='QCD=%i' % (int(ior[1])+1)
+                                process=process+r+' '
+                        result = re.split('([/$]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
                             commandline+="add process %s j %s%s , %s %s ;" % (process, split, rest, decay_text, proc_nb)
