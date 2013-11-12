@@ -2436,7 +2436,6 @@ class decay_all_events:
         start = time.time()
         commandline=''
         for proc in processes:
-            print proc
             if '[' not in proc:
                 commandline+="add process %s ;" % proc
             else:
