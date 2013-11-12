@@ -551,7 +551,7 @@ class ColorMatrix(dict):
 
         self.col_matrix_fixed_Nc = {}
         self.inverted_col_matrix = {}
-
+        
         self._col_basis1 = col_basis
         if col_basis2:
             self._col_basis2 = col_basis2
@@ -577,7 +577,6 @@ class ColorMatrix(dict):
                     enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
                     enumerate(sorted(self._col_basis2.keys())):
-
                 # Only scan upper right triangle if symmetric
                 if is_symmetric and i2 < i1:
                     continue

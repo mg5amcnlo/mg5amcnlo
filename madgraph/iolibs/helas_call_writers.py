@@ -1218,7 +1218,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                         couplings=[]
                         for coup in lwf.get('coupling'):
                             couplings.append("LC(%d)"%couplingNumber)
-                            couplingNumber=couplingNumber+1
+                            couplingNumber=couplingNumber+1 
                         lwf.set('coupling',couplings)
                     for mother in lwf.get('mothers'):
                         if not mother.get('is_loop'):
@@ -1231,6 +1231,7 @@ class FortranUFOHelasCallWriter(UFOHelasCallWriter):
                 # And now for all the other wavefunctions
                 res.extend([ self.get_wavefunction_call(wf) for \
                           wf in lamp.get('wavefunctions') if wf.get('mothers')])
+
                 # Get the last wf generated and the corresponding loop
                 # wavefunction number
                 for lwf in lamp.get('amplitudes')[0].get('mothers'):
