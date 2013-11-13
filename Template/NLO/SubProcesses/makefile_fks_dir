@@ -2,6 +2,7 @@ include ../../Source/make_opts
 include ../analyse_opts
 
 LIBDIR = ../../lib/
+ANADIR = ../../AnalysisFixedOrder/
 
 FASTJET_CONFIG = $(fastjet_config)
 CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
@@ -27,8 +28,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 FKSParamReader.o MC_integer.o $(reweight_xsec_events_pdf_dummy)
 
 # Files needed for vegas, mint & mintMC
-RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
-	madfks_plot.o analysis_fixed_order.o fill_MC_mshell.o born_hel.o
+RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
+	madfks_plot.o fill_MC_mshell.o born_hel.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -57,14 +58,22 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o iproc_map.o  \
 	fks_inc_chooser.o leshouche_inc_chooser.o
 
-%.o : %.f
-	$(FC) $(FFLAGS) -c $<
-%.o : %.for
-	$(FC) $(FFLAGS) -c $<
+%.o: %.f
+	$(FC) $(FFLAGS) -c -I. $<
+%.o: $(ANADIR)/%.f
+	$(FC) $(FFLAGS) -c -I. $<
+%.o: %.for
+	$(FC) $(FFLAGS) -c -I. $<
+%.o: $(ANADIR)/%.for
+	$(FC) $(FFLAGS) -c -I. $<
 %.o: %.c
-	$(CXX) -g -c $^
+	$(CXX) -g -c -I. $^
+%.o: $(ANADIR)/%.c
+	$(CXX) -g -c -I. $^
 %.o: %.cc
-	$(CXX) -g -c $(CXXFLAGS) $^
+	$(CXX) -g -c $(CXXFLAGS) -I. $^
+%.o: $(ANADIR)/%.cc
+	$(CXX) -g -c $(CXXFLAGS) -I. $^
 
 gensym: $(SYM)
 	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
@@ -85,13 +94,16 @@ check_poles: $(POLES) $(libmadloop)
 	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) \
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)

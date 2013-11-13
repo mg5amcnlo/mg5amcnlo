@@ -5,9 +5,9 @@
 # PROCDIR/SubProcesses (PROCDIR is the name of the exported process directory)
 #                                                                               
 ################################################################################
-FO_EXTRALIBS   =                    # Needed extra-libraries (FastJet is already linked). 
-FO_EXTRAPATHS  =                    # (Absolute) path to the extra-libraries. 
-FO_INCLUDEPATHS=                    # (Absolute) Path to the dirs containing header files neede by C++.
-                                    # Directory names are separated by white spaces
-FO_ANALYSE     = analysis_fixed_order.o # User's analysis and histogramming routines 
-                                    # (please use .o as extension and white spaces to separate files)
+FO_EXTRALIBS   =                      # Needed extra-libraries (FastJet is already linked). 
+FO_EXTRAPATHS  =                      # (Absolute) path to the extra-libraries. 
+FO_INCLUDEPATHS=                      # (Absolute) Path to the dirs containing header files neede by C++.
+                                      # Directory names are separated by white spaces
+FO_ANALYSE     = analysis_default.o   # User's analysis (to be put in the AnalysisFixedOrder directory)
+                                      # (please use .o as extension and white spaces to separate files)
