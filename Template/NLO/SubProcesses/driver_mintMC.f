@@ -156,6 +156,7 @@ c
       call setcuts               !Sets up cuts & particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
+      call initcluster
 c     
 c     Get user input
 c
@@ -167,7 +168,6 @@ c
       else
         flat_grid=.false.
       endif
-c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
@@ -327,6 +327,7 @@ c$$$         putonshell=.false.
          open (unit=99,file='nevts',status='old',err=999)
          read (99,*) nevts
          close(99)
+         write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then
             write (*,*)
      &           'No events needed for this channel...skipping it'

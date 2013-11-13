@@ -140,6 +140,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
+      call initcluster
 c     
 c     Get user input
 c
@@ -151,7 +152,6 @@ c
       else
         flat_grid=.false.
       endif
-c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1

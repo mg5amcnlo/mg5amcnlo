@@ -4,18 +4,24 @@ include ../analyse_opts
 LIBDIR = ../../lib/
 ANADIR = ../../AnalysisFixedOrder/
 
-FASTJET_CONFIG = $(fastjet_config)
-CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
-FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
-#FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins )
-#FJLIBS=
+#check if fastjet-config is set
+ifeq ($(fastjet_config),None) 
+    fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o
+    FJLIBS += -lstdc++
+else
+    FASTJET_CONFIG = $(fastjet_config)
+    CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
+    FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
+    fastjetfortran_madfks=fastjetfortran_madfks_full.o
+endif
 
 NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 # Uncomment the line below to compile with MadLoop without setting the environnement 
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
-LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf $(lhapdf)
-LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a $(LIBDIR)libpdf.a
+LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
+$(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
@@ -23,9 +29,11 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
-	 fastjetfortran_madfks.o ktclusdble.o fks_singular.o		\
+	 $(fastjetfortran_madfks) ktclusdble.o fks_singular.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 FKSParamReader.o MC_integer.o $(reweight_xsec_events_pdf_dummy)
+	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
+	 reweight.o get_color.o FKSParamReader.o			\
+	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
 
 # Files needed for vegas, mint & mintMC
 RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
@@ -35,11 +43,11 @@ RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 
 # Files for mintMC
-MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o	\
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
 	handling_lhe_events.o iproc_map.o
 
 # Files for Born reweighting
-BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o	\
+BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
 	write_event.o
 
 # Files for check_poles
@@ -54,9 +62,10 @@ SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o fastjetfortran_madfks.o boostwdir2.o 			\
-	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o iproc_map.o  \
-	fks_inc_chooser.o leshouche_inc_chooser.o
+	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
+	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
+	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
+	leshouche_inc_chooser.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<

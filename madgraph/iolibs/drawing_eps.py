@@ -158,6 +158,24 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Ffermion')
 
+    def draw_curved_dashed(self, line, cercle):
+        """ADD the EPS code for this fermion line."""
+
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+        
+        #add the code in the correct format
+        x1, y1 = self.rescale(line.begin.pos_x, line.begin.pos_y)
+        self.text += ' %s  %s moveto \n' % (x1, y1)
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '%s Fhiggsl' %\
+                         curvature)
+
     def draw_curved_straight(self, line, cercle):
         """ADD the EPS code for this fermion line."""
 
@@ -324,7 +342,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += ' %s  %s moveto \n' % (x, y)
         self.text += '(%s)   show\n' % (number)
 
-    def associate_name(self, line, name):
+    def associate_name(self, line, name, loop=False, reverse=False):
         """ADD the EPS code associate to the name of the particle. Place it near
         to the center of the line.
         """
@@ -336,7 +354,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         d = line.get_length()
         if d == 0:
             raise self.DrawDiagramError('Line can not have 0 length')
-
+        
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:
@@ -351,7 +369,21 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         else:
             dx = 0.01 #0.05
             dy = 0.02 #d * 0.12 
+        if loop:
+            dx, dy = 1.5* dx, dy
+            if x1 == x2:
+                if y1 < y2:
+                    dx, dy = -dx, -dy
+            elif y1 == y2:
+                if x1 >x2:
+                    dx, dy = -dx, -dy
+            elif x1 < x2:
+                dx, dy = -dx, -dy
+        if reverse:
+            dx, dy = -dx, -dy
+
             
+                
         # Assign position
         x_pos = (x1 + x2) / 2 + dx
         y_pos = (y1 + y2) / 2 + dy

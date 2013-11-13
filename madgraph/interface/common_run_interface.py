@@ -438,6 +438,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+
+            if amcatnlo and int(run_card['ickkw']) == 3:
+                # For FxFx merging, make sure that:
+                # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed
+                scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
+                for scale in scales:
+                    if  banner_mod.RunCard.format('bool',run_card[scale]) == '.true.':
+                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                                    % scale,'$MG:color:BLACK')
+                        run_card[scale]='F'
+                # 2. Use kT algorithm for jets with pseudo-code size R=1.0
+                jetparams=['jetradius','jetalgo']
+                for jetparam in jetparams:
+                    if float(run_card[jetparam]) != 1.0:
+                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
+                               % jetparam ,'$MG:color:BLACK')
+                        run_card[jetparam]='1.0'
+
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
         
         if mode in ['param', 'all']: 
@@ -485,8 +503,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                     % part.name,'$MG:color:BLACK')
                         param.value = 0
                 
-                
-                
             param_card.write_inc_file(outfile, ident_card, default)
 
 
@@ -522,10 +538,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
         if plot:
-            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'        
