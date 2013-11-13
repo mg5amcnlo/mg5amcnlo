@@ -324,7 +324,7 @@ int id4Mass() const {return 4;}""")
 // This file has been automatically generated for Pythia 8
 // MadGraph5_aMC@NLO v. %(version)s, %(date)s
 // By the MadGraph5_aMC@NLO Development Team
-// Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_Sigma_sm_qqx_qqx_H
@@ -423,7 +423,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 // This file has been automatically generated for Pythia 8 by
 // MadGraph5_aMC@NLO v. %(version)s, %(date)s
 // By the MadGraph5_aMC@NLO Development Team
-// Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "Sigma_sm_qqx_qqx.h"
@@ -757,7 +757,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 // This file has been automatically generated for Pythia 8 by
 // MadGraph5_aMC@NLO v. %(version)s, %(date)s
 // By the MadGraph5_aMC@NLO Development Team
-// Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "Sigma_sm_qq_six.h"
@@ -1279,7 +1279,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
 // This file has been automatically generated for Pythia 8
 // MadGraph5_aMC@NLO v. %(version)s, %(date)s
 // By the MadGraph5_aMC@NLO Development Team
-// Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_Sigma_sm_gd_ddxd_H
@@ -2444,7 +2444,7 @@ return matrix;
 // This file has been automatically generated for C++ Standalone by
 // MadGraph5_aMC@NLO v. %(version)s, %(date)s
 // By the MadGraph5_aMC@NLO Development Team
-// Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "CPPProcess.h"
@@ -2736,7 +2736,7 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
 // This file has been automatically generated for Pythia 8
 #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
 #  By the MadGraph5_aMC@NLO Development Team
-#  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_parameters_sm_H
@@ -2801,7 +2801,7 @@ static Parameters_sm* instance;
 // This file has been automatically generated for Pythia 8 by
 #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
 #  By the MadGraph5_aMC@NLO Development Team
-#  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include <iostream>

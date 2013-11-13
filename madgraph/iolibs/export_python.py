@@ -328,11 +328,11 @@ class ProcessExporterPython(object):
                          (info['version'], info['date'])
             info_lines = info_lines + \
                          "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
-                         "        #  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
+                         "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
         else:
             info_lines = "        #  by MadGraph5_aMC@NLO\n" + \
                          "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
-                         "        #  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
+                         "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
 
         return info_lines
 

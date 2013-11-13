@@ -234,7 +234,7 @@ class IOExportPythonTest(unittest.TestCase):
         #  
         #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
         #  By the MadGraph5_aMC@NLO Development Team
-        #  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
         # 
         # MadGraph5_aMC@NLO StandAlone Version
         # 
@@ -292,7 +292,7 @@ class IOExportPythonTest(unittest.TestCase):
         #  
         #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
         #  By the MadGraph5_aMC@NLO Development Team
-        #  Please visit us at launchpad.net/madgraph5 and amcatnlo.web.cern.ch
+        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
         #
         # Returns amplitude squared summed/avg over colors
         # for the point with external lines W(0:6,NEXTERNAL)
