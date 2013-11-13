@@ -115,7 +115,7 @@ massless, the decay of Z bosons is unfavored to any specific lepton
 flavor, we could as well have generated events with only muons and
 then randomly replacing the muons in the event file by electrons or
 tau's with 33% probability for each. This is exactly what the REPLACE
-script has been designed to do. Note that for MadGraph5_aMC@NLO 5, this is less
+script has been designed to do. Note that for MadGraph5_aMC@NLO, this is less
 of a problem, and in general the full process should be run
 (preferentially using sm-no_masses to get as few run directories as
 possible).

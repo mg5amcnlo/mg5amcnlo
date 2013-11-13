@@ -32,13 +32,13 @@ c) How to run the aMC@NLO output
 
 If you have FastJet (v3 or later) installed on your computer and you wish
 to link it, please update the mg5_configuration file or type
-mg5>set fastjet /path/to/fastjet-config
+MG5_aMC>set fastjet /path/to/fastjet-config
 Otherwise the basic fastjet functionalities inluded in FJcore (shipped
 with aMC@NLO) will be used.
 
 
 Let's start with the first point, how to generate a process at NLO:
-mg5>generate p p > e+ ve [QCD]
+MG5_aMC>generate p p > e+ ve [QCD]
 Note that a space is mandatory between the particle names and that '[QCD]' 
 specifies that you want to consider QCD NLO corrections. 
 Couplings different than QCD cannot be perturbed yet.

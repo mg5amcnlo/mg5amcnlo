@@ -9,7 +9,7 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
 *                                                          *
 *                   Code download from:                    *
@@ -38,7 +38,7 @@ Package for the NLO cross-section computation (matched to shower) and generation
 - gfortran4.6 (or higher)
 - fastjet
 To configure the path to fastjet please do:
-./bin/mg5
+./bin/mg5_aMC
 set fastjet PATH_TO_FASTJET-CONFIG_FILE
 
 
@@ -47,7 +47,7 @@ On Windows:
 
 In order to run MG5 you need to
 1) add the Python directory to the PATH
-2) run $> python ./bin/mg5
+2) run $> python ./bin/mg5_aMC
 
 Note that most of the output (including madevent/aMCatNLO)
 are not compatible with Windows even with cygwin.

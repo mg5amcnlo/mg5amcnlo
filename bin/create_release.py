@@ -15,7 +15,7 @@
 #
 ################################################################################
 
-"""This is a simple script to create a release for MadGraph5_aMC@NLO 5, based
+"""This is a simple script to create a release for MadGraph5_aMC@NLO, based
 on the latest Bazaar commit of the present version. It performs the
 following actions:
 

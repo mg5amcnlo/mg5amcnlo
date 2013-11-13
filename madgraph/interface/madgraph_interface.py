@@ -34,7 +34,7 @@ import time
 import urllib
         
 
-#usefull shortcut
+#useful shortcut
 pjoin = os.path.join
 
 try:
@@ -45,7 +45,7 @@ except:
 
 import aloha
 import madgraph
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error, MGName
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 
 
 import madgraph.core.base_objects as base_objects
@@ -156,7 +156,7 @@ class CmdExtended(cmd.Cmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                        MadGraph5_aMC@NLO *\n' + \
+        '#*                     MadGraph5_aMC@NLO                    *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -167,14 +167,14 @@ class CmdExtended(cmd.Cmd):
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
-        '#*               Command File for MadGraph5_aMC@NLO *\n' + \
+        '#*               Command File for MadGraph5_aMC@NLO         *\n' + \
         '#*                                                          *\n' + \
-        '#*     run as ./bin/mg5  filename                           *\n' + \
+        '#*     run as ./bin/mg5_aMC  filename                       *\n' + \
         '#*                                                          *\n' + \
         '#************************************************************\n'
         
@@ -184,7 +184,8 @@ class CmdExtended(cmd.Cmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*                     W E L C O M E to                     *\n" + \
+        "*             M A D G R A P H  5 _ a M C @ N L O           *\n" + \
         "*                                                          *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
@@ -195,8 +196,10 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                            and                           *\n" + \
+        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
         "*           Type 'tutorial' to learn how MG5 works         *\n" + \
@@ -2185,7 +2188,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'
+        self.prompt = 'MG5_aMC>'
         if madgraph.ReadWrite: # prevent on read-only disk  
             self.do_install('update --mode=mg5_start')
         

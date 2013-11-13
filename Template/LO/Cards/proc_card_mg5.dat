@@ -1,5 +1,5 @@
 #************************************************************
-#*                        MadGraph5_aMC@NLO *
+#*                    MadGraph5_aMC@NLO                     *
 #*                                                          *
 #*                *                       *                 *
 #*                  *        * *        *                   *
@@ -10,14 +10,14 @@
 #*                                                          *
 #*         VERSION 1.0.0                 2011-04-02         *
 #*                                                          *
-#*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *
+#*    The MadGraph5_aMC@NLO Development Team - Find us at   *
 #*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
 #*                                                          *
 #************************************************************
 #*                                                          *
-#*               Command File for MadGraph5_aMC@NLO *
+#*               Command File for MadGraph5_aMC@NLO         *
 #*                                                          *
-#*     run as ./bin/mg5  filename                           *
+#*     run as ./bin/mg5_aMC  filename                       *
 #*                                                          *
 #************************************************************
 import model sm

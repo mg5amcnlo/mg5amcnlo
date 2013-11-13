@@ -259,7 +259,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
   guarantee a correct behavior of the code in this context. Please visit
   http://amcatnlo.cern.ch/list.htm for a list of processes we have 
   validated. If your process does not appear and you have successfully
-  studied it with MadGraph5_aMC@NLO v2.0, please report it.
+  studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 

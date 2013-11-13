@@ -19,7 +19,7 @@
 
 To run MadGraph5_aMC@NLO using the command line interface:
 --------------------------------------------
-./bin/mg5
+./bin/mg5_aMC
 Type "help" for list of commands and "help [command]" for help
 on individual commands. 
 Type "tutorial" for an interactive quick-start tutorial.

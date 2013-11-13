@@ -19,7 +19,7 @@
 # Line starting with # should be uncommented if you want to modify the default
 #    value.
 # Current value for all options can seen by typing "display options"
-#    after either ./bin/mg5 or ./bin/madevent 
+#    after either ./bin/mg5_aMC or ./bin/madevent 
 #
 # You can place this files in ~/.mg5/mg5_configuration.txt if you have more than
 #    one version of MG5 

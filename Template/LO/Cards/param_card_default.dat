@@ -36,7 +36,8 @@ Block SMINPUTS      # Standard Model inputs
      2         1.16600000E-05   # G_Fermi
      3         1.18000000E-01   # alpha_s(MZ) SM MSbar
      4         9.15445065E+01   # Z mass (as input parameter)
-Block MGSMPARAM      # Standard Model parameters for MadGraph5_aMC@NLO 1         2.31200000E-01   # sin(theta_W)^2
+Block MGSMPARAM      # Standard Model parameters for MadGraph5_aMC@NLO
+     1         2.31200000E-01   # sin(theta_W)^2
      2         8.02673592E+01   # W mass (as input parameter)
 Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
 #    PDG          YMASS
@@ -44,7 +45,8 @@ Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
      4         1.25000000E+00   # mcharm  for the Yukawa  y_c
      6         1.74300000E+02   # mtop    for the Yukawa  y_t
     15         1.77700000E+00   # mtau    for the Yukawa  y_ta
-Block MGCKM     # CKM elements for MadGraph5_aMC@NLO 1   1     9.75000000E-01   # Vud for Cabibbo matrix
+Block MGCKM     # CKM elements for MadGraph5_aMC@NLO
+     1   1     9.75000000E-01   # Vud for Cabibbo matrix
 Block MASS      #  Mass spectrum (kinematic masses)
 #       PDG       Mass
          4     1.40000000E+00   # charm    pole mass

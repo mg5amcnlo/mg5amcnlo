@@ -61,9 +61,9 @@ class Switcher(object):
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
 
-    interface_names= {'MadGraph':('MG5',MGcmd.MadGraphCmd),
-                      'MadLoop':('ML5',LoopCmd.LoopInterface),
-                      'aMC@NLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
+    interface_names= {'MadGraph':('MG5_aMC',MGcmd.MadGraphCmd),
+                      'MadLoop':('MG5_aMC',LoopCmd.LoopInterface),
+                      'aMC@NLO':('MG5_aMC',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None
