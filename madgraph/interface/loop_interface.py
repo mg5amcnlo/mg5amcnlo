@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -259,7 +259,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
   guarantee a correct behavior of the code in this context. Please visit
   http://amcatnlo.cern.ch/list.htm for a list of processes we have 
   validated. If your process does not appear and you have successfully
-  studied it with MadGraph5 v2.0, please report it.
+  studied it with MadGraph5_aMC@NLO v2.0, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
@@ -487,7 +487,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
 
-        # Fortran MadGraph Standalone
+        # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format == 'standalone':
             for me in matrix_elements:
                 calls = calls + \

@@ -1,5 +1,5 @@
 *****************************************************************
-* This file contains the MadGraph routines that calculate the   *
+* This file contains the MadGraph5_aMC@NLO routines that calculate the   *
 * matrix elements squared (color and spin sums/averages and     *
 * bose factors not included) for generic decays:                * 
 *                                                               *

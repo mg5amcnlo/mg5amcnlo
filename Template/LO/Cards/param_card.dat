@@ -1,7 +1,7 @@
 #******************************************************************
 #                      MadGraph/MadEvent                          *
 #******************************************************************
-#   Les Houches friendly file for the SM parameters of MadGraph   *
+#   Les Houches friendly file for the SM parameters of MadGraph5_aMC@NLO *
 #        Spectrum and decay widths produced by SMCalc             *
 #******************************************************************
 #*Please note the following IMPORTANT issues:                     *
@@ -13,9 +13,9 @@
 #   or gauge invariance).  Always use a calculator.               *
 #                                                                 *
 #1. alpha_S(MZ) has been used in the calculation of the parameters*
-#   but, for consistency, it will be reset by madgraph to the     *
+#   but, for consistency, it will be reset by MadGraph5_aMC@NLO to the     *
 #   value expected IF the pdfs for collisions with hadrons are    *
-#   used. This value is KEPT by madgraph when no pdf are used     *
+#   used. This value is KEPT by MadGraph5_aMC@NLO when no pdf are used     *
 #   lpp(i)=0 .                                                    *
 #                                                                 *
 #2. Values of the charm and bottom kinematic (pole) masses are    *
@@ -37,8 +37,7 @@ Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
      4         1.42000000E+00   # mcharm  for the Yukawa  y_c
      6         1.64500000E+02   # mtop    for the Yukawa  y_t
     15         1.77700000E+00   # mtau    for the Yukawa  y_ta
-Block MGCKM     # CKM elements for MadGraph
-     1   1     9.75000000E-01   # Vud for Cabibbo matrix
+Block MGCKM     # CKM elements for MadGraph5_aMC@NLO 1   1     9.75000000E-01   # Vud for Cabibbo matrix
 Block MASS      #  Mass spectrum (kinematic masses)
 #       PDG       Mass
          5     4.70000000E+00   # bottom   pole mass

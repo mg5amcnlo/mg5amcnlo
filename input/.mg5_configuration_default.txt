@@ -78,7 +78,7 @@
 #  INFO FOR MADEVENT 
 ################################################################################
 # If this file is in a MADEVENT Template. 'main directory' is the directory
-# containing the SubProcesses directory. Otherwise this is the madgraph5 main
+# containing the SubProcesses directory. Otherwise this is the MadGraph5_aMC@NLO main
 # directory (containing the directories madgraph and Template)
 
 # Allow/Forbid the automatic opening of the web browser  (on the status page)

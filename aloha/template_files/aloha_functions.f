@@ -2,7 +2,7 @@ C###############################################################################
 C
 C Copyright (c) 2010 The ALOHA Development team and Contributors
 C
-C This file is a part of the MadGraph 5 project, an application which
+C This file is a part of the MadGraph5_aMC@NLO project, an application which
 C automatically generates Feynman diagrams and matrix elements for arbitrary
 C high-energy processes in the Standard Model and beyond.
 C

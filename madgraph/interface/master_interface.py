@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 

@@ -15,8 +15,8 @@
 
 tutorial_MadLoop = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options for MadLoop which are mostly similar to the MadGraph5 one. 
-If you have not done so already, please follow MadGraph5 tutorial before 
+syntax options for MadLoop which are mostly similar to the MadGraph5_aMC@NLO one. 
+If you have not done so already, please follow MadGraph5_aMC@NLO tutorial before 
 this one.  
 
 Remember that exactly as in MadGraph5, you can learn more about the different 
@@ -25,7 +25,7 @@ aMC@NLO> help A_CMD
 And to see a list of all commands, use
 aMC@NLO> help 
 
-MadLoop is the part of MadGraph5 used by aMC@NLO to generate the code for
+MadLoop is the part of MadGraph5_aMC@NLO used by aMC@NLO to generate the code for
 evaluating the loop diagrams. This tutorial teaches you how to use MadLoop
 as standalone tool for studying loops within particular processes.
 Therefore in this mode, you can only consider definite processes, meaning 
@@ -110,7 +110,7 @@ ML5>output MY_FIRST_MADLOOP_RUN
 
 output = """
 If you are following the tutorial, a directory MY_FIRST_MADLOOP_RUN has
-been created under your MadGraph5 installation directory.
+been created under your MadGraph5_aMC@NLO installation directory.
 
 The code for the evaluation of the squared loop matrix element is in 
 'SubProcesses/P0_<shell_proc_name>/'. There, you can compile and edit 
@@ -146,7 +146,7 @@ runs (those with the 'virt=' option).
 
 check = """
 You have seen the results for the various consistency checks performed on the
-MadGraph5 loop computation.
+MadGraph5_aMC@NLO loop computation.
 You can now use the check command to obtain a full profiling of a given process
 including loop contributions.
 Simply type:

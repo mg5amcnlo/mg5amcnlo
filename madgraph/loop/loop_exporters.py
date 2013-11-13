@@ -382,7 +382,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                         imag_num=imag_num-buff_num
                     else:
                         imag_num=imag_num+buff_num
-                assert not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                assert not (real_num!=0 and imag_num!=0), "MadGraph5_aMC@NLO found a "+\
                   "color matrix element which has both a real and imaginary part."
                 if imag_num!=0:
                     res=fractions.Fraction(imag_num,common_denom)

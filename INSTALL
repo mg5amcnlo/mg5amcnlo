@@ -9,7 +9,7 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
 *                                                          *
 *                   Code download from:                    *
@@ -20,7 +20,7 @@
 Dependencies :
 ===============
 
- * MadGraph 5 *
+ * MadGraph5_aMC@NLO *
 
 - Python 2.6 (or higher, but not compatible with 3.X)
 

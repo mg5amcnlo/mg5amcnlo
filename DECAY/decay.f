@@ -30,7 +30,7 @@ c     LAST UPDATE  August-18-2005:                                     *
 c     - Fixed a bug in  the previous update                            * 
 c----------------------------------------------------------------------*
 c     LAST UPDATE  July-27-2006:                                        *
-c     - Make it compliant with MadGraph v 4.0                          *
+c     - Make it compliant with MadGraph5_aMC@NLO v 4.0                          *
 c***********************************************************************
       implicit none
       include 'decay.inc'

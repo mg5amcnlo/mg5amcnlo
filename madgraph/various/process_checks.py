@@ -2379,7 +2379,7 @@ def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
 def output_stability(stability, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
-    under the MadGraph root folder (mg_root)"""
+    under the MadGraph5_aMC@NLO root folder (mg_root)"""
     
     def accuracy(eval_list):
         """ Compute the accuracy from different evaluations."""

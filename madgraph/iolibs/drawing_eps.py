@@ -316,7 +316,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
 
     def associate_number(self, line, number):
-        """Write in the EPS figure the MadGraph number associate to the line.
+        """Write in the EPS figure the MadGraph5_aMC@NLO number associate to the line.
         Note that this routine is called only for external particle."""
 
         # find the external vertex associate to the line

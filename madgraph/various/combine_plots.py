@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 ################################################################################
 #
-# Copyright (c) 2013 The MadGraph Development team and Contributors
+# Copyright (c) 2013 The MadGraph5_aMC@NLO Development team and Contributors
 #
 # This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary

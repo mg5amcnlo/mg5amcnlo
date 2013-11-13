@@ -1,4 +1,4 @@
-Update notes for MadGraph 5 (in reverse time order)
+Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 2.0.0.beta4(xx/xx/xx) OM: Merge with 1.5.9-12 (See informtation below)

@@ -3,7 +3,7 @@
 <!--
 #*********************************************************************
 #                                                                    *
-#                            MadGraph 5                              *
+#                            MadGraph5_aMC@NLO *
 #                                                                    *
 #                           Going Beyond                             *
 #                                                                    *
@@ -11,7 +11,7 @@
 #                   http://madgraph.phys.ucl.ac.be                   *
 #                   http://madgraph.roma2.infn.it                    *
 #                                                                    *
-#                         The MadGraph team                          *
+#                         The MadGraph5_aMC@NLO team                          *
 #                                                                    *
 #....................................................................*
 #                                                                    *

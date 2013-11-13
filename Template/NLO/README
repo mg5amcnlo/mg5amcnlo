@@ -1,4 +1,4 @@
-aMC@NLO in MadGraph 5 v2.0
+aMC@NLO in MadGraph5_aMC@NLO v2.0
 
 http://madgraph.phys.ucl.ac.be/
 http://amcatnlo.cern.ch/
@@ -49,7 +49,7 @@ are unphysical.
 In order to have the shower working, you need to have the 
 MCatNLO-utilities package installed. You can install it (before or 
 after the code generation) by typing "install MCatNLO-utilities" in the
-MadGraph5 interface. Otherwise the shower will be skipped (same as with
+MadGraph5_aMC@NLO interface. Otherwise the shower will be skipped (same as with
 the -p/--parton option).
 If you want to first generate a smaller sample of events, and then a
 larger one with the same cuts/parameters, you can skip the grid-setting/

@@ -322,8 +322,8 @@ int id4Mass() const {return 4;}""")
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -421,8 +421,8 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -755,8 +755,8 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -1277,8 +1277,8 @@ double Sigma_sm_qq_six::matrix_uu_six()
 
         goal_string = """//==========================================================================
 // This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -2442,8 +2442,8 @@ return matrix;
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for C++ Standalone by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
 // Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -2734,8 +2734,8 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         goal_file_h = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-#  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team
+#  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+#  By the MadGraph5_aMC@NLO Development Team
 #  Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 
@@ -2799,8 +2799,8 @@ static Parameters_sm* instance;
         goal_file_cc = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-#  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team
+#  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+#  By the MadGraph5_aMC@NLO Development Team
 #  Please visit us at https://launchpad.net/madgraph5
 //==========================================================================
 

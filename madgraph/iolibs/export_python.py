@@ -324,14 +324,14 @@ class ProcessExporterPython(object):
         info = misc.get_pkg_info()
         info_lines = ""
         if info and info.has_key('version') and  info.has_key('date'):
-            info_lines = "#  MadGraph 5 v. %s, %s\n" % \
+            info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
-                         "        #  By the MadGraph Development Team\n" + \
+                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
                          "        #  Please visit us at https://launchpad.net/madgraph5"
         else:
-            info_lines = "        #  by MadGraph 5\n" + \
-                         "        #  By the MadGraph Development Team\n" + \
+            info_lines = "        #  by MadGraph5_aMC@NLO 5\n" + \
+                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
                          "        #  Please visit us at https://launchpad.net/madgraph5"        
 
         return info_lines

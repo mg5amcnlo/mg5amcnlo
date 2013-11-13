@@ -1333,7 +1333,7 @@ class Model(PhysicsObject):
                 '%s particles with pdg code %s is in conflict with MG ' + \
                 'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
-                'MadGraph convention'
+                'MadGraph5_aMC@NLO convention'
                 
                 raise MadGraph5Error, error_text % \
                                      (part.get_name(), part.get_pdg_code(), pdg)                

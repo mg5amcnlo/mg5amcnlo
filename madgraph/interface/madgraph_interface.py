@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features at LO.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features at LO.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -156,7 +156,7 @@ class CmdExtended(cmd.Cmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                        MadGraph 5                        *\n' + \
+        '#*                        MadGraph5_aMC@NLO *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -167,12 +167,12 @@ class CmdExtended(cmd.Cmd):
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
-        '#*               Command File for MadGraph 5                *\n' + \
+        '#*               Command File for MadGraph5_aMC@NLO *\n' + \
         '#*                                                          *\n' + \
         '#*     run as ./bin/mg5  filename                           *\n' + \
         '#*                                                          *\n' + \
@@ -195,7 +195,7 @@ class CmdExtended(cmd.Cmd):
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *\n" + \
         "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
@@ -316,7 +316,7 @@ class HelpToCmd(cmd.HelpCmd):
     def help_install(self):
         logger.info("syntax: install " + "|".join(self._install_opts),'$MG:color:BLUE')
         logger.info("-- Download the last version of the program and install it")
-        logger.info("   locally in the current Madgraph version. In order to have")
+        logger.info("   locally in the current MadGraph5_aMC@NLO version. In order to have")
         logger.info("   a successful installation, you will need to have an up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
         logger.info(" ")
@@ -2647,7 +2647,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             pydoc.pager(outstr)            
         
         elif args[0] == 'options':
-            outstr = "                          MadGraph Options    \n"
+            outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
             for key, default in self.options_madgraph.items():
                 value = self.options[key]
@@ -4783,7 +4783,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 logger.info('This option will be the default in any output that you are going to create in this session.')
                 logger.info('In order to keep this changes permanent please run \'save options\'')
         else:
-            #madgraph configuration
+            #MadGraph5_aMC@NLO configuration
             if not self.history or self.history[-1].split() != line.split():
                 self.history.append('set %s' % line)
                 self.avoid_history_duplicate('set %s' % args[0], ['define', 'set']) 
@@ -5070,7 +5070,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
 
-        # Fortran MadGraph Standalone
+        # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
             for me in matrix_elements[:]:
                 new_calls = self._curr_exporter.generate_subprocess_directory_v4(\

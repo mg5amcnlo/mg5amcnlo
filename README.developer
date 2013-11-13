@@ -9,7 +9,7 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
 *                                                          *
 *                   Code download from:                    *
@@ -17,7 +17,7 @@
 *                                                          *
 ************************************************************
 
-To run MadGraph 5 using the command line interface:
+To run MadGraph5_aMC@NLO using the command line interface:
 --------------------------------------------
 ./bin/mg5
 Type "help" for list of commands and "help [command]" for help

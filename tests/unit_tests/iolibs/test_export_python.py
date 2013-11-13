@@ -232,11 +232,11 @@ class IOExportPythonTest(unittest.TestCase):
 
     def smatrix(self,p, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
-        #  By the MadGraph Development Team
+        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+        #  By the MadGraph5_aMC@NLO Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         # 
-        # MadGraph StandAlone Version
+        # MadGraph5_aMC@NLO StandAlone Version
         # 
         # Returns amplitude squared summed/avg over colors
         # and helicities
@@ -290,8 +290,8 @@ class IOExportPythonTest(unittest.TestCase):
 
     def matrix(self, p, hel, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
-        #  By the MadGraph Development Team
+        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+        #  By the MadGraph5_aMC@NLO Development Team
         #  Please visit us at https://launchpad.net/madgraph5
         #
         # Returns amplitude squared summed/avg over colors

@@ -472,9 +472,9 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    target = target.replace('MadGraph 5 v. %(version)s, %(date)s'\
+                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
-                                          'MadGraph 5 v. %(version)s, %(date)s')
+                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

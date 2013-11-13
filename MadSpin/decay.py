@@ -1436,7 +1436,7 @@ class width_estimate(object):
 
 
     def extract_br_from_width_evaluation(self, to_decay):
-        """ use madgraph to generate me's for res > all all  
+        """ use MadGraph5_aMC@NLO to generate me's for res > all all  
         """
         if os.path.isdir(pjoin(self.path_me,"width_calculator")):
             shutil.rmtree(pjoin(self.path_me,"width_calculator"))

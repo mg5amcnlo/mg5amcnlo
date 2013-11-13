@@ -1322,7 +1322,7 @@ end
         replace_dict['pdgs'] = '\n'.join(proc_lines)
         replace_dict['symfin'] = 'Yes'
         content = \
-"#OLE_order written by MadGraph 5\n\
+"#OLE_order written by MadGraph5_aMC@NLO 5\n\
 \n\
 MatrixElementSquareType %(mesq)s\n\
 CorrectionType          %(corr)s\n\

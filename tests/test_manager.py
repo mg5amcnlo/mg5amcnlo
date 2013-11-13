@@ -30,7 +30,7 @@
 import sys
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
+    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
 import inspect
@@ -260,7 +260,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # reference files by hand.
         text = " \nModifications performed by hand on %s at %s in"%(\
                          str(datetime.date.today()),misc.format_timer(0.0)[14:])
-        text += '\n   MadGraph 5 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        text += '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info()
         log = open(_hc_comparison_modif_log,mode='a')
         log.write(text)
         log.close()
@@ -341,7 +341,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # Display the modifications
         text = " \nModifications performed on %s at %s in"%(\
                          str(datetime.date.today()),misc.format_timer(0.0)[14:])
-        text += '\n   MadGraph 5 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        text += '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info()
         for key in modifications.keys():
             if len(modifications[key])==0:
                 continue
