@@ -1373,7 +1373,7 @@ c Compute deadzones
          max_scale(npartner)=
      &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
          max_scale(npartner)=max(max_scale(npartner),3d0)
-         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
+         if(ptHWPP.gt.max_scale(npartner))lzone(npartner)=.false.
 c
 c Compute MC subtraction terms
         if(lzone(npartner))then
