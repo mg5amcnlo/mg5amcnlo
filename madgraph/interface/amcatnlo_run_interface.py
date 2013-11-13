@@ -60,6 +60,7 @@ try:
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
     import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as analyse_card
 
     from madgraph import InvalidCmd, aMCatNLOError
     aMCatNLO = False
@@ -76,6 +77,7 @@ except ImportError, error:
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.shower_card as shower_card
+    import internal.FO_analyse_card as analyse_card
     aMCatNLO = True
 
 class aMCatNLOError(Exception):
@@ -2414,9 +2416,12 @@ Integrated cross-section
         if mode in ['NLO', 'LO']:
             exe = 'madevent_vegas'
             tests = ['test_ME']
+            self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
+            # write an empty analyse_opts
+            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('')
 
         #directory where to compile exe
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
@@ -2786,6 +2791,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
         cards = ['param_card.dat', 'run_card.dat']
         if mode in ['LO', 'NLO']:
             options['parton'] = True
+            cards.append('FO_analyse_card.dat')
         elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
@@ -2814,10 +2820,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
             if mode in ['LO','aMC@LO','noshowerLO']:
                 self.run_name += '_LO' 
         self.set_run_name(self.run_name, self.run_tag, 'parton')
+        #create the shower_card or the analyse card if needed 
         if 'aMC@' in mode or mode == 'onlyshower':
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
             self.shower_card = shower_card.ShowerCard(shower_card_path)
-        
+        elif mode in ['LO', 'NLO']:
+            analyse_card_path = pjoin(self.me_dir, 'Cards','FO_analyse_card.dat')
+            self.analyse_card = analyse_card.FOAnalyseCard(analyse_card_path)
         return mode
 
 
