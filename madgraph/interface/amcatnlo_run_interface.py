@@ -1418,7 +1418,8 @@ Integrated cross-section
         if not match or output[1]:
             logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results')
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+            'Please check the .log files inside the directories which failed.')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
