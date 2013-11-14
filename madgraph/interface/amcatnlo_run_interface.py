@@ -1637,6 +1637,7 @@ Integrated cross-section
                 if nTot1 != 0:
                     debug_msg += '\n          Unknown return code (1):             %d'%nTot1
         logger.info(message+'\n')
+        open(pjoin(self.me_dir, 'Events', self.run_name, 'summary.txt'), 'w').write(message+'\n')
                  
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
