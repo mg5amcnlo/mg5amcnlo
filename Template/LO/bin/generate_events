@@ -140,7 +140,8 @@ def treat_old_argument(argument):
 
 ################################################################################  
 ##   EXECUTABLE
-################################################################################                                
+################################################################################
+
 if '__main__' == __name__:
     # Check that python version is valid
 
@@ -162,7 +163,7 @@ if '__main__' == __name__:
             launch.run_cmd('quit')
         except:
             pass
-    except ME.MadEventAlreadyRunning, error:
+    except Exception, error:
         logging.error(str(error))
         sys.exit()
                           

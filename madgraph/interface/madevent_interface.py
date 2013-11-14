@@ -1524,7 +1524,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
         
-        self.prompt = "'%s' >"%os.path.basename(pjoin(me_dir))
+        self.prompt = "'%s' >"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
     

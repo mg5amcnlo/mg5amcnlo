@@ -808,7 +808,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
-        self.prompt = "'%s' >"%os.path.basename(pjoin(me_dir))
+        self.prompt = "'%s' >"%os.path.basename(pjoin(self.me_dir))
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
