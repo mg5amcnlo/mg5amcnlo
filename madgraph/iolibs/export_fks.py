@@ -473,7 +473,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
-                     'ktclusdble.f',
                      'madfks_dbook.f',
                      'madfks_mcatnlo.inc',
                      'madfks_plot.f',
