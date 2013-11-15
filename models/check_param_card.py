@@ -148,13 +148,27 @@ class Block(list):
         list.remove(self, self.get(lhacode))
         # update the dictionary of key
         return self.param_dict.pop(tuple(lhacode))
+    
+    def __eq__(self, other, prec=1e-4):
+        """ """
+        if len(self) != len(other):
+            return False
+        return not any(abs(param.value-other.param_dict[key].value)> prec
+                        for key, param in self.param_dict.items())
+        
+    def __ne__(self, other, prec=1e-4):
+        return not self.__eq__(other, prec)
         
     def append(self, obj):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
 
-        
+        #The following line seems/is stupid but allow to pickle/unpickle this object
+        #this is important for madspin (in gridpack mode)
+        if not hasattr(self, 'param_dict'):
+            self.param_dict = {}
+            
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
                 raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \

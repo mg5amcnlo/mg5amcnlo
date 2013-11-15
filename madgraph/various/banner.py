@@ -164,26 +164,6 @@ class Banner(dict):
             ff.close()
 
     ############################################################################
-    #  SPLIT BANNER
-    ############################################################################
-    def charge_card(self, tag):
-        """Build the python object associated to the card"""
-        
-        if tag == 'param_card':
-            tag = 'slha'
-        elif tag == 'run_card':
-            tag = 'mgruncard' 
-        elif tag == 'proc_card':
-            tag = 'mg5proccard' 
-        
-        assert tag in ['mgruncard'], 'invalid card %s' % tag
-        
-        if tag == 'mgruncard':
-            run_card = self[tag].split('\n') 
-            self.run_card = RunCard(run_card)
-            return self.run_card
-
-    ############################################################################
     #  WRITE BANNER
     ############################################################################
     def check_pid(self, pid2label):

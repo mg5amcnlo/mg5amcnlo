@@ -1825,7 +1825,7 @@ class decay_misc:
         return mean, sd
      
 
-class decay_all_events:
+class decay_all_events(object):
     
     def __init__(self, ms_interface, banner, inputfile, options):
         """Store all the component and organize special variable"""
@@ -1835,12 +1835,17 @@ class decay_all_events:
         #max_weight_arg = options['max_weight']  
         #BW_effects = options['BW_effect']
         self.path_me = os.path.realpath(options['curr_dir']) 
+        if options['ms_dir']:
+            self.path_me = os.path.realpath(options['ms_dir'])
+            if not os.path.exists(self.path_me):
+                os.mkdir(self.path_me) 
         self.mgcmd = ms_interface.mg5cmd
         self.mscmd = ms_interface
         self.model = ms_interface.model
         self.banner = banner
         self.evtfile = inputfile
         self.curr_event = Event(self.evtfile) 
+        self.inverted_decay_mapping={}
                
         self.curr_dir = os.getcwd()
         # dictionary to fortan evaluator
@@ -1852,14 +1857,14 @@ class decay_all_events:
     
         # Remove old stuff from previous runs
         # so that the current run is not confused
-
-        if os.path.isdir(pjoin(self.path_me,"production_me")):
-            shutil.rmtree(pjoin(self.path_me,"production_me"))
-
-        if os.path.isdir(pjoin(self.path_me,"full_me")):
-            shutil.rmtree(pjoin(self.path_me,"full_me"))    
-        if os.path.isdir(pjoin(self.path_me,"decay_me")):
-            shutil.rmtree(pjoin(self.path_me,"decay_me"))     
+        # Don't have to do that for gridpack 
+        if not options["ms_dir"]:
+            if os.path.isdir(pjoin(self.path_me,"production_me")):
+                shutil.rmtree(pjoin(self.path_me,"production_me"))
+            if os.path.isdir(pjoin(self.path_me,"full_me")):
+                shutil.rmtree(pjoin(self.path_me,"full_me"))    
+            if os.path.isdir(pjoin(self.path_me,"decay_me")):
+                shutil.rmtree(pjoin(self.path_me,"decay_me"))     
     
         # Prepare some dict usefull for optimize model imformation
         # pid -> label and label -> pid
@@ -1976,10 +1981,9 @@ class decay_all_events:
         decay_mapping = self.get_identical_decay()
 
         # also compute the inverted map, which will be used in the decay procedure       
-        inverted_decay_mapping={}
         for tag in decay_mapping:
            for equiv_decay in decay_mapping[tag]:
-               inverted_decay_mapping[equiv_decay[0]]=tag
+               self.inverted_decay_mapping[equiv_decay[0]]=tag
  
         # Estimation of the maximum weight
         #=================================
@@ -1994,8 +1998,16 @@ class decay_all_events:
         # add probability of not writting events (for multi production with 
         # different decay
         self.add_loose_decay()
+        # Store this object with all the associate number for gridpack:
+        if self.options['ms_dir']:
+            self.save_status_to_pickle()
+    
+        self.ending_run()
+        
+    def ending_run(self):
+        """launch the unweighting and deal with final information"""    
         # launch the decay and reweighting
-        efficiency = self.decaying_events(inverted_decay_mapping)
+        efficiency = self.decaying_events(self.inverted_decay_mapping)
         if  efficiency != 1:
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
@@ -2012,13 +2024,39 @@ class decay_all_events:
             
         # Closing all run
         self.terminate_fortran_executables()
-        shutil.rmtree(pjoin(self.path_me,'production_me'))
-        shutil.rmtree(pjoin(self.path_me,'full_me'))
-        shutil.rmtree(pjoin(self.path_me,'decay_me'))
+        if not self.options['ms_dir']:
+            shutil.rmtree(pjoin(self.path_me,'production_me'))
+            shutil.rmtree(pjoin(self.path_me,'full_me'))
+            shutil.rmtree(pjoin(self.path_me,'decay_me'))
         # set the environment variable GFORTRAN_UNBUFFERED_ALL 
         # to its original value
         #os.environ['GFORTRAN_UNBUFFERED_ALL']='n'
 
+    def save_status_to_pickle(self):
+        import madgraph.iolibs.save_load_object as save_load_object
+        #don't store the event file in the pkl
+        evt_file, self.evtfile = self.evtfile, None
+        curr_event, self.curr_event = self.curr_event , None
+        mgcmd, self.mgcmd = self.mgcmd, None
+        mscmd, self.mscmd = self.mscmd , None
+        pid2mass, self.pid2mass = self.pid2mass, None
+        pid2width, self.pid2width = self.pid2width, None
+        #banner, self.banner = self.banner, None
+        #self.all_ME.banner = None
+        
+        name = pjoin(self.options['ms_dir'], 'madspin.pkl')
+        save_load_object.save_to_file(name, self)
+        
+        #restore the event file
+        self.evtfile = evt_file
+        self.curr_event = curr_event
+        self.mgcmd = mgcmd
+        self.mscmd = mscmd 
+        self.pid2mass = pid2mass
+        self.pid2width = pid2width
+        #self.banner = banner
+        #self.all_ME.banner = banner
+        
     def decaying_events(self,inverted_decay_mapping):
         """perform the decay of each events"""
 
@@ -3011,6 +3049,7 @@ class decay_all_events:
         """routine to return the matrix element"""
 
         tmpdir = ''
+        
         if (mode, production) in self.calculator:
             external = self.calculator[(mode, production)]
             self.calculator_nbcall[(mode, production)] += 1

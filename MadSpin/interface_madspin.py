@@ -67,7 +67,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'max_weight_ps_point': 400,
                         'BW_cut':-1,
                         'zeromass_for_max_weight':5,
-                        'nb_sigma':0}
+                        'nb_sigma':0,
+                        'ms_dir':None}
         
 
         
@@ -266,18 +267,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
-        if args[0] in  ['max_weight', 'BW_effect']:
+        if args[0] in  ['max_weight', 'BW_effect','ms_dir']:
             self.options[args[0]] = args[1]
+            if args[0] == 'ms_dir':
+                self.options['curr_dir'] = self.options['ms_dir']
         elif args[0] == 'seed':
             import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
         else:
-             self.options[args[0]] = int(args[1])
+            self.options[args[0]] = int(args[1])
     
     def complete_set(self,  text, line, begidx, endidx):
         
-     try:
+
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -287,9 +290,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif len(args) == 2:
             if args[1] == 'BW_effect':
                 return self.list_completion(text, ['True', 'False']) 
-     except Exception, error:
-         print error
-         
+            if args[1] == 'ms_dir':
+                return self.path_completion(text, '.', only_dirs = True)
+        elif args[1] == 'ms_dir':
+            curr_path = pjoin(*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+            return self.path_completion(text, curr_path, only_dirs = True)
+        
     def help_set(self):
         """help the set command"""
         
@@ -346,6 +353,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
+            return self.run_from_pickle()
+        
+    
         args = self.split_arg(line)
         self.check_launch(args)
         for part in self.list_branches.keys():
@@ -394,6 +405,55 @@ class MadSpinInterface(extended_cmd.Cmd):
         misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
+    
+  
+    def run_from_pickle(self):
+        import madgraph.iolibs.save_load_object as save_load_object
+        
+        generate_all = save_load_object.load_from_file(pjoin(self.options['ms_dir'], 'madspin.pkl'))
+        # Re-create information which are not save in the pickle.
+        generate_all.evtfile = self.events_file
+        generate_all.curr_event = madspin.Event(self.events_file) 
+        generate_all.mgcmd = self.mg5cmd
+        generate_all.mscmd = self 
+        generate_all.pid2width = lambda pid: generate_all.banner.get('param_card', 'decay', abs(pid)).value
+        generate_all.pid2mass = lambda pid: generate_all.banner.get('param_card', 'mass', abs(pid)).value
+        
+        if not hasattr(self.banner, 'param_card'):
+            self.banner.charge_card('slha')
+        for name, block in self.banner.param_card.items():
+            if name.startswith('decay'):
+                continue
+            orig_block = generate_all.banner.param_card[name]
+            if block != orig_block:
+                raise Exception, """The directory %s is specific to a mass spectrum. 
+                Your event file is not compatible with this one. (Different param_card: %s different)
+                orig block:
+                %s
+                new block:
+                %s""" \
+                % (self.options['ms_dir'], name, orig_block, block)
+                
+        
+        #generate_all.banner = self.banner
+        #generate_all.banner.add('slha', pjoin(self.options['ms_dir'], 'param_card.dat'))
+        #generate_all.banner.charge_card('slha')
+        #generate_all.all_ME.banner = banner
+        # NOW we have all the information available for RUNNING
+        
+        generate_all.ending_run()
+        self.branching_ratio = generate_all.branching_ratio
+        evt_path = self.events_file.name
+        try:
+            self.events_file.close()
+        except:
+            pass
+        misc.call(['gzip -f %s' % evt_path], shell=True)
+        decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
+        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
+        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        if not self.mother:
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
     
     
     def load_model(self, name, use_mg_default, complex_mass=False):
