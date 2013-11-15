@@ -3354,6 +3354,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     break
                 print 'apply patch %s' % (i+1)
                 text = filetext.read()
+                # track rename since patch fail to apply those correctly.
+                pattern = re.compile(r'''=== renamed file \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
+                #=== renamed file 'Template/SubProcesses/addmothers.f' => 'madgraph/iolibs/template_files/addmothers.f'
+                for orig, new in pattern.findall(text):
+                    files.cp(pjoin(MG5DIR, orig), pjoin(MG5DIR, new))
                 p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
                                                                   cwd=MG5DIR)
                 p.communicate(text)
