@@ -37,7 +37,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &       0.5d0,-5d0,5d0)
         call bookup(l+7,'w pt        '//weights_info(kk)//cc(i),
      &       10d00,0d0,200d0)
-        call bookup(l+8,'cphi(e,ve)  '//weights_info(kk)//cc(i),
+        call bookup(l+8,'cphi[e,ve]  '//weights_info(kk)//cc(i),
      &       0.05d0,-1d0,1d0)
       enddo
       enddo
@@ -70,7 +70,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call multitop(l+5,3,2,'trans. mass',ytit,'LOG')
          call multitop(l+6,3,2,'w rapidity ',ytit,'LIN')
          call multitop(l+7,3,2,'w pt       ',ytit,'LOG')
-         call multitop(l+8,3,2,'cphi(e,ve) ',ytit,'LOG')
+         call multitop(l+8,3,2,'cphi[e,ve] ',ytit,'LOG')
       enddo
       enddo
       return                

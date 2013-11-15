@@ -19,7 +19,7 @@ c     the analysis_end and analysis_fill subroutines this label is used
 c     to keep track of the histogram. The label should be a number
 c     between 1 and NPLOTS/4=1250 (can be increased in dbook.inc).
 c     o) The second argument is a string that will apear above the
-c     histogram.
+c     histogram. Do not use brackets "(" or ")" inside this string.
 c     o) The third, forth and fifth arguments are the bin size, the
 c     lower edge of the first bin and the upper edge of the last
 c     bin. There is a maximum of 100 bins per histogram.
@@ -74,7 +74,8 @@ c multitop() subroutine.
 c     o) The first argument is the histogram label
 c     o) The second and third arguments are not used (keep them to the
 c     default 3,2)
-c     o) Fourth argument is the label for the x-axis
+c     o) Fourth argument is the label for the x-axis. Do not use
+c     brackets "(" or ")" inside this string.
 c     o) Fifth argument is the y-axis
 c     o) Final argument declares if the y-axis should be a linear 'LIN'
 c     or logarithmic 'LOG' scale.

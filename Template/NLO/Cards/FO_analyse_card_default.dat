@@ -2,10 +2,10 @@
 #                                                                               
 # This file contains the settings for analyses to be linked to aMC@NLO
 # fixed order runs. Analyse files are meant to be put (or linked)
-# inside <PROCDIR>/AnalysisFixedOrder/ (<PROCDIR> is the name of the
+# inside <PROCDIR>/FixedOrderAnalysis/ (<PROCDIR> is the name of the
 # exported process directory). The histograms should be declared and
 # filled using the 'hbook' package (which is already included in the
-# code). See the <PROCDIR>/AnalysisFixedOrder/analysis_template.f file
+# code). See the <PROCDIR>/FixedOrderAnalysis/analysis_template.f file
 # for details on how to write your own analysis.
 #                                                                               
 #######################################################################
@@ -13,14 +13,15 @@
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
 #
-# (Absolute) path to the extra-libraries. Directory names should be
+# (Absolute) path to the extra libraries. Directory names should be
 # separated by white spaces.
 FO_EXTRAPATHS =
 #
-# (Absolute) path to the dirs containing header files needed by C++:
+# (Absolute) path to the dirs containing header files needed by the
+# libraries (e.g. C++ header files):
 FO_INCLUDEPATHS =                      
 #
-# User's analysis (to be put in the <PROCDIR>/AnalysisFixedOrder/
+# User's analysis (to be put in the <PROCDIR>/FixedOrderAnalysis/
 # directory). Please use .o as extension and white spaces to separate
 # files.
 FO_ANALYSE = analysis_template.o

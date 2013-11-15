@@ -2,7 +2,7 @@ include ../../Source/make_opts
 include ../analyse_opts
 
 LIBDIR = ../../lib/
-ANADIR = ../../AnalysisFixedOrder/
+ANADIR = ../../FixedOrderAnalysis/
 
 #check if fastjet-config is set
 ifeq ($(fastjet_config),None) 
@@ -36,8 +36,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
 
 # Files needed for vegas, mint & mintMC
-RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
-	madfks_plot.o fill_MC_mshell.o born_hel.o
+RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
+	madfks_dbook.o madfks_plot.o fill_MC_mshell.o born_hel.o
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o

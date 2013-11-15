@@ -24,39 +24,39 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      $     ,2.d0,0.d0,200.d0)
       call bookup(l+2,'Higgs pT                  '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+3,'Higgs log(pT)             '//weights_info(kk)
+      call bookup(l+3,'Higgs log[pT]             '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
       call bookup(l+4,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
       call bookup(l+5,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+6,'Higgs log(pT),  |y_H| < 2 '//weights_info(kk)
+      call bookup(l+6,'Higgs log[pT],  |y_H| < 2 '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 
       call bookup(l+7,'H jet pT                    '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
       call bookup(l+8,'H jet pT                    '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+9,'H jet log(pT)               '//weights_info(kk)
+      call bookup(l+9,'H jet log[pT]               '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
       call bookup(l+10,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
       call bookup(l+11,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+12,'H jet log(pT),  |y_Hj| < 2 '//weights_info(kk)
+      call bookup(l+12,'H jet log[pT],  |y_Hj| < 2 '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 
       call bookup(l+13,'Inc jet pT                   '
      $     //weights_info(kk),2.d0,0.d0,200.d0)
       call bookup(l+14,'Inc jet pT                   '
      $     //weights_info(kk),5.d0,0.d0,500.d0)
-      call bookup(l+15,'Inc jet log(pT)              '
+      call bookup(l+15,'Inc jet log[pT]              '
      $     //weights_info(kk),0.05d0,0.1d0,5.d0)
       call bookup(l+16,'Inc jet pT,  |y_Ij| < 2      '
      $     //weights_info(kk),2.d0,0.d0,2.d2)
       call bookup(l+17,'Inc jet pT,  |y_Ij| < 2      '
      $     //weights_info(kk),5.d0,0.d0,5.d2)
-      call bookup(l+18,'Inc jet log(pT),  |y_Ij| < 2 '
+      call bookup(l+18,'Inc jet log[pT],  |y_Ij| < 2 '
      $     //weights_info(kk),0.05d0,0.1d0,5.d0)
 
 
