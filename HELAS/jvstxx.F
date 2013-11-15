@@ -47,7 +47,7 @@ c Gluon propagator:
 
       dv = - g /sqrTwo /dcmplx( q2 )
 
-cfax--> MadGraph5_aMC@NLO bug compensation
+cfax--> madgraph bug compensation
 
       dv = -dv
 

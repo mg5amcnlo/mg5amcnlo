@@ -226,7 +226,7 @@ class CmdExtended(common_run.CommonRunCmd):
         '#*                                                          *\n' + \
         '#*               Command File for aMCatNLO                  *\n' + \
         '#*                                                          *\n' + \
-        '#*     run as ./bin/madevent.py filename                    *\n' + \
+        '#*     run as ./bin/aMCatNLO.py filename                    *\n' + \
         '#*                                                          *\n' + \
         '#************************************************************\n'
         

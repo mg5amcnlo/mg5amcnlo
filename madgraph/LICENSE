@@ -1,15 +1,20 @@
 The MadGraph5_aMC@NLO software comes with the following Open Source License, 
 adapted from the University of Illinois/NCSA license.
 
-Copyright (c) 2009, the MadTeam.  All rights reserved.
+Copyright (c) 2009, 2013, the MadTeam.  All rights reserved.
 
 Developed by the "MadTeam", i.e. 
 
-Dr. Johan ALWALL, alwall@slac.stanford.edu, SLAC, USA
-Dr. Michel HERQUET, mherquet@nikhef.nl, NIKHEF, The Netherlands
-Prof. Fabio MALTONI, fabio.maltoni@uclouvain.be, UCLouvain, Belgium
-MSc. Olivier MATTELAER, olivier.mattelaer@uclouvain.be, UCLouvain, Belgium
-Prof. Tim STELZER, tstelzer@illinois.edu, UIUC, USA
+Johan ALWALL
+Rikkert FREDERIX
+Stefano FRIXIONE
+Michel HERQUET
+Valentin HIRSCHI
+Fabio MALTONI
+Olivier MATTELAER
+Tim STELZER
+Paolo TORRIELLI
+Marco ZARO
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to
