@@ -70,19 +70,19 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<
 %.o: $(ANADIR)/%.f
-	$(FC) $(FFLAGS) -c -I. $<
+	$(FC) $(FFLAGS) -c -I. $(FO_INCLUDEPATHS) $<
 %.o: %.for
 	$(FC) $(FFLAGS) -c -I. $<
 %.o: $(ANADIR)/%.for
-	$(FC) $(FFLAGS) -c -I. $<
+	$(FC) $(FFLAGS) -c -I. $(FO_INCLUDEPATHS) $<
 %.o: %.c
 	$(CXX) -g -c -I. $^
 %.o: $(ANADIR)/%.c
-	$(CXX) -g -c -I. $^
+	$(CXX) -g -c -I. $(FO_INCLUDEPATHS) $^
 %.o: %.cc
 	$(CXX) -g -c $(CXXFLAGS) -I. $^
 %.o: $(ANADIR)/%.cc
-	$(CXX) -g -c $(CXXFLAGS) -I. $^
+	$(CXX) -g -c $(CXXFLAGS) -I. $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
 	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
@@ -104,15 +104,15 @@ check_poles: $(POLES) $(libmadloop)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) 
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) 
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_INCLUDEPATHS)
+	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) 
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)

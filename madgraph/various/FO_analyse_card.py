@@ -77,13 +77,13 @@ class FOAnalyseCard(dict):
                 if key == 'fo_extrapaths':
                     # add the -L flag
                     line = '%s=%s' % (key.upper(), 
-                            ' '.join(['-L' + path for path in value.split()]))
+                            ' '.join(['-Wl,-rpath,' + path for path in value.split()])+' '+' '.join(['-L' + path for path in value.split()]))
                 elif key == 'fo_includepaths':
-                    # add the -L flag
+                    # add the -I flag
                     line = '%s=%s' % (key.upper(), 
                             ' '.join(['-I' + path for path in value.split()]))
                 elif key == 'fo_extralibs':
-                    # add the -L flag
+                    # add the -l flag
                     line = '%s=%s' % (key.upper(), 
                             ' '.join(['-l' + lib for lib in value.split()]))
                 else:
