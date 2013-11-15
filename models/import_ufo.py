@@ -172,7 +172,7 @@ def import_full_model(model_path, decay=False):
                 return model
 
     if (model_path, aloha.unitary_gauge) in _import_once:
-        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path)

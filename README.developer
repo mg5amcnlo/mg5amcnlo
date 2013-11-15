@@ -9,13 +9,22 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph5_aMC@NLO Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                            and                           *
+*              http://www.cern.amcatnlo.ch                 *
+*                                                          *
 *                                                          *
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
 *                                                          *
+*    Please refer to: MadGraph5 : Going Beyond.            *
+*                     J. Alwall, M. Herquet, F. Maltoni,   *
+*                     O. Mattelaer, T. Stelzer             *
+*                     JHEP 1106 (2011) 128                 *
+*                     arXiv:1106.0522 [hep-ph]             *
 ************************************************************
+
 
 To run MadGraph5_aMC@NLO using the command line interface:
 --------------------------------------------

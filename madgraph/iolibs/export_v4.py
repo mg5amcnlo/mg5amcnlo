@@ -4066,7 +4066,7 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
                     options['export_format'] = 'madloop_default'
             return ExporterClass(cmd._mgme_dir, cmd._export_dir, options)
         else:
-            raise MadGraph5Error('MG5 cannot find the \'loop_material\' directory'+\
+            raise MadGraph5Error('MG5_aMC cannot find the \'loop_material\' directory'+\
                                  ' in %s'%str(cmd._mgme_dir))
 
     # Then treat the aMC@NLO output     
