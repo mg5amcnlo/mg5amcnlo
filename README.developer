@@ -1,6 +1,6 @@
 ************************************************************
 *                                                          *
-*           W E L C O M E  to  M A D G R A P H  5          *
+*  W E L C O M E  to  M A D G R A P H  5 _ a M C @ N L O   *
 *                                                          *
 *                                                          *
 *                 *                       *                *
@@ -12,13 +12,12 @@
 *    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
 *                            and                           *
-*              http://www.cern.amcatnlo.ch                 *
-*                                                          *
+*                http://www.cern.ch/amcatnlo               *
 *                                                          *
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
 *                                                          *
-*    Please refer to: MadGraph5 : Going Beyond.            *
+*    Please refer to: MadGraph5_aMC@NLO                    *
 *                     J. Alwall, M. Herquet, F. Maltoni,   *
 *                     O. Mattelaer, T. Stelzer             *
 *                     JHEP 1106 (2011) 128                 *
@@ -32,19 +31,6 @@ To run MadGraph5_aMC@NLO using the command line interface:
 Type "help" for list of commands and "help [command]" for help
 on individual commands. 
 Type "tutorial" for an interactive quick-start tutorial.
-
-
-To use with MadEvent:
----------------------
-Please run the script
-./bin/setup_madevent_template.py
-
-To run using the MadEvent newprocess_mg5 script: 
-Copy the Template directory to a new directory, e.g. MyRunDir.
-Modify the Cards/proc_card.dat, and run:
-./bin/newprocess_mg5
-After completed process generation, you will find the sequence of
-commands used by MG5 in the file Cards/proc_card_mg5.dat.
 
 To run the test suite:
 ----------------------

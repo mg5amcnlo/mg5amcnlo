@@ -1,6 +1,6 @@
 ************************************************************
 *                                                          *
-*           W E L C O M E  to  M A D G R A P H  5          *
+*  W E L C O M E  to  M A D G R A P H  5 _ a M C @ N L O   *
 *                                                          *
 *                                                          *
 *                 *                       *                *
@@ -11,6 +11,8 @@
 *                                                          *
 *    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                            and                           *
+*                http://www.cern.ch/amcatnlo               *
 *                                                          *
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
@@ -32,15 +34,11 @@ Package for the LO cross-section computation and generation of events
 - a Fortran 77 compiler (such as g77 or gfortran)
 
  * aMC@NLO *
-Package for the NLO cross-section computation (matched to shower) and generation of events 
+Package for the NLO cross-section computation (matched to shower) and
+generation of events 
 
 - bash
 - gfortran4.6 (or higher)
-- fastjet
-To configure the path to fastjet please do:
-./bin/mg5_aMC
-set fastjet PATH_TO_FASTJET-CONFIG_FILE
-
 
 On Windows:
 ===========
