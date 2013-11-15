@@ -293,7 +293,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 #                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     logger.info(\
                       "The default sm model does not allow to generate"+
-                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                      " loop processes. MG5_aMC now loads 'loop_sm' instead.")
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]

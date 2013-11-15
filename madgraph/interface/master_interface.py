@@ -566,7 +566,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
         else:
             raise MadGraph5Error, 'Type of interface not valid: %s' % name  
         
-        if self.current_interface!=old_cmd:
+        if self.interface_names[old_cmd][0]!=self.interface_names[name][0]:
             logger.info("Switching from interface %s to %s"\
                         %(self.interface_names[old_cmd][0],\
                           self.interface_names[name][0]))
