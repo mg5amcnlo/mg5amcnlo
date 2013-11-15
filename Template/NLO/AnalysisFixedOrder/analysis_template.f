@@ -1,6 +1,7 @@
 c
 c This file contains the default histograms for fixed order runs: it
-c only plots the total rate as an example.
+c only plots the total rate as an example. It can be used as a template
+c to make distributions for other observables.
 c
 c This uses the hbook package and generates histograms in the top-drawer
 c format. This format is human-readable. After running, the histograms
@@ -22,9 +23,9 @@ c     histogram.
 c     o) The third, forth and fifth arguments are the bin size, the
 c     lower edge of the first bin and the upper edge of the last
 c     bin. There is a maximum of 100 bins per histogram.
-c     o) When including scale and/or PDF uncertainties, fill a histogram
-c     for each weight, and compute the uncertainties from the final set
-c     of histograms
+c     o) When including scale and/or PDF uncertainties, declare a
+c     histogram for each weight, and compute the uncertainties from the
+c     final set of histograms
 c
       implicit none
 c When including scale and/or PDF uncertainties the total number of
@@ -42,13 +43,13 @@ c Fill the c_analysis common block with the number of weights that will
 c be computed
       nwgt_analysis=nwgt
 c
-c     loop over all the weights that are computed (depends on run_card
-c     parameters do_rwgt_scale and do_rwgt_pdf):
+c loop over all the weights that are computed (depends on run_card
+c parameters do_rwgt_scale and do_rwgt_pdf):
       do kk=1,nwgt_analysis
-c     make sure that there is a separate histogram initialized for each
-c     weight
+c make sure that there is a separate histogram initialized for each
+c weight
          l=(kk-1)*2
-c     declare (book) the histograms
+c declare (i.e. book) the histograms
          call bookup(l+1,'total rate      '//weights_info(kk),
      &        1.0d0,0.5d0,5.5d0)
          call bookup(l+2,'total rate Born '//weights_info(kk),
@@ -86,7 +87,7 @@ c Local variables
       common/c_analysis/nwgt_analysis
 c This defines NPLOTS:
       include 'dbook.inc'
-c Do not touch the folloing 5 lines. These lines make sure that the
+c Do not touch the folloing 4 lines. These lines make sure that the
 c histograms will have the correct overall normalisation: cross section
 c (in pb) per bin.
       do i=1,NPLOTS
@@ -111,7 +112,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine analysis_fill(p,istatus,ipdg,wgts,ibody)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c This subroutine is called for each n-body and (n+1)-body configuration
-c that passes the generation cuts.
+c that passes the generation cuts. Here the histrograms are filled.
       implicit none
 c This includes the 'nexternal' parameter that labels the number of
 c particles in the (n+1)-body process
@@ -121,7 +122,9 @@ c state particles
       integer istatus(nexternal)
 c This is an array with (simplified) PDG codes for the particles. Note
 c that channels that are combined (i.e. they have the same matrix
-c elements) are given only 1 set of PDG codes.
+c elements) are given only 1 set of PDG codes. This means, e.g., that
+c when using a 5-flavour scheme calculation (massless b quark), no
+c b-tagging can be applied.
       integer iPDG(nexternal)
 c The array of the momenta and masses of the initial and final state
 c particles in the lab frame. The format is "E, px, py, pz, mass", while
@@ -156,14 +159,14 @@ c first argument is the histogram label, the second is the numerical
 c value of the variable to plot for the current phase-space point and
 c the final argument is the weight of the current phase-space point.
       var=1d0
-c     loop over all the weights that are computed (depends on run_card
-c     parameters do_rwgt_scale and do_rwgt_pdf):
+c loop over all the weights that are computed (depends on run_card
+c parameters do_rwgt_scale and do_rwgt_pdf):
       do kk=1,nwgt_analysis
          wgt=wgts(kk)
          l=(kk-1)*2
-c     always fill the total rate
+c always fill the total rate
          call mfill(l+1,var,wgt)
-c     only fill the total rate for the Born when ibody=3
+c only fill the total rate for the Born when ibody=3
          if (ibody.eq.3) call mfill(l+2,var,wgt)
       enddo
       return
