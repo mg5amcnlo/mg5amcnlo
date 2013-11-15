@@ -144,7 +144,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*              MadGraph5_aMC@NLO/MadEvent 5                *\n' + \
+        '#*               MadGraph5_aMC@NLO/MadEvent                 *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -173,7 +173,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "************************************************************\n" + \
         "*                                                          *\n" + \
         "*                      W E L C O M E to                    *\n" + \
-        "*            M A D G R A P H  5 _ a M C @ N L O            *\n" + \
+        "*             M A D G R A P H 5 _ a M C @ N L O            *\n" + \
         "*                      M A D E V E N T                     *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \

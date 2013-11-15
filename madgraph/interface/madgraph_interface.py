@@ -185,7 +185,7 @@ class CmdExtended(cmd.Cmd):
         "************************************************************\n" + \
         "*                                                          *\n" + \
         "*                     W E L C O M E to                     *\n" + \
-        "*             M A D G R A P H  5 _ a M C @ N L O           *\n" + \
+        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
         "*                                                          *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \

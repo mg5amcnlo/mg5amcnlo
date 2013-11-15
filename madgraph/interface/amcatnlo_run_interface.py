@@ -208,7 +208,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                    MadGraph/aMC@NLO 5                    *\n' + \
+        '#*                    MadGraph5_aMC@NLO                     *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -221,6 +221,8 @@ class CmdExtended(common_run.CommonRunCmd):
         "#*                                                          *\n" + \
         "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "#*                           and                            *\n" + \
+        "#*                http://amcatnlo.cern.ch                   *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
@@ -236,7 +238,7 @@ class CmdExtended(common_run.CommonRunCmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 5           *\n" + \
         "*                       a M C @ N L O                      *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
