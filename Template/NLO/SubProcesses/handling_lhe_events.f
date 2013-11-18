@@ -173,21 +173,21 @@ c Write here the reweight information if need be
             write(ifile,602) "      <weight id='1001'>"/
      $           /" muR=",1d0," muF=",1d0," </weight>"
             write(ifile,602) "      <weight id='1002'>"/
-     $           /" muR=",1d0," muF=",rw_Fscale_up," </weight>"
-            write(ifile,602) "      <weight id='1003'>"/
      $           /" muR=",1d0," muF=",rw_Fscale_down," </weight>"
+            write(ifile,602) "      <weight id='1003'>"/
+     $           /" muR=",1d0," muF=",rw_Fscale_up," </weight>"
             write(ifile,602) "      <weight id='1004'>"/
-     $           /" muR=",rw_Rscale_up," muF=",1d0," </weight>"
+     $           /" muR=",rw_Rscale_down," muF=",1d0," </weight>"
             write(ifile,602) "      <weight id='1005'> muR="
-     $           ,rw_Rscale_up," muF=",rw_Fscale_up," </weight>"
-            write(ifile,602) "      <weight id='1006'> muR="
-     $           ,rw_Rscale_up," muF=",rw_Fscale_down," </weight>"
-            write(ifile,602) "      <weight id='1007'> muR="
-     $           ,rw_Rscale_down," muF=",1d0," </weight>"
-            write(ifile,602) "      <weight id='1008'> muR="
-     $           ,rw_Rscale_down," muF=",rw_Fscale_up," </weight>"
-            write(ifile,602) "      <weight id='1009'> muR="
      $           ,rw_Rscale_down," muF=",rw_Fscale_down," </weight>"
+            write(ifile,602) "      <weight id='1006'> muR="
+     $           ,rw_Rscale_down," muF=",rw_Fscale_up," </weight>"
+            write(ifile,602) "      <weight id='1007'> muR="
+     $           ,rw_Rscale_up," muF=",1d0," </weight>"
+            write(ifile,602) "      <weight id='1008'> muR="
+     $           ,rw_Rscale_up," muF=",rw_Fscale_down," </weight>"
+            write(ifile,602) "      <weight id='1009'> muR="
+     $           ,rw_Rscale_up," muF=",rw_Fscale_up," </weight>"
             write(ifile,'(a)') "    </weightgroup>"
          endif
          if (numPDFpairs.ne.0) then

@@ -2603,7 +2603,7 @@ Integrated cross-section
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
             # write an analyse_opts with a default analysis so that compilation goes through
-            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_template.o\n')
+            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o\n')
 
         #directory where to compile exe
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 

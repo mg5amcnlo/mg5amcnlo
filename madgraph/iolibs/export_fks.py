@@ -476,7 +476,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'madfks_dbook.f',
                      'madfks_mcatnlo.inc',
                      'madfks_plot.f',
-                     'analysis_fixed_order.f',
+                     'analysis_dummy.f',
                      'mint-integrator2.f',
                      'MC_integer.f',
                      'mint.inc',
