@@ -47,14 +47,14 @@ class FKSDiagramTag(diagram_generation.DiagramTag): #test written
         return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
 
-def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
-    """finds the real configurations that match the born ones, i.e.
-    for each born configuration, the real configuration that has 
-    the ij -> i j splitting.
-    i, j and ij are integers, and refer to the leg position in the real
-    process (i, j) and in the born process (ij).
+def link_rb_configs(born_amp, real_amp, i, j, ij):
+    """finds the real configurations that match the born ones, i.e.  for
+    each born configuration, the real configuration that has the ij ->
+    i j splitting.  i, j and ij are integers, and refer to the leg
+    position in the real process (i, j) and in the born process (ij).
     """
     # find diagrams with 3 point functions and use them as configurations
+    id_ij = born_amp['process']['legs'][ij - 1]['id']
 
     minvert = min([max([len(vert.get('legs')) \
                         for vert in diag.get('vertices')]) \
@@ -63,19 +63,23 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     born_confs = []
     real_confs = []
 
-    for k, diag in enumerate(born_amp.get('diagrams')):
+    k=0
+    for diag in born_amp.get('diagrams'):
         if any([len(vert.get('legs')) > minvert for vert in
                 diag.get('vertices')]):
             continue
         else:
             born_confs.append({'number' : k, 'diagram' : diag})
+            k=k+1
 
-    for k, diag in enumerate(real_amp.get('diagrams')):
+    k=0
+    for diag in real_amp.get('diagrams'):
         if any([len(vert.get('legs')) > minvert \
                 for vert in diag.get('vertices')]):
             continue
         else:
             real_confs.append({'number': k, 'diagram': diag})
+            k=k+1
 
     good_diags = []
 
@@ -97,7 +101,6 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                                   'leg_ij': last_leg,
                                   'number': diag['number']})
                 break #no need to continue once the vertex is found
-
 
     # now good_diags contains the real_confs which had the splitting, 
     #  with the vertex corresponding to the splitting removed
@@ -130,10 +133,16 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                         legs.remove(l)
                         l['number'] -= shift
                  #and relabel last_leg to ij
-                    if l.get('number') == good_diag['leg_ij'] and not replaced_ij and l in legs:
+                    if l.get('number') == good_diag['leg_ij'] and \
+                       l.get('id') == id_ij and not replaced_ij and l in legs:
                         legs.remove(l)
                         replaced_ij = True
                         l['number'] = ij
+
+    # this is to handle cases in which only one diagrams has to be linked
+    if len(good_diags) == 1 and len(born_confs) == 1:
+        return [{'real_conf': good_diags[0]['number'],
+                          'born_conf': born_confs[0]['number']}]
 
     # now create the tags
     born_tags = [FKSDiagramTag(d['diagram'], 
@@ -171,6 +180,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                                   born_confs[ib]['diagram'].nice_string()) )
 
     return links
+
 
 
 def find_orders(amp): #test_written
@@ -275,7 +285,8 @@ def ij_final(pair):
 def insert_legs(leglist_orig, leg, split):
     """Returns a new leglist with leg splitted into split.
     The convention is to remove leg ij, replace it with leg j, and put
-    i at the end of the group of legs with the same color representation
+    i at the end of the group of massless legs with the same color 
+    representation
     """
     # the deepcopy statement is crucial
     leglist = FKSLegList(copy.deepcopy(leglist_orig))         
@@ -292,13 +303,13 @@ def insert_legs(leglist_orig, leg, split):
         col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if l['color'] == col and l['massless']])
     for col in set([abs(l['color']) for l in leglist[firstfinal:] if not l['massless']]):
         mass_col_maxindex[col] = max([0] + [leglist.index(l) for l in leglist[firstfinal:] if abs(l['color']) == col and not l['massless']])
-    #no need to keep info on particles with color > i
+    #no need to keep info on massless particles with color > i
     for col in copy.copy(col_maxindex.keys()):
         if abs(col) > abs(split[1]['color']):
             del col_maxindex[col]
-    for col in copy.copy(mass_col_maxindex.keys()):
-        if abs(col) > abs(split[1]['color']):
-            del mass_col_maxindex[col]
+###    for col in copy.copy(mass_col_maxindex.keys()):
+###        if abs(col) > abs(split[1]['color']):
+###            del mass_col_maxindex[col]
     #also remove antiquarks if i is a quark
     if split[1]['color'] > 0:
         try:
@@ -308,6 +319,7 @@ def insert_legs(leglist_orig, leg, split):
     #so now the maximum of the max_col entries should be the position to insert leg i
 
     leglist.insert(max(col_maxindex.values() + mass_col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
+###    leglist.insert(max(col_maxindex.values() + [firstfinal - 1] ) + 1, split[1])
 #    for sleg in split:            
 #        leglist.insert(i, sleg)
 #        #keep track of the number for initial state legs
@@ -486,6 +498,7 @@ def find_color_links(leglist, symm = False): #test written
                             'legs': [leg1, leg2],
                             'string': col_dict['string'],
                             'replacements': col_dict['replacements']})
+
     return color_links
              
 
@@ -538,6 +551,14 @@ def legs_to_color_link_string(leg1, leg2): #test written, all cases
         elif leg1.get('color') * icol == - 3:
             string = color_algebra.ColorString(
                      [color_algebra.T(iglu, iglu, min_index-1, num)])
+        elif leg1.get('color') == 8:
+            string = color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index-1,iglu,min_index)], 
+                               is_imaginary =True)
+            string.product(color_algebra.ColorString(init_list = [
+                               color_algebra.f(min_index,iglu,num)], 
+                               is_imaginary =True))
+
         string.coeff = string.coeff * fractions.Fraction(1, 2) 
     dict['replacements'] = replacements
     dict['string'] = string
@@ -624,22 +645,34 @@ class FKSLegList(MG.LegList):
             raise FKSProcessError('Too many initial legs')
         #find color representations
         colors = sorted(set([abs(l['color']) for l in final_legs]))
+        # first put massless particles, without any rearrangment
+        if 1 in colors:
+            sorted_leglist.extend(sorted(\
+                    [l for l in final_legs if l['color'] == 1], key = itemgetter('number')))
+            colors.remove(1)
+
+        #now go for colored legs, put first all massive legs, then all massless legs
+        massless_dict = {}
+        massive_dict = {}
         for col in colors:
             col_legs = FKSLegList([l for l in final_legs if abs(l['color']) == col])
             #find massive and massless legs in this color repr
-            massive_legs = [l for l in col_legs if not l['massless']]
-            massless_legs = [l for l in col_legs if l['massless']]
-            # sorting may be different for massive and massless particles
-            # for color singlets, do not change order
-            if col == 1:
-                keys = [itemgetter('number'), itemgetter('number')]
-                reversing = False
-            else:
-                keys = [itemgetter('id'), itemgetter('id')]
-                reversing = True
+            massive_dict[col] = [l for l in col_legs if not l['massless']]
+            massless_dict[col] = [l for l in col_legs if l['massless']]
 
-            for i, list in enumerate([massive_legs, massless_legs]):
+        for i_m, dict in enumerate([massive_dict, massless_dict]):
+            for col in colors:
+                # sorting may be different for massive and massless particles
+                # for color singlets, do not change order
+                if col == 1:
+                    keys = [itemgetter('number'), itemgetter('number')]
+                    reversing = False
+                else:
+                    keys = [itemgetter('id'), itemgetter('id')]
+                    reversing = True
+
                 init_pdg_legs = []
+                list = dict[col]
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
                     for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
@@ -648,20 +681,19 @@ class FKSLegList(MG.LegList):
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = keys[i], reverse=reversing)
+                            init_pdg_legs.sort(key = keys[i_m], reverse=reversing)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
                     other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = keys[i], reverse=reversing)
+                    other_legs.sort(key = keys[i_m], reverse=reversing)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = keys[i], reverse=reversing)
+                    list.sort(key = keys[i_m], reverse=reversing)
                     sorted_leglist.extend(FKSLegList(list))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
-
 
 
 

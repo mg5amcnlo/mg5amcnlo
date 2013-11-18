@@ -719,7 +719,6 @@ c
 c     Local
 c
       double precision xp(0:3,-nexternal:nexternal)
-      double precision tsgn
       integer i,j,iloop
       logical onshell
       double precision xmass
@@ -753,7 +752,6 @@ c-----
          enddo
       enddo
 c
-      tsgn = +1d0
       do i=-1,-iloop,-1                      !Loop over propagators
          onbw(i) = .false.
 c Skip the t-channels

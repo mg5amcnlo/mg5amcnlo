@@ -1,7 +1,7 @@
 // Driver for Pythia 8. Reads an input file dynamically created on
 // the basis of the inputs specified in MCatNLO_MadFKS_PY8.Script 
-#include "Pythia.h"
-#include "HepMCInterface.h"
+#include "Pythia8/Pythia.h"
+#include "Pythia8/Pythia8ToHepMC.h"
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
 #include "HepMC/IO_BaseClass.h"
@@ -46,7 +46,7 @@ int main() {
   }
 
   HepMC::IO_BaseClass *_hepevtio;
-  HepMC::I_Pythia8 ToHepMC;
+  HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
 
   for (int iEvent = 0; ; ++iEvent) {

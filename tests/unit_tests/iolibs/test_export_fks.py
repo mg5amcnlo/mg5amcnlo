@@ -108,8 +108,9 @@ class IOExportFKSTest(unittest.TestCase,
 
     def test_write_mparticles(self):
         goal = \
-"""      INTEGER MAX_PARTICLES
-      PARAMETER (MAX_PARTICLES=5)"""
+"""      INTEGER MAX_PARTICLES, MAX_BRANCH
+      PARAMETER (MAX_PARTICLES=5)
+      PARAMETER (MAX_BRANCH=MAX_PARTICLES-1)"""
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxparticles_file(\
             writers.FortranWriter(self.give_pos('test')),\
@@ -872,7 +873,7 @@ C
       INTEGER IC(NEXTERNAL)
       DATA IC /NEXTERNAL*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(18,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(20,NWAVEFUNCS)
 C     
 C     COLOR DATA
 C     
@@ -1175,7 +1176,7 @@ C
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(18,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(20,NWAVEFUNCS)
      $ , JAMPH(2, NCOLOR)
 C     
 C     GLOBAL VARIABLES
@@ -1578,8 +1579,8 @@ C     CONSTANTS
 C     
       INTEGER     NGRAPHS
       PARAMETER ( NGRAPHS = 3 )
-      INTEGER    NWAVEFUNCS, NCOLOR1, NCOLOR2
-      PARAMETER (NWAVEFUNCS=7, NCOLOR1=2, NCOLOR2=3)
+      INTEGER NCOLOR1, NCOLOR2
+      PARAMETER (NCOLOR1=2, NCOLOR2=3)
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       COMPLEX*16 IMAG1

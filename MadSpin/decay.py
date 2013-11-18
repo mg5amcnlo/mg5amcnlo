@@ -2419,7 +2419,7 @@ class decay_all_events:
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]
         processes += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]      
+                      if re.search('^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
         modelpath = self.model.get('modelpath')
@@ -2443,14 +2443,22 @@ class decay_all_events:
                 commandline+="add process %s;" % (process)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        result = re.split('([/$])', process, 1)
+                        if 'QCD=' in process:
+                            result=re.split(' ',process)
+                            process=''
+                            for r in result:
+                                if 'QCD=' in r:
+                                    ior=re.split('=',r)
+                                    r='QCD=%i' % (int(ior[1])+1)
+                                process=process+r+' '
+                        result = re.split('([/$@]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
                             commandline+="add process %s j %s%s ;" % (process, split, rest)
                         else:
                             commandline +='add process %s j;' % process
                     else:
-                        raise Exception('Madspin not implemented NLO corrections.')
+                        raise Exception('Madspin: only QCD NLO corrections implemented.')
                 
                         
         commandline = commandline.replace('add process', 'generate',1)
@@ -2498,26 +2506,45 @@ class decay_all_events:
         
         
         for proc in processes:
+            # deal with @ syntax need to move it after the decay specification
+            if '@' in proc:
+                proc, proc_nb = proc.split('@')
+                try:
+                    int(proc_nb)
+                except ValueError:
+                    raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
+                proc_nb = '@ %i' % proc_nb 
+            else:
+                proc_nb = '' 
+            
             if '[' not in proc:
                 nb_comma = proc.count(',')
                 if nb_comma == 0:
-                    commandline+="add process %s, %s;" % (proc, decay_text)
+                    commandline+="add process %s, %s %s;" % (proc, decay_text, proc_nb)
                 elif nb_comma == 1:
                     before, after = proc.split(',')
-                    commandline+="add process %s, %s, (%s, %s);" % (before, decay_text, after, decay_text)
+                    commandline+="add process %s, %s, (%s, %s) %s;" % (before, decay_text, after, decay_text, proc_nb)
                 else:
                     raise Exception, 'too much decay at MG level. this can not be done for the moment)'
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
-                commandline+="add process %s, %s;" % (process, decay_text)
+                commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
                 if not order.startswith('virt='):
                     if 'QCD' in order:
-                        result = re.split('([/$])', process, 1)
+                        if 'QCD=' in process:
+                            result=re.split(' ',process)
+                            process=''
+                            for r in result:
+                                if 'QCD=' in r:
+                                    ior=re.split('=',r)
+                                    r='QCD=%i' % (int(ior[1])+1)
+                                process=process+r+' '
+                        result = re.split('([/$]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
-                            commandline+="add process %s j %s%s , %s ;" % (process, split, rest, decay_text)
+                            commandline+="add process %s j %s%s , %s %s ;" % (process, split, rest, decay_text, proc_nb)
                         else:
-                            commandline +='add process %s j, %s;' % (process, decay_text)
+                            commandline +='add process %s j, %s; %s' % (process, decay_text, proc_nb)
                     else:
                         raise Exception('Madspin not implemented NLO corrections.')
                 

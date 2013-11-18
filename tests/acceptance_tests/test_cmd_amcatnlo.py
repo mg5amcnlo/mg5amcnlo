@@ -98,6 +98,38 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd(line, errorhandling=False,precmd=True)
 
 
+    def test_check_singletop_fastjet(self):
+        cmd = os.getcwd()
+        self.generate(['p p > t j [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
+
+        card = open('/tmp/MGPROCESS/Cards/shower_card_default.dat').read()
+        self.assertTrue( 'ANALYSE     =' in card)
+        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwanstp.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
+        card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
+        open('/tmp/MGPROCESS/Cards/shower_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/shower_card_default.dat /tmp/MGPROCESS/Cards/shower_card.dat')
+
+        os.system('rm -rf /tmp/MGPROCESS/RunWeb')
+        os.system('rm -rf /tmp/MGPROCESS/Events/run_*')
+        self.do('generate_events -f')
+        # test the lhe event file and plots exist
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/plot_HERWIG6_1_0.top'))
+
+
+
     def test_check_ppzjj(self):
         """test that p p > z j j is correctly output without raising errors"""
         
@@ -113,6 +145,49 @@ class TestMECmdShell(unittest.TestCase):
         for pdir in pdirs:
             exe = os.path.join('/tmp/MGPROCESS/SubProcesses', pdir, 'madevent_mintMC')
             self.assertTrue(os.path.exists(exe))
+
+
+    def test_split_evt_gen(self):
+        """test that the event generation splitting works"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( ' -1 = nevt_job' in card)
+        card = card.replace(' -1 = nevt_job', '500 = nevt_job')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
+
+    def test_check_ppwy(self):
+        """test that the p p > w y (spin 2 graviton) process works with loops. This
+        is needed in order to test the correct wavefunction size setting for spin2
+        particles"""
+        cmd = os.getcwd()
+        self.generate(['p p > w+ y [QCD] '], 'tests/loop_smgrav')
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+        os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
 
     def generate_production(self):
         """production"""
@@ -132,7 +207,8 @@ class TestMECmdShell(unittest.TestCase):
                     card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
                     self.assertTrue( '10000 = nevents' in card)
                     card = card.replace('10000 = nevents', '100 = nevents')
-                    open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+                    open('/tmp/MGPROCESS/Cards/run_card_default.dat', 'w').write(card)
+                    os.system('cp  /tmp/MGPROCESS/Cards/run_card_default.dat /tmp/MGPROCESS/Cards/run_card.dat')
                     os.system('cp  /tmp/MGPROCESS/Cards/shower_card_default.dat /tmp/MGPROCESS/Cards/shower_card.dat')
                     
                     return
@@ -145,6 +221,46 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+
+    def test_ppgogo_amcatnlo(self):
+        """tests if the p p > go go (in the mssm) process works"""
+        self.generate(['p p > go go [real=QCD]'], 'mssm')
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000 = nevents' in card)
+        card = card.replace('10000 = nevents', '100 = nevents')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+        self.do('launch aMC@NLO -fp')
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+
+
+    def test_ppgogo_nlo(self):
+        """tests if the p p > go go (in the mssm) process works at fixed order"""
+        self.generate(['p p > go go [real=QCD]'], 'mssm')
+
+        card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
+        self.assertTrue( '10000  = npoints_FO' in card)
+        card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '6000   = npoints_FO' in card)
+        card = card.replace('6000   = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '5000   = npoints_FO' in card)
+        card = card.replace('5000   = npoints_FO', '100  = npoints_FO')
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card)
+
+        self.do('launch NLO -f')
+        # test the plot file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
         
 
 
@@ -158,6 +274,7 @@ class TestMECmdShell(unittest.TestCase):
 
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
 
         
@@ -174,6 +291,7 @@ class TestMECmdShell(unittest.TestCase):
                 stdout = open(os.devnull, 'w'))
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -205,6 +323,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -226,6 +345,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -252,6 +372,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -276,6 +397,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -299,6 +421,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -330,12 +453,33 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         # test the hep event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events_HERWIG6_0.hep.gz'))
+
+
+    def test_generate_events_nlo_hw6_split(self):
+        """test the param_card created is correct"""
+        
+        cmd = os.getcwd()
+        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.assertEqual(cmd, os.getcwd())
+        #change splitevent generation
+        card = open('/tmp/MGPROCESS/Cards/run_card.dat').read()
+        open('/tmp/MGPROCESS/Cards/run_card.dat', 'w').write(card.replace(' -1 = nevt_job', ' 100 = nevt_job'))
+        self.do('generate_events NLO -fp')        
+        
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
         
 
     def test_generate_events_nlo_py6_stdhep(self):
@@ -350,6 +494,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -369,6 +514,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
 
 
     def test_calculate_xsect_lo(self):
@@ -381,6 +527,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/MADatNLO.top'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
     
     def test_amcatnlo_from_file(self):
         """ """

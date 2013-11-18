@@ -10,6 +10,7 @@ Update notes for MadGraph 5 (in reverse time order)
                            in DEBUG mode).
                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
                       OM+SF+RF: Add Frixione Photon isolation
+		      RF: Added FxFx merging
                       PA+OM: Fast version of MadSpin implemented (PS generation in Fortran).
 		      VH+RF: Improved the Binoth LHA interface
 		      RF: Improved the multi-channeling for processes with more amplitudes than diagrams.

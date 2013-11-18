@@ -32,6 +32,7 @@ import sys
 import traceback
 import time
 import signal
+import tarfile
 
 try:
     import readline
@@ -1060,6 +1061,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
 
+        if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
+            logger.warning("""You are running with FxFx merging enabled.
+To be able to merge samples of various multiplicities without double counting,
+you have to remove some events after showering 'by hand'.
+Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+
+
+
 
     ############################################################################      
     def do_compile(self, line):
@@ -1160,14 +1169,24 @@ Please, shower the Les Houches events before using them for physics analyses."""
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation'] and not options['reweightonly']:
-                for obj in folder_names[mode]:
-                    to_rm = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith(obj[:-1]) and \
-                                (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+            #find old folders to be removed
+            for obj in folder_names[mode]:
+                to_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                #always clean dirs for the splitted event generation
+                to_always_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and
+                             '_' in file and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
+
+                if not options['only_generation'] and not options['reweightonly']:
+                    to_always_rm.extend(to_rm)
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -1267,8 +1286,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
 
-            #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
@@ -1288,6 +1306,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
             
 
             for i, status in enumerate(mcatnlo_status):
+                #check if need to split jobs 
+                # at least one channel must have enough events
+                try:
+                    nevents_unweighted = open(pjoin(self.me_dir, 
+                                                'SubProcesses', 
+                                                'nevents_unweighted')).read().split('\n')
+                except IOError:
+                    nevents_unweighted = []
+
+                split = i == 2 and \
+                        int(self.run_card['nevt_job']) > 0 and \
+                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
+                            for l in nevents_unweighted if l])
+
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
                     # skip mint step 2
@@ -1295,20 +1327,36 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(options, 2,mode)
                         return
 
+                    if split:
+                        # split the event generation
+                        misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
+                                   [self.run_card['nevt_job']],
+                                   stdout = devnull,
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
+                        assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
+                            'nevents_unweighted_splitted'))
+
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
                         self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        self.run_all(job_dict, 
+                                     [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], 
+                                     status, split_jobs = split)
                         
                     elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, 
+                                     [['2', 'B', '%d' % i]], 
+                                     '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
-                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
-                            stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
+                    p = misc.Popen(['./combine_results.sh'] + \
+                                   ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
+                                   folder_names[mode],
+                                   stdout=subprocess.PIPE, 
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
                     files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
@@ -1318,12 +1366,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(options, i, mode)
 
+                #check that split jobs are all correctly terminated
+                if split:
+                    self.check_event_files()
+
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
             self.update_status(
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
+        if split:
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
+                     pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+
 
         event_norm=self.run_card['event_norm']
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
@@ -1362,7 +1418,8 @@ Integrated cross-section
         if not match or output[1]:
             logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results')
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+            'Please check the .log files inside the directories which failed.')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
@@ -1581,6 +1638,7 @@ Integrated cross-section
                 if nTot1 != 0:
                     debug_msg += '\n          Unknown return code (1):             %d'%nTot1
         logger.info(message+'\n')
+        open(pjoin(self.me_dir, 'Events', self.run_name, 'summary.txt'), 'w').write(message+'\n')
                  
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
@@ -1652,7 +1710,51 @@ Integrated cross-section
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
         self.banner_to_mcatnlo(evt_file)
-        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+
+        # if fastjet has to be linked (in extralibs) then
+        # add lib /include dirs for fastjet if fastjet-config is present on the
+        # system, otherwise add fjcore to the files to combine
+        if 'fastjet' in self.shower_card['extralibs']:
+            #first, check that stdc++ is also linked
+            if not 'stdc++' in self.shower_card['extralibs']:
+                logger.warning('Linking FastJet: adding stdc++ to EXTRALIBS')
+                self.shower_card['extralibs'] += ' stdc++'
+            # then check if options[fastjet] corresponds to a valid fj installation
+            try:
+                #this is for a complete fj installation
+                p = subprocess.Popen([self.options['fastjet'], '--prefix'], \
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                #remove the line break from output (last character)
+                output = output[:-1]
+                # add lib/include paths
+                if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
+                    logger.warning('Linking FastJet: updating EXTRAPATHS')
+                    self.shower_card['extrapaths'] += ' ' + pjoin(output, 'lib')
+                if not pjoin(output, 'include') in self.shower_card['includepaths']:
+                    logger.warning('Linking FastJet: updating INCLUDEPATHS')
+                    self.shower_card['includepaths'] += ' ' + pjoin(output, 'include')
+                # to be changed in the fortran wrapper
+                include_line = '#include "fastjet/ClusterSequence.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fastjet;//NAMESPACE_FJ'
+            except Exception:
+                logger.warning('Linking FastJet: using fjcore')
+                # this is for FJcore, so no FJ library has to be linked
+                self.shower_card['extralibs'].replace('fasjtet', '')
+                if not 'fjcore.o' in self.shower_card['analyse']:
+                    self.shower_card['analyse'] += ' fjcore.o'
+                # to be changed in the fortran wrapper
+                include_line = '#include "fjcore.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fjcore;//NAMESPACE_FJ'
+            # change the fortran wrapper with the correct namespaces/include
+            fjwrapper_lines = open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc')).read().split('\n')
+            for line in fjwrapper_lines:
+                if '//INCLUDE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = include_line
+                if '//NAMESPACE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = namespace_line
+            open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
+                    '\n'.join(fjwrapper_lines) + '\n')
 
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
@@ -1661,9 +1763,10 @@ Integrated cross-section
         for path in self.shower_card['extrapaths'].split():
             ldlibrarypath += ':%s' % path
         if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
+        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
@@ -1672,7 +1775,8 @@ Integrated cross-section
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
         exe = 'MCATNLO_%s_EXE' % shower
-        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)):
+        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
+            not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
@@ -1688,15 +1792,20 @@ Integrated cross-section
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
-        files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
-        files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        if shower != 'PYTHIA8':
+            files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        # special treatment for pythia8
+        else:
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
                 misc.call(['ln -s %s %s' % \
-                (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
             except Exception:
-                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
+                raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
@@ -1704,8 +1813,18 @@ Integrated cross-section
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
             pjoin(rundir,self.run_name))], shell=True)
-
-        misc.call(['./%s' % exe], cwd = rundir, 
+        # special treatment for pythia8
+        if shower=='PYTHIA8':
+            open(pjoin(rundir, exe), 'w').write(\
+                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
+                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
+            os.system('chmod  +x %s' % pjoin(rundir,exe))
+            misc.call(['./%s' % exe], cwd = rundir, 
+                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                shell=True)
+        else:
+            misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
@@ -1736,6 +1855,22 @@ Integrated cross-section
 
                 misc.call(['mv %s %s' % \
                     (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
+            #this is for pythia8
+            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
+                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
+
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
                 misc.call(['gzip %s' % evt_file], shell=True)
                 misc.call(['gzip %s' % hep_file], shell=True)
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
@@ -1971,6 +2106,15 @@ Integrated cross-section
             #overwrite the PDFCODE variable in order to use internal lhapdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+        # add the pythia8/hwpp path(s)
+        if self.options['pythia8_path']:
+            content+='PY8PATH=%s\n' % self.options['pythia8_path']
+        if self.options['hwpp_path']:
+            content+='HWPPPATH=%s\n' % self.options['hwpp_path']
+        if self.options['thepeg_path']:
+            content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
+        if self.options['hepmc_path']:
+            content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
 
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
@@ -2127,20 +2271,87 @@ Integrated cross-section
             self.cluster.remove()
             raise
 
-    def run_all(self, job_dict, arg_list, run_type='monitor'):
+    def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+        njob_split = 0
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
+
+        #  this is to keep track, if splitting evt generation, of the various 
+        # folders/args in order to resubmit the jobs if some of them fail
+        self.split_folders = {}
+
         for args in arg_list:
             for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    if not split_jobs:
+                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    else:
+                        for n in self.find_jobs_to_split(Pdir, job, args[1]):
+                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                            njob_split += 1
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
+        if njob_split > 0:
+            self.njobs = njob_split
         self.wait_for_complete(run_type)
+
+
+
+    def check_event_files(self):
+        """check the integrity of the event files after splitting, and resubmit 
+        those which are not nicely terminated"""
+        to_resubmit = []
+        for dir in self.split_folders.keys():
+            last_line = ''
+            try:
+                last_line = subprocess.Popen('tail -n1 %s ' % \
+                    pjoin(dir, 'events.lhe'), \
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            except IOError:
+                pass
+
+            if last_line != "</LesHouchesEvents>":
+                to_resubmit.append(dir)
+
+        self.njobs = 0
+        if to_resubmit:
+            run_type = 'Resubmitting broken jobs'
+            logger.info('Some event files are broken, corresponding jobs will be resubmitted.')
+            logger.debug('Resubmitting\n' + '\n'.join(to_resubmit) + '\n')
+            for dir in to_resubmit:
+                files.rm([dir])
+                job = self.split_folders[dir][0]
+                args = self.split_folders[dir][1:]
+                run_type = 'monitor'
+                cwd = os.path.split(dir)[0]
+                self.run_exe(job, args, run_type, cwd=cwd )
+                self.njobs +=1
+
+            self.wait_for_complete(run_type)
+
+
+    def find_jobs_to_split(self, pdir, job, arg):
+        """looks into the nevents_unweighed_splitted file to check how many
+        split jobs are needed for this (pdir, job). arg is F, B or V"""
+        # find the number of the integration channel
+        splittings = []
+        ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
+        pattern = re.compile('for i in (\d+) ; do')
+        match = re.search(pattern, ajob)
+        channel = match.groups()[0]
+        # then open the nevents_unweighted_splitted file and look for the 
+        # number of splittings to be done
+        nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        pattern = re.compile(r"%s_(\d+)/events.lhe" % \
+                          pjoin(pdir, 'G%s%s' % (arg,channel)))
+        matches = re.findall(pattern, nevents_file)
+        for m in matches:
+            splittings.append(m)
+        return splittings
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
@@ -2180,12 +2391,22 @@ Integrated cross-section
                 return self.cluster.submit2(exe, args, cwd=cwd, 
                                  input_files=input_files, output_files=output_files) 
 
-            #this is for the cluster/multicore run
+        #this is for the cluster/multicore run
         elif 'ajob' in exe:
-            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
-            #submitting
-            self.cluster.submit2(exe, args, cwd=cwd, 
-                         input_files=input_files, output_files=output_files)
+            # check if args is a list of string 
+            if type(args[0]) == str:
+                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                #submitting
+                for f in input_files:
+                    if not os.path.exists(f):
+                        print 'DONT EXIST', f
+                self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+
+                # keep track of folders and arguments for splitted evt gen
+                if len(args) == 4 and '_' in output_files[-1]:
+                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
 
@@ -2199,7 +2420,11 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
+
+        if os.path.exists(pjoin(cwd,'nevents.tar')):
+            input_files.append(pjoin(cwd,'nevents.tar'))
         
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
@@ -2275,7 +2500,8 @@ Integrated cross-section
                                           starting_dir=pjoin(cwd,current))
                 elif len(args) ==4:
                     keep_fourth_arg = True
-               
+                    # this is for the split event generation
+                    output_files.append('G%s%s_%s' % (args[1], i, args[3]))
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -2406,8 +2632,10 @@ Integrated cross-section
             except KeyError:
                 pass
 
-
-        os.environ['fastjet_config'] = self.options['fastjet']
+        try: 
+            os.environ['fastjet_config'] = self.options['fastjet']
+        except (TypeError, KeyError):
+            os.environ['fastjet_config'] = 'None'
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -2783,6 +3011,27 @@ Please, shower the Les Houches events before using them for physics analyses."""
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
+        
+        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+            raise self.InvalidCmd(error)
+        elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+            logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+samples of various multiplicities without double counting, you
+have to remove some events after showering 'by hand'.  Please
+read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+            if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                raise self.InvalidCmd(error)
+            elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                    "Type \'n\' to stop or \'y\' to continue"
+                answers = ['n','y']
+                answer = self.ask(question, 'n', answers, alias=alias)
+                if answer == 'n':
+                    error = '''Stop opertation'''
+                    self.ask_run_configuration(mode, options)
+#                    raise aMCatNLOError(error)
         
         return mode
 
