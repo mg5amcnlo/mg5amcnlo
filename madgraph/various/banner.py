@@ -298,7 +298,6 @@ class Banner(dict):
         elif tag == 'shower_card':
             tag = 'mgshowercard'
 
-        
         assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard'], 'invalid card %s' % tag
         
         if tag == 'slha':
@@ -316,9 +315,12 @@ class Banner(dict):
             proc_card = self[tag].split('\n')
             self.proc_card = ProcCard(proc_card)
             return self.proc_card
-        elif tag ==' mgshowercard':
+        elif tag =='mgshowercard':
             shower_content = self[tag] 
-            self.shower_card = shower_card.shower_card(shower_content, True)
+            self.shower_card = shower_card.ShowerCard(shower_content, True)
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.shower_card.testing = False
             return self.shower_card
 
         

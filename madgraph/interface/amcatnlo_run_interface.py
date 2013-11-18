@@ -1129,7 +1129,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
-        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 'banner.txt'))
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
 
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
@@ -2064,10 +2065,6 @@ Integrated cross-section
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
 
-        # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
-            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
         content += 'MCMODE=%s\n' % shower
@@ -2098,14 +2095,17 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
-        lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
+        # check if need to link lhapdf
+        if pdlabel =='\'lhapdf\'':
+            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if lhapdfpath:
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
         else:
-            #overwrite the PDFCODE variable in order to use internal lhapdf
+            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
