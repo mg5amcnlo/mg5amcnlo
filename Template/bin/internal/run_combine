@@ -1,15 +1,14 @@
 #!/bin/bash
 
-rm fail_combine.log
+rm fail_combine.log &> /dev/null
 for try in $(seq 1 10)
 do
     ../bin/internal/combine_events 2> fail_combine.log
-    if grep -F "combine_events: No such file or directory" fail.log
+    if grep -F "combine_events: No such file or directory" fail_combine.log
     then
         sleep 1
-        echo $try >> fail.log
     else
-        echo "suceed at $try" >> fail.log
+     	rm fail_combine.log &> /dev/null
         break
     fi
 done
