@@ -212,6 +212,7 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       include 'reweight0.inc'
+      include 'run.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
@@ -226,11 +227,39 @@ c for 'geometric mean'
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       integer NN,NJET,JET(nexternal),iqcd
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmergemax
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
      &     ,tmp1,tmp2,xm2
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imurtype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+c     Note that nFxFx_ren_scales includes the one scale that corresponds
+c     to the real-emission one (and is zero for the n-body conf.). Skip
+c     that scale here.
+         if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
+c For processes that have alpha_S to some (non-zero) power at the lowest
+c multiplicity Born, use the transverse mass of that system for those
+c alpha_S
+            tmp=FxFx_ren_scales(0)**
+     &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
+         elseif(nint(wgtbpower).eq.0) then
+c lowest multiplicity for processes without QCD use the transverse mass
+c of the colorless system (as returned by setclscales)
+            tmp=FxFx_ren_scales(0)
+         else
+            tmp=1d0
+         endif
+         do i=2,nFxFx_ren_scales
+            tmp=tmp*FxFx_ren_scales(i)
+         enddo
+         tmp=tmp**(1d0/max(wgtbpower,1d0))
+         temp_scale_id='FxFx merging scale'
+      elseif(imurtype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imurtype.eq.2)then
         do i=nincoming+1,nexternal
@@ -262,7 +291,7 @@ c geometric mean (to reweight alphaS)
             palg=1.d0
             rfj=0.4d0
             sycut=0d0
-            call fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
             if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/
@@ -274,7 +303,7 @@ c  clustering values of the jets compute the geometric mean for the
 c  scale. Don't include the softest d_ij, because that corresponds to
 c  the 'real-emission parton'
                do i=1,nint(wgtbpower)
-                  tmp2=tmp2*sqrt(fastjetdmergemax(nn-i-1))
+                  tmp2=tmp2*sqrt(amcatnlo_fastjetdmergemax(nn-i-1))
                enddo
                tmp=tmp2**(1d0/wgtbpower)
             elseif (nn-1.lt.nint(wgtbpower)) then
@@ -288,7 +317,7 @@ c  particles (e.g. top quarks or Higgs) into account.
                      tmp1=tmp1+sqrt(pt(pp(0,i))**2+xm2)
                   else
                      iqcd=iqcd+1
-                     tmp2=tmp2*sqrt(fastjetdmergemax(nn-iqcd-1))
+                     tmp2=tmp2*sqrt(amcatnlo_fastjetdmergemax(nn-iqcd-1))
                   endif
                enddo
                tmp=tmp2*tmp1**(nint(wgtbpower)-iqcd)
@@ -363,6 +392,7 @@ c a scale to be used as a reference for factorizations scales
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
       external pt,et,dot,sumdot
@@ -370,9 +400,18 @@ c a scale to be used as a reference for factorizations scales
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
       parameter (imuftype=1)
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imuftype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+        tmp=min(FxFx_fac_scale(1),FxFx_fac_scale(2))
+        temp_scale_id='FxFx merging scale'
+      elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imuftype.eq.2)then
         do i=nincoming+1,nexternal

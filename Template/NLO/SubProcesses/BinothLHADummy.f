@@ -20,3 +20,12 @@
       return
       end
 
+      subroutine sloopmatrix(p_born,virt_wgts)
+      implicit none
+      include "nexternal.inc"
+      double precision p_born(0:3,nexternal-1),virt_wgts(3)
+      virt_wgts(1)=0d0
+      virt_wgts(2)=0d0
+      virt_wgts(3)=0d0
+      return
+      end

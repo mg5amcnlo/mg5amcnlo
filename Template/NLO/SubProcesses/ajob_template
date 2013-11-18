@@ -1,5 +1,15 @@
 #!/bin/bash
 script=ajob1.$1.$2.$3.$4
+
+function link1up {
+if [[ ! -e $1 && -e ../$1 ]] ; then
+    ln -sf ../$1 .
+fi
+}
+
+
+
+
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
     runnumber=0
@@ -28,6 +38,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ ! -e $j ]]; then
             mkdir $j
         fi
+        
         cd $j
         if [[ "$4" != "" ]]; then
             if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
@@ -40,79 +51,59 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
                 fi
             else
                 runnumber=$4
+                if [[ ! -e ../${j}_$4 ]]; then
+                    mkdir ../${j}_$4
+                fi
+                cd ../${j}_$4
+                ln -sf ../${j}/mint_grids 
+                ln -sf ../${j}/mint_grids_NLO 
+                ln -sf ../${j}/grid.MC_integer
+                ln -sf ../${j}/res_1
             fi
         fi
     fi
-   
-        
     if  [[ ! -e randinit ]] ; then
-    	if [[ -e ../randinit ]] ; then
-			ln -sf ../randinit .
-		else
-			ln -sf ../../randinit .
-		fi
+        if [[ -e ../randinit ]] ; then
+            cp ../randinit .
+        else
+            cp ../../randinit .
+        fi
     fi
     if  [[ ! -e symfact.dat ]] ; then
     	if [[  -e ../symfact.dat ]] ; then
-			ln -sf ../symfact.dat .
-		else
-			ln -sf ../../symfact.dat .    
-		fi
-
-    fi
-    if  [[ ! -e MadLoopParams.dat ]] ; then
-	ln -sf ../MadLoopParams.dat .
-    fi
-	if  [[ ! -e HelFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../HelFilter.dat ]] ; then                                                                                     
-			ln -sf ../HelFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-	if  [[ ! -e LoopFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../LoopFilter.dat ]] ; then                                                                                     
-			ln -sf ../LoopFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-    if  [[ ! -e ColorDenomFactors.dat ]] ; then
-	ln -sf ../ColorDenomFactors.dat .
-    fi
-    if  [[ ! -e HelConfigs.dat ]] ; then
-	ln -sf ../HelConfigs.dat .
-    fi
-    if  [[ ! -e ColorNumFactors.dat ]] ; then
-	ln -sf ../ColorNumFactors.dat .
-    fi
-    if  [[ ! -e FKS_params.dat ]] ; then
-	ln -sf ../FKS_params.dat .
-    fi
-    if  [[ ! -e OLE_order.olc ]] ; then
-	ln -sf ../OLE_order.olc .
-    fi
-    if  [[ ! -e param_card.dat ]] ; then
-	if [[ -e ../../Cards/param_card.dat ]] ; then
-	    ln -sf ../../Cards/param_card.dat .
+	    ln -sf ../symfact.dat .
 	else
-	    ln -sf ../../../Cards/param_card.dat .
+	    ln -sf ../../symfact.dat .    
 	fi
     fi
+
+    link1up MadLoopParams.dat
+    link1up HelFilter.dat 
+    link1up LoopFilter.dat
+    link1up ColorDenomFactors.dat
+    link1up HelConfigs.dat
+    link1up ColorNumFactors.dat
+    link1up FKS_params.dat
+    link1up OLE_order.olc
+    link1up param_card.dat
     
 #   check where is the basic file for the creation of input_app.txt
 #       
- 	if [[ $1 == '0' ]]; then
- 		if  [[  -e ../madin.$2 ]] ; then
- 			input_template=../madin.$2
- 		else
- 			input_template=../../madin.$2
- 		fi 
+    if [[ $1 == '0' ]]; then
+ 	if  [[  -e ../madin.$2 ]] ; then
+ 	    input_template=../madin.$2
+ 	else
+ 	    input_template=../../madin.$2
+        fi 
     elif [[ $1 == '2' ]]; then
     	if [[ $3 == '0' || $3 == '2' ]]; then
-    		if  [[  -e ../madinMMC_$2.2 ]] ; then
- 				input_template=../madinMMC_$2.2
- 			else
- 				input_template=../../madinMMC_$2.2
- 			fi
- 		else
-			input_template=./madinM1
+    	    if [[  -e ../madinMMC_$2.2 ]] ; then
+ 		input_template=../madinMMC_$2.2
+ 	    else
+ 		input_template=../../madinMMC_$2.2
+ 	    fi
+ 	else
+	    input_template=./madinM1
     	fi
     fi
     
@@ -127,7 +118,8 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         echo "Time in seconds: ${T}" >>log.txt
     elif [[ $1 == '2' ]]; then
         if [[ $runnumber != 0 ]]; then
-            mv -f nevts__$runnumber nevts
+            tar --extract --file=../nevents.tar nevts_${j}_$runnumber
+            mv  nevts_${j}_$runnumber nevts
             echo "$runnumber" >& moffset.dat
         fi
         if [[ $3 == '0' || $3 == '2' ]]; then
@@ -146,12 +138,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         echo "Time in seconds: ${T}" >>log.txt
         cp -f log.txt log_MINT$3.txt
     fi
-    if [[ $1 == '2' && $runnumber != 0 ]]; then
-        mv events.lhe events_$runnumber.lhe
-        mv log.txt log_MINT$3_$runnumber.txt
-    fi
-    cd ../
     exit $status
 done
-
+    
 

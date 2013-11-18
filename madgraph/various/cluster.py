@@ -71,8 +71,8 @@ class Cluster(object):
         
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
-        """How to make one submission. Return status id on the cluster."""
-        raise NotImplemented, 'No implementation of how to submit a job to cluster \'%s\'' % self.name
+        """how to make one submission. return status id on the cluster."""
+        raise NotImplemented, 'no implementation of how to submit a job to cluster \'%s\'' % self.name
 
     def submit2(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                 log=None, input_files=[], output_files=[]):
@@ -321,7 +321,7 @@ class MultiCore(Cluster):
                 logger.warning(fail_msg)
                 try:
                     log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
-                    logger.warning('Last 15 lines of lofgile %s:\n%s\n' % \
+                    logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
                             (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
                 except IOError, AttributeError:
                     logger.warning('Please look for possible logfiles in %s' % cwd)
@@ -561,6 +561,88 @@ class CondorCluster(Cluster):
     
     name = 'condor'
     job_id = 'CONDOR_ID'
+
+
+    @multiple_try()
+    def submit_multi(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None, 
+            input_files=[], output_files=[]):
+        """Submit a multijob prog (with different arguments) to a Condor cluster"""
+        
+        text = """Executable = %(prog)s
+                  output = %(stdout)s
+                  error = %(stderr)s
+                  log = %(log)s
+                  should_transfer_files = YES
+                  when_to_transfer_output = ON_EXIT
+                  transfer_input_files = %(input_files)s
+                  %(output_files)s
+                  Universe = vanilla
+                  notification = Error
+                  Initialdir = %(cwd)s
+                  %(requirement)s
+                  getenv=True
+               """
+        
+        if self.cluster_queue not in ['None', None]:
+            requirement = 'Requirements = %s=?=True' % self.cluster_queue
+        else:
+            requirement = ''
+
+        if cwd is None:
+            cwd = os.getcwd()
+        if stdout is None:
+            stdout = '/dev/null'
+        else:
+            stdout +='.$(process)'
+        if stderr is None:
+            stderr = '/dev/null'
+        else:
+            stderr +='.$(process)'
+        if log is None:
+            log = '/dev/null'
+        else:
+            log +='.$(process)'
+        if not os.path.exists(prog):
+            prog = os.path.join(cwd, prog)
+        # input/output file treatment
+        if input_files:
+            input_files = ','.join(input_files)
+        else: 
+            input_files = ''
+        if output_files:
+            output_files = 'transfer_output_files = %s' % ','.join(output_files)
+        else:
+            output_files = ''
+        
+        
+
+        dico = {'prog': prog, 'cwd': cwd, 'stdout': stdout, 
+                'stderr': stderr,'log': log,'argument': argument,
+                'requirement': requirement, 'input_files':input_files, 
+                'output_files':output_files}
+
+        one_exe_text = """
+        %(argument)s
+        queue 1
+        """
+        exe_text = """"""
+        for arg in argument:
+            exe_text += one_exe_text % {'argument': 'Arguments = ' + ' '.join(arg)}
+        open('submit_condor','w').write(text % dico + exe_text)
+        a = misc.Popen(['condor_submit','submit_condor'], stdout=subprocess.PIPE)
+        output = a.stdout.read()
+        #Submitting job(s).
+        #Logging submit event(s).
+        #1 job(s) submitted to cluster 2253622.
+        pat = re.compile("submitted to cluster (\d*)",re.MULTILINE)
+        try:
+            id = pat.search(output).groups()[0]
+        except:
+            raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                                                                        % output 
+        self.submitted += len(argument)
+        self.submitted_ids.append(id)
+        return id
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None):
@@ -1308,7 +1390,7 @@ class SLURMCluster(Cluster):
         
         command = ['sbatch','-o', stdout,
                    '-J', me_dir, 
-                   '-e', stderr, prog]
+                   '-e', stderr, prog] + argument
                    
         a = misc.Popen(command, stdout=subprocess.PIPE, 
                                       stderr=subprocess.STDOUT,

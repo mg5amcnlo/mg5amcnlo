@@ -252,13 +252,6 @@ c check that the event normalization input is reasoble
          stop 1
       endif
 
-
-c info for reweight
-
-      ickkw=0
-      chcluster=.false.
-      ktscheme=1
-
 c !!! Default behavior changed (MH, Aug. 07) !!!
 c If no pdf, read the param_card and use the value from there and
 c order of alfas running = 2
