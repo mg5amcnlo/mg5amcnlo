@@ -3030,6 +3030,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_generate(self, line):
         """Main commands: Generate an amplitude for a given process"""
 
+        aloha_lib.KERNEL.clean()
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
         # Reset Helas matrix elements
