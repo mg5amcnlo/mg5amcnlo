@@ -1736,7 +1736,7 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('   Prepairing MCatNLO run')
-        self.update_status('Showering events', level='parton', update_results = True) 
+        self.update_status('Showering events...', level='parton', update_results = True) 
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
@@ -1830,6 +1830,7 @@ Integrated cross-section
 
         self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
                 level='parton')
+        self.update_status('Showering events...', level='parton')
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
