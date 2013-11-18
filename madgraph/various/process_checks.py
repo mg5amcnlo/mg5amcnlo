@@ -2113,7 +2113,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_timing(process_definition, param_card= None, cuttools="",iregi="",
+def check_timing(process_definition, param_card= None, cuttools="",
                                           options={}, cmd = FakeInterface()):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
