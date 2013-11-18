@@ -810,8 +810,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
         #common_run.CommonRunCmd.__init__(self, me_dir, options)
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
 
@@ -1145,8 +1143,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
@@ -1479,7 +1475,7 @@ Integrated cross-section
                 process = line.replace('generate ', '')
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
@@ -2128,10 +2124,6 @@ Integrated cross-section
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
 
-        # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
-            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
         content += 'MCMODE=%s\n' % shower
@@ -2162,14 +2154,17 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
-        lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
+        # check if need to link lhapdf
+        if pdlabel =='\'lhapdf\'':
+            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if lhapdfpath:
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
         else:
-            #overwrite the PDFCODE variable in order to use internal lhapdf
+            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
@@ -2645,6 +2640,12 @@ Integrated cross-section
 
         self.results.add_detail('run_mode', mode) 
 
+        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
+
+
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
@@ -3040,8 +3041,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
+        ignore = []
         if mode in ['LO', 'NLO']:
             options['parton'] = True
+            ignore = ['shower_card.dat', 'madspin_card.dat']
         elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
@@ -3051,18 +3054,24 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if options['reweightonly']:
             cards = ['run_card.dat']
 
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore)
         
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
-        if not options['force'] and not  self.force:
+        if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False)
-            
 
+        self.banner = banner_mod.Banner()
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
+        # store the cards in the banner
+        for card in cards:
+            self.banner.add(pjoin(self.me_dir, 'Cards', card))
+        # and the run settings
+        run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
+        self.banner.add_text('run_settings', run_settings)
+
+        self.run_card = self.banner.charge_card('run_card')
         self.run_tag = self.run_card['run_tag']
         self.run_name = self.find_available_run_name(self.me_dir)
         #add a tag in the run_name for distinguish run_type
@@ -3071,8 +3080,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 self.run_name += '_LO' 
         self.set_run_name(self.run_name, self.run_tag, 'parton')
         if 'aMC@' in mode or mode == 'onlyshower':
-            shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-            self.shower_card = shower_card.ShowerCard(shower_card_path)
+            self.shower_card = self.banner.charge_card('shower_card')
         
         if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
             logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
