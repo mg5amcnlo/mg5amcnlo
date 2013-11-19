@@ -4072,12 +4072,20 @@ class Channel(base_objects.Diagram):
                     apx_m *= self.get_apx_fnrule(vert.get('legs')[-1].get('id'),
                                                  M, True, model)
 
-
                 # Evaluate the coupling strength
+                vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
+                lorentz_factor = 0
+                for key, v in vertex['couplings'].items():
+                    if not hasattr(model, 'lorentz_dict'):
+                        model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
+                        self.init_regular_expression()
+                        
+                    structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
+                    new_structure = self.lor_pattern.sub(self.simplify_lorentz,
+                                                         structure)
+                    lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
 
-                apx_m *= sum([abs(eval(v)) ** 2 for key, v in \
-                                  model.get('interaction_dict')[\
-                            abs(vert.get('id'))]['couplings'].items()])
+                apx_m *= lorentz_factor
 
             # Calculate the contribution from final legs
             for leg in self.get_final_legs():
@@ -4131,6 +4139,45 @@ class Channel(base_objects.Diagram):
                 value *= 2.*q 
             else:
                 value *= q **2
+        #spin 3/2 case
+        elif part.get('spin') == 4:
+            if onshell:
+                #spin1 part
+                # For massive vector boson
+                if mass != 0. :
+                    value *= (1+ (q/mass) **2)
+                # For massless boson
+                else:
+                    value *= 1
+                #spin1/2 part
+                value *= 2.*q 
+            # The numerator of propagator.
+            else:
+                # For massive 
+                if mass != 0. :
+                    value *= 4/9 * (q)**2 * (1-q**2/mass**2)**2
+                # For massless case
+                else:
+                    value *= q**2
+        #spin2 case
+        elif part.get('spin') == 5:
+            if onshell:
+                #spin1**2 
+                # For massive vector boson
+                if mass != 0. :
+                    value *= (1+ (q/mass) **2)**2
+                # For massless boson
+                else:
+                    value *= 1
+            # The numerator of propagator.
+            else:
+                # For massive 
+                if mass != 0. :
+                    value *= (7/6-4/3*q**2/mass**2+2/3*q**4/mass**4)**2
+                # For massless case
+                else:
+                    value *= 1      
+                     
 
         # Do nothing for scalar
         return value
