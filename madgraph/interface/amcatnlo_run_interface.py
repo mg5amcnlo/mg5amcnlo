@@ -2962,8 +2962,60 @@ Integrated cross-section
             question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
             return question
 
+
+        def modify_switch(mode, answer, switch):
+            if '=' in answer:
+                key, status = answer.split('=')
+                switch[key] = status
+                if (key, status) in force_switch:
+                    for key2, status2 in force_switch[(key, status)].items():
+                        if switch[key2] not in  [status2, void]:
+                            logger.info('For coherence \'%s\' is set to \'%s\''
+                                        % (key2, status2), '$MG:color:BLACK')
+                            switch[key2] = status2
+            elif answer in ['0', 'auto', 'done']:
+                return 
+            elif answer in special_values:
+                logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                if answer == 'LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'noshower':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')                                                    
+                elif answer == 'noshowerLO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                if mode:
+                    return
+            return switch
+
+
+        modify_switch(mode, self.last_mode, switch)
+        
         if not self.force:
-            answer = self.last_mode
+            answer = ''
             while answer not in ['0', 'done', 'auto', 'onlyshower']:
                 question = create_question(switch)
                 if mode:
@@ -2975,51 +3027,9 @@ Integrated cross-section
                     opt1 = allowed_switch_value[key][0]
                     opt2 = allowed_switch_value[key][1]
                     answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
-                if '=' in answer:
-                    key, status = answer.split('=')
-                    switch[key] = status
-                    if (key, status) in force_switch:
-                        for key2, status2 in force_switch[(key, status)].items():
-                            if switch[key2] not in  [status2, void]:
-                                logger.info('For coherence \'%s\' is set to \'%s\''
-                                            % (key2, status2), '$MG:color:BLACK')
-                                switch[key2] = status2
-                elif answer in ['0', 'auto', 'done']:
+
+                if not modify_switch(mode, answer, switch):
                     break
-                elif answer in special_values:
-                    logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
-                    if answer == 'LO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'ON'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'NLO':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'ON'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'aMC@NLO':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'ON')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'aMC@LO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'ON')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'noshower':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')                                                    
-                    elif answer == 'noshowerLO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    if mode:
-                        break
 
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
