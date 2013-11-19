@@ -200,7 +200,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                          line.end.pos_x, line.end.pos_y, 'Fhiggs')
 
 
-    def draw_wavy(self, line, opt=0, type='d'):
+    def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""
 
         #add the code in the correct format
