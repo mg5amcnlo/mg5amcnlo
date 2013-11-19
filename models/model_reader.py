@@ -154,7 +154,7 @@ class ModelReader(base_objects.Model):
             try:
                 exec("locals()[\'%s\'] = %s" % (param.name, param.expr))
             except Exception as error:
-                msg = 'Unable to evaluate %s: raise error: %s' % (param.expr, error)
+                msg = 'Unable to evaluate %s = %s: raise error: %s' % (param.name,param.expr, error)
                 raise MadGraph5Error, msg
             param.value = complex(eval(param.name))
             if not eval(param.name) and eval(param.name) != 0:

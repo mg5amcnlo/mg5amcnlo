@@ -65,8 +65,13 @@ select_events.o: select_events.f run_config.inc
 setrun.o: setrun.f nexternal.inc leshouche.inc run_card.inc run_config.inc
 rw_events.o: rw_events.f run_config.inc
 
-run_card.inc:
+run_card.inc: ../Cards/run_card.dat
 	../bin/madevent treatcards run
+
+clean_lhapdf:
+	rm -f $(LIBDIR)libgeneric.$(libext)
+	cd PDF; make clean_lhapdf
+
 clean:
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
 	cd PDF; make clean; cd ..

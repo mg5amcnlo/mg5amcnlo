@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+#  This runs Delphes 3 on the pythia_events.hep
+#
+#  Usage: run_delphes3 [delphes3dir [para/serial [run_name]]]
+#  where delphes3dir is the path to the delphes3 executable
+
+delphesdir=$1
+run=$2
+tag=$3
+cross=$4 
+
+main=`pwd`
+
+if [ ! -e ../Cards/delphes_card.dat ]; then
+  echo "No delphes_card.dat found. Quitting..."
+  exit
+fi
+
+if [ ! -e $delphesdir/DelphesSTDHEP ]; then
+  echo "No Delphes executable found at $delphesdir/DelphesSTDHEP. Quitting..."
+  exit
+fi
+
+echo $$ >> ../myprocid
+
+# Set delphes path in delphes_card.dat
+
+$delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat delphes.root pythia_events.hep
+$delphesdir/root2lhco delphes.root delphes_events.lhco
+
+if [ -e delphes_events.lhco ]; then
+# write the delphes banner
+    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
+    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
+    rm -f delphes_events.lhco
+fi

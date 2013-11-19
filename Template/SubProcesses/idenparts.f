@@ -22,7 +22,7 @@ c
 c
 c     local
 c
-      integer i,j,it
+      integer i,j,it,isp
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
@@ -44,7 +44,14 @@ c
 
       i=1
       do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
-         ipdg(-i)=sprop(1,-i)
+C        Find first non-zero sprop
+         do j=1,maxsproc
+            if(sprop(j,-i).ne.0) then
+               isp=sprop(j,-i)
+               exit
+            endif
+         enddo
+         ipdg(-i)=isp
          if (prwidth(-i) .gt. 0d0) then
             if(ipdg(-i).eq.ipdg(itree(1,-i)).and.itree(1,-i).gt.0.or.
      $         ipdg(-i).eq.ipdg(itree(2,-i)).and.itree(2,-i).gt.0) then

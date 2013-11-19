@@ -21,6 +21,186 @@ Update notes for MadGraph 5 (in reverse time order)
                       the 4-flavor scheme. Note that auto_ptj_mjj must be set to
                       .false. for this to work properly.
 
+1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
+                      In case of failure, you can re-submitted the failing jobs automatically. The maximal 
+                      number of re-submission for a job can be parametrize (default 1) and how long you have to
+                      wait before this resubmission [to avoid slow filesystem problem, i.e. condor](default 300s)
+                      Supported cluster for this function: condor, lsf, pbs
+                  OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
+                      (tt~+4jets).
+                  BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
+                      Higgs interactions) 
+                  OM: use evince by default to open eps file instead of gv.
+		  OM: Fix a problem with the set command for the card edition for the mssm model.
+                  OM: Update EWdim6 paper according to the snowmass paper. (3 more operator)
+                      The default model is restricted in order to exclude those operators. In order
+                      to have those you have to use import model EWdim6-full
+                  OM: Fix bug #1243189, impossible to load v4 model if a local directory has the name of
+                      the models (which is present in the models directory)
+                  OM: Fix a bug in the complex mass scheme in the reading of the param_card (it was clearly stated)
+                  OM: Improve numerical stability of the phase-space point generation. (thanks Z. Surujon)
+
+1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
+                      the cross-section were slightly (~4%) under-evaluated due to such strong cut.
+                  OM: Add a command print_results in the madevent interface. This command print the 
+                      cross-section/number of events/... 
+                  OM: change the way prompt color is handle (no systematic reset). Which provides better
+                      result when the log is printed to a file. (thanks Bae Taegil) 
+                  OM: Fix Bug #1199514: Wrong assignment of mass in the lhe events file if the initial 
+                      state has one massive and one massless particles. (Thanks Wojciech Kotlarski)
+                  OM: Fix a compilation problem for SLC6 for the installation of pythia-pgs
+                  OM: Fix a crash linked to bug #1209113.
+                  OM: Fix a crash if python is not a valid executation (Bug #1211777)
+		  OM: Fix a bug in the edition of the run_card if some parameters were missing in the cards
+                      (Bug #1183334)
+
+1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
+                      one W decaying leptonically. For such processes the lepton cuts were also used
+                      on the neutrino particle reducing the cross-section. This bug was present only
+                      for group_subprocesses=True (the default)
+                  OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                      LINUX computer only)
+                  OM: The compilation of madevent is now performed by the number of core specify
+                      in the configuration file. Same for pythia, ...
+                  OM: Improve support for Read-Only system
+                  OM: Fix a bug with the detection of the compiler when user specifiy a specific
+                      compiler.
+                  OM: Fix a problem that MG5 fails to compute the cross-section/width after that 
+                      a first computation fails to integrate due to a wrong mass spectrum. 
+                  OM: Fix a wrong output (impossible to compile) for pythia in presence of photon/gluon
+                      propagator (introduce in 1.5.8)
+                  OM: Allow to have UFO model with "goldstone" attribute instead of "GoldstoneBoson", since
+                      FR change convention in order to match the UFO paper.
+
+1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
+                      massless propagator. (introduce in 1.5.9)
+                  OM: Fix question #226810: checking that patch program exists before
+                      trying to update MG5 code.
+                  OM: Fix Bug #1171049: an error in the order of wavefunctions 
+                      making the code to crash (introduce in 1.5.7)
+		  OM: Allow to use an additional syntax for the set command.
+                      set gauge = Feynman is now valid. (Was not valid before due to the '=')
+                  OM: Fix By Arian Abrahantes. Fix SGE cluster which was not working when
+                      running full simulation (PGS/Delphes).
+                  OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
+                      written the routine) 
+                  OM: Fix Bug #1177442. This crash occurs only for very large model. 
+                      None of the model shipped with MG5 are impacted.
+                  OM: Fix Question #228315. On some filesystem, some of the executable 
+                      loose the permission to be executable. Recover those errors 
+                      automatically.
+                  OM: Modify the diagram enhancement technique. When more diagram have 
+                      the same propagator structure we still combine them but we now include
+                      the interference term in the enhancement technique for those diagrams.
+                      This fix a crash for some multi-jet process in presence of non diagonal
+                      ckm matrices.
+
+1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
+                      give the wrong propagators included in event files for certain
+                      processes (such as p p > z z j, z > l+ l-). Apart from the 
+                      propagators (with status 2) in the event file, this bug didn't
+                      affect any other results (such as distributions).
+                  JA: Fix problem in gensym which made some decay chain processes
+                      slower than they should be. Thanks Eric Mintun for reporting.
+                  JA: Fix problem in event clustering (introduced in v. 1.5.8)
+                      which made events from some processes fail Pythia running.
+                  JA: Fixed bug #1156474, Pythia 8 C++ matrix element output for 
+                      decay chain processes such as p p > z j, z > j j.
+                      (Bug #1156474)
+                  JA + OM: Automatically remove libpdf and libgeneric before survey,
+                      so everything works automatically when switching between
+                      built-in PDFs and LHAPDF.
+                  JA: Allow syntax / to remove particles in the define command.
+                      Example: define q = p / g
+                  JA: Added fat warning if any decay process in a decay chain
+                      includes a particle decaying to itself (as is the case
+                      if you do w+ > all all, since you include w+ > w+ a).
+                  JA: Forbid running newprocess_mg5 from a process directory
+                      that has already been generated, to avoid confusion.
+                  OM: Fix lxplus server issue (Bug #1159929)
+                  OM: Fix an issue when MG5 directory is on a read only disk 
+                      (Bug #1160629)
+                  OM: Fix a bug which prevent to have the pythia matching plot/cross-section
+                      in some particular case.
+                  OM: Support of new UFO convention allowing to define custom propagator.
+                      (Both in MG5 and ALOHA)
+                  OM: Change ALOHA default propagator to have a specific expression for the
+                      massless case allowing to speed up matrix element computation with 
+                      photon/gluon.
+                  OM: Correct the default spin 3/2 propagator (wrong incoming/outcoming 
+                      definition)
+                  ML (by OM): Adding support of the SLURM cluster. Thanks to 
+                      Matthew Low for the implementation.
+                  OM: Fixing the standalone_cpp output for the mssm model. (only model impacted)
+                      Thanks to Silvan S Kuttimalai for reporting. 
+                  OM: Fix Bug #1162512: Wrong line splitting in cpp when some name were very long.
+                      (shorten the name + fix the splitting)
+
+1.5.8 (05/05/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
+                      HELAS routine for expression containing expression square. 
+                      (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
+                      have such type of expression. More information in bug report #1132996
+                      (Thanks Gezim) 		
+                  OM+JA: install Delphes now installs Delphes 3 
+                      [added command install Delphes2 to install Delphes 2]
+                  OM: Add command in MadEvent interface: add_time_of_flight
+                      This command modifies the lhe events file by adding the time of 
+                      flight information in the lhe events. To run this you need to do
+                      $> ./bin/madevent
+                      MGME> generate_events --laststep=parton -f 
+                      MGME> add_time_of_flight
+		      MGME> pythia    [if needed]
+                  OM: Fix bug in pythia8 output for process using decay chains syntax.
+                      See bug #1099790.
+                  CDe+OM: Update EWdim6 model
+                  OM: Fix a bug preventing model customized via the "customize_model"
+                      command to use the automatic width computation.
+                  OM: Change model restriction behavior: a value of 1 for a width is 
+                      not treated as a restriction rule.
+                  OM: Fix incomplete restriction of the MSSM model leading to inefficient
+                      process merging (and larger-than-necessary files) for the MSSM.
+                  OM: Correct bug #1107603 (problem with condor cluster for submission 
+                      associated to a large number of jobs). Thanks Sanjay.
+                  JA: Fix one part of the problem in bug #1123974: take into 
+                      account invariant mass cuts mmXX above the peak range in 
+                      s-channel resonances in the phase space integration,
+                      to make sure such channels find events even for narrow
+                      invariant mass cut ranges. Please note the discussion in 
+                      that bug report for other types of channels however.
+                  JA: Fixed bug #1139303: matrix elements for identical 
+                      decay chain processes with different propagators (such as 
+                      p p > w+, w+ > e+ ve and p p > w-,  w- > vm~ mu-) 
+                      are now no longer combined, to ensure that resonances are
+                      correctly represented in event file.
+                  OM: Support lhapdf set which contains photon (See bug #1131995).
+                  RF+JA: Reuse last two PDF calls also for LHAPDF PDFs, clarify code
+                      for reuse of PDFs in pdg2pdf.f and pdg2pdf_lhapdf.f
+                  OM: Update the default delphes card to latest Delphes version. This 
+                      default card is automatically overwritten by the default Delphes
+                      card when running "install Delphes".
+                  JA: Make sure cuts are only checked once per event - this can save
+                      a lot of time for multiparton event generation.
+                  OM: Fix Bug #1142042 (crash in gridpack).
+
+1.5.7 (15/01/13)  OM+JA: Fixed crash linked to model_v4 for processes containing wwww or
+                      zzww interactions. (See bug #1095603. Thanks to Tim Lu) 
+                  OM: Fix a bug affecting 2>1 process when the final states particles is 
+                      (outcoming fermion) introduced in version 1.5.0. (Thanks to 
+                      B. Fuks) 
+                  OM: Fix a problem of fermion flow for v4 model (thanks to A. Abrahantes) 
+                  OM+DBF: Change the automatically the electroweak-scheme when passing to 
+                      complex-mass scheme: the mass of the W is the an external parameter
+                      and Gf is an internal parameter fixed by LO gauge relation. 
+                  OM+DBF: Remove the model sm_mw of the model database. 
+                  OM: Fix problem in the ./bin/mg5 file command when some question are 
+                      present in the file.
+                  OM: Extend support for ~ and ${vars} in path.
+                  OM: Fix a crash in multi_run for more than 300 successive runs.
+                      (Thanks to Diptimoy)
+                  OM: Allow to choose the center of mass energy for the check command.
+                  OM: small change in the pbs cluster submission (see question #218824)
+                  OM: Adding possibility to check gauge/lorentz/...for  2>1 processes.                    
+
 1.5.6 (20/12/12)  JA: Replaced error with warning when there are decay processes
                       without corresponding core processes final state (see 
                       Question #216037). If you get this warning, please check

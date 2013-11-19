@@ -46,7 +46,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.group_subprocs')
 
 #===============================================================================
-# DiagramTag class to identify matrix elements
+# DiagramTag class to identify diagrams giving the same config
 #===============================================================================
 
 class IdentifyConfigTag(diagram_generation.DiagramTag):
@@ -55,45 +55,40 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the end link for a leg needed to identify matrix
-        elements: ((leg numer, state, spin, self_antipart, mass,
-        width, color, decay and is_part), number)."""
+        """Returns the end link for a leg needed to identify configs: 
+        ((leg numer, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
 
-        return [((leg.get('number'),
+        return [((leg.get('number'), part.get('spin'),
                   part.get('mass'), part.get('width'), part.get('color')),
                  leg.get('number'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
-        """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
+        """Returns the info needed to identify configs:
+        interaction color, mass, width."""
 
         inter = model.get_interaction(vertex.get('id'))
-        ret_list = 0
                    
         if last_vertex:
-            return (ret_list,)
+            return ((0,),)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
                      part.get('mass'), part.get('width')),
-                    ret_list)
+                    0)
 
     @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
-        """Move the wavefunction part of vertex id appropriately"""
+    def flip_vertex(new_vertex, old_vertex, links):
+        """Move the wavefunction part of propagator id appropriately"""
 
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
-            # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
+            # We go from a last link to next-to-last link - 
+            return (old_vertex[0], new_vertex[0][0])
+        elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
+            return (old_vertex[0],)
         # We should not get here
         raise diagram_generation.DiagramTag.DiagramTagError, \
               "Error in IdentifyConfigTag, wrong setup of vertices in link."

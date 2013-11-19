@@ -46,6 +46,7 @@ import os.path as path
 import re
 import shutil
 import subprocess
+import urllib
 
 from datetime import date
 
@@ -118,7 +119,42 @@ else:
         exit()
     rev_nb=None
 
- 
+# checking that the rev_nb is in a reasonable range compare to the old one.
+if rev_nb:
+    rev_nb_i = int(rev_nb)
+    try:
+        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+        web_version = int(filetext.read().strip())            
+    except (ValueError, IOError):
+        logging.warning("WARNING: impossible to detect the version number on the web")
+        answer = raw_input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()
+        web_version = -1
+    else:
+        logging.info('version on the web is %s' % web_version)
+    if web_version +1 == rev_nb_i or web_version == -1:
+        pass # this is perfect
+    elif rev_nb_i in [web_version+i for i in range(1,4)]:
+        logging.warning("WARNING: current version on the web is %s" % web_version)
+        logging.warning("Please check that this (small difference) is expected.")
+        answer = raw_input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()
+    elif web_version < rev_nb_i:
+        logging.warning("CRITICAL: current version on the web is %s" % web_version)
+        logging.warning("This is a very large difference. Indicating a wrong manipulation.")
+        logging.warning("and can creates trouble for the auto-update.")
+        answer = raw_input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()
+    else:
+        logging.warning("CRITICAL: current version on the web is %s" % web_version)
+        logging.warning("This FORBIDS any auto-update for this version.")
+        rev_nb=None
+        answer = raw_input('Do you want to continue anyway? (y/n)')
+        if answer != 'y':
+            exit()                        
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
@@ -157,7 +193,6 @@ shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'),
             path.join(filepath, 'input','mg5_configuration.txt'))
 
 # 2. Create the automatic documentation in the apidoc directory
-
 try:
     status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
                                'madgraph', 'aloha',
@@ -175,7 +210,8 @@ if status1:
 # 3. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
-
+# clean all the pyc
+os.system("cd %s;find . -name '*.pyc' -delete" % filepath)
 status2 = subprocess.call(['tar', 'czf', filename, filepath])
 
 if status2:

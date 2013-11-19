@@ -163,7 +163,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
         and PDG code needs to be flipped if we move the final vertex around."""
 
         if vertex.get('id') == 0:
-            return (0,)
+            return ((0,),)
 
         inter = model.get_interaction(vertex.get('id'))
         coup_keys = sorted(inter.get('couplings').keys())
@@ -173,7 +173,7 @@ class IdentifyMETag(diagram_generation.DiagramTag):
                          inter.get('lorentz'))
                    
         if last_vertex:
-            return (ret_list,)
+            return ((ret_list,),)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             # If we have possibly onshell s-channel particles with
@@ -184,24 +184,271 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             if s_pdg and (part.get('width').lower() == 'zero' or \
                vertex.get('legs')[-1].get('onshell') == False):
                 s_pdg = 0
-            return ((part.get('spin'), part.get('color'),
+            return (((part.get('spin'), part.get('color'),
                      part.get('self_antipart'),
                      part.get('mass'), part.get('width'), s_pdg),
-                    ret_list)
+                    ret_list),)
 
     @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
+    def flip_vertex(new_vertex, old_vertex, links):
         """Move the wavefunction part of vertex id appropriately"""
 
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) == 2:
             # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
+            return ((old_vertex[0][0],new_vertex[0][0]),)
+        elif len(new_vertex[0]) == 2 and len(old_vertex[0]) == 1:
             # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
+            return ((new_vertex[0][1],),)
         # We should not get here
         assert(False)
         
+#===============================================================================
+# DiagramTag class to create canonical order configs
+#===============================================================================
+
+class CanonicalConfigTag(diagram_generation.DiagramTag):
+    """DiagramTag daughter class to create canonical order of
+    config. Need to compare leg number, mass, width, and color.
+    Also implement find s- and t-channels from the tag.
+    Warning! The sorting in this tag must be identical to that of
+       IdentifySGConfigTag in diagram_symmetry.py (apart from leg number)
+       to make sure symmetry works!"""
+
+    def get_s_and_t_channels(self, ninitial, model, new_pdg):
+        """Get s and t channels from the tag, as two lists of vertices
+        ordered from the outermost s-channel and in/down towards the highest
+        number initial state leg. 
+        Algorithm: Start from the final tag. Check for final leg number for 
+        all links and move in the direction towards leg 2 (or 1, if 1 and 2
+        are in the same direction).
+        """
+
+        # Look for final leg numbers in all links
+        done = [l for l in self.tag.links if \
+                l.end_link and l.links[0][1][0] == ninitial]
+        while not done:
+            # Identify the chain closest to ninitial
+            right_num = -1
+            for num, link in enumerate(self.tag.links):
+                if len(link.vertex_id) == 2 and \
+                        link.vertex_id[-1][-1] == ninitial:
+                    right_num = num
+            if right_num == -1:
+                # We need to look for leg number 1 instead
+                for num, link in enumerate(self.tag.links):
+                    if len(link.vertex_id) == 2 and \
+                       link.vertex_id[-1][-1] == 1:
+                        right_num = num
+            if right_num == -1:
+                # This should never happen
+                raise diagram_generation.DiagramTag.DiagramTagError, \
+                    "Error in CanonicalConfigTag, no link with number 1 or 2."
+
+            # Now move one step in the direction of right_link
+            right_link = self.tag.links[right_num]
+            # Create a new link corresponding to moving one step
+            new_links = list(self.tag.links[:right_num]) + \
+                                           list(self.tag.links[right_num + 1:])
+            new_link = diagram_generation.DiagramTagChainLink(\
+                                           new_links,
+                                           self.flip_vertex(\
+                                             self.tag.vertex_id,
+                                             right_link.vertex_id,
+                                             new_links))
+            # Create a new final vertex in the direction of the right_link
+            other_links = list(right_link.links) + [new_link]
+            other_link = diagram_generation.DiagramTagChainLink(\
+                                             other_links,
+                                             self.flip_vertex(\
+                                                 right_link.vertex_id,
+                                                 self.tag.vertex_id,
+                                                 other_links))
+            self.tag = other_link
+            done = [l for l in self.tag.links if \
+                    l.end_link and l.links[0][1][0] == ninitial]
+
+        # Construct a diagram from the resulting tag
+        diagram = self.diagram_from_tag(model)
+
+        # Go through the vertices and add them to s-channel or t-channel
+        schannels = base_objects.VertexList()
+        tchannels = base_objects.VertexList()
+
+        for vert in diagram.get('vertices')[:-1]:
+            if vert.get('legs')[-1].get('number') > ninitial:
+                schannels.append(vert)
+            else:
+                tchannels.append(vert)
+
+        # Need to make sure leg number 2 is always last in last vertex
+        lastvertex = diagram.get('vertices')[-1]
+        legs = lastvertex.get('legs')
+        leg2 = [l.get('number') for l in legs].index(ninitial)
+        legs.append(legs.pop(leg2))
+        if ninitial == 2:
+            # Last vertex always counts as t-channel        
+            tchannels.append(lastvertex)
+        else:
+            legs[-1].set('id', 
+                     model.get_particle(legs[-1].get('id')).get_anti_pdg_code())
+            schannels.append(lastvertex)
+
+        # Split up multiparticle vertices using fake s-channel propagators
+        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
+                          if len(v.get('legs')) > 3]
+        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
+                          if len(v.get('legs')) > 3]
+        
+        increase = 0
+        for channel in multischannels + multitchannels:
+            newschannels = []
+            vertex = channel[1]
+            while len(vertex.get('legs')) > 3:
+                # Pop the first two legs and create a new
+                # s-channel from them
+                popped_legs = \
+                           base_objects.LegList([vertex.get('legs').pop(0) \
+                                                    for i in [0,1]])
+                popped_legs.append(base_objects.Leg({\
+                    'id': new_pdg,
+                    'number': min([l.get('number') for l in popped_legs]),
+                    'state': True,
+                    'onshell': None}))
+
+                new_vertex = base_objects.Vertex({
+                    'id': vertex.get('id'),
+                    'legs': popped_legs})
+
+                # Insert the new s-channel before this vertex
+                if channel in multischannels:
+                    schannels.insert(channel[0]+increase, new_vertex)
+                    # Account for previous insertions
+                    increase += 1
+                else:
+                    schannels.append(new_vertex)
+                legs = vertex.get('legs')
+                # Insert the new s-channel into vertex
+                legs.insert(0, copy.copy(popped_legs[-1]))
+                # Renumber resulting leg according to minimum leg number
+                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
+
+        # Finally go through all vertices, sort the legs and replace
+        # leg number with propagator number -1, -2, ...
+        number_dict = {}
+        nprop = 0
+        for vertex in schannels + tchannels:
+            # Sort the legs
+            legs = vertex.get('legs')[:-1]
+            if vertex in schannels:
+                legs.sort(lambda l1, l2: l2.get('number') - \
+                          l1.get('number'))
+            else:
+                legs.sort(lambda l1, l2: l1.get('number') - \
+                          l2.get('number'))
+            for ileg,leg in enumerate(legs):
+                newleg = copy.copy(leg)
+                try:
+                    newleg.set('number', number_dict[leg.get('number')])
+                except KeyError:
+                    pass
+                else:
+                    legs[ileg] = newleg                    
+            nprop = nprop - 1
+            last_leg = copy.copy(vertex.get('legs')[-1])
+            number_dict[last_leg.get('number')] = nprop
+            last_leg.set('number', nprop)
+            legs.append(last_leg)
+            vertex.set('legs', base_objects.LegList(legs))
+
+        return schannels, tchannels
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        """Returns the end link for a leg needed to identify configs: 
+        ((leg numer, mass, width, color), number)."""
+
+        part = model.get_particle(leg.get('id'))
+
+        # use charge to forbid identification of neutrino and lepton
+        # the main reason is that the cuts are different on such particles.
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+
+        return [((leg.get('number'), part.get('spin'), part.get('color'), charge,
+                  part.get('mass'), part.get('width')),
+                 (leg.get('number'),leg.get('id'),leg.get('state')))]
+        
+    @staticmethod
+    def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
+        """Returns the info needed to identify configs:
+        interaction color, mass, width. Also provide propagator PDG code."""
+
+        inter = model.get_interaction(vertex.get('id'))
+
+        if last_vertex:
+            return ((0,),
+                    (vertex.get('id'),
+                     min([l.get('number') for l in vertex.get('legs')])))
+        else:
+            part = model.get_particle(vertex.get('legs')[-1].get('id'))
+            return ((part.get('color'),
+                     part.get('mass'), part.get('width')),
+                    (vertex.get('id'), 
+                     vertex.get('legs')[-1].get('onshell'),
+                     vertex.get('legs')[-1].get('number')))
+
+    @staticmethod
+    def flip_vertex(new_vertex, old_vertex, links):
+        """Move the wavefunction part of propagator id appropriately"""
+
+        # Find leg numbers for new vertex
+        min_number = min([l.vertex_id[-1][-1] for l in links if not l.end_link]\
+                         + [l.links[0][1][0] for l in links if l.end_link])
+
+        if len(new_vertex[0]) == 1 and len(old_vertex[0]) > 1:
+            # We go from a last link to next-to-last link 
+            return (old_vertex[0], 
+                    (new_vertex[1][0], old_vertex[1][1], min_number))
+        elif len(new_vertex[0]) > 1 and len(old_vertex[0]) == 1:
+            # We go from next-to-last link to last link - remove propagator info
+            return (old_vertex[0], (new_vertex[1][0], min_number))
+
+        # We should not get here
+        raise diagram_generation.DiagramTag.DiagramTagError, \
+              "Error in CanonicalConfigTag, wrong setup of vertices in link."
+        
+    @staticmethod
+    def leg_from_link(link):
+        """Return a leg from a link"""
+
+        if link.end_link:
+            # This is an external leg, info in links
+            leg = base_objects.Leg({'number':link.links[0][1][0],
+                                     'id':link.links[0][1][1],
+                                     'state':link.links[0][1][2],
+                                     'onshell':None})
+            return leg
+        # This shouldn't happen
+        assert False
+
+    @staticmethod
+    def vertex_from_link(legs, vertex_id, model):
+        """Return a vertex given a leg list and a vertex id"""
+        vertex = base_objects.Vertex({'legs': legs,
+                                      'id': vertex_id[1][0]})
+        if len(vertex_id[1]) == 3:
+            vertex.get('legs')[-1].set('onshell', vertex_id[1][1])
+        return vertex
+
+    @staticmethod
+    def id_from_vertex_id(vertex_id):
+        """Return the numerical vertex id from a link.vertex_id"""
+
+        return vertex_id[-1][0]
+
+
 #===============================================================================
 # HelasWavefunction
 #===============================================================================
@@ -804,20 +1051,30 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         new_wf.set('number', old_wf.get('number'))
                     diagram_wavefunctions[old_wf_index] = new_wf
                 except ValueError:
-                    diagram_wavefunctions.append(new_wf)
                     # Make sure that new_wf comes before any wavefunction
                     # which has it as mother
-                    for i, wf in enumerate(diagram_wavefunctions):
-                        if self in wf.get('mothers'):
-                            # Remove new_wf, in order to insert it below
-                            diagram_wavefunctions.pop()
-                            # Update wf numbers
-                            new_wf.set('number', wf.get('number'))
-                            for w in diagram_wavefunctions[i:]:
+                    if len(self['mothers']) == 0:
+                        #insert at the beginning
+                        if diagram_wavefunctions:
+                            wf_nb = diagram_wavefunctions[0].get('number')
+                            for w in diagram_wavefunctions:
                                 w.set('number', w.get('number') + 1)
-                            # Insert wavefunction
-                            diagram_wavefunctions.insert(i, new_wf)
-                            break
+                            new_wf.set('number', wf_nb)
+                            diagram_wavefunctions.insert(0, new_wf)
+                        else:
+                            diagram_wavefunctions.insert(0, new_wf)
+                    else:
+                        for i, wf in enumerate(diagram_wavefunctions):
+                            if self in wf.get('mothers'):
+                                # Update wf numbers
+                                new_wf.set('number', wf.get('number'))
+                                for w in diagram_wavefunctions[i:]:
+                                    w.set('number', w.get('number') + 1)
+                                # Insert wavefunction
+                                diagram_wavefunctions.insert(i, new_wf)
+                                break
+                        else:
+                            diagram_wavefunctions.append(new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -956,6 +1213,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['out'] = self.get('me_id') - flip
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
+        output['propa'] = self.get('particle').get('propagator')
+        if output['propa'] != '':
+            output['propa'] = 'P%s' % output['propa']
         # optimization
         if aloha.complex_mass: 
             if (self.get('width') == 'ZERO' or self.get('mass') == 'ZERO'):
@@ -1118,141 +1378,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
         color_indices.append(self.get('color_key'))
 
         return color_indices
-
-    def get_s_and_t_channels(self, ninitial, mother_leg):
-        """Returns two lists of vertices corresponding to the s- and
-        t-channels that can be traced from this wavefunction, ordered
-        from the outermost s-channel and in/down towards the highest
-        number initial state leg. mother_leg corresponds to self but with
-        correct leg number = min(final state mothers)."""
-
-        schannels = base_objects.VertexList()
-        tchannels = base_objects.VertexList()
-
-        mother_leg = copy.copy(mother_leg)
-
-        # Add vertices for all s-channel mothers
-        final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
-                               self.get('mothers'))
-
-        for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}, optimization = 0))
-
-        # Extract initial state mothers
-        init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
-                              self.get('mothers'))
-
-        assert len(init_mothers) < 3 , \
-                   "get_s_and_t_channels can only handle up to 2 initial states"
-
-        if len(init_mothers) == 1:
-            # This is an s-channel or t-channel leg, or the initial
-            # leg of a decay process. Add vertex and continue stepping
-            # down towards external initial state
-            legs = base_objects.LegList()
-            mothers = final_mothers + init_mothers
-
-            for mother in mothers:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-
-            if init_mothers[0].get('number_external') == 1 and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
-                # If this is t-channel going towards external leg 1,
-                # mother_leg is resulting wf
-                legs.append(mother_leg)
-            else:
-                # For decay processes or if init_mother is an s-channel leg
-                # or we are going towards external leg 2, mother_leg
-                # is one of the mothers (placed next-to-last)
-                legs.insert(-1, mother_leg)
-                # Need to switch direction of the resulting s-channel
-                legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-                
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels from init_mother
-            new_mother_leg = legs[-1]
-            if init_mothers[0].get('number_external') == 1 and \
-                   not init_mothers[0].get('leg_state') and \
-                   ninitial > 1:
-                # Mother of next vertex is init_mothers[0]
-                # (next-to-last in legs)
-                new_mother_leg = legs[-2]
-
-            mother_s, tchannels = \
-                      init_mothers[0].get_s_and_t_channels(ninitial,
-                                                           new_mother_leg)
-            if ninitial == 1 or init_mothers[0].get('leg_state') == True:
-                # This vertex is s-channel
-                schannels.append(vertex)
-            elif init_mothers[0].get('number_external') == 1:
-                # If init_mothers is going towards external leg 1, add
-                # to t-channels, at end
-                tchannels.append(vertex)
-            else:
-                # If init_mothers is going towards external leg 2, add to
-                # t-channels, at start
-                tchannels.insert(0, vertex)
-
-            schannels.extend(mother_s)
-
-        elif len(init_mothers) == 2:
-            # This is a t-channel junction. Start with the leg going
-            # towards external particle 1, and then do external
-            # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
-                                   init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1, init_mothers2]:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-            legs.insert(0, mother_leg)
-
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels going down towards leg 1
-            mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
-            schannels.extend(mother_s)
-
-            # Add vertex
-            tchannels.append(vertex)
-
-            # Add s- and t-channels going down towards leg 2
-            mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
-            schannels.extend(mother_s)
-            tchannels.extend(mother_t)
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
-
-        return schannels, tchannels
 
     def get_conjugate_index(self):
         """Return the index of the particle that should be conjugated."""
@@ -1942,169 +2067,18 @@ class HelasAmplitude(base_objects.PhysicsObject):
             'id': self.get('interaction_id'),
             'legs': legs})
 
-    def get_s_and_t_channels(self, ninitial, new_pdg):
+    def get_s_and_t_channels(self, ninitial, model, new_pdg):
         """Returns two lists of vertices corresponding to the s- and
         t-channels of this amplitude/diagram, ordered from the outermost
         s-channel and in/down towards the highest number initial state
         leg."""
 
-        schannels = base_objects.VertexList()
-        tchannels = base_objects.VertexList()
-
-        # Add vertices for all s-channel mothers
-        final_mothers = filter(lambda wf: wf.get('number_external') > ninitial,
-                               self.get('mothers'))
-
-        for mother in final_mothers:
-            schannels.extend(mother.get_base_vertices({}, optimization = 0))
-
-        # Extract initial state mothers
-        init_mothers = filter(lambda wf: wf.get('number_external') <= ninitial,
-                              self.get('mothers'))
-
-        if len(init_mothers) > 2:
-            raise self.PhysicsObjectError, \
-                  "get_s_and_t_channels can only handle up to 2 initial states"
-
-        if len(init_mothers) == 1:
-            # This is an s-channel leg, or the first vertex in a decay
-            # process. Add vertex and start stepping down towards
-            # initial state
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + init_mothers:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-            # Change direction of init_mother
-            legs[-1].set('id', init_mothers[0].get_anti_pdg_code())
-
-            # Add vertex to s-channels
-            schannels.append(base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs}))
-
-            # Add s- and t-channels from further down
-            mother_s, tchannels = init_mothers[0].\
-                                  get_s_and_t_channels(ninitial, legs[-1])
-
-            schannels.extend(mother_s)
-        else:
-            # This is a t-channel leg. Start with the leg going
-            # towards external particle 1, and then do external
-            # particle 2
-            init_mothers1 = filter(lambda wf: wf.get('number_external') == 1,
-                                   init_mothers)[0]
-            init_mothers2 = filter(lambda wf: wf.get('number_external') == 2,
-                                   init_mothers)[0]
-
-            # Create vertex
-            legs = base_objects.LegList()
-            for mother in final_mothers + [init_mothers1] + [init_mothers2]:
-                legs.append(base_objects.Leg({
-                    'id': mother.get_pdg_code(),
-                    'number': mother.get('number_external'),
-                    'state': mother.get('leg_state'),
-                    'onshell': mother.get('onshell')
-                    }))
-            # Renumber resulting leg according to minimum leg number
-            legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-            vertex = base_objects.Vertex({
-                'id': self.get('interaction_id'),
-                'legs': legs})
-
-            # Add s- and t-channels going down towards leg 1
-            mother_s, tchannels = \
-                      init_mothers1.get_s_and_t_channels(ninitial, legs[-2])
-
-            schannels.extend(mother_s)
-
-            # Add vertex to t-channels
-            tchannels.append(vertex)
-
-            # Add s- and t-channels going down towards leg 2
-            mother_s, mother_t = \
-                      init_mothers2.get_s_and_t_channels(ninitial, legs[-1])
-            schannels.extend(mother_s)
-            tchannels.extend(mother_t)
-
-        # Sort s-channels according to number
-        schannels.sort(lambda x1,x2: x2.get('legs')[-1].get('number') - \
-                       x1.get('legs')[-1].get('number'))
-
-        # Split up multiparticle vertices using fake s-channel propagators
-        multischannels = [(i, v) for (i, v) in enumerate(schannels) \
-                          if len(v.get('legs')) > 3]
-        multitchannels = [(i, v) for (i, v) in enumerate(tchannels) \
-                          if len(v.get('legs')) > 3]
-        
-        increase = 0
-        for channel in multischannels + multitchannels:
-            newschannels = []
-            vertex = channel[1]
-            while len(vertex.get('legs')) > 3:
-                # Pop the first two legs and create a new
-                # s-channel from them
-                popped_legs = \
-                           base_objects.LegList([vertex.get('legs').pop(0) \
-                                                    for i in [0,1]])
-                popped_legs.append(base_objects.Leg({\
-                    'id': new_pdg,
-                    'number': min([l.get('number') for l in popped_legs]),
-                    'state': True,
-                    'onshell': None}))
-
-                new_vertex = base_objects.Vertex({
-                    'id': vertex.get('id'),
-                    'legs': popped_legs})
-
-                # Insert the new s-channel before this vertex
-                if channel in multischannels:
-                    schannels.insert(channel[0]+increase, new_vertex)
-                    # Account for previous insertions
-                    increase += 1
-                else:
-                    schannels.append(new_vertex)
-                legs = vertex.get('legs')
-                # Insert the new s-channel into vertex
-                legs.insert(0, copy.copy(popped_legs[-1]))
-                # Renumber resulting leg according to minimum leg number
-                legs[-1].set('number', min([l.get('number') for l in legs[:-1]]))
-
-        # Finally go through all vertices, sort the legs and replace
-        # leg number with propagator number -1, -2, ...
-        number_dict = {}
-        nprop = 0
-        for vertex in schannels + tchannels:
-            # Sort the legs
-            legs = vertex.get('legs')[:-1]
-            if vertex in schannels:
-                legs.sort(lambda l1, l2: l2.get('number') - \
-                          l1.get('number'))
-            else:
-                legs.sort(lambda l1, l2: l1.get('number') - \
-                          l2.get('number'))
-            for leg in legs:
-                try:
-                    leg.set('number', number_dict[leg.get('number')])
-                except KeyError:
-                    pass
-            nprop = nprop - 1
-            last_leg = vertex.get('legs')[-1]
-            number_dict[last_leg.get('number')] = nprop
-            last_leg.set('number', nprop)
-            legs.append(last_leg)
-            vertex.set('legs', base_objects.LegList(legs))
-
-        return schannels, tchannels
+        # Create a CanonicalConfigTag to ensure that the order of
+        # propagators is canonical
+        wf_dict = {}
+        tag = CanonicalConfigTag(self.get_base_diagram(wf_dict), model)
+        diagram = tag.diagram_from_tag(model)
+        return tag.get_s_and_t_channels(ninitial, model, new_pdg)
 
     def get_color_indices(self):
         """Get the color indices corresponding to
@@ -2181,6 +2155,7 @@ class HelasAmplitude(base_objects.PhysicsObject):
         for i, coup in enumerate(self.get('coupling')):
             output['coup%d'%i] = str(coup)
         output['out'] = self.get('number') - flip
+        output['propa'] = ''
         return output
 
 
@@ -2715,13 +2690,29 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                     helas_diagram.get('amplitudes').append(amp)
 
             # After generation of all wavefunctions and amplitudes,
-            # add wavefunctions to diagram
+            # first sort the wavefunctions according to number
+            diagram_wavefunctions.sort(lambda wf1, wf2: \
+                                       wf1.get('number') - wf2.get('number'))
+            
+            # Then make sure that all mothers come before daughters
+            iwf = len(diagram_wavefunctions) - 1
+            while iwf > 0:
+                this_wf = diagram_wavefunctions[iwf]
+                moved = False
+                for i,wf in enumerate(diagram_wavefunctions[:iwf]):
+                    if this_wf in wf.get('mothers'):
+                        diagram_wavefunctions.pop(iwf)
+                        diagram_wavefunctions.insert(i, this_wf)
+                        this_wf.set('number', wf.get('number'))
+                        for w in diagram_wavefunctions[i+1:]:
+                            w.set('number',w.get('number')+1)
+                        moved = True
+                        break
+                if not moved: iwf -= 1
+
+            # Finally, add wavefunctions to diagram
             helas_diagram.set('wavefunctions', diagram_wavefunctions)
 
-            # Sort the wavefunctions according to number
-            diagram_wavefunctions.sort(lambda wf1, wf2: \
-                          wf1.get('number') - wf2.get('number'))
-            
             if optimization:
                 wavefunctions.extend(diagram_wavefunctions)
                 wf_mother_arrays.extend([wf.to_array() for wf \
@@ -2810,6 +2801,10 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         * decay_dict: a dictionary from external leg number
           to decay matrix element.
         """
+
+        # First need to reset all legs_with_decays
+        for proc in self.get('processes'):
+            proc.set('legs_with_decays', base_objects.LegList())
 
         # We need to keep track of how the
         # wavefunction numbers change
@@ -3731,11 +3726,18 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMatrixElement."""
 
-        return [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
-                 wa.find_outgoing_number()) for wa in \
-                self.get_all_wavefunctions() + self.get_all_amplitudes() \
+        out = [(tuple(wa.get('lorentz')),  
+                tuple(([] if wa.get('particle').get('propagator') =='' else \
+                           ['P%s' % wa.get('particle').get('propagator')]) + \
+                           list(wa.get('conjugate_indices'))), \
+                wa.find_outgoing_number()) 
+                for wa in self.get_all_wavefunctions() \
+                                               if wa.get('interaction_id') != 0] 
+        out += [(tuple(wa.get('lorentz')),  wa.get('conjugate_indices'),
+                 wa.find_outgoing_number()) for wa in  self.get_all_amplitudes() \
                 if wa.get('interaction_id') != 0]
-        
+
+        return out
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
@@ -3757,8 +3759,11 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         for proc in self.get('processes'):
             legs = copy.copy(proc.get('legs'))
             legs[0:2] = [legs[1],legs[0]]
+            decay_legs = copy.copy(proc.get('legs_with_decays'))
+            decay_legs[0:2] = [decay_legs[1],decay_legs[0]]
             process = copy.copy(proc)
             process.set('legs', legs)
+            process.set('legs_with_decays', decay_legs)
             processes.append(process)
         return processes
 
@@ -4082,6 +4087,8 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
         matrix_elements = HelasMatrixElementList()
         # Store matrix element tags in me_tags, for precise comparison
         me_tags = []
+        # Store external id permutations
+        permutations = []
         
         # List of list of ids for the initial state legs in all decay
         # processes
@@ -4214,11 +4221,7 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                     # If an identical matrix element is already in the list,
                     # then simply add this process to the list of
                     # processes for that matrix element
-                    other_processes = matrix_elements[\
-                    me_tags.index(me_tag)].get('processes')
-                    logger.info("Combining process with %s" % \
-                      other_processes[0].nice_string().replace('Process: ', ''))
-                    other_processes.extend(matrix_element.get('processes'))
+                    me_index = me_tags.index(me_tag)
                 except ValueError:
                     # Otherwise, if the matrix element has any diagrams,
                     # add this matrix element.
@@ -4226,8 +4229,17 @@ class HelasDecayChainProcess(base_objects.PhysicsObject):
                            matrix_element.get('diagrams'):
                         matrix_elements.append(matrix_element)
                         me_tags.append(me_tag)
-
-
+                        permutations.append(me_tag[-1][0].\
+                                            get_external_numbers())
+                else: # try
+                    other_processes = matrix_elements[me_index].get('processes')
+                    logger.info("Combining process with %s" % \
+                      other_processes[0].nice_string().replace('Process: ', ''))
+                    for proc in matrix_element.get('processes'):
+                        other_processes.append(HelasMultiProcess.\
+                              reorder_process(proc,
+                                   permutations[me_index],
+                                   me_tag[-1][0].get_external_numbers()))
 
         return matrix_elements
 
@@ -4363,9 +4375,53 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             amplitude = amplitudes.pop(0)
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
                 # Might get multiple matrix elements from this amplitude
-                matrix_element_list = HelasDecayChainProcess(amplitude).\
-                                      combine_decay_chain_processes()
-            else:
+                tmp_matrix_element_list = HelasDecayChainProcess(amplitude).\
+                                          combine_decay_chain_processes()
+                # Use IdentifyMETag to check if matrix elements present
+                matrix_element_list = []
+                for matrix_element in tmp_matrix_element_list:
+                    assert isinstance(matrix_element, HelasMatrixElement), \
+                              "Not a HelasMatrixElement: %s" % matrix_element
+
+                    # If the matrix element has no diagrams,
+                    # remove this matrix element.
+                    if not matrix_element.get('processes') or \
+                           not matrix_element.get('diagrams'):
+                        continue
+
+                    # Create IdentifyMETag
+                    amplitude_tag = IdentifyMETag.create_tag(\
+                                    matrix_element.get_base_amplitude())
+                    try:
+                        me_index = amplitude_tags.index(amplitude_tag)
+                    except ValueError:
+                        # Create matrix element for this amplitude
+                        matrix_element_list.append(matrix_element)
+                        if combine_matrix_elements:
+                            amplitude_tags.append(amplitude_tag)
+                            identified_matrix_elements.append(matrix_element)
+                            permutations.append(amplitude_tag[-1][0].\
+                                                get_external_numbers())
+                    else: # try
+                        # Identical matrix element found
+                        other_processes = identified_matrix_elements[me_index].\
+                                          get('processes')
+                        # Reorder each of the processes
+                        # Since decay chain, only reorder legs_with_decays
+                        for proc in matrix_element.get('processes'):
+                            other_processes.append(cls.reorder_process(\
+                                    proc,
+                                    permutations[me_index],
+                                    amplitude_tag[-1][0].get_external_numbers()))
+                        logger.info("Combined %s with %s" % \
+                                    (matrix_element.get('processes')[0].\
+                                     nice_string().\
+                                     replace('Process: ', 'process '),
+                                     other_processes[0].nice_string().\
+                                     replace('Process: ', 'process ')))
+                        # Go on to next matrix element
+                        continue
+            else: # not DecayChainAmplitude
                 # Create tag identifying the matrix element using
                 # IdentifyMETag. If two amplitudes have the same tag,
                 # they have the same matrix element
@@ -4388,6 +4444,8 @@ class HelasMultiProcess(base_objects.PhysicsObject):
                             identified_matrix_elements.append(me)
                             permutations.append(amplitude_tag[-1][0].\
                                                 get_external_numbers())
+                    else:
+                        matrix_element_list = []
                 else:
                     # Identical matrix element found
                     other_processes = identified_matrix_elements[me_index].\
@@ -4408,39 +4466,6 @@ class HelasMultiProcess(base_objects.PhysicsObject):
             for matrix_element in copy.copy(matrix_element_list):
                 assert isinstance(matrix_element, HelasMatrixElement), \
                           "Not a HelasMatrixElement: %s" % matrix_element
-
-                # If the matrix element has no diagrams,
-                # remove this matrix element.
-                if not matrix_element.get('processes') or \
-                       not matrix_element.get('diagrams'):
-                    continue
-
-                # Check if identical matrix element already present
-                if matrix_element in matrix_elements:
-                    me = matrix_elements[matrix_elements.index(matrix_element)]
-                    me_procs = me.get('processes')
-                    procs = matrix_element.get('processes')
-                    if me_procs[0].get_ninitial() > 1 or \
-                            procs[0].get_initial_ids() == \
-                            me_procs[0].get_initial_ids():
-                        logger.info("Combining process %s with %s" % \
-                                (procs[0].nice_string().\
-                                     replace('Process: ', ''),
-                                 me_procs[0].nice_string().\
-                                     replace('Process: ', '')))
-                        for proc in procs:
-                            if proc not in me_procs:
-                                me_procs.append(proc)
-                            else:
-                                raise InvalidCmd,("Duplicate process %s found."\
-                                           +" Please check your processes.") % \
-                                    proc.nice_string().replace('Process: ', '')
-                        # Remove this matrix element from the lists
-                        if combine_matrix_elements and amplitude_tags:
-                            amplitude_tags.pop(-1)
-                            identified_matrix_elements.pop(-1)
-                            permutations.pop(-1)
-                        continue
 
                 # Otherwise, add this matrix element to list
                 matrix_elements.append(matrix_element)
@@ -4497,9 +4522,13 @@ class HelasMultiProcess(base_objects.PhysicsObject):
         between org_perm and proc_perm"""
 
         leglist = base_objects.LegList(\
-                  [copy.copy(process.get('legs')[i]) for i in \
+                  [copy.copy(process.get('legs_with_decays')[i]) for i in \
                    diagram_generation.DiagramTag.reorder_permutation(\
                        proc_perm, org_perm)])
         new_proc = copy.copy(process)
-        new_proc.set('legs', leglist)
+        new_proc.set('legs_with_decays', leglist)
+
+        if not new_proc.get('decay_chains'):
+            new_proc.set('legs', leglist)
+
         return new_proc

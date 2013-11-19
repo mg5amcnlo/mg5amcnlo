@@ -126,7 +126,15 @@ class Computation(dict):
         argument = []
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
-                expr = expression.expand().get_rep([0])
+                try:
+                    expr = expression.expand().get_rep([0])
+                except KeyError, error:
+                    if error.args != ((0,),):
+                        raise
+                    else:
+                        raise aloha.ALOHAERROR, '''Error in input format. 
+    Argument of function (or denominator) should be scalar.
+    We found %s''' % expression
                 new = expr.simplify()
                 new = expr.factorize()
                 argument.append(new)
@@ -134,7 +142,7 @@ class Computation(dict):
                 argument.append(expression)
         if str(fct_tag)+str(argument) in self.inverted_fct:
             return self.inverted_fct[str(fct_tag)+str(argument)]
-        else:
+        else: 
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))

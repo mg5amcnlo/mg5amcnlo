@@ -1,13 +1,24 @@
-# This file was automatically created by FeynRules 1.7.53
-# Mathematica version: 8.0 for Linux x86 (64-bit) (February 23, 2011)
-# Date: Wed 1 Aug 2012 00:44:44
+# This file was automatically created by FeynRules 1.7.214
+# Mathematica version: 9.0 for Mac OS X x86 (64-bit) (January 24, 2013)
+# Date: Thu 22 Aug 2013 18:21:54
 
 
 from object_library import all_lorentz, Lorentz
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, cot
+try:
+   import form_factors as ForFac 
+except ImportError:
+   pass
 
 
+UUS1 = Lorentz(name = 'UUS1',
+               spins = [ -1, -1, 1 ],
+               structure = '1')
+
+UUV1 = Lorentz(name = 'UUV1',
+               spins = [ -1, -1, 3 ],
+               structure = 'P(3,2) + P(3,3)')
 
 SSS1 = Lorentz(name = 'SSS1',
                spins = [ 1, 1, 1 ],
@@ -40,6 +51,10 @@ FFV4 = Lorentz(name = 'FFV4',
 FFV5 = Lorentz(name = 'FFV5',
                spins = [ 2, 2, 3 ],
                structure = 'Gamma(3,2,-1)*ProjM(-1,1) + Gamma(3,2,-1)*ProjP(-1,1)')
+
+FFV6 = Lorentz(name = 'FFV6',
+               spins = [ 2, 2, 3 ],
+               structure = 'Gamma(3,2,1) + Gamma(3,2,-1)*ProjM(-1,1) + Gamma(3,2,-1)*ProjP(-1,1)')
 
 VSS1 = Lorentz(name = 'VSS1',
                spins = [ 3, 1, 1 ],

@@ -21,6 +21,7 @@ import logging
 import optparse
 import os
 import pydoc
+import random
 import re
 import signal
 import subprocess
@@ -363,7 +364,7 @@ class HelpToCmd(cmd.HelpCmd):
         
     def help_check(self):
 
-        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition")
+        logger.info("syntax: check [" + "|".join(self._check_opts) + "] [param_card] process_definition [--energy=]")
         logger.info("-- check a process or set of processes. Options:")
         logger.info("full: Perform all three checks described below:")
         logger.info("   permutation, gauge and lorentz_invariance.")
@@ -378,6 +379,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("If param_card is given, that param_card is used instead")
         logger.info("   of the default values for the model.")
         logger.info("For process syntax, please see help generate")
+        logger.info("the options --energy allows to change the \sqrt(S)")
 
     def help_generate(self):
 
@@ -412,9 +414,10 @@ class HelpToCmd(cmd.HelpCmd):
 
     def help_define(self):
         logger.info("syntax: define multipart_name [=] part_name_list")
-        logger.info("-- define a multiparticle")
+        logger.info("-- define a multiparticle. part_name_list can include multiparticles.")
         logger.info("   Example: define p = g u u~ c c~ d d~ s s~ b b~")
-        
+        logger.info("   Special syntax: Use | for OR (used for required s-channels)")
+        logger.info("   Special syntax: Use / to remove particles. Example: define q = p / g")
 
     def help_set(self):
         logger.info("syntax: set %s argument|default" % "|".join(self._set_options))
@@ -567,7 +570,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         if any([',' in elem for elem in args]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
-        self.check_process_format(" ".join(args[1:]))
+        if not args[-1].startswith('--energy='):
+            args.append('--energy=1000')
+        
+        self.check_process_format(" ".join(args[1:-1]))
 
         return param_card
     
@@ -667,7 +673,7 @@ class CheckValidForCmd(cmd.CheckCmd):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
             
-        if args[0] in ["ExRootAnalysis", "Delphes"]:
+        if args[0] in ["ExRootAnalysis", "Delphes", "Delphes2"]:
             if not misc.which('root'):
                 raise self.InvalidCmd(
 '''In order to install ExRootAnalysis, you need to install Root on your computer first.
@@ -868,6 +874,9 @@ This will take effect only in a NEW terminal
 
         if len(args) == 1 and args[0] == 'complex_mass_scheme':
             args.append('True')
+
+        if len(args) > 2 and '=' == args[1]:
+            args.pop(1)
         
         if len(args) < 2:
             self.help_set()
@@ -995,7 +1004,7 @@ This will take effect only in a NEW terminal
             forbiden_chars = ['>','<',';','&']
             for char in forbiden_chars:
                 if char in path:
-                    raise self.invalidCmd('%s is not allowed in the output path' % char)
+                    raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp']:
@@ -1259,6 +1268,7 @@ class CompleteForCmd(cmd.CompleteCmd):
     def complete_check(self, text, line, begidx, endidx):
         "Complete the check command"
 
+        out = {}
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -1276,10 +1286,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         model_comp = self.model_completion(text, ' '.join(args[2:]))
 
         if len(args) == 2:
-            return model_comp + self.path_completion(text)
+            out['particles'] = model_comp
+            out['path to param_card'] = self.path_completion(text)
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
 
         if len(args) > 2:
-            return model_comp
+            out['particles'] = model_comp
+            out['options'] = self.list_completion(text, ['--energy='])
+            return self.deal_multiple_categories(out)
             
         
     def complete_tutorial(self, text, line, begidx, endidx):
@@ -1753,7 +1768,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'update']
+                     'update', 'Delphes2']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -1780,6 +1795,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_type': 'condor',
                        'cluster_temp_path': None,
                        'cluster_queue': None,
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300
                        }
     
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -1805,8 +1822,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def preloop(self):
         """Initializing before starting the main loop"""
 
-        self.prompt = 'mg5>'       
-        self.do_install('update --mode=mg5_start')
+        self.prompt = 'mg5>'
+        if madgraph.ReadWrite: # prevent on read-only disk  
+            self.do_install('update --mode=mg5_start')
         
         # By default, load the UFO Standard Model
         logger.info("Loading default model: sm")
@@ -1853,7 +1871,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             os.remove(pjoin(self._done_export[0],'RunWeb'))
                 
         value = super(MadGraphCmd, self).do_quit(line)
-        self.do_install('update --mode=mg5_end')
+        if madgraph.ReadWrite: #prevent to run on Read Only disk
+            self.do_install('update --mode=mg5_end')
         print
 
         return value
@@ -1935,7 +1954,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))                
+                  (len(self._curr_amps), ndiags))        
+                
   
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -1945,16 +1965,28 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if self._use_lower_part_names:
             # Particle names lowercase
             line = line.lower()
-        # Make sure there are spaces around = and |
+        # Make sure there are spaces around =, | and /
         line = line.replace("=", " = ")
         line = line.replace("|", " | ")
+        line = line.replace("/", " / ")
         args = self.split_arg(line)
         # check the validity of the arguments
         self.check_define(args)
 
         label = args[0]
+        remove_ids = []
+        try:
+            remove_index = args.index("/")
+        except ValueError:
+            pass
+        else:
+            remove_ids = args[remove_index + 1:]
+            args = args[:remove_index]
         
         pdg_list = self.extract_particle_ids(args[1:])
+        remove_list = self.extract_particle_ids(remove_ids)
+        pdg_list = [p for p in pdg_list if p not in remove_list]
+
         self.optimize_order(pdg_list)
         self._multiparticles[label] = pdg_list
         if log:
@@ -2330,8 +2362,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         # Check args validity
         param_card = self.check_check(args)
-
+        energy = float(args[-1].split('=')[1])
+        args = args[:-1]
         line = " ".join(args[1:])
+        
         myprocdef = self.extract_process(line)
 
         # Check that we have something    
@@ -2357,19 +2391,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,
                                                         param_card = param_card,
-                                                        quick = True)
+                                                        quick = True,
+                                                        energy=energy)
             nb_processes += len(comparisons[0])
 
         if args[0] in ['lorentz_invariance', 'full']:
             lorentz_result = process_checks.check_lorentz(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(lorentz_result)
             
         if args[0] in  ['gauge', 'full']:
             gauge_result = process_checks.check_gauge(myprocdef,
                                                       param_card = param_card,
-                                                      cmass_scheme = mass_scheme)
+                                                      cmass_scheme = mass_scheme,
+                                                      energy=energy)
             nb_processes += len(gauge_result)
 
         if args[0] in  ['gauge', 'full'] and len(self._curr_model.get('gauge')) == 2:
@@ -2397,7 +2434,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
-                                                cmass_scheme = mass_scheme)
+                                                cmass_scheme = mass_scheme,
+                                                energy=energy)
             
             
             # restore previous settings
@@ -3027,18 +3065,31 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Load file with path of the different program:
         import urllib
         path = {}
-        try:
-            data = urllib.urlopen('http://madgraph.phys.ucl.ac.be/package_info.dat')
-        except:
-            raise MadGraph5Error, '''Impossible to connect the server. 
+        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                     'http://madgraph.hep.uiuc.edu/package_info.dat']
+        r = random.randint(0,1)
+        r = [r, (1-r)]
+        for index in r:
+            cluster_path = data_path[index]
+            try:
+                data = urllib.urlopen(cluster_path)
+            except Exception:
+                continue
+            break
+        else:
+            raise MadGraph5Error, '''Impossible to connect any of us servers. 
             Please check your internet connection or retry later'''
+                
         for line in data: 
             split = line.split()   
             path[split[0]] = split[1]
         
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes':'Delphes', 
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+        
+        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes3':'Delphes',
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis'}
+                'MadAnalysis':'MadAnalysis', 'Delphes2': 'Delphes'}
         name = name[args[0]]
         
         try:
@@ -3053,10 +3104,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         else:
             misc.call(['wget', path[args[0]], '--output-document=%s.tgz'% name], cwd=MG5DIR)
         # Untar the file
-        returncode = misc.call(['tar', '-xzpvf', '%s.tgz' % name], cwd=MG5DIR, 
+        returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
                                      stdout=open(os.devnull, 'w'))
         if returncode:
             raise MadGraph5Error, 'Fail to download correctly the File. Stop'
+        
         
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
@@ -3070,19 +3122,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('compile %s. This might takes a while.' % name)
         
         # Modify Makefile for pythia-pgs on Mac 64 bit
-        if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
-            path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
-            text = open(path).read()
-            text = text.replace('MBITS=32','MBITS=64')
-            open(path, 'w').writelines(text)
-            
+        if args[0] == "pythia-pgs":
+            if sys.maxsize > 2**32:
+                path = os.path.join(MG5DIR, 'pythia-pgs', 'src', 'make_opts')
+                text = open(path).read()
+                text = text.replace('MBITS=32','MBITS=64')
+                open(path, 'w').writelines(text)
+            if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
+                os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
+                
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
-            if self.options['fortran_compiler']:
+            if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
                 compiler = self.options['fortran_compiler']
             elif misc.which('gfortran'):
-                 compiler = 'gfortran'
+                compiler = 'gfortran'
             elif misc.which('g77'):
                 compiler = 'g77'
             else:
@@ -3101,10 +3156,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w') 
             misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
         else:
-            misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
-            status = misc.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            self.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+            if name == 'pythia-pgs':
+                #SLC6 needs to have this first (don't ask why)
+                status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
+            status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
         if not status:
             logger.info('compilation succeeded')
         else:
@@ -3143,6 +3204,16 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if sys.platform == "darwin":
                     logger.warning('''You can download this program at the following link: 
                     http://www.macupdate.com/app/mac/9980/gpl-ghostscript''')
+            
+        if args[0] == 'Delphes2':
+            data = open(pjoin(MG5DIR, 'Delphes','data','DetectorCard.dat')).read()
+            data = data.replace('data/', 'DELPHESDIR/data/')
+            out = open(pjoin(MG5DIR, 'Template', 'Cards', 'delphes_card_default.dat'), 'w')
+            out.write(data)
+        if args[0] == 'Delphes3':
+            files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
+                     pjoin(MG5DIR,'Template', 'Cards', 'delphes_card_default.dat'))  
+        
 
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
@@ -3192,6 +3263,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return 
+        
+        if not misc.which('patch'):
+            error_text = """Not able to find program \'patch\'. Please reload a clean version
+            or install that program and retry."""
+            if mode == 'userrequest':
+                raise self.ConfigurationError(error_text)
+            return            
         
         
         # read the data present in .autoupdate
@@ -3423,6 +3501,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         Execute the code (madevent/standalone/...)
         """
         
+        current_options = dict([(name, self.options[name]) for name in self.options_madgraph])
         start_cwd = os.getcwd()
         
         args = self.split_arg(line)
@@ -3473,7 +3552,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         ext_program.run()
         os.chdir(start_cwd) #ensure to go to the initial path
-        
+        # ensure that MG options are not changed!
+        for key, value in current_options.items():
+            self.options[key] = value
         
         
     
@@ -3630,7 +3711,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         logger.info('Loading the resulting model')
         # Applying the restriction 
         self._curr_model = import_ufo.RestrictModel(self._curr_model)
-        self._curr_model.restrict_model(param_card)
+        model_name = self._curr_model.get('name')
+        if model_name == 'mssm':
+            keep_external=True
+        else:
+            keep_external=False
+        self._curr_model.restrict_model(param_card,keep_external=keep_external)
         
         if args:
             name = args[0].split('=',1)[1]
@@ -3838,7 +3924,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
-        elif args[0] in ['timeout', 'auto_update']:
+        elif args[0] in ['timeout', 'auto_update', 'cluster_nb_retry',
+                         'cluster_retry_wait']:
                 self.options[args[0]] = int(args[1]) 
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
@@ -3953,7 +4040,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean)
         elif self._export_format == 'standalone_cpp':
             export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-        elif not os.path.isdir(self._export_dir):
+        if self._export_format not in \
+                ['madevent', 'standalone', 'standalone_cpp'] and \
+                not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         if self._export_format in ['madevent', 'standalone']:
@@ -3993,7 +4082,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 group = False
             elif self.options['group_subprocesses'] == 'Auto' and \
                                          self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
+                group = False 
 
 
 

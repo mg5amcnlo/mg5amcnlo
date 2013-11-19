@@ -118,7 +118,7 @@ c     Set stot
 c
 c     Start reading use_config from symfact.dat written by MG5
 c
-      open(unit=25, file='symfact.dat', status='old')
+      open(unit=25, file='symfact_orig.dat', status='old')
       i=0
       do j=1,mapconfig(0)
          do while(i.lt.mapconfig(j))
@@ -278,6 +278,7 @@ c     First open symfact file
 c     ncode is number of digits needed for the code
       ncode=int(dlog10(3d0)*(max_particles-3))+1
       do i=1,mapconfig(0)
+         print *,'Writing config ',mapconfig(i)
          if (use_config(i) .gt. 0) then
             call bw_conflict(i,iforest(1,-max_branch,i),lconflict,
      $           sprop(1,-max_branch,i), gForceBW(-max_branch,i))
@@ -287,8 +288,8 @@ c     ncode is number of digits needed for the code
                   iarray(j)=0   !Assume no cuts on BW
                enddo
                do j=1,nexternal-3
-c                  write(*,*) 'Width',prwidth(-j,i),j,i
-                  if (prwidth(-j,i) .gt. 0d0 .and. sprop(1,-j,i).ne.0) then
+c                  write(*,*) 'Width',prwidth(-j,i),j,ic                 
+                  if (prwidth(-j,i) .gt. 0d0 .and. iforest(1,-j,i).ne.1) then
                      nbw=nbw+1
 c                     write(*,*) 'Got bw',-nbw,j
 c                    JA 4/8/11 don't treat forced BW differently
@@ -305,17 +306,20 @@ c                        write(*,*) 'Got conflict ',-nbw,j
 c            do j=1,2**nbw
             done = .false.
             do while (.not. done)
-               if(failConfig(i,iarray,iforest(1,-max_branch,i),
-     $           sprop(1,-max_branch,i),gForceBW(-max_branch,i))) goto 100
                call enCode(icode,iarray,ibase,imax)
+               if(failConfig(i,iarray,iforest(1,-max_branch,i),
+     $           sprop(1,-max_branch,i),gForceBW(-max_branch,i))) then 
+                  print *,'Skipping impossible config ',mapconfig(i),'.',icode
+                  goto 100
+               endif
                ic=ic+1
                if (ic .gt. ChanPerJob) then
                   call close_bash_file(26)
                   call open_bash_file(26)
                   ic = 1
                endif
-c               write(*,*) 'mapping',ic,mapconfig(i)
                nconf=int(dlog10(dble(mapconfig(i))))+1
+c               write(*,*) 'mapping',ic,mapconfig(i),icode               
                if (icode .eq. 0) then
 c                 Create format string based on number of digits
                   write(formstr,'(a,i1,a)') '(I',nconf,'$)'
@@ -578,9 +582,7 @@ c     Go through
 c
       nbw=0
       i=1
-      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1 .and.
-     $     sprop(1,-i).ne.0)
-
+      do while (i .lt. nexternal-2 .and. itree(1,-i) .ne. 1)
          xmass(-i) = xmass(itree(1,-i))+xmass(itree(2,-i))
          mtot=mtot-xmass(-i)
          xwidth(-i)=prwidth(-i,iconfig)
@@ -666,8 +668,6 @@ c
       write(lun,20) 'cp $k log.txt'
       write(lun,20) 'cd ../'
       write(lun,15) 'done'
-      write(lun,15) 'rm -f run.$script'
-      write(lun,15) 'touch done.$script'
  15   format(a)
  20   format(5x,a)
  25   format(10x,a)

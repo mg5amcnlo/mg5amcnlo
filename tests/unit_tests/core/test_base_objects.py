@@ -47,6 +47,7 @@ class ParticleTest(unittest.TestCase):
                       'pdg_code':6,
                       'propagating':True,
                       'is_part':True,
+                      'propagator':'',
                       'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
@@ -161,10 +162,11 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
         goal = goal + "    \'propagating\': True,\n"
+        goal = goal + "    \'propagator\': '',\n"
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False\n}"
 
-        self.assertEqual(goal, str(self.mypart))
+        self.assertEqual(goal.split('\n'), str(self.mypart).split('\n'))
 
     def test_get_pdg_code(self):
         """Test the get_pdg_code function of Particle"""
@@ -932,41 +934,42 @@ class ModelTest2(unittest.TestCase):
         
         # Check that the Width of the W is not anymore in the external parameter
         # and the yukawa
-        self.assertEqual(len(self.model['parameters'][('external',)]) -4,
+        self.assertEqual(len(self.model['parameters'][('external',)]) -3,
                          len(model['parameters'][('external',)]) )
         
         
-        # Check that the Width of the W is in internal parameter
-        WW = None
-        WComplex = None
-        MW = None
-        for param in model['parameters'][('aEWM1',)]:
-            if param.name not in ['CMASS_MW', 'WW', 'MW']:
-                continue
-            elif param.name == 'CMASS_MW':
-                WComplex = param
-                self.assertFalse(WW)
-            elif param.name == 'WW':
-                WW = param
-            else:
-                MW = param
-                self.assertFalse(WW)
-                self.assertFalse(WComplex)
-        self.assertTrue(WW)
-        self.assertTrue(MW)
-        self.assertTrue(WComplex)
-        # Check that WW and MW are the real/imaginary part
-        self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
-        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
+#        # Check that the Width of the W is in internal parameter
+#        WW = None
+#        WComplex = None
+#        MW = None
+#        for param in model['parameters'][('aEWM1',)]:
+#            if param.name not in ['CMASS_MW', 'WW', 'MW']:
+#                continue
+#            elif param.name == 'CMASS_MW':
+#                WComplex = param
+#                self.assertFalse(WW)
+#            elif param.name == 'WW':
+#                WW = param
+#            else:
+#                MW = param
+#                self.assertFalse(WW)
+#                self.assertFalse(WComplex)
+#        self.assertFalse(WW)
+#        self.assertFalse(MW)
+#        self.assertTrue(WComplex)
+#        # Check that WW and MW are the real/imaginary part
+#        self.assertEqual(WW.expr, '-1 * im(CMASS_MW**2) / MW')
+#        self.assertEqual('cmath.sqrt(re(%s**2))' % WComplex.expr, MW.expr)
         
         # Check that MZ has a complex_mass definition
         # and that the width and the mass are external
         found = 0
         for param in model['parameters'][('external',)]:
-            if param.name in ['WZ','MZ']:
+            if param.name in ['WZ','MZ','WW','MW']:
                 self.assertEqual(param.type, 'real')
                 found += 1
-        self.assertEqual(found, 2)
+                
+        self.assertEqual(found, 4)
         
         found=0
         for param in model['parameters'][tuple([])]:
@@ -1508,6 +1511,7 @@ class ProcessTest(unittest.TestCase):
                        'forbidden_particles':[],
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
+                       'legs_with_decays': self.myleglist,
                        'overall_orders': {}}
 
         self.myprocess = base_objects.Process(self.mydict)
@@ -1588,7 +1592,8 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'forbidden_s_channels\': [],\n"
         goal = goal + "    \'forbidden_particles\': [],\n"
         goal = goal + "    \'is_decay_chain\': False,\n"
-        goal = goal + "    \'decay_chains\': []\n}"
+        goal = goal + "    \'decay_chains\': [],\n"
+        goal = goal + "    \'legs_with_decays\': %s\n}" % repr(self.myleglist)
 
         self.assertEqual(goal, str(self.myprocess))
 

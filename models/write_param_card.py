@@ -85,12 +85,16 @@ class ParamCardWriter(object):
         
         # 
         self.dep_mass, self.dep_width = [] , []
-        self.duplicate_mass, self.duplicate_width =[], [] 
+        self.duplicate_mass, self.duplicate_width = [], [] 
 
         def_param = [] 
         # one loop for the mass
         for p in all_particles:
             mass = self.param_dict[p["mass"]]
+            if isinstance(mass, base_objects.ParamCardVariable):
+                if mass.lhacode[0] != p['pdg_code']:
+                    self.duplicate_mass.append((p, mass))
+                    continue                    
             if mass in def_param:
                 self.duplicate_mass.append((p, mass))
                 continue
@@ -103,6 +107,10 @@ class ParamCardWriter(object):
         def_param = [] 
         for p in all_particles:
             width = self.param_dict[p["width"]]
+            if isinstance(width, base_objects.ParamCardVariable):
+                if width.lhacode[0] != p['pdg_code']:
+                    self.duplicate_width.append((p, width))
+                    continue 
             if width in def_param:
                 self.duplicate_width.append((p, width))
                 continue
@@ -118,15 +126,18 @@ class ParamCardWriter(object):
     def order_param(obj1, obj2):
         """ order parameter of a given block """
         
-        if obj1.lhablock == obj2.lhablock:
+        block1 = obj1.lhablock.upper()
+        block2 = obj2.lhablock.upper()
+        
+        if block1 == block2:
             pass
-        elif obj1.lhablock == 'DECAY':
+        elif block1 == 'DECAY':
             return 1
-        elif obj2.lhablock == 'DECAY':
+        elif block2 == 'DECAY':
             return -1
-        elif obj1.lhablock < obj2.lhablock:
+        elif block1 < block2:
             return -1
-        elif obj1.lhablock != obj2.lhablock:
+        elif block1 != block2:
             return 1
         
         maxlen = min([len(obj1.lhacode), len(obj2.lhacode)])
@@ -167,10 +178,10 @@ class ParamCardWriter(object):
         cur_lhablock = ''
         for param in self.external:
             #check if we change of lhablock
-            if cur_lhablock != param.lhablock: 
+            if cur_lhablock != param.lhablock.upper(): 
                 # check if some dependent param should be written
                 self.write_dep_param_block(cur_lhablock)
-                cur_lhablock = param.lhablock
+                cur_lhablock = param.lhablock.upper()
                 # write the header of the new block
                 self.write_block(cur_lhablock)
             #write the parameter
@@ -220,7 +231,7 @@ class ParamCardWriter(object):
         """writing the requested LHA parameter"""
 
         if lhablock == 'MASS':
-            data = self.dep_mass 
+            data = self.dep_mass
             prefix = " "
         elif lhablock == 'DECAY':
             data = self.dep_width
