@@ -88,8 +88,9 @@ class LoopExporterFortran(object):
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
 
-        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
-        
+        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
+
+
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
@@ -101,7 +102,7 @@ class LoopExporterFortran(object):
         except os.error:
             logger.error('Could not cd to directory %s' % targetPath)
             return 0
-
+        
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
                               ' can take a couple of minutes.','$MG:color:BLACK')
@@ -122,7 +123,7 @@ class LoopExporterFortran(object):
 
         # Return to original PWD
         os.chdir(cwd)
-    
+            
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
         exporter so that it can later be used in the LoopHelasMatrixElement
@@ -1181,8 +1182,63 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
-    # CutTools call the loops with same denominator structure
+    # CutTools/TIR call the loops with same denominator structure
     group_loops=True
+    # TIR things
+    all_tir=['iregi']
+    
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+        """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
+        information on where to find all the loop-related source files, 
+        like CutTools and TIR"""
+
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
+                                                                   dir_path, opt)
+
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            if tir_dir in self.opt:
+                setattr(self,tir_dir,self.opt[tir_dir])
+            else:
+                setattr(self,tir_dir,'')
+
+
+    def copy_v4template(self, modelname):
+        """Additional actions needed for setup of Template
+        """
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(modelname)
+        # We must link the TIR to the Library folder of the active Template
+        link_tir_libs=[]
+        tir_libs=[]
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            libpath=getattr(self,tir_dir)
+            libname="lib%s.a"%tir
+            tir_name=tir
+            self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                              libpath,libname,tir_name=tir_name)
+            link_tir_libs.extend(['-l%s'%tir])
+            tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+            #if tir=="iregi":
+            #    link_tir_libs.extend(['-lff','-lqcdloop','-lavh_olo'])
+            #    tir_libs.extend(['$(LIBDIR)libff.$(libext)',
+            #                     '$(LIBDIR)libqcdloop.$(libext)',
+            #                     '$(LIBDIR)libavh_olo.$(libext)'])
+        if self.all_tir:
+            os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
+            cwd = os.getcwd()
+            dirpath = os.path.join(self.dir_path, 'SubProcesses')
+            try:
+                os.chdir(dirpath)
+            except os.error:
+                logger.error('Could not cd to directory %s' % dirpath)
+                return 0
+            filename = 'makefile'
+            calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                          link_tir_libs,tir_libs)
+            # Return to original PWD
+            os.chdir(cwd)
+                     
 
     def link_files_from_Subprocesses(self,proc_name=""):
         """ Does the same as the mother routine except that it also links
@@ -1195,6 +1251,41 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
                  'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
+
+    def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
+        """Link the TIR source directory inside the target path given
+        in argument"""
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(targetPath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % targetPath)
+            return 0
+        if not os.path.exists(os.path.join(libpath,libname)):
+            logger.info(('Compiling %s. This has to be done only once and'%tir_name)+\
+                              ' can take a couple of minutes.','$MG:color:BLACK')
+            current = misc.detect_current_compiler(os.path.join(\
+                                                  libpath,'makefile'))
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                           self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(libpath, new,current)
+            misc.compile(cwd=libpath, job_specs = False)
+            
+        if os.path.exists(os.path.join(libpath,libname)):            
+            linkfiles = [libname]
+            #if libname=="libiregi.a":
+            #    linkfiles.extend(["qcdloop/libff.a","qcdloop/libqcdloop.a",\
+            #                      "oneloop/libavh_olo.a"])
+            for file in linkfiles:
+                ln(libpath+'/%s' % file)
+        else:
+            raise MadGraph5Error,"%s could not be correctly compiled."%tir_name
+
+        # Return to original PWD
+        os.chdir(cwd)
+        
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
         """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
@@ -1332,6 +1423,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
         file = file % replace_dict
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+        
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
+        """ Create the file makefile which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.loop_dir,'StandAlone',
+                                 'SubProcesses','makefile_TIR.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        file=file%replace_dict
         
         if writer:
             writer.writelines(file)

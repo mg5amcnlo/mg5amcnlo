@@ -149,7 +149,6 @@ class ML5EWTest(unittest.TestCase):
         MLParams = file.read()
         MLred = re.search(r'#MLReductionLib\n',MLParams)
         MLredstr=MLParams[MLred.end():MLred.end()+1]
-        
         if loop_induce and MLredstr!="1":return            
         # Create a MERunner object for MadLoop 5 optimized
         # Open Loops is not avaiable for loop induced processes

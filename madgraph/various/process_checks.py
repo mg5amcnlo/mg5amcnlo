@@ -541,7 +541,7 @@ class MatrixElementEvaluator(object):
 class LoopMatrixElementEvaluator(MatrixElementEvaluator):
     """Class taking care of matrix element evaluation for loop processes."""
 
-    def __init__(self,cuttools_dir=None,cmd=FakeInterface(),*args,**kwargs):
+    def __init__(self,cuttools_dir=None,tir_dir={},cmd=FakeInterface(),*args,**kwargs):
         """Allow for initializing the MG5 root where the temporary fortran
         output for checks is placed."""
         
@@ -549,6 +549,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         self.mg_root=self.cmd._mgme_dir
         self.cuttools_dir=cuttools_dir
+        self.tir_dir=tir_dir
         self.loop_optimized_output = cmd.options['loop_optimized_output']
         # Set proliferate to true if you want to keep the produced directories
         # and eventually reuse them if possible
@@ -625,6 +626,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
               'loop_dir': os.path.join(self.mg_root,'Template','loop_material'),
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler': self.cmd.options['fortran_compiler']}
+            
+            MLoptions.update(self.tir_dir)
                         
             FortranExporter = exporter_class(\
                 self.mg_root, export_dir, MLoptions)
@@ -1248,6 +1251,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                        'cuttools_dir': self.cuttools_dir,
                        'fortran_compiler':self.cmd.options['fortran_compiler']}
     
+            MLoptions.update(self.tir_dir)
+
             start=time.time()
             FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
@@ -2033,7 +2038,7 @@ def generate_loop_matrix_element(process_definition, reuse,
 #===============================================================================
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
-def check_profile(process_definition, param_card = None,cuttools="",
+def check_profile(process_definition, param_card = None,cuttools="",tir={},
                             options = None, cmd = FakeInterface(),MLOptions={}):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
@@ -2046,7 +2051,8 @@ def check_profile(process_definition, param_card = None,cuttools="",
                                                              keep_folder,cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     options['reuse'] = reusing
-    myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
+    myProfiler = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
+                                        model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myProfiler.loop_optimized_output=False
     if not myProfiler.loop_optimized_output:
@@ -2077,7 +2083,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_stability(process_definition, param_card = None,cuttools="", 
+def check_stability(process_definition, param_card = None,cuttools="",tir={}, 
                                options=None,nPoints=100, reuse=False, 
                                cmd = FakeInterface(), MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
@@ -2091,7 +2097,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
                                                                  reuse, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     options['reuse'] = reusing
-    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,
+    myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
                                                             model=model,cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myStabilityChecker.loop_optimized_output=False
@@ -2113,7 +2119,7 @@ def check_stability(process_definition, param_card = None,cuttools="",
 #===============================================================================
 # check_timing for loop processes
 #===============================================================================
-def check_timing(process_definition, param_card= None, cuttools="",
+def check_timing(process_definition, param_card= None, cuttools="",tir={},
                                           options=None, cmd = FakeInterface(),
                                           MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
@@ -2125,7 +2131,8 @@ def check_timing(process_definition, param_card= None, cuttools="",
                                                            keep_folder, cmd=cmd)
     reusing = isinstance(matrix_element, base_objects.Process)
     options['reuse'] = reusing
-    myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,model=model, cmd=cmd)
+    myTimer = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
+                                     model=model, cmd=cmd)
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myTimer.loop_optimized_output=False
     if not myTimer.loop_optimized_output:
@@ -2147,7 +2154,7 @@ def check_timing(process_definition, param_card= None, cuttools="",
 #===============================================================================
 # check_processes
 #===============================================================================
-def check_processes(processes, param_card = None, quick = [],cuttools="",
+def check_processes(processes, param_card = None, quick = [],cuttools="",tir={},
                              options=None, reuse = False, cmd = FakeInterface()):
     """Check processes by generating them with all possible orderings
     of particles (which means different diagram building and Helas
@@ -2166,7 +2173,7 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
             evaluator = MatrixElementEvaluator(model,
                auth_skipping = True, reuse = False, cmd = cmd)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, 
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir, 
                             model=model, auth_skipping = True,
                             reuse = False, cmd = cmd)
        
@@ -2202,8 +2209,8 @@ def check_processes(processes, param_card = None, quick = [],cuttools="",
         evaluator = MatrixElementEvaluator(model, param_card,
                auth_skipping = True, reuse = False, cmd = cmd)
     else:
-        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, model=model,
-                                           param_card=param_card,
+        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, tir_dir=tir,
+                                               model=model,param_card=param_card,
                                            auth_skipping = True, reuse = False,
                                            cmd = cmd)
 
@@ -2831,7 +2838,7 @@ def fixed_string_length(mystr, length):
 #===============================================================================
 # check_gauge
 #===============================================================================
-def check_gauge(processes, param_card = None,cuttools="", reuse = False, 
+def check_gauge(processes, param_card = None,cuttools="",tir={}, reuse = False, 
                                      options=None, cmd = FakeInterface()):
     """Check gauge invariance of the processes by using the BRS check.
     For one of the massless external bosons (e.g. gluon or photon), 
@@ -2850,7 +2857,7 @@ def check_gauge(processes, param_card = None,cuttools="", reuse = False,
             evaluator = MatrixElementEvaluator(model, param_card,cmd= cmd,
                                            auth_skipping = True, reuse = False)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                                            cmd= cmd,model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False)
 
@@ -2889,7 +2896,7 @@ def check_gauge(processes, param_card = None,cuttools="", reuse = False,
                                        auth_skipping = True, reuse = False, 
                                        cmd = cmd)
     else:
-        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                                            model=model, param_card=param_card,
                                            auth_skipping = False, reuse = False,
                                            cmd = cmd)
@@ -3100,7 +3107,7 @@ def output_gauge(comparison_results, output='text'):
 #===============================================================================
 # check_lorentz
 #===============================================================================
-def check_lorentz(processes, param_card = None,cuttools="", options=None, \
+def check_lorentz(processes, param_card = None,cuttools="",tir={},options=None, \
                                           reuse = False, cmd = FakeInterface()):
     """ Check if the square matrix element (sum over helicity) is lorentz 
         invariant by boosting the momenta with different value."""
@@ -3117,7 +3124,7 @@ def check_lorentz(processes, param_card = None,cuttools="", options=None, \
             evaluator = MatrixElementEvaluator(model,
                                 cmd= cmd, auth_skipping = False, reuse = True)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                      model=model, auth_skipping = False, reuse = True,cmd = cmd)
 
         if not cmass_scheme and processes.get('perturbation_couplings')==[]:
@@ -3155,8 +3162,8 @@ def check_lorentz(processes, param_card = None,cuttools="", options=None, \
                                        auth_skipping = False, reuse = True, 
                                        cmd=cmd)
     else:
-        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, model=model,
-                                           param_card=param_card,
+        evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools, tir_dir=tir,
+                                               model=model,param_card=param_card,
                                            auth_skipping = False, reuse = True,
                                            cmd = cmd)
 
@@ -3346,7 +3353,7 @@ def check_lorentz_process(process, evaluator,options=None):
 #===============================================================================
 def check_unitary_feynman(processes_unit, processes_feynm, param_card=None, 
                                options=None,
-                               cuttools="", reuse=False, cmd = FakeInterface()):
+                               cuttools="",tir={},reuse=False, cmd = FakeInterface()):
     """Check gauge invariance of the processes by flipping
        the gauge of the model
     """
@@ -3369,7 +3376,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd,auth_skipping = False, reuse = True)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                                            cmd=cmd, model=model,
                                            param_card=param_card,
                                            auth_skipping = False, reuse = False)
@@ -3405,7 +3412,7 @@ def check_unitary_feynman(processes_unit, processes_feynm, param_card=None,
             evaluator = MatrixElementEvaluator(model, param_card,
                                        cmd= cmd, auth_skipping = False, reuse = False)
         else:
-            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,
+            evaluator = LoopMatrixElementEvaluator(cuttools_dir=cuttools,tir_dir=tir,
                                            cmd= cmd, model=model,
                                            param_card=param_card,
                                            auth_skipping = False, reuse = False)

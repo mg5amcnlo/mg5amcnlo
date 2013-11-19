@@ -315,6 +315,20 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
+        # Set where to look for IREGI installation
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        if not os.path.isdir(self._iregi_dir):
+            logger.warning(('Warning: Directory %s is not a valid IREGI directory.'+\
+                            'Using default IREGI instead.')%\
+                           self._iregi_dir)
+            self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        # Set where to look for PJFry++ installation
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
+        #if not os.path.isdir(self._pjfry_dir):
+        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
+        #                    'Using default PJFry++ instead.')%\
+        #                   self._pjfry_dir)
+        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
 
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen

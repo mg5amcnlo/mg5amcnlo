@@ -2229,6 +2229,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
         self._comparisons = None
         self._nlo_modes_for_completion = ['all','virt','real']
 
@@ -2911,11 +2913,18 @@ This implies that with decay chains:
             CT_dir = self._cuttools_dir
         else:
             CT_dir =""
+        # directories for TIR
+        TIR_dir={}
+        if "_iregi_dir" in dir(self):
+            TIR_dir['iregi_dir']=self._iregi_dir
+        #if "_pjfry_dir" in dir(self):
+        #    TIR_dir['pjfry_dir']=self._pjfry_dir
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
                                                   cmd = self,
                                                   MLOptions = MLoptions
@@ -2925,6 +2934,7 @@ This implies that with decay chains:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
                                                   cmd = self,
                                                   MLOptions = MLoptions)
@@ -2935,6 +2945,7 @@ This implies that with decay chains:
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
                                                   cmd = self,
                                                   MLOptions = MLoptions)
@@ -2986,6 +2997,7 @@ This implies that with decay chains:
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
+                                                tir=TIR_dir,
                                                 reuse = options['reuse'],
                                                 cmd = self)
             
@@ -3003,6 +3015,7 @@ This implies that with decay chains:
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
+                                            tir=TIR_dir,
                                             reuse = options['reuse'],
                                             cmd = self,
                                             options=options)
@@ -3013,6 +3026,7 @@ This implies that with decay chains:
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           options=options)
@@ -3022,6 +3036,7 @@ This implies that with decay chains:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           options=options)

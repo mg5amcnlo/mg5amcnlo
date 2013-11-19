@@ -1,0 +1,103 @@
+8-sep-2003.  A special case in C11 was found to be wrongly coded (thanks Andre van Hameren).  In rare circumstances thtis would give the wrong value for C11.  New ffxc1.f
+
+1-sept-1996.  In spite of my new job at the KNMI, I still fully support 
+the FF library.
+
+This is the prerelease of the new version of FF, version 2.0.  The complex 
+routines are being held back, as these are as yet completely untested.  The 
+main differences with the normal version are:
+- better handling of non-IR masses which are zero (typically neutrinos)
+- faster IR divergent boxes using the algorithms of Beenakker & Denner
+- B0' (ffxdb0, note that it also returns p^2*B0' to avoid an undefined result 
+  for p^2=0)
+- the sixpoint function F0
+- some tensor functions: B2, D2 (the others will follow)
+- hooks for complex functions
+- possibility to input the dotproducts (ffxd0d); experimental.
+Please report any problems you might have to me, gjvo@xs4all.nl or 
+t19@nikhef.nl.  Without this feedback I have a hard time killing all bugs.
+
+The calling sequences for internal functions have been changed completely, so 
+it is not possible to mix routines from theis version with previous ones.  
+Also some error messages have been renumbered, so you cannot even mix the 
+ffwarn.dat and fferr.dat files.
+
+Geert Jan van Oldenborgh
+
+Bug fixes:
+- 12-07-1991: inconsistent flagging in ffxc0p.f and ffxdi.f caused undefined 
+  arguments to be used in some cases.  l4also=.FALSE. helps, or the new files.
+- 15-07-1993: better error messages in case of dependent momenta.
+- 19-07-1993: fixed typo in ffzdbd which caused ffzzdl to be called with one 
+  argument too many.  new file ffzdbd.f
+- 12-10-1993: ffxc0 gave a spurious error when called with 3 spacelike momenta
+- 1-dec-1993: fixed many problems with the error system, for the time being 
+  only in the routines with real masses.  Added B2.  B1' arguments changed!
+  Also added the possibility to input the dotproducts: ffxd0d, ffxc0d.  Please 
+  report problems with this scheme if you use it.  Fixed bug in B0' for 
+  xp=0.
+- 1-dec-1993.  AA routines added (tensor reduction).  The B-reduction is now 
+  completely stable; I am working on the other ones.  Note that instabilities 
+  in the aa routines are not yet reported.  B1' still missing.
+- 1-dec-1993.  As the new ff.h file is different from the old one you'll have 
+  to recompile everything.
+- 2-dec-1993.  Further cleaning in the error reports.
+- 18-jan-1994.  Fixed a few typos in ffzb0 (file ffcb0.f), wrong # of args.
+- mrt-1994. Fixed a bug in ffxb0 which caused spurious error messages when 
+  lwarn was off.
+- 8-aug-1994. Fixed a stupid bug in ffcxyz.f, which caused undefined values to 
+  be used, thus giving (very) wrong answers if l4also was .true..  Updated 
+  some files to use input ier when checking to beat back on spurious error 
+  messages.
+- 25-mar-1995. Fixed a bug in ffcxr.f, when a Taylor expansion was made some 
+  eta terms could be undefined.
+- 19-apr-1995. Fixed a bug in ffxd0, if a host of conditions was met the 
+  imaginary part would be off by a term i\pi^2.  Improved error checking.
+- 22-aug-1995. Fixed a row of bugs which appeared in Z -> gamma gamma gamma 
+  with equal masses, mainly extra terms 2\pi^2 which caused the answer to be 4 
+  orders of magnitude too large.  Some of these gave error messages; other did 
+  not.  New ffxd0.f, ffdel4.f, ffdcxs.f, ffcxs3.f, ffxc0p.f, ffdxc0.f.
+- 22-sep-1995.  Fixed another bug in Z->3gammma, close together algorithm did 
+  not check for different i*pi^2.  Still wrong for on-shell photons, use 
+  p^2=-1d-10 for the time being.
+- 3-oct-1995.  Fixed rare bug that caused the Hill identity to be used when it 
+  should not, giving an error message from ffzli2 that the argument is too 
+  large.  Actually harmless numericallyy.  New ffcrr.f
+- 6-oct-1995.  Fixed another equal-masses bug in the C0, answer was off by 
+  pi^2/3 due to typo.  New ffxc0p.f.
+- 16-oct-1995.  An i*eps problem which occurred in the equal masses case gave 
+  the wrong imaginary part.  CHECK AGAINST l4also=.FALSE, ldc3c4=.FALSE.
+  New ffcxs4.f, ffcrr.f; put warning in ffxd0h.f
+- 1-dec-1995.  When p4^2=0, m2>m1 the IR C0 (using delta) would have the wrong 
+  sign.
+- 9-mar-1996: added the complex tensor reduction functions aacbc.f, aaccc.f, 
+  ffcb2.f ffcb2p.f, aacinv.f, ffcdb0.f
+- 13-mar-1996: killed a bug in ffdcxs, would appear in cases with equal masses 
+  in versions newer than 22-aug-1995.  New ffdcxs.f.  Also synchronized with 
+  my private copy, this entails a new ff.h for the 6-point function.  Please 
+  recompile everything.
+- 18-mar-1996: Fixed a stupid typo bug in ffcb0, up to now all quantities with 
+  complex p^2 but real m^2 would use only the real part of p^2.  New ffcb0.f
+- 22-mar-1996: Killed a bug in 13-mar's bugfix in ffdcxs.f.  Should really be 
+  OK now.  Fixed a few warnings with ftnchk'ing, and a typo in the testing in 
+  ffxdi.f
+- 27-mar-1996: On request of CERN people, changed ffinit to ffini to avoid 
+  conflict with the FFREAD tape handling package.  A dummy subroutine ffinit 
+  that just calls ffini is included for older programs, if you want to link 
+  against the CERN paclib you should NOT include file ffini.o in ff.a!
+- 28-mar-1996. I think I have all the continuations for p^2 complex correct 
+  now.  New ffcb0.f
+- 4-jun-1996: Added a few safety checks in ffxc0, ffcb0, fxc0i.
+- 16-jul-1996: Added a check in ffxb2q to not use an algorithm which divides 
+  by xm1 when xm1.eq.0.  New ffxb1p.f
+- 15-aug-1996.  Got rid of the last two instances of ffinit.  
+- 23-jan-1997.  The IR-divergent routines now complain when the user attempts 
+  to evaluate a mass singular D0.
+- 21-jul-1997.  Moved the archive back to NIKHEF; I hope for good.
+- friday-13-mar-1998: Set xalogm, xclogm to their IEEE value when the 
+  optimizer kills the loop and returns zero ffini (ffinit.f)
+  Added word 'path' to ffopen (ffinit.f)
+  Put lwrite on warning (ffxb1.f)
+- 1-oct-1998: Fixed ier bug in aaxcx (was too high for level=3), fixed
+  makefile problems, updated ffmanual.tex, updated npointes slightly.
+   
