@@ -3027,13 +3027,13 @@ class decay_all_events(object):
             self.calculator_nbcall[('full',path)] = 1 
 
         external.stdin.write(stdin_text)
-
+        
         if mode == 'maxweight':
             maxweight=float(external.stdout.readline())
-            return maxweight
+            output = maxweight
         elif mode == 'full_me':
             me_value=float(external.stdout.readline())
-            return me_value
+            output = me_value
         elif mode == 'unweighting':
             firstline=external.stdout.readline().split()
             nexternal=int(firstline[0])
@@ -3043,13 +3043,30 @@ class decay_all_events(object):
             failed= float(firstline[4])
             use_mc_masses=int(firstline[5])
             momenta=[external.stdout.readline() for i in range(nexternal)]
-            return trials, BWvalue, weight, momenta, failed, use_mc_masses
+            output = trials, BWvalue, weight, momenta, failed, use_mc_masses
 
+        if len(self.calculator) > 100:
+            logger.debug('more than 100 calculator. Perform cleaning')
+            nb_calls = self.calculator_nbcall.values()
+            nb_calls.sort()
+            cut = max([nb_calls[len(nb_calls)//2], 0.001 * nb_calls[-1]])
+            for key, external in list(self.calculator.items()):
+                nb = self.calculator_nbcall[key]
+                if nb < cut:
+                    external.stdin.close()
+                    external.stdout.close()
+                    external.terminate()
+                    del self.calculator[key]
+                    del self.calculator_nbcall[key]
+                else:
+                    self.calculator_nbcall[key] = self.calculator_nbcall[key] //10
+                    
+        return output
+    
     def calculate_matrix_element(self, mode, production, stdin_text):
         """routine to return the matrix element"""
 
         tmpdir = ''
-        
         if (mode, production) in self.calculator:
             external = self.calculator[(mode, production)]
             self.calculator_nbcall[(mode, production)] += 1

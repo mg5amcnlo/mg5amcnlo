@@ -88,6 +88,10 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        open(unit=56,file='seeds.dat',status='old')
        read(56,*) iseed
        close(56)
+       open(unit=56,file='seeds.dat',status='unknown')
+       if (iseed.gt.900000000) iseed = 5
+       write(56,*) iseed+1
+       close(56)
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
