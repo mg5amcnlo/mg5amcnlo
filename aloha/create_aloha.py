@@ -45,6 +45,7 @@ logger = logging.getLogger('ALOHA')
 _conjugate_gap = 50
 _spin2_mult = 1000
 
+pjoin = os.path.join
 
 ALOHAERROR = aloha.ALOHAERROR
 
@@ -130,8 +131,11 @@ class AbstractRoutineBuilder(object):
         self.denominator = None
 #        assert model
         
-        
-    
+        if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+            for formf in lorentz.formfactors:
+                pat = re.compile(r'\b%s\b' % formf.name)
+                self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
+            
     def compute_routine(self, mode, tag=[], factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
@@ -199,7 +203,8 @@ in presence of majorana particle/flow violation"""
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
     
-        infostr = str(self.lorentz_expr)        
+        infostr = str(self.lorentz_expr)
+
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                     infostr, self.denominator)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
@@ -836,7 +841,7 @@ class AbstractALOHAModel(dict):
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
                                         routines=routines)
 
-                
+            
                       
   
                 
@@ -894,6 +899,25 @@ class AbstractALOHAModel(dict):
         
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
+
+        if aloha_lib.KERNEL.unknow_fct:
+            if  language == 'Fortran':
+                logger.warning('''Some function present in the lorentz structure are not
+            recognized. A Template file has been created:
+            %s
+            Please edit this file to include the associated definition.''' % \
+               pjoin(output_dir, 'additional_aloha_function.f') )
+            else:
+                logger.warning('''Some function present in the lorentz structure are 
+                not recognized. Please edit the code to add the defnition of such function.''')
+                logger.info('list of missing fct: %s .' % \
+                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
+        
+        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
+            if language == 'Fortran':
+                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
+        
+
         
         #self.write_aloha_file_inc(output_dir)
     
@@ -1069,9 +1093,14 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
             if alohafile_pattern.search(filename):
                 aloha_files.append(filename.replace(file_ext, comp_ext))
 
+    if os.path.exists(pjoin(aloha_dir, 'additional_aloha_function.f')):
+        aloha_files.append('additional_aloha_function.o')
+    
     text="ALOHARoutine = "
     text += ' '.join(aloha_files)
     text +='\n'
+    
+
     file(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
 
 

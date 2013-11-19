@@ -1771,3 +1771,20 @@ c spin-3/2 fermion wavefunction
 
       return
       end
+
+
+      complex*16 function THETA_FUNCTION(cond, out_true, out_false)
+
+      double precision cond
+      complex*16 out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTION = out_true
+      else
+        THETA_FUNCTION = out_false
+      endif
+
+      return
+      end
+
+
