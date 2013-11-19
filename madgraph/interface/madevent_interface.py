@@ -1807,6 +1807,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
                                                         opt['cluster_temp_path'])
+            self.cluster.nb_retry = opt['cluster_nb_retry']
+            self.cluster.cluster_retry_wait = int(opt['cluster_retry_wait'])
         return args
     
     ############################################################################            
