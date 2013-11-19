@@ -817,10 +817,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
             self.results.resetall(self.me_dir)
+            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
+            self.last_mode = ''
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -972,6 +974,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         mode = argss[0]
         self.ask_run_configuration(mode, options)
 
+        self.results.add_detail('run_mode', mode) 
+
         self.update_status('Starting run', level=None, update_results=True)
 
         if self.options_madevent['automatic_html_opening']:
@@ -1006,6 +1010,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['parton'] and mode == 'aMC@LO':
             mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
 
         self.update_status('Starting run', level=None, update_results=True)
 
@@ -1050,6 +1056,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if mode in ['LO', 'NLO']:
             options['parton'] = True
         mode = self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
 
         self.update_status('Starting run', level=None, update_results=True)
 
@@ -2636,8 +2644,6 @@ Integrated cross-section
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
-        self.results.add_detail('run_mode', mode) 
-
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -2884,6 +2890,7 @@ Integrated cross-section
     ############################################################################
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
+        print "MODE", mode
         
         if 'parton' not in options:
             options['parton'] = False
@@ -2956,7 +2963,7 @@ Integrated cross-section
             return question
 
         if not self.force:
-            answer = ''
+            answer = self.last_mode
             while answer not in ['0', 'done', 'auto', 'onlyshower']:
                 question = create_question(switch)
                 if mode:

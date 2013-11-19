@@ -905,23 +905,23 @@ class OneTagResults(dict):
         
         first = None
         subresults_html = ''
-        for type in ['parton', 'pythia', 'pgs', 'delphes','reweight']:
-            data = getattr(self, type)
+        for ttype in ['parton', 'pythia', 'pgs', 'delphes','reweight']:
+            data = getattr(self, ttype)
             if not data:
                 continue
             
-            local_dico = {'type': type, 'run': self['run_name']}
+            local_dico = {'type': ttype, 'run': self['run_name']}
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
                 local_dico['run_mode'] = ""
             if not first:
-                if type == 'reweight':
+                if ttype == 'reweight':
                     template = sub_part_template_reweight
                 else:
                     template = sub_part_template_parton
-                first = type
-                if type=='parton' and self['cross_pythia']:
+                first = ttype
+                if ttype=='parton' and self['cross_pythia']:
                     local_dico['cross_span'] = 1
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
@@ -943,7 +943,7 @@ class OneTagResults(dict):
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
                     
-            elif type == 'pythia' and self['cross_pythia']:
+            elif ttype == 'pythia' and self['cross_pythia']:
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
@@ -960,10 +960,10 @@ class OneTagResults(dict):
                 template = sub_part_template_pgs   
             
             # Fill the links
-            local_dico['links'] = self.get_links(type)
+            local_dico['links'] = self.get_links(ttype)
 
             # Fill the actions
-            if type == 'parton':
+            if ttype == 'parton':
                 if runresults.web:
                     local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
@@ -985,12 +985,12 @@ class OneTagResults(dict):
                     local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
                                                                        % (self['run_name'], self['tag']))
                     # this the detector simulation and pythia should be available only for madevent
-                    if os.path.exists(os.path.join(self.me_dir, 'bin', 'madevent')): 
+                    if self['run_mode'] == 'madevent':
                         local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
-                    elif os.path.exists(os.path.join(self.me_dir, 'bin', 'aMCatNLO')): 
+                    else: 
                         pass
 
-            elif type == 'pythia':
+            elif ttype == 'pythia':
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
                         local_dico['action'] = """
@@ -1030,11 +1030,11 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove """ + str(type) + """\">
+<INPUT TYPE=SUBMIT VALUE="Remove """ + str(ttype) + """\">
 </FORM>"""
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
-                                                              (self['run_name'], type, self['tag']))
+                                                              (self['run_name'], ttype, self['tag']))
 
             # create the text
             subresults_html += template % local_dico
@@ -1118,10 +1118,9 @@ class OneTagResults(dict):
             button = 're-run from the banner'
         else:
             button = 'launch detector simulation'
-
-        if exists(pjoin(self.me_dir,'bin','madevent')):
+        if self['run_mode'] == 'madevent':
             header = 'Launch ./bin/madevent in a shell, and run the following command: '
-        elif exists(pjoin(self.me_dir,'bin','aMCatNLO')):
+        else:
             header = 'Launch ./bin/aMCatNLO in a shell, and run the following command: '
 
         return "<INPUT TYPE=SUBMIT VALUE='%s' onClick=\"alert('%s')\">" % (button, header + command)
