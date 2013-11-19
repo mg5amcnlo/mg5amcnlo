@@ -129,10 +129,11 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         matrix_elements = FKSHelasProcessList()
 
-        for proc in fksprocs:
-            logger.info("Generating Helas calls for FKS %s" % \
-              proc.born_amp.get('process').nice_string(print_weighted = False).\
-                                                  replace('Process', 'process'))
+        for i, proc in enumerate(fksprocs):
+            logger.info("Generating Helas calls for FKS %s (%d / %d)" % \
+              (proc.born_amp.get('process').nice_string(print_weighted = False).\
+                                                  replace('Process', 'process'),
+                i + 1, len(fksprocs)))
             matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],
                                                            fksmulti['real_amplitudes'],
                                                           loop_optimized = self.loop_optimized,

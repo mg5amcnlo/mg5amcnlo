@@ -327,7 +327,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     # generate_directories_fks
     #===============================================================================
     def generate_directories_fks(self, matrix_element, fortran_model, me_number,
-                                                path=os.getcwd(),OLP='MadLoop'):
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
@@ -351,9 +351,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
         (matrix_element.get('processes')[0].shell_string())
+        print me_number
         os.mkdir(borndir)
         os.chdir(borndir)
-        logger.info('Writing files in %s' % borndir)
+        logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
 
 ## write the files corresponding to the born process in the P* directory
         self.generate_born_fks_files(matrix_element,
