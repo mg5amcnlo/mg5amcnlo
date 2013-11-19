@@ -177,7 +177,7 @@ class make_info_html:
         if os.path.exists(os.path.join(self.dir,'SubProcesses','done')):
             self.rep_rule['meta'] = 'HTTP-EQUIV=\"REFRESH\" CONTENT=\"30\"'
         else:
-            self.rep_rule['meta'] = "<META HTTP-EQUIV=\"EXPIRES\" CONTENT=\"20\" >"
+            self.rep_rule['meta'] = "HTTP-EQUIV=\"EXPIRES\" CONTENT=\"20\""
         
 
     def define_info_tables(self):

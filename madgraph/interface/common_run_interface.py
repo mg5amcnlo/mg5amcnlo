@@ -1173,7 +1173,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
   
 
     def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None, update_results=True):
+                      error=False, starttime = None, update_results=True,
+                      print_log=True):
         """ update the index status """
         
         if makehtml and not force:
@@ -1181,16 +1182,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return
             else:
                 self.next_update = time.time() + 3
-        
-        if isinstance(status, str):
-            if '<br>' not  in status:
-                logger.info(status)
-        elif starttime:
-            running_time = misc.format_timer(time.time()-starttime)
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
-                       (status[0], status[1], status[2], running_time))
-        else: 
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+                
+        if print_log:
+            if isinstance(status, str):
+                if '<br>' not  in status:
+                    logger.info(status)
+            elif starttime:
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
+                           (status[0], status[1], status[2], running_time))
+            else: 
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
@@ -1367,9 +1369,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0]) 
-        
+        madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt) 
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
+        
         madspin_cmd.import_command_file(path)
                 
         # create a new run_name directory for this output

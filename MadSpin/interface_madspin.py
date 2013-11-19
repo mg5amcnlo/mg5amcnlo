@@ -47,6 +47,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     prompt = 'MadSpin>'
     debug_output = 'MS_debug'
     
+    
     @misc.mute_logger()
     def __init__(self, event_path=None, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
@@ -309,6 +310,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
         return self.mg5cmd.do_define(line)
     
+    def update_status(self, *args, **opts):
+        """ """
+        pass # function overwritten for MS launched by ME
+    
     def complete_define(self, *args):
         """ """
         try:
@@ -377,9 +382,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
         
-
+        
+        self.update_status('generating Madspin matrix element')
         generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
                                                     self.options)
+        
+        self.update_status('running MadSpin')
         generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio

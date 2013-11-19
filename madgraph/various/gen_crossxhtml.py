@@ -327,8 +327,17 @@ class AllResults(dict):
         if self.status and self.current:
             if isinstance(self.status, str):
                 status = '<td ROWSPAN=2 colspan=4>%s</td>' %  self.status
-            else:
-                s = self.status
+            else:                
+                s = list(self.status)
+                if s[0] == '$events':
+                    if self.current['nb_event']:
+                        nevent = self.current['nb_event']
+                    else:
+                        nevent = self[self.current['run_name']][0]['nb_event']
+                    if nevent:
+                        s[0] = nevent - int(s[1]) -int(s[2])
+                    else:
+                        s[0] = ''
                 status ='''<td> %s </td> <td> %s </td> <td> %s </td>
                 </tr><tr><td colspan=3><center> %s </center></td>''' % (s[0],s[1], s[2], s[3])
                 
