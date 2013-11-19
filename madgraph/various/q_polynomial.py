@@ -76,7 +76,7 @@ class PolynomialRoutines(object):
             self.czero='CMPLX(0.0e0_16,0.0e0_16,KIND=16)'            
         else:
             self.rzero='0.0e0'
-            self.czero='(0.0e0,0.0e0)'            
+            self.czero='(0.0e0,0.0e0)'
         self.line_split=line_split
         if max_rank<0:
             raise PolynomialError, \

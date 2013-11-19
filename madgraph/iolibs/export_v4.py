@@ -1487,7 +1487,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # write_matrix_element_v4
     #===========================================================================
-    def write_matrix_element_v4(self, writer, matrix_element, fortran_model):
+    def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
+                                                                proc_prefix=''):
         """Export a matrix element to a matrix.f file in MG4 standalone format"""
 
         if not matrix_element.get('processes') or \
@@ -1504,7 +1505,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        replace_dict = {'global_variable':'', 'amp2_lines':''}
+        replace_dict = {'global_variable':'', 'amp2_lines':'',
+                                                      'proc_prefix':proc_prefix}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\

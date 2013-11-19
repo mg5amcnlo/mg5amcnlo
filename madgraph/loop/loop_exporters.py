@@ -207,6 +207,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
+
+    def get_ME_identifier(self, matrix_element):
+        """ A function returning a string uniquely identifying the matrix 
+        element given in argument so that it can be used as a prefix to all
+        MadLoop5 subroutines and common blocks related to it. This allows
+        to compile several processes into one library as requested by the 
+        BLHA (Binoth LesHouches Accord) guidelines. """
+        
+        return 'ML5_%s_'%matrix_element.get('processes')[0].shell_string()
+
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
@@ -537,6 +547,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         for the different output codes for this exporter"""
         
         dict={}
+        # A general process prefix which appears in front of all MadLooop
+        # subroutines and common block so that several processes can be compiled
+        # together into one library, as necessary to follow BLHA guidelines.
+        dict['proc_prefix'] = self.get_ME_identifier(matrix_element)
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         dict['info_lines'] = info_lines
@@ -623,7 +637,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
         self.general_replace_dict=\
-                              self.generate_general_replace_dict(matrix_element)
+                              self.generate_general_replace_dict(matrix_element)                                 
+        
         # Extract max number of loop couplings (specific to this output type)
         self.general_replace_dict['maxlcouplings']= \
                                          matrix_element.find_max_loop_coupling()
@@ -992,8 +1007,8 @@ C                ENDIF
         else:
             replace_dict['compute_born']=\
 """C Compute the born, for a specific helicity if asked so.
-call smatrixhel(P_USER,USERHEL,ANS(0))
-"""
+call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
+"""%self.general_replace_dict
             replace_dict['set_reference']=\
 """C We chose to use the born evaluation for the reference
 call smatrix(p,ref)"""
@@ -1030,25 +1045,32 @@ call smatrix(p,ref)"""
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open('ColorNumFactors.dat','w')
+        CMWriter=open(
+             '%{proc_prefix}sColorNumFactors.dat'%self.general_replace_dict,'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open('ColorDenomFactors.dat','w')
+        CMWriter=open(
+           '%{proc_prefix}sColorDenomFactors.dat'%self.general_replace_dict,'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open('HelConfigs.dat','w')
+        HelConfigWriter=open(
+                  '%{proc_prefix}ss.dat'%self.general_replace_dict,'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
         HelConfigWriter.close()
         
         # Extract helas calls
         loop_amp_helas_calls = fortran_model.get_loop_amp_helas_calls(\
-                                                            matrix_element)
+                                                                 matrix_element)
+        # The proc_prefix must be replaced
+        loop_amp_helas_calls = [lc % self.general_replace_dict 
+                                                 for lc in loop_amp_helas_calls]
+        
         born_ct_helas_calls, UVCT_helas_calls = \
                            fortran_model.get_born_ct_helas_calls(matrix_element)
         # In the default output, we do not need to separate these two kind of
@@ -1076,15 +1098,17 @@ call smatrix(p,ref)"""
             replace_dict[toBeRepaced]='\n'.join(loop_amp_helas_calls)
         
         file = file % replace_dict
+
+        loop_calls_finder = re.compile(r'^\s*CALL\S*LOOP\S*')
+        n_loop_calls = len(filter(lambda call: 
+               not loop_calls_finder.match(call) is None, loop_amp_helas_calls))
         if writer:
             # Write the file
             writer.writelines(file)  
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, \
-                              loop_amp_helas_calls))
+            return n_loop_calls
         else:
             # Return it to be written along with the others
-            return len(filter(lambda call: call.find('CALL LOOP') != 0, \
-                              loop_amp_helas_calls)), file
+            return n_loop_calls, file
                   
     def write_bornmatrix(self, writer, matrix_element, fortran_model):
         """Create the born_matrix.f file for the born process as for a standard
@@ -1118,8 +1142,9 @@ call smatrix(p,ref)"""
         # ones (provided they are not used further in the code.)
         bornME.optimization = True
         
-        return super(LoopProcessExporterFortranSA,self).\
-          write_matrix_element_v4(writer,bornME,fortran_model)
+        return super(LoopProcessExporterFortranSA,self).write_matrix_element_v4(
+                                                  writer, bornME, fortran_model, 
+                           proc_prefix=self.general_replace_dict['proc_prefix'])
 
     def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
                                 noSplit=False): 
@@ -1353,10 +1378,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
-                                             matrix_element.get_max_loop_rank())
+                                         matrix_element.get_max_loop_rank(),
+                                         sub_prefix=replace_dict['proc_prefix'])
         mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
                     matrix_element.get_max_loop_rank(),coef_format='complex*32',
-                                                               sub_prefix='MP_')
+                                   sub_prefix='MP_'+replace_dict['proc_prefix'])
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
         subroutines.append(mp_poly_writer.write_polynomial_evaluator())
@@ -1425,6 +1451,9 @@ ENDIF"""
         coef_construction, coef_merging = fortran_model.get_coef_construction_calls(\
                                     matrix_element,group_loops=self.group_loops,
                         squared_orders=squared_orders,split_orders=split_orders)
+        # The proc_prefix must be replaced
+        coef_construction = [c % self.general_replace_dict for c 
+                                                           in coef_construction]
         self.turn_to_mp_calls(coef_construction)
         self.turn_to_mp_calls(coef_merging)        
                                          
@@ -1500,7 +1529,7 @@ ENDIF"""
             self.general_replace_dict['set_coupling_target']='\n'.join([
 '# Here we leave the default target squared split order to -1, meaning that we'+
 ' aim at computing all individual contributions. You can choose otherwise.',
-'call SET_COUPLINGORDERS_TARGET(-1)'])
+'call %(proc_prefix)sSET_COUPLINGORDERS_TARGET(-1)'%self.general_replace_dict])
             self.general_replace_dict['print_so_loop_results'] = '\n'.join([
               '\n'.join(["write(*,*) 'Loop ME for orders (%s) :'"%(' '.join(
           ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))])),
@@ -1690,14 +1719,14 @@ C the split_order summed value I=0 is used in ML5 code.
 DO I=0,NSQUAREDSO
   TEMP1(I)=0.0d0
 ENDDO
-CALL SMATRIXHEL_SPLITORDERS(P_USER,USERHEL,TEMP1(0))
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,TEMP1(0))
 DO I=0,NSQUAREDSO
   ANS(0,I)=TEMP1(I)
 ENDDO
-"""
+"""%self.general_replace_dict
             replace_dict['set_reference']='\n'.join(
               ['C We set here the reference to the born summed over all split orders and helicities',
-              'call smatrix(P_USER,ref)'])
+              'call %(proc_prefix)ssmatrix(P_USER,ref)'%self.general_replace_dict])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join([
@@ -1735,18 +1764,21 @@ ENDDO""")
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open('ColorNumFactors.dat','w')
+        CMWriter=open(
+             '%{proc_prefix}sColorNumFactors.dat'%self.general_replace_dict,'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open('ColorDenomFactors.dat','w')
+        CMWriter=open(
+           '%{proc_prefix}sColorDenomFactors.dat'%self.general_replace_dict,'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open('HelConfigs.dat','w')
+        HelConfigWriter=open(
+                  '%{proc_prefix}sHelConfigs.dat'%self.general_replace_dict,'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
         HelConfigWriter.close()
@@ -1760,8 +1792,12 @@ ENDDO""")
                         squared_orders=squared_orders,split_orders=split_orders)
 
         loop_CT_calls = fortran_model.get_loop_CT_calls(matrix_element,\
-                    group_loops=self.group_loops, squared_orders=squared_orders,
-                                                      split_orders=split_orders)
+                       group_loops=self.group_loops,
+                       squared_orders=squared_orders, split_orders=split_orders)
+        # The proc_prefix must be replaced
+        coef_construction = [c % self.general_replace_dict for c 
+                                                           in coef_construction]
+        loop_CT_calls = [lc % self.general_replace_dict for lc in loop_CT_calls]
         
         file = open(os.path.join(self.template_dir,\
                                            'loop_matrix_standalone.inc')).read()

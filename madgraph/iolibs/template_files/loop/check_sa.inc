@@ -142,7 +142,7 @@ C     Update the couplings with the new MU_R
 C
 C     Now we can call the matrix element
 C
-      CALL SLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
+      CALL %(proc_prefix)sSLOOPMATRIX_THRES(P,MATELEM,-1.0d0,PREC_FOUND,RETURNCODE)
 
 C
 C        write the information on the four momenta 
