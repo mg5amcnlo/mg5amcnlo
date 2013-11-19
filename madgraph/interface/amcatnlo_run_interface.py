@@ -92,8 +92,8 @@ def compile_dir(arguments):
     this function needs not to be a class method in order to use pool to do
     the compilation on multicore"""
 
-    (me_dir, p_dir, mode, options, tests, exe, run_mode, i, ndirs) = arguments
-    logger.info(' Compiling %s... (%d / %d)' % (p_dir, i + 1, ndirs))
+    (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
+    logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
     #compile everything
@@ -2678,16 +2678,15 @@ Integrated cross-section
             logger.info('Compiling on %d cores' % self.nb_core)
             mypool.map(compile_dir,
                     ((self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode'], i, len(p_dirs)) \
-                        for i, p_dir in enumerate(p_dirs)))
+                        tests, exe, self.options['run_mode']) for p_dir in p_dirs))
             time.sleep(1) # sleep one second to make sure all ajob* files are written
             mypool.terminate() # kill all the members of the multiprocessing pool
         except ImportError: 
             self.nb_core = 1
             logger.info('Multiprocessing module not found. Compiling on 1 core')
-            for i, p_dir in enumerate(p_dirs):
+            for p_dir in p_dirs:
                 compile_dir(self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode'], i, len(p_dirs))
+                        tests, exe, self.options['run_mode'])
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
