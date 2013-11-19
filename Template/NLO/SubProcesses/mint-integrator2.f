@@ -125,7 +125,7 @@ c Initialize grids
                xgrid(kint,kdim)=dble(kint)/nint_used
             enddo
          enddo
-         call init_ave_virt(nint_used,ndim)
+c$$$         call init_ave_virt(nint_used,ndim)
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
          even=.false.
@@ -243,7 +243,7 @@ c compute jacobian ('vol') for the PS point
             if(imode.eq.0)
      &           nhits(icell(kdim),kdim)=nhits(icell(kdim),kdim)+1
          enddo
-         call get_ave_virt(x,nint_used,ndim,average_virtual)
+c$$$         call get_ave_virt(x,nint_used,ndim,average_virtual)
 c contribution to integral
          if(imode.eq.0) then
             dummy=fun(x,vol,ifirst,f1)
@@ -272,7 +272,10 @@ c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
                xacc(icell(kdim),kdim)=xacc(icell(kdim),kdim)+f(1)
             enddo
             if (f(4).ne.0d0) then
-               call fill_ave_virt(x,nint_used,ndim,f(4))
+c$$$               call fill_ave_virt(x,nint_used,ndim,f(3)*virtual_fraction,f(5))
+               f(5)=f(5)/virtual_fraction
+            else
+               f(5)=0d0
             endif
          else
 c update the upper bounding envelope
@@ -385,7 +388,7 @@ c Reset the MINT grids
                      xgrid(kint,kdim)=dble(kint)/nint_used
                   enddo
                enddo
-               call init_ave_virt(nint_used,ndim)
+c$$$               call init_ave_virt(nint_used,ndim)
             elseif (imode.eq.1) then
                do kdim=1,ndim
                   nintcurr=nint_used/ifold(kdim)
@@ -451,6 +454,7 @@ c double the number of points for the next iteration
          write (*,'(a,1x,e9.3)') 'Chi^2=',(vtot(1)-ans(1))**2
      $        /etot(1)**2
       endif
+
       nit_included=nit_included+1
       write(*,'(a,1x,e9.3,1x,a,1x,e9.3,1x,a,1x,f7.3,1x,a)')
      $     'accumulated result |int|=',ans(1),' +/- ',unc(1),' ('
@@ -470,15 +474,22 @@ c double the number of points for the next iteration
          write (*,'(a,1x,e9.3)') 'accumulated result Chi^2 per DoF =',
      &        chi2(1)/dble(nit_included-1)
       endif
+      if (imode.eq.0) then
+c     Update the average_virtual: a_new=(virt+a_old*born)/born
+         if (average_virtual.eq.0d0) then ! i.e. first iteration
+            average_virtual=vtot(3)/vtot(5)+average_virtual
+         else ! give some importance to the iterations already done
+            average_virtual=(vtot(3)/vtot(5)+average_virtual*2d0)/2d0
+         endif
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
-      if (imode.eq.0) then
          virtual_fraction=max(min(virtual_fraction*
      &        max(min(2d0*etot(3)/etot(1),2d0),0.25d0),1d0),0.01d0)
-c Give same importance to last ave_virtual as compared to all the others
-         average_virtual=ans(4)
-         write (*,'(a,1x,f7.3)')
-     $        'update virtual fraction to:',virtual_fraction
+         write (*,'(a,1x,f7.3,1x,f7.3)')
+     $        'update virtual fraction to:',virtual_fraction,average_virtual
+      elseif (imode.eq.1) then
+         write (*,'(a,1x,f7.3,1x,f7.3)')
+     $        'virtual fraction is:',virtual_fraction,average_virtual
       endif
 c Update the results of the last tree iterations
       do i=1,nintegrals
@@ -527,6 +538,7 @@ c Iteration is finished; now rearrange the grid
             call regrid(xacc(0,kdim),xgrid(0,kdim),nhits(1,kdim)
      $           ,nint_used)
          enddo
+c$$$         call regrid_ave_virt(nint_used,ndim)
 c Regrid the MC over integers (used for the MC over FKS dirs)
          call regrid_MC_integer
       endif
@@ -559,7 +571,7 @@ c Double the number of intervals in the grids if not yet reach the maximum
          do kdim=1,ndim
             call double_grid(xgrid(0,kdim),nint_used)
          enddo
-         call double_ave_virt(nint_used,ndim)
+c$$$         call double_ave_virt(nint_used,ndim)
          nint_used=2*nint_used
       endif
 c double the number of points for the next iteration
@@ -813,6 +825,7 @@ c imode=3 store generation efficiency in x(1)
          vol=vol*dx(kdim)*nintervals/ifold(kdim)
          x(kdim)=xgrid(icell(kdim)-1,kdim)+rand(kdim)*dx(kdim)
       enddo
+c$$$      call get_ave_virt(x,nintcurr,ndim,average_virtual)
       dummy=fun(x,vol,ifirst,f1)
       do i=1,nintegrals
          f(i)=f(i)+f1(i)
@@ -972,13 +985,20 @@ c Got random numbers for all dimensions, update kkk() for the next call
       subroutine init_ave_virt(ninter,ndim)
       implicit none
       include "mint.inc"
-      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,i
-      double precision ave_virt(0:nintervals,ndimmax)
-      common/c_ave_virt/ave_virt,nvirt
+      integer kdim,ndim,ninter,i
+      integer nvirt(nintervals,ndimmax),nvirt_acc(nintervals,ndimmax)
+      double precision ave_virt(nintervals,ndimmax)
+     $     ,ave_virt_acc(nintervals,ndimmax),ave_born_acc(nintervals
+     $     ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc
+     $     ,nvirt,nvirt_acc
       do kdim=1,ndim
-         do i=0,ninter
+         do i=1,ninter
             nvirt(i,kdim)=0
             ave_virt(i,kdim)=0d0
+            nvirt_acc(i,kdim)=0
+            ave_virt_acc(i,kdim)=0d0
+            ave_born_acc(i,kdim)=0d0
          enddo
       enddo
       return
@@ -987,53 +1007,124 @@ c Got random numbers for all dimensions, update kkk() for the next call
       subroutine get_ave_virt(x,ninter,ndim,average_virtual)
       implicit none
       include "mint.inc"
-      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,ncell
-      double precision x(ndimmax),ave_virt(0:nintervals,ndimmax)
-     $     ,average_virtual
-      common/c_ave_virt/ave_virt,nvirt
-      average_virtual=1d0
+      integer kdim,ndim,ninter,ncell
+      double precision x(ndimmax),average_virtual
+      integer nvirt(nintervals,ndimmax),nvirt_acc(nintervals,ndimmax)
+      double precision ave_virt(nintervals,ndimmax)
+     $     ,ave_virt_acc(nintervals,ndimmax),ave_born_acc(nintervals
+     $     ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc
+     $     ,nvirt,nvirt_acc
+      average_virtual=0d0
       do kdim=1,ndim
          ncell=min(int(x(kdim)*ninter)+1,ninter)
-         average_virtual=average_virtual*ave_virt(ncell,kdim)
+         average_virtual=average_virtual+ave_virt(ncell,kdim)
+      enddo
+      average_virtual=average_virtual/ndim
+      return
+      end
+
+      subroutine fill_ave_virt(x,ninter,ndim,virtual,born)
+      implicit none
+      include "mint.inc"
+      integer kdim,ndim,ninter,ncell
+      double precision x(ndimmax),virtual,born
+      integer nvirt(nintervals,ndimmax),nvirt_acc(nintervals,ndimmax)
+      double precision ave_virt(nintervals,ndimmax)
+     $     ,ave_virt_acc(nintervals,ndimmax),ave_born_acc(nintervals
+     $     ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc
+     $     ,nvirt,nvirt_acc
+      do kdim=1,ndim
+         ncell=min(int(x(kdim)*ninter)+1,ninter)
+         nvirt_acc(ncell,kdim)=nvirt_acc(ncell,kdim)+1
+         ave_virt_acc(ncell,kdim)=ave_virt_acc(ncell,kdim)+virtual
+         ave_born_acc(ncell,kdim)=ave_born_acc(ncell,kdim)+born
       enddo
       return
       end
 
-      subroutine fill_ave_virt(x,ninter,ndim,virtual)
+      subroutine regrid_ave_virt(ninter,ndim)
       implicit none
       include "mint.inc"
-      integer kdim,ndim,nvirt(0:nintervals,ndimmax),ninter,ncell
-      double precision x(ndimmax),ave_virt(0:nintervals,ndimmax),virtual
-      common/c_ave_virt/ave_virt,nvirt
+      integer ninter,ndim,kdim,i
+      integer nvirt(nintervals,ndimmax),nvirt_acc(nintervals,ndimmax)
+      double precision ave_virt(nintervals,ndimmax)
+     $     ,ave_virt_acc(nintervals,ndimmax),ave_born_acc(nintervals
+     $     ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc
+     $     ,nvirt,nvirt_acc
+c need to solve for k_new = (virt+k_old*born)/born
       do kdim=1,ndim
-         ncell=min(int(x(kdim)*ninter)+1,ninter)
-         nvirt(ncell,kdim)=nvirt(ncell,kdim)+1
-         ave_virt(ncell,kdim)=
-     &        ( ave_virt(ncell,kdim)*dble(nvirt(ncell,kdim)-1)+
-     &          sign(1d0,virtual)*abs(virtual)**(1d0/ndim) )
-     &         /dble(nvirt(ncell,kdim))
+         do i=1,ninter
+            if (ave_born_acc(i,kdim).ne.0d0) then
+c get k_old in the correct format
+c$$$               ave_virt(i,kdim)=ave_virt(i,kdim)*nvirt(i,kdim)
+               ave_virt(i,kdim)=ave_virt(i,kdim)
+c compute k_new
+               ave_virt(i,kdim)=ave_virt_acc(i,kdim)/ave_born_acc(i
+c$$$     $              ,kdim)*nvirt_acc(i,kdim)+ave_virt(i,kdim)
+     $              ,kdim)+ave_virt(i,kdim)
+            else
+               ave_virt(i,kdim)=0d0
+            endif
+         enddo
+      enddo
+      do kdim=1,ndim
+         do i=1,ninter
+c convert k_new to the multiplicative format
+            nvirt(i,kdim)=nvirt(i,kdim)+nvirt_acc(i,kdim)
+c$$$            if (nvirt(i,kdim).ne.0) then
+c$$$               ave_virt(i,kdim)=abs(ave_virt(i,kdim))/nvirt(i,kdim)
+c$$$            else
+c$$$               ave_virt(i,kdim)=0d0
+c$$$            endif
+
+            write (*,*) ave_virt(i,kdim),ave_virt_acc(i,kdim)
+     $           ,ave_born_acc(i,kdim),ave_virt_acc(i,kdim)
+     $           /ave_born_acc(i,kdim),nvirt_acc(i,kdim),nvirt(i,kdim)
+
+         enddo
+      enddo
+c reset the acc values
+      do kdim=1,ndim
+         do i=1,ninter
+            nvirt_acc(i,kdim)=0
+            ave_born_acc(i,kdim)=0d0
+            ave_virt_acc(i,kdim)=0d0
+         enddo
       enddo
       return
       end
+
 
       subroutine double_ave_virt(ninter,ndim)
       implicit none
       include "mint.inc"
-      integer kdim,ndim,nvirt(0:nintervals,ndimmax),i,ninter
-      double precision ave_virt(0:nintervals,ndimmax)
-      common/c_ave_virt/ave_virt,nvirt
+      integer kdim,ndim,i,ninter
+      integer nvirt(nintervals,ndimmax),nvirt_acc(nintervals,ndimmax)
+      double precision ave_virt(nintervals,ndimmax)
+     $     ,ave_virt_acc(nintervals,ndimmax),ave_born_acc(nintervals
+     $     ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc
+     $     ,nvirt,nvirt_acc
       do kdim=1,ndim
+         write (*,*) (ave_virt(i,kdim),i=1,ninter)
+         write (*,*) (nvirt(i,kdim),i=1,ninter)
          do i=ninter,1,-1
             ave_virt(i*2,kdim)=ave_virt(i,kdim)
             if (i.ne.1) ave_virt(i*2-1,kdim)=(ave_virt(i,kdim)
      $           +ave_virt(i-1,kdim))/2d0
-            nvirt(i*2,kdim)=nvirt(i,kdim)
+            nvirt(i*2,kdim)=nvirt(i,kdim)/2
             if ( (nvirt(i,kdim).eq.0 .and. nvirt(i-1,kdim).eq.1) .or.
      &           (nvirt(i,kdim).eq.1 .and. nvirt(i-1,kdim).eq.0) ) then
                nvirt(i*2-1,kdim)=1
             else
-               if (i.ne.1) nvirt(i*2-1,kdim)=(nvirt(i,kdim)+nvirt(i-1
-     $              ,kdim))/2
+               if (i.ne.1) then
+                  nvirt(i*2-1,kdim)=(nvirt(i,kdim)+nvirt(i-1,kdim))/4
+               else
+                  nvirt(i,kdim)=nvirt(i,kdim)/2
+               endif
             endif
          enddo
       enddo

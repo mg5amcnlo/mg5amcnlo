@@ -1528,6 +1528,8 @@ c Soft subtraction term:
      &                *xsec*CONV
                  unwgt_table(0,3,j)=unwgt_table(0,3,j)+PD(j)*virt_wgt
      &                *xsec*CONV
+                 unwgt_table(1,3,j)=unwgt_table(1,3,j)+PD(j)*born_wgt
+     &                *xsec*CONV*g**2/(8d0*PI**2)
               enddo
               bsv_wgt=bsv_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
@@ -1810,6 +1812,7 @@ c Update the shower starting scale with the shape from montecarlocounter
                else
                   unwgt_table(0,1,j)=0d0
                   unwgt_table(0,3,j)=0d0
+                  unwgt_table(1,3,j)=0d0
                endif
             enddo
          endif
@@ -1827,6 +1830,8 @@ c Update the shower starting scale with the shape from montecarlocounter
                unwgt_table(0,1,j)=unwgt_table(0,1,j)
      $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
                unwgt_table(0,3,j)=unwgt_table(0,3,j)
+     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+               unwgt_table(1,3,j)=unwgt_table(1,3,j)
      $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
             endif
          enddo

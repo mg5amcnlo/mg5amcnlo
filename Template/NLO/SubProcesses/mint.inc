@@ -4,7 +4,7 @@ c "nintervals = min_inter * 2^n",
 c where 'n' is smaller or equal to 'min_it'.
 
       integer nintervals,ndimmax,nintegrals
-      parameter (nintervals=32,ndimmax=60,nintegrals=4)
+      parameter (nintervals=32,ndimmax=60,nintegrals=5)
 
       integer min_inter,min_it,max_it,max_points
       data min_inter /4/

@@ -1180,7 +1180,7 @@ c reweighting
       include 'madfks_mcatnlo.inc'
       include 'run.inc'
       double precision unwgt_table(0:fks_configs,3,maxproc)
-     $     ,f(nintegrals),dummy,dlum,f_abs_H,f_abs_S,f_V,rnd,ran2
+     $     ,f(nintegrals),dummy,dlum,f_abs_H,f_abs_S,f_V,f_B,rnd,ran2
      $     ,current,f_abs_S_un,f_unwgt(fks_configs,maxproc),sum,tot_sum
      $     ,temp_shower_scale
       external ran2
@@ -1260,6 +1260,7 @@ c
          f_abs_H=0d0
          f_abs_S=0d0
          f_V=0d0
+         f_B=0d0
 c Nothing to combine for H-events, so need to sum them independently
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
@@ -1325,6 +1326,7 @@ c nFKSprocess_soft)
      &                          f_unwgt(nFKSprocess_soft,i) +
      &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
                            f_V=f_V+unwgt_table(0,3,i)
+                           f_B=f_B+unwgt_table(1,3,i)
                         endif
                      enddo
                   endif
@@ -1345,6 +1347,7 @@ c the n+1-body to it
                         f_unwgt(nFKSprocess,i) = f_unwgt(nFKSprocess,i)
      $                       +unwgt_table(0,1,i)+unwgt_table(0,2,i)
                         f_V=f_V+unwgt_table(0,3,i)
+                        f_B=f_B+unwgt_table(1,3,i)
                      endif
                   enddo
                   do j=1,iproc_save(nFKSprocess)
@@ -1361,6 +1364,7 @@ c Sum here all together for the S-event contributions
          f(1)=f_abs_H+f_abs_S
          f(3)=f_V
          f(4)=virtual_over_born
+         f(5)=f_B
 c absolute values of total rate are now filled (including the f_unwgt
 c array for the S-event contributions)
 c*******************************************************************
@@ -1489,6 +1493,7 @@ c and the n-body contributions
      &                 f_unwgt(nFKSprocess_used_born,i)+
      &                 unwgt_table(0,1,i)
                   f_V=f_V+unwgt_table(0,3,i)
+                  f_B=f_B+unwgt_table(1,3,i)
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))
@@ -1498,11 +1503,13 @@ c just return the (correct) absolute value
             f(1)=f_abs_H+f_abs_S
             f(3)=f_V
             f(4)=virtual_over_born
+            f(5)=f_B
          else
 c pick one at random and update reweight info and all that
             f(1)=f_abs_H+f_abs_S
             f(3)=f_V
             f(4)=virtual_over_born
+            f(5)=f_B
             Hevents=.false.
             if (f(1).ne.0d0) then
                rnd=ran2()
