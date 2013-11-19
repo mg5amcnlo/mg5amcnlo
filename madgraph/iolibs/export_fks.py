@@ -351,7 +351,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #first make and cd the direcrory corresponding to the born process:
         borndir = "P%s" % \
         (matrix_element.get('processes')[0].shell_string())
-        print me_number
         os.mkdir(borndir)
         os.chdir(borndir)
         logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
