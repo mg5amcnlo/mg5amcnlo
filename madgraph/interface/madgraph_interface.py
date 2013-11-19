@@ -2793,7 +2793,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             mybanner = banner.Banner(param_card)
             param_card = mybanner.charge_card('param_card')
  
-
+        aloha_lib.KERNEL.clean()
         # Back up the gauge for later
         gauge = str(self.options['gauge'])
         
