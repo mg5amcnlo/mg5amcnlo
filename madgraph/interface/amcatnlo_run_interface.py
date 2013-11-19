@@ -1731,8 +1731,7 @@ Integrated cross-section
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Prepairing MCatNLO run')
-        self.update_status('Showering events...', level='parton', update_results = True) 
+        logger.info('Prepairing MCatNLO run')
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
@@ -1804,7 +1803,7 @@ Integrated cross-section
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
-        self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
+        self.update_status('Compiling MCatNLO for %s...' % shower, level='parton') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
@@ -1824,9 +1823,8 @@ Integrated cross-section
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
-                level='parton')
         self.update_status('Showering events...', level='parton')
+        logger.info('(Running in %s)' % rundir)
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)

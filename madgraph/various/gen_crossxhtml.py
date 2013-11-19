@@ -977,7 +977,6 @@ class OneTagResults(dict):
                     if os.path.exists(os.path.join(self.me_dir, 'bin', 'madevent')): 
                         local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
                     elif os.path.exists(os.path.join(self.me_dir, 'bin', 'aMCatNLO')): 
-                        print 'MZ: update buttons for amcatnlo'
                         pass
 
             elif type == 'pythia':
