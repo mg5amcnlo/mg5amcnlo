@@ -1398,14 +1398,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info(new_file)        
  
         if hasattr(self, 'results'):
+            current = self.results.current
             nb_event = self.results.current['nb_event']
-            cross = self.results.current['cross']
-            error = self.results.current['error']
+            if not nb_event:
+                current = self.results[self.run_name][0]
+                nb_event = current['nb_event']
+            
+            cross = current['cross']
+            error = current['error']
             self.results.add_run( new_run, self.run_card)
             self.results.add_detail('nb_event', nb_event)
             self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
             self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+            self.results.add_detail('run_mode', current['run_mode'])
+    
         self.run_name = new_run
+        self.banner.add(path)
+        self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
+                                (self.run_name, self.run_tag)))
         self.update_status('MadSpin Done', level='parton', makehtml=False)
         if 'unweighted' in os.path.basename(args[0]):
             self.create_plot('parton')

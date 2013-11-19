@@ -355,7 +355,8 @@ class AllResults(dict):
                                    'noshower': '(aMC@NLO)',
                                    'noshowerLO': '(aMC@LO)',
                                    'NLO': '(NLO f.o.)',
-                                   'LO': '(LO f.o.)'}
+                                   'LO': '(LO f.o.)',
+                                   'madevent':''}
                 status_dict['run_mode_string'] = run_mode_string[self.current['run_mode']]
             else:
                 status_dict['run_mode_string'] = ''
@@ -597,6 +598,7 @@ class OneTagResults(dict):
         self['cross_pythia'] = ''
         self['nb_event_pythia'] = 0
         self['error'] = 0
+        self['run_mode'] = 'madevent'
         self.parton = []
         self.reweight = [] 
         self.pythia = []
