@@ -2109,7 +2109,6 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                         options=options,param_card=param_card, 
                                                         keep_folder=keep_folder,
                                                         MLOptions=MLoptions)
-    
     if stability == None:
         return None
     else:

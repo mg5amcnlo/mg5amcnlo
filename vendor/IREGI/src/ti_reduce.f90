@@ -5,16 +5,23 @@ MODULE ti_reduce
   USE funlib
   IMPLICIT NONE
 CONTAINS
-  SUBROUTINE tensor_integral_reduce(IMODE,NLOOPLINE,MAXRANK,NCOEFS,PDEN,M2L,MU,TICOEFS,TSTABLE)
+  SUBROUTINE tensor_integral_reduce(IMODE,NLOOPLINE,MAXRANK,NCOEFS,PDEN_IN,M2L_IN,MU,TICOEFS,TSTABLE,CTMODE)
+    ! CTMODE=1 ---> DO NOTHING
+    ! CTMODE=2 ---> ROTATE THE LOOP PROPAGATOR DIRECTION,i.e D0...DN-1 to DN-1...D0
     ! IMODE=0, IBP reduction
     ! IMODE=1, PaVe reduction
     ! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
     IMPLICIT NONE
     INTEGER,INTENT(IN)::NLOOPLINE,MAXRANK,IMODE,NCOEFS
+    INTEGER,INTENT(IN),OPTIONAL::CTMODE
     REAL(KIND(1d0)),INTENT(IN)::MU
-    REAL(KIND(1d0)),DIMENSION(NLOOPLINE,0:3),INTENT(IN)::PDEN
-    REAL(KIND(1d0)),DIMENSION(NLOOPLINE),INTENT(IN)::M2L
+    REAL(KIND(1d0)),DIMENSION(NLOOPLINE,0:3),INTENT(IN)::PDEN_IN
+    REAL(KIND(1d0)),DIMENSION(NLOOPLINE,0:3)::PDEN
+    REAL(KIND(1d0)),DIMENSION(0:3)::PDEN_N
+    REAL(KIND(1d0)),DIMENSION(NLOOPLINE),INTENT(IN)::M2L_IN
+    REAL(KIND(1d0)),DIMENSION(NLOOPLINE)::M2L
     COMPLEX(KIND(1d0)),DIMENSION(0:NCOEFS-1,1:4),INTENT(OUT)::TICOEFS
+    COMPLEX(KIND(1d0)),DIMENSION(0:NCOEFS-1,1:4)::TICOEFS_SAVE
     LOGICAL,INTENT(OUT)::TSTABLE
     INTEGER,DIMENSION(1,1)::sol11
     REAL(KIND(1d0)),DIMENSION(1)::factor1
@@ -24,7 +31,14 @@ CONTAINS
     INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE)::sy
 !    REAL(KIND(1d0)),PARAMETER::EPS=1d-10
     REAL(KIND(1d0))::temp
+    INTEGER::ctmode_local
+    LOGICAL::do_shift
     SAVE first
+    IF(PRESENT(CTMODE))THEN
+       ctmode_local=CTMODE
+    ELSE
+       ctmode_local=1
+    ENDIF
     MU_R_IREGI=MU
     IF(first.EQ.0)THEN
        WRITE(*,*)"#####################################################################################"
@@ -51,7 +65,26 @@ CONTAINS
        END DO
        first=1
     ENDIF
+    IF(ctmode_local.EQ.2)THEN
+       PDEN_N(0:3)=PDEN_IN(NLOOPLINE,0:3)
+       DO I=1,NLOOPLINE
+          PDEN(NLOOPLINE-I+1,0:3)=PDEN_IN(I,0:3)-PDEN_N(0:3)
+          M2L(NLOOPLINE-I+1)=M2L_IN(I)
+       ENDDO
+    ELSE
+       PDEN_N(0:3)=PDEN_IN(1,0:3)
+       DO I=1,NLOOPLINE
+          PDEN(I,0:3)=PDEN_IN(I,0:3)-PDEN_N(0:3)
+          M2L(1:NLOOPLINE)=M2L_IN(1:NLOOPLINE)
+       ENDDO
+    ENDIF
     numzerp=0
+    temp=(ABS(PDEN_N(0))+ABS(PDEN_N(1))+ABS(PDEN_N(2))+ABS(PDEN_N(3)))/4d0
+    IF(temp.LT.EPS)THEN
+       do_shift=.FALSE.
+    ELSE
+       do_shift=.TRUE.
+    ENDIF
     DO i=1,NLOOPLINE
        temp=(ABS(PDEN(i,0))+ABS(PDEN(i,1))+ABS(PDEN(i,2))+ABS(PDEN(i,3)))/4d0
        IF(temp.LT.EPS)THEN
@@ -70,6 +103,12 @@ CONTAINS
     CALL symmetry(IMODE,NLOOPLINE,ntot,sy(1:xiarraymax2,-1:n),syfactor(1:xiarraymax2),&
          numzerp,zerp,PDEN,M2L,NCOEFS,TICOEFS)
     TSTABLE=STABLE_IREGI
+    IF(TSTABLE.AND.do_shift)THEN
+       ! do momentum shift
+       TICOEFS_SAVE(0:NCOEFS-1,1:4)=TICOEFS(0:NCOEFS-1,1:4)
+       PDEN_N(0:3)=-PDEN_N(0:3)
+       CALL SHIFT_MOM(PDEN_N,NCOEFS,TICOEFS_SAVE,TICOEFS)
+    ENDIF
     RETURN
   END SUBROUTINE tensor_integral_reduce
 

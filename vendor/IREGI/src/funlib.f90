@@ -786,4 +786,140 @@ CONTAINS
     WRITE(*,*)"ERROR in POS2RANK,ipos=",ipos
     STOP
   END FUNCTION POS2RANK
+
+  FUNCTION RANK_NUM(MAXRANK)
+    IMPLICIT NONE
+    INTEGER::RANK_NUM
+    INTEGER,INTENT(IN)::MAXRANK
+    INTEGER::I
+    RANK_NUM=0
+    IF(MAXRANK.LT.0)RETURN
+    DO I=0,MAXRANK
+       RANK_NUM=RANK_NUM+(I+3)*(I+2)*(I+1)/6
+    ENDDO
+    RETURN
+  END FUNCTION RANK_NUM
+
+  SUBROUTINE SHIFT_MOM(MOM,NCOEFS,TICOEFS_SAVE,TICOEFS)
+    ! SHIFT MOMENTUM MOM
+    IMPLICIT NONE
+    !
+    ! CONSTANS
+    !
+    ! MAX RANK SET AS 10
+    ! Sum((3+r)*(2+r)*(1+r)/6,{r,0,10})=1001 --> LOOPMAXCOEFS_IREGI
+    ! MAX OF (i1+1)*(i2+1)*(i3+1)*(i4+1) with i1+i2+i3+i4<=MAXRANK = 144 --> MAXSPLIT
+    INTEGER,PARAMETER::LOOPMAXCOEFS_IREGI=1001,MAXRANK=10,MAXSPLIT=144
+    REAL(KIND(1d0)),DIMENSION(0:3),INTENT(IN)::MOM
+    INTEGER,INTENT(IN)::NCOEFS
+    COMPLEX(KIND(1d0)),DIMENSION(0:NCOEFS-1,1:4),INTENT(IN)::TICOEFS_SAVE
+    COMPLEX(KIND(1d0)),DIMENSION(0:NCOEFS-1,1:4),INTENT(OUT)::TICOEFS
+    LOGICAL::INIT=.TRUE.
+    INTEGER,DIMENSION(0:LOOPMAXCOEFS_IREGI-1)::NTERM
+    REAL(KIND(1d0)),DIMENSION(0:LOOPMAXCOEFS_IREGI-1,MAXSPLIT)::SPLIT_FACTOR
+    ! i=0-3 -> number of lorentz indices =i
+    ! i=4 -> the position of TICOEFS that should be multiplied
+    ! e.g. (q+MOM)^mu1(q+MOM)^mu2...(q+MOM)^muk
+    ! it can be splitted into q^mu1...q^muk+q^mu1...q^mui Mom^mui+1 ...q^muk ...
+    ! for some specific term configurateion mu1=0,mu2=0,...muk=3
+    ! NTERM stores the total number of terms
+    ! SPLIT_FACTOR is the factor for each term
+    ! SPLIT_INFO(J,K,0-3) is the number of 0,1,2,3 with MOM^mu
+    ! SPLIT_INFO(J,K,4) is the corresponding q^mu (remaining lorentz indices)
+    INTEGER,DIMENSION(0:LOOPMAXCOEFS_IREGI-1,MAXSPLIT,0:4)::SPLIT_INFO  
+    SAVE INIT,NTERM,SPLIT_FACTOR,SPLIT_INFO
+    INTEGER::I,J,K,L,NINDEX,r,incr
+    INTEGER::i1,i2,i3,i4,nsplit,itit,rte,ND
+    REAL(KIND(1d0))::temp
+    INTEGER,DIMENSION(MAXRANK)::POSINDEX
+    IF(INIT)THEN
+       incr=0
+       ND=0
+       DO r=0,MAXRANK
+          DO I=r,0,-1
+             DO J=r-I,0,-1
+                DO K=r-I-J,0,-1
+                   L=r-I-J-K
+                   ! exhaust all of the subsets
+                   nsplit=0
+                   NTERM(incr)=(I+1)*(J+1)*(K+1)*(L+1)
+                   DO i1=0,I
+                      !DO itit=1,i1
+                      !   POSINDEX(itit)=0
+                      !ENDDO
+                      DO i2=0,J
+                         !DO itit=i1+1,i1+i2
+                         !   POSINDEX(itit)=1
+                         !ENDDO
+                         DO i3=0,K
+                            !DO itit=i1+i2+1,i1+i2+i3
+                            !   POSINDEX(itit)=2
+                            !ENDDO
+                            DO i4=0,L
+                               !DO itit=i1+i2+i3+1,i1+i2+i3+i4
+                               !   POSINDEX(itit)=3
+                               !ENDDO
+                               nsplit=nsplit+1
+                               rte=i1+i2+i3+i4
+                               DO itit=1,i1
+                                  POSINDEX(rte-itit+1)=0
+                               ENDDO
+                               DO itit=i1+1,i1+i2
+                                  POSINDEX(rte-itit+1)=1
+                               ENDDO
+                               DO itit=i1+i2+1,i1+i2+i3
+                                  POSINDEX(rte-itit+1)=2
+                               ENDDO
+                               DO itit=i1+i2+i3+1,i1+i2+i3+i4
+                                  POSINDEX(rte-itit+1)=3
+                               ENDDO
+                               SPLIT_INFO(incr,nsplit,4)=QPOLYPOS(rte,POSINDEX)+RANK_NUM(rte-1)-1
+                               SPLIT_INFO(incr,nsplit,0)=I-i1
+                               SPLIT_INFO(incr,nsplit,1)=J-i2
+                               SPLIT_INFO(incr,nsplit,2)=K-i3
+                               SPLIT_INFO(incr,nsplit,3)=L-i4
+                               SPLIT_FACTOR(incr,nsplit)=DBLE(factorial(I))&
+                                    /DBLE(factorial(i1)*factorial(I-i1))
+                               SPLIT_FACTOR(incr,nsplit)=SPLIT_FACTOR(incr,nsplit)*&
+                                    DBLE(factorial(J))/DBLE(factorial(i2)*factorial(J-i2))
+                               SPLIT_FACTOR(incr,nsplit)=SPLIT_FACTOR(incr,nsplit)*&
+                                    DBLE(factorial(K))/DBLE(factorial(i3)*factorial(K-i3))
+                               SPLIT_FACTOR(incr,nsplit)=SPLIT_FACTOR(incr,nsplit)*&
+                                    DBLE(factorial(L))/DBLE(factorial(i4)*factorial(L-i4))
+                               IF(.NOT.ML5_CONVENTION)THEN
+                                  SPLIT_FACTOR(incr,nsplit)=SPLIT_FACTOR(incr,nsplit)*&
+                                       DBLE(factorial(r))/DBLE(factorial(I)*factorial(J))&
+                                       /DBLE(factorial(K)*factorial(L))
+                                  SPLIT_FACTOR(incr,nsplit)=SPLIT_FACTOR(incr,nsplit)/&
+                                       DBLE(factorial(rte))*DBLE(factorial(i1))*DBLE(factorial(i2))*&
+                                       DBLE(factorial(i3))*DBLE(factorial(i4))
+                               ENDIF
+                            ENDDO
+                         ENDDO
+                      ENDDO
+                   ENDDO
+                   incr=incr+1
+                ENDDO
+             ENDDO
+          ENDDO
+          ND=ND+(3+r)*(2+r)*(1+r)/6
+       ENDDO
+       INIT=.FALSE.
+    ENDIF
+    DO I=0,NCOEFS-1
+       TICOEFS(I,1:4)=DCMPLX(0d0)
+       DO J=1,NTERM(I)
+          temp=SPLIT_FACTOR(I,J)
+          DO K=0,3
+             NINDEX=SPLIT_INFO(I,J,K)
+             IF(NINDEX.GT.0)THEN
+                temp=temp*MOM(K)**NINDEX
+             ENDIF
+          ENDDO
+          TICOEFS(I,1:4)=TICOEFS(I,1:4)&
+               +TICOEFS_SAVE(SPLIT_INFO(I,J,4),1:4)*temp
+       ENDDO
+    ENDDO
+    RETURN
+  END SUBROUTINE SHIFT_MOM
 END MODULE FUNLIB
