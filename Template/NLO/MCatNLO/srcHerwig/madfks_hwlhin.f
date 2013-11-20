@@ -18,7 +18,6 @@ C---Les Houches Event Common Block
       INTEGER ISORH_LHE,IFKS_LHE,JFKS_LHE,FKSFATHER_LHE,IPARTNER_LHE
       DOUBLE PRECISION SCALE1_LHE,SCALE2_LHE
       DOUBLE PRECISION WGTCENTRAL,WGTMUMIN,WGTMUMAX,WGTPDFMIN,WGTPDFMAX
-      DOUBLE PRECISION WGTBPOWER
       INTEGER MQQ
       COMMON/cMQQ/MQQ
       INTEGER IUNIT
@@ -132,7 +131,6 @@ c Avoids rounding problems for zero-mass particles
           do i=1,numscales
              do j=1,numscales
                 call read_rwgt_line(iunit,idwgt,wgtxsecmu(i,j))
-                iww=iww+1
                 if (numscales.ne.3) then
                    write (*,*) 'ERROR #1 in UPEVNT:',numscales
                    stop
@@ -149,23 +147,14 @@ c Avoids rounding problems for zero-mass particles
                    write(*,*)'incorrect event wgt id',idwgt,i,j
                    stop
                 endif
-             enddo
-          enddo
-          if(numscales.ne.0)then
 c 1 = central,
 c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
 c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
 c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
-             ww(2) =wgtxsecmu(1,1)/MQQ
-             ww(4) =wgtxsecmu(1,2)/MQQ
-             ww(3) =wgtxsecmu(1,3)/MQQ
-             ww(8) =wgtxsecmu(2,1)/MQQ
-             ww(10)=wgtxsecmu(2,2)/MQQ
-             ww(9) =wgtxsecmu(2,3)/MQQ
-             ww(5) =wgtxsecmu(3,1)/MQQ
-             ww(7) =wgtxsecmu(3,2)/MQQ
-             ww(6) =wgtxsecmu(3,3)/MQQ
-          endif
+                iww=iww+1
+                ww(iww)=wgtxsecmu(i,j)/MQQ
+             enddo
+          enddo
           do i=1,2*numPDFpairs
              call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
              iww=iww+1
@@ -243,7 +232,7 @@ c Hard event file (to be entered in Herwig driver)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
       double precision xmuR,xmuF
-      integer idwgt,iPDF
+      integer iPDF
 C
       numscales=0
       numPDFpairs=0
@@ -263,31 +252,13 @@ c --> see if we have the new format for the weights
                if (INDEX(STRING,"</weightgroup>").ne.0 .and.
      $              STRING(1:1).ne.'#') exit
                numscales=numscales+1
-               read(string(index(string,"id=")+4:index(string,"> m")-2),*)idwgt
                read(string(index(string,"muR")+4:index(string,"muF")-1),*)xmuR
                read(string(index(string,"muF")+4:index(string,"</w")-1),*)xmuF
 c 1 = central,
 c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
 c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
 c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
-               if(idwgt.eq.1001)
-     &            write(weights_info(2), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1002)
-     &            write(weights_info(4), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1003)
-     &            write(weights_info(3), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1004)
-     &            write(weights_info(8), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1005)
-     &            write(weights_info(10),111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1006)
-     &            write(weights_info(9), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1007)
-     &            write(weights_info(5), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1008)
-     &            write(weights_info(7), 111)"muR=",xmuR,"muF=",xmuF
-               if(idwgt.eq.1009)
-     &            write(weights_info(6), 111)"muR=",xmuR,"muF=",xmuF
+               write(weights_info(numscales+1), 111)"muR=",xmuR,"muF=",xmuF
             ENDDO
             nwgt=nwgt+numscales
             numscales=nint(sqrt(dble(numscales)))
