@@ -1177,10 +1177,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                 #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
                 to_always_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and
-                             '_' in file and \
+                             '_' in file and not '_G' in file and \
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
 
