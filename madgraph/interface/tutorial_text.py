@@ -15,7 +15,7 @@
 
 tutorial = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of MadGraph5.
+syntax options of MadGraph5_aMC@NLO.
 
 To learn more about the different options for a command, you can use
 MG5_aMC>help A_CMD
@@ -89,7 +89,7 @@ MG5_aMC> launch MY_FIRST_MG5_RUN
 
 open_index = output
 
-launch = """This step ends the tutorial of the basic commands of MG5. You can
+launch = """This step ends the tutorial of the basic commands of MG5_aMC. You can
 always use the help to see the options available for different
 commands. For example, if you want to know all valid output formats,
 you can enter
@@ -97,7 +97,7 @@ MG5_aMC>help output
 
 In order to close this tutorial please enter
 MG5_aMC>tutorial stop
-If you want to exit MG5 please enter
+If you want to exit MG5_aMC please enter
 MG5_aMC>exit
 
 But you can also continue the tutorial to learn some other useful
@@ -105,7 +105,7 @@ commands:
 d) How to load a model
 e) How to define a multi-particle label 
 f) How to store a history of the commands in a session
-g) How to call shell commands from MG5
+g) How to call shell commands from MG5_aMC
 h) How to draw the diagrams for your processes without generating
    MadEvent output
 
@@ -175,7 +175,7 @@ MG5_aMC>import command my_mg5_cmd.dat
 or from the shell:
 ./bin/mg5_aMC my_mg5_cmd.dat
 
-It is also possible to display this file directly from MG5:
+It is also possible to display this file directly from MG5_aMC:
 MG5_aMC>open ./my_mg5_cmd.dat
 """
 
@@ -184,7 +184,7 @@ open_index = output
 
 open = """
 Note that in order to open some file, you might be need to use a shell command.
-Any shell command can be launched by MG5, by running \"shell\" or
+Any shell command can be launched by MG5_aMC, by running \"shell\" or
 starting the line by an exclamation mark (!).
 
 The final command of the tutorial is display diagrams. This allows you to draw and
@@ -204,7 +204,7 @@ This command was the last step of the tutorial.
 Quit the tutorial by typing:
 MG5_aMC>tutorial stop
 
-Thanks for using MG5.
+Thanks for using MadGraph5_aMC@NLO.
 """
 
 

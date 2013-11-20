@@ -16,25 +16,25 @@
 
 tutorial_aMCatNLO = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of aMC@NLO. Most of the syntax is identical to the MadGraph one 
+syntax options of MadGraph5_aMC@NLO for the computation of processes involving
+NLO corrections.
 
-As in MadGraph, to learn more about the different options for a command, 
-you can use
-aMC@NLO>help A_CMD
+To learn more about the different options for a command, you can use
+MG_aMC>help A_CMD
 To see a list of all commands, use
-aMC@NLO>help 
+MG_aMC>help 
 
 The goal of this tutorial is to learn how to generate a process and to
-produce an output for aMC@NLO. In this part we will learn
-a) How to generate a process
-b) How to create output for aMC@NLO
-c) How to run the aMC@NLO output
+produce an output for MadGraph5_aMC@NLO. In this part we will learn
+a) How to generate a process involving NLO corrections
+b) How to create the corresponding output for MadGraph5_aMC@NLO
+c) How to run this output for computing NLO corrections
 
 If you have FastJet (v3 or later) installed on your computer and you wish
 to link it, please update the mg5_configuration file or type
 MG5_aMC>set fastjet /path/to/fastjet-config
-Otherwise the basic fastjet functionalities inluded in FJcore (shipped
-with aMC@NLO) will be used.
+Otherwise the basic fastjet functionalities included in FJcore (shipped
+with MadGraph5_aMC@NLO) will be used.
 
 
 Let's start with the first point, how to generate a process at NLO:
@@ -49,21 +49,21 @@ tutorial = tutorial_aMCatNLO
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-aMC@NLO>help generate
+MG_aMC>help generate
 To list all defined processes, type
-aMC@NLO>display processes
+MG_aMC>display processes
 
 If you want to know more about particles and multiparticles present,
 write
-aMC@NLO>display particles
-aMC@NLO>display multiparticles
+MG_aMC>display particles
+MG_aMC>display multiparticles
 
 If you want to add a second process, use the add process command:
-aMC@NLO>add process p p > e+ e- [QCD] @2
+MG_aMC>add process p p > e+ e- [QCD] @2
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+MG_aMC>output MY_FIRST_AMCATNLO_RUN
 """
 
 display_processes = """
@@ -71,8 +71,8 @@ You have seen a list of the already defined processes.
 
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
-aMC@NLO. This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCTANLO_RUN
+MadGraph5_aMC@NLO. This is done simply by typing:
+MG_aMC>output MY_FIRST_AMCTANLO_RUN
 """
 
 add_process = """
@@ -80,11 +80,11 @@ You have added a process to your process list.
 
 At this stage you can export your processes.
 This is done simply by typing:
-aMC@NLO>output MY_FIRST_AMCATNLO_RUN
+MG_aMC>output MY_FIRST_AMCATNLO_RUN
 """
 output = """
 If you are following the tutorial, a directory MY_FIRST_AMCATNLO_RUN has
-been created which can be used in order to run aMC@NLO.
+been created which can be used in order to run simulation including NLO corrections.
 
 Additionally to the commands in the bin directory (see 
 MY_FIRST_AMCATNLO_RUN/README), you can also generate your events/compute the 
@@ -101,38 +101,40 @@ events in the .lhe file are UNPHYSICAL.
 In order to obtain physical results, please use the .hep file
 
 Please enter
-aMC@NLO> launch 
+MG_aMC> launch 
 
 If you just want to generate the parton level .lhe file, please enter
-aMC@NLO> launch -p
+MG_aMC> launch -p
 
 (you can interrupt the computation to continue the tutorial by pressing Ctrl-C)
 
-At any time, you can access more commands/options for running aMC@NLO by switching to an interactive interface aMC@NLO_run for a given output folder 'MyFolder'.
+At any time, you can access more commands/options for running the output by 
+switching to an interactive interface for a given output folder 'MyFolder'.
 You can do so by typing:
-aMC@NLO> launch -i MyFolder
+MG_aMC> launch -i MyFolder
 
 Please see MY_FIRST_AMCATNLO_RUN/README to know about the available commands.
-To know the possible options/modes for each command, simply tipe
-aMC@NLO_run> help COMMAND
-from the aMC@NLO_run interface
+To know the possible options/modes for each command, simply tiple
+'MyFolder'> help COMMAND
+from the interface bound to the 'MyFolder' output.
 
 """
 
 open_index = output
 
-launch = """This step ends the tutorial of the basic commands of aMCatNLO.
+launch = """This step ends the tutorial of the basic commands of for running
+processes including NLO corrections.
 You can always use the help to see the options available for different
 commands. For example, if you want to know how to launch on multicore/cluster
 just type
-aMC@NLO>help launch
+MG_aMC>help launch
 
-To learn more about MadLoop standalone checks and runs, you can now follow
+To learn more about MadLoop StandAlone checks and runs, you can now follow
 its tutorial with:
-aMC@NLO>tutorial MadLoop
+MG_aMC>tutorial MadLoop
 
 To simply close this tutorial, enter
-aMC@NLO>tutorial stop
+MG_aMC>tutorial stop
 If you want to exit MG5, enter
-aMC@NLO>exit
+MG_aMC>exit
 """
