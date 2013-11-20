@@ -27,8 +27,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       xmi=40.d0
       xms=120.d0
       bin=1.0d0
-      do kk=1,nwgt_analysis
       do j=1,2
+      do kk=1,nwgt_analysis
       l=(kk-1)*10+(j-1)*5
       call bookup(l+ 1,'V pt     '//weights_info(kk)//cc(j)
      &     ,2.d0,0.d0,200.d0)
@@ -61,8 +61,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call mfinal(i)
       enddo
       ytit='sigma per bin '
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
       l=(kk-1)*10+(i-1)*5
       call multitop(l+ 1,3,2,'V pt     ',' ','LOG')
       call multitop(l+ 2,3,2,'V log pt ',' ','LOG')
@@ -125,9 +125,9 @@ C
       yv=getrapidity(pv(0),pv(3))
       etav=getpseudorap(pv(0),pv(1),pv(2),pv(3))
 C
-      do kk=1,nwgt_analysis
-         www=wgts(kk)
-         do i=1,2
+      do i=1,2
+         do kk=1,nwgt_analysis
+            www=wgts(kk)
             l=(kk-1)*10+(i-1)*5
             if (ibody.ne.3 .and.i.eq.2) cycle
             call mfill(l+1,ptv,WWW)
