@@ -573,6 +573,7 @@ BLOCK SPINFO #  spectrum calculator information
 ###################################
 BLOCK MODSEL #  model selection
       1 1 sugra # 
+      2 1 #  fake line for the formating line point of view
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
@@ -667,34 +668,34 @@ BLOCK VMIX #  chargino mixing matrix v
 ###################################
 ## INFORMATION FOR HMIX
 ###################################
-BLOCK HMIX #  drbar higgs parameters
+BLOCK HMIX Q= 4.670342e+02 #  drbar higgs parameters
       1 3.576810e+02 #  mu(q)mssm drbar
       2 9.748624e+00 #  tan beta(q)mssm drba
       4 1.664391e+05 #  ma^2(q)mssm drbar
 ###################################
 ## INFORMATION FOR GAUGE
 ###################################
-BLOCK GAUGE #  the gauge couplings
+BLOCK GAUGE Q= 4.670342e+02 #  the gauge couplings
       3 1.101787e+00 #  g3(q) msbar
 ###################################
 ## INFORMATION FOR YU
 ###################################
-BLOCK YU #  the yukawa couplings
+BLOCK YU Q= 4.670342e+02 #  the yukawa couplings
       3 3 8.928445e-01 #  y_t(q) drbar
 ###################################
 ## INFORMATION FOR YD
 ###################################
-BLOCK YD #  the yukawa couplings
+BLOCK YD Q= 4.670342e+02 #  the yukawa couplings
       3 3 1.388402e-01 #  y_b(q) drbar
 ###################################
 ## INFORMATION FOR YE
 ###################################
-BLOCK YE #  the yukawa couplings
+BLOCK YE Q= 4.670342e+02 #  the yukawa couplings
       3 3 1.008908e-01 #  y_tau(q) drbar
 ###################################
 ## INFORMATION FOR MSOFT
 ###################################
-BLOCK MSOFT #  the soft susy breaking masses at the scale q
+BLOCK MSOFT Q= 4.670342e+02 #  the soft susy breaking masses at the scale q
       1 1.013965e+02 #  m_1(q)
       2 1.915042e+02 #  m_2(q)
       3 5.882630e+02 #  m_3(q)

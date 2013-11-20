@@ -409,25 +409,11 @@ C $E$ IFOREST $E$ !this is a tag for MadWeight
 C $B$ DECAYBW $E$ !this is a tag for MadWeight
 
       integer icl(-(nexternal-3):nexternal)
-      integer ibw
 
       nbw=0
-      do i=-1,-(nexternal-3),-1
-C $B$ ONBW $B$ !this is a tag for MadWeight
-        if(OnBW(i)) then 
-C $E$ ONBW $E$ !this is a tag for MadWeight
-           nbw=nbw+1
-        endif
-      enddo
-      if(nbw.eq.0)then
-c        print *,'No BW found'
-        return
-      endif
-
       do i=1,nexternal
         icl(i)=ishft(1,i-1)
       enddo
-      ibw=0
       do i=-1,-(nexternal-3),-1
         icl(i)=icl(iforest(1,i,this_config))+
      $     icl(iforest(2,i,this_config))
@@ -435,12 +421,11 @@ c        print *,'No BW found'
 C $B$ ONBW $B$ !this is a tag for MadWeight
         if(OnBW(i))then
 C $E$ ONBW $E$ !this is a tag for MadWeight
-          ibw=ibw+1
-          ibwlist(1,ibw)=icl(i)
-          ibwlist(2,ibw)=i
+          nbw=nbw+1
+          ibwlist(1,nbw)=icl(i)
+          ibwlist(2,nbw)=i
           isbw(icl(i))=.true.
 c          print *,'Added BW for resonance ',i,icl(i),this_config
-          if(ibw.eq.nbw) return
         endif
       enddo
       

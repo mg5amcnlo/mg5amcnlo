@@ -201,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating','propagator',
                    'is_part', 'self_antipart']
 
     def default_setup(self):
@@ -219,6 +219,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
 
@@ -1111,8 +1112,25 @@ class Model(PhysicsObject):
             if not isinstance(width, ParamCardVariable):
                 width.expr = 're(%s)' % width.expr
             if particle.get('mass') != 'ZERO':
+                    
                 mass = self.get_parameter(particle.get('mass'))
-                
+                # special SM treatment to change the gauge scheme automatically.
+                if particle.get('pdg_code') == 24:
+                    if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
+                        # Make MW an external parameter
+                        MW = ParamCardVariable(mass.name, mass.value, 'mass', (24,))
+                        self.get('parameters')[('external',)].append(MW)
+                        self.get('parameters')[mass.depend].remove(mass)
+                        # Make Gf an internal parameter
+                        new_param = ModelVariable('Gf',
+                        '-aEW*MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - MZ**2))' %\
+                        {'MW': mass.name}, 'complex', mass.depend)
+                        Gf = self.get_parameter('Gf')
+                        self.get('parameters')[('external',)].remove(Gf)
+                        self.add_param(new_param, ['aEW'])
+                        # Use the new mass for the future modification
+                        mass = MW
+                        
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))
@@ -1755,11 +1773,13 @@ class Process(PhysicsObject):
         self['overall_orders'] = {}
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessList()
+        # Legs with decay chains substituted in
+        self['legs_with_decays'] = LegList()
 
     def filter(self, name, value):
         """Filter for valid process property values."""
 
-        if name == 'legs':
+        if name in ['legs', 'legs_with_decays'] :
             if not isinstance(value, LegList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid LegList object" % str(value)
@@ -1845,13 +1865,21 @@ class Process(PhysicsObject):
 
         return super(Process, self).set(name, value) # call the mother routine
 
+    def get(self, name):
+        """Special get for legs_with_decays"""
+        
+        if name == 'legs_with_decays':
+            self.get_legs_with_decays()
+
+        return super(Process, self).get(name) # call the mother routine
+
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'overall_orders', 'model', 'id',
                 'required_s_channels', 'forbidden_onsh_s_channels',
-                'forbidden_s_channels',
-                'forbidden_particles', 'is_decay_chain', 'decay_chains']
+                'forbidden_s_channels', 'forbidden_particles',
+                'is_decay_chain', 'decay_chains', 'legs_with_decays']
 
     def nice_string(self, indent=0):
         """Returns a nicely formated string about current process
@@ -1863,7 +1891,7 @@ class Process(PhysicsObject):
             mypart = self['model'].get('particle_dict')[leg['id']]
             if prevleg and prevleg['state'] == False \
                    and leg['state'] == True:
-                # Separate initial and final legs by ">"
+                # Separate initial and final legs by >
                 mystr = mystr + '> '
                 # Add required s-channels
                 if self['required_s_channels'] and \
@@ -2063,11 +2091,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True)
             elif schannel:
-                return self.shell_string(False, False, False)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
             
             
             
@@ -2135,9 +2166,10 @@ class Process(PhysicsObject):
     def get_legs_with_decays(self):
         """Return process with all decay chains substituted in."""
 
+        if self['legs_with_decays']:
+            return self['legs_with_decays']
+
         legs = copy.deepcopy(self.get('legs'))
-        if self.get('is_decay_chain'):
-            legs.pop(0)
         org_decay_chains = copy.copy(self.get('decay_chains'))
         sorted_decay_chains = []
         # Sort decay chains according to leg order
@@ -2155,13 +2187,18 @@ class Process(PhysicsObject):
                       legs[ileg].get('id') != decay.get('legs')[0].get('id'):
                 ileg = ileg + 1
             decay_legs = decay.get_legs_with_decays()
-            legs = legs[:ileg] + decay_legs + legs[ileg+1:]
-            ileg = ileg + len(decay_legs)
+            legs = legs[:ileg] + decay_legs[1:] + legs[ileg+1:]
+            ileg = ileg + len(decay_legs) - 1
+
+        # Replace legs with copies
+        legs = [copy.copy(l) for l in legs]
 
         for ileg, leg in enumerate(legs):
             leg.set('number', ileg + 1)
             
-        return LegList(legs)
+        self['legs_with_decays'] = LegList(legs)
+
+        return self['legs_with_decays']
 
     def list_for_sort(self):
         """Output a list that can be compared to other processes as:
@@ -2273,6 +2310,7 @@ class ProcessDefinition(Process):
         self['legs'] = MultiLegList()
         # Decay chain processes associated with this process
         self['decay_chains'] = ProcessDefinitionList()
+        if 'legs_with_decays' in self: del self['legs_with_decays']
 
     def filter(self, name, value):
         """Filter for valid process property values."""
@@ -2294,7 +2332,10 @@ class ProcessDefinition(Process):
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
 
-        return super(ProcessDefinition, self).get_sorted_keys()
+        keys = super(ProcessDefinition, self).get_sorted_keys()
+        keys.remove('legs_with_decays')                                  
+
+        return keys
 
     def get_minimum_WEIGHTED(self):
         """Retrieve the minimum starting guess for WEIGHTED order, to

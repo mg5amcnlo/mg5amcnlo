@@ -47,13 +47,13 @@ from array import array
 import collections
 from fractions import Fraction
 import numbers
+import re
 import aloha # define mode of writting
 
 class defaultdict(collections.defaultdict):
 
     def __call__(self, *args):
         return defaultdict(int)
-
 
 class Computation(dict):
     """ a class to encapsulate all computation. Limit side effect """
@@ -66,6 +66,7 @@ class Computation(dict):
         self.fct_expr = {}
         self.reduced_expr2 = {}
         self.inverted_fct = {}
+        self.has_pi = False # logical to check if pi is used in at least one fct
         dict.__init__(self)
 
     def clean(self):
@@ -117,29 +118,53 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
+        self.unknow_fct = []
         #return expression
         return new
     
+    known_fct = ['/', 'log', 'pow', 'sin', 'cos', 'asin', 'acos', 'tan', 'cot', 'acot',
+                 'theta_function', 'exp']
     def add_function_expression(self, fct_tag, *args):
 
-        tag = 'FCT%s' % len(self.fct_expr)
+        if not (fct_tag.startswith('cmath.') or fct_tag in self.known_fct or
+                                       (fct_tag, len(args)) in self.unknow_fct):
+            self.unknow_fct.append( (fct_tag, len(args)) )
+        
         argument = []
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
-                expr = expression.expand().get_rep([0])
+                try:
+                    expr = expression.expand().get_rep([0])
+                except KeyError, error:
+                    if error.args != ((0,),):
+                        raise
+                    else:
+                        raise aloha.ALOHAERROR, '''Error in input format. 
+    Argument of function (or denominator) should be scalar.
+    We found %s''' % expression
                 new = expr.simplify()
                 new = expr.factorize()
                 argument.append(new)
             else:
                 argument.append(expression)
+        for arg in argument:
+            val = re.findall(r'''\bFCT(\d*)\b''', str(arg))
+            for v in val:
+                self.add_tag(('FCT%s' % v,))
+            
         if str(fct_tag)+str(argument) in self.inverted_fct:
-            return self.inverted_fct[str(fct_tag)+str(argument)]
+            tag = self.inverted_fct[str(fct_tag)+str(argument)]
+            v = tag.split('(')[1][:-1]
+            self.add_tag(('FCT%s' % v,))
+            return tag
         else:
+            id = len(self.fct_expr)
+            tag = 'FCT%s' % id
+            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % id
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))
-            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % (len(self.fct_expr) -1)
-            return 'FCT(%s)' % (len(self.fct_expr) -1)
+            return 'FCT(%s)' % id
         
 KERNEL = Computation()
 
@@ -293,7 +318,11 @@ class AddVariable(list):
         
         for item in self[1:]:
             if self.prefactor == 1:
-                new += item.expand(veto)
+                try:
+                    new += item.expand(veto)
+                except AttributeError:
+                    new = new + item
+                
             else:
                 new += (self.prefactor) * item.expand(veto)
         return new
@@ -398,6 +427,7 @@ class AddVariable(list):
     __radd__ = __add__
     __rmul__ = __mul__ 
 
+
     def __div__(self, obj):
         return self.__mul__(1/obj)
     
@@ -445,7 +475,6 @@ class AddVariable(list):
         max_wgt, maxvar = 0, None
         for var in possibility:
             wgt = sum(w**2 for w in correlation[var].values())/len(correlation[var])
-            #print KERNEL.objs[var], maxnb, wgt,sum(w**2 for w in correlation[var].values())/len(correlation[var])
             if wgt > max_wgt:
                 maxvar = var
                 max_wgt = wgt
@@ -727,6 +756,19 @@ class MultVariable(array):
 #===============================================================================
 # FactoryVar
 #===============================================================================
+class C_Variable(str):
+    vartype=0
+    type = 'complex'
+    
+class R_Variable(str):
+    vartype=0
+    type = 'double'
+
+class ExtVariable(str):
+    vartype=0
+    type = 'parameter'
+
+
 class FactoryVar(object):
     """This is the standard object for all the variable linked to expression.
     """
@@ -745,8 +787,8 @@ class FactoryVar(object):
 
 class Variable(FactoryVar):
     
-    def __new__(self, name):
-        return FactoryVar(name, C_Variable)
+    def __new__(self, name, type=C_Variable):
+        return FactoryVar(name, type)
 
 class DVariable(FactoryVar):
     
@@ -763,13 +805,6 @@ class DVariable(FactoryVar):
         return FactoryVar(name, R_Variable)
 
 
-class C_Variable(str):
-    vartype=0
-    type = 'complex'
-    
-class R_Variable(str):
-    vartype=0
-    type = 'double'
 
 
 #===============================================================================

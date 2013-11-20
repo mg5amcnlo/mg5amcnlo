@@ -29,7 +29,9 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.madevent_interface as MECmd
 import madgraph.interface.launch_ext_program as launch_ext
+
 import madgraph.various.misc as misc
+import madgraph.various.lhe_parser as lhe_parser
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -87,6 +89,12 @@ class TestMECmdShell(unittest.TestCase):
         """ exec a line in the cmd under test """        
         self.cmd_line.exec_cmd(line)
         
+  
+        
+        
+            
+        
+        
     def test_width_computation(self):
         """test the param_card created is correct"""
         
@@ -115,24 +123,34 @@ class TestMECmdShell(unittest.TestCase):
         """test that the creation of matched plot works"""
 
         cmd = os.getcwd()
-        self.generate('p p > W+ j', 'sm')
+        self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '/tmp/MGPROCESS/Cards/run_card.dat')
         shutil.copy('/tmp/MGPROCESS/Cards/pythia_card_default.dat',
                     '/tmp/MGPROCESS/Cards/pythia_card.dat')
-        self.do('generate_events -f')
+        self.do('generate_events -f')     
+        
         
         f1 = self.check_matched_plot(tag='fermi')         
         start = time.time()
-                
-        self.assertEqual(cmd, os.getcwd())
+        
+        #modify the run_card
+        run_card = self.cmd_line.run_card
+        run_card['nevents'] = 44
+        run_card.write('/tmp/MGPROCESS/Cards/run_card.dat',
+                                    '/tmp/MGPROCESS/Cards/run_card_default.dat')
+            
+        self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
+        self.assertEqual(int(self.cmd_line.run_card['nevents']), 44)
         self.do('pythia run_01 -f')
         self.do('quit')
         
+        self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
+        
         self.check_parton_output()
-        self.check_parton_output('run_02')
+        self.check_parton_output('run_02', target_event=44)
         self.check_pythia_output()        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
@@ -205,7 +223,8 @@ class TestMECmdShell(unittest.TestCase):
         err1 = self.cmd_line.results.current['error']
         
         target = 3864.0
-        self.assertTrue(abs(val1 - target) / err1 < 1.)
+        self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
+                        (target, val1, err1))
         
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
@@ -270,6 +289,57 @@ class TestMECmdShell(unittest.TestCase):
 class TestMEfromfile(unittest.TestCase):
     """test that we can launch everything from a single file"""
 
+
+    def test_add_time_of_flight(self):
+        """checking time of flight is working fine"""
+
+        try:
+            shutil.rmtree('/tmp/MGPROCESS/')
+        except Exception, error:
+            pass
+        
+        cmd = """import model sm
+                set automatic_html_opening False --no-save
+                 generate p p > w+ z
+                 output /tmp/MGPROCESS -f -nojpeg
+                 launch -i 
+                 generate_events
+                 parton
+                 set nevents 100
+                 add_time_of_flight --threshold=3e-26
+                 pythia
+                 """
+        open('/tmp/mg5_cmd','w').write(cmd)
+        
+        devnull =open(os.devnull,'w')
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+                         '/tmp/mg5_cmd'],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=devnull, stderr=devnull)
+
+        self.check_parton_output(cross=17.21, error=0.19)
+        self.check_pythia_output()
+        event = '/tmp/MGPROCESS/Events/run_01/unweighted_events.lhe'
+        if not os.path.exists(event):
+            os.system('gunzip %s.gz' % event)
+        
+        has_zero = False
+        has_non_zero = False
+        for event in lhe_parser.EventFile(event):
+            for particle in event:
+                if particle.pid in [23,25]:
+                    self.assertTrue(particle.vtim ==0 or particle.vtim > 3e-26)
+                    if particle.vtim == 0 :
+                        has_zero = True
+                    else:
+                        has_non_zero = True
+        self.assertTrue(has_zero)
+        self.assertTrue(has_non_zero)
+        
+        
+        
+
+
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
@@ -288,11 +358,16 @@ class TestMEfromfile(unittest.TestCase):
             out = p.communicate('install pythia-pgs')
         misc.compile(cwd=pythia_path)
         
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+
 
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_mssm_generation')],
                          cwd=pjoin(_file_path, os.path.pardir),
-                        stdout=devnull,stderr=devnull)
+                        stdout=stdout,stderr=stdout)
 
         
         self.check_parton_output(cross=4.541638, error=0.035)
@@ -326,7 +401,8 @@ class TestMEfromfile(unittest.TestCase):
         data = self.load_result(run_name)
         self.assertTrue('lhe' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
-        self.assertTrue('hep' in data[0].pythia)
+        
+        
 
 #===============================================================================
 # TestCmd

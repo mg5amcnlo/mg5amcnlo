@@ -443,7 +443,7 @@ c
       include 'leshouche.inc'
       data iseed /0/
 
-      double precision pmass(nexternal)
+      double precision pmass(nexternal), tmp
       common/to_mass/  pmass
 
 c      integer ncols,ncolflow(maxamps),ncolalt(maxamps)
@@ -554,6 +554,7 @@ c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
      $                npart,numproc,flip)
+
 
 c
 c     Write events to lun

@@ -60,20 +60,18 @@ class UFOBaseClass(object):
 
 all_particles = []
 
-    
-
 class Particle(UFOBaseClass):
     """A standard Particle"""
 
     require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge']
 
-    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'line', 'propagating', 'goldstoneboson']
+    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'line', 'propagating', 'goldstoneboson', 'propagator']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, charge , line=None, propagating=True, goldstoneboson=False, **options):
+                antitexname, charge , line=None, propagating=True, goldstoneboson=False, propagator=None, **options):
 
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, float(charge))
+                antitexname, float(charge))
 
         UFOBaseClass.__init__(self, *args,  **options)
 
@@ -84,14 +82,17 @@ class Particle(UFOBaseClass):
         self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
-        if 1: #not line:
+        if not line:                                                                                                                                                                                   
             self.line = self.find_line_type()
         else:
             self.line = line
 
-
-
-
+        if propagator:
+            if isinstance(propagator, dict):
+                self.propagator = propagator
+            else:
+                self.propagator = {0: propagator, 1: propagator}
+             
     def find_line_type(self):
         """ find how we draw a line if not defined
         valid output: dashed/straight/wavy/curly/double/swavy/scurly
@@ -122,7 +123,7 @@ class Particle(UFOBaseClass):
             return 'dotted'
         else:
             return 'dashed' # not supported yet
-
+        
     def anti(self):
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
@@ -241,5 +242,43 @@ class CouplingOrder(object):
         self.expansion_order = expansion_order
         self.hierarchy = hierarchy
 
+all_decays = []
+
+class Decay(UFOBaseClass):
+    require_args = ['particle','partial_widths']
+
+    def __init__(self, particle, partial_widths, **opt):
+        args = (particle, partial_widths)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_decays
+        all_decays.append(self)
+    
+        # Add the information directly to the particle
+        particle.partial_widths = partial_widths
+
+all_form_factors = []
+
+class FormFactor(UFOBaseClass):
+    require_args = ['name','type','value']
+
+    def __init__(self, name, type, value, **opt):
+        args = (name, type, value)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_form_factors
+        all_form_factors.append(self)
 
         
+all_propagators = []
+
+class Propagator(UFOBaseClass):
+    
+    require_args = ['name','numerator','denominator']
+
+    def __init__(self, name, numerator, denominator=None, **opt):
+        args = (name, numerator, denominator)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_propagators
+        all_propagators.append(self)

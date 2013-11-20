@@ -109,34 +109,37 @@ class TestCmdShell1(unittest.TestCase):
     def test_config(self):
         """check that configuration file is at default value"""
         self.maxDiff=None
+        self.cmd.options = {} #reset to None
         config = self.cmd.set_configuration(MG5DIR+'/input/.mg5_configuration_default.txt', final=False)
         config =dict(config)
         del config['stdout_level']
-        for key in config.keys():
-            if key.endswith('_path') and key != 'cluster_temp_path':
-                del config[key]
+#        for key in config.keys():
+#            if key.endswith('_path') and key != 'cluster_temp_path':
+#                del config[key]
         expected = {'web_browser': None, 
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
                     'run_mode': 2,
-#                    'pythia-pgs_path': './pythia-pgs', 
-#                    'td_path': './td', 
-#                    'delphes_path': './Delphes', 
+                    'pythia-pgs_path': './pythia-pgs', 
+                    'td_path': './td', 
+                    'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
-#                    'madanalysis_path': './MadAnalysis', 
+                    'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
                     'fortran_compiler': None, 
-#                    'exrootanalysis_path': './ExRootAnalysis', 
+                    'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': True, 
-#                    'pythia8_path': None,
+                    'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
                     'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
                     'timeout': 60,
-                    'auto_update': 7
+                    'auto_update': 7,
+                    'cluster_nb_retry': 1,
+                    'cluster_retry_wait': 300
                     }
 
         self.assertEqual(config, expected)
@@ -355,7 +358,60 @@ class TestCmdShell2(unittest.TestCase,
                                                'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'Cards', 'proc_card_mg5.dat')))
+    
+    def test_custom_propa(self):
+        """check that using custom propagator is working"""
         
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        path = os.path.join(MG5DIR, 'tests', 'input_files', 'sm_with_custom_propa')
+        self.do('import model %s' % path)
+        self.do('generate g g > t t~')
+        self.do('output standalone %s ' % self.out_dir)        
+        
+        files = ['aloha_file.inc', 'aloha_functions.f','FFV1_0.f', 'FFV1_1.f',
+                 'FFV1_2.f', 'makefile', 'VVV1PV2_1.f'] 
+
+        for f in files:
+            self.assertTrue(os.path.isfile(os.path.join(self.out_dir,
+                                                        'Source', 'DHELAS',
+                                                        f)), 
+                            '%s file is not in aloha directory' % f)
+
+        devnull = open(os.devnull,'w')
+        # Check that the Model and Aloha output compile
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'Source'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libdhelas.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libmodel.a')))
+        # Check that check_sa.f compiles
+        subprocess.call(['make', 'check'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_ttx'))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                                    'SubProcesses', 'P0_gg_ttx',
+                                                    'check')))
+        # Check that the output of check is correct 
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_gg_ttx',
+                               'check.log')
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=devnull,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_gg_ttx'), shell=True)
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 0.592626100)
+        
+    
+    
     def test_ufo_aloha(self):
         """Test the import of models and the export of Helas Routine """
 
@@ -368,7 +424,7 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
                  #'FFS1C1_2.f', 'FFS1_0.f',
-                 'FFV1_0.f', 'FFV1_3.f',
+                 'FFV1_0.f', 'FFV1P0_3.f',
                  'FFV2_0.f', 'FFV2_3.f',
                  'FFV4_0.f', 'FFV4_3.f',
                  'makefile', 'aloha_functions.f']
@@ -379,6 +435,7 @@ class TestCmdShell2(unittest.TestCase,
                             '%s file is not in aloha directory' % f)
         # Check that unwanted ALOHA subroutines are not generated
         notfiles = ['FFV1_1.f', 'FFV1_2.f', 'FFV2_1.f', 'FFV2_2.f',
+                    'FFV1_3.f','FFV2P0_3.f','FFV4P0_3.f'
                     'FFV4_1.f', 'FFV4_2.f', 
                     'VVV1_0.f', 'VVV1_1.f', 'VVV1_2.f', 'VVV1_3.f']
         for f in notfiles:
@@ -415,6 +472,39 @@ class TestCmdShell2(unittest.TestCase,
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
         self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+    
+    def test_standalone_cpp(self):
+        """test that standalone cpp is working"""
+
+        if os.path.isdir(self.out_dir):
+            shutil.rmtree(self.out_dir)
+
+        self.do('import model mssm-full')
+        self.do('generate g g > go go QED=2')
+        self.do('output standalone_cpp %s ' % self.out_dir)
+        devnull = open(os.devnull,'w')
+    
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_Sigma_mssm_full_gg_gogo',
+                               'check.log')
+        # Check that check_sa.cc compiles
+        subprocess.call(['make'],
+                        stdout=devnull, stderr=devnull, 
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_Sigma_mssm_full_gg_gogo'))
+        
+        subprocess.call('./check', 
+                        stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        cwd=os.path.join(self.out_dir, 'SubProcesses',
+                                         'P0_Sigma_mssm_full_gg_gogo'), shell=True)
+    
+        log_output = open(logfile, 'r').read()
+        me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
+                           re.IGNORECASE)
+        me_groups = me_re.search(log_output)
+        
+        self.assertTrue(me_groups)
+        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
+    
         
     def test_v4_heft(self):
         """Test standalone directory for UFO HEFT model"""
@@ -471,7 +561,7 @@ class TestCmdShell2(unittest.TestCase,
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
                  #'FFS1C1_2.f', 'FFS1_0.f',
-                 'FFV1_0.f', 'FFV1_3.f',
+                 'FFV1_0.f', 'FFV1P0_3.f',
                  'FFV2_0.f', 'FFV2_3.f',
                  'FFV4_0.f', 'FFV4_3.f',
                  'makefile', 'aloha_functions.f']
@@ -480,6 +570,9 @@ class TestCmdShell2(unittest.TestCase,
                                                         'Source', 'DHELAS',
                                                         f)), 
                             '%s file is not in aloha directory' % f)
+        
+        #check the content of FFV1P0_0.f
+        self.check_aloha_file()
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'Cards',
                                                     'ident_card.dat')))
@@ -534,6 +627,126 @@ class TestCmdShell2(unittest.TestCase,
                                                     'P0_epem_epem',
                                                     'madevent')))
         
+        
+    def check_aloha_file(self):
+        """check the content of aloha file FFV1P0_3.f and FFV2_3.f"""
+        
+        ffv1p0 = """C     This File is Automatically generated by ALOHA 
+C     The process calculated in this file is: 
+C     Gamma(3,2,1)
+C     
+      SUBROUTINE FFV1P0_3(F1, F2, COUP, M3, W3,V3)
+      IMPLICIT NONE
+      COMPLEX*16 CI
+      PARAMETER (CI=(0D0,1D0))
+      COMPLEX*16 F2(*)
+      COMPLEX*16 V3(6)
+      REAL*8 W3
+      REAL*8 P3(0:3)
+      REAL*8 M3
+      COMPLEX*16 F1(*)
+      COMPLEX*16 DENOM
+      COMPLEX*16 COUP
+      V3(1) = +F1(1)+F2(1)
+      V3(2) = +F1(2)+F2(2)
+      P3(0) = -DBLE(V3(1))
+      P3(1) = -DBLE(V3(2))
+      P3(2) = -DIMAG(V3(2))
+      P3(3) = -DIMAG(V3(1))
+      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 
+     $ -CI* W3))
+      V3(3)= DENOM*-CI*(F1(3)*F2(5)+F1(4)*F2(6)+F1(5)*F2(3)+F1(6)
+     $ *F2(4))
+      V3(4)= DENOM*-CI*(F1(5)*F2(4)+F1(6)*F2(3)-F1(3)*F2(6)-F1(4)
+     $ *F2(5))
+      V3(5)= DENOM*-CI*(-CI*(F1(3)*F2(6)+F1(6)*F2(3))+CI*(F1(4)*F2(5)
+     $ +F1(5)*F2(4)))
+      V3(6)= DENOM*-CI*(F1(4)*F2(6)+F1(5)*F2(3)-F1(3)*F2(5)-F1(6)
+     $ *F2(4))
+      END
+
+
+"""
+        text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV1P0_3.f')).read()
+        
+        self.assertFalse('OM3' in text)
+        self.assertEqual(ffv1p0.split('\n'), text.split('\n'))
+        
+
+        ffv2 = """C     This File is Automatically generated by ALOHA 
+C     The process calculated in this file is: 
+C     Gamma(3,2,-1)*ProjM(-1,1)
+C     
+      SUBROUTINE FFV2_3(F1, F2, COUP, M3, W3,V3)
+      IMPLICIT NONE
+      COMPLEX*16 CI
+      PARAMETER (CI=(0D0,1D0))
+      COMPLEX*16 DENOM
+      COMPLEX*16 V3(6)
+      COMPLEX*16 TMP1
+      REAL*8 W3
+      REAL*8 P3(0:3)
+      REAL*8 M3
+      COMPLEX*16 F1(*)
+      COMPLEX*16 F2(*)
+      REAL*8 OM3
+      COMPLEX*16 COUP
+      OM3 = 0D0
+      IF (M3.NE.0D0) OM3=1D0/M3**2
+      V3(1) = +F1(1)+F2(1)
+      V3(2) = +F1(2)+F2(2)
+      P3(0) = -DBLE(V3(1))
+      P3(1) = -DBLE(V3(2))
+      P3(2) = -DIMAG(V3(2))
+      P3(3) = -DIMAG(V3(1))
+      TMP1 = (F1(3)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)+CI*(P3(2))))
+     $ +F1(4)*(F2(5)*(P3(1)-CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
+      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 
+     $ -CI* W3))
+      V3(3)= DENOM*-CI*(F1(3)*F2(5)+F1(4)*F2(6)-P3(0)*OM3*TMP1)
+      V3(4)= DENOM*-CI*(-F1(3)*F2(6)-F1(4)*F2(5)-P3(1)*OM3*TMP1)
+      V3(5)= DENOM*-CI*(-CI*(F1(3)*F2(6))+CI*(F1(4)*F2(5))-P3(2)*OM3
+     $ *TMP1)
+      V3(6)= DENOM*-CI*(F1(4)*F2(6)-F1(3)*F2(5)-P3(3)*OM3*TMP1)
+      END
+
+
+C     This File is Automatically generated by ALOHA 
+C     The process calculated in this file is: 
+C     Gamma(3,2,-1)*ProjM(-1,1)
+C     
+      SUBROUTINE FFV2_4_3(F1, F2, COUP1, COUP2, M3, W3,V3)
+      IMPLICIT NONE
+      COMPLEX*16 CI
+      PARAMETER (CI=(0D0,1D0))
+      COMPLEX*16 DENOM
+      COMPLEX*16 V3(6)
+      REAL*8 W3
+      REAL*8 P3(0:3)
+      REAL*8 M3
+      COMPLEX*16 F1(*)
+      COMPLEX*16 COUP1
+      COMPLEX*16 F2(*)
+      COMPLEX*16 COUP2
+      REAL*8 OM3
+      INTEGER*4 I
+      COMPLEX*16 VTMP(6)
+      CALL FFV2_3(F1,F2,COUP1,M3,W3,V3)
+      CALL FFV4_3(F1,F2,COUP2,M3,W3,VTMP)
+      DO I = 3, 6
+        V3(I) = V3(I) + VTMP(I)
+      ENDDO
+      END
+
+
+"""
+        text = open(os.path.join(self.out_dir,'Source', 'DHELAS', 'FFV2_3.f')).read()
+        self.assertTrue('OM3' in text)
+        self.assertEqual(ffv2, text)        
+        
+        
+        
+        
     def test_define_order(self):
         """Test the reordering of particles in the define"""
 
@@ -545,7 +758,7 @@ class TestCmdShell2(unittest.TestCase,
         self.do('define p = u c~ g d s b~ b h')
         self.assertEqual(self.cmd._multiparticles['p'],
                          [21, 2, 1, 3, 5, -4, -5, 25])
-        
+
     def test_madevent_decay_chain(self):
         """Test decay chain output"""
 
@@ -630,7 +843,7 @@ class TestCmdShell2(unittest.TestCase,
                 value = line.split('=')[1]
                 value = value. split('GeV')[0]
                 value = eval(value)
-                self.assertAlmostEqual(value, 1.951829785476705e-2)
+                self.assertAlmostEqual(value, 0.019538610404713896)
 
     def test_load_feynman(self):
         """ Test that feynman gauge assignment works """
@@ -780,20 +993,20 @@ class TestCmdShell2(unittest.TestCase,
         self.assertEqual(open(os.path.join(self.out_dir,
                                            'SubProcesses',
                                            'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact.dat')).read(),
-                         """ 1    1
- 2    -1
- 3    -1
- 4    -1
- 5    1
- 6    -5
- 7    -5
- 8    -5
- 9    1
- 10   -9
- 11   -9
- 12   -9
-""")
+                                           'symfact_orig.dat')).read().split('\n'),
+                         """ 1   1
+ 2  -1
+ 3  -1
+ 4  -1
+ 5   1
+ 6  -5
+ 7  -5
+ 8  -5
+ 9   1
+10  -9
+11  -9
+12  -9
+""".split('\n'))
 
         # Compile the Source directory
         status = subprocess.call(['make'],
@@ -1151,7 +1364,7 @@ P1_qq_wp_wp_lvl
                            re.IGNORECASE)
         me_groups = me_re.search(log_output)
         self.assertTrue(me_groups)
-        self.assertAlmostEqual(float(me_groups.group('value')), 1.953735e-2)
+        self.assertAlmostEqual(float(me_groups.group('value')), 0.019455844550069087)
         
     def test_import_banner_command(self):
         """check that the import banner command works"""

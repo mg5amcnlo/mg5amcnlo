@@ -533,21 +533,6 @@ c     Reset chcluster to run_card value
         write(*,*)'iconfig is ',iconfig
       endif
 
-c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
-c     (i.e. geom. average of transverse mass of t and t~)
-        if(mt2last.gt.4d0 .and. nexternal.gt.3) then
-           if(jlast(1).eq.nexternal-2.and.jlast(2).eq.nexternal-2.and.
-     $        isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1),iproc)).and.
-     $        isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1),iproc)).and.
-     $        isqcd(ipdgcl(imocl(nexternal-3),igraphs(1),iproc)))then
-              mt2ij(nexternal-2)=mt2last
-              mt2ij(nexternal-3)=mt2last
-              if (btest(mlevel,3)) then
-                 write(*,*)' setclscales: set last vertices to mtlast: ',sqrt(mt2last)
-              endif
-           endif
-        endif
-
 C   If we have fixed factorization scale, for ickkw>0 means central
 C   scale, i.e. last two scales (ren. scale for these vertices are
 C   anyway already set by "scale" above)
@@ -564,6 +549,16 @@ C   anyway already set by "scale" above)
 
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
+
+c   ipart gives the external particle number corresponding to the present
+c   quark or gluon line. 
+c   For t-channel lines, ipart(1) contains the connected beam. 
+c   For s-channel lines, it depends if it is quark or gluon line:
+c   For quark lines, ipart(2) is 0 and ipart(1) connects to the corresponding
+c   final-state quark. For gluons, if it splits into two gluons, 
+c   it connects to the hardest gluon. If it splits into qqbar, it ipart(1) is
+c   the hardest and ipart(2) is the softest.
+
       do i=1,nexternal
          ipart(1,ishft(1,i-1))=i
          ipart(2,ishft(1,i-1))=0
@@ -623,8 +618,9 @@ c             Determine which are beam particles based on n
               endif
 c             
               if(partonline(j))then
-c             Stop fact scale where parton line stops
+c             If jfirst not set, set it
                  if(jfirst(j).eq.0) jfirst(j)=n
+c             Stop fact scale where parton line stops
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
      $                isjet(ipdgcl(imo,igraphs(1),iproc))
@@ -745,6 +741,8 @@ c     Store external jet numbers if first time
          njetstore(iconfig)=njets
          if (btest(mlevel,4))
      $        write(*,*) 'Storing jets: ',(iqjetstore(i,iconfig),i=1,njets)
+c     Recluster without requiring chcluster
+         goto 100
       else
 c     Otherwise, check that we have the right jets
 c     if not, recluster according to iconfig
@@ -778,6 +776,21 @@ c     if not, recluster according to iconfig
          endif
       endif
       
+c     If last clustering is s-channel QCD (e.g. ttbar) use mt2last instead
+c     (i.e. geom. average of transverse mass of t and t~)
+        if(mt2last.gt.4d0 .and. nexternal.gt.3) then
+           if(jlast(1).eq.nexternal-2.and.jlast(2).eq.nexternal-2.and.
+     $        isqcd(ipdgcl(idacl(nexternal-3,1),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(idacl(nexternal-3,2),igraphs(1),iproc)).and.
+     $        isqcd(ipdgcl(imocl(nexternal-3),igraphs(1),iproc)))then
+              mt2ij(nexternal-2)=mt2last
+              mt2ij(nexternal-3)=mt2last
+              if (btest(mlevel,3)) then
+                 write(*,*)' setclscales: set last vertices to mtlast: ',sqrt(mt2last)
+              endif
+           endif
+        endif
+
 c     Set central scale to mT2
       if(jcentral(1).gt.0) then
          if(mt2ij(jcentral(1)).gt.0d0)
@@ -801,10 +814,11 @@ c     Check xqcut for vertices with jet daughters only
          do n=1,nexternal-3
 c        Check if any of vertex daughters among jets
             do i=1,2
+c              ifsno gives leg number if daughter is FS particle, otherwise 0
                fsnum(1)=ifsno(idacl(n,i),ipart)
                if(fsnum(1).gt.0)then
                   if(iqjets(fsnum(1)).gt.0)then
-c                       Daughter among jets - check xqcut
+c                    Daughter among jets - check xqcut
                      if(sqrt(pt2ijcl(n)).lt.xqcut)then
                         if (btest(mlevel,3))
      $                       write(*,*) 'Failed xqcut: ',n,
@@ -1102,18 +1116,6 @@ c     Set incoming particle identities
 
       endif
       
-c     Store pdf information for systematics studies (initial)
-      if(use_syst)then
-         do j=1,2
-            n_pdfrw(j)=1
-            i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
-            s_xpdf(1,j)=xbk(ib(j))
-            s_qpdf(1,j)=sqrt(q2fact(j))
-         enddo
-      endif
-
-      if(ickkw.le.0) goto 100
-
 c     Store pdf information for systematics studies (initial)
       if(use_syst)then
          do j=1,2

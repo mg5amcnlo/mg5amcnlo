@@ -111,6 +111,12 @@ C
       LOGICAL  IS_A_NU(NEXTERNAL),IS_HEAVY(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM
+C
+C     Keep track of whether cuts already calculated for this event
+C
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
+      DATA CUTSDONE,CUTSPASSED/.FALSE.,.FALSE./
 
 C $B$ MW_NEW_DEF $E$ !this is a tag for MadWeight
 
@@ -221,7 +227,15 @@ c     Put momenta in the common block to zero to start
             enddo
          enddo
          
+      ENDIF ! IF FIRSTTIME
+
+      IF (CUTSDONE) THEN
+         PASSCUTS=CUTSPASSED
+         RETURN
       ENDIF
+      CUTSDONE=.TRUE.
+      CUTSPASSED=.FALSE.
+
 c
 c     Make sure have reasonable 4-momenta
 c
@@ -239,6 +253,7 @@ c     Also make sure there's no INF or NAN
             endif
          enddo
       enddo
+      
 c
 c     Limit S_hat
 c
@@ -719,6 +734,8 @@ c                  write (*,*) hardj1,hardj2,ptmax1,ptmax2
                endif
             enddo
             
+            if (hardj2.eq.0) goto 21 ! bypass vbf cut since not enough jets
+
 C-- NOW APPLY THE CUT I            
 
             if (abs(rap(p(0,hardj1))) .lt. xetamin
@@ -742,7 +759,7 @@ c            write (*,*) hardj1,hardj2,rap(p(0,hardj1)),rap(p(0,hardj2))
 
 C...Set couplings if event passed cuts
 
-      if(.not.fixed_ren_scale) then
+ 21   if(.not.fixed_ren_scale) then
          call set_ren_scale(P,scale)
          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
       endif
@@ -784,6 +801,7 @@ c     Set couplings in model files
       if(debug) write (*,*) ' EVENT PASSED THE CUTS       '
       if(debug) write (*,*) '============================='
 
+      CUTSPASSED=.TRUE.
 
       RETURN
       END
