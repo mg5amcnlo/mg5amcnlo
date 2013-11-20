@@ -1,3 +1,8 @@
+c
+c Example analysis for "p p > w+ [QCD]" process.
+c Example analysis for "p p > w- [QCD]" process.
+c Example analysis for "p p > z [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -10,28 +15,39 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
       real * 8 xm0,gam,xmlow,xmupp,bin
       real * 8 xmi,xms,pi
       PARAMETER (PI=3.14159265358979312D0)
-      integer j,k,jpr
-      character*5 cc(5)
-      data cc/'     ',' cut1',' cut2',' cut3',' cut4'/
-
+      integer j,kk,l,jpr
+      character*5 cc(2)
+      data cc/'     ','     '/
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
+c
+      call inihist
+      nwgt_analysis=nwgt
       xmi=40.d0
       xms=120.d0
       bin=1.0d0
-
-      call inihist
-
       do j=1,1
-      k=30+(j-1)*5
-
-      call mbook(k+ 1,'W pt'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(k+ 2,'W log pt'//cc(j),0.05d0,0.d0,5.d0)
-      call mbook(k+ 3,'W y'//cc(j),0.25d0,-9.d0,9.d0)
-      call mbook(k+ 4,'W eta'//cc(j),0.25d0,-9.d0,9.d0)
-      call mbook(k+ 5,'mW'//cc(j),(bin),xmi,xms)
-
+      do kk=1,nwgt_analysis
+      l=(kk-1)*10+(j-1)*5
+      call mbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
+     &     ,2.d0,0.d0,200.d0)
+      call mbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0.d0,5.d0)
+      call mbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-9.d0,9.d0)
+      call mbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-9.d0,9.d0)
+      call mbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
+     &     ,bin,xmi,xms)
+      enddo
       enddo
  999  END
 C----------------------------------------------------------------------
@@ -40,25 +56,30 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
-      INTEGER I,J,K
+      INTEGER I,J,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='HERSVB.TOP',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,100              
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+100)
-        CALL MOPERA(I+100,'F',I+100,I+100,(XNORM),0.D0)
- 	CALL MFINAL3(I+100)             
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)             
       ENDDO                          
 C
-      do j=1,1
-      k=30+(j-1)*5
-      call multitop(100+k+ 1,99,3,2,'W pt',' ','LOG')
-      call multitop(100+k+ 2,99,3,2,'W log pt',' ','LOG')
-      call multitop(100+k+ 3,99,3,2,'W y',' ','LOG')
-      call multitop(100+k+ 4,99,3,2,'W eta',' ','LOG')
-      call multitop(100+k+ 5,99,3,2,'mW',' ','LOG')
+      do i=1,1
+      do kk=1,nwgt_analysis
+      l=(kk-1)*10+(i-1)*5
+      call multitop(NPL+l+ 1,NPL-1,3,2,'V pt     ',' ','LOG')
+      call multitop(NPL+l+ 2,NPL-1,3,2,'V log pt ',' ','LOG')
+      call multitop(NPL+l+ 3,NPL-1,3,2,'V y      ',' ','LOG')
+      call multitop(NPL+l+ 4,NPL-1,3,2,'V eta    ',' ','LOG')
+      call multitop(NPL+l+ 5,NPL-1,3,2,'mV       ',' ','LOG')
+      enddo
       enddo
       CLOSE(99)
       END
@@ -68,6 +89,7 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
       DOUBLE PRECISION HWVDOT,PSUM(4),XME,PPV(5),PPE(5),PPNU(5),
      # PPDCE(5),PPDCNU(5),WT,ETAEMIN(2),ETAEMAX(2),PTEMIN(2),
      # XMV,PTV,YV,GETRAPIDITY,PTE,THE,ETAE,PTNU,THNU,ETANU,
@@ -77,13 +99,23 @@ C----------------------------------------------------------------------
       LOGICAL DIDSOF,TEST1,TEST2,FLAG
       REAL*8 PI
       PARAMETER (PI=3.14159265358979312D0)
-      REAL*8 WWW0,TINY
-      INTEGER KK
+      REAL*8 TINY
+      INTEGER KK,i,l
       DATA TINY/.1D-5/
       DATA XME/5.11D-4/
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
 c
       IF (IERROR.NE.0) RETURN
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
 c
+c CHOOSE IDENT=24 FOR W+, IDENT=-24 FOR W-, IDENT=23 FOR Z0
       IDENT=24
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
@@ -91,7 +123,9 @@ C EFFECT, SO THROW THE EVENT AWAY
         CALL HWWARN('HWANAL',111)
         GOTO 999
       ENDIF
-      WWW0=EVWGT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
       CALL HWVSUM(4,PHEP(1,1),PHEP(1,2),PSUM)
       CALL HWVSCA(4,-1D0,PSUM,PSUM)
       ICHSUM=0
@@ -157,13 +191,15 @@ C Variables of the vector boson
       yv=getrapidity(ppv(4),ppv(3))
       etav=getpseudorap(ppv(4),ppv(1),ppv(2),ppv(3))
 C
-      do j=1,1
-        kk=30+(j-1)*5
-          call mfill(kk+1,(ptv),(WWW0))
-          if(ptv.gt.0)call mfill(kk+2,(log10(ptv)),(WWW0))
-          call mfill(kk+3,(yv),(WWW0))
-          call mfill(kk+4,(etav),(WWW0))
-          call mfill(kk+5,(xmv),(WWW0))
+      do i=1,1
+         do kk=1,nwgt_analysis
+            l=(kk-1)*10+(i-1)*5
+            call mfill(l+1,ptv,WWW(kk))
+            if(ptv.gt.0) call mfill(l+2,log10(ptv),WWW(kk))
+            call mfill(l+3,yv,WWW(kk))
+            call mfill(l+4,etav,WWW(kk))
+            call mfill(l+5,xmv,WWW(kk))
+         enddo
       enddo
 C
  999  END
