@@ -33,7 +33,7 @@ c************************************************************************
 
       character(512) param_name
 
-      call setpara2(param_name)
+      call setpara(param_name)
 
       return
 
