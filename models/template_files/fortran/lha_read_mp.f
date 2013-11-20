@@ -123,12 +123,26 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       logical islast,isnum,found
       character*20 temp_val
 
+      integer i
+      character(512) IdentCardPath      
+
+      character(512) ParamCardPath
+      common/ParamCardPath/ParamCardPath
 
 c     *********************************************************************
 c     Try to find a correspondance in ident_card
 c
+
+      IdentCardPath=''
+      i =1
+      do while (i.le.LEN(ParamCardPath) .and. 
+     \            ParamCardPath(i:i).ne.' ')
+        i=i+1
+      enddo
+      IdentCardPath = ParamCardPath(1:i-1)//'/ident_card.dat'
+
       ref_file = 20
-      call LHA_open_file(ref_file,'ident_card.dat',fopened)
+      call LHA_open_file(ref_file,IdentCardPath,fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!
         
       islast=.false.
@@ -383,7 +397,7 @@ c
       integer lun
       logical fopened
       character*(*) filename
-      character*90  tempname
+      character*512  tempname
       integer fine
       integer dirup,i
 
