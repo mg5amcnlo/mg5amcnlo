@@ -259,11 +259,9 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
 	  character(512) MLPath
-      data MLPath/'[[NA]]'/
       common/MLPATH/MLPath
 
 	  LOGICAL ML_INIT
-	  DATA ML_INIT/.TRUE./
 	  common/ML_INIT/ML_INIT
 
 C ----------
