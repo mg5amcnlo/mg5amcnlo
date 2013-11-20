@@ -121,7 +121,7 @@ cMass_UV = CTParameter(name = 'cMass_UV',
                        texname = '\delta m_c')
 
 tMass_UV = CTParameter(name = 'tMass_UV',
-                       type = 'cocomplex',
+                       type = 'complex',
                        value = {-1:'cond(MT,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*3.0*CF*MT)',
                                  0:'cond(MT,0.0,complex(0,1)*((G**2)/(16.0*cmath.pi**2))*CF*(4.0-3.0*reglog(MT**2/MU_R**2))*MT)'
                                },

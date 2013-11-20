@@ -9,6 +9,9 @@ SPLIT40=split40.o
 # Files to collect all the events in the separate integration channels into a single file
 COLLECT_EVENTS=collect_events.o handling_lhe_events.o fill_MC_mshell.o
 
+combine_jobs.o : combine_jobs.f max_split.inc
+	$(FC) $(FFLAGS) -c combine_jobs.f
+
 %.o : %.f
 	$(FC) $(FFLAGS) -c $<
 %.o : %.for

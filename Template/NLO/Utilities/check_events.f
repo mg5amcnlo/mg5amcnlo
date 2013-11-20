@@ -49,7 +49,7 @@ c negative number of events
       character*3 ch3,event_norm
       character*10 MonteCarlo
       character*2 ch2,pm
-      character*1 ch1
+      character*9 ch1
       common/cevtnorm/event_norm
 
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
@@ -226,7 +226,7 @@ c
             write(*,*)'Inconsistency in event file',i,' ',buff
             stop
           endif
-          read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                      fksfather_lhe,ipartner_lhe,
      #                      scale1_lhe,scale2_lhe,
      #                      jwgtinfo,mexternal,iwgtnumpartn,
@@ -359,7 +359,7 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
              write(*,*)'Inconsistency in event file',i,' ',buff
              stop
            endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
      #                       scale1_lhe,scale2_lhe,
      #                       jwgtinfo,mexternal,iwgtnumpartn,
@@ -612,7 +612,6 @@ c Error if more that 1sigma away
 
       if(idec.eq.0)call finalizedecays()
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
  300  format(a,2(1x,i2),a,(1x,f16.6))
  301  format(a,6x,i3,a,(1x,f16.6))
  400  format(a,2(1x,i2),a,2(1x,f16.6))

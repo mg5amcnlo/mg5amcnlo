@@ -26,7 +26,7 @@ C---Les Houches Event Common Block
       CHARACTER*140 BUFF
       character*12 dummy12
       character*2 dummy2
-      CHARACTER*1 CH1
+      CHARACTER*9 CH1
       INTEGER I,J,II,NPS,NNG,idwgt
       character*140 buff_tlh
       common/cbuff_tlh/buff_tlh
@@ -65,7 +65,7 @@ c Avoids rounding problems for zero-mass particles
       read(iunit,'(a)')buff
       if(buff(1:1).eq.'#')then
         buff_tlh=buff
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -159,7 +159,6 @@ c$$$      IF(ISORH_LHE.EQ.2)THEN
 c$$$c H events
 c$$$        IF(SCALE2_LHE.GT.0.D0)SCALUP=SCALE2_LHE
 c$$$      ENDIF
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))

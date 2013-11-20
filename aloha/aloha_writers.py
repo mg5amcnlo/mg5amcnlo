@@ -924,10 +924,10 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         # position of the outgoing in particle list        
         self.l_id = [int(c[1:]) for c in abstract_routine.tag if c[0] == 'L'][0] 
         self.l_helas_id = self.l_id   # expected position for the argument list
-        if 'C%s' %((self.outgoing + 1) // 2) in abstract_routine.tag:
+        if 'C%s' %((self.l_id + 1) // 2) in abstract_routine.tag:
             #flip the outgoing tag if in conjugate
-            self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2 
-        
+            self.l_helas_id += self.l_id % 2 - (self.l_id +1) % 2
+         
 
     def define_expression(self):
         """Define the functions in a 100% way """
@@ -1033,24 +1033,18 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
         """define a list with the string of object required as incoming argument"""
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
-        call_arg = [('list_complex', 'P%s'% self.l_helas_id)] #incoming argument of the routine
+        call_arg = []
+        #incoming argument of the routine
+        call_arg.append( ('list_complex', 'P%s'% self.l_helas_id) )
+        
         self.declaration.add(call_arg[0])
         
         for index,spin in enumerate(self.particles):
-            if self.offshell == index + 1:
+            if self.outgoing == index + 1:
                 continue
             if self.l_helas_id == index + 1:
                 continue
-            
-            if index in conjugate:
-                index2, spin2 = index+1, self.particles[index+1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
-                #call_arg.append('%s%d' % (spin, index +1)) 
-            elif index-1 in conjugate:
-                index2, spin2 = index-1, self.particles[index-1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
-            else:
-                call_arg.append(('complex','%s%d' % (spin, index +1)))
+            call_arg.append(('complex','%s%d' % (spin, index +1)))
             self.declaration.add(('list_complex', call_arg[-1][-1])) 
         
         # couplings
@@ -1077,7 +1071,7 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 self.declaration.add(('double','W%s' % self.outgoing))
             
         self.call_arg = call_arg
-                
+        
         return call_arg
 
     def get_momenta_txt(self):

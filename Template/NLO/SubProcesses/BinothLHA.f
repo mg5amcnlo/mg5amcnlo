@@ -241,7 +241,11 @@ c               goto 203
 202            continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
-               if (hel(0).lt.NHelForMCoverHels) then
+               if (NHelForMCoverHels.eq.-1) then
+                  write (*,*) 'Not doing MC over helicities: '/
+     $                 /'HelForMCoverHels=-1'
+                  mc_hel=0
+               elseif (hel(0).lt.NHelForMCoverHels) then
                   write (*,'(a,i3,a)') 'Only ',hel(0)
      $                 ,' independent helicities:'/
      $                 /' switching to explicitly summing over them'
