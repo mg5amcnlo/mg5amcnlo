@@ -22,7 +22,7 @@ C ----------
       CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, ampLn)
+	  logical function %(proc_prefix)sIsZero(toTest, reference_value, ampLn)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -46,14 +46,14 @@ C ----------
 C BEGIN CODE
 C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
-	    IsZero=.FALSE.
+	    %(proc_prefix)sIsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZeroThres)
+	    %(proc_prefix)sIsZero=((abs(toTest)/abs(reference_value)).lt.ZeroThres)
 	  endif
       IF(AMPLN.NE.-1) THEN 
-	    IF((.NOT.ISZERO).AND.(.NOT.S(AMPLN))) THEN
+	    IF((.NOT.%(proc_prefix)sISZERO).AND.(.NOT.S(AMPLN))) THEN
 	      write(*,*) '##W01 WARNING Contribution ',ampLn,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	    ENDIF
 	  ENDIF
@@ -74,8 +74,17 @@ C
 C  
 C CONSTANTS
 C
-      CHARACTER*64 paramFileName
-      PARAMETER ( paramFileName='%{proc_prefix}sMadLoopParams.dat')
+      CHARACTER*512 paramFName,HelConfigFName,LoopFilterFName
+	  CHARACTER*512 colorNumFName,colorDenomFName, HelFilterFName
+	  CHARACTER*512 Proc_Prefix
+      PARAMETER ( paramFName='MadLoopParams.dat')
+      PARAMETER ( HelConfigFName='HelConfigs.dat')
+      PARAMETER ( LoopFilterFName='LoopFilter.dat')
+      PARAMETER ( HelFilterFName='HelFilter.dat')
+      PARAMETER ( ColorNumFName='ColorNumFactors.dat')
+      PARAMETER ( ColorDenomFName='ColorDenomFactors.dat')
+      PARAMETER ( Proc_Prefix='%(proc_prefix)s')
+
 	  %(nbornamps_decl)s
       INTEGER    NLOOPAMPS, NCTAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d) 
@@ -112,6 +121,16 @@ C LOCAL VARIABLES
 C  
       %(real_dp_format)s ANS(0:3)
       INTEGER I,J,K,H
+
+      CHARACTER*512 ParamFN,HelConfigFN,LoopFilterFN,ColorNumFN,ColorDenomFN,HelFilterFN
+	  CHARACTER*512 TMP
+	  SAVE ParamFN
+	  SAVE HelConfigFN
+	  SAVE LoopFilterFN
+	  SAVE ColorNumFN
+	  SAVE ColorDenomFN
+	  SAVE HelFilterFN
+
 	  INTEGER HELPICKED_BU, CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
 C P is the actual PS POINT used for the computation, and can be rotated for the stability test purposes.
@@ -154,7 +173,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 C
 C FUNCTIONS
 C
-      LOGICAL ISZERO
+      LOGICAL %(proc_prefix)sISZERO
 C  
 C GLOBAL VARIABLES
 C  
@@ -239,12 +258,37 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  DATA MP_DONE_ONCE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
+	  character(512) MLPath
+      data MLPath/'[[NA]]'/
+      common/MLPATH/MLPath
+
+	  LOGICAL ML_INIT
+	  DATA ML_INIT/.TRUE./
+	  common/ML_INIT/ML_INIT
+
 C ----------
 C BEGIN CODE
 C ----------
 
+IF(ML_INIT) THEN
+  TMP = 'auto'
+  CALL SETMADLOOPPATH(TMP)
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+  ML_INIT = .FALSE.
+ENDIF
+
 IF(NTRY.EQ.0) THEN
-  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+
+C Setup the file paths
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+  CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+  CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+  CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+  CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+  CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+  
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
   HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter  
   DO J=1,NCOMB
@@ -252,7 +296,7 @@ IF(NTRY.EQ.0) THEN
 	  GOODAMP(I,J)=.TRUE.
 	ENDDO
   ENDDO
-OPEN(1, FILE="%{proc_prefix}sLoopFilter.dat", err=100, status='OLD',           action='READ')
+OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
   DO J=1,NCOMB
     READ(1,*,END=101) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
   ENDDO
@@ -266,7 +310,7 @@ OPEN(1, FILE="%{proc_prefix}sLoopFilter.dat", err=100, status='OLD',           a
   ENDDO
 101  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%{proc_prefix}sHelFilter.dat", err=102, status='OLD',           action='READ')
+OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
   READ(1,*,END=103) (GOODHEL(I),I=1,NCOMB)
   GOTO 103
 102  CONTINUE
@@ -276,31 +320,31 @@ OPEN(1, FILE="%{proc_prefix}sHelFilter.dat", err=102, status='OLD',           ac
   ENDDO
 103  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%{proc_prefix}sColorNumFactors.dat", err=104, status='OLD',           action='READ')
+OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 105
 104  CONTINUE
-  STOP 'Color factors could not be initialized from file %{proc_prefix}sColorNumFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorNumFactors.dat. File not found' 
 105  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%{proc_prefix}sColorDenomFactors.dat", err=106, status='OLD',           action='READ')
+OPEN(1, FILE=ColorDenomFN, err=106, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
     READ(1,*,END=107) (CF_D(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 107
 106  CONTINUE
-  STOP 'Color factors could not be initialized from file %{proc_prefix}sColorDenomFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorDenomFactors.dat. File not found' 
 107  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="%{proc_prefix}sHelConfigs.dat", err=108, status='OLD',                  action='READ')
+OPEN(1, FILE=HelConfigFN, err=108, status='OLD',                  action='READ')
   DO H=1,NCOMB
     READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
   ENDDO
   GOTO 109
 108  CONTINUE
-  STOP 'Color helictiy configurations could not be initialized from file %{proc_prefix}sHelConfigs.dat. File not found' 
+  STOP 'Color helictiy configurations could not be initialized from file %(proc_prefix)sHelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
 IF(BOOTANDSTOP) THEN
@@ -341,7 +385,7 @@ NTRY=NTRY+1
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-OPEN(1, FILE="%{proc_prefix}sHelFilter.dat", err=110, status='NEW',       action='WRITE')
+OPEN(1, FILE=HelFilterFN, err=110, status='NEW',       action='WRITE')
   WRITE(1,*) (GOODHEL(I),I=1,NCOMB)
 110  CONTINUE
   CLOSE(1)
@@ -349,7 +393,7 @@ FOUNDHELFILTER=.TRUE.
 ENDIF
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER) THEN
-OPEN(1, FILE="%{proc_prefix}sLoopFilter.dat", err=111, status='NEW',       action='WRITE')
+OPEN(1, FILE=LoopFilterFN, err=111, status='NEW',       action='WRITE')
   DO J=1,NCOMB
     WRITE(1,*) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
   ENDDO
@@ -481,7 +525,7 @@ IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF (CHECKPHASE) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
-      IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
+      IF(%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=.FALSE.
 	    ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -507,7 +551,7 @@ C   SET THE HELICITY FILTER
 C   SET THE LOOP FILTER
     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	  DO I=NCTAMPS+1,NLOOPAMPS
-        IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
+        IF(.NOT.%(proc_prefix)sISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
           IF(NTRY.EQ.1) THEN
 	        GOODAMP(I,HELPICKED)=.TRUE.
 	      ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN
@@ -523,12 +567,12 @@ C   SET THE LOOP FILTER
   	  ENDDO
     ENDIF
   ELSEIF (.NOT.HELDOUBLECHECKED)THEN
-    IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+    IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
 	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
 	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	  NTRY=0
-	  OPEN(30,FILE='%{proc_prefix}sHelFilter.dat',err=349)
+	  OPEN(30,FILE=HelFilterFN,err=349)
 349   CONTINUE
       CLOSE(30,STATUS='delete')
 	ENDIF
@@ -597,19 +641,19 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
 	EVAL_DONE(3)=.TRUE.
 	CALL %(proc_prefix)sROTATE_PS(PS,P,1)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
+	IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,1)
 	goto 200
   ENDIF
 
   IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
 	EVAL_DONE(4)=.TRUE.
 	CALL %(proc_prefix)sROTATE_PS(PS,P,2)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)	
+	IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,2)	
 	goto 200
   ENDIF
 
   CALL %(proc_prefix)sROTATE_PS(PS,P,0)
-  IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,0)  
+  IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,0)  
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 

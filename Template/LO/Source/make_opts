@@ -12,6 +12,8 @@ ifeq ($(origin FC),default)
    FC=gfortran
 endif
 
+OLP_FLAGS = -fPIC
+
 # Options: dynamic, lhapdf
 
 UNAME := $(shell uname)

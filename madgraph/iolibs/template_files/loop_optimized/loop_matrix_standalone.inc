@@ -16,16 +16,16 @@ C
 C  
 C CONSTANTS
 C
-      CHARACTER*128 paramFName,HelConfigFName,LoopFilterFName
-	  CHARACTER*128 colorNumFName,colorDenomFName, HelFilterFName
-	  CHARACTER*128 procPrefix
+      CHARACTER*512 paramFName,HelConfigFName,LoopFilterFName
+	  CHARACTER*512 colorNumFName,colorDenomFName, HelFilterFName
+	  CHARACTER*512 Proc_Prefix
       PARAMETER ( paramFName='MadLoopParams.dat')
       PARAMETER ( HelConfigFName='HelConfigs.dat')
       PARAMETER ( LoopFilterFName='LoopFilter.dat')
       PARAMETER ( HelFilterFName='HelFilter.dat')
-      PARAMETER ( colorNumFName='ColorNumFactors.dat')
-      PARAMETER ( colorDenomFName='ColorDenomFactors.dat')
-      PARAMETER ( procPrefix='%(proc_prefix)s')
+      PARAMETER ( ColorNumFName='ColorNumFactors.dat')
+      PARAMETER ( ColorDenomFName='ColorDenomFactors.dat')
+      PARAMETER ( Proc_Prefix='%(proc_prefix)s')
 
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
@@ -115,7 +115,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  %(real_dp_format)s HELSAVED(3,NCOMB)
 	  INTEGER ITEMP
 	  LOGICAL LTEMP
-	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
+	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
@@ -135,11 +135,11 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 C
 C FUNCTIONS
 C
-      INTEGER ML5SOINDEX_FOR_BORN_AMP
-	  INTEGER ML5SOINDEX_FOR_LOOP_AMP
-	  INTEGER ML5SQSOINDEX
-      INTEGER ISSAME
-      LOGICAL ISZERO
+      INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
+	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
+	  INTEGER %(proc_prefix)sML5SQSOINDEX
+      INTEGER %(proc_prefix)sISSAME
+      LOGICAL %(proc_prefix)sIsZero
 C  
 C GLOBAL VARIABLES
 C  
@@ -264,11 +264,9 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
 	  character(512) MLPath
-      data MLPath/'[[NA]]'/
       common/MLPATH/MLPath
 
 	  LOGICAL ML_INIT
-	  DATA ML_INIT/.TRUE./
 	  common/ML_INIT/ML_INIT
 
 C ----------
@@ -276,21 +274,23 @@ C BEGIN CODE
 C ----------
 
 IF(ML_INIT) THEN
-  CALL setMadLoopPath('auto')
-  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+  TMP = 'auto'
+  CALL setMadLoopPath(TMP)
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
   ML_INIT = .FALSE.
 ENDIF
 
 IF(NTRY.EQ.0) THEN
 
 C Setup the file paths
-  CALL joinPath(MLPATH,proc_prefix,TMP)
-  CALL joinPath(TMP,ParamFName,ParamFN)
-  CALL joinPath(TMP,HelConfigFName,HelConfigFN)
-  CALL joinPath(TMP,LoopFilterFName,LoopFilterFN)
-  CALL joinPath(TMP,ColorNumFName,ColorNumFN)
-  CALL joinPath(TMP,ColorDenomFName,ColorDenomFN)
-  CALL joinPath(TMP,HelFilterFName,HelFilterFN)
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+  CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+  CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+  CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+  CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+  CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
 
@@ -329,7 +329,7 @@ OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   ENDDO
   GOTO 105
 104  CONTINUE
-  STOP 'Color factors could not be initialized from file %{proc_prefix}sColorNumFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorNumFactors.dat. File not found' 
 105  CONTINUE
 CLOSE(1)
 OPEN(1, FILE=ColorDenomFN, err=106, status='OLD',           action='READ')
@@ -338,7 +338,7 @@ OPEN(1, FILE=ColorDenomFN, err=106, status='OLD',           action='READ')
   ENDDO
   GOTO 107
 106  CONTINUE
-  STOP 'Color factors could not be initialized from file %{proc_prefix}sColorDenomFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorDenomFactors.dat. File not found' 
 107  CONTINUE
 CLOSE(1)
 OPEN(1, FILE=HelConfigFN, err=108, status='OLD',                  action='READ')
@@ -347,7 +347,7 @@ OPEN(1, FILE=HelConfigFN, err=108, status='OLD',                  action='READ')
   ENDDO
   GOTO 109
 108  CONTINUE
-  STOP 'Color helictiy configurations could not be initialized from file %{proc_prefix}sHelConfigs.dat. File not found' 
+  STOP 'Color helictiy configurations could not be initialized from file %(proc_prefix)sHelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
 
@@ -619,7 +619,7 @@ C SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING THE HELICITY FI
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
 	  HEL_INCONSISTENT=.FALSE.
-      IF(ISZERO(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+      IF(%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=-HELOFFSET
 	    ELSEIF(GOODHEL(HELPICKED).NE.-HELOFFSET) THEN
@@ -635,7 +635,7 @@ C   SET THE HELICITY FILTER
 	    DO H=1,HELPICKED-1
 		  IF(GOODHEL(H).GT.-HELOFFSET) THEN
 C           Be looser for helicity check, bring a factor 100
-		    DUMMY=ISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
+		    DUMMY=%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,H),REF,.FALSE.)
 		    IF(DUMMY.NE.0) THEN
 		      IF(NTRY.EQ.1) THEN
 C               Set the matching helicity to be contributing once more
@@ -687,7 +687,7 @@ C   SET THE LOOP FILTER
     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	  DO I=1,NLOOPGROUPS
 	    DO J=1,NSQUAREDSO
-          IF(.NOT.ISZERO(ABS(LOOPRES(1,J,I))+ABS(LOOPRES(2,J,I))+ABS(LOOPRES(3,J,I)),(REF*1.0d-4),I,J)) THEN
+          IF(.NOT.%(proc_prefix)sIsZero(ABS(LOOPRES(1,J,I))+ABS(LOOPRES(2,J,I))+ABS(LOOPRES(3,J,I)),(REF*1.0d-4),I,J)) THEN
             IF(NTRY.EQ.1) THEN
 	          GOODAMP(J,I)=.TRUE.
 		      LOOPFILTERBUFF(J,I)=.TRUE.
@@ -707,7 +707,7 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED.AND.NTRY.NE.0)THEN
 C   DOUBLE CHECK THE HELICITY FILTER
     IF (GOODHEL(HELPICKED).EQ.-HELOFFSET) THEN
-	  IF (.NOT.ISZERO(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
+	  IF (.NOT.%(proc_prefix)sIsZero(ABS(ANS(1,0))+ABS(ANS(2,0))+ABS(ANS(3,0)),REF/DBLE(NCOMB),-1,-1)) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected what are the zero helicity configurations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -718,7 +718,7 @@ C   DOUBLE CHECK THE HELICITY FILTER
 	  ENDIF
 	ENDIF
 	IF (GOODHEL(HELPICKED).LT.-HELOFFSET.AND.NTRY.NE.0) THEN
-	  IF(ISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
+	  IF(%(proc_prefix)sISSAME(ANS(1,0),HELSAVED(1,ABS(GOODHEL(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
 	    write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	    write(*,*) 'One reason for this is that you might have changed sensible parameters which affected the helicity dependance relations.'
 	    write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
@@ -917,7 +917,7 @@ C   General Helper functions and subroutine
 C   for the main sloopmatrix subroutine
 C --=========================================--
 
-	  logical function IsZero(toTest, reference_value, loop, soindex)
+	  logical function %(proc_prefix)sIsZero(toTest, reference_value, loop, soindex)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -942,22 +942,22 @@ C ----------
 C BEGIN CODE
 C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
-	    IsZero=.FALSE.
+	    %(proc_prefix)sIsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP 1
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
+	    %(proc_prefix)sIsZero=((abs(toTest)/abs(reference_value)).lt.ZEROTHRES)
 	  endif
       
 	  IF(loop.NE.-1) THEN
-	    IF((.NOT.ISZERO).AND.(.NOT.S(soindex,loop))) THEN
+	    IF((.NOT.%(proc_prefix)sIsZero).AND.(.NOT.S(soindex,loop))) THEN
 	      write(*,*) '##W01 WARNING Contribution ',loop,' of split order ',soindex,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	    ENDIF
 	  ENDIF
 
 	  end
 
-      integer function ISSAME(resA,resB,ref,useMax)
+      integer function %(proc_prefix)sISSAME(resA,resB,ref,useMax)
 	  IMPLICIT NONE
 C     This function compares the result from two different helicity configuration A and B
 C     It returns 0 if they are not related and (+/-wgt) if A=(+/-wgt)*B.
@@ -977,7 +977,7 @@ C
 C  
 C LOCAL VARIABLES
 C
-      LOGICAL ISZERO
+      LOGICAL %(proc_prefix)sIsZero
       integer I,J
 	  integer N_WGT_TO_TRY
       integer WGT_TO_TRY(MAX_WGT_TO_TRY)
@@ -989,7 +989,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      ISSAME=0
+      %(proc_prefix)sISSAME=0
 
 C If the helicity can be constructed progressively while allowing inconsistency, then we only allow for weight one comparisons.
 	  IF (.NOT.HELINITSTARTOVER.AND..NOT.USEMAX) THEN
@@ -1000,16 +1000,16 @@ C If the helicity can be constructed progressively while allowing inconsistency,
 
 	  DO I=1,N_WGT_TO_TRY
 	    DO J=1,3
-		  IF (IsZero(ABS(resB(J)),ref,-1)) THEN
-		    IF(.NOT.IsZero(ABS(resB(J))+ABS(resA(J)),ref,-1)) THEN
+		  IF (%(proc_prefix)sIsZero(ABS(resB(J)),ref,-1,-1)) THEN
+		    IF(.NOT.%(proc_prefix)sIsZero(ABS(resB(J))+ABS(resA(J)),ref,-1,-1)) THEN
 		      GOTO 1231
 			ENDIF
 C         Be loser for helicity comparison, so bring a factor 100
-		  ELSEIF(.NOT.IsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1)) THEN
+		  ELSEIF(.NOT.%(proc_prefix)sIsZero((resA(J)/resB(J))-DBLE(WGT_TO_TRY(I)),ref*100.0d0,-1,-1)) THEN
 		    GOTO 1231		    
 		  ENDIF
 		ENDDO
-		ISSAME = WGT_TO_TRY(I)
+		%(proc_prefix)sISSAME = WGT_TO_TRY(I)
 		RETURN
  1231   CONTINUE
       ENDDO
@@ -1157,7 +1157,7 @@ C
 
       END
 
-      INTEGER FUNCTION ML5SOINDEX_FOR_SQUARED_ORDERS(ORDERS)
+      INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS(ORDERS)
 C
 C This functions returns the integer index identifying the split orders list 
 C passed in argument.
@@ -1183,18 +1183,18 @@ C
 	    DO J=1,NSO
 		  IF (ORDERS(J).NE.SQPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		ML5SOINDEX_FOR_SQUARED_ORDERS = I
+		%(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS = I
 		RETURN
 1009    CONTINUE
 	  ENDDO
 
-	  WRITE(*,*) 'ERROR:: Stopping function ML5SOINDEX_FOR_SQUARED_ORDERS'
+	  WRITE(*,*) 'ERROR:: Stopping function %(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS'
 	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
 	  STOP
 
       END
 
-      INTEGER FUNCTION ML5SOINDEX_FOR_BORN_AMP(AMPID)
+      INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(AMPID)
 C
 C For a given born amplitude number, it returns the ID of the split orders it has
 C
@@ -1217,11 +1217,11 @@ C -----------
 	  IF (AMPID.gt.NBORNAMPS) THEN
 	    WRITE(*,*) 'ERROR:: Born amplitude ID ',AMPID,' above the maximum ',NBORNAMPS	
       ENDIF
-	  ML5SOINDEX_FOR_BORN_AMP = BORNAMPORDERS(AMPID)
+	  %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP = BORNAMPORDERS(AMPID)
 
       END
 
-      INTEGER FUNCTION ML5SOINDEX_FOR_LOOP_AMP(AMPID)
+      INTEGER FUNCTION %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(AMPID)
 C
 C For a given loop amplitude number, it returns the ID of the split orders it has
 C
@@ -1244,12 +1244,12 @@ C -----------
 	  IF (AMPID.gt.NLOOPAMPS) THEN
 	    WRITE(*,*) 'ERROR:: Loop amplitude ID ',AMPID,' above the maximum ',NLOOPAMPS	
 	  ENDIF
-	  ML5SOINDEX_FOR_LOOP_AMP = LOOPAMPORDERS(AMPID)
+	  %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP = LOOPAMPORDERS(AMPID)
 
       END
 
 
-      INTEGER FUNCTION ML5SQSOINDEX(ORDERINDEXA, ORDERINDEXB)
+      INTEGER FUNCTION %(proc_prefix)sML5SQSOINDEX(ORDERINDEXA, ORDERINDEXB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -1274,14 +1274,14 @@ C
 C
 C FUNCTION
 C
-      INTEGER ML5SOINDEX_FOR_SQUARED_ORDERS
+      INTEGER %(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSO
 	    SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERINDEXB,I)
 	  ENDDO
-	  ML5SQSOINDEX=ML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
+	  %(proc_prefix)sML5SQSOINDEX=%(proc_prefix)sML5SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
 	  END
 
 C --=========================================--

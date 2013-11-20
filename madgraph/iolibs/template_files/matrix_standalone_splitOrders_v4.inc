@@ -214,7 +214,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEX
+      INTEGER %(proc_prefix)sSQSOINDEX
 C  
 C GLOBAL VARIABLES
 C  
@@ -237,7 +237,7 @@ C ----------
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 		  DO N = 1, NAMPSO
-            RES(SQSOINDEX(M,N)) = RES(SQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
 		  ENDDO
         ENDDO
 	  ENDDO
@@ -248,7 +248,7 @@ C
 C Helper functions to deal with the split orders.
 C
 
-      INTEGER FUNCTION SQSOINDEX(AMPORDERA,AMPORDERB)
+      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -274,17 +274,17 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEX_FROM_ORDERS
+      INTEGER %(proc_prefix)sSQSOINDEX_FROM_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSPLITORDERS
 	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
 	  ENDDO
-	  SQSOINDEX=SQSOINDEX_FROM_ORDERS(SQORDERS)
+	  %(proc_prefix)sSQSOINDEX=%(proc_prefix)sSQSOINDEX_FROM_ORDERS(SQORDERS)
 	  END
 
-      INTEGER FUNCTION SQSOINDEX_FROM_ORDERS(ORDERS)
+      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -310,7 +310,7 @@ C
 	    DO J=1,NSPLITORDERS
 		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		SQSOINDEX_FROM_ORDERS = I
+		%(proc_prefix)sSQSOINDEX_FROM_ORDERS = I
 		RETURN
 1009    CONTINUE
 	  ENDDO

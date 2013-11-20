@@ -29,14 +29,18 @@
 
       subroutine setMadLoopPath(path)
 
-      character*(*) path
+      character(512) path
 
       character(512) prefix,fpath
       character(17) nameToCheck
-      paramter (nameToCheck='MadLoopParams.dat')
+      parameter (nameToCheck='MadLoopParams.dat')
+
+      LOGICAL ML_INIT
+      DATA ML_INIT/.TRUE./
+      common/ML_INIT/ML_INIT
 
       character(512) MLPath
-      data MLPath/'[[NA]]'/
+      data MLPath/'[[NA]]'/      
       common/MLPATH/MLPath
 
       if (LEN(path).ge.4 .and. path(1:4).eq.'auto') then
@@ -50,7 +54,7 @@ C     Try to automatically find the path
           goto 10
 1         continue
           close(1)
-          prefix='./MadLoop5_files/'
+          prefix='./MadLoop5_ressources/'
           call joinPath(prefix,nameToCheck,fpath)
           OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',      
      $    ACTION='READ')
@@ -86,7 +90,7 @@ C     Check that the FilePath set is correct
 3     continue
       close(1)
       write(*,*) '==='
-      write(*,*) 'ERROR: The MadLoop5 auxiliary files could not'
+      write(*,*) 'ERROR: The MadLoop5 auxiliary files could not',
      $' be found in ',MLPath
       write(*,*) '==='
       stop

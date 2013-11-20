@@ -60,32 +60,16 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 		fi
 
     fi
-    if  [[ ! -e MadLoopParams.dat ]] ; then
-	ln -sf ../MadLoopParams.dat .
-    fi
-	if  [[ ! -e HelFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../HelFilter.dat ]] ; then                                                                                     
-			ln -sf ../HelFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-	if  [[ ! -e LoopFilter.dat ]] ; then                                                                                      
-    	if [[ -e ../LoopFilter.dat ]] ; then                                                                                     
-			ln -sf ../LoopFilter.dat .                                                                                                 
-		fi                                                                                                                  
-	fi
-    if  [[ ! -e ColorDenomFactors.dat ]] ; then
-	ln -sf ../ColorDenomFactors.dat .
-    fi
-    if  [[ ! -e HelConfigs.dat ]] ; then
-	ln -sf ../HelConfigs.dat .
-    fi
-    if  [[ ! -e ColorNumFactors.dat ]] ; then
-	ln -sf ../ColorNumFactors.dat .
-    fi
+
     if  [[ ! -e FKS_params.dat ]] ; then
 	ln -sf ../FKS_params.dat .
     fi
-    if  [[ ! -e OLE_order.olc ]] ; then
+
+    if  [[ ! -e MadLoop5_ressources ]] ; then
+	ln -sf ../MadLoop5_ressources .
+    fi
+
+	if  [[ ! -e OLE_order.olc ]] ; then
 	ln -sf ../OLE_order.olc .
     fi
     if  [[ ! -e param_card.dat ]] ; then

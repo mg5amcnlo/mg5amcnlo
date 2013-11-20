@@ -46,8 +46,8 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
-      INTEGER ID,R
-      COMMON/%(proc_prefix)sLOOP/ID,R
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
 C ----------
 C BEGIN CODE

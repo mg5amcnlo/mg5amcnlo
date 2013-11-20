@@ -56,7 +56,7 @@ C
 C  
 C FUNCTIONS
 C
-      LOGICAL %(mp_prefix)sIS_PHYSICAL
+      LOGICAL %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL
 C
 C SAVED VARIABLES
 C
@@ -89,7 +89,7 @@ C
 	  ENDDO
 
 C Check the sanity of the original PS point
-      IF (.NOT.%(mp_prefix)sIS_PHYSICAL(NEWP,WARNED)) THEN
+      IF (.NOT.%(proc_prefix)s%(mp_prefix)sIS_PHYSICAL(NEWP,WARNED)) THEN
 	    ERRCODE = 1
 		WRITE(*,*) 'ERROR:: The input PS point is not precise enough.'
 		GOTO 100
@@ -140,7 +140,7 @@ C Report to the user or update the PS point.
 	  END
       
 
-      FUNCTION %(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)
+      FUNCTION %(proc_prefix)s%(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)
 	  IMPLICIT NONE
 C
 C CONSTANTS
@@ -155,7 +155,7 @@ C
 C ARGUMENTS 
 C
       %(real_format)s P(0:3,NEXTERNAL), NEWP(0:3,NEXTERNAL)
-	  LOGICAL %(mp_prefix)sIS_CLOSE
+	  LOGICAL %(proc_prefix)s%(mp_prefix)sIS_CLOSE
 	  INTEGER WARNED
 C
 C LOCAL VARIABLES 
@@ -164,7 +164,7 @@ C
 	  %(real_format)s REF,REF2
 
 C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
-     %(mp_prefix)sIS_CLOSE = .TRUE.
+     %(proc_prefix)s%(mp_prefix)sIS_CLOSE = .TRUE.
      REF  = ZERO
 	 REF2 = ZERO
 	 DO J=1,NEXTERNAL
@@ -175,7 +175,7 @@ C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
 	 ENDDO
 
 	  IF ((REF/REF2).GT.THRS_CLOSE) THEN
-	    %(mp_prefix)sIS_CLOSE = .FALSE.
+	    %(proc_prefix)s%(mp_prefix)sIS_CLOSE = .FALSE.
 	    IF (WARNED.LT.20) THEN
 	      WRITE(*,*) 'WARNING:: The improved PS point is too far from the original one',(REF/REF2)
 		  WARNED=WARNED+1
@@ -184,7 +184,7 @@ C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
 
 	  END
 
-      FUNCTION %(mp_prefix)sIS_PHYSICAL(P,WARNED)
+      FUNCTION %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL(P,WARNED)
 	  IMPLICIT NONE
 C
 C CONSTANTS
@@ -209,7 +209,7 @@ C
 C ARGUMENTS 
 C
       %(real_format)s P(0:3,NEXTERNAL)
-	  LOGICAL %(mp_prefix)sIS_PHYSICAL
+	  LOGICAL %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL
 	  INTEGER WARNED
 C
 C LOCAL VARIABLES 
@@ -228,7 +228,7 @@ C ----------
 C BEGIN CODE
 C ----------
 
-      %(mp_prefix)sIS_PHYSICAL = .TRUE.
+      %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL = .TRUE.
 
 C WE FIRST CHECK THAT THE INPUT PS POINT IS REASONABLY PHYSICAL
 C FOR THAT WE NEED A REFERENCE SCALE
@@ -250,7 +250,7 @@ C FOR THAT WE NEED A REFERENCE SCALE
 		    CALL %(proc_prefix)s%(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF
-		  %(mp_prefix)sIS_PHYSICAL = .FALSE.
+		  %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL = .FALSE.
 		ENDIF
 	  ENDDO
 	  REF = REF / (ONE*NEXTERNAL)
@@ -262,7 +262,7 @@ C FOR THAT WE NEED A REFERENCE SCALE
 		    CALL %(proc_prefix)s%(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF		  
-		  %(mp_prefix)sIS_PHYSICAL = .FALSE.
+		  %(proc_prefix)s%(mp_prefix)sIS_PHYSICAL = .FALSE.
 		ENDIF
 	  ENDDO
 
@@ -276,7 +276,7 @@ C FOR THAT WE NEED A REFERENCE SCALE
       PARAMETER (NINITIAL=%(ninitial)d)
 	  DOUBLE PRECISION ZERO
 	  PARAMETER (ZERO=0.0d0)
-      DOUBLE PRECISION mdot
+      DOUBLE PRECISION %(proc_prefix)smdot
 
 	  INTEGER I,J
 
@@ -297,17 +297,17 @@ C
       WRITE (*,*) '    ---------------------'
       WRITE (*,*) '    E | px | py | pz | m '
       DO I=1,NEXTERNAL
-        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(MDOT(P(0,I),P(0,I))))
+        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(%(proc_prefix)sMDOT(P(0,I),P(0,I))))
       ENDDO
       WRITE (*,*) '    Four-momentum conservation sum:'
       WRITE (*,'(1x,4e27.17)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
       WRITE (*,*) '   ---------------------'
 	  END
 
-	  DOUBLE PRECISION function mdot(p1,p2)
+	  DOUBLE PRECISION function %(proc_prefix)smdot(p1,p2)
       implicit none
       DOUBLE PRECISION p1(0:3),p2(0:3)
-      mdot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
+      %(proc_prefix)smdot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
       return
       end
 
@@ -319,7 +319,7 @@ C
       PARAMETER (NINITIAL=%(ninitial)d)
 	  %(real_format)s ZERO
 	  PARAMETER (ZERO=0.0%(exp_letter)s+00%(mp_specifier)s)
-      %(real_format)s %(mp_prefix)smdot
+      %(real_format)s %(proc_prefix)s%(mp_prefix)smdot
 
 	  INTEGER I,J
 
@@ -351,7 +351,7 @@ C The GCC4.7 compiler on SLC machines has trouble to write out quadruple precisi
       WRITE (*,*) '    ---------------------'
       WRITE (*,*) '    E | px | py | pz | m '
       DO I=1,NEXTERNAL
-	    DOT=SQRT(ABS(%(mp_prefix)sMDOT(P(0,I),P(0,I))))
+	    DOT=SQRT(ABS(%(proc_prefix)s%(mp_prefix)sMDOT(P(0,I),P(0,I))))
 		DP_DOT=DOT
         WRITE (*,'(1x,5e27.17)') DP_P(0,I),DP_P(1,I),DP_P(2,I),DP_P(3,I),DP_DOT
       ENDDO
@@ -360,10 +360,10 @@ C The GCC4.7 compiler on SLC machines has trouble to write out quadruple precisi
       WRITE (*,*) '   ---------------------'
 	  END
 
-      %(real_format)s function %(mp_prefix)smdot(p1,p2)
+      %(real_format)s function %(proc_prefix)s%(mp_prefix)smdot(p1,p2)
       implicit none
       %(real_format)s p1(0:3),p2(0:3)
-      %(mp_prefix)smdot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
+      %(proc_prefix)s%(mp_prefix)smdot=p1(0)*p2(0)-p1(1)*p2(1)-p1(2)*p2(2)-p1(3)*p2(3)
       return
       end
 
@@ -499,7 +499,7 @@ C
 C  
 C FUNCTIONS
 C
-      LOGICAL %(mp_prefix)sIS_CLOSE 
+      LOGICAL %(proc_prefix)s%(mp_prefix)sIS_CLOSE 
 C
 C LOCAL VARIABLES 
 C
@@ -602,7 +602,7 @@ C
 	   NEWP(J,P1) = REF
 	 ENDDO
  
-      IF (.NOT.%(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)) THEN
+      IF (.NOT.%(proc_prefix)s%(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)) THEN
 	    ERRCODE=999
 		GOTO 100
 	  ENDIF
@@ -652,7 +652,7 @@ C
 C  
 C FUNCTIONS
 C
-      LOGICAL %(mp_prefix)sIS_CLOSE
+      LOGICAL %(proc_prefix)s%(mp_prefix)sIS_CLOSE
 C
 C LOCAL VARIABLES 
 C
@@ -760,7 +760,7 @@ C     Consistency check
 		GOTO 1000
 	  ENDIF
 
-      IF (.NOT.%(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)) THEN
+      IF (.NOT.%(proc_prefix)s%(mp_prefix)sIS_CLOSE(P,NEWP,WARNED)) THEN
 	    ERRCODE=999
 		GOTO 1000
 	  ENDIF

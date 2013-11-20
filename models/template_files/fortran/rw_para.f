@@ -28,5 +28,15 @@ c************************************************************************
 
       end
 
+      subroutine setpara2(param_name)
+      implicit none
+
+      character(512) param_name
+
+      call setpara2(param_name)
+
+      return
+
+      end
 
 

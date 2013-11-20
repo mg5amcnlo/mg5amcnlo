@@ -56,6 +56,7 @@ import aloha.create_aloha as create_aloha
 import models.write_param_card as param_writer
 from madgraph import MadGraph5Error, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
+pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.loop_exporter')
 
@@ -171,17 +172,29 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         # We must change some files to their version for NLO computations
         cpfiles= ["Source/makefile","SubProcesses/makefile",\
-                  "SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopCommons.f",
                   "Cards/MadLoopParams.dat",
+                  "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
+        # Copy the hole MadLoop5_ressources directory (empty at this stage)
+        if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
+                                                        'MadLoop5_ressources')):
+            cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
+                    'MadLoop5_ressources'),pjoin(self.dir_path,'SubProcesses'))
+
+        # Link MadLoopParams.dat from Cards inside the MadLoop5_ressources
+        ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_ressources'))
+
         # And remove check_sa in the SubProcess folder since now there is a
         # check_sa tailored to each subprocess.
-        os.remove(os.path.join(self.dir_path,'SubProcesses','check_sa.f'))
+        if os.path.isfile(pjoin(self.dir_path,'SubProcesses','check_sa.f')):
+            os.remove(pjoin(self.dir_path,'SubProcesses','check_sa.f'))
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -214,8 +227,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         MadLoop5 subroutines and common blocks related to it. This allows
         to compile several processes into one library as requested by the 
         BLHA (Binoth LesHouches Accord) guidelines. """
-        
-        return 'ML5_%s_'%matrix_element.get('processes')[0].shell_string()
+
+        # return 'ML5_%s_'%matrix_element.get('processes')[0].shell_string()    
+        # The version below is shorter
+        return 'ML5_%d_'%matrix_element.get('processes')[0].get('id')   
 
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
@@ -437,7 +452,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         cwd = os.getcwd()
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
-                       "P%s" % matrix_element.get('processes')[0].shell_string())
+                      "P%s" % matrix_element.get('processes')[0].shell_string())
 
         try:
             os.mkdir(dirpath)
@@ -530,7 +545,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         linkfiles = ['coupl.inc', 'makefile',
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
-                     'MadLoopParamReader.f',
+                     'MadLoopParamReader.f','MadLoopCommons.f',
                      'MadLoopParams.inc']
         
         for file in linkfiles:
@@ -539,8 +554,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # The mp module
         ln('../../lib/mpmodule.mod')
             
-        # For convenience also link the madloop param card
-        ln('../../Cards/MadLoopParams.dat')
+        # Also like the whole MadLoop5_files directory
+        ln('../MadLoop5_ressources')
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
@@ -665,6 +680,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
                                           LoopFortranModel)
+            
+            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+            proc_prefix_writer.close()
             
             filename = 'check_sa.f'
             self.write_check_sa(writers.FortranWriter(filename),matrix_element)
@@ -1011,7 +1030,7 @@ call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
 """%self.general_replace_dict
             replace_dict['set_reference']=\
 """C We chose to use the born evaluation for the reference
-call smatrix(p,ref)"""
+call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['loop_induced_helas_calls'] = ""
             replace_dict['loop_induced_finalize'] = ""
             replace_dict['loop_induced_setup'] = ""
@@ -1045,21 +1064,21 @@ call smatrix(p,ref)"""
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(
-             '%{proc_prefix}sColorNumFactors.dat'%self.general_replace_dict,'w')
+        CMWriter=open(pjoin('..','MadLoop5_ressources',
+            '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open(
-           '%{proc_prefix}sColorDenomFactors.dat'%self.general_replace_dict,'w')
+        CMWriter=open(pjoin('..','MadLoop5_ressources',
+          '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(
-                  '%{proc_prefix}ss.dat'%self.general_replace_dict,'w')
+        HelConfigWriter=open(pjoin('..','MadLoop5_ressources',
+                 '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
         HelConfigWriter.close()
@@ -1286,6 +1305,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         else:
                         
+            proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
+            proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
+            proc_prefix_writer.close()
+                        
             filename = 'loop_matrix.f'
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
@@ -1421,24 +1444,24 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['mp_squaring']=\
-"""ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_LOOP_AMP(J))
+"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
 TEMP2 = DUMMY*REAL(CFTOT*AMPL(1,I)*CONJG(AMPL(1,J)),KIND=16)
 IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
   ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2
   ANS(1,0)=ANS(1,0)+TEMP2
-ENDIF"""       
+ENDIF"""%self.general_replace_dict  
         else:
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['mp_squaring']=\
-"""ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_BORN_AMP(J))
+"""ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN                               
 DO K=1,3
 TEMP2 = DUMMY*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
 ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
 ANS(K,0)=ANS(K,0)+TEMP2
 ENDDO
-ENDIF"""
+ENDIF"""%self.general_replace_dict
         # Extract helas calls
         squared_orders = matrix_element.get_squared_order_contribs()
         split_orders = matrix_element.get('processes')[0].get('split_orders')
@@ -1696,7 +1719,7 @@ ENDDO
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']='\n'.join([\
-              'ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_LOOP_AMP(J))',
+              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))'%self.general_replace_dict,
               'TEMP2 = DUMMY*DBLE(CFTOT*AMPL(1,I)*DCONJG(AMPL(1,J)))',
               'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
               'ANS(1,ITEMP)=ANS(1,ITEMP)+TEMP2',
@@ -1730,7 +1753,7 @@ ENDDO
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join([
-              'ITEMP = ML5SQSOINDEX(ML5SOINDEX_FOR_LOOP_AMP(I),ML5SOINDEX_FOR_BORN_AMP(J))',
+              'ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))'%self.general_replace_dict,
               'IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN',
               'DO K=1,3',
               'TEMP2 = 2.0d0*DUMMY*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))',
@@ -1764,21 +1787,21 @@ ENDDO""")
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(
-             '%{proc_prefix}sColorNumFactors.dat'%self.general_replace_dict,'w')
+        CMWriter=open(pjoin('..','MadLoop5_ressources',
+            '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open(
-           '%{proc_prefix}sColorDenomFactors.dat'%self.general_replace_dict,'w')
+        CMWriter=open(pjoin('..','MadLoop5_ressources',
+          '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(
-                  '%{proc_prefix}sHelConfigs.dat'%self.general_replace_dict,'w')
+        HelConfigWriter=open(pjoin('..','MadLoop5_ressources',
+                 '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
         HelConfigWriter.close()
@@ -1832,6 +1855,12 @@ ENDDO""")
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
+        
+        find=re.compile("\%[^\(]")
+        for i in find.findall(file):
+            print 'FUUUCK',i
+#            if i not in replace_dict.keys():
+#                print "NotInDic",i
         
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \

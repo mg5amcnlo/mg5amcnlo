@@ -74,6 +74,8 @@ ADDED_GLOBAL = []
 
 temp_dir_prefix = "TMP_CHECK"
 
+pjoin = os.path.join
+
 def clean_added_globals(to_clean):
     for value in list(to_clean):
         del globals()[value]
@@ -1145,8 +1147,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         def need_init():
             """ True if init not done yet."""
-            return any([not os.path.exists(os.path.join(run_dir,fname)) for \
-                                                    fname in my_req_files]) or \
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            return any([not os.path.exists(os.path.join(run_dir,'MadLoop5_ressources',
+                            proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)
         
