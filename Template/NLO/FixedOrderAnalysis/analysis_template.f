@@ -17,7 +17,7 @@ c Declare the histograms using 'bookup'.
 c     o) The first argument is an integer that labels the histogram. In
 c     the analysis_end and analysis_fill subroutines this label is used
 c     to keep track of the histogram. The label should be a number
-c     between 1 and NPLOTS/4=1250 (can be increased in dbook.inc).
+c     between 1 and NPLOTS/4=5000 (can be increased in dbook.inc).
 c     o) The second argument is a string that will apear above the
 c     histogram. Do not use brackets "(" or ")" inside this string.
 c     o) The third, forth and fifth arguments are the bin size, the
