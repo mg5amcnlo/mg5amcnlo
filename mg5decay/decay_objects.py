@@ -4075,7 +4075,9 @@ class Channel(base_objects.Diagram):
                 # Evaluate the coupling strength
                 vertex =  model.get('interaction_dict')[abs(vert.get('id'))]
                 lorentz_factor = 0
+                q_dict_lor = {}
                 for key, v in vertex['couplings'].items():
+                    
                     if not hasattr(model, 'lorentz_dict'):
                         model.lorentz_dict = dict([(l.name, l) for l in model['lorentz']])
                         self.init_regular_expression()
@@ -4083,6 +4085,9 @@ class Channel(base_objects.Diagram):
                     structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
+                    for i, part in enumerate(vertex['particles']):
+                        mass  = abs(eval(part.get('mass')))
+                        q_dict_lor['q%i' % (i+1)] = mass / 2
                     lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
 
                 apx_m *= lorentz_factor
