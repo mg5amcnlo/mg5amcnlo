@@ -1149,7 +1149,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             """ True if init not done yet."""
             proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
             proc_prefix = proc_prefix_file.read()
-            return any([not os.path.exists(os.path.join(run_dir,'MadLoop5_ressources',
+            return any([not os.path.exists(os.path.join(run_dir,'MadLoop5_resources',
                             proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)

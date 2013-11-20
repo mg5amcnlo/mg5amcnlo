@@ -16,6 +16,8 @@ C
       INTEGER NPSPOINTS
       PARAMETER (NPSPOINTS = 4)
 
+	  character(512) MadLoopResourcePath
+
       INCLUDE "nsquaredSO.inc"
 
 C     
@@ -138,6 +140,12 @@ C     In standalone mode, always use sqrt_s as the renormalization scale.
 
 C     Update the couplings with the new MU_R
       CALL UPDATE_AS_PARAM()
+
+C     Optionally the user can set where to find the MadLoop5_resources folder.
+C     Otherwise it will look for it automatically and find it if it has not
+C     been moved
+c     MadLoopResourcePath = '<MadLoop5_resources_path>'
+c     CALL SETMADLOOPPATH(MadLoopResourcePath)
 
 C
 C     Now we can call the matrix element

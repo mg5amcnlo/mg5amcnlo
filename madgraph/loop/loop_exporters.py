@@ -181,15 +181,15 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
 
-        # Copy the hole MadLoop5_ressources directory (empty at this stage)
+        # Copy the hole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
-                                                        'MadLoop5_ressources')):
+                                                        'MadLoop5_resources')):
             cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
-                    'MadLoop5_ressources'),pjoin(self.dir_path,'SubProcesses'))
+                    'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
 
-        # Link MadLoopParams.dat from Cards inside the MadLoop5_ressources
+        # Link MadLoopParams.dat from Cards inside the MadLoop5_resources
         ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
-                      pjoin(self.dir_path,'SubProcesses','MadLoop5_ressources'))
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
 
         # And remove check_sa in the SubProcess folder since now there is a
         # check_sa tailored to each subprocess.
@@ -555,7 +555,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         ln('../../lib/mpmodule.mod')
             
         # Also like the whole MadLoop5_files directory
-        ln('../MadLoop5_ressources')
+        ln('../MadLoop5_resources')
 
     def generate_general_replace_dict(self,matrix_element):
         """Generates the entries for the general replacement dictionary used
@@ -1064,12 +1064,12 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(pjoin('..','MadLoop5_ressources',
+        CMWriter=open(pjoin('..','MadLoop5_resources',
             '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open(pjoin('..','MadLoop5_ressources',
+        CMWriter=open(pjoin('..','MadLoop5_resources',
           '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
@@ -1077,7 +1077,7 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(pjoin('..','MadLoop5_ressources',
+        HelConfigWriter=open(pjoin('..','MadLoop5_resources',
                  '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')
@@ -1787,12 +1787,12 @@ ENDDO""")
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
-        CMWriter=open(pjoin('..','MadLoop5_ressources',
+        CMWriter=open(pjoin('..','MadLoop5_resources',
             '%(proc_prefix)sColorNumFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMNum:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
         CMWriter.close()
-        CMWriter=open(pjoin('..','MadLoop5_ressources',
+        CMWriter=open(pjoin('..','MadLoop5_resources',
           '%(proc_prefix)sColorDenomFactors.dat'%self.general_replace_dict),'w')
         for ColorLine in CMDenom:
             CMWriter.write(' '.join(['%d'%C for C in ColorLine])+'\n')
@@ -1800,7 +1800,7 @@ ENDDO""")
         
         # Write out the helicity configurations
         HelConfigs=matrix_element.get_helicity_matrix()
-        HelConfigWriter=open(pjoin('..','MadLoop5_ressources',
+        HelConfigWriter=open(pjoin('..','MadLoop5_resources',
                  '%(proc_prefix)sHelConfigs.dat'%self.general_replace_dict),'w')
         for HelConfig in HelConfigs:
             HelConfigWriter.write(' '.join(['%d'%H for H in HelConfig])+'\n')

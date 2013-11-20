@@ -43,6 +43,13 @@
       data MLPath/'[[NA]]'/      
       common/MLPATH/MLPath
 
+      integer i
+
+      goto 100
+C     Just a dummy call for LD to pick up this function
+      CALL SETPARA2(' ')
+100   continue
+
       if (LEN(path).ge.4 .and. path(1:4).eq.'auto') then
           if (MLPath(1:6).eq.'[[NA]]') then
 C     Try to automatically find the path
@@ -54,7 +61,7 @@ C     Try to automatically find the path
           goto 10
 1         continue
           close(1)
-          prefix='./MadLoop5_ressources/'
+          prefix='./MadLoop5_resources/'
           call joinPath(prefix,nameToCheck,fpath)
           OPEN(1, FILE=fpath, ERR=2, STATUS='OLD',      
      $    ACTION='READ')
@@ -79,6 +86,14 @@ c     We could not automatically find the auxiliary files
           endif
       else
 C     Use the one specified by the user
+C     Make sure there is a separator added
+      i =1
+      do while (i.le.LEN(path) .and. path(i:i).ne.' ')
+      i=i+1
+      enddo
+      if (path(i-1:i-1).ne.'/') then
+          path(i:i) = '/'
+      endif
       MLpath=path          
       endif
 

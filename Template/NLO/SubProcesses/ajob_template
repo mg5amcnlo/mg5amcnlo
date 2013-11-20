@@ -65,8 +65,8 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 	ln -sf ../FKS_params.dat .
     fi
 
-    if  [[ ! -e MadLoop5_ressources ]] ; then
-	ln -sf ../MadLoop5_ressources .
+    if  [[ ! -e MadLoop5_resources ]] ; then
+	ln -sf ../MadLoop5_resources .
     fi
 
 	if  [[ ! -e OLE_order.olc ]] ; then

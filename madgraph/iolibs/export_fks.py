@@ -974,8 +974,8 @@ end
 
         matrix_element = loop_matrix_element
 
-        # Create the MadLoop5_ressources directory if not already existing
-        dirpath = os.path.join(dir_name, 'MadLoop5_ressources')
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -1045,10 +1045,10 @@ end
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopCommons.f','MadLoopParams.inc']
 
-        # We should move to MadLoop5_ressources directory from the SubProcesses
+        # We should move to MadLoop5_resources directory from the SubProcesses
 
         ln(pjoin('../../..','Cards','MadLoopParams.dat'),
-                                              pjoin('..','MadLoop5_ressources'))
+                                              pjoin('..','MadLoop5_resources'))
 
         for file in linkfiles:
             ln('../../%s' % file)
@@ -2423,8 +2423,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         matrix_element = loop_matrix_element
 
-        # Create the MadLoop5_ressources directory if not already existing
-        dirpath = os.path.join(dir_name, 'MadLoop5_ressources')
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -2505,9 +2505,9 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         os.system("ln -s ../../makefile_loop makefile")
         
-# We should move to MadLoop5_ressources directory from the SubProcesses
+# We should move to MadLoop5_resources directory from the SubProcesses
         ln(pjoin('../../..','Cards','MadLoopParams.dat'),
-                                              pjoin('..','MadLoop5_ressources'))        
+                                              pjoin('..','MadLoop5_resources'))        
 
         linkfiles = ['mpmodule.mod']
 

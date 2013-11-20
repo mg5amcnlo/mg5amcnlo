@@ -1,10 +1,16 @@
 ifeq ($(wildcard ../../Source/make_opts),) 
-	include ../Source/make_opts
-	LIBDIR = ../lib/
-else
-	include ../../Source/make_opts
-	LIBDIR = ../../lib/	
+    ROOT = ..
+else 
+    ROOT = ../..
 endif
+
+
+if [ -a ../../Source/make_opts]; then ROOT = ../..; fi;
+
+if [ -a ../Source/make_opts]; then ROOT = ../; fi;
+
+include $(ROOT)/Source/make_opts
+LIBDIR = $(ROOT)/lib/
 
 PROG   = check
 OLP    = OLP
@@ -55,7 +61,7 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst %.f,%.o,$(
 	$(FC) $(FFLAGS) -o $(CHECK_SA_BORN_SPLITORDERS) check_sa_born_splitOrders.o $(patsubst %.f,%.o,$(wildcard *born_matrix.f)) -L$(LIBDIR) -ldhelas -lmodel
 
 %.o : %.f 
-	$(FC) -c $(OLP_FLAGS) $< -o $@
+	$(FC) $(FFLAGS) -c $< -o $@
 
 $(OLP): $(OLP_PROCESS) $(LIBS)
 	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.so $(LINKLIBS)

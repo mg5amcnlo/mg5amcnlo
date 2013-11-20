@@ -33,8 +33,9 @@ c************************************************************************
 
       character(512) param_name
 
-      call setpara(param_name)
-
+      if (param_name(1:1).ne.' ') then
+        call setpara(param_name)
+      endif
       return
 
       end
