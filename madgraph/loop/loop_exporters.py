@@ -187,8 +187,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             cp(pjoin(self.loop_dir,'StandAlone','SubProcesses',
                     'MadLoop5_resources'),pjoin(self.dir_path,'SubProcesses'))
 
-        # Link MadLoopParams.dat from Cards inside the MadLoop5_resources
+        # Link relevant cards from Cards inside the MadLoop5_resources
         ln(pjoin(self.dir_path,'Cards','MadLoopParams.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'Cards','param_card.dat'), 
+                      pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
+        ln(pjoin(self.dir_path,'Cards','ident_card.dat'), 
                       pjoin(self.dir_path,'SubProcesses','MadLoop5_resources'))
 
         # And remove check_sa in the SubProcess folder since now there is a
