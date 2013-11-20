@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE %(proc_prefix)sLOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -32,22 +32,22 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER ID,SQSOINDEX,R
-      COMMON/LOOP/ID,SQSOINDEX,R
+      common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
 	  LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+      common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
 
 	  INTEGER HELOFFSET
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
 
 	  %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-	  common/LOOPRES/LOOPRES,S
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/W/W  
+	  common/%(proc_prefix)sW/W  
 
 C ----------
 C BEGIN CODE
@@ -70,7 +70,7 @@ C ----------
           TEMP=TEMP+PAIRING(J)
         ENDDO
       ENDDO
-      CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+      CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
 	  ELSE
 	    LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=0.0d0
 	    LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=0.0d0

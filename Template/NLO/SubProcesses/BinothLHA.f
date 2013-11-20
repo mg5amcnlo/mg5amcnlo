@@ -211,7 +211,12 @@ c MadLoop initialization PS points.
             if (mc_hel.ne.0) then
 c Set-up the MC over helicities. This assumes that the 'HelFilter.dat'
 c exists, which should be the case when firsttime is false.
-               open (unit=67,file='HelFilter.dat',status='old',err=201)
+               if (NHelForMCoverHels.lt.0) then
+                   mc_hel=0
+                   goto 203
+               endif
+               open (unit=67,file='MadLoop5_resources/HelFilter.dat',
+     $   status='old',err=201)
                hel(0)=0
                j=0
                do i=1,max_bhel
@@ -223,6 +228,17 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                   endif
                enddo
+               goto 202
+201            continue
+               write (*,*) 'Cannot do MC over hel:'/
+     &     /' "HelFilter.dat" does not exist'/
+     &     /' or does not have the correct format.'/
+     $     /' Change NHelForMCoverHels in FKS_params.dat '/
+     &     /'to explicitly summ over them instead.'
+               stop
+c               mc_hel=0
+c               goto 203
+202            continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
                if (NHelForMCoverHels.eq.-1) then
@@ -235,6 +251,7 @@ c or more non-zero (independent) helicities
      $                 /' switching to explicitly summing over them'
                   mc_hel=0
                endif
+203            continue
                close(67)
             endif
          elseif(cpol .and. firsttime) then
@@ -332,10 +349,6 @@ c check (only available when not doing MC over hels)
       endif
 
       return
- 201  write (*,*) 'Cannot do MC over hel:'/
-     &     /' "HelFilter.dat" does not exist'/
-     &     /' or does not have the correct format'
-      stop
       end
 
       subroutine BinothLHAInit(filename)

@@ -2,7 +2,8 @@
 
       implicit none
 
-      CHARACTER*64 fileName, buff, buff2, mode
+      CHARACTER(512) fileName, buff, buff2, mode
+      
       include "MadLoopParams.inc"
 
       logical printParam, couldRead, paramPrinted

@@ -1,4 +1,4 @@
-      SUBROUTINE SLOOPMATRIXHEL(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -14,15 +14,15 @@ C
       %(real_dp_format)s P(0:3,NEXTERNAL)
       %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
 	  INTEGER HEL, USERHEL
-	  common/USERCHOICE/USERHEL
+	  common/%(proc_prefix)sUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
 	  USERHEL=HEL
-      CALL SLOOPMATRIX(P,ANS)
+      CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
 	  END
 
-	  logical function IsZero(toTest, reference_value, ampLn)
+	  logical function %(proc_prefix)sIsZero(toTest, reference_value, ampLn)
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -41,26 +41,26 @@ C
 
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/AMPL/AMPL,S
+	  common/%(proc_prefix)sAMPL/AMPL,S
 C ----------
 C BEGIN CODE
 C ----------
 	  IF(abs(reference_value).eq.0.0d0) then
-	    IsZero=.FALSE.
+	    %(proc_prefix)sIsZero=.FALSE.
 		write(*,*) '##E02 ERRROR Reference value for comparison is zero.'
 		STOP
 	  else
-	    IsZero=((abs(toTest)/abs(reference_value)).lt.ZeroThres)
+	    %(proc_prefix)sIsZero=((abs(toTest)/abs(reference_value)).lt.ZeroThres)
 	  endif
       IF(AMPLN.NE.-1) THEN 
-	    IF((.NOT.ISZERO).AND.(.NOT.S(AMPLN))) THEN
+	    IF((.NOT.%(proc_prefix)sISZERO).AND.(.NOT.S(AMPLN))) THEN
 	      write(*,*) '##W01 WARNING Contribution ',ampLn,' is detected as contributing with CR=',(abs(toTest)/abs(reference_value)),' but is unstable.' 
 	    ENDIF
 	  ENDIF
 
 	  end
 
-      SUBROUTINE SLOOPMATRIX(P_USER,ANSRETURNED)
+      SUBROUTINE %(proc_prefix)sSLOOPMATRIX(P_USER,ANSRETURNED)
 C  
 %(info_lines)s
 C
@@ -74,8 +74,17 @@ C
 C  
 C CONSTANTS
 C
-      CHARACTER*64 paramFileName
-      PARAMETER ( paramFileName='MadLoopParams.dat')
+      CHARACTER*512 paramFName,HelConfigFName,LoopFilterFName
+	  CHARACTER*512 colorNumFName,colorDenomFName, HelFilterFName
+	  CHARACTER*512 Proc_Prefix
+      PARAMETER ( paramFName='MadLoopParams.dat')
+      PARAMETER ( HelConfigFName='HelConfigs.dat')
+      PARAMETER ( LoopFilterFName='LoopFilter.dat')
+      PARAMETER ( HelFilterFName='HelFilter.dat')
+      PARAMETER ( ColorNumFName='ColorNumFactors.dat')
+      PARAMETER ( ColorDenomFName='ColorDenomFactors.dat')
+      PARAMETER ( Proc_Prefix='%(proc_prefix)s')
+
 	  %(nbornamps_decl)s
       INTEGER    NLOOPAMPS, NCTAMPS
       PARAMETER (NLOOPAMPS=%(nloopamps)d, NCTAMPS=%(nctamps)d) 
@@ -101,7 +110,7 @@ C     This parameter is designed for the check timing command of MG5
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
-	  common/stability_tests/maxstabilitylength	  
+	  common/%(proc_prefix)sstability_tests/maxstabilitylength	  
 C  
 C ARGUMENTS 
 C  
@@ -112,6 +121,16 @@ C LOCAL VARIABLES
 C  
       %(real_dp_format)s ANS(0:3)
       INTEGER I,J,K,H
+
+      CHARACTER*512 ParamFN,HelConfigFN,LoopFilterFN,ColorNumFN,ColorDenomFN,HelFilterFN
+	  CHARACTER*512 TMP
+	  SAVE ParamFN
+	  SAVE HelConfigFN
+	  SAVE LoopFilterFN
+	  SAVE ColorNumFN
+	  SAVE ColorDenomFN
+	  SAVE HelFilterFN
+
 	  INTEGER HELPICKED_BU, CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
 C P is the actual PS POINT used for the computation, and can be rotated for the stability test purposes.
@@ -154,7 +173,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 C
 C FUNCTIONS
 C
-      LOGICAL ISZERO
+      LOGICAL %(proc_prefix)sISZERO
 C  
 C GLOBAL VARIABLES
 C  
@@ -170,60 +189,60 @@ C
 	  DATA HELDOUBLECHECKED/.FALSE./
 	  %(real_dp_format)s REF
 	  DATA REF/0.0d0/
-      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+      common/%(proc_prefix)sINIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
 C     THE LOGICAL BELOWS ARE JUST TO KEEP TRACK OF WHETHER THE MP_PS HAS BEEN SET YET OR NOT AND WHETER THE MP EXTERNAL WFS HAVE BEEN COMPUTED YET.
 	  LOGICAL MP_DONE
 	  DATA MP_DONE/.FALSE./
-	  common/MP_DONE/MP_DONE
+	  common/%(proc_prefix)sMP_DONE/MP_DONE
 	  LOGICAL MP_PS_SET
 	  DATA MP_PS_SET/.FALSE./
-	  common/MP_PS_SET/MP_PS_SET
+	  common/%(proc_prefix)sMP_PS_SET/MP_PS_SET
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST	  
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
 	  %(real_dp_format)s PS(0:3,NEXTERNAL)
-	  common/PSPOINT/PS
+	  common/%(proc_prefix)sPSPOINT/PS
 C     AGAIN BELOW, MP_PS IS THE FIXED (POSSIBLY IMPROVED) MP PS POINT AND MP_P IS THE ONE WHICH CAN BE MODIFIED (I.E. ROTATED ETC.) FOR STABILITY PURPOSE
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE THAN HERE AND SET_MP_PS()
       %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
-	  common/MP_PSPOINT/MP_PS,MP_P
+	  common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
 
 	  %(real_dp_format)s LSCALE
 	  INTEGER CTMODE	  
-      common/CT/LSCALE,CTMODE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
 
 	  LOGICAL GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL
 
 	  INTEGER HELPICKED
 	  DATA HELPICKED/-1/
-	  common/HELCHOICE/HELPICKED
+	  common/%(proc_prefix)sHELCHOICE/HELPICKED
 	  INTEGER USERHEL
 	  DATA USERHEL/-1/
-	  common/USERCHOICE/USERHEL
+	  common/%(proc_prefix)sUSERCHOICE/USERHEL
 
       %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
 	  INTEGER VALIDH
-	  common/WFCTS/W  
-	  common/VALIDH/VALIDH
+	  common/%(proc_prefix)sWFCTS/W  
+	  common/%(proc_prefix)sVALIDH/VALIDH
 
       %(complex_dp_format)s AMPL(3,NLOOPAMPS)
 	  LOGICAL S(NLOOPAMPS)
-	  common/AMPL/AMPL,S
+	  common/%(proc_prefix)sAMPL/AMPL,S
 
 	  INTEGER CF_D(NLOOPAMPS,%(color_matrix_size)s)
 	  INTEGER CF_N(NLOOPAMPS,%(color_matrix_size)s)
-	  common/CF/CF_D,CF_N
+	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  INTEGER HELC(NEXTERNAL,NCOMB)
-	  common/HELCONFIGS/HELC
+	  common/%(proc_prefix)sHELCONFIGS/HELC
 
 	  %(real_dp_format)s PREC,USER_STAB_PREC
 	  DATA USER_STAB_PREC/-1.0d0/	  
-	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+	  common/%(proc_prefix)sUSER_STAB_PREC/USER_STAB_PREC
 
 C     Return codes H,T,U correspond to the hundreds, tens and units
 C     building returncode, i.e.
@@ -233,26 +252,49 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  DATA (ACCURACY(I),I=0,NSQUAREDSO)/NSQUAREDSOP1*1.0d0/
 	  DATA RET_CODE_H,RET_CODE_T,RET_CODE_U/1,1,0/
-	  common/ACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
+	  common/%(proc_prefix)sACC/ACCURACY,RET_CODE_H,RET_CODE_T,RET_CODE_U
 
 	  LOGICAL MP_DONE_ONCE
 	  DATA MP_DONE_ONCE/.FALSE./
-	  common/MP_DONE_ONCE/MP_DONE_ONCE
+	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
+
+	  character(512) MLPath
+      common/MLPATH/MLPath
+
+	  LOGICAL ML_INIT
+	  common/ML_INIT/ML_INIT
 
 C ----------
 C BEGIN CODE
 C ----------
 
+IF(ML_INIT) THEN
+  TMP = 'auto'
+  CALL SETMADLOOPPATH(TMP)
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+  ML_INIT = .FALSE.
+ENDIF
+
 IF(NTRY.EQ.0) THEN
-  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
-  CALL SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+
+C Setup the file paths
+  CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+  CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+  CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+  CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+  CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+  CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+  CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+  
+  CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
   HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter  
   DO J=1,NCOMB
     DO I=1,NCTAMPS
 	  GOODAMP(I,J)=.TRUE.
 	ENDDO
   ENDDO
-OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
+OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
   DO J=1,NCOMB
     READ(1,*,END=101) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
   ENDDO
@@ -266,7 +308,7 @@ OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
   ENDDO
 101  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="HelFilter.dat", err=102, status='OLD',           action='READ')
+OPEN(1, FILE=HelFilterFN, err=102, status='OLD',           action='READ')
   READ(1,*,END=103) (GOODHEL(I),I=1,NCOMB)
   GOTO 103
 102  CONTINUE
@@ -276,31 +318,31 @@ OPEN(1, FILE="HelFilter.dat", err=102, status='OLD',           action='READ')
   ENDDO
 103  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="ColorNumFactors.dat", err=104, status='OLD',           action='READ')
+OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 105
 104  CONTINUE
-  STOP 'Color factors could not be initialized from file ColorNumFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorNumFactors.dat. File not found' 
 105  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="ColorDenomFactors.dat", err=106, status='OLD',           action='READ')
+OPEN(1, FILE=ColorDenomFN, err=106, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
     READ(1,*,END=107) (CF_D(I,J),J=1,%(color_matrix_size)s)
   ENDDO
   GOTO 107
 106  CONTINUE
-  STOP 'Color factors could not be initialized from file ColorDenomFactors.dat. File not found' 
+  STOP 'Color factors could not be initialized from file %(proc_prefix)sColorDenomFactors.dat. File not found' 
 107  CONTINUE
 CLOSE(1)
-OPEN(1, FILE="HelConfigs.dat", err=108, status='OLD',                  action='READ')
+OPEN(1, FILE=HelConfigFN, err=108, status='OLD',                  action='READ')
   DO H=1,NCOMB
     READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
   ENDDO
   GOTO 109
 108  CONTINUE
-  STOP 'Color helictiy configurations could not be initialized from file HelConfigs.dat. File not found' 
+  STOP 'Color helictiy configurations could not be initialized from file %(proc_prefix)sHelConfigs.dat. File not found' 
 109  CONTINUE
 CLOSE(1)
 IF(BOOTANDSTOP) THEN
@@ -341,7 +383,7 @@ NTRY=NTRY+1
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-OPEN(1, FILE="HelFilter.dat", err=110, status='NEW',       action='WRITE')
+OPEN(1, FILE=HelFilterFN, err=110, status='NEW',       action='WRITE')
   WRITE(1,*) (GOODHEL(I),I=1,NCOMB)
 110  CONTINUE
   CLOSE(1)
@@ -349,7 +391,7 @@ FOUNDHELFILTER=.TRUE.
 ENDIF
 
 IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER) THEN
-OPEN(1, FILE="LoopFilter.dat", err=111, status='NEW',       action='WRITE')
+OPEN(1, FILE=LoopFilterFN, err=111, status='NEW',       action='WRITE')
   DO J=1,NCOMB
     WRITE(1,*) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
   ENDDO
@@ -386,7 +428,7 @@ ENDDO
 
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
-  CALL IMPROVE_PS_POINT_PRECISION(PS)
+  CALL %(proc_prefix)sIMPROVE_PS_POINT_PRECISION(PS)
 ENDIF
 
 DO I=1,NEXTERNAL
@@ -409,7 +451,7 @@ IF (CTMODE.EQ.0.OR.CTMODE.GE.4) THEN
 ENDIF
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
-  CALL SET_MP_PS(P_USER)
+  CALL %(proc_prefix)sSET_MP_PS(P_USER)
   MP_PS_SET = .TRUE.
 ENDIF
 
@@ -437,7 +479,7 @@ C   (because they are not saved for each hel configuration)
 C   (This is not optimal unlike what is done int the loop optimized output)
 	HELPICKED_BU = HELPICKED
     HELPICKED = H
-    CALL MP_BORN_AMPS_AND_WFS(MP_P)
+    CALL %(proc_prefix)sMP_BORN_AMPS_AND_WFS(MP_P)
     HELPICKED = HELPICKED_BU
     GOTO 300	
   ENDIF
@@ -481,7 +523,7 @@ IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
   IF (CHECKPHASE) THEN
 C   SET THE HELICITY FILTER
     IF(.NOT.FOUNDHELFILTER) THEN
-      IF(ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
+      IF(%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1)) THEN
         IF(NTRY.EQ.1) THEN
 	      GOODHEL(HELPICKED)=.FALSE.
 	    ELSEIF(GOODHEL(HELPICKED)) THEN
@@ -507,7 +549,7 @@ C   SET THE HELICITY FILTER
 C   SET THE LOOP FILTER
     IF(.NOT.FOUNDLOOPFILTER.AND.USELOOPFILTER) THEN
   	  DO I=NCTAMPS+1,NLOOPAMPS
-        IF(.NOT.ISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
+        IF(.NOT.%(proc_prefix)sISZERO(ABS(AMPL(1,I))+ABS(AMPL(2,I))+ABS(AMPL(3,I)),(REF*1.0d-4),I)) THEN
           IF(NTRY.EQ.1) THEN
 	        GOODAMP(I,HELPICKED)=.TRUE.
 	      ELSEIF(.NOT.GOODAMP(I,HELPICKED)) THEN
@@ -523,12 +565,12 @@ C   SET THE LOOP FILTER
   	  ENDDO
     ENDIF
   ELSEIF (.NOT.HELDOUBLECHECKED)THEN
-    IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+    IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
 	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
 	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
 	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	  NTRY=0
-	  OPEN(30,FILE='HelFilter.dat',err=349)
+	  OPEN(30,FILE=HelFilterFN,err=349)
 349   CONTINUE
       CLOSE(30,STATUS='delete')
 	ENDIF
@@ -596,31 +638,31 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   
   IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
 	EVAL_DONE(3)=.TRUE.
-	CALL ROTATE_PS(PS,P,1)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
+	CALL %(proc_prefix)sROTATE_PS(PS,P,1)
+	IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,1)
 	goto 200
   ENDIF
 
   IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
 	EVAL_DONE(4)=.TRUE.
-	CALL ROTATE_PS(PS,P,2)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)	
+	CALL %(proc_prefix)sROTATE_PS(PS,P,2)
+	IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,2)	
 	goto 200
   ENDIF
 
-  CALL ROTATE_PS(PS,P,0)
-  IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,0)  
+  CALL %(proc_prefix)sROTATE_PS(PS,P,0)
+  IF (DOING_QP_EVALS) CALL %(proc_prefix)sMP_ROTATE_PS(MP_PS,MP_P,0)  
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS) THEN
-    CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS(1))
+    CALL %(proc_prefix)sCOMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS(1))
 	ACCURACY(0)=ACC	
 	RET_CODE_H=3	
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  RET_CODE_H=4
 	  NEPS=NEPS+1
-      CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
+      CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
       WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
 	  WRITE(*,*) '(DP,QP) accuracies : (',TEMP1,',',ACC,')'
 	  WRITE(*,*) 'Best estimate (fin,1eps,2eps) :',(ANS(I),I=1,3)
@@ -638,7 +680,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  ENDIF
     ENDIF
   ELSE
-    CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS(1))
+    CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS(1))
 	IF(ACC.GE.MLSTABTHRES) THEN
 	  DOING_QP_EVALS=.TRUE.
 	  EVAL_DONE(1)=.TRUE.
@@ -686,13 +728,13 @@ ANSRETURNED(2,0)=ANS(2)
 ANSRETURNED(3,0)=ANS(3)
 END
 
-      SUBROUTINE compute_accuracy(fulllist, length, acc, estimate)
+      SUBROUTINE %(proc_prefix)scompute_accuracy(fulllist, length, acc, estimate)
       implicit none
 C  
 C PARAMETERS 
 C
       integer maxstabilitylength
-	  common/stability_tests/maxstabilitylength
+	  common/%(proc_prefix)sstability_tests/maxstabilitylength
 C  
 C ARGUMENTS 
 C
@@ -749,7 +791,7 @@ C     The following is used instead
 
       end
 
-      SUBROUTINE SET_N_EVALS(N_DP_EVALS,N_QP_EVALS)
+      SUBROUTINE %(proc_prefix)sSET_N_EVALS(N_DP_EVALS,N_QP_EVALS)
  
 	  IMPLICIT NONE
 	  INTEGER N_DP_EVALS, N_QP_EVALS
@@ -773,12 +815,12 @@ C     The following is used instead
 
 
 C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A GIVEN VARIABLE IN DOUBLE PRECISION
-	  SUBROUTINE SET_MP_PS(P)
+	  SUBROUTINE %(proc_prefix)sSET_MP_PS(P)
 
 	    INTEGER    NEXTERNAL
         PARAMETER (NEXTERNAL=%(nexternal)d)
 	    %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
-	    common/MP_PSPOINT/MP_PS,MP_P
+	    common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
   	    %(real_dp_format)s P(0:3,NEXTERNAL)
 
 	    DO I=1,NEXTERNAL
@@ -786,7 +828,7 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
     	    MP_PS(J,I)=P(J,I) 
     	  ENDDO
   	    ENDDO
-  	    CALL MP_IMPROVE_PS_POINT_PRECISION(MP_PS)
+  	    CALL %(proc_prefix)sMP_IMPROVE_PS_POINT_PRECISION(MP_PS)
   	    DO I=1,NEXTERNAL
     	  DO J=0,3
       	  	MP_P(J,I)=MP_PS(J,I) 
@@ -795,7 +837,7 @@ C THIS SUBROUTINE SIMPLY SET THE GLOBAL PS CONFIGURATION GLOBAL VARIABLES FROM A
 
 	  END
 
-	  SUBROUTINE SET_COUPLINGORDERS_TARGET(SOTARGET)
+	  SUBROUTINE %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOTARGET)
 	  IMPLICIT NONE
 C
 C     This routine can be accessed by an external user to set the squared split order target.
@@ -812,7 +854,7 @@ C ----------
       write(*,*) 'WARNING:: Ignored, the possibility of selecting specific squared order contributions is not available in the default mode.'
 	  END
 
-      SUBROUTINE GET_NSQSO_LOOP(NSQSO)
+      SUBROUTINE %(proc_prefix)sGET_NSQSO_LOOP(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling sloopmatrix 
@@ -825,7 +867,7 @@ C
 
       END
 
-      SUBROUTINE SLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+      SUBROUTINE %(proc_prefix)sSLOOPMATRIXHEL_THRES(P,HEL,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
 	  IMPLICIT NONE
 C  
 C CONSTANTS
@@ -844,19 +886,19 @@ C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
-	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+	  common/%(proc_prefix)sUSER_STAB_PREC/USER_STAB_PREC
 
 	  INTEGER I
 
 	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
-	  common/ACC/ACCURACY,H,T,U
+	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
-      CALL SLOOPMATRIXHEL(P,HEL,ANS)
+      CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS)
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
@@ -868,7 +910,7 @@ C Reset it to default value not to affect next runs
 
 	  END
 
-      SUBROUTINE SLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
+      SUBROUTINE %(proc_prefix)sSLOOPMATRIX_THRES(P,ANS,PREC_ASKED,PREC_FOUND,RET_CODE)
 C
 C     Inputs are:
 C     P(0:3, Nexternal)  double  :: Kinematic configuration (E,px,py,pz)
@@ -924,19 +966,19 @@ C
 C GLOBAL VARIABLES
 C
 	  %(real_dp_format)s USER_STAB_PREC
-	  COMMON/USER_STAB_PREC/USER_STAB_PREC
+	  common/%(proc_prefix)sUSER_STAB_PREC/USER_STAB_PREC
 
 	  INTEGER I
 
 	  INTEGER H,T,U
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
-	  common/ACC/ACCURACY,H,T,U
+	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
-      CALL SLOOPMATRIX(P,ANS)
+      CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 

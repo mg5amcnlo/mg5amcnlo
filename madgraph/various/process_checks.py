@@ -75,6 +75,8 @@ ADDED_GLOBAL = []
 
 temp_dir_prefix = "TMP_CHECK"
 
+pjoin = os.path.join
+
 def clean_added_globals(to_clean):
     for value in list(to_clean):
         del globals()[value]
@@ -1146,8 +1148,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         def need_init():
             """ True if init not done yet."""
-            return any([not os.path.exists(os.path.join(run_dir,fname)) for \
-                                                    fname in my_req_files]) or \
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            return any([not os.path.exists(os.path.join(run_dir,'MadLoop5_resources',
+                            proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)
         
@@ -1365,7 +1370,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # Detect one contributing helicity
         contributing_hel=0
         n_contrib_hel=0
-        helicities = file(os.path.join(dir_name,'HelFilter.dat')).read().split()
+        proc_prefix_file = open(pjoin(dir_name,'proc_prefix.txt'),'r')
+        proc_prefix = proc_prefix_file.read()
+        proc_prefix_file.close()
+        helicities = file(os.path.join(dir_name,'MadLoop5_resources',
+                                  '%sHelFilter.dat'%proc_prefix)).read().split()
         for i, hel in enumerate(helicities):
             if (self.loop_optimized_output and int(hel)>-10000) or hel=='T':
                 if contributing_hel==0:

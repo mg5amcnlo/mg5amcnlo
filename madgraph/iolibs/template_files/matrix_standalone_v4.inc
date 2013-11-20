@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -16,17 +16,17 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/HELUSERCHOICE/USERHEL
+	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL SMATRIX(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX(P,ANS)
 	  USERHEL=-1
 
 	  END
 
-      SUBROUTINE SMATRIX(P,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS)
 C  
 %(info_lines)s
 C 
@@ -69,7 +69,7 @@ C GLOBAL VARIABLES
 C
       INTEGER USERHEL
 	  DATA USERHEL/-1/
-	  COMMON/HELUSERCHOICE/USERHEL
+	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 
 %(helicity_lines)s
 %(den_factor_line)s

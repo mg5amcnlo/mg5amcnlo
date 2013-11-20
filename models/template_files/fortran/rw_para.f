@@ -28,5 +28,16 @@ c************************************************************************
 
       end
 
+      subroutine setpara2(param_name)
+      implicit none
+
+      character(512) param_name
+
+      if (param_name(1:1).ne.' ') then
+        call setpara(param_name)
+      endif
+      return
+
+      end
 
 

@@ -704,7 +704,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             self.validate_model(coupling_type='QED')
         else:
             self.validate_model()
-	# HSS
+	   # HSS
 
         if args[0] == 'process':            
             # Rejoin line
@@ -720,48 +720,52 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             # Extract process from process definition
 	    # HSS, 13/11/2012
 	    # Is it useless ?
-	    if args2:
-		self.validate_model(loop_type='virtual',coupling_type='QED')
+        if args2:
+            self.validate_model(loop_type='virtual',coupling_type='QED')
+        else:
+            self.validate_model(loop_type='virtual')
+
+        myprocdef = self.extract_process(line)
+             
+        # If it is a process for MadLoop standalone, make sure it has a 
+        # unique ID. It is important for building a BLHA library which
+        # contains unique entry point for each process generated.
+        all_ids = [amp.get('process').get('id') for amp in self._curr_amps]
+        if myprocdef.get('id') in all_ids:
+                myprocdef.set('id',max(all_ids)+1)
+             
+        self.proc_validity(myprocdef,'ML5')
+
+        cpu_time1 = time.time()
+
+        # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+        multiprocessclass=None
+        if myprocdef['perturbation_couplings']!=[]:
+            multiprocessclass=loop_diagram_generation.LoopMultiProcess
+        else:
+            multiprocessclass=diagram_generation.MultiProcess
+        
+        myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
+                                            ignore_six_quark_processes = False)
+        
+        for amp in myproc.get('amplitudes'):
+            if amp not in self._curr_amps:
+                self._curr_amps.append(amp)
             else:
-            	self.validate_model(loop_type='virtual')
-	    # HSS
-            if ',' in line:
-                myprocdef, line = self.extract_decay_chain_process(line)
-            else:
-                myprocdef = self.extract_process(line)
-            self.proc_validity(myprocdef,'ML5')
-
-            cpu_time1 = time.time()
-
-            # Decide here wether one needs a LoopMultiProcess or a MultiProcess
-            multiprocessclass=None
-            if myprocdef['perturbation_couplings']!=[]:
-                multiprocessclass=loop_diagram_generation.LoopMultiProcess
-            else:
-                multiprocessclass=diagram_generation.MultiProcess
-
-            myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
-                                       ignore_six_quark_processes = False)
-
-            for amp in myproc.get('amplitudes'):
-                if amp not in self._curr_amps:
-                    self._curr_amps.append(amp)
-                else:
-                    warning = "Warning: Already in processes:\n%s" % \
-                                                amp.nice_string_processes()
-                    logger.warning(warning)
-
+                warning = "Warning: Already in processes:\n%s" % \
+                                                     amp.nice_string_processes()
+                logger.warning(warning)
 
             # Reset _done_export, since we have new process
             self._done_export = False
-
+            
             cpu_time2 = time.time()
-
+            
             ndiags = sum([len(amp.get('loop_diagrams')) for \
-                              amp in myproc.get('amplitudes')])
+                      amp in myproc.get('amplitudes')])
             logger.info("Process generated in %0.3f s" % \
-                  (cpu_time2 - cpu_time1))
-   
+            (cpu_time2 - cpu_time1))
+
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
 
