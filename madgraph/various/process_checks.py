@@ -1508,11 +1508,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             if os.path.isfile(os.path.join(dir_path,'SavedStabilityRun.pkl')):
                 saved_run = save_load_object.load_from_file(os.path.join(\
                                               dir_path,'SavedStabilityRun.pkl'))
-                for key in saved_run.keys():
-                    DP_stability = saved_run['DP_stability']
-                    QP_stability = saved_run['QP_stability']
-                    Unstable_PS_points = saved_run['Unstable_PS_points']
-                    Exceptional_PS_points = saved_run['Exceptional_PS_points']
+                #for key in saved_run.keys():
+                DP_stability = saved_run['DP_stability']
+                QP_stability = saved_run['QP_stability']
+                Unstable_PS_points = saved_run['Unstable_PS_points']
+                Exceptional_PS_points = saved_run['Exceptional_PS_points']
 
         return_dict = {'DP_stability':DP_stability,
                'QP_stability':QP_stability,

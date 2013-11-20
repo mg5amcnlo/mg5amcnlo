@@ -1369,8 +1369,12 @@ C         MadLoop in initialization phase. Only double precision used.
 C     T == 4
 C         MadLoop in initialization phase. Quadruple precision used.
 C
-C     U is a number left for future use (always set to 0 for now).
-C     example: TIR vs OPP usage.
+C     U == 0
+C         CutTools.
+C     U == 1
+C         PJFry++.
+C     U == 2
+C         IREGI.
 C
       IMPLICIT NONE
 C  
