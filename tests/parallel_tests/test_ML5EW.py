@@ -58,7 +58,13 @@ HCR_processes_long =  [
                        ('u~ u > w+ w-',{},['QCD'],{}),
                        ('u~ u > w+ w-',{},['QED'],{}),
                        ('d~ d > w+ w-',{},['QCD'],{}),
-                       ('d~ d > w+ w-',{},['QED'],{})
+                       ('d~ d > w+ w-',{},['QED'],{}),
+                       ('u~ u > z z',{},['QCD'],{}),
+                       ('u~ u > z z',{},['QED'],{}),
+                       ('d~ d > z z',{},['QCD'],{}),
+                       ('d~ d > z z',{},['QED'],{}),
+                       ('u~ d > w- z',{},['QCD'],{}),
+                       ('u~ d > w- z',{},['QED'],{})
                        ]
 
 HCR_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
@@ -95,7 +101,14 @@ ML5EW_processes_long =  [
                        ('u~ u > w+ w-',{},['QCD'],{}),
                        ('u~ u > w+ w-',{},['QED'],{}),
                        ('d~ d > w+ w-',{},['QCD'],{}),
-                       ('d~ d > w+ w-',{},['QED'],{})]
+                       ('d~ d > w+ w-',{},['QED'],{}),
+                         ('u~ u > z z',{},['QCD'],{}),
+                         ('u~ u > z z',{},['QED'],{}),
+                         ('d~ d > z z',{},['QCD'],{}),
+                         ('d~ d > z z',{},['QED'],{}),
+                         ('u~ d > w- z',{},['QCD'],{}),
+                         ('u~ d > w- z',{},['QED'],{})
+                         ]
 
 ML5EW_processes_long_dic = dict((procToFolderName(elem[0])+'_'+'_'.join(elem[2][0].split()),elem)\
                                 for elem in ML5EW_processes_long)
@@ -116,6 +129,14 @@ class ML5EWTest(unittest.TestCase):
                         '.restrict_parallel_test_WW.dat'),
            os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
                         'restrict_parallel_test_WW.dat'))
+        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+                        '.restrict_parallel_test_ZZ.dat'),
+           os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+                        'restrict_parallel_test_ZZ.dat'))
+        cp(os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+                        '.restrict_parallel_test_WZ.dat'),
+           os.path.join(_mg5_path,'models','loop_qcd_qed_sm_Gmu',
+                        'restrict_parallel_test_WZ.dat'))
 
     @staticmethod
     def create_pickle(my_proc_list, pickle_file, runner, ref_runner=None,
@@ -433,7 +454,7 @@ class ML5EWTest(unittest.TestCase):
         
     # checking with arXiv:1307.4331
     # thanks to Ninh for providing us the PS results
-    # ('u~ u > w+ w-',{},['QCD'],{}
+    # ('u~ u > w+ w-',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_uxu_wpwm_QCD(self):
         proc = 'uxu_wpwm_QCD'
         self.compare_processes([HCR_processes_long_dic[proc]],
@@ -442,7 +463,7 @@ class ML5EWTest(unittest.TestCase):
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
-    # ('u~ u > w+ w-',{},['QED'],{}
+    # ('u~ u > w+ w-',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_uxu_wpwm_QED(self):
         proc = 'uxu_wpwm_QED'
         self.compare_processes([HCR_processes_long_dic[proc]],
@@ -451,7 +472,7 @@ class ML5EWTest(unittest.TestCase):
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
-    # ('d~ d > w+ w-',{},['QCD'],{}
+    # ('d~ d > w+ w-',{},['QCD'],{})
     def test_long_sm_vs_stored_HCR_dxd_wpwm_QCD(self):
         proc = 'dxd_wpwm_QCD'
         self.compare_processes([HCR_processes_long_dic[proc]],
@@ -460,11 +481,65 @@ class ML5EWTest(unittest.TestCase):
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
         
-    # ('d~ d > w+ w-',{},['QED'],{}
+    # ('d~ d > w+ w-',{},['QED'],{})
     def test_long_sm_vs_stored_HCR_dxd_wpwm_QED(self):
         proc = 'dxd_wpwm_QED'
         self.compare_processes([HCR_processes_long_dic[proc]],
                model = "loop_qcd_qed_sm_Gmu-parallel_test_WW", 
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('u~ u > z z',{},['QCD'],{})
+    def test_long_sm_vs_stored_HCR_uxu_zz_QCD(self):
+        proc = 'uxu_zz_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('u~ u > z z',{},['QED'],{})
+    def test_long_sm_vs_stored_HCR_uxu_zz_QED(self):
+        proc = 'uxu_zz_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('d~ d > z z',{},['QCD'],{})
+    def test_long_sm_vs_stored_HCR_dxd_zz_QCD(self):
+        proc = 'dxd_zz_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('d~ d > z z',{},['QED'],{})
+    def test_long_sm_vs_stored_HCR_dxd_zz_QED(self):
+        proc = 'dxd_zz_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_ZZ",
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('u~ d > w- z',{},['QCD'],{})
+    def test_long_sm_vs_stored_HCR_uxd_wmz_QCD(self):
+        proc = 'uxd_wmz_QCD'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_WZ",
+               pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
+                               loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
+
+    # ('u~ d > w- z',{},['QED'],{})
+    def test_long_sm_vs_stored_HCR_uxd_wmz_QED(self):
+        proc = 'uxd_wmz_QED'
+        self.compare_processes([HCR_processes_long_dic[proc]],
+               model = "loop_qcd_qed_sm_Gmu-parallel_test_WZ",
                pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_hcr_%s'%proc, chosen_runner = 'HCR',
                                loop_induce = False,mu_r=-1.0) # mu_r<0, use MU_R in param_card.dat
@@ -485,6 +560,8 @@ if '__main__' == __name__:
     # Replace the correct model and resctrict card
     model = 'loop_qcd_qed_sm-parallel_test'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_WW'
+    #model = 'loop_qcd_qed_sm_Gmu-parallel_test_ZZ'
+    model = 'loop_qcd_qed_sm_Gmu-parallel_test_WZ' 
     for savefile in HCR_processes_long_dic.keys():
         res_list = []
         proc_list = []
