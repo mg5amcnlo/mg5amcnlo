@@ -744,6 +744,7 @@ class RunCardNLO(RunCard):
         self.add_line('bwcutoff', 'float', 15.0)
         # Photon isolation
         self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('etagamma', 'float', -1.0)
         self.add_line('R0gamma', 'float', 0.4)
         self.add_line('xn', 'float', 1.0)
         self.add_line('epsgamma', 'float', 1.0)
