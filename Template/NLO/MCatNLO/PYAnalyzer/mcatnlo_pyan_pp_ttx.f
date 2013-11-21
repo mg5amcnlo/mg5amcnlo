@@ -1,3 +1,6 @@
+c
+c Example analysis for "p p > t t~ [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -9,38 +12,66 @@ C----------------------------------------------------------------------
       SUBROUTINE PYABEG
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
+      implicit none
+      include 'reweight0.inc'
       REAL*8 pi
-      integer j,k
+      integer j,kk,l,i
       PARAMETER (PI=3.14159265358979312D0)
       character*5 cc(2)
       data cc/'     ',' cuts'/
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
 c
       call inihist
-      do j=1,2
-        k=(j-1)*50
-        call mbook(k+ 1,'tt pt'//cc(j),2.d0,0.d0,100.d0)
-        call mbook(k+ 2,'tt log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-        call mbook(k+ 3,'tt inv m'//cc(j),10.d0,300.d0,1000.d0)
-        call mbook(k+ 4,'tt azimt'//cc(j),pi/20.d0,0.d0,pi)
-        call mbook(k+ 5,'tt del R'//cc(j),pi/20.d0,0.d0,3*pi)
-        call mbook(k+ 6,'tb pt'//cc(j),5.d0,0.d0,500.d0)
-        call mbook(k+ 7,'tb log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-        call mbook(k+ 8,'t pt'//cc(j),5.d0,0.d0,500.d0)
-        call mbook(k+ 9,'t log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-        call mbook(k+10,'tt delta eta'//cc(j),0.2d0,-4.d0,4.d0)
-        call mbook(k+11,'y_tt'//cc(j),0.1d0,-4.d0,4.d0)
-        call mbook(k+12,'delta y'//cc(j),0.2d0,-4.d0,4.d0)
-        call mbook(k+13,'tt azimt'//cc(j),pi/60.d0,2*pi/3,pi)
-        call mbook(k+14,'tt del R'//cc(j),pi/60.d0,2*pi/3,4*pi/3)
-        call mbook(k+15,'y_tb'//cc(j),0.1d0,-4.d0,4.d0)
-        call mbook(k+16,'y_t'//cc(j),0.1d0,-4.d0,4.d0)
-        call mbook(k+17,'tt log[pi-azimt]'//cc(j),0.05d0,-4.d0,0.1d0)
+      nwgt_analysis=nwgt
+      do kk=1,nwgt_analysis
+      do i=1,2
+        l=(kk-1)*40+(i-1)*20
+        call mbook(l+ 1,'tt pt            '
+     &       //weights_info(kk)//cc(i),2.d0,0.d0,100.d0)
+        call mbook(l+ 2,'tt log[pt]       '
+     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+        call mbook(l+ 3,'tt inv m         '
+     &       //weights_info(kk)//cc(i),10.d0,300.d0,1000.d0)
+        call mbook(l+ 4,'tt azimt         '
+     &       //weights_info(kk)//cc(i),pi/20.d0,0.d0,pi)
+        call mbook(l+ 5,'tt del R         '
+     &       //weights_info(kk)//cc(i),pi/20.d0,0.d0,3*pi)
+        call mbook(l+ 6,'tb pt            '
+     &       //weights_info(kk)//cc(i),5.d0,0.d0,500.d0)
+        call mbook(l+ 7,'tb log[pt]       '
+     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+        call mbook(l+ 8,'t pt             '
+     &       //weights_info(kk)//cc(i),5.d0,0.d0,500.d0)
+        call mbook(l+ 9,'t log[pt]        '
+     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+        call mbook(l+10,'tt delta eta     '
+     &       //weights_info(kk)//cc(i),0.2d0,-4.d0,4.d0)
+        call mbook(l+11,'y_tt             '
+     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+        call mbook(l+12,'delta y          '
+     &       //weights_info(kk)//cc(i),0.2d0,-4.d0,4.d0)
+        call mbook(l+13,'tt azimt         '
+     &       //weights_info(kk)//cc(i),pi/60.d0,2*pi/3,pi)
+        call mbook(l+14,'tt del R         '
+     &       //weights_info(kk)//cc(i),pi/60.d0,2*pi/3,4*pi/3)
+        call mbook(l+15,'y_tb             '
+     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+        call mbook(l+16,'y_t              '
+     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+        call mbook(l+17,'tt log[pi-azimt] '
+     &       //weights_info(kk)//cc(i),0.05d0,-4.d0,0.1d0)
+        call mbook(l+18,'tt pt            '
+     &       //weights_info(kk)//cc(i),20.d0,80.d0,2000.d0)
+        call mbook(l+19,'tb pt            '
+     &       //weights_info(kk)//cc(i),20.d0,400.d0,2400.d0)
+        call mbook(l+20,'t pt             '
+     &       //weights_info(kk)//cc(i),20.d0,400.d0,2400.d0)
       enddo
-      do j=1,2
-        k=(j-1)*50
-        call mbook(k+18,'tt pt'//cc(j),20.d0,80.d0,2000.d0)
-        call mbook(k+19,'tb pt'//cc(j),20.d0,400.d0,2400.d0)
-        call mbook(k+20,'t pt'//cc(j),20.d0,400.d0,2400.d0)
       enddo
       END
 
@@ -50,43 +81,44 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       REAL*8 XNORM
-      INTEGER I,J,K
+      INTEGER I,J,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTQQ.TOP',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,100              
+      DO I=1,NPL
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+100)
-        CALL MOPERA(I+100,'F',I+100,I+100,(XNORM),0.D0)
- 	CALL MFINAL3(I+100)             
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)             
       ENDDO                          
 C
-      do j=1,2
-        k=(j-1)*50
-        call multitop(100+k+ 1,99,2,3,'tt pt',' ','LOG')
-        call multitop(100+k+ 2,99,2,3,'tt log[pt]',' ','LOG')
-        call multitop(100+k+ 3,99,2,3,'tt inv m',' ','LOG')
-        call multitop(100+k+ 4,99,2,3,'tt azimt',' ','LOG')
-        call multitop(100+k+ 5,99,2,3,'tt del R',' ','LOG')
-        call multitop(100+k+ 6,99,2,3,'tb pt',' ','LOG')
-        call multitop(100+k+ 7,99,2,3,'tb log[pt]',' ','LOG')
-        call multitop(100+k+ 8,99,2,3,'t pt',' ','LOG')
-        call multitop(100+k+ 9,99,2,3,'t log[pt]',' ','LOG')
-        call multitop(100+k+10,99,2,3,'tt Delta eta',' ','LOG')
-        call multitop(100+k+11,99,2,3,'y_tt',' ','LOG')
-        call multitop(100+k+12,99,2,3,'tt Delta y',' ','LOG')
-        call multitop(100+k+13,99,2,3,'tt azimt',' ','LOG')
-        call multitop(100+k+14,99,2,3,'tt del R',' ','LOG')
-        call multitop(100+k+15,99,2,3,'tb y',' ','LOG')
-        call multitop(100+k+16,99,2,3,'t y',' ','LOG')
-        call multitop(100+k+17,99,2,3,'tt log[pi-azimt]',' ','LOG')
+      do kk=1,nwgt_analysis
+      do i=1,2
+        l=(kk-1)*40+(i-1)*20
+        call multitop(NPL+l+ 1,NPL-1,2,3,'tt pt',' ','LOG')
+        call multitop(NPL+l+ 2,NPL-1,2,3,'tt log[pt]',' ','LOG')
+        call multitop(NPL+l+ 3,NPL-1,2,3,'tt inv m',' ','LOG')
+        call multitop(NPL+l+ 4,NPL-1,2,3,'tt azimt',' ','LOG')
+        call multitop(NPL+l+ 5,NPL-1,2,3,'tt del R',' ','LOG')
+        call multitop(NPL+l+ 6,NPL-1,2,3,'tb pt',' ','LOG')
+        call multitop(NPL+l+ 7,NPL-1,2,3,'tb log[pt]',' ','LOG')
+        call multitop(NPL+l+ 8,NPL-1,2,3,'t pt',' ','LOG')
+        call multitop(NPL+l+ 9,NPL-1,2,3,'t log[pt]',' ','LOG')
+        call multitop(NPL+l+10,NPL-1,2,3,'tt Delta eta',' ','LOG')
+        call multitop(NPL+l+11,NPL-1,2,3,'y_tt',' ','LOG')
+        call multitop(NPL+l+12,NPL-1,2,3,'tt Delta y',' ','LOG')
+        call multitop(NPL+l+13,NPL-1,2,3,'tt azimt',' ','LOG')
+        call multitop(NPL+l+14,NPL-1,2,3,'tt del R',' ','LOG')
+        call multitop(NPL+l+15,NPL-1,2,3,'tb y',' ','LOG')
+        call multitop(NPL+l+16,NPL-1,2,3,'t y',' ','LOG')
+        call multitop(NPL+l+17,NPL-1,2,3,'tt log[pi-azimt]',' ','LOG')
+        call multitop(NPL+l+18,NPL-1,2,3,'tt pt',' ','LOG')
+        call multitop(NPL+l+19,NPL-1,2,3,'tb pt',' ','LOG')
+        call multitop(NPL+l+20,NPL-1,2,3,'t pt',' ','LOG')
       enddo
-      do j=1,2
-        k=(j-1)*50
-        call multitop(100+k+18,99,2,3,'tt pt',' ','LOG')
-        call multitop(100+k+19,99,2,3,'tb pt',' ','LOG')
-        call multitop(100+k+20,99,2,3,'t pt',' ','LOG')
       enddo
-c
       CLOSE(99)
       END
 
@@ -97,6 +129,7 @@ C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       implicit double precision(a-h, o-z)
       implicit integer(i-n)
+      include 'reweight0.inc'
       DOUBLE PRECISION PSUM(4)
       INTEGER ICHSUM,ICHINI,IHEP
       LOGICAL flcuts,siq1flag,siq2flag,ddflag
@@ -114,8 +147,13 @@ C----------------------------------------------------------------------
       REAL*8 PI
       PARAMETER (PI=3.14159265358979312D0)
       REAL*8 WWW0
-      INTEGER KK,IVLEP1,IVLEP2
+      INTEGER KK,IVLEP1,IVLEP2,i,l
       COMMON/VVLIN/IVLEP1,IVLEP2
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
 c
       integer pychge
       external pydata
@@ -133,14 +171,19 @@ c
       COMMON/CIFAIL/IFAIL
 
       IF(IFAIL.EQ.1)RETURN
-c
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,P(3,3)).EQ.SIGN(1.D0,P(4,3)))THEN
          WRITE(*,*)'WARNING 111 IN PYANAL'
         GOTO 999
       ENDIF
-      WWW0=EVWEIGHT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWEIGHT*ww(i)/ww(1)
+      ENDDO
       do i=1,4
          p1(i)=0.d0
          p2(i)=0.d0
@@ -223,58 +266,60 @@ c-------------------------------------------------------------
       siq2flag=ptq2.gt.ptcut.and.abs(yq2).lt.ycut
       ddflag=siq1flag.and.siq2flag
 c-------------------------------------------------------------
-      call mfill(1,(ptg),(WWW0))
-      call mfill(18,(ptg),(WWW0))
-      if(ptg.gt.0) call mfill(2,(log10(ptg)),(WWW0))
-      call mfill(3,(qqm),(WWW0))
-      call mfill(4,(azi),(WWW0))
-      call mfill(13,(azi),(WWW0))
-      if(azinorm.gt.0)call mfill(17,(log10(azinorm)),(WWW0))
-      call mfill(5,(dr),(WWW0))
-      call mfill(14,(dr),(WWW0))
-      call mfill(10,(etaq1-etaq2),(WWW0))
-      call mfill(11,(yqq),(WWW0))
-      call mfill(12,(yq1-yq2),(WWW0))
-      call mfill(6,(ptq2),(WWW0))
-      call mfill(19,(ptq2),(WWW0))
-      if(ptq2.gt.0) call mfill(7,(log10(ptq2)),(WWW0))
-      call mfill(15,(yq2),(WWW0))
-      call mfill(8,(ptq1),(WWW0))
-      call mfill(20,(ptq1),(WWW0))
-      if(ptq1.gt.0) call mfill(9,(log10(ptq1)),(WWW0))
-      call mfill(16,(yq1),(WWW0))
+      do kk=1,nwgt_analysis
+         l=(kk-1)*40
+         call mfill(l+1,ptg,WWW(kk))
+         call mfill(l+18,ptg,WWW(kk))
+         if(ptg.gt.0) call mfill(l+2,log10(ptg),WWW(kk))
+         call mfill(l+3,qqm,WWW(kk))
+         call mfill(l+4,azi,WWW(kk))
+         call mfill(l+13,azi,WWW(kk))
+         if(azinorm.gt.0)call mfill(l+17,log10(azinorm),WWW(kk))
+         call mfill(l+5,dr,WWW(kk))
+         call mfill(l+14,dr,WWW(kk))
+         call mfill(l+10,etaq1-etaq2,WWW(kk))
+         call mfill(l+11,yqq,WWW(kk))
+         call mfill(l+12,yq1-yq2,WWW(kk))
+         call mfill(l+6,ptq2,WWW(kk))
+         call mfill(l+19,ptq2,WWW(kk))
+         if(ptq2.gt.0) call mfill(l+7,log10(ptq2),WWW(kk))
+         call mfill(l+15,yq2,WWW(kk))
+         call mfill(l+8,ptq1,WWW(kk))
+         call mfill(l+20,ptq1,WWW(kk))
+         if(ptq1.gt.0) call mfill(l+9,log10(ptq1),WWW(kk))
+         call mfill(l+16,yq1,WWW(kk))
 c
 c***************************************************** with cuts
 c
-      kk=50
-      if(ddflag)then
-        call mfill(kk+1,(ptg),(WWW0))
-        call mfill(kk+18,(ptg),(WWW0))
-        if(ptg.gt.0) call mfill(kk+2,(log10(ptg)),(WWW0))
-        call mfill(kk+3,(qqm),(WWW0))
-        call mfill(kk+4,(azi),(WWW0))
-        call mfill(kk+13,(azi),(WWW0))
-        if(azinorm.gt.0) 
-     #    call mfill(kk+17,(log10(azinorm)),(WWW0))
-        call mfill(kk+5,(dr),(WWW0))
-        call mfill(kk+14,(dr),(WWW0))
-        call mfill(kk+10,(etaq1-etaq2),(WWW0))
-        call mfill(kk+11,(yqq),(WWW0))
-        call mfill(kk+12,(yq1-yq2),(WWW0))
-      endif
-      if(abs(yq2).lt.ycut)then
-        call mfill(kk+6,(ptq2),(WWW0))
-        call mfill(kk+19,(ptq2),(WWW0))
-        if(ptq2.gt.0) call mfill(kk+7,(log10(ptq2)),(WWW0))
-      endif
-      if(ptq2.gt.ptcut)call mfill(kk+15,(yq2),(WWW0))
-      if(abs(yq1).lt.ycut)then
-        call mfill(kk+8,(ptq1),(WWW0))
-        call mfill(kk+20,(ptq1),(WWW0))
-        if(ptq1.gt.0) call mfill(kk+9,(log10(ptq1)),(WWW0))
-      endif
-      if(ptq1.gt.ptcut)call mfill(kk+16,(yq1),(WWW0))
-
+         l=l+20
+c
+         if(ddflag)then
+            call mfill(l+1,ptg,WWW(kk))
+            call mfill(l+18,ptg,WWW(kk))
+            if(ptg.gt.0) call mfill(l+2,log10(ptg),WWW(kk))
+            call mfill(l+3,qqm,WWW(kk))
+            call mfill(l+4,azi,WWW(kk))
+            call mfill(l+13,azi,WWW(kk))
+            if(azinorm.gt.0) call mfill(l+17,log10(azinorm),WWW(kk))
+            call mfill(l+5,dr,WWW(kk))
+            call mfill(l+14,dr,WWW(kk))
+            call mfill(l+10,etaq1-etaq2,WWW(kk))
+            call mfill(l+11,yqq,WWW(kk))
+            call mfill(l+12,yq1-yq2,WWW(kk))
+         endif
+         if(abs(yq2).lt.ycut)then
+            call mfill(l+6,ptq2,WWW(kk))
+            call mfill(l+19,ptq2,WWW(kk))
+            if(ptq2.gt.0) call mfill(l+7,log10(ptq2),WWW(kk))
+         endif
+         if(ptq2.gt.ptcut)call mfill(l+15,yq2,WWW(kk))
+         if(abs(yq1).lt.ycut)then
+            call mfill(l+8,ptq1,WWW(kk))
+            call mfill(l+20,ptq1,WWW(kk))
+            if(ptq1.gt.0) call mfill(l+9,log10(ptq1),WWW(kk))
+         endif
+         if(ptq1.gt.ptcut)call mfill(l+16,yq1,WWW(kk))
+      enddo
  999  return
       end
 
