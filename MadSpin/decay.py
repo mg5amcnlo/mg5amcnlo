@@ -1106,11 +1106,10 @@ class AllMatrixElement(dict):
         return topologies
    
     def get_decay_from_tag(self, production_tag, decay_tag):
-
         for decay in self[production_tag]['decays']:
             if decay['decay_tag']==decay_tag: return decay
 
-        msg = 'Unable to retrieve decay from decay_tag'
+        msg = 'Unable to retrieve decay from decay_tag\n%s\n%s' %(production_tag, decay_tag)
         raise Exception, msg
  
     def get_random_decay(self, production_tag,first=[]):
@@ -1497,7 +1496,6 @@ class width_estimate(object):
         #me_cmd.exec_cmd('set automatic_html_opening False --no_save')
 
         filename=pjoin(path_me,'width_calculator','Events','run_01','param_card.dat')
-#        misc.sprint(pjoin(path_me,'width_calculator','Events','run_01','param_card.dat'))
         self.extract_br_from_card(filename)
 
     def extract_br_for_antiparticle(self):
@@ -1977,13 +1975,12 @@ class decay_all_events(object):
         
         #Next step: we need to determine which matrix elements are really necessary
         #==========================================================================
-        # Need to change the way this is done !
         decay_mapping = self.get_identical_decay()
 
         # also compute the inverted map, which will be used in the decay procedure       
         for tag in decay_mapping:
-           for equiv_decay in decay_mapping[tag]:
-               self.inverted_decay_mapping[equiv_decay[0]]=tag
+            for equiv_decay in decay_mapping[tag]:
+                self.inverted_decay_mapping[equiv_decay[0]]=tag
  
         # Estimation of the maximum weight
         #=================================
@@ -2091,8 +2088,12 @@ class decay_all_events(object):
             else:
                 #  for the matrix element, identify the master decay channel to which 'decay' is equivalent:
                 decay_tag_me=inverted_decay_mapping[decay['decay_tag']]
-                decay_me=self.all_ME.get_decay_from_tag(production_tag, decay_tag_me)
- 
+                try:
+                    decay_me=self.all_ME.get_decay_from_tag(production_tag, decay_tag_me)
+                except Exception:
+                    #if the master didn't exsit try the original one.
+                    decay_me=self.all_ME.get_decay_from_tag(production_tag, decay['decay_tag'])
+                    
                 event_nb+=1
                 report[decay['decay_tag']] += 1 
                 if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
@@ -2859,6 +2860,7 @@ class decay_all_events(object):
             mean_decay= {}
             std_decay = {}
 
+            atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
                 #print decay
                 #print decay['decay_struct'] 
@@ -2882,7 +2884,7 @@ class decay_all_events(object):
                 logger.info('No independent decay for one type of final states -> skip those events')
                 nb_decay[decaying] = numberev
                 ev += numberev -1
-                break
+                continue
             probe_weight[decaying].append(max_decay)
 
             self.terminate_fortran_executables()

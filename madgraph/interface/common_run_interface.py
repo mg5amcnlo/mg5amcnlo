@@ -1064,9 +1064,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
-            opt = self.options
-            self.cluster = cluster.from_name[opt['cluster_type']](\
-                                 opt['cluster_queue'], opt['cluster_temp_path'])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
