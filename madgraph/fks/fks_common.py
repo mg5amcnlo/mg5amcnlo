@@ -47,14 +47,14 @@ class FKSDiagramTag(diagram_generation.DiagramTag): #test written
         return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
 
-def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
-    """finds the real configurations that match the born ones, i.e.
-    for each born configuration, the real configuration that has 
-    the ij -> i j splitting.
-    i, j and ij are integers, and refer to the leg position in the real
-    process (i, j) and in the born process (ij).
+def link_rb_configs(born_amp, real_amp, i, j, ij):
+    """finds the real configurations that match the born ones, i.e.  for
+    each born configuration, the real configuration that has the ij ->
+    i j splitting.  i, j and ij are integers, and refer to the leg
+    position in the real process (i, j) and in the born process (ij).
     """
     # find diagrams with 3 point functions and use them as configurations
+    id_ij = born_amp['process']['legs'][ij - 1]['id']
 
     minvert = min([max([len(vert.get('legs')) \
                         for vert in diag.get('vertices')]) \
@@ -63,19 +63,23 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
     born_confs = []
     real_confs = []
 
-    for k, diag in enumerate(born_amp.get('diagrams')):
+    k=0
+    for diag in born_amp.get('diagrams'):
         if any([len(vert.get('legs')) > minvert for vert in
                 diag.get('vertices')]):
             continue
         else:
             born_confs.append({'number' : k, 'diagram' : diag})
+            k=k+1
 
-    for k, diag in enumerate(real_amp.get('diagrams')):
+    k=0
+    for diag in real_amp.get('diagrams'):
         if any([len(vert.get('legs')) > minvert \
                 for vert in diag.get('vertices')]):
             continue
         else:
             real_confs.append({'number': k, 'diagram': diag})
+            k=k+1
 
     good_diags = []
 
@@ -97,7 +101,6 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                                   'leg_ij': last_leg,
                                   'number': diag['number']})
                 break #no need to continue once the vertex is found
-
 
     # now good_diags contains the real_confs which had the splitting, 
     #  with the vertex corresponding to the splitting removed
@@ -130,10 +133,16 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                         legs.remove(l)
                         l['number'] -= shift
                  #and relabel last_leg to ij
-                    if l.get('number') == good_diag['leg_ij'] and not replaced_ij and l in legs:
+                    if l.get('number') == good_diag['leg_ij'] and \
+                       l.get('id') == id_ij and not replaced_ij and l in legs:
                         legs.remove(l)
                         replaced_ij = True
                         l['number'] = ij
+
+    # this is to handle cases in which only one diagrams has to be linked
+    if len(good_diags) == 1 and len(born_confs) == 1:
+        return [{'real_conf': good_diags[0]['number'],
+                          'born_conf': born_confs[0]['number']}]
 
     # now create the tags
     born_tags = [FKSDiagramTag(d['diagram'], 
@@ -171,6 +180,7 @@ def link_rb_conf(born_amp, real_amp, i, j, ij): #test written, sm and heft
                                   born_confs[ib]['diagram'].nice_string()) )
 
     return links
+
 
 
 def find_orders(amp): #test_written

@@ -1063,6 +1063,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
 
+        if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
+            logger.warning("""You are running with FxFx merging enabled.
+To be able to merge samples of various multiplicities without double counting,
+you have to remove some events after showering 'by hand'.
+Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+
+
+
 
     ############################################################################      
     def do_compile(self, line):
@@ -1169,10 +1177,12 @@ Please, shower the Les Houches events before using them for physics analyses."""
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                 #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
                 to_always_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and
-                             '_' in file and \
+                             '_' in file and not '_G' in file and \
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
 
@@ -1386,7 +1396,8 @@ Integrated cross-section
         if not match or output[1]:
             logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results')
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+            'Please check the .log files inside the directories which failed.')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
@@ -1600,6 +1611,7 @@ Integrated cross-section
                 if nTot1 != 0:
                     debug_msg += '\n          Unknown return code (1):             %d'%nTot1
         logger.info(message+'\n')
+        open(pjoin(self.me_dir, 'Events', self.run_name, 'summary.txt'), 'w').write(message+'\n')
                  
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
@@ -2381,6 +2393,7 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
         if os.path.exists(pjoin(cwd,'nevents.tar')):
@@ -2967,6 +2980,27 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if 'aMC@' in mode or mode == 'onlyshower':
             shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
             self.shower_card = shower_card.ShowerCard(shower_card_path)
+        
+        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+            raise self.InvalidCmd(error)
+        elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+            logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+samples of various multiplicities without double counting, you
+have to remove some events after showering 'by hand'.  Please
+read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+            if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                raise self.InvalidCmd(error)
+            elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                    "Type \'n\' to stop or \'y\' to continue"
+                answers = ['n','y']
+                answer = self.ask(question, 'n', answers, alias=alias)
+                if answer == 'n':
+                    error = '''Stop opertation'''
+                    self.ask_run_configuration(mode, options)
+#                    raise aMCatNLOError(error)
         
         return mode
 

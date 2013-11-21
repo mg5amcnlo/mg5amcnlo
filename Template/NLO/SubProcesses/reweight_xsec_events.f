@@ -53,6 +53,7 @@ c Compile with makefile_rwgt
 c
       call setrun                !Sets up run parameters
 
+
       write(*,*) 'Enter event file name'
       read(*,*) event_file
 

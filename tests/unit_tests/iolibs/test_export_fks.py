@@ -108,8 +108,9 @@ class IOExportFKSTest(unittest.TestCase,
 
     def test_write_mparticles(self):
         goal = \
-"""      INTEGER MAX_PARTICLES
-      PARAMETER (MAX_PARTICLES=5)"""
+"""      INTEGER MAX_PARTICLES, MAX_BRANCH
+      PARAMETER (MAX_PARTICLES=5)
+      PARAMETER (MAX_BRANCH=MAX_PARTICLES-1)"""
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxparticles_file(\
             writers.FortranWriter(self.give_pos('test')),\

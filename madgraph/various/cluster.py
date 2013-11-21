@@ -321,7 +321,7 @@ class MultiCore(Cluster):
                 logger.warning(fail_msg)
                 try:
                     log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
-                    logger.warning('Last 15 lines of lofgile %s:\n%s\n' % \
+                    logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
                             (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
                 except IOError, AttributeError:
                     logger.warning('Please look for possible logfiles in %s' % cwd)

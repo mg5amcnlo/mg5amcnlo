@@ -731,9 +731,10 @@ class RunCardNLO(RunCard):
         self.add_line('reweight_PDF', 'bool', True, fortran_name='do_rwgt_pdf')
         self.add_line('PDF_set_min', 'int', 21101)
         self.add_line('PDF_set_max', 'int', 21140)
-
-       # self.add_line('fixed_couplings', 'bool', True, log=10)
-        self.add_line('jetalgo', 'int', 1)
+        # FxFx merging stuff
+        self.add_line('ickkw', 'int', 0)
+        # self.add_line('fixed_couplings', 'bool', True, log=10)
+        self.add_line('jetalgo', 'float', 1.0)
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
         self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
@@ -743,6 +744,7 @@ class RunCardNLO(RunCard):
         self.add_line('bwcutoff', 'float', 15.0)
         # Photon isolation
         self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('etagamma', 'float', -1.0)
         self.add_line('R0gamma', 'float', 0.4)
         self.add_line('xn', 'float', 1.0)
         self.add_line('epsgamma', 'float', 1.0)

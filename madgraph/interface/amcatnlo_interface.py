@@ -568,7 +568,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
                         self._curr_exporter.generate_directories_fks(me, 
-                        self._curr_fortran_model, ime, path,self.options['OLP'])
+                        self._curr_fortran_model, 
+                        ime, len(self._curr_matrix_elements.get('matrix_elements')), 
+                        path,self.options['OLP'])
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')

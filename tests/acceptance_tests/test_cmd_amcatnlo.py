@@ -125,6 +125,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_abs.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/plot_HERWIG6_1_0.top'))
 
 
@@ -158,6 +159,7 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -179,6 +181,7 @@ class TestMECmdShell(unittest.TestCase):
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -233,6 +236,7 @@ class TestMECmdShell(unittest.TestCase):
 
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -255,6 +259,7 @@ class TestMECmdShell(unittest.TestCase):
         self.do('launch NLO -f')
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
         
 
@@ -269,6 +274,7 @@ class TestMECmdShell(unittest.TestCase):
 
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
 
         
@@ -285,6 +291,7 @@ class TestMECmdShell(unittest.TestCase):
                 stdout = open(os.devnull, 'w'))
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -316,6 +323,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -337,6 +345,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -363,6 +372,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -387,6 +397,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res_1_tot.txt'))
@@ -410,6 +421,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -441,6 +453,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -462,6 +475,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -480,6 +494,7 @@ class TestMECmdShell(unittest.TestCase):
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/events.lhe.gz'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_tot.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_0_abs.txt'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res_1_tot.txt'))
@@ -499,6 +514,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/MADatNLO.top'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/res.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/summary.txt'))
 
 
     def test_calculate_xsect_lo(self):
@@ -511,6 +527,7 @@ class TestMECmdShell(unittest.TestCase):
         # test the plot file exists
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/MADatNLO.top'))
         self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/res.txt'))
+        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01_LO/summary.txt'))
     
     def test_amcatnlo_from_file(self):
         """ """

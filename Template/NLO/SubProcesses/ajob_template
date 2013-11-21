@@ -62,7 +62,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             fi
         fi
     fi
-   
     if  [[ ! -e randinit ]] ; then
         if [[ -e ../randinit ]] ; then
             cp ../randinit .
@@ -80,20 +79,13 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 
     link1up MadLoopParams.dat
     link1up HelFilter.dat 
-    link1up LoopFilter.dat                                                                                                 
+    link1up LoopFilter.dat
     link1up ColorDenomFactors.dat
     link1up HelConfigs.dat
     link1up ColorNumFactors.dat
     link1up FKS_params.dat
-
     link1up OLE_order.olc
-    if  [[ ! -e param_card.dat ]] ; then
-	if [[ -e ../../Cards/param_card.dat ]] ; then
-	    ln -sf ../../Cards/param_card.dat .
-	elif [[ -e ../../../Cards/param_card.dat ]] ; then
-	    ln -sf ../../../Cards/param_card.dat .
-	fi
-    fi
+    link1up param_card.dat
     
 #   check where is the basic file for the creation of input_app.txt
 #       
@@ -152,5 +144,5 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
     exit $status
 done
-
+    
 

@@ -393,10 +393,24 @@ c For tests
       double precision virt_wgt
       common/c_fks_singular/virt_wgt
 
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero,enhanceS,enhanceH
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
       vegas_weight=vegaswgt
+
+c FxFx merging
+      ktscheme=1
+      rewgt_mohdr_calculated=.false.
+      rewgt_izero_calculated=.false.
+
 
       if (fold.eq.0) then
          calculatedBorn=.false.
@@ -494,6 +508,15 @@ c Set the ybst_til_tolab before applying the cuts.
         wgtxbj(2,1)=xbk(2)
       endif
       if (passcuts(pp,rwgt)) then
+c       Compute the scales and sudakov-reweighting for the FxFx merging
+        if (ickkw.eq.3) then
+           if (.not. setclscales(pp)) then
+               write (*,*) 'ERROR in setclscales mohdr'
+              stop
+           endif
+           rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+           rewgt_mohdr_calculated=.true.
+        endif
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
         ffact = f_damp(x)
@@ -522,6 +545,15 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #     nocntevents ) goto 547
 
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         rewgt_izero_calculated=.true.
+      endif
       call set_alphaS(p1_cnt(0,1,0))
       if(doNLOreweight)then
         wgtqes2(2)=QES2
@@ -612,6 +644,10 @@ c Soft subtraction term:
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt
      $             ,born_wgt)
+c For FxFx merging, include the compensation term
+              if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                 bsv_wgt=bsv_wgt-g**2/(4d0*Pi)*rewgt_exp_izero*born_wgt
+              endif
               if(doNLOreweight)then
                 if(wgtbpower.gt.0)then
                   wgtwborn(2)=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -619,6 +655,10 @@ c Soft subtraction term:
                   wgtwborn(2)=born_wgt*xsec
                 endif
                 wgtwns(2)=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                 if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                    wgtwns(2)=wgtwns(2)-rewgt_exp_izero*wgtwborn(2)
+     $                   /(4d0*pi)
+                 endif
                 wgtwnsmuf(2)=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
      &               +2.d0))
                 wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
@@ -736,14 +776,41 @@ c
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
-      ev_wgt = ev_wgt * enhance
-      cnt_wgt = cnt_wgt * enhance
-      cnt_swgt = cnt_swgt * enhance
-      bsv_wgt = bsv_wgt * enhance
-      virt_wgt = virt_wgt * enhance
-      born_wgt = born_wgt * enhance
-      deg_wgt = deg_wgt * enhance
-      deg_swgt = deg_swgt * enhance
+c Apply the FxFx Sudakov damping on the H events
+      if (ev_wgt.ne.0d0 .and. ickkw.eq.3..and.
+     $     .not.rewgt_mohdr_calculated) then
+         write (*,*) 'Error rewgt_mohdr_calculated'
+         stop
+      elseif(rewgt_mohdr_calculated) then
+         if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
+         enhanceH=enhance*rewgt_mohdr
+      else
+         enhanceH=enhance
+      endif
+
+      ev_wgt = ev_wgt * enhanceH
+
+c Apply the FxFx Sudakov damping on the S events
+      if(.not.(cnt_wgt.eq.0d0 .and. cnt_swgt.eq.0d0 .and. bsv_wgt.eq.0d0
+     $     .and. born_wgt.eq.0d0 .and. deg_wgt.eq.0d0 .and.
+     $     deg_swgt.eq.0d0 )
+     $     .and. ickkw.eq.3 .and. .not.rewgt_izero_calculated) then
+         write (*,*) 'Error rewgt_izero_calculated'
+         stop
+      elseif(rewgt_izero_calculated) then
+         if (rewgt_izero.gt.1d0) rewgt_izero=1d0
+         enhanceS=enhance*rewgt_izero
+      else
+         enhanceS=enhance
+      endif
+
+      cnt_wgt = cnt_wgt * enhanceS
+      cnt_swgt = cnt_swgt * enhanceS
+      bsv_wgt = bsv_wgt * enhanceS
+      virt_wgt = virt_wgt * enhanceS
+      born_wgt = born_wgt * enhanceS
+      deg_wgt = deg_wgt * enhanceS
+      deg_swgt = deg_swgt * enhanceS
 
       if(iminmax.eq.0) then
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
@@ -771,9 +838,14 @@ c
              stop
            endif
            wgtref = dsig
-           xsec = enhance*unwgtfun
+           xsec = enhanceS*unwgtfun
            do i=1,4
-             wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+              if (i.eq.1) then
+                 wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+     $                *enhanceH/enhanceS
+              else
+                 wgtwreal(i)=wgtwreal(i) * xsec*fkssymmetryfactor
+              endif
              wgtwdeg(i)=wgtwdeg(i) * xsec*fkssymmetryfactorDeg
              wgtwdegmuf(i)=wgtwdegmuf(i) * xsec*fkssymmetryfactorDeg
              if(i.eq.2)then
@@ -951,7 +1023,7 @@ c Multi channel stuff:
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
 
-      double precision ev_enh,enhance,rwgt,unwgtfun
+      double precision ev_enh,enhance,rwgt,unwgtfun,enhanceS,enhanceH
       logical firsttime,passcuts
       data firsttime /.true./
       integer inoborn_ev,inoborn_cnt
@@ -1089,6 +1161,13 @@ c
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 
       double precision pmass(nexternal)
       include "pmass.inc"
@@ -1132,6 +1211,11 @@ c
       dsigH=0d0
       MCcntcalled=.false.
 c
+c FxFx merging
+      ktscheme=1
+      rewgt_mohdr_calculated=.false.
+      rewgt_izero_calculated=.false.
+
       if(doreweight)then
         if(.not.AddInfoLHE)then
           write(*,*)'Error in dsigF'
@@ -1152,7 +1236,6 @@ c
         if (nbody) ifill2S_Born=0
       endif
       if(AddInfoLHE)then
-c$$$        iSorH_lhe=1+2 ! filled elsewhere
         ifks_lhe(nFKSprocess)=i_fks
         jfks_lhe(nFKSprocess)=j_fks
         fksfather_lhe(nFKSprocess)=0
@@ -1162,10 +1245,12 @@ c$$$        iSorH_lhe=1+2 ! filled elsewhere
       endif
 c Set the upper value of the shower scale for the H and S events,
 c respectively
-      call set_cms_stuff(mohdr)
-      call set_shower_scale_noshape(pp,nFKSprocess*2)
-      call set_cms_stuff(izero)
-      call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      if (ickkw.ne.3) then
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(pp,nFKSprocess*2)
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      endif
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
@@ -1232,6 +1317,20 @@ c for the collinear, soft and/or soft-collinear subtraction terms
       if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
      #      nocntevents ) goto 547
 
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         rewgt_izero_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      endif
+
       gfactsf=1.d0
       gfactcl=1.d0
       sevmc=1.d0
@@ -1246,6 +1345,19 @@ c for the collinear, soft and/or soft-collinear subtraction terms
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
       call set_cms_stuff(mohdr)
+c     Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(pp)) then
+            write (*,*) 'ERROR in setclscales mohdr'
+            stop
+         endif
+         rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+         rewgt_mohdr_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(mohdr)
+         call set_shower_scale_noshape(pp,nFKSprocess*2)
+      endif
       call set_alphaS(pp)
       if(doreweight)then
          wgtmuR2_all(1,nFKSprocess*2)=muR2_current/muR_over_ref**2
@@ -1272,6 +1384,14 @@ c for the collinear, soft and/or soft-collinear subtraction terms
          sevmc = fks_Hij(pp,i_fks,j_fks)
          sevmc = sevmc*ffact
       endif
+
+      if (ickkw.eq.3 .and. .not. (rewgt_mohdr_calculated .and.
+     $     rewgt_izero_calculated) )then
+         write (*,*)'Both shower scales should be set before'/
+     $        /' entering the MC subtraction terms'
+         stop
+      endif
+
       call xmcsubt(pp,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      #             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
@@ -1329,6 +1449,22 @@ c
 c Set scales for all counterevents, using soft kinematics as done
 c in the case of parton-level NLO computations
 
+      call set_cms_stuff(izero)
+      if ( (.not.passcuts(p1_cnt(0,1,0),rwgt)) .or.
+     #      nocntevents ) goto 547
+c Compute the scales and sudakov-reweighting for the FxFx merging
+      if (ickkw.eq.3) then
+         if (.not. setclscales(p1_cnt(0,1,0))) then
+            write (*,*) 'ERROR in setclscales izero'
+            stop
+         endif
+         rewgt_izero=rewgt(p1_cnt(0,1,0),rewgt_exp_izero)
+         rewgt_izero_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+         call set_cms_stuff(izero)
+         call set_shower_scale_noshape(pp,nFKSprocess*2-1)
+      endif
       call set_alphaS(p1_cnt(0,1,0))
       if(doreweight)then
          if (nbody) then
@@ -1519,6 +1655,10 @@ c Soft subtraction term:
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt
      $             ,born_wgt)
+c For FxFx merging, include the compensation term
+              if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                 bsv_wgt=bsv_wgt-g**2/(4d0*Pi)*rewgt_exp_izero*born_wgt
+              endif
               if(doreweight)then
                  if(wgtbpower.gt.0)then
                     wgtwborn_all=born_wgt*xsec/g**(nint(2*wgtbpower))
@@ -1526,6 +1666,10 @@ c Soft subtraction term:
                     wgtwborn_all=born_wgt*xsec
                  endif
                  wgtwns_all=wgtnstmp*xsec/g**(nint(2*wgtbpower+2.d0))
+                 if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
+                    wgtwns_all=wgtwns_all-rewgt_exp_izero*wgtwborn_all
+     $                   /(4d0*pi)
+                 endif
                  wgtwnsmuf_all=wgtwnstmpmuf*xsec/g**(nint(2*wgtbpower
      &                +2.d0))
                  wgtwnsmur_all=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
@@ -1672,6 +1816,19 @@ c Set the ybst_til_tolab before applying the cuts.
          wgtxbj_all(2,1,nFKSprocess*2-1)=xbk(2)
       endif
       if (passcuts(pp,rwgt)) then
+c     Compute the scales and sudakov-reweighting for the FxFx merging
+        if (ickkw.eq.3) then
+           if (.not. setclscales(pp)) then
+              write (*,*) 'ERROR in setclscales mohdr'
+              stop
+           endif
+           rewgt_mohdr=rewgt(pp,rewgt_exp_mohdr)
+           rewgt_mohdr_calculated=.true.
+c Set the upper value of the shower scale for the H and S events,
+c respectively
+           call set_cms_stuff(mohdr)
+           call set_shower_scale_noshape(pp,nFKSprocess*2)
+        endif
         call set_alphaS(pp)
         x = abs(2d0*dot(pp(0,i_fks),pp(0,j_fks))/shat)
         ffact = f_damp(x)
@@ -1785,17 +1942,44 @@ c
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
 
       totH_wgt = Hev_wgt+Hxmc_wgt
-      totH_wgt = totH_wgt * enhance
 
-      Sev_wgt = Sev_wgt * enhance
-      Sxmc_wgt = Sxmc_wgt * enhance
-      cnt_wgt = cnt_wgt * enhance
-      cnt_swgt = cnt_swgt * enhance
-      bsv_wgt = bsv_wgt * enhance
-      virt_wgt = virt_wgt * enhance
-      born_wgt = born_wgt * enhance
-      deg_wgt = deg_wgt * enhance
-      deg_swgt = deg_swgt * enhance
+c Apply the FxFx Sudakov damping on the H events
+      if (totH_wgt.ne.0d0 .and. ickkw.eq.3..and.
+     $     .not.rewgt_mohdr_calculated) then
+         write (*,*) 'Error rewgt_mohdr_calculated',totH_wgt
+         stop
+      elseif(rewgt_mohdr_calculated) then
+         if (rewgt_mohdr.gt.1d0) rewgt_mohdr=1d0
+         enhanceH=enhance*rewgt_mohdr
+      else
+         enhanceH=enhance
+      endif
+
+      totH_wgt = totH_wgt * enhanceH
+
+c Apply the FxFx Sudakov damping on the S events
+      if(.not.(Sev_wgt.eq.0d0 .and. Sxmc_wgt.eq.0d0 .and. cnt_wgt.eq.0d0
+     $     .and. cnt_swgt.eq.0d0 .and. bsv_wgt.eq.0d0 .and.
+     $     born_wgt.eq.0d0 .and. deg_wgt.eq.0d0 .and. deg_swgt.eq.0d0)
+     $     .and. ickkw.eq.3 .and. .not.rewgt_izero_calculated) then
+         write (*,*) 'Error rewgt_izero_calculated'
+         stop
+      elseif(rewgt_izero_calculated) then
+         if (rewgt_izero.gt.1d0) rewgt_izero=1d0
+         enhanceS=enhance*rewgt_izero
+      else
+         enhanceS=enhance
+      endif
+
+      Sev_wgt = Sev_wgt * enhanceS
+      Sxmc_wgt = Sxmc_wgt * enhanceS
+      cnt_wgt = cnt_wgt * enhanceS
+      cnt_swgt = cnt_swgt * enhanceS
+      bsv_wgt = bsv_wgt * enhanceS
+      virt_wgt = virt_wgt * enhanceS
+      born_wgt = born_wgt * enhanceS
+      deg_wgt = deg_wgt * enhanceS
+      deg_swgt = deg_swgt * enhanceS
 
 c Update the shower starting scale with the shape from montecarlocounter
       if (.not.nbody) then
@@ -1839,14 +2023,14 @@ c Update the shower starting scale with the shape from montecarlocounter
          do j=1,iproc_save(nFKSprocess)
             if (.not.nbody) then
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
-     $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
+     $              *enhanceS*fkssymmetryfactor*unwgtfun*vegaswgt
             else
                unwgt_table(0,1,j)=unwgt_table(0,1,j)
-     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+     $              *enhanceS*fkssymmetryfactorBorn*unwgtfun*vegaswgt
                unwgt_table(0,3,j)=unwgt_table(0,3,j)
-     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+     $              *enhanceS*fkssymmetryfactorBorn*unwgtfun*vegaswgt
                unwgt_table(1,3,j)=unwgt_table(1,3,j)
-     $              *enhance*fkssymmetryfactorBorn*unwgtfun*vegaswgt
+     $              *enhanceS*fkssymmetryfactorBorn*unwgtfun*vegaswgt
             endif
          enddo
          if(doreweight)then
@@ -1885,7 +2069,6 @@ c
             endif
 
             if (nbody) then
-c$$$               wgtref_nbody = dsigS
                do i_process=1,iproc_save(nFKSprocess) 
                   wgtref_nbody_all(i_process)=0d0
                   do j=1,iproc_save(nFKSprocess)
@@ -1896,7 +2079,6 @@ c$$$               wgtref_nbody = dsigS
                   enddo
                enddo
             endif
-c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
             do i_process=1,iproc_save(nFKSprocess) 
                wgtref_all(nFKSprocess*2-1,i_process)=0d0
                do j=1,iproc_save(nFKSprocess)
@@ -1906,7 +2088,7 @@ c$$$            wgtref_all(nFKSprocess*2-1) = dsigS
      $                 +unwgt_table(nFKSprocess,1,j)/vegaswgt
                enddo
             enddo
-            xsec = enhance*unwgtfun
+            xsec = enhanceS*unwgtfun
             do i=1,4
                if (.not.nbody) then
                   wgtwreal_all(i,nFKSprocess*2-1)=wgtwreal_all(i
@@ -1992,7 +2174,7 @@ c Plot observables for counterevents and Born
          if (.not.nbody) then
             do j=1,iproc_save(nFKSprocess)
                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
-     $              *enhance*fkssymmetryfactor*unwgtfun*vegaswgt
+     $              *enhanceH*fkssymmetryfactor*unwgtfun*vegaswgt
             enddo
          endif
          if(doreweight)then
@@ -2002,12 +2184,11 @@ c Plot observables for counterevents and Born
                stop
             endif
             if (.not.nbody) then
-c$$$               wgtref_all(nFKSprocess*2) = dsigH
                do j=1,iproc_save(nFKSprocess)
                   wgtref_all(nFKSprocess*2,j)=unwgt_table(nFKSprocess,2
      $                 ,j)/vegaswgt
                enddo
-               xsec = enhance*unwgtfun*fkssymmetryfactor
+               xsec = enhanceH*unwgtfun*fkssymmetryfactor
                do i=1,4
                   wgtwreal_all(i,nFKSprocess*2)=wgtwreal_all(i
      &                 ,nFKSprocess*2) * xsec
@@ -2159,7 +2340,6 @@ c
       endif
 
       if (Hevents) then
-c$$$         SCALUP(iFKS)=min(SCALUP(iFKS),shower_H_scale(iFKS))
          SCALUP(iFKS)=min(SCALUP(iFKS),max(shower_H_scale(iFKS)
      &        ,ref_H_scale(iFKS)-min(emsca,scalemax)))
       else
@@ -2181,7 +2361,11 @@ c
       parameter (pfrac=0.9d0)
       include "nexternal.inc"
       include "madfks_mcatnlo.inc"
+      include 'run.inc'
       include 'nFKSconfigs.inc'
+      integer izero,mohdr
+      parameter (izero=0)
+      parameter (mohdr=-100)
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
@@ -2209,9 +2393,18 @@ c
 c jet cluster algorithm
       integer NN,NJET,JET(nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal),rfj,sycut
-     &     ,palg,amcatnlo_fastjetdmergemax,
-     &     di_ev(nexternal),di_cnt(nexternal)
+     $     ,palg,amcatnlo_fastjetdmergemax,di_ev(nexternal)
+     $     ,di_cnt(nexternal)
       external amcatnlo_fastjetdmergemax
+c FxFx
+      double precision rewgt,rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      external setclscales,rewgt
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       NN=0
       do j=nincoming+1,nexternal
@@ -2230,8 +2423,8 @@ c For processes without jets at the Born
 c
          pt_hardness=0d0
          shower_S_scale(iFKS)=sqrtshat_cnt(0)
-c$$$         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
-         shower_H_scale(iFKS)=sqrtshat_cnt(0)
+         shower_H_scale(iFKS)=sqrtshat_ev-ptparton
+c$$$         shower_H_scale(iFKS)=sqrtshat_cnt(0)
          ref_H_scale(iFKS)=0d0
       else
          pt_hardness=0d0        ! updated below if event exists
@@ -2255,8 +2448,9 @@ c one MUST use kt, and no lower pt cut. The radius parameter
 c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
-            rfj=0.4d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            rfj=1.0d0           ! the radius parameter
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
+     $           ,njet,jet)
             do i=1,NN
                di_cnt(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
@@ -2291,8 +2485,9 @@ c One MUST use kt, and no lower pt cut. The radius parameter
 c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
-            rfj=0.4d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            rfj=1.0d0           ! the radius parameter
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
+     $           ,njet,jet)
             do i=1,NN
                di_ev(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
@@ -2306,7 +2501,8 @@ c can be changed
             enddo
             ref_H_scale(iFKS)=di_ev(NN-1)
             pt_hardness=di_ev(NN)
-            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+c$$$            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness
+            shower_H_scale(iFKS)=ref_H_scale(iFKS)-pt_hardness/2d0
          else
             ref_H_scale(iFKS)=shower_S_scale(iFKS)
             shower_H_scale(iFKS)=ref_H_scale(iFKS)

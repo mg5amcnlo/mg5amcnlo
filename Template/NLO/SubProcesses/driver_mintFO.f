@@ -158,6 +158,7 @@ c
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
+      call initcluster
 c     
 c     Get user input
 c
