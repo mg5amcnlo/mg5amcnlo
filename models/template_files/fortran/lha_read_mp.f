@@ -407,6 +407,9 @@ c-----
 c
 c     first check that we will end in the main directory
 c
+      ! Somehow it seems important to make sure the flow is
+      ! iunit is closed before opening it.
+      close(lun)
       open(unit=lun,file=filename,status='old',ERR=20)
 c      write(*,*) 'read model file ',filename
       fopened=.true.

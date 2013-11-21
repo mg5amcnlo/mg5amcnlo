@@ -18,6 +18,12 @@ UNAME := $(shell uname)
 
 # Option dynamic
 
+ifeq ($(UNAME), Darwin)
+  dylibext=dylib
+else
+  dylibext=so  
+endif
+
 ifdef dynamic
   ifeq ($(UNAME), Darwin)
     libext=dylib

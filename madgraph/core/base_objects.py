@@ -470,8 +470,25 @@ class ParticleList(PhysicsObjectList):
         
         part = self.find_name(name)
         if not part:
+            # Then try to look for a particle with that PDG
+            try:
+                pdg = int(name)
+            except ValueError:
+                return None
+
+            for p in self:
+                if p.get_pdg_code()==pdg:
+                    part = copy.copy(p)
+                    part.set('is_part', True)
+                    return part
+                elif p.get_anti_pdg_code()==pdg:
+                    part = copy.copy(p)
+                    part.set('is_part', False)
+                    return part
+
             return None
-        part = copy.copy(part)     
+        part = copy.copy(part)
+        pname = name 
           
         if part.get('name') == name:
             part.set('is_part', True)

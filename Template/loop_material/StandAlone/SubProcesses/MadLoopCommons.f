@@ -30,6 +30,7 @@
       subroutine setMadLoopPath(path)
 
       character(512) path
+      character(512) dummy      
 
       character(512) prefix,fpath
       character(17) nameToCheck
@@ -47,7 +48,8 @@
 
 C     Just a dummy call for LD to pick up this function
 C     when creating the BLHA2 dynamic library
-      CALL SETPARA2(' ')
+      dummy = ' '
+      CALL SETPARA2(dummy)
 
       if (LEN(path).ge.4 .and. path(1:4).eq.'auto') then
           if (MLPath(1:6).eq.'[[NA]]') then

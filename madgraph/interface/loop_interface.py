@@ -69,6 +69,22 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         else:
             return mg_interface.CheckValidForCmd.check_tutorial(self,args)
 
+    def check_add(self, args):
+        """ If no model is defined yet, make sure to load the right loop one """
+        
+        if not self._curr_model:
+            pert_coupl_finder = re.compile(r"^(?P<proc>.+)\s*\[\s*((?P<option>\w+)"+
+                        r"\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+            pert_coupl = pert_coupl_finder.match(' '.join(args))
+            model_name = 'loop_sm'
+            if pert_coupl:
+                pert_coupls = pert_coupl.group("pertOrders")
+                if "QED" in pert_coupls:
+                    model_name = 'loop_qcd_qed_sm'
+            self.do_import('model %s'%model_name)
+        
+        mg_interface.MadGraphCmd.check_add(self,args)
+    
     def check_output(self, args):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
@@ -266,36 +282,21 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-
-    def do_set(self, line, log=True):
-        """Set the loop optimized output while correctly switching to the
-        Feynman gauge if necessary.
-        """
-
-        mg_interface.MadGraphCmd.do_set(self,line,log)
-        
-        args = self.split_arg(line)
-        self.check_set(args)
-
-        if args[0] == 'loop_optimized_output' and eval(args[1]) and \
-                                           not self.options['gauge']=='Feynman':
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-
     # HSS, 13/11/2012
     # add a line 'coupling_type = 'QCD''
     def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
     # HSS
-	# HSS, 13/11/2012 
 
         if not self._curr_model:
-            mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
-            #import model with correct treatment of the history
+            if coupling_type=='QED':
+                self.do_set(self,'gauge Feynman')
             return
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
-           self._curr_model['perturbation_couplings']==[] or (coupling_type not in self._curr_model['perturbation_couplings']):
-	# HSS
+           self._curr_model['perturbation_couplings']==[] or \
+              (coupling_type not in self._curr_model['perturbation_couplings']):
+            
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\

@@ -64,7 +64,7 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst %.f,%.o,$(
 	$(FC) $(FFLAGS) -c $< -o $@
 
 $(OLP): $(OLP_PROCESS) $(LIBS)
-	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.so $(LINKLIBS)
+	$(FC) -shared $(OLP_PROCESS) -o libMadLoop.$(dylibext) $(LINKLIBS)
 
 clean:
 		@rm -f *.o
