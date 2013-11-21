@@ -12,97 +12,98 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       include 'dbook.inc'
       call inihist
       nwgt_analysis=nwgt
-      if (nwgt_analysis*38.gt.nplots/4) then
+      if (nwgt_analysis*40.gt.nplots/4) then
          write (*,*) 'error in analysis_begin: '/
      &        /'too many histograms, increase NPLOTS to',
-     &        nwgt_analysis*38*4
+     &        nwgt_analysis*40*4
          stop 1
       endif
       do kk=1,nwgt_analysis
-      l=(kk-1)*38
-      call bookup(l+1,'Higgs pT                  '//weights_info(kk)
+      l=(kk-1)*40
+      call bookup(l+1,'Higgs pT '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call bookup(l+2,'Higgs pT                  '//weights_info(kk)
+      call bookup(l+2,'Higgs pT '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+3,'Higgs log[pT]             '//weights_info(kk)
+      call bookup(l+3,'Higgs log[pT] '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
-      call bookup(l+4,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
+      call bookup(l+4,'Higgs pT,|y_H|<2 '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call bookup(l+5,'Higgs pT,  |y_H| < 2      '//weights_info(kk)
+      call bookup(l+5,'Higgs pT,|y_H|<2 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
-      call bookup(l+6,'Higgs log[pT],  |y_H| < 2 '//weights_info(kk)
-     $     ,0.05d0,0.1d0,5.d0)
-
-      call bookup(l+7,'H jet pT                    '//weights_info(kk)
-     $     ,2.d0,0.d0,200.d0)
-      call bookup(l+8,'H jet pT                    '//weights_info(kk)
-     $     ,5.d0,0.d0,500.d0)
-      call bookup(l+9,'H jet log[pT]               '//weights_info(kk)
-     $     ,0.05d0,0.1d0,5.d0)
-      call bookup(l+10,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
-     $     ,2.d0,0.d0,200.d0)
-      call bookup(l+11,'H jet pT,  |y_Hj| < 2      '//weights_info(kk)
-     $     ,5.d0,0.d0,500.d0)
-      call bookup(l+12,'H jet log[pT],  |y_Hj| < 2 '//weights_info(kk)
+      call bookup(l+6,'Higgs log[pT],|y_H|<2 '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 
-      call bookup(l+13,'Inc jet pT                   '
-     $     //weights_info(kk),2.d0,0.d0,200.d0)
-      call bookup(l+14,'Inc jet pT                   '
-     $     //weights_info(kk),5.d0,0.d0,500.d0)
-      call bookup(l+15,'Inc jet log[pT]              '
-     $     //weights_info(kk),0.05d0,0.1d0,5.d0)
-      call bookup(l+16,'Inc jet pT,  |y_Ij| < 2      '
-     $     //weights_info(kk),2.d0,0.d0,2.d2)
-      call bookup(l+17,'Inc jet pT,  |y_Ij| < 2      '
-     $     //weights_info(kk),5.d0,0.d0,5.d2)
-      call bookup(l+18,'Inc jet log[pT],  |y_Ij| < 2 '
-     $     //weights_info(kk),0.05d0,0.1d0,5.d0)
+      call bookup(l+7,'j1 pT '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call bookup(l+8,'j1 pT '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call bookup(l+9,'j1 log[pT] '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
+      call bookup(l+10,'j1 pT,|y_j1|<2 '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call bookup(l+11,'j1 pT,|y_j1|<2 '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call bookup(l+12,'j1 log[pT],|y_j1|<2 '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
 
+      call bookup(l+13,'Inc j pT '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call bookup(l+14,'Inc j pT '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call bookup(l+15,'Inc j log[pT] '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
+      call bookup(l+16,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
+     $     ,2.d0,0.d0,2.d2)
+      call bookup(l+17,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
+     $     ,5.d0,0.d0,5.d2)
+      call bookup(l+18,'Inc j log[pT],|y_Ij|<2'//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
 
-      call bookup(l+19,'Higgs y                '//weights_info(kk)
+      call bookup(l+19,'Higgs y '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+20,'Higgs y,  pT_H > 10 GeV'//weights_info(kk)
+      call bookup(l+20,'Higgs y,pT_H>10GeV '//weights_info(kk)
      $     ,0.12d0,-6.d0,6.d0)
-      call bookup(l+21,'Higgs y,  pT_H > 30 GeV'//weights_info(kk)
+      call bookup(l+21,'Higgs y,pT_H>30GeV '//weights_info(kk)
      $     ,0.12d0,-6.d0,6.d0)
-      call bookup(l+22,'Higgs y,  pT_H > 50 GeV'//weights_info(kk)
+      call bookup(l+22,'Higgs y,pT_H>50GeV '//weights_info(kk)
      $     ,0.12d0,-6.d0,6.d0)
-      call bookup(l+23,'Higgs y,  pT_H > 70 GeV'//weights_info(kk)
+      call bookup(l+23,'Higgs y,pT_H>70GeV '//weights_info(kk)
      $     ,0.12d0,-6.d0,6.d0)
-      call bookup(l+24,'Higgs y,  pt_H > 90 GeV'//weights_info(kk)
+      call bookup(l+24,'Higgs y,pt_H>90GeV '//weights_info(kk)
      $     ,0.12d0,-6.d0,6.d0)
 
-      call bookup(l+25,'H jet y                 '//weights_info(kk)
+      call bookup(l+25,'j1 y '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+26,'H jet y,  pT_Hj > 10 GeV'//weights_info(kk)
+      call bookup(l+26,'j1 y,pT_j1>10GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+27,'H jet y,  pT_Hj > 30 GeV'//weights_info(kk)
+      call bookup(l+27,'j1 y,pT_j1>30GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+28,'H jet y,  pT_Hj > 50 GeV'//weights_info(kk)
+      call bookup(l+28,'j1 y,pT_j1>50GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+29,'H jet y,  pT_Hj > 70 GeV'//weights_info(kk)
+      call bookup(l+29,'j1 y,pT_j1>70GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+30,'H jet y,  pT_Hj > 90 GeV'//weights_info(kk)
+      call bookup(l+30,'j1 y,pT_j1>90GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
 
-      call bookup(l+31,'H-Hj y                 '//weights_info(kk)
+      call bookup(l+31,'H-j1 y '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+32,'H-Hj y,  pT_Hj > 10 GeV'//weights_info(kk)
+      call bookup(l+32,'H-j1 y,pT_j1>10GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+33,'H-Hj y,  pT_Hj > 30 GeV'//weights_info(kk)
+      call bookup(l+33,'H-j1 y,pT_j1>30GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+34,'H-Hj y,  pT_Hj > 50 GeV'//weights_info(kk)
+      call bookup(l+34,'H-j1 y,pT_j1>50GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+35,'H-Hj y,  pT_Hj > 70 GeV'//weights_info(kk)
+      call bookup(l+35,'H-j1 y,pT_j1>70GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
-      call bookup(l+36,'H-Hj y,  pT_Hj > 90 GeV'//weights_info(kk)
+      call bookup(l+36,'H-j1 y,pT_j1>90GeV '//weights_info(kk)
      $     ,0.2d0,-6.d0,6.d0)
       
-      call bookup(l+37,'njets                 '//weights_info(kk)
+      call bookup(l+37,'njets '//weights_info(kk)
      $     ,1.d0,-0.5d0,10.5d0)
-      call bookup(l+38,'njets, |y_j| < 2.5 GeV'//weights_info(kk)
+      call bookup(l+38,'njets,|y_j|<2.5 '//weights_info(kk)
      $     ,1.d0,-0.5d0,10.5d0)
+      call bookup(l+39,'xsec '//weights_info(kk)
+     $     ,1.d0,-0.5d0,2.5d0)
 
       enddo
       return
@@ -126,7 +127,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       enddo
       ytit='sigma per bin '
       do kk=1,nwgt_analysis
-         l=(kk-1)*38
+         l=(kk-1)*40
          call multitop(l+1,3,2,'Higgs pT (GeV)',' ','LOG')
          call multitop(l+2,3,2,'Higgs pT (GeV)',' ','LOG')
          call multitop(l+3,3,2,'Higgs log(pT/GeV)',' ','LOG')
@@ -134,19 +135,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call multitop(l+5,3,2,'Higgs pT (GeV)',' ','LOG')
          call multitop(l+6,3,2,'Higgs log(pT/GeV)',' ','LOG')
 c     
-         call multitop(l+7,3,2,'H jet pT (GeV)',' ','LOG')
-         call multitop(l+8,3,2,'H jet pT (GeV)',' ','LOG')
-         call multitop(l+9,3,2,'H jet log(pT/GeV)',' ','LOG')
-         call multitop(l+10,3,2,'H jet pT (GeV)',' ','LOG')
-         call multitop(l+11,3,2,'H jet pT (GeV)',' ','LOG')
-         call multitop(l+12,3,2,'H jet log(pT/GeV)',' ','LOG')
+         call multitop(l+7,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(l+8,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(l+9,3,2,'j1 log(pT/GeV)',' ','LOG')
+         call multitop(l+10,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(l+11,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(l+12,3,2,'j1 log(pT/GeV)',' ','LOG')
 c
-         call multitop(l+13,3,2,'Inc jet pT (GeV)',' ','LOG')
-         call multitop(l+14,3,2,'Inc jet pT (GeV)',' ','LOG')
-         call multitop(l+15,3,2,'Inc jet log(pT/GeV)',' ','LOG')
-         call multitop(l+16,3,2,'Inc jet pT (GeV)',' ','LOG')
-         call multitop(l+17,3,2,'Inc jet pT (GeV)',' ','LOG')
-         call multitop(l+18,3,2,'Inc jet log(pT/GeV)',' ','LOG')
+         call multitop(l+13,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(l+14,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(l+15,3,2,'Inc j log(pT/GeV)',' ','LOG')
+         call multitop(l+16,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(l+17,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(l+18,3,2,'Inc j log(pT/GeV)',' ','LOG')
 c
          call multitop(l+19,3,2,'Higgs y',' ','LOG')
          call multitop(l+20,3,2,'Higgs y',' ','LOG')
@@ -155,22 +156,23 @@ c
          call multitop(l+23,3,2,'Higgs y',' ','LOG')
          call multitop(l+24,3,2,'Higgs y',' ','LOG')
 c     
-         call multitop(l+25,3,2,'H jet y',' ','LOG')
-         call multitop(l+26,3,2,'H jet y',' ','LOG')
-         call multitop(l+27,3,2,'H jet y',' ','LOG')
-         call multitop(l+28,3,2,'H jet y',' ','LOG')
-         call multitop(l+29,3,2,'H jet y',' ','LOG')
-         call multitop(l+30,3,2,'H jet y',' ','LOG')
+         call multitop(l+25,3,2,'j1 y',' ','LOG')
+         call multitop(l+26,3,2,'j1 y',' ','LOG')
+         call multitop(l+27,3,2,'j1 y',' ','LOG')
+         call multitop(l+28,3,2,'j1 y',' ','LOG')
+         call multitop(l+29,3,2,'j1 y',' ','LOG')
+         call multitop(l+30,3,2,'j1 y',' ','LOG')
 c
-         call multitop(l+31,3,2,'H-Hj y',' ','LOG')
-         call multitop(l+32,3,2,'H-Hj y',' ','LOG')
-         call multitop(l+33,3,2,'H-Hj y',' ','LOG')
-         call multitop(l+34,3,2,'H-Hj y',' ','LOG')
-         call multitop(l+35,3,2,'H-Hj y',' ','LOG')
-         call multitop(l+36,3,2,'H-Hj y',' ','LOG')
+         call multitop(l+31,3,2,'H-j1 y',' ','LOG')
+         call multitop(l+32,3,2,'H-j1 y',' ','LOG')
+         call multitop(l+33,3,2,'H-j1 y',' ','LOG')
+         call multitop(l+34,3,2,'H-j1 y',' ','LOG')
+         call multitop(l+35,3,2,'H-j1 y',' ','LOG')
+         call multitop(l+36,3,2,'H-j1 y',' ','LOG')
 
          call multitop(l+37,3,2,'njets',' ','LOG')
          call multitop(l+38,3,2,'njets',' ','LOG')
+         call multitop(l+39,3,2,'xsec',' ','LOG')
       enddo
       return                
       end
@@ -242,7 +244,7 @@ c hardest jet variables
 C
       do kk=1,nwgt_analysis
       www=wgts(kk)
-      l=(kk-1)*38
+      l=(kk-1)*40
       call mfill(l+1,pth,WWW)
       call mfill(l+2,pth,WWW)
       if(pth.gt.0.d0)call mfill(l+3,log10(pth),WWW)
@@ -299,6 +301,7 @@ c
 c
       call mfill(l+37,njdble,WWW)
       call mfill(l+38,njcdble,WWW)
+      call mfill(l+39,1d0,WWW)
 c      
       enddo
 C

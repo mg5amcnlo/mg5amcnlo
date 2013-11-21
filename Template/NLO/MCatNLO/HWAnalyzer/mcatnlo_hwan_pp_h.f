@@ -1,3 +1,6 @@
+c
+c Example analysis for "p p > h [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -10,65 +13,101 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
-      real * 8 xmh0
-      real * 8 xmhi,xmhs
-      integer j,kk
-      character*5 cc(2)
-      data cc/'     ',' cuts'/
-c
-      xmh0=125d0
-      xmhi=(xmh0-25d0)
-      xmhs=(xmh0+25d0)
+      include 'reweight0.inc'
+      integer nwgt,max_weight,nwgt_analysis,kk,l
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
       call inihist
-      do j=1,1
-      kk=(j-1)*50
-      call mbook(kk+1,'Higgs pT'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(kk+2,'Higgs pT'//cc(j),5.d0,0.d0,500.d0)
-      call mbook(kk+3,'Higgs log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(kk+4,'Higgs pT,  |y_H| < 2'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(kk+5,'Higgs pT,  |y_H| < 2'//cc(j),5.d0,0.d0,500.d0)
-      call mbook(kk+6,'Higgs log(pT),  |y_H| < 2'//cc(j),
-     #                                           0.05d0,0.1d0,5.d0)
+      nwgt_analysis=nwgt
+      do kk=1,nwgt_analysis
+      l=(kk-1)*40
+      call mbook(l+1,'Higgs pT '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+2,'Higgs pT '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call mbook(l+3,'Higgs log[pT] '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+4,'Higgs pT,|y_H|<2 '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+5,'Higgs pT,|y_H|<2 '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call mbook(l+6,'Higgs log[pT],|y_H|<2 '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
 
-      call mbook(kk+7,'H jet pT'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(kk+8,'H jet pT'//cc(j),5.d0,0.d0,500.d0)
-      call mbook(kk+9,'H jet log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(kk+10,'H jet pT,  |y_Hj| < 2'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(kk+11,'H jet pT,  |y_Hj| < 2'//cc(j),5.d0,0.d0,500.d0)
-      call mbook(kk+12,'H jet log(pT),  |y_Hj| < 2'//cc(j),
-     #                                             0.05d0,0.1d0,5.d0)
+      call mbook(l+7,'j1 pT '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+8,'j1 pT '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call mbook(l+9,'j1 log[pT] '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+10,'j1 pT,|y_j1|<2 '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+11,'j1 pT,|y_j1|<2 '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call mbook(l+12,'j1 log[pT],|y_j1|<2 '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
 
-      call mbook(kk+13,'Inc jet pT'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(kk+14,'Inc jet pT'//cc(j),5.d0,0.d0,500.d0)
-      call mbook(kk+15,'Inc jet log(pT)'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(kk+16,'Inc jet pT,  |y_Ij| < 2'//cc(j),2.d0,0.d0,2.d2)
-      call mbook(kk+17,'Inc jet pT,  |y_Ij| < 2'//cc(j),5.d0,0.d0,5.d2)
-      call mbook(kk+18,'Inc jet log(pT),  |y_Ij| < 2'//cc(j),
-     #                                               0.05d0,0.1d0,5.d0)
+      call mbook(l+13,'Inc j pT '//weights_info(kk)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+14,'Inc j pT '//weights_info(kk)
+     $     ,5.d0,0.d0,500.d0)
+      call mbook(l+15,'Inc j log[pT] '//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+16,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
+     $     ,2.d0,0.d0,2.d2)
+      call mbook(l+17,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
+     $     ,5.d0,0.d0,5.d2)
+      call mbook(l+18,'Inc j log[pT],|y_Ij|<2'//weights_info(kk)
+     $     ,0.05d0,0.1d0,5.d0)
 
-      call mbook(kk+19,'Higgs y',0.2d0,-6.d0,6.d0)
-      call mbook(kk+20,'Higgs y,  pT_H > 10 GeV',0.12d0,-6.d0,6.d0)
-      call mbook(kk+21,'Higgs y,  pT_H > 30 GeV',0.12d0,-6.d0,6.d0)
-      call mbook(kk+22,'Higgs y,  pT_H > 50 GeV',0.12d0,-6.d0,6.d0)
-      call mbook(kk+23,'Higgs y,  pT_H > 70 GeV',0.12d0,-6.d0,6.d0)
-      call mbook(kk+24,'Higgs y,  pt_H > 90 GeV',0.12d0,-6.d0,6.d0)
+      call mbook(l+19,'Higgs y '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+20,'Higgs y,pT_H>10GeV '//weights_info(kk)
+     $     ,0.12d0,-6.d0,6.d0)
+      call mbook(l+21,'Higgs y,pT_H>30GeV '//weights_info(kk)
+     $     ,0.12d0,-6.d0,6.d0)
+      call mbook(l+22,'Higgs y,pT_H>50GeV '//weights_info(kk)
+     $     ,0.12d0,-6.d0,6.d0)
+      call mbook(l+23,'Higgs y,pT_H>70GeV '//weights_info(kk)
+     $     ,0.12d0,-6.d0,6.d0)
+      call mbook(l+24,'Higgs y,pt_H>90GeV '//weights_info(kk)
+     $     ,0.12d0,-6.d0,6.d0)
 
-      call mbook(kk+25,'H jet y',0.2d0,-6.d0,6.d0)
-      call mbook(kk+26,'H jet y,  pT_Hj > 10 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+27,'H jet y,  pT_Hj > 30 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+28,'H jet y,  pT_Hj > 50 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+29,'H jet y,  pT_Hj > 70 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+30,'H jet y,  pT_Hj > 90 GeV',0.2d0,-6.d0,6.d0)
+      call mbook(l+25,'j1 y '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+26,'j1 y,pT_j1>10GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+27,'j1 y,pT_j1>30GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+28,'j1 y,pT_j1>50GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+29,'j1 y,pT_j1>70GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+30,'j1 y,pT_j1>90GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
 
-      call mbook(kk+31,'H-Hj y',0.2d0,-6.d0,6.d0)
-      call mbook(kk+32,'H-Hj y,  pT_Hj > 10 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+33,'H-Hj y,  pT_Hj > 30 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+34,'H-Hj y,  pT_Hj > 50 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+35,'H-Hj y,  pT_Hj > 70 GeV',0.2d0,-6.d0,6.d0)
-      call mbook(kk+36,'H-Hj y,  pT_Hj > 90 GeV',0.2d0,-6.d0,6.d0)
-
-      call mbook(kk+37,'njets',1.d0,-0.5d0,10.5d0)
-      call mbook(kk+38,'njets, |y_j| < 2.5 GeV',1.d0,-0.5d0,10.5d0)
+      call mbook(l+31,'H-j1 y '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+32,'H-j1 y,pT_j1>10GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+33,'H-j1 y,pT_j1>30GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+34,'H-j1 y,pT_j1>50GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+35,'H-j1 y,pT_j1>70GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      call mbook(l+36,'H-j1 y,pT_j1>90GeV '//weights_info(kk)
+     $     ,0.2d0,-6.d0,6.d0)
+      
+      call mbook(l+37,'njets '//weights_info(kk)
+     $     ,1.d0,-0.5d0,10.5d0)
+      call mbook(l+38,'njets,|y_j|<2.5 '//weights_info(kk)
+     $     ,1.d0,-0.5d0,10.5d0)
+      call mbook(l+39,'xsec '//weights_info(kk)
+     $     ,1.d0,-0.5d0,2.5d0)
 
       enddo
       END
@@ -80,65 +119,68 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
-      INTEGER I,J,KK
+      INTEGER I,J,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='HERHG.TOP',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,100              
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+100)
-        CALL MOPERA(I+100,'F',I+100,I+100,(XNORM),0.D0)
- 	CALL MFINAL3(I+100)
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)
       ENDDO
 C
-      do j=1,1
-      kk=(j-1)*50
-      call multitop(100+kk+1,99,3,2,'Higgs pT (GeV)',' ','LOG')
-      call multitop(100+kk+2,99,3,2,'Higgs pT (GeV)',' ','LOG')
-      call multitop(100+kk+3,99,3,2,'Higgs log(pT/GeV)',' ','LOG')
-      call multitop(100+kk+4,99,3,2,'Higgs pT (GeV)',' ','LOG')
-      call multitop(100+kk+5,99,3,2,'Higgs pT (GeV)',' ','LOG')
-      call multitop(100+kk+6,99,3,2,'Higgs log(pT/GeV)',' ','LOG')
-c
-      call multitop(100+kk+7,99,3,2,'H jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+8,99,3,2,'H jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+9,99,3,2,'H jet log(pT/GeV)',' ','LOG')
-      call multitop(100+kk+10,99,3,2,'H jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+11,99,3,2,'H jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+12,99,3,2,'H jet log(pT/GeV)',' ','LOG')
-c
-      call multitop(100+kk+13,99,3,2,'Inc jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+14,99,3,2,'Inc jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+15,99,3,2,'Inc jet log(pT/GeV)',' ','LOG')
-      call multitop(100+kk+16,99,3,2,'Inc jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+17,99,3,2,'Inc jet pT (GeV)',' ','LOG')
-      call multitop(100+kk+18,99,3,2,'Inc jet log(pT/GeV)',' ','LOG')
-c
-      call multitop(100+kk+19,99,3,2,'Higgs y',' ','LOG')
-      call multitop(100+kk+20,99,3,2,'Higgs y',' ','LOG')
-      call multitop(100+kk+21,99,3,2,'Higgs y',' ','LOG')
-      call multitop(100+kk+22,99,3,2,'Higgs y',' ','LOG')
-      call multitop(100+kk+23,99,3,2,'Higgs y',' ','LOG')
-      call multitop(100+kk+24,99,3,2,'Higgs y',' ','LOG')
+      do kk=1,nwgt_analysis
+         l=(kk-1)*40
+         call multitop(NPL+l+1,NPL-1,3,2,'Higgs pT (GeV)',' ','LOG')
+         call multitop(NPL+l+2,NPL-1,3,2,'Higgs pT (GeV)',' ','LOG')
+         call multitop(NPL+l+3,NPL-1,3,2,'Higgs log(pT/GeV)',' ','LOG')
+         call multitop(NPL+l+4,NPL-1,3,2,'Higgs pT (GeV)',' ','LOG')
+         call multitop(NPL+l+5,NPL-1,3,2,'Higgs pT (GeV)',' ','LOG')
+         call multitop(NPL+l+6,NPL-1,3,2,'Higgs log(pT/GeV)',' ','LOG')
 c     
-      call multitop(100+kk+25,99,3,2,'H jet y',' ','LOG')
-      call multitop(100+kk+26,99,3,2,'H jet y',' ','LOG')
-      call multitop(100+kk+27,99,3,2,'H jet y',' ','LOG')
-      call multitop(100+kk+28,99,3,2,'H jet y',' ','LOG')
-      call multitop(100+kk+29,99,3,2,'H jet y',' ','LOG')
-      call multitop(100+kk+30,99,3,2,'H jet y',' ','LOG')
+         call multitop(NPL+l+7,NPL-1,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(NPL+l+8,NPL-1,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(NPL+l+9,NPL-1,3,2,'j1 log(pT/GeV)',' ','LOG')
+         call multitop(NPL+l+10,NPL-1,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(NPL+l+11,NPL-1,3,2,'j1 pT (GeV)',' ','LOG')
+         call multitop(NPL+l+12,NPL-1,3,2,'j1 log(pT/GeV)',' ','LOG')
 c
-      call multitop(100+kk+31,99,3,2,'H-Hj y',' ','LOG')
-      call multitop(100+kk+32,99,3,2,'H-Hj y',' ','LOG')
-      call multitop(100+kk+33,99,3,2,'H-Hj y',' ','LOG')
-      call multitop(100+kk+34,99,3,2,'H-Hj y',' ','LOG')
-      call multitop(100+kk+35,99,3,2,'H-Hj y',' ','LOG')
-      call multitop(100+kk+36,99,3,2,'H-Hj y',' ','LOG')
+         call multitop(NPL+l+13,NPL-1,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(NPL+l+14,NPL-1,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(NPL+l+15,NPL-1,3,2,'Inc j log(pT/GeV)',' ','LOG')
+         call multitop(NPL+l+16,NPL-1,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(NPL+l+17,NPL-1,3,2,'Inc j pT (GeV)',' ','LOG')
+         call multitop(NPL+l+18,NPL-1,3,2,'Inc j log(pT/GeV)',' ','LOG')
+c
+         call multitop(NPL+l+19,NPL-1,3,2,'Higgs y',' ','LOG')
+         call multitop(NPL+l+20,NPL-1,3,2,'Higgs y',' ','LOG')
+         call multitop(NPL+l+21,NPL-1,3,2,'Higgs y',' ','LOG')
+         call multitop(NPL+l+22,NPL-1,3,2,'Higgs y',' ','LOG')
+         call multitop(NPL+l+23,NPL-1,3,2,'Higgs y',' ','LOG')
+         call multitop(NPL+l+24,NPL-1,3,2,'Higgs y',' ','LOG')
+c     
+         call multitop(NPL+l+25,NPL-1,3,2,'j1 y',' ','LOG')
+         call multitop(NPL+l+26,NPL-1,3,2,'j1 y',' ','LOG')
+         call multitop(NPL+l+27,NPL-1,3,2,'j1 y',' ','LOG')
+         call multitop(NPL+l+28,NPL-1,3,2,'j1 y',' ','LOG')
+         call multitop(NPL+l+29,NPL-1,3,2,'j1 y',' ','LOG')
+         call multitop(NPL+l+30,NPL-1,3,2,'j1 y',' ','LOG')
+c
+         call multitop(NPL+l+31,NPL-1,3,2,'H-j1 y',' ','LOG')
+         call multitop(NPL+l+32,NPL-1,3,2,'H-j1 y',' ','LOG')
+         call multitop(NPL+l+33,NPL-1,3,2,'H-j1 y',' ','LOG')
+         call multitop(NPL+l+34,NPL-1,3,2,'H-j1 y',' ','LOG')
+         call multitop(NPL+l+35,NPL-1,3,2,'H-j1 y',' ','LOG')
+         call multitop(NPL+l+36,NPL-1,3,2,'H-j1 y',' ','LOG')
 
-      call multitop(100+kk+37,99,3,2,'njets',' ','LOG')
-      call multitop(100+kk+38,99,3,2,'njets',' ','LOG')
-
+         call multitop(NPL+l+37,NPL-1,3,2,'njets',' ','LOG')
+         call multitop(NPL+l+38,NPL-1,3,2,'njets',' ','LOG')
+         call multitop(NPL+l+39,NPL-1,3,2,'xsec',' ','LOG')
       enddo
 c
       CLOSE(99)
@@ -149,6 +191,7 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
       DOUBLE PRECISION HWVDOT,PSUM(4),PPH(5),XMH,PTH,YH,PTP,YP,
      &getrapidity,getpseudorap,etah,ECUT,PTJ1,PTJ,YJ,
      &PSUB,MJ1,Y,YCUT,YJ1
@@ -162,24 +205,33 @@ C----------------------------------------------------------------------
       DOUBLE PRECISION PALG,RFJ,SYCUT,PP(4,NMAX),PJET(4,NMAX),
      # PTJET(NMAX),ETAJET(NMAX),YJET(NMAX),pjet_new(4,nmax),
      # njdble,njcdble,y_central
-
+      integer nwgt_analysis,max_weight,l
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
       DATA TINY/.1D-5/
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
 c
-      IF(IERROR.NE.0)RETURN
+      IF (IERROR.NE.0) RETURN
 C INITIALISE
       DO I=1,NMAX
         DO J=1,4
           PP(J,I)=0D0
         ENDDO
       ENDDO
-      IF (IERROR.NE.0) RETURN
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
         GOTO 999
       ENDIF
-      WWW0=EVWGT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
       CALL HWVSUM(4,PHEP(1,1),PHEP(1,2),PSUM)
       CALL HWVSCA(4,-1D0,PSUM,PSUM)
       ICHSUM=0
@@ -270,87 +322,86 @@ c hardest jet variables
 c
       njdble=dble(njet)
       njcdble=dble(njet_central)
-      kk=0
-      call mfill(kk+1,(pth),(WWW0))
-      call mfill(kk+2,(pth),(WWW0))
-      if(pth.gt.0.d0)call mfill(kk+3,(log10(pth)),(WWW0))
+C
+      do kk=1,nwgt_analysis
+      l=(kk-1)*40
+      call mfill(l+1,pth,WWW(kk))
+      call mfill(l+2,pth,WWW(kk))
+      if(pth.gt.0.d0)call mfill(l+3,log10(pth),WWW(kk))
       if(abs(yh).le.2.d0)then
-         call mfill(kk+4,(pth),(WWW0))
-         call mfill(kk+5,(pth),(WWW0))
-         if(pth.gt.0.d0)call mfill(kk+6,(log10(pth)),(WWW0))
+         call mfill(l+4,pth,WWW(kk))
+         call mfill(l+5,pth,WWW(kk))
+         if(pth.gt.0.d0)call mfill(l+6,log10(pth),WWW(kk))
       endif
 c
       if(njet.ge.1)then
-      call mfill(kk+7,(ptj1),(WWW0))
-      call mfill(kk+8,(ptj1),(WWW0))
-      if(ptj1.gt.0.d0)call mfill(kk+9,(log10(ptj1)),(WWW0))
-      if(abs(yj1).le.2.d0)then
-         call mfill(kk+10,(ptj1),(WWW0))
-         call mfill(kk+11,(ptj1),(WWW0))
-         if(ptj1.gt.0.d0)call mfill(kk+12,(log10(ptj1)),
-     &                                          (WWW0))
-      endif
-c
-      do nj=1,njet
-         call mfill(kk+13,(ptjet(nj)),(WWW0))
-         call mfill(kk+14,(ptjet(nj)),(WWW0))
-         if(ptjet(nj).gt.0.d0)call mfill(kk+15,(log10(ptjet(nj))),
-     &                                                (WWW0))
-         if(abs(yjet(nj)).le.2.d0)then
-            call mfill(kk+16,(ptjet(nj)),(WWW0))
-            call mfill(kk+17,(ptjet(nj)),(WWW0))
-            if(ptjet(nj).gt.0d0)call mfill(kk+18,(log10(ptjet(nj))),
-     &                                                   (WWW0))
+         call mfill(l+7,ptj1,WWW(kk))
+         call mfill(l+8,ptj1,WWW(kk))
+         if(ptj1.gt.0.d0)call mfill(l+9,log10(ptj1),WWW(kk))
+         if(abs(yj1).le.2.d0)then
+            call mfill(l+10,ptj1,WWW(kk))
+            call mfill(l+11,ptj1,WWW(kk))
+            if(ptj1.gt.0.d0)call mfill(l+12,log10(ptj1),WWW(kk))
          endif
-      enddo
+c
+         do nj=1,njet
+            call mfill(l+13,ptj1,WWW(kk))
+            call mfill(l+14,ptj1,WWW(kk))
+            if(ptj1.gt.0.d0)call mfill(l+15,log10(ptj1),WWW(kk))
+            if(abs(yj1).le.2.d0)then
+               call mfill(l+16,ptj1,WWW(kk))
+               call mfill(l+17,ptj1,WWW(kk))
+               if(ptj1.gt.0d0)call mfill(l+18,log10(ptj1),WWW(kk))
+            endif
+         enddo
       endif
 c
-      call mfill(kk+19,(yh),(WWW0))
-      if(pth.ge.10.d0) call mfill(kk+20,(yh),(WWW0))
-      if(pth.ge.30.d0) call mfill(kk+21,(yh),(WWW0))
-      if(pth.ge.50.d0) call mfill(kk+22,(yh),(WWW0))
-      if(pth.ge.70.d0) call mfill(kk+23,(yh),(WWW0))
-      if(pth.ge.90.d0) call mfill(kk+24,(yh),(WWW0))  
+      call mfill(l+19,yh,WWW(kk))
+      if(pth.ge.10.d0) call mfill(l+20,yh,WWW(kk))
+      if(pth.ge.30.d0) call mfill(l+21,yh,WWW(kk))
+      if(pth.ge.50.d0) call mfill(l+22,yh,WWW(kk))
+      if(pth.ge.70.d0) call mfill(l+23,yh,WWW(kk))
+      if(pth.ge.90.d0) call mfill(l+24,yh,WWW(kk))  
 c     
       if(njet.ge.1)then
-      call mfill(kk+25,(yj1),(WWW0))
-      if(ptj1.ge.10.d0) call mfill(kk+26,(yj1),(WWW0))
-      if(ptj1.ge.30.d0) call mfill(kk+27,(yj1),(WWW0))
-      if(ptj1.ge.50.d0) call mfill(kk+28,(yj1),(WWW0))
-      if(ptj1.ge.70.d0) call mfill(kk+29,(yj1),(WWW0))
-      if(ptj1.ge.90.d0) call mfill(kk+30,(yj1),(WWW0))
-c
-      call mfill(kk+31,(yh-yj1),(WWW0))
-      if(ptj1.ge.10.d0) call mfill(kk+32,(yh-yj1),(WWW0))
-      if(ptj1.ge.30.d0) call mfill(kk+33,(yh-yj1),(WWW0))
-      if(ptj1.ge.50.d0) call mfill(kk+34,(yh-yj1),(WWW0))
-      if(ptj1.ge.70.d0) call mfill(kk+35,(yh-yj1),(WWW0))
-      if(ptj1.ge.90.d0) call mfill(kk+36,(yh-yj1),(WWW0))
+         call mfill(l+25,yj1,WWW(kk))
+         if(ptj1.ge.10.d0) call mfill(l+26,yj1,WWW(kk))
+         if(ptj1.ge.30.d0) call mfill(l+27,yj1,WWW(kk))
+         if(ptj1.ge.50.d0) call mfill(l+28,yj1,WWW(kk))
+         if(ptj1.ge.70.d0) call mfill(l+29,yj1,WWW(kk))
+         if(ptj1.ge.90.d0) call mfill(l+30,yj1,WWW(kk))
+c     
+         call mfill(l+31,yh-yj1,WWW(kk))
+         if(ptj1.ge.10.d0) call mfill(l+32,yh-yj1,WWW(kk))
+         if(ptj1.ge.30.d0) call mfill(l+33,yh-yj1,WWW(kk))
+         if(ptj1.ge.50.d0) call mfill(l+34,yh-yj1,WWW(kk))
+         if(ptj1.ge.70.d0) call mfill(l+35,yh-yj1,WWW(kk))
+         if(ptj1.ge.90.d0) call mfill(l+36,yh-yj1,WWW(kk))
       endif
 c
-      call mfill(kk+37,(njdble),(WWW0))
-      call mfill(kk+38,(njcdble),(WWW0))
-
-
-
+      call mfill(l+37,njdble,WWW(kk))
+      call mfill(l+38,njcdble,WWW(kk))
+      call mfill(l+39,1d0,WWW(kk))
+c      
+      enddo
+C
  999  END
 
 
       function getrapidity(en,pl)
       implicit none
       real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-      parameter (tiny=1.d-5)
-c
+      parameter (tiny=1.d-8)
       xplus=en+pl
       xminus=en-pl
       if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
+         if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+            y=0.5d0*log( xplus/xminus  )
+         else
+            y=sign(1.d0,pl)*1.d8
+         endif
+      else 
+         y=sign(1.d0,pl)*1.d8
       endif
       getrapidity=y
       return
