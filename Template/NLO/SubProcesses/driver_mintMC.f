@@ -741,6 +741,8 @@ c From dsample_fks
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
+      double precision double_check(nintegrals)
+      save double_check
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -987,23 +989,26 @@ c IRPOC's
       endif
 
       if (ifl.eq.0)then
+         do i=1,nintegrals
+            double_check(i)=0d0
+         enddo
          do i=1,99
-c$$$            if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
-c$$$     &           then
-c$$$               if(i.le.ndim-3)then
-c$$$                  x(i)=xx(i)
-c$$$               elseif(i.le.ndim) then
-c$$$                  x(i)=ran2()   ! Choose them flat when not including real-emision
-c$$$               else
-c$$$                  x(i)=0.d0
-c$$$               endif
-c$$$            else
+            if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+     &           then
+               if(i.le.ndim-3)then
+                  x(i)=xx(i)
+               elseif(i.le.ndim) then
+                  x(i)=ran2()   ! Choose them flat when not including real-emision
+               else
+                  x(i)=0.d0
+               endif
+            else
                if(i.le.ndim)then
                   x(i)=xx(i)
                else
                   x(i)=0.d0
                endif
-c$$$            endif
+            endif
          enddo
 c
 c Compute the Born-like contributions with nbody=.true.
@@ -1118,6 +1123,9 @@ c much. Do this by overwrite the 'wgt' variable
             endif
          endif
          if (f(1).ne.0d0) itotalpoints=itotalpoints+1
+         do i=1,nintegrals
+            double_check(i)=f(i)
+         enddo
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
@@ -1130,6 +1138,23 @@ c The following two are needed when writing events to do NLO/Born
 c reweighting
          sigintF_without_w=sigintF/w
          f_abs_without_w=f(1)/w
+c Double check the consistency. This check will fail when folding is
+c used.
+         do i=1,nintegrals
+            if (double_check(i).ne.0d0) then
+               if (abs(1d0-f(i)/double_check(i)).gt.1d-12) then
+                  write (*,*) "Not consistent numbers in driver_mintMC"
+                  write (*,*) f
+                  write (*,*) double_check
+                  stop 1
+               endif
+            elseif (f(i).ne.0d0) then
+               write (*,*) "Not consistent numbers in driver_mintMC"
+               write (*,*) f
+               write (*,*) double_check
+               stop 1
+            endif
+         enddo
       endif
       return
       end

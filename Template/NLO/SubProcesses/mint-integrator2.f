@@ -364,7 +364,7 @@ c Special for the computation of the 'computed virtual'
      &     double_events) then
          write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
          write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '
-     &        ,non_zero_point(i),' GAVE A NON-ZERO INTEGRAND.'
+     &        ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
          stop
       endif
 c Goto beginning of loop over PS points until enough points have found
@@ -520,20 +520,22 @@ c double the number of points for the next iteration
       endif
       if (imode.eq.0) then
 c     Update the average_virtual: a_new=(virt+a_old*born)/born
-         if (average_virtual.eq.0d0) then ! i.e. first iteration
-            average_virtual=vtot(3)/vtot(5)+average_virtual
-         else ! give some importance to the iterations already done
-            average_virtual=(vtot(3)/vtot(5)+average_virtual*2d0)/2d0
+         if (vtot(5).ne.0d0) then
+            if (average_virtual.eq.0d0) then ! i.e. first iteration
+               average_virtual=vtot(3)/vtot(5)+average_virtual
+            else  ! give some importance to the iterations already done
+               average_virtual=(vtot(3)/vtot(5)+average_virtual*2d0)/2d0
+            endif
          endif
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
          virtual_fraction=max(min(virtual_fraction*
      &        max(min(2d0*etot(3)/etot(1),2d0),0.25d0),1d0),0.01d0)
-         write (*,'(a,1x,f7.3,1x,f7.3)')
-     $        'update virtual fraction to:',virtual_fraction,average_virtual
+         write (*,'(a,1x,f7.3,1x,f7.3)') 'update virtual fraction to:'
+     $        ,virtual_fraction,average_virtual
       elseif (imode.eq.1) then
-         write (*,'(a,1x,f7.3,1x,f7.3)')
-     $        'virtual fraction is:',virtual_fraction,average_virtual
+         write (*,'(a,1x,f7.3,1x,f7.3)') 'virtual fraction is:'
+     $        ,virtual_fraction,average_virtual
       endif
 c Update the results of the last tree iterations
       do i=1,nintegrals
@@ -949,9 +951,9 @@ c get final value (x and vol not used in this call)
       if (vn.eq.2) then
          xx(2)=xx(2)+f(2)
          xx(3)=xx(3)+f(1)
-c$$$
+
 c$$$         write (*,*) xx(2)/icalls
-c$$$
+
       else
          xx(5)=xx(5)+f(2)
          xx(6)=xx(6)+f(1)

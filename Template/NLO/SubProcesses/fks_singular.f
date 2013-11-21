@@ -1804,6 +1804,7 @@ c Update the shower starting scale with the shape from montecarlocounter
       endif
       call set_cms_stuff(izero)
       call set_shower_scale(nFKSprocess*2-1,.false.)
+
       if(iminmax.eq.0) then
          dsigS = (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
