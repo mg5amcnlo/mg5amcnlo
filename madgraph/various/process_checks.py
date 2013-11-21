@@ -1495,7 +1495,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             process = matrix_element
         proc_name = process.shell_string()[2:]
         export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
-                                                temp_dir_prefix+"_%s"%proc_name)
+                                                temp_dir_prefix+"_%s"%proc_name+\
+                            "_%i"%(1 if "MLReductionLib" not in MLOptions \
+                                   else MLOptions['MLReductionLib']))
         if not infos:
             infos = self.setup_process(matrix_element,export_dir, \
                                                 reusing, param_card,MLOptions)
@@ -2109,9 +2111,15 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                         options=options,param_card=param_card, 
                                                         keep_folder=keep_folder,
                                                         MLOptions=MLoptions)
+
     if stability == None:
         return None
     else:
+        if 'MLReductionLib' not in MLoptions:
+            stability['tool_name']="CutTools"
+        else:
+            mlrlib={1:"CutTools",2:"PJFry++",3:"IREGI"}
+            stability['tool_name']=mlrlib[MLoptions['MLReductionLib']]
         stability['loop_optimized_output']=myStabilityChecker.loop_optimized_output
         return stability
 
@@ -2430,7 +2438,7 @@ def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
                                                               %str(logFilePath))
     return text
 
-def output_stability(stability, mg_root, reusing=False):
+def output_stability(stabilitylist, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
@@ -2508,85 +2516,127 @@ def output_stability(stability, mg_root, reusing=False):
 
     # Define shortcut
     f = format_output
+    # change the format of stability list
+    stability={}
+    if isinstance(stabilitylist,list):
+        if len(stabilitylist)==0:
+            res_str += "= Could not produce the empty stability result"
+        stability['loop_optimized_output']=stabilitylist[0]['loop_optimized_output']
+        stability['Process']=stabilitylist[0]['Process']
+        stability['Stability']={}
+        for stab in stabilitylist:
+            toolname=stab['tool_name']
+            stability['Stability'][toolname]={}
+            stability['Stability'][toolname]['DP_stability']=stab['DP_stability']
+            stability['Stability'][toolname]['QP_stability']=stab['QP_stability']
+            stability['Stability'][toolname]['Unstable_PS_points']=stab['Unstable_PS_points']
+            stability['Stability'][toolname]['Exceptional_PS_points']=stab['Exceptional_PS_points']
+    else:
+        stability['loop_optimized_output']=stabilitylist['loop_optimized_output']
+        stability['Process']=stabilitylist['Process']
+        stability['Stability']={}
+        toolname=stabilitylist['tool_name']
+        stability['Stability'][toolname]={}
+        stability['Stability'][toolname]['DP_stability']=stabilitylist['DP_stability']
+        stability['Stability'][toolname]['QP_stability']=stabilitylist['QP_stability']
+        stability['Stability'][toolname]['Unstable_PS_points']=stabilitylist['Unstable_PS_points']
+        stability['Stability'][toolname]['Exceptional_PS_points']=stabilitylist['Exceptional_PS_points']        
+        
     opt = stability['loop_optimized_output']
 
     mode = 'optimized' if opt else 'default'
-    DP_stability = [eval['Accuracy'] for eval in stability['DP_stability']]
-    # Remember that an evaluation which did not require QP has an empty dictionary
-    QP_stability = [eval['Accuracy'] if eval!={} else -1.0 for eval in \
-                                                      stability['QP_stability']]
     process = stability['Process']
-    nPS = len(DP_stability)
-    UPS = stability['Unstable_PS_points']
-    UPS_stability_DP = [DP_stability[U[0]] for U in UPS]
-    UPS_stability_QP = [QP_stability[U[0]] for U in UPS]
-    EPS = stability['Exceptional_PS_points']
-    EPS_stability_DP = [DP_stability[E[0]] for E in EPS]
-    EPS_stability_QP = [QP_stability[E[0]] for E in EPS]
-    
-    res_str = "%i PS points evaluated for %s (%s mode)\n"\
-                                           %(nPS,process.nice_string()[9:],mode)
-    res_str += "\n= Double precision results\n"
-    res_str += "|= Median accuracy............... %s\n"%f(median(DP_stability),'%.2e')
-    res_str += "|= Max accuracy.................. %s\n"%f(min(DP_stability),'%.2e')
-    res_str += "|= Min accuracy.................. %s\n"%f(max(DP_stability),'%.2e')
-    (pmed,pmin,pfrac)=loop_direction_test_power(stability['DP_stability'])
-    res_str += "|= Overall DP loop_dir test power %s,%s\n"\
+    res_str = "Stability checking for %s (%s mode)\n"\
+                                           %(process.nice_string()[9:],mode)
+    logFile = open(os.path.join(mg_root, 'stability_%s_%s.log'\
+                                           %(mode,process.shell_string())), 'w')
+    logFile.write('Stability check results\n\n')
+    logFile.write(res_str)
+    data_plot_dict={}
+    accuracy_dict={}
+    nPSmax=0
+    max_acc=0.0
+    min_acc=1.0
+    for key in stability['Stability'].keys():
+        toolname=key
+        stab=stability['Stability'][key]
+        DP_stability = [eval['Accuracy'] for eval in stab['DP_stability']]
+        # Remember that an evaluation which did not require QP has an empty dictionary
+        QP_stability = [eval['Accuracy'] if eval!={} else -1.0 for eval in \
+                                                      stab['QP_stability']]
+        nPS = len(DP_stability)
+        if nPS>nPSmax:nPSmax=nPS
+        UPS = stab['Unstable_PS_points']
+        UPS_stability_DP = [DP_stability[U[0]] for U in UPS]
+        UPS_stability_QP = [QP_stability[U[0]] for U in UPS]
+        EPS = stab['Exceptional_PS_points']
+        EPS_stability_DP = [DP_stability[E[0]] for E in EPS]
+        EPS_stability_QP = [QP_stability[E[0]] for E in EPS]
+        
+        res_str_i = "\n%i PS points evaluated with %s\n"\
+                                           %(nPS,toolname)    
+        
+        res_str_i += "\n= Double precision results\n"
+        res_str_i += "|= Median accuracy............... %s\n"%f(median(DP_stability),'%.2e')
+        res_str_i += "|= Max accuracy.................. %s\n"%f(min(DP_stability),'%.2e')
+        res_str_i += "|= Min accuracy.................. %s\n"%f(max(DP_stability),'%.2e')
+        (pmed,pmin,pfrac)=loop_direction_test_power(stab['DP_stability'])
+        res_str_i += "|= Overall DP loop_dir test power %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-    res_str += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
-    res_str += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
-    if len(UPS)>0:
-        res_str += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
-        res_str += "|= DP Max accuracy............... %.2e\n"%min(UPS_stability_DP)
-        res_str += "|= DP Min accuracy............... %.2e\n"%max(UPS_stability_DP)
-        (pmed,pmin,pfrac)=loop_direction_test_power(\
-                                 [stability['DP_stability'][U[0]] for U in UPS])
-        res_str += "|= UPS DP loop_dir test power.... %s,%s\n"\
+        res_str_i += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
+        res_str_i += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
+        if len(UPS)>0:
+            res_str_i += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
+            res_str_i += "|= DP Max accuracy............... %.2e\n"%min(UPS_stability_DP)
+            res_str_i += "|= DP Min accuracy............... %.2e\n"%max(UPS_stability_DP)
+            (pmed,pmin,pfrac)=loop_direction_test_power(\
+                                 [stab['DP_stability'][U[0]] for U in UPS])
+            res_str_i += "|= UPS DP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= UPS DP fraction with power<-3. %s\n"\
+            res_str_i += "|= UPS DP fraction with power<-3. %s\n"\
                                                                 %f(pfrac,'%.2e')
-        res_str += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
-        res_str += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
-        res_str += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
-        (pmed,pmin,pfrac)=loop_direction_test_power(\
-                                 [stability['QP_stability'][U[0]] for U in UPS])
-        res_str += "|= UPS QP loop_dir test power.... %s,%s\n"\
+            res_str_i += "|= QP Median accuracy............ %.2e\n"%median(UPS_stability_QP)
+            res_str_i += "|= QP Max accuracy............... %.2e\n"%min(UPS_stability_QP)
+            res_str_i += "|= QP Min accuracy............... %.2e\n"%max(UPS_stability_QP)
+            (pmed,pmin,pfrac)=loop_direction_test_power(\
+                                 [stab['QP_stability'][U[0]] for U in UPS])
+            res_str_i += "|= UPS QP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= UPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
-        (pmed,pmin,pmax)=test_consistency(\
-                                 [stability['DP_stability'][U[0]] for U in UPS],
-                                 [stability['QP_stability'][U[0]] for U in UPS])
-        res_str += "|= DP vs QP stab test consistency %s,%s,%s\n"\
+            res_str_i += "|= UPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
+            (pmed,pmin,pmax)=test_consistency(\
+                                 [stab['DP_stability'][U[0]] for U in UPS],
+                                 [stab['QP_stability'][U[0]] for U in UPS])
+            res_str_i += "|= DP vs QP stab test consistency %s,%s,%s\n"\
                                  %(f(pmed,'%.1f'),f(pmin,'%.1f'),f(pmax,'%.1f'))        
-    res_str += "\n= Number of Exceptional PS points : %i\n"%len(EPS)
-    if len(EPS)>0:
-        res_str += "|= DP Median accuracy............ %s\n"%f(median(EPS_stability_DP),'%.2e')
-        res_str += "|= DP Max accuracy............... %s\n"%f(min(EPS_stability_DP),'%.2e')
-        res_str += "|= DP Min accuracy............... %s\n"%f(max(EPS_stability_DP),'%.2e')
-        pmed,pmin,pfrac=loop_direction_test_power(\
-                                 [stability['DP_stability'][E[0]] for E in EPS])
-        res_str += "|= EPS DP loop_dir test power.... %s,%s\n"\
+            res_str_i += "\n= Number of Exceptional PS points : %i\n"%len(EPS)
+        if len(EPS)>0:
+            res_str_i += "|= DP Median accuracy............ %s\n"%f(median(EPS_stability_DP),'%.2e')
+            res_str_i += "|= DP Max accuracy............... %s\n"%f(min(EPS_stability_DP),'%.2e')
+            res_str_i += "|= DP Min accuracy............... %s\n"%f(max(EPS_stability_DP),'%.2e')
+            pmed,pmin,pfrac=loop_direction_test_power(\
+                                 [stab['DP_stability'][E[0]] for E in EPS])
+            res_str_i += "|= EPS DP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= EPS DP fraction with power<-3. %s\n"\
+            res_str_i += "|= EPS DP fraction with power<-3. %s\n"\
                                                                 %f(pfrac,'%.2e')
-        res_str += "|= QP Median accuracy............ %s\n"\
+            res_str_i += "|= QP Median accuracy............ %s\n"\
                                              %f(median(EPS_stability_QP),'%.2e')
-        res_str += "|= QP Max accuracy............... %s\n"\
+            res_str_i += "|= QP Max accuracy............... %s\n"\
                                                 %f(min(EPS_stability_QP),'%.2e')
-        res_str += "|= QP Min accuracy............... %s\n"\
+            res_str_i += "|= QP Min accuracy............... %s\n"\
                                                 %f(max(EPS_stability_QP),'%.2e')
-        pmed,pmin,pfrac=loop_direction_test_power(\
-                                 [stability['QP_stability'][E[0]] for E in EPS])
-        res_str += "|= EPS QP loop_dir test power.... %s,%s\n"\
+            pmed,pmin,pfrac=loop_direction_test_power(\
+                                 [stab['QP_stability'][E[0]] for E in EPS])
+            res_str_i += "|= EPS QP loop_dir test power.... %s,%s\n"\
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str += "|= EPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
+            res_str_i += "|= EPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
 
-    res_str += \
-    """
+        res_str_i += \
+            """
 = Legend for the statistics of the stability tests. (all log below ar log_10)
-  The loop direction test power P is computed as follow:
-     P = accuracy(loop_dir_test) / accuracy(all_other_test)
-  So that log(P) is positive if the loop direction test is effective.
+The loop direction test power P is computed as follow:
+    P = accuracy(loop_dir_test) / accuracy(all_other_test)
+    So that log(P) is positive if the loop direction test is effective.
   The tuple printed out is (log(median(P)),log(min(P)))
   The consistency test C is computed when QP evaluations are available:
      C = accuracy(all_DP_test) / abs(best_QP_eval-best_DP_eval)
@@ -2594,68 +2644,79 @@ def output_stability(stability, mg_root, reusing=False):
   The tuple printed out is (log(median(C)),log(min(C)),log(max(C)))
 """
 
-    logFile = open(os.path.join(mg_root, 'stability_%s_%s.log'\
-                                           %(mode,process.shell_string())), 'w')
-    logFile.write('Stability check results\n\n')
-    logFile.write(res_str)
-    res_str += "\n= Stability details of the run are output to the file"+\
-                          " stability_%s_%s.log\n"%(mode,process.shell_string())
-    if len(EPS)>0:
-        logFile.write('\nFull details of the %i EPS encountered.\n'%len(EPS))
-        for i, eps in enumerate(EPS):
-            logFile.write('\nEPS #%i\n'%(i+1))
-            logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
-                                                              for p in eps[1]]))
-            logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[eps[0]])
-            logFile.write('  QP accuracy :  %.3e\n'%QP_stability[eps[0]])
-    if len(UPS)>0:
-        logFile.write('\nFull details of the %i UPS encountered.\n'%len(UPS))
-        for i, ups in enumerate(UPS):
-            logFile.write('\nUPS #%i\n'%(i+1))
-            logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
-                                                              for p in ups[1]]))
-            logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
-            logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
 
-    logFile.write('\nData entries for the stability plot.\n')
-    logFile.write('First row is a maximal accuracy delta, second is the '+\
+        logFile.write(res_str_i)
+
+        if len(EPS)>0:
+            logFile.write('\nFull details of the %i EPS encountered.\n'%len(EPS))
+            for i, eps in enumerate(EPS):
+                logFile.write('\nEPS #%i\n'%(i+1))
+                logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
+                                                              for p in eps[1]]))
+                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[eps[0]])
+                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[eps[0]])
+        if len(UPS)>0:
+            logFile.write('\nFull details of the %i UPS encountered.\n'%len(UPS))
+            for i, ups in enumerate(UPS):
+                logFile.write('\nUPS #%i\n'%(i+1))
+                logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
+                                                              for p in ups[1]]))
+                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
+                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
+
+        logFile.write('\nData entries for the stability plot.\n')
+        logFile.write('First row is a maximal accuracy delta, second is the '+\
                   'fraction of events with DP accuracy worse than delta.\n\n')
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
-    if max(DP_stability)>0.0:
-        min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
-        if min_digit_acc>=0:
-            min_digit_acc = min_digit_acc+1
-        accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
-    else:
-        res_str += '\nPerfect accuracy over all the trial PS points. No plot'+\
+        if max(DP_stability)>0.0:
+            min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
+            if min_digit_acc>=0:
+                min_digit_acc = min_digit_acc+1
+            accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
+        else:
+            res_str_i += '\nPerfect accuracy over all the trial PS points. No plot'+\
                                                               ' is output then.'
-        logFile.write('Perfect accuracy over all the trial PS points.')
-        logFile.close()
-        return res_str
-
-    data_plot=[]
-    for acc in accuracies:
-        data_plot.append(float(len([d for d in DP_stability if d>acc]))\
+            logFile.write('Perfect accuracy over all the trial PS points.')
+            res_str +=res_str_i
+            continue
+        #logFile.close()
+        #return res_str
+        accuracy_dict[toolname]=accuracies
+        if max(accuracies) > max_acc: max_acc=max(accuracies)
+        if min(accuracies) < min_acc: min_acc=min(accuracies)
+        data_plot=[]
+        for acc in accuracies:
+            data_plot.append(float(len([d for d in DP_stability if d>acc]))\
                                                       /float(len(DP_stability)))
+        data_plot_dict[toolname]=data_plot
         
-    logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
+        logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
-    logFile.write('\nList of accuracies recorded for the %i evaluations.\n'%nPS)
-    logFile.write('First row is DP, second is QP.\n\n')
-    logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+        logFile.write('\nList of accuracies recorded for the %i evaluations.\n'%nPS)
+        logFile.write('First row is DP, second is QP.\n\n')
+        logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
                              else '%.3e\n'%QP_stability[i]) for i in range(nPS))
     logFile.close()
+    res_str += "\n= Stability details of the run are output to the file"+\
+                          " stability_%s_%s.log\n"%(mode,process.shell_string())
     try:
         import matplotlib.pyplot as plt
-        plt.plot(accuracies, data_plot, color='b', marker='o', linestyle='-')
-        plt.axis([min(accuracies),max(accuracies),\
-                               10**(-int(math.log(nPS-0.5)/math.log(10))-1), 1])
+        colorlist=['b','r','g']
+        for i,key in enumerate(data_plot_dict.keys()):
+            color=colorlist[i]
+            data_plot=data_plot_dict[key]
+            accuracies=accuracy_dict[key]
+            plt.plot(accuracies, data_plot, color=color, marker='o', linestyle='-',\
+                     label=key)
+        plt.axis([min_acc,max_acc,\
+                               10**(-int(math.log(nPSmax-0.5)/math.log(10))-1), 1])
         plt.yscale('log')
         plt.xscale('log')
         plt.title('Stability plot for %s (%s mode, %d points)'%\
-                                           (process.nice_string()[9:],mode,nPS))
+                                           (process.nice_string()[9:],mode,nPSmax))
         plt.ylabel('Fraction of events')
         plt.xlabel('Maximal precision')
+        plt.legend()
         if not reusing:
             logger.info('Some stability statistics will be displayed once you '+\
                                                         'close the plot window')

@@ -2931,7 +2931,31 @@ This implies that with decay chains:
                                                   )        
 
         if args[0] in ['stability']:
-            stability = process_checks.check_stability(myprocdef,
+            if 'MLReductionLib' not in MLoptions or MLoptions['MLReductionLib']==-1:
+                if self.options['loop_optimized_output']:
+                    stability=[]
+                    mlrlib=[1,3]
+                    for i in mlrlib:
+                        MLoptions['MLReductionLib']=i
+                        stab = process_checks.check_stability(myprocdef,
+                                                  param_card = param_card,
+                                                  cuttools=CT_dir,
+                                                  tir=TIR_dir,
+                                                  options = options,
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
+                        if not stab==None:
+                            stability.append(stab)
+                else:
+                    stability=process_checks.check_stability(myprocdef,
+                                                  param_card = param_card,
+                                                  cuttools=CT_dir,
+                                                  tir=TIR_dir,
+                                                  options = options,
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
+            else:
+                stability=process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   tir=TIR_dir,
