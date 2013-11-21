@@ -4496,7 +4496,11 @@ calculator."""
             return
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
-        card = pjoin(self.me_dir, 'Cards', 'syscalc_card.dat')
+        card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
+        template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
+        open(card,'w').write(template % self.run_card)
+        
+        
         if not scdir or \
             not os.path.exists(card):
             return False
@@ -4520,9 +4524,6 @@ calculator."""
         
         self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
-            print event_path, os.path.exists(pjoin(event_dir, event_path))
-            print card, os.path.exists(pjoin(event_dir, card))
-            print output, os.path.exists(pjoin(event_dir, output))
             proc = misc.Popen([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
                             stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
@@ -4537,9 +4538,6 @@ calculator."""
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
-        print event_path, os.path.exists(pjoin(event_dir, event_path))
-        print card, os.path.exists(pjoin(event_dir, card))
-        print output, os.path.exists(pjoin(event_dir, output))
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
@@ -5392,15 +5390,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
+            elif  args[start+1].lower() in ['t','.true.','true']:
                 self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
+            elif  args[start+1].lower() in ['f','.false.','false']:
                 self.setR(args[start], '.false.')
             else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
+                if args[0].startswith('sys_'):
+                    val = ' '.join(args[start+1:])
+                    val = val.split('#')[0]
+                else: 
+                    try:
+                        val = eval(args[start+1])
+                    except NameError:
+                        val = args[start+1]
                 self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
@@ -5410,7 +5412,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                                          and card != 'run_card':
             if args[start] == 'width':
                 args[start] = 'decay'
-                
+            
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)

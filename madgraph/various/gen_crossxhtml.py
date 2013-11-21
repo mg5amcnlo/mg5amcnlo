@@ -635,8 +635,8 @@ class OneTagResults(dict):
                 self.pythia.append('hep')
             
             if 'rwt' not in self.pythia and \
-                            (exists(pjoin(path,"%s_systematics.dat.gz" % tag)) or
-                             exists(pjoin(path,"%s_systematics.dat" % tag))):
+                            (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_syscalc.dat" % tag))):
                 self.pythia.append('rwt')
             
             if 'root' not in self.pythia and \
@@ -871,6 +871,10 @@ class OneTagResults(dict):
                         local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error_pythia']
+                    if 'rwt' in self.pythia:
+                        print 'rwt is here so the problem is in the template'
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
@@ -891,6 +895,9 @@ class OneTagResults(dict):
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
+                if 'rwt' in self.pythia:
+                    local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
             else:

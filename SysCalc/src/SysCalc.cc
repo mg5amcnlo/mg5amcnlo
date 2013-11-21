@@ -58,7 +58,7 @@ void SysCalc::write_xsec(){
 	//  	  	  	  	  	  if (min == 0. or _alpsxsec[i] < min) min =  _alpsxsec[i];
 	//  	  	  	  	  	  if (max == 0. or _alpsxsec[i] > max) max =  _alpsxsec[i];
   	  	  	  	  }
-  	  	  	cout << "min/max:"<< min<< " " << max << endl;
+  	//  	  	cout << "min/max:"<< min<< " " << max << endl;
   	  	min=0.;
   	  	max =0.;
   	  	  	  	  for (int i=0; i < _pdfxsec.size(); i++) {
