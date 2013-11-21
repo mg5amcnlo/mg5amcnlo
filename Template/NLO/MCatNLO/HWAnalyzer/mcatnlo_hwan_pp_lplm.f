@@ -1,3 +1,6 @@
+c
+c Example analysis for "p p > l+ l- [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -10,44 +13,72 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
-      real * 8 xm0,gam,xmlow,xmupp,bin
-      real * 8 xmi,xms,pi
+      include 'reweight0.inc'
+      real * 8 bin,xmi,xms,pi
       PARAMETER (PI=3.14159265358979312D0)
-      integer j,k,jpr
+      integer j,kk,l
       character*5 cc(2)
       data cc/'     ',' cuts'/
-c
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
       call inihist
-      do j=1,2
-      k=(j-1)*50
+      nwgt_analysis=nwgt
 c
       xmi=50.d0
       xms=130.d0
       bin=0.8d0
-      call mbook(k+ 1,'V pt'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(k+ 2,'V pt'//cc(j),10.d0,0.d0,1000.d0)
-      call mbook(k+ 3,'V log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(k+ 4,'V y'//cc(j),0.2d0,-9.d0,9.d0)
-      call mbook(k+ 5,'V eta'//cc(j),0.2d0,-9.d0,9.d0)
-      call mbook(k+ 6,'mV'//cc(j),(bin),xmi,xms)
+      do kk=1,nwgt_analysis
+      do j=1,2
+      l=(kk-1)*42+(j-1)*21
+      call mbook(l+ 1,'V pt      '//weights_info(kk)//cc(j)
+     &     ,2.d0,0.d0,200.d0)
+      call mbook(l+ 2,'V pt      '//weights_info(kk)//cc(j)
+     &     ,10.d0,0.d0,1000.d0)
+      call mbook(l+ 3,'V log[pt] '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+ 4,'V y       '//weights_info(kk)//cc(j)
+     &     ,0.2d0,-9.d0,9.d0)
+      call mbook(l+ 5,'V eta     '//weights_info(kk)//cc(j)
+     &     ,0.2d0,-9.d0,9.d0)
+      call mbook(l+ 6,'mV        '//weights_info(kk)//cc(j)
+     &     ,bin,xmi,xms)
 c
-      call mbook(k+ 7,'l pt'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(k+ 8,'l pt'//cc(j),10.d0,0.d0,1000.d0)
-      call mbook(k+ 9,'l log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(k+10,'l eta'//cc(j),0.2d0,-9.d0,9.d0)
-      call mbook(k+11,'lb pt'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(k+12,'lb pt'//cc(j),10.d0,0.d0,1000.d0)
-      call mbook(k+13,'lb log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
-      call mbook(k+14,'lb eta'//cc(j),0.2d0,-9.d0,9.d0)
+      call mbook(l+ 7,'lm pt      '//weights_info(kk)//cc(j)
+     &     ,2.d0,0.d0,200.d0)
+      call mbook(l+ 8,'lm pt      '//weights_info(kk)//cc(j)
+     &     ,10.d0,0.d0,1000.d0)
+      call mbook(l+ 9,'lm log[pt] '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+10,'lm eta     '//weights_info(kk)//cc(j)
+     &     ,0.2d0,-9.d0,9.d0)
+      call mbook(l+11,'lp pt      '//weights_info(kk)//cc(j)
+     &     ,2.d0,0.d0,200.d0)
+      call mbook(l+12,'lp pt      '//weights_info(kk)//cc(j)
+     &     ,10.d0,0.d0,1000.d0)
+      call mbook(l+13,'lp log[pt] '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0.1d0,5.d0)
+      call mbook(l+14,'lp eta     '//weights_info(kk)//cc(j)
+     &     ,0.2d0,-9.d0,9.d0)
 c
-      call mbook(k+15,'llb delta eta'//cc(j),0.2d0,-9.d0,9.d0)
-      call mbook(k+16,'llb azimt'//cc(j),pi/20.d0,0.d0,pi)
-      call mbook(k+17,'llb log[pi-azimt]'//cc(j),0.05d0,-4.d0,0.1d0)
-      call mbook(k+18,'llb inv m'//cc(j),(bin),xmi,xms)
-      call mbook(k+19,'llb pt'//cc(j),2.d0,0.d0,200.d0)
-      call mbook(k+20,'llb log[pt]'//cc(j),0.05d0,0.1d0,5.d0)
+      call mbook(l+15,'lmlp delta eta     '//weights_info(kk)//cc(j)
+     $     ,0.2d0,-9.d0,9.d0)
+      call mbook(l+16,'lmlp azimt         '//weights_info(kk)//cc(j)
+     $     ,pi/20.d0,0.d0,pi)
+      call mbook(l+17,'lmlp log[pi-azimt] '//weights_info(kk)//cc(j)
+     $     ,0.05d0,-4.d0,0.1d0)
+      call mbook(l+18,'lmlp inv m         '//weights_info(kk)//cc(j)
+     $     ,bin,xmi,xms)
+      call mbook(l+19,'lmlp pt            '//weights_info(kk)//cc(j)
+     $     ,2.d0,0.d0,200.d0)
+      call mbook(l+20,'lmlp log[pt]       '//weights_info(kk)//cc(j)
+     $     ,0.05d0,0.1d0,5.d0)
 c
-      call mbook(k+21,'total'//cc(j),1.d0,-1.d0,1.d0)
+      call mbook(l+21,'total'//weights_info(kk)//cc(j),1.d0,-1.d0,1.d0)
+      enddo
       enddo
  999  END
 
@@ -58,47 +89,50 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
-      INTEGER I,J,K
+      INTEGER I,J,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='HERLL.TOP',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,100              
+      DO I=1,NPL
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+100)
-        CALL MOPERA(I+100,'F',I+100,I+100,(XNORM),0.D0)
- 	CALL MFINAL3(I+100)             
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)             
       ENDDO                          
 C
-      do j=1,2
-      k=(j-1)*50
-      call multitop(100+k+ 1,99,3,2,'V pt',' ','LOG')
-      call multitop(100+k+ 2,99,3,2,'V pt',' ','LOG')
-      call multitop(100+k+ 3,99,3,2,'V log[pt]',' ','LOG')
-      call multitop(100+k+ 4,99,3,2,'V y',' ','LOG')
-      call multitop(100+k+ 5,99,3,2,'V eta',' ','LOG')
-      call multitop(100+k+ 6,99,3,2,'mV',' ','LOG')
+      do kk=1,nwgt_analysis
+      do i=1,2
+      l=(kk-1)*42+(i-1)*21
+C
+      call multitop(NPL+l+ 1,NPL-1,3,2,'V pt',' ','LOG')
+      call multitop(NPL+l+ 2,NPL-1,3,2,'V pt',' ','LOG')
+      call multitop(NPL+l+ 3,NPL-1,3,2,'V log[pt]',' ','LOG')
+      call multitop(NPL+l+ 4,NPL-1,3,2,'V y',' ','LOG')
+      call multitop(NPL+l+ 5,NPL-1,3,2,'V eta',' ','LOG')
+      call multitop(NPL+l+ 6,NPL-1,3,2,'mV',' ','LOG')
+c
+      call multitop(NPL+l+ 7,NPL-1,3,2,'lm pt',' ','LOG')
+      call multitop(NPL+l+ 8,NPL-1,3,2,'lm pt',' ','LOG')
+      call multitop(NPL+l+ 9,NPL-1,3,2,'lm log[pt]',' ','LOG')
+      call multitop(NPL+l+10,NPL-1,3,2,'lm eta',' ','LOG')
+      call multitop(NPL+l+11,NPL-1,3,2,'lm pt',' ','LOG')
+      call multitop(NPL+l+12,NPL-1,3,2,'lm pt',' ','LOG')
+      call multitop(NPL+l+13,NPL-1,3,2,'lm log[pt]',' ','LOG')
+      call multitop(NPL+l+14,NPL-1,3,2,'lm eta',' ','LOG')
+c
+      call multitop(NPL+l+15,NPL-1,3,2,'lmlp deta',' ','LOG')
+      call multitop(NPL+l+16,NPL-1,3,2,'lmlp azi',' ','LOG')
+      call multitop(NPL+l+17,NPL-1,3,2,'lmlp azi',' ','LOG')
+      call multitop(NPL+l+18,NPL-1,3,2,'lmlp inv m',' ','LOG')
+      call multitop(NPL+l+19,NPL-1,3,2,'lmlp pt',' ','LOG')
+      call multitop(NPL+l+20,NPL-1,3,2,'lmlp pt',' ','LOG')
+c
+      call multitop(NPL+l+21,NPL-1,3,2,'total',' ','LOG')
       enddo
-c
-      do j=1,2
-      k=(j-1)*50
-      call multitop(100+k+ 7,99,3,2,'l pt',' ','LOG')
-      call multitop(100+k+ 8,99,3,2,'l pt',' ','LOG')
-      call multitop(100+k+ 9,99,3,2,'l log[pt]',' ','LOG')
-      call multitop(100+k+10,99,3,2,'l eta',' ','LOG')
-      call multitop(100+k+11,99,3,2,'l pt',' ','LOG')
-      call multitop(100+k+12,99,3,2,'l pt',' ','LOG')
-      call multitop(100+k+13,99,3,2,'l log[pt]',' ','LOG')
-      call multitop(100+k+14,99,3,2,'l eta',' ','LOG')
-c
-      call multitop(100+k+15,99,3,2,'llb deta',' ','LOG')
-      call multitop(100+k+16,99,3,2,'llb azi',' ','LOG')
-      call multitop(100+k+17,99,3,2,'llb azi',' ','LOG')
-      call multitop(100+k+18,99,3,2,'llb inv m',' ','LOG')
-      call multitop(100+k+19,99,3,2,'llb pt',' ','LOG')
-      call multitop(100+k+20,99,3,2,'llb pt',' ','LOG')
-c
-      call multitop(100+k+21,99,3,2,'total',' ','LOG')
       enddo
 c
       CLOSE(99)
@@ -109,29 +143,39 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
       DOUBLE PRECISION HWVDOT,PSUM(4),PPV(5),YCUT,XMV,PTV,YV,THV,ETAV,
      #  PPL(5),PPLB(5),PTL,YL,THL,ETAL,PLL,ENL,PTLB,YLB,THLB,ETALB,
      #  PLLB,ENLB,PTPAIR,DLL,CLL,AZI,AZINORM,XMLL,DETALLB
       INTEGER ICHSUM,ICHINI,IHEP,IV,IFV,IST,ID,IJ,ID1,JPR,IDENT,
-     #  ILL,ILLB,IHRD
-      LOGICAL DIDSOF,TEST1,TEST2,flag
+     #  ILL,ILLB,IHRD,ILL0,ILLB0
+      LOGICAL DIDSOF,TEST1,TEST2,flag,ISLP,ISLM
       REAL*8 PI,wmass,wgamma,bwcutoff,getinvm,getdelphi,getrapidity,
      &getpseudorap
       PARAMETER (PI=3.14159265358979312D0)
       REAL*8 WWW0,TINY
-      INTEGER KK
+      INTEGER KK,i,l
       DATA TINY/.1D-5/
-c
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
       IF (IERROR.NE.0) RETURN
-c
-      IDENT=24
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
+      IDENT=23
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
         GOTO 999
       ENDIF
-      WWW0=EVWGT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
       CALL HWVSUM(4,PHEP(1,1),PHEP(1,2),PSUM)
       CALL HWVSCA(4,-1D0,PSUM,PSUM)
       ICHSUM=0
@@ -147,6 +191,8 @@ C EFFECT, SO THROW THE EVENT AWAY
         IST=ISTHEP(IHEP)      
         ID=IDHW(IHEP)
         ID1=IDHEP(IHEP)
+        ISLP=ID1.EQ. 11.OR.ID1.EQ. 13.OR.ID1.EQ. 15
+        ISLM=ID1.EQ.-11.OR.ID1.EQ.-13.OR.ID1.EQ.-15
 C Herwig relabels the vector boson V in Drell-Yan; this doesn't happen with
 C MC@NLO; in S events, V appears as HARD, in H as V, but with status 155
 C rather than 195. We add here 195 for future compatibility
@@ -162,6 +208,8 @@ C rather than 195. We add here 195 for future compatibility
           IV=IHEP
           IFV=IFV+1
         ENDIF
+        IF((IST.GE.120.AND.IST.LE.125).AND.ISLM)ILL0=IHEP
+        IF((IST.GE.120.AND.IST.LE.125).AND.ISLP)ILLB0=IHEP
   100 CONTINUE
       IF(IPROC.LT.0.AND.IFV.EQ.0)THEN
         IV=IHRD
@@ -200,9 +248,8 @@ C FIND THE LEPTONS
         ILL=JDAHEP(1,JDAHEP(2,IV))
         ILLB=JDAHEP(1,JDAHEP(1,IV))
       ELSE
-c        CALL HWUEPR
-c        CALL HWWARN('HWANAL',123)
-        goto 999
+         ILL=ILL0
+         ILLB=ILLB0
       ENDIF
       DO IJ=1,5
         PPL(IJ)=PHEP(IJ,ILL)
@@ -211,14 +258,10 @@ c        CALL HWWARN('HWANAL',123)
 C CHECK THAT THE LEPTONS ARE FINAL-STATE LEPTONS
       IF( ABS(IDHEP(ILL)).LT.11 .OR. ABS(IDHEP(ILL)).GT.16 .OR.
      #    ABS(IDHEP(ILLB)).LT.11 .OR. ABS(IDHEP(ILLB)).GT.16 )THEN
-c        CALL HWUEPR
-c        CALL HWWARN('HWANAL',123)
         goto 999
       ENDIF
       IF( (ISTHEP(ILL).NE.1.AND.ISTHEP(ILL).NE.195) .OR.
      #    (ISTHEP(ILLB).NE.1.AND.ISTHEP(ILLB).NE.195) )THEN
-c        CALL HWUEPR
-c        CALL HWWARN('HWANAL',123)
         goto 999
       ENDIF
 C FILL THE HISTOS
@@ -243,80 +286,77 @@ c
       xmll=xmv
       detallb=etal-etalb
 c
-      kk=0
-      wmass=80.419d0
-      wgamma=2.046d0
-      bwcutoff=15.d0
-      flag=(xmv.ge.wmass-wgamma*bwcutoff.and.
-     &      xmv.le.wmass+wgamma*bwcutoff)
-      if(flag)then
-      call mfill(kk+1,(ptv),(WWW0))
-      call mfill(kk+2,(ptv),(WWW0))
-      if(ptv.gt.0.d0)call mfill(kk+3,(log10(ptv)),(WWW0))
-      call mfill(kk+4,(yv),(WWW0))
-      call mfill(kk+5,(etav),(WWW0))
-      call mfill(kk+6,(xmv),(WWW0))
+      do kk=1,nwgt_analysis
+      l=(kk-1)*42
+      call mfill(l+1,(ptv),(WWW(kk)))
+      call mfill(l+2,(ptv),(WWW(kk)))
+      if(ptv.gt.0.d0)call mfill(l+3,(log10(ptv)),(WWW(kk)))
+      call mfill(l+4,(yv),(WWW(kk)))
+      call mfill(l+5,(etav),(WWW(kk)))
+      call mfill(l+6,(xmv),(WWW(kk)))
 c
-      call mfill(kk+7,(ptl),(WWW0))
-      call mfill(kk+8,(ptl),(WWW0))
-      if(ptl.gt.0.d0)call mfill(kk+9,(log10(ptl)),(WWW0))
-      call mfill(kk+10,(etal),(WWW0))
-      call mfill(kk+11,(ptlb),(WWW0))
-      call mfill(kk+12,(ptlb),(WWW0))
-      if(ptlb.gt.0.d0)call mfill(kk+13,(log10(ptlb)),(WWW0))
-      call mfill(kk+14,(etalb),(WWW0))
+      call mfill(l+7,(ptl),(WWW(kk)))
+      call mfill(l+8,(ptl),(WWW(kk)))
+      if(ptl.gt.0.d0)call mfill(l+9,(log10(ptl)),(WWW(kk)))
+      call mfill(l+10,(etal),(WWW(kk)))
+      call mfill(l+11,(ptlb),(WWW(kk)))
+      call mfill(l+12,(ptlb),(WWW(kk)))
+      if(ptlb.gt.0.d0)call mfill(l+13,(log10(ptlb)),(WWW(kk)))
+      call mfill(l+14,(etalb),(WWW(kk)))
 c
-      call mfill(kk+15,(detallb),(WWW0))
-      call mfill(kk+16,(azi),(WWW0))
+      call mfill(l+15,(detallb),(WWW(kk)))
+      call mfill(l+16,(azi),(WWW(kk)))
       if(azinorm.gt.0.d0)
-     #  call mfill(kk+17,(log10(azinorm)),(WWW0))
-      call mfill(kk+18,(xmll),(WWW0))
-      call mfill(kk+19,(ptpair),(WWW0))
-      if(ptpair.gt.0)call mfill(kk+20,(log10(ptpair)),(WWW0))
-      call mfill(kk+21,(0d0),(WWW0))
+     #  call mfill(l+17,(log10(azinorm)),(WWW(kk)))
+      call mfill(l+18,(xmll),(WWW(kk)))
+      call mfill(l+19,(ptpair),(WWW(kk)))
+      if(ptpair.gt.0)call mfill(l+20,(log10(ptpair)),(WWW(kk)))
+      call mfill(l+21,(0d0),(WWW(kk)))
 c
-      kk=50
+      l=l+21
+
       if(abs(etav).lt.ycut)then
-        call mfill(kk+1,(ptv),(WWW0))
-        call mfill(kk+2,(ptv),(WWW0))
-        if(ptv.gt.0.d0)call mfill(kk+3,(log10(ptv)),(WWW0))
+        call mfill(l+1,(ptv),(WWW(kk)))
+        call mfill(l+2,(ptv),(WWW(kk)))
+        if(ptv.gt.0.d0)call mfill(l+3,(log10(ptv)),(WWW(kk)))
       endif
       if(ptv.gt.20.d0)then
-        call mfill(kk+4,(yv),(WWW0))
-        call mfill(kk+5,(etav),(WWW0))
+        call mfill(l+4,(yv),(WWW(kk)))
+        call mfill(l+5,(etav),(WWW(kk)))
       endif
       if(abs(etav).lt.ycut.and.ptv.gt.20.d0)then
-         call mfill(kk+6,(xmv),(WWW0))
-         call mfill(kk+21,(0d0),(WWW0))
+         call mfill(l+6,(xmv),(WWW(kk)))
+         call mfill(l+21,(0d0),(WWW(kk)))
       endif
 c
       if(abs(etal).lt.ycut)then
-        call mfill(kk+7,(ptl),(WWW0))
-        call mfill(kk+8,(ptl),(WWW0))
-        if(ptl.gt.0.d0)call mfill(kk+9,(log10(ptl)),(WWW0))
+        call mfill(l+7,(ptl),(WWW(kk)))
+        call mfill(l+8,(ptl),(WWW(kk)))
+        if(ptl.gt.0.d0)call mfill(l+9,(log10(ptl)),(WWW(kk)))
       endif
-      if(ptl.gt.20.d0)call mfill(kk+10,(etal),(WWW0))
+      if(ptl.gt.20.d0)call mfill(l+10,(etal),(WWW(kk)))
       if(abs(etalb).lt.ycut)then
-        call mfill(kk+11,(ptlb),(WWW0))
-        call mfill(kk+12,(ptlb),(WWW0))
-        if(ptlb.gt.0.d0)call mfill(kk+13,(log10(ptlb)),(WWW0))
+        call mfill(l+11,(ptlb),(WWW(kk)))
+        call mfill(l+12,(ptlb),(WWW(kk)))
+        if(ptlb.gt.0.d0)call mfill(l+13,(log10(ptlb)),(WWW(kk)))
       endif
-      if(ptlb.gt.20.d0)call mfill(kk+14,(etalb),(WWW0))
+      if(ptlb.gt.20.d0)call mfill(l+14,(etalb),(WWW(kk)))
 c
       if( abs(etal).lt.ycut.and.abs(etalb).lt.ycut .and.
      #    ptl.gt.20.d0.and.ptlb.gt.20.d0)then
-        call mfill(kk+15,(detallb),(WWW0))
-        call mfill(kk+16,(azi),(WWW0))
+        call mfill(l+15,(detallb),(WWW(kk)))
+        call mfill(l+16,(azi),(WWW(kk)))
         if(azinorm.gt.0.d0)
-     #    call mfill(kk+17,(log10(azinorm)),(WWW0))
-        call mfill(kk+18,(xmll),(WWW0))
-        call mfill(kk+19,(ptpair),(WWW0))
+     #    call mfill(l+17,(log10(azinorm)),(WWW(kk)))
+        call mfill(l+18,(xmll),(WWW(kk)))
+        call mfill(l+19,(ptpair),(WWW(kk)))
         if(ptpair.gt.0) 
-     #    call mfill(kk+20,(log10(ptpair)),(WWW0))
+     #    call mfill(l+20,(log10(ptpair)),(WWW(kk)))
       endif
-      endif
- 999  END
 
+      enddo
+
+ 999  END
 
 
 
