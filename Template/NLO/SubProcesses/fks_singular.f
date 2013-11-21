@@ -468,6 +468,7 @@ c points)
       cnt_wgt_c=0.d0
       cnt_wgt_sc=0.d0
       bsv_wgt=0.d0
+      virt_wgt=0d0
       born_wgt=0.d0
       cnt_swgt=0.d0
       cnt_swgt_s=0.d0
@@ -690,11 +691,13 @@ c Enhance the one channel for multi-channel integration
 c
       enhance=1.d0
       if ((ev_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.ne.0d0.or.
-     &     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.deg_wgt.ne.0d0.or.
-     &     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0)
-     &     .and. multi_channel) then
-         if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
-     &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
+     $     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.virt_wgt.ne.0d0.or.deg_wgt.
+     $     ne.0d0.or.
+     $     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0)
+     $     .and. multi_channel) then
+         if
+     $        (bsv_wgt.eq.0d0.and.virt_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.
+     $        eq.0d0.and.cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
 
          if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
             call sborn(p_born,wgt1)
@@ -746,6 +749,7 @@ c
          dsig = (ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
@@ -804,6 +808,7 @@ c Plot observables for counterevents and Born
          plot_wgt=( cnt_wgt*fkssymmetryfactor +
      &              cnt_swgt*fkssymmetryfactor +
      &              bsv_wgt*fkssymmetryfactorBorn +
+     &              virt_wgt*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
      &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt
          if(abs(plot_wgt).gt.1.d-20) then
@@ -833,6 +838,7 @@ c for except PS points, this is the maximal approx for the virtual
          dsig_max = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
          total_wgt_sum_max=total_wgt_sum_max+
@@ -844,6 +850,7 @@ c for except PS points, this is the minimal approx for the virtual
          dsig_min = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
          total_wgt_sum_min=total_wgt_sum_min+
@@ -1109,6 +1116,7 @@ c points)
       cnt_wgt_c=0.d0
       cnt_wgt_sc=0.d0
       bsv_wgt=0.d0
+      virt_wgt=0d0
       born_wgt=0.d0
       cnt_swgt=0.d0
       cnt_swgt_s=0.d0
@@ -1532,6 +1540,7 @@ c Soft subtraction term:
      &                *xsec*CONV*g**2/(8d0*PI**2)
               enddo
               bsv_wgt=bsv_wgt*xnormsv
+              virt_wgt=virt_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
             endif
  548        continue
@@ -1729,12 +1738,14 @@ c Enhance the one channel for multi-channel integration
 c
       enhance=1.d0
       if ((Sxmc_wgt.ne.0d0 .or. Hxmc_wgt.ne.0d0 .or. cnt_wgt_c.ne.0d0
-     &     .or. cnt_wgt_s.ne.0d0 .or. cnt_wgt_sc.ne.0d0 .or.
-     &     bsv_wgt.ne.0d0 .or. deg_wgt.ne.0d0.or.deg_swgt.ne.0d0 .or.
-     &     cnt_swgt_s.ne.0d0 .or. cnt_swgt_sc.ne.0d0 .or.Sev_wgt.ne.0d0
-     &     .or. Hev_wgt.ne.0d0) .and. multi_channel) then
-         if (bsv_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.eq.0d0.and.
-     &       cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
+     $     .or. cnt_wgt_s.ne.0d0 .or. cnt_wgt_sc.ne.0d0 .or.
+     $     bsv_wgt.ne.0d0 .or. virt_wgt.ne.0d0 .or.
+     $     deg_wgt.ne.0d0.or.deg_swgt.ne.0d0 .or. cnt_swgt_s.ne.0d0 .or.
+     $     cnt_swgt_sc.ne.0d0 .or.Sev_wgt.ne.0d0 .or. Hev_wgt.ne.0d0)
+     $     .and. multi_channel) then
+         if(bsv_wgt.eq.0d0.and.virt_wgt.eq.0d0.and.deg_wgt.eq.0d0
+     $        .and.deg_swgt.eq.0d0.and.cnt_wgt_c.eq.0d0 )
+     $        CalculatedBorn=.false.
 
          if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
             call sborn(p_born,wgt1)
@@ -1781,6 +1792,7 @@ c
       cnt_wgt = cnt_wgt * enhance
       cnt_swgt = cnt_swgt * enhance
       bsv_wgt = bsv_wgt * enhance
+      virt_wgt = virt_wgt * enhance
       born_wgt = born_wgt * enhance
       deg_wgt = deg_wgt * enhance
       deg_swgt = deg_swgt * enhance
@@ -1796,6 +1808,7 @@ c Update the shower starting scale with the shape from montecarlocounter
          dsigS = (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg
 
@@ -1877,8 +1890,8 @@ c$$$               wgtref_nbody = dsigS
                   do j=1,iproc_save(nFKSprocess)
                      if (eto(j,nFKSprocess).eq.i_process)
      $                    wgtref_nbody_all(i_process)
-     $                    =wgtref_nbody_all(i_process)+unwgt_table(0,1
-     $                    ,j)/vegaswgt
+     $                    =wgtref_nbody_all(i_process)+(unwgt_table(0,1
+     $                    ,j)+unwgt_table(0,3,j))/vegaswgt
                   enddo
                enddo
             endif
@@ -1946,6 +1959,7 @@ c Plot observables for counterevents and Born
             plot_wgt=( (Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &           cnt_swgt*fkssymmetryfactor +
      &           bsv_wgt*fkssymmetryfactorBorn +
+     &           virt_wgt*fkssymmetryfactorBorn +
      &           deg_wgt*fkssymmetryfactorDeg +
      &           deg_swgt*fkssymmetryfactorDeg )*vegaswgt
             if( abs(plot_wgt).gt.1.d-20.and.p1_cnt(0,1,0).ne.-99d0 .and.
@@ -2059,6 +2073,7 @@ c for except PS points, this is the maximal approx for the virtual
          dsigS_max = ((Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
          total_wgt_sum_max=total_wgt_sum_max+
@@ -2070,6 +2085,7 @@ c for except PS points, this is the minimal approx for the virtual
          dsigS_min = ((Sev_wgt+Sxmc_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
+     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
      &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
          total_wgt_sum_min=total_wgt_sum_min+
@@ -4049,6 +4065,7 @@ c entering this function
 c Born contribution:
          bsv_wgt=dble(wgt1(1))
          born_wgt=dble(wgt1(1))
+         virt_wgt=0d0
 
          if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
@@ -4181,18 +4198,23 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
          virt_wgt=0d0
          if (fold.eq.0) then
-            if (ran2().le.virtual_fraction .and. abrv(1:3).ne.'nov') then
+            if ((ran2().le.virtual_fraction .and.
+     $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                Call BinothLHA(p_born,born_wgt,virt_wgt)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
                virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
-     $              /virtual_fraction
+               if (abrv.ne.'virt') then
+                  virt_wgt=virt_wgt/virtual_fraction
+               endif
                virt_wgt_save=virt_wgt
-               bsv_wgt=bsv_wgt+virt_wgt_save
+c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
             endif
          elseif(fold.eq.1) then
-            bsv_wgt=bsv_wgt+virt_wgt_save
+            virt_wgt=virt_wgt_save
+c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
-         bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
+         if (abrv(1:4).ne.'virt')
+     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
@@ -4237,7 +4259,7 @@ c eq.(MadFKS.C.14)
              endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
-             wgtnstmp=bsv_wgt-born_wgt-
+             wgtnstmp=bsv_wgt+virt_wgt-born_wgt-
      #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
      #                wgtwnstmpmur*log(scale**2/QES2)
            else
@@ -4289,6 +4311,7 @@ c            stop
 
       else
          bsv_wgt=0d0
+         virt_wgt=0d0
          born_wgt=0d0
          if(doNLOreweight.or.doreweight)then
            wgtnstmp=0d0

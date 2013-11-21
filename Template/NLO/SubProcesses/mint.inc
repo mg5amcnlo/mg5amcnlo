@@ -3,8 +3,9 @@ c grids, 'nintervals', should be equal to
 c "nintervals = min_inter * 2^n",
 c where 'n' is smaller or equal to 'min_it'.
 
-      integer nintervals,ndimmax,nintegrals
-      parameter (nintervals=32,ndimmax=60,nintegrals=5)
+      integer nintervals,ndimmax,nintegrals,nintervals_virt
+      parameter (nintervals=32,ndimmax=60,nintegrals=6,
+     &		nintervals_virt=8)
 
       integer min_inter,min_it,max_it,max_points
       data min_inter /4/

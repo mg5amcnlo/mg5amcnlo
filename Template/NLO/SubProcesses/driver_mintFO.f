@@ -88,6 +88,7 @@ c For MINT:
       include "mint.inc"
       real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
      $     ,xerr,itmax_fl
+      real * 8 xint_virt,ymax_virt
       real * 8 x(ndimmax)
       integer ixi_i,iphi_i,iy_ij
       integer ifold(ndimmax) 
@@ -125,7 +126,6 @@ c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
       virtual_fraction=virt_fraction
-c
 c
 c     Read process number
 c
@@ -168,11 +168,9 @@ c
       else
         flat_grid=.false.
       endif
-c$$$      call setfksfactor(iconfig)
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -183,22 +181,16 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
-
       itotalpoints=0
       ivirtpoints=0
       ivirtpointsExcept=0
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
-
       i_momcmp_count=0
       xratmax=0.d0
-
       unwgt=.false.
-
-
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
          if(imode.eq.0)then
@@ -234,13 +226,12 @@ c Update the number of PS points based on xerr, ncall and accuracy
             close (12)
             write (*,*) "Update iterations and points to",itmax,ncall
          endif
-
 c
          call initplot
 c
          write (*,*) 'imode is ',imode
-         call mint(sigint,ndim,ncall,itmax,imode,
-     &        xgrid,xint,ymax,resA,errA,resS,errS,chi2)
+         call mint(sigint,ndim,ncall,itmax,imode,xgrid,xint,ymax
+     $        ,xint_virt,ymax_virt,resA,errA,resS,errS,chi2)
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',resA,' +/-',errA
          write(58,*)'Final result:',resS,' +/-',errS
@@ -368,6 +359,7 @@ c From dsample_fks
       common/ctotalpoints/itotalpoints
       double precision virtual_over_born
       common/c_vob/virtual_over_born
+      double precision virt_wgt_current
       double precision virt_wgt
       common/c_fks_singular/virt_wgt
       logical fillh
@@ -401,7 +393,6 @@ c
       enddo
 
       sigint=0d0
-      virt_wgt=0.d0
 
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -465,6 +456,8 @@ c
 c Fill the importance sampling array
          call fill_MC_integer(2,ihel,abs(sigint*volh))
       endif
+
+      virt_wgt_current=virt_wgt
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -503,10 +496,12 @@ c     account this Jacobian
          endif
       endif
 
-      f(1)=abs(sigint)
-      f(2)=sigint
-      f(3)=virt_wgt
+      f(1)=abs(sigint+virt_wgt_current)
+      f(2)=sigint+virt_wgt_current
+      f(3)=virt_wgt_current
       f(4)=virtual_over_born
+      f(5)=abs(virt_wgt_current)
+      f(6)=born_wgt
 
       if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
