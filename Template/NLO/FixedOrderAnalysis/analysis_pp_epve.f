@@ -20,8 +20,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &        nwgt_analysis*16*4
          stop 1
       endif
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
         call bookup(l+1,'total rate  '//weights_info(kk)//cc(i),
      &       1.0d0,0.5d0,5.5d0)
@@ -60,8 +60,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call mfinal(i)
       enddo
       ytit='sigma per bin '
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
          l=(kk-1)*16+(i-1)*8
          call multitop(l+1,3,2,'total rate ',ytit,'LIN')
          call multitop(l+2,3,2,'e rapidity ',ytit,'LIN')
@@ -133,9 +133,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       mtr    = dsqrt(2d0*pte*etmiss-2d0*p(1,3)*p(1,4)-2d0*p(2,3)*p(2,4))
       cphi   = (p(1,3)*p(1,4)+p(2,3)*p(2,4))/pte/etmiss
       var    = 1.d0
-      do kk=1,nwgt_analysis
-         www=wgts(kk)
-         do i=1,2
+      do i=1,2
+         do kk=1,nwgt_analysis
+            www=wgts(kk)
             l=(kk-1)*16+(i-1)*8
             if (ibody.ne.3 .and.i.eq.2) cycle
             call mfill(l+1,var,www)
