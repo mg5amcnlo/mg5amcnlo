@@ -242,35 +242,38 @@ SysCalc::SysCalc(istream& conffile,
     _sysfile = new ifstream(sysfilename.c_str(), ifstream::in);
     _filestatus = _sysfile->is_open();
     if (!_filestatus) {
+    	cout<<"failed with is_open"<<endl;
       return;
     }
     // Extract header from file
     char line[1000];
     _sysfile->getline(line, 1000);
     string linestr = line;
-    bool done = (linestr.find("<event") != string::npos) || _sysfile->eof();
-    bool hold = false;
-    while (!done){
-      if (!hold) hold = (linestr.find("<initrwgt") != string::npos);
-      if (!hold){
-	_header_text.append(linestr);
-	_header_text.push_back('\n');
-      }
-      if (hold) hold = (linestr.find("</initrwgt") == string::npos);
-      _sysfile->getline(line, 1000);
-      linestr = line;
-      done = (linestr.find("<event") != string::npos) || _sysfile->eof();
-    }
-    
+    //if (_lhe_output){
+		bool done = (linestr.find("<event") != string::npos) || _sysfile->eof();
+		bool hold = false;
+		while (!done){
+		  if (!hold) hold = (linestr.find("<initrwgt") != string::npos);
+		  if (!hold){
+		_header_text.append(linestr);
+		_header_text.push_back('\n');
+		  }
+		  if (hold) hold = (linestr.find("</initrwgt") == string::npos);
+		  _sysfile->getline(line, 1000);
+		  linestr = line;
+		  done = (linestr.find("<event") != string::npos) || _sysfile->eof();
+		}
+    //}
     // Make sure that there there is still something in the file
     if (_sysfile->eof()){
+    	cout << "nothing in file" << endl;
       _filestatus = false;
       return;
     }
     // Push back last line read
     _sysfile->putback('\n');
     for(int i = linestr.length() - 1; i > -1; i--)
-      _sysfile->putback(linestr[i]);      
+      _sysfile->putback(linestr[i]);
     
     // Read orgpdf info
     int start = _header_text.find("<header");
@@ -281,6 +284,7 @@ SysCalc::SysCalc(istream& conffile,
       cout << "  Please check for unmatched XML <tags>" << endl;
       exit(1);
     }
+
     XMLElement* orgpdf = header->FirstChildElement("orgpdf");
     if(orgpdf){
       tokenize(orgpdf->GetText(), tokens);
@@ -289,6 +293,7 @@ SysCalc::SysCalc(istream& conffile,
       if(tokens.size() > 1)
 	_org_member = atoi(tokens[1].c_str());
     }
+    cout << "read up to orgpdf" << endl;
     // Read beams info
     XMLElement* beams = header->FirstChildElement("beams");
     if(beams){

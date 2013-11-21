@@ -3574,6 +3574,7 @@ calculator."""
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
+                print '3577 syst.dat', pjoin(self.me_dir, 'Events','syst.dat'), os.path.exists(pjoin(self.me_dir, 'Events','syst.dat'))
                 self.run_syscalc('Pythia')
                 shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
                 os.system('gzip -f %s' % filename)                
@@ -3583,7 +3584,7 @@ calculator."""
                             filename)
                 os.system('gzip -f %s' % filename)
             else:
-                logger.info('No valid files for pythia level syscalc')
+                logger.info('No valid files for pythia level')
     
     def store_result(self):
         """ tar the pythia results. This is done when we are quite sure that 
@@ -4519,6 +4520,9 @@ calculator."""
         
         self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
+            print event_path, os.path.exists(pjoin(event_dir, event_path))
+            print card, os.path.exists(pjoin(event_dir, card))
+            print output, os.path.exists(pjoin(event_dir, output))
             proc = misc.Popen([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
                             stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
@@ -4526,13 +4530,16 @@ calculator."""
                             stdin=subprocess.PIPE,
                             cwd=event_dir)
             proc.wait()
-            # Wait 10 s to make sure file is finished writing
+            # Wait 5 s to make sure file is finished writing
             time.sleep(10)            
         except OSError, error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
+        print event_path, os.path.exists(pjoin(event_dir, event_path))
+        print card, os.path.exists(pjoin(event_dir, card))
+        print output, os.path.exists(pjoin(event_dir, output))
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         

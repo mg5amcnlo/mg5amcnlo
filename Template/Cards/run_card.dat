@@ -71,14 +71,6 @@
  5        = asrwgtflavor     ! highest quark flavor for a_s reweight
  T        = clusinfo         ! include clustering tag in output
 #*********************************************************************
-#
-#**********************************************************
-# Store info for systematics studies
-# WARNING: If use_syst is T, matched Pythia output is 
-#          meaningful ONLY if plotted taking matchscale 
-#          reweighting into account!
-#**********************************************************
-   F  = use_syst      ! Enable systematics studies
 #**********************************************************
 #
 #**********************************************************
@@ -248,3 +240,21 @@
 #*********************************************************************
  0   = xqcut   ! minimum kt jet measure between partons
 #*********************************************************************
+#
+#**********************************************************
+# Store info for systematics studies
+# WARNING: If use_syst is T, matched Pythia output is 
+#          meaningful ONLY if plotted taking matchscale 
+#          reweighting into account!
+#**********************************************************
+   F  = use_syst      ! Enable systematics studies
+#
+#************************************                                       
+# Parameter of the systematics study
+#***********************************                                     
+#
+0.5 1 2 = sys_scalefact  # Central scale factors
+0.5 1 2 = sys_scalefact  # \alpha_s emission scale factors
+# PDF sets and number of members (0 or none for all members).
+CT10nlo.LHgrid = sys_PDF # matching scales
+# MSTW2008nlo68cl.LHgrid 1  = sys_PDF
