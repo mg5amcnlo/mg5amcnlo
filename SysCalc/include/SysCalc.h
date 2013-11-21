@@ -27,6 +27,7 @@ class SysCalc
 
   bool fileStatus() { return _filestatus; }
   int parsedEvents() { return _parsed_events; }
+  void write_xsec();
 
  protected:
   // Helper functions
@@ -101,6 +102,15 @@ class SysCalc
   vector< vector<double> > _PDFweights;
   // matching scale weights
   vector<double> _matchweights;
+
+  /*** Final systematics cross-section ***/
+  // Central scale cross-section (ratio)
+  vector<double> _scalexsec;
+  // alpha_s emission scale cross-section (ratio)
+  vector<double> _alpsxsec;
+  // PDF cross-section (ratio)
+  vector<double> _pdfxsec;
+
 };
 
 #endif /* SysCalc_h */

@@ -78,4 +78,5 @@ int main( int argc, const char ** argv)
     *outfile << "</LesHouchesEvents>";
 
   cout << "Finished parsing " << syscalc->parsedEvents() << " events." << endl;
+  syscalc->write_xsec();
 }

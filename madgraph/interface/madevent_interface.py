@@ -485,10 +485,10 @@ class HelpToCmd(object):
         logger.info("     will be performed automaticaly during the event generation.")
         logger.info("   -f options: answer all question by default.")
         
-    def help_reweight(self):
-        logger.info("syntax: reweight [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
-        logger.info("-- calculate reweighting infor for the RUN (current run by default)")
-        logger.info("     at different stages of the event generation")
+    def help_syscalc(self):
+        logger.info("syntax: syscalc [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("-- calculate systematics information for the RUN (current run by default)")
+        logger.info("     at different stages of the event generation for scale/pdf/...")
 
     def help_remove(self):
         logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes|banner] [-f] [--tag=]")
@@ -1172,9 +1172,9 @@ class CheckValidForCmd(object):
                  self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
     
-    def check_reweight(self, args):
-        """Check the argument for the reweight command
-        reweight run_name modes"""
+    def check_syscalc(self, args):
+        """Check the argument for the syscalc command
+        syscalc run_name modes"""
 
         scdir = self.options['syscalc_path']
         
@@ -1193,29 +1193,29 @@ class CheckValidForCmd(object):
                      
         if len(args) == 0:
             if not hasattr(self, 'run_name') or not self.run_name:
-                self.help_reweight()
+                self.help_syscalc()
                 raise self.InvalidCmd('No run name currently defined. Please add this information.')             
             args.append('all')
             return
 
         
-        if args[0] not in self._reweight_mode:
-            self.set_run_name(args[0], level='reweight')
+        if args[0] not in self._syscalc_mode:
+            self.set_run_name(args[0], level='syscalc')
             del args[0]
             if len(args) == 0:
                 args.append('all')
         elif not self.run_name:
-            self.help_reweight()
+            self.help_syscalc()
             raise self.InvalidCmd('No run name currently defined. Please add this information.')                             
         
         for arg in args:
-            if arg not in self._reweight_mode and arg != self.run_name:
-                 self.help_reweight()
+            if arg not in self._syscalc_mode and arg != self.run_name:
+                 self.help_syscalc()
                  raise self.InvalidCmd('unknown options %s' % arg)        
 
         if self.run_card['use_syst'] not in self.true:
             raise self.InvalidCmd('Run %s does not include ' % self.run_name + \
-                                  'systematics information needed for reweight.')
+                                  'systematics information needed for syscalc.')
             
     
     def check_pgs(self, arg):
@@ -1584,14 +1584,14 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
-    def complete_reweight(self, text, line, begidx, endidx):
-        """ Complete the reweight command """
+    def complete_syscalc(self, text, line, begidx, endidx):
+        """ Complete the syscalc command """
         
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) > 1:
-            return self.list_completion(text, self._reweight_mode)
+            return self.list_completion(text, self._syscalc_mode)
         else:
-            return self.list_completion(text, self._reweight_mode + self.results.keys())
+            return self.list_completion(text, self._syscalc_mode + self.results.keys())
         
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """
@@ -1689,7 +1689,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     _calculate_decay_options = ['-f', '--accuracy=0.']
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
-    _reweight_mode = ['all', 'parton','pythia']
+    _syscalc_mode = ['all', 'parton','pythia']
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
     _save_opts = ['options']
@@ -1750,7 +1750,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                          'cluster_nb_retry':1,
                          'cluster_retry_wait':300}
     
-    helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main Commands', 'Documented Commands', 'Require MG5 directory',
                    'Advanced commands']
     
     ############################################################################
@@ -2398,7 +2398,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.print_results_in_shell(self.results.current)
-            self.run_reweight('parton')
+            self.run_syscalc('parton')
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
@@ -3286,18 +3286,18 @@ calculator."""
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
              
         if os.path.exists(pjoin(self.me_dir,'Events','syst.dat')):
-            # Calculate reweight info based on syst.dat
-            self.run_reweight('Pythia')
+            # Calculate syscalc info based on syst.dat
+            self.run_syscalc('Pythia')
             # Store syst.dat
             subprocess.call(['gzip','-f','syst.dat'],
                             cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
-            # Store reweight.dat
-            if os.path.exists(pjoin(self.me_dir, 'Events', 'reweight.dat')):
+            # Store syscalc.dat
+            if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
                 filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                          '%s_reweight.dat' % self.run_tag)
-                shutil.move(pjoin(self.me_dir, 'Events','reweight.dat'), 
+                                          '%s_syscalc.dat' % self.run_tag)
+                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
                             filename)
                 os.system('gzip -f %s' % filename)
 
@@ -3543,17 +3543,17 @@ calculator."""
                 logger.info('No valid files for delphes plot')
 
     ############################################################################
-    def do_reweight(self, line):
+    def do_syscalc(self, line):
         """Evaluate systematics variation weights for a given run"""
 
-        # Since in principle, all reweighting is already done automaticaly
+        # Since in principle, all systematics run are already done automaticaly
         self.store_result()
         args = self.split_arg(line)
         # Check argument's validity
-        self.check_reweight(args)
-        logger.info('Calculating reweighting for run %s' % self.run_name)
+        self.check_syscalc(args)
+        logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['reweight'], args)
+        self.ask_edit_cards(['syscalc'], args)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -3561,11 +3561,11 @@ calculator."""
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
-                self.run_reweight('parton')
+                self.run_syscalc('parton')
                 shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
                 os.system('gzip -f %s' % filename)
             else:
-                logger.info('No valid files for parton level reweight.')
+                logger.info('No valid files for parton level systematics run.')
                 
         if any([arg in ['all','pythia'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events' ,self.run_name,
@@ -3574,16 +3574,16 @@ calculator."""
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
-                self.run_reweight('Pythia')
+                self.run_syscalc('Pythia')
                 shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
                 os.system('gzip -f %s' % filename)                
                 filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                          '%s_reweight.dat' % self.run_tag)
-                shutil.move(pjoin(self.me_dir, 'Events','reweight.dat'), 
+                                          '%s_syscalc.dat' % self.run_tag)
+                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
                             filename)
                 os.system('gzip -f %s' % filename)
             else:
-                logger.info('No valid files for pythia level reweight')
+                logger.info('No valid files for pythia level syscalc')
     
     def store_result(self):
         """ tar the pythia results. This is done when we are quite sure that 
@@ -4131,7 +4131,7 @@ calculator."""
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[],
-                       'reweight':[]}
+                       'syscalc':[]}
         
         
 
@@ -4487,28 +4487,27 @@ calculator."""
         return True   
 
     
-    def run_reweight(self, mode='parton', event_path=None, output=None):
-        """create the reweight output""" 
+    def run_syscalc(self, mode='parton', event_path=None, output=None):
+        """create the syscalc output""" 
 
+        logger.info('running syscalc on mode %s' % mode)
         if self.run_card['use_syst'] not in self.true:
             return
-
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
-        card = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        card = pjoin(self.me_dir, 'Cards', 'syscalc_card.dat')
         if not scdir or \
             not os.path.exists(card):
             return False
-
         event_dir = pjoin(self.me_dir, 'Events')
 
         if not event_path:
             if mode == 'parton':
                 event_path = pjoin(event_dir,'unweighted_events.lhe')
-                output = pjoin(event_dir, 'reweight.lhe')
+                output = pjoin(event_dir, 'syscalc.lhe')
             elif mode == 'Pythia':
                 event_path = pjoin(event_dir,'syst.dat')
-                output = pjoin(event_dir, 'reweight.dat')
+                output = pjoin(event_dir, 'syscalc.dat')
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
             
@@ -4518,12 +4517,11 @@ calculator."""
             else:
                 raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
-        self.update_status('Calculating reweighting for %s level' % mode, level = mode.lower())
-               
+        self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
             proc = misc.Popen([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
-                            stdout = open(pjoin(event_dir, 'reweight.log'),'w'),
+                            stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
                             stderr = subprocess.STDOUT,
                             stdin=subprocess.PIPE,
                             cwd=event_dir)
@@ -4531,11 +4529,11 @@ calculator."""
             # Wait 10 s to make sure file is finished writing
             time.sleep(10)            
         except OSError, error:
-            logger.error('fail to run reweight: %s. Please check that SysCalc is correctly installed.' % error)
+            logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
-        self.update_status('End reweight for %s level' % mode, level = mode.lower(),
+        self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
         return True   
@@ -4835,7 +4833,7 @@ calculator."""
                      'delphes': 'delphes_card.dat',
                      'trigger': 'delphes_trigger.dat',
                      'param': 'param_card.dat',
-                     'reweight': 'reweight_card.dat'
+                     'syscalc': 'syscalc_card.dat'
                      }
 
         # Ask the user if he wants to edit any of the files

@@ -11,6 +11,25 @@ using namespace LHAPDF;
 
 bool DEBUG = false;
 
+std::vector<std::string> &split(const std::string &s, char delim,
+		std::vector<std::string> &elems, int maxsplit) {
+    std::stringstream ss(s);
+    std::string item;
+    int i = 0;
+    while (std::getline(ss, item, delim) and elems.size() < maxsplit) {
+    	if (item != "") elems.push_back(item);
+    }
+    return elems;
+}
+
+
+std::vector<std::string> split(const std::string &s, char delim, int maxsplit=20) {
+    std::vector<std::string> elems;
+    split(s, delim, elems, maxsplit);
+    return elems;
+}
+
+
 void SysCalc::clean_tokens(vector<string>& tokens){
 // Remove everything after "#"
   for(vector<string>::iterator i = tokens.begin();
@@ -21,6 +40,38 @@ void SysCalc::clean_tokens(vector<string>& tokens){
     }
   }
 }
+
+void SysCalc::write_xsec(){
+	double min,max;
+	//min = 0.;
+	//max = 0.;
+	  for (int i=0; i < _scalexsec.size(); i++) {
+	  	  	  	  	  	  cout <<"scale fact cross-section  :"<< i <<" "<< _scalexsec[i] <<endl;
+	//  	  	  	  	  	  if (min == 0. or _scalexsec[i] < min) min =  _scalexsec[i];
+	//  	  	  	  	  	  if (max == 0. or _scalexsec[i] > max) max =  _scalexsec[i];
+  	  	  	  	  	  }
+	//cout << "min/max:"<< min<< " " << max << endl;
+	//min=0.;
+	//max =0.;
+  	  	  	  	  for (int i=0; i < _alpsxsec.size(); i++) {
+  	  	  	  	  	  	  cout <<"alpha_s emission scale fact cross-section  :"<< i <<" "<< _alpsxsec[i] <<endl;
+	//  	  	  	  	  	  if (min == 0. or _alpsxsec[i] < min) min =  _alpsxsec[i];
+	//  	  	  	  	  	  if (max == 0. or _alpsxsec[i] > max) max =  _alpsxsec[i];
+  	  	  	  	  }
+  	  	  	cout << "min/max:"<< min<< " " << max << endl;
+  	  	min=0.;
+  	  	max =0.;
+  	  	  	  	  for (int i=0; i < _pdfxsec.size(); i++) {
+  	  	  	  	  	  	  cout <<"pdf reweighted cross-section  :"<< i <<" "<< _pdfxsec[i] <<endl;
+	  	  	  	  	  	  if (min == 0. or _pdfxsec[i] < min) min =  _pdfxsec[i];
+	  	  	  	  	  	  if (max == 0. or _pdfxsec[i] > max) max =  _pdfxsec[i];
+    	  	  	  	  	  }
+  	  	  	  	cout << "min/max:"<< min<< " " << max << endl;
+
+
+}
+
+
 
 void SysCalc::tokenize(const string& str,
 			vector<string>& tokens,
@@ -535,13 +586,13 @@ bool SysCalc::convertEvent()
   double org_weight = org_ren_alps*org_em_alps*org_pdf_fact;
   if (DEBUG) cout << "Calculated reweight factor: " << org_weight << endl;
 
-  if (fabs(org_weight - _total_reweight_factor)/
-      (org_weight+_total_reweight_factor) > 5e-3) {
-    cout << "Warning: Reweight factor differs in event "
-	 << _event_number << ": ";
-    cout << org_ren_alps*org_em_alps*org_pdf_fact << " (cf. "
-	 << _total_reweight_factor << ")" << endl;
-  }
+//  if (fabs(org_weight - _total_reweight_factor)/
+//      (org_weight+_total_reweight_factor) > 5e-3) {
+//    cout << "Warning: Reweight factor differs in event "
+//	 << _event_number << ": ";
+//    cout << org_ren_alps*org_em_alps*org_pdf_fact << " (cf. "
+//	 << _total_reweight_factor << ")" << endl;
+//  }
 
   /*** Perform reweighting ***/
 
@@ -567,7 +618,13 @@ bool SysCalc::convertEvent()
     pdf_fact *= calculatePDFWeight(orgnum, sf, _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
     if (DEBUG) cout << "New PDF factor: " << pdf_fact << endl;
 
-    _scaleweights.push_back(ren_alps*pdf_fact/(org_ren_alps*org_pdf_fact));
+    _scaleweights.push_back(ren_alps*pdf_fact/(org_ren_alps*org_pdf_fact) * _event_weight);
+    if (_scaleweights.size() -1 == _scalexsec.size()){
+       	_scalexsec.push_back(_scaleweights[_scaleweights.size()-1]);
+       }else{
+       	_scalexsec[_scaleweights.size()-1] += _scaleweights[_scaleweights.size()-1];
+       }
+
     if (DEBUG) cout << "scalefact weight: " << _scaleweights[_scaleweights.size()-1]
 		    << endl;
   }
@@ -580,9 +637,15 @@ bool SysCalc::convertEvent()
     for(int i=0; i < _alpsem_scales.size(); i++)
       em_alps *= alphasPDF(orgnum, as*_alpsem_scales[i]);
     if (DEBUG) cout << "New emission alps factor: " << org_em_alps << endl;
-    _alpsweights.push_back(em_alps/org_em_alps);
+    _alpsweights.push_back(em_alps/org_em_alps * _event_weight);
     if (DEBUG) cout << "alpsfact weight: " << _alpsweights[_alpsweights.size()-1]
 		    << endl;
+
+    if (_alpsweights.size() -1 == _alpsxsec.size()){
+       	_alpsxsec.push_back(_alpsweights[_alpsweights.size()-1]);
+    }else{
+       	_alpsxsec[_alpsweights.size()-1] += _alpsweights[_alpsweights.size()-1];
+    }
   }
 
   // Different PDF sets
@@ -615,8 +678,15 @@ bool SysCalc::convertEvent()
       pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[0], _pdf_pdg1, _pdf_x1, _pdf_q1);
       pdf_fact *= calculatePDFWeight(pdfnum, 1., _beam[1], _pdf_pdg2, _pdf_x2, _pdf_q2);
       if (DEBUG) cout << "Total PDF factor: " << pdf_fact << endl;
-      pdffacts->push_back(pdf_fact/org_weight);
+      pdffacts->push_back(pdf_fact/org_weight * _event_weight);
       if (DEBUG) cout << "PDF weight: " << (*pdffacts)[pdffacts->size()-1] << endl;
+      if (pdffacts->size() -1 == _pdfxsec.size()){
+         	_pdfxsec.push_back(pdf_fact/org_weight * _event_weight);
+      }else{
+         	_pdfxsec[pdffacts->size() -1] += pdf_fact/org_weight * _event_weight;
+      }
+
+
     }
     _PDFweights.push_back(*pdffacts);
   }

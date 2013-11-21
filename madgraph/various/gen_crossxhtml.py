@@ -611,6 +611,11 @@ class OneTagResults(dict):
             if 'param_card' not in self.parton and \
                                     exists(pjoin(path, "param_card.dat")):
                 self.parton.append('param_card')
+            
+            if 'syst' not in self.parton and \
+                                    exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
+                self.parton.append('syst')
+                
                 
         if level in ['pythia', 'all']:
             
@@ -630,8 +635,8 @@ class OneTagResults(dict):
                 self.pythia.append('hep')
             
             if 'rwt' not in self.pythia and \
-                            (exists(pjoin(path,"%s_reweight.dat.gz" % tag)) or
-                             exists(pjoin(path,"%s_reweight.dat" % tag))):
+                            (exists(pjoin(path,"%s_systematics.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_systematics.dat" % tag))):
                 self.pythia.append('rwt')
             
             if 'root' not in self.pythia and \
@@ -716,6 +721,8 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
+            #if 'rwt' in self.parton:
+            #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 
             return out % self
         
@@ -737,9 +744,9 @@ class OneTagResults(dict):
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'rwt' in self.pythia:
-                link = './Events/%(run_name)s/%(tag)s_reweight.dat'
+                link = './Events/%(run_name)s/%(tag)s_systematics.dat'
                 level = 'pythia'
-                name = 'Reweight'
+                name = 'systematics'
                 out += self.special_link(link, level, name)                 
             if 'plot' in self.pythia:
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
@@ -799,7 +806,7 @@ class OneTagResults(dict):
         # Compute the text for eachsubpart
         
         sub_part_template_parton = """
-        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g </a></center></td>
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g</a> %(syst)s </center></td>
         <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
@@ -840,7 +847,7 @@ class OneTagResults(dict):
             if not data:
                 continue
             
-            local_dico = {'type': type, 'run': self['run_name']}
+            local_dico = {'type': type, 'run': self['run_name'],'syst':''}
 
             if not first:
                 template = sub_part_template_parton
@@ -850,6 +857,9 @@ class OneTagResults(dict):
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 elif self['cross_pythia']:
                     if self.parton:
                         local_dico['cross_span'] = nb_line -1
@@ -866,6 +876,9 @@ class OneTagResults(dict):
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                     
             elif type == 'pythia' and self['cross_pythia']:
                 template = sub_part_template_parton
@@ -882,6 +895,8 @@ class OneTagResults(dict):
                 local_dico['err'] = self['error_pythia']
             else:
                template = sub_part_template_pgs             
+
+            
             
             # Fill the links
             local_dico['links'] = self.get_links(type)
@@ -992,7 +1007,8 @@ class OneTagResults(dict):
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
-                           'action': action
+                           'action': action,
+                           'syst':''
                            }                                
                                   
         if self.debug is KeyboardInterrupt:
