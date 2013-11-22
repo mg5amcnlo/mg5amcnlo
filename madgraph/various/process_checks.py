@@ -1657,10 +1657,17 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
                 checkerName = 'StabilityCheckDriver.f'
             else:
-                checkerName = 'StabilityCheckDriver_loop_induced.f'                
-            cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
-                   checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
-        
+                checkerName = 'StabilityCheckDriver_loop_induced.f'
+            
+            with open(pjoin(self.mg_root,'Template','loop_material','Checks',
+                                               checkerName),'r') as checkerFile:
+                with open(pjoin(dir_path,'proc_prefix.txt')) as proc_prefix:
+                    checkerToWrite = checkerFile.read()%{'proc_prefix':
+                                                             proc_prefix.read()}
+            checkerFile = open(pjoin(dir_path,'StabilityCheckDriver.f'),'w')
+            checkerFile.write(checkerToWrite)
+            checkerFile.close()
+
         # Make sure to recompile the possibly modified files (time stamps can be
         # off).
         if os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver')):

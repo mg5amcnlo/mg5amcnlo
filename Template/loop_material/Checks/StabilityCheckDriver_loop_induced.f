@@ -85,7 +85,7 @@
         write(*,*) "Enter split_orders choice, -1 = all."
         read(*,*) SOCHOICE
         IF (SOCHOICE.NE.-1) THEN
-          CALL SET_COUPLINGORDERS_TARGET(SOCHOICE)
+          CALL %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOCHOICE)
         ENDIF
 !---  Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
@@ -93,9 +93,9 @@
 !     Now we can call the matrix element!
 !
         IF (HELCHOICE.EQ.-1) THEN
-          CALL SLOOPMATRIX(P,MATELEM)
+          CALL %(proc_prefix)sSLOOPMATRIX(P,MATELEM)
         ELSE
-          CALL SLOOPMATRIXHEL(P,HELCHOICE,MATELEM)
+          CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HELCHOICE,MATELEM)
         ENDIF
         write(*,*) '##TAG#RESULT_START#TAG##'
         do i=1,nexternal      
