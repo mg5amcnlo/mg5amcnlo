@@ -506,11 +506,11 @@ c double the number of points for the next iteration
       endif
       if (imode.eq.0) then
 c     Update the average_virtual: a_new=(virt+a_old*born)/born
-         if (vtot(5).ne.0d0) then
+         if (vtot(6).ne.0d0) then
             if (average_virtual.eq.0d0) then ! i.e. first iteration
-               average_virtual=vtot(3)/vtot(5)+average_virtual
+               average_virtual=vtot(3)/vtot(6)+average_virtual
             else  ! give some importance to the iterations already done
-               average_virtual=(vtot(3)/vtot(5)+average_virtual*2d0)/2d0
+               average_virtual=(vtot(3)/vtot(6)+average_virtual*2d0)/2d0
             endif
          endif
 c Update the fraction of the events for which we include the virtual corrections
