@@ -249,10 +249,10 @@
 #*********************************************************************
    F  = use_syst      ! Enable systematics studies
 #
-#************************************                                       
+#**************************************                                       
 # Parameter of the systematics study 
-#  will be use by SysCalc if install
-#***********************************                                     
+#  will be use by SysCalc (if install)
+#**************************************                                     
 #
 0.5 1 2 = sys_scalefact  # Central scale factors
 0.5 1 2 = sys_alpsfact  # \alpha_s emission scale factors

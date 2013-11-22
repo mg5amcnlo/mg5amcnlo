@@ -4060,7 +4060,6 @@ calculator."""
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        
         if self.configured > time_mod and hasattr(self, 'random'):
             return
         else:
