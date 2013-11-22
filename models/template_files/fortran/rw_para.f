@@ -61,6 +61,13 @@ c************************************************************************
         endif
         call setpara(param_name)
       endif
+      if (param_name(1:1).ne.'*') then
+         ! Dummy call to printout so that it is available in the
+         ! dynamic library for MadLoop BLHA2
+         ! In principle the --whole-archive option of ld could be 
+         ! used but it is not always supported
+         call printout()
+      endif
       return
 
       end
