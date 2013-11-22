@@ -22,8 +22,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &        nwgt_analysis*48*4
          stop 1
       endif
-      do kk=1,nwgt_analysis
       do j=1,2
+      do kk=1,nwgt_analysis
       l=(kk-1)*48+(j-1)*24
       call bookup(l+ 1,'t pt        '//weights_info(kk)//cc(j)
      &     ,5d0,0d0,200d0)
@@ -100,8 +100,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call mfinal(i)
       enddo
       ytit='sigma per bin '
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
       l=(kk-1)*48+(i-1)*24
       call multitop(l+ 1,2,3,'t pt',' ','LOG')
       call multitop(l+ 2,2,3,'t log pt',' ','LOG')
@@ -149,14 +149,14 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer iPDG(nexternal)
       double precision p(0:4,nexternal)
       double precision wgts(*)
-      integer ibody
+      integer ibody,mu,count_bj,count_j
       double precision wgt,var
-      integer i,j,kk,l,nwgt_analysis
+      integer i,j,kk,l,nwgt_analysis,itop
       common/c_analysis/nwgt_analysis
       double precision www,pQCD(0:3,nexternal),palg,rfj,sycut,pjet(0:3
      $     ,nexternal),ptj1,yj1,etaj1,ptbj1,ybj1,etabj1,ptj2,yj2,etaj2
      $     ,ptbj2,ybj2,etabj2,p_top(0:3),pttop,ytop,etatop,psyst(0:3)
-     $     ,ptsyst,ysyst,etasyst
+     $     ,ptsyst,ysyst,etasyst,p_bjet(0:3,nexternal)
       integer nQCD,nb,is_b(nexternal),njet,jet(nexternal),nbjet
       logical is_b_jet(nexternal)
       double precision getpt,getrapidity,getpseudorap
@@ -195,26 +195,25 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          stop 1
       endif
 
-
       nQCD=0
       nb=0
       do i=1,nexternal
-         if (abs(ipdg(i)).eq.5) then
-c b-quark
-            nQCD=nQCD+1
-            nb=nb+1
-            is_b(nb)=nQCD
-            do j=0,3
-               pQCD(j,nQCD)=p(j,i)
-            enddo
-         elseif(abs(ipdg(i)).le.4 .or. ipdg(i).eq.21) then
-c light QCD parton
+         if(abs(ipdg(i)).le.5.or.ipdg(i).eq.21) then
             nQCD=nQCD+1
             do j=0,3
                pQCD(j,nQCD)=p(j,i)
             enddo
+            if (abs(ipdg(i)).eq.5) then
+               nb=nb+1
+               is_b(nb)=i
+            endif
          endif
+         if(abs(ipdg(i)).eq.6)itop=i
       enddo
+      if(nb.ne.1)then
+         write(*,*)'not one b',nb
+         stop
+      endif
             
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
       palg=JETALGO              ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
@@ -241,68 +240,62 @@ c
       call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
 c
 c******************************************************************************
+      if(njet.gt.2)then
+         write(*,*)'more than two jets',njet
+         stop
+      endif
 
-c find the b-jets
+C b-jet
       do i=1,njet
          is_b_jet(i)=.false.
+         if(jet(is_b(nb)).eq.i)is_b_jet(i)=.true.
       enddo
-      do i=1,nb
-         if (jet(is_b(i)).ne.0) then
-            is_b_jet(jet(is_b(i)))=.true.
-         endif
-      enddo
-c compute the (b)-jet observables
-      nbjet=0
-      if (njet.ge.1) then
-         ptj1  = getpt(pjet(0,1))
-         yj1   = getrapidity(pjet(0,1))
-         etaj1 = getpseudorap(pjet(0,1))
-         if (is_b_jet(1)) then
-            nbjet=nbjet+1
-            ptbj1  = ptj1
-            ybj1   = yj1
-            etabj1 = etaj1
-         endif
-      endif
-      if (njet.ge.2) then
-         ptj2  = getpt(pjet(0,2))
-         yj2   = getrapidity(pjet(0,2))
-         etaj2 = getpseudorap(pjet(0,2))
-         if (is_b_jet(2)) then
-            nbjet=nbjet+1
-            if (nbjet.eq.1) then
-               ptbj1  = ptj2
-               ybj1   = yj2
-               etabj1 = etaj2
-            else
-               ptbj2  = ptj2
-               ybj2   = yj2
-               etabj2 = etaj2
-            endif
-         endif
-      endif
-c compute the top observables
+
       do i=0,3
-         p_top(i)=p(i,3)
+         p_top(i)=p(i,itop)
       enddo
       pttop = getpt(p_top)
       ytop  = getrapidity(p_top)
       etatop= getpseudorap(p_top)
 
-c compute the "syst" observables
-      if (njet.ge.1) then
-         do i=0,3
-            psyst(i)=p_top(i)+pjet(i,1)
-         enddo
-         ptsyst = getpt(psyst)
-         ysyst  = getrapidity(psyst)
-         etasyst= getpseudorap(psyst)
-      endif
-
+      count_j=0
+      count_bj=0
+      do i=1,njet
+         if(.not.is_b_jet(i))then
+            count_j=count_j+1
+            if(count_j.eq.1)then
+               ptj1 = getpt(pjet(0,i))
+               yj1  = getrapidity(pjet(0,i))
+               etaj1= getpseudorap(pjet(0,i))
+               do mu=0,3
+                  psyst(mu)=p_top(mu)+pjet(mu,i)
+               enddo
+               ptsyst = getpt(psyst)
+               ysyst  = getrapidity(psyst)
+               etasyst= getpseudorap(psyst)
+            elseif(count_j.eq.2)then
+               ptj2 = getpt(pjet(0,i))
+               yj2  = getrapidity(pjet(0,i))
+               etaj2= getpseudorap(pjet(0,i))
+            endif
+         elseif(is_b_jet(i))then
+            count_bj=count_bj+1
+            if (count_bj.eq.1) then
+               ptbj1 = getpt(pjet(0,i))
+               ybj1  = getrapidity(pjet(0,i))
+               etabj1= getpseudorap(pjet(0,i))
+            elseif (count_bj.eq.2) then
+               ptbj2 = getpt(pjet(0,i))
+               ybj2  = getrapidity(pjet(0,i))
+               etabj2= getpseudorap(pjet(0,i))
+            endif
+         endif
+      enddo
+      nbjet=count_bj
 c fill the histograms
-      do kk=1,nwgt_analysis
-         www=wgts(kk)
-         do i=1,2
+      do i=1,2
+         do kk=1,nwgt_analysis
+            www=wgts(kk)
             l=(kk-1)*48+(i-1)*24
             if (ibody.ne.3 .and.i.eq.2) cycle
             call mfill(l+1,pttop,www)
@@ -314,6 +307,10 @@ c fill the histograms
                if (ptj1.gt.0d0) call mfill(l+6,log10(ptj1),www)
                call mfill(l+7,yj1,www)
                call mfill(l+8,etaj1,www)
+               call mfill(l+21,ptsyst,www)
+               if(ptsyst.gt.0d0) call mfill(l+22,log10(ptsyst),www)
+               call mfill(l+23,ysyst,www)
+               call mfill(l+24,etasyst,www)
             endif
             if(njet.ge.2)then
                call mfill(l+9,ptj2,www)
@@ -332,12 +329,6 @@ c fill the histograms
                if (ptbj2.gt.0d0) call mfill(l+18,log10(ptbj2),www)
                call mfill(l+19,ybj2,www)
                call mfill(l+20,etabj2,www)
-            endif
-            if (njet.ge.1) then
-               call mfill(l+21,ptsyst,www)
-               if(ptsyst.gt.0d0) call mfill(l+22,log10(ptsyst),www)
-               call mfill(l+23,ysyst,www)
-               call mfill(l+24,etasyst,www)
             endif
          enddo
       enddo
