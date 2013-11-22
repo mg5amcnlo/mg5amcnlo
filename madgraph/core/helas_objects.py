@@ -1043,8 +1043,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     # also identical wavefunctions in the same diagram
                     old_wf_index = diagram_wavefunctions.index(self)
                     old_wf = diagram_wavefunctions[old_wf_index]
-                    if wavefunctions[wavefunctions.index(self)].get('number') \
-                       == old_wf.get('number'):
+                    if self.get('number') == old_wf.get('number'):
                         # The wavefunction and old_wf are the same -
                         # need to reset wf_number and new_wf number
                         wf_number -= 1

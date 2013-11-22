@@ -120,6 +120,7 @@ def import_model(model_name, decay=False, restrict_file=None):
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
                                             keep_external=keep_external)
+        model.path = model_path
         
     return model
 
@@ -127,6 +128,7 @@ _import_once = []
 def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
+
 
     assert model_path == find_ufo_path(model_path)
             
@@ -349,7 +351,7 @@ class UFOMG5Converter(object):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-        
+
         if not hasattr(particle_info, 'propagator'):
             nb_property += 1
             if particle.get('spin') >= 3:
@@ -686,7 +688,7 @@ class UFOMG5Converter(object):
         data_string = '*'.join(output)
 
         # Change convention for summed indices
-        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        p = re.compile(r'\'\w(?P<number>\d+)\'')
         data_string = p.sub('-\g<number>', data_string)
          
         # Shift indices by -1
@@ -1059,6 +1061,9 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
+            if param.lhablock.lower() == 'decay':
+                continue
+            
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
             if key in block_value_to_var:

@@ -93,17 +93,21 @@ class ModelReader(base_objects.Model):
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              ','.join(set(parameter_dict.keys()).difference(set(key))),
                              ','.join(set(key).difference(set(parameter_dict.keys()))))
-                # FOR MSSM allow for automatic conversion to correct format 
-                try:
-                    param_card = param_card.input_path
-                    param_card = card_reader.convert_to_mg5card(param_card,
-                                                                 writting=False)
-                    key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
-                                            and not k.startswith('decay_table')]
+                if self['name'].startswith('mssm-') or self['name'] == 'mssm':
                     if not set(parameter_dict.keys()).difference(set(key)):
                         fail = False
-                except Exception:
-                    raise MadGraph5Error, msg
+                    else:
+                        # FOR MSSM allow for automatic conversion to correct format 
+                        try:
+                            param_card = param_card.input_path
+                            param_card = card_reader.convert_to_mg5card(param_card,
+                                                                         writting=False)
+                            key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
+                                                    and not k.startswith('decay_table')]
+                            if not set(parameter_dict.keys()).difference(set(key)):
+                                fail = False
+                        except Exception:
+                            raise MadGraph5Error, msg
                 
                 if fail:
                     raise MadGraph5Error, msg
@@ -219,7 +223,6 @@ class Alphas_Runner(object):
         assert cmass > 0
         assert bmass > 0
         assert nloop > -1
-    
         t = 2 * math.log(bmass/zmass)
         self.amb = self.newton1(t, asmz, 5)
         t = 2 * math.log(cmass/bmass)
@@ -258,7 +261,6 @@ class Alphas_Runner(object):
         input scale and output scale t.
         Evolution is performed using Newton's method,
         with a precision given by tol."""        
-        
         nloop = self.nloop
         tol = 5e-4
         arg = nf-3

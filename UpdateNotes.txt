@@ -1,12 +1,14 @@
 Update notes for MadGraph 5 (in reverse time order)
 
-1.6.0 (XX/XX/XX)  JA: Store parameters needed for systematics studies.
+
+1.6.0 (XX/XX/XX)  JA+OM+AK: Store parameters needed for systematics studies.
                       This can be turned on with the use_syst parameter in
                       run_card.dat.
                       This output can be used to generate event weights for
                       a variety of variational parameters, including scalefact,
                       alpsfact, PDF choice, and matching scale. Note that this require
                       pythia-pgs v2.2 for matching scale.
+                  OM+JA+Chia: Implement MadDecay (automatic/smart computation of the widths)
                   OM: Support for formfactor defined in the UFO model. and support for model
                       parameter presence inside the Lorentz expression.
                   JA: Included <clustering> tag in matched .lhe output, to be 
@@ -21,6 +23,8 @@ Update notes for MadGraph 5 (in reverse time order)
                       allows for consistent matching e.g. of p p > w+ b b~ in 
                       the 4-flavor scheme. Note that auto_ptj_mjj must be set to
                       .false. for this to work properly.
+                  OM: Change model restriction behavior: two widths with identical are not merged anymore.
+
 
 1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
                       In case of failure, you can re-submitted the failing jobs automatically. The maximal 

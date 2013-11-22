@@ -236,10 +236,10 @@ class BasicCmd(cmd.Cmd):
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
-        #print self.completion_matches
 
-        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
-                      and l or (l+' ')) for l in self.completion_matches if l]
+        self.completion_matches = [ l if l[-1] in [' ','@','=',os.path.sep]
+                                    else ((l + ' ') if not l.endswith('\\$') else l[:-2])
+                                  for l in self.completion_matches if l] 
         
         try:
             return self.completion_matches[state]
@@ -704,7 +704,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
            logger.error(error)
-            
+
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         # Create a nice error output
@@ -726,6 +726,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
         
+        #add the cards:
+        for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat']:
+            try:
+                ff = open(pjoin(self.me_dir, 'Cards', card))
+                debug_file.write(ff.read())
+                ff.close()
+            except Exception:
+                pass
+            
 
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
