@@ -9,6 +9,7 @@ c
       include 'maxparticles.inc'
       include 'run_config.inc'
       include 'run.inc'
+      include 'cuts.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
       integer    cmax_events
@@ -17,6 +18,12 @@ c
       parameter (sfnum=17)   !Unit number for scratch file
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
+c
+c     for the run_card
+c
+      real*8 sf1,sf2,pb1,pb2,D
+      integer lhaid
+      character*7 pdlabel
 c     
 c     Local
 c
@@ -64,15 +71,18 @@ c-----
 c
 c     Get requested number of events
 c
-      call load_para(npara,param,value)
-      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
-      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      include 'run_card.inc'
+c      call load_para(npara,param,value)
+c      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
+c      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       if (gridrun.and.gridpack) then
-         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
+          nreq = gevents
+c         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
       else
-         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
+          nreq = nevents
+c         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
       endif
-      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
+c      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
 
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'

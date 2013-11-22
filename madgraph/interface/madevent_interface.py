@@ -476,7 +476,7 @@ class HelpToCmd(object):
         self.run_options_help([])
         
     def help_plot(self):
-        logger.info("syntax: help [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("syntax: plot [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
         logger.info("-- create the plot for the RUN (current run by default)")
         logger.info("     at the different stage of the event generation")
         logger.info("     Note than more than one mode can be specified in the same command.")
@@ -485,6 +485,11 @@ class HelpToCmd(object):
         logger.info("     will be performed automaticaly during the event generation.")
         logger.info("   -f options: answer all question by default.")
         
+    def help_syscalc(self):
+        logger.info("syntax: syscalc [RUN] [%s] [-f | --tag=]" % '|'.join(self._plot_mode))
+        logger.info("-- calculate systematics information for the RUN (current run by default)")
+        logger.info("     at different stages of the event generation for scale/pdf/...")
+
     def help_remove(self):
         logger.info("syntax: remove RUN [all|parton|pythia|pgs|delphes|banner] [-f] [--tag=]")
         logger.info("-- Remove all the files linked to previous run RUN")
@@ -1058,9 +1063,9 @@ class CheckValidForCmd(object):
             
         if not self.options['pythia-pgs_path'] or not \
             os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
-            error_msg = 'No pythia-pgs path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
+            error_msg = 'No valid pythia-pgs path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
             raise self.InvalidCmd(error_msg)
      
      
@@ -1135,14 +1140,14 @@ class CheckValidForCmd(object):
         td = self.options['td_path']        
         
         if not madir:
-            error_msg = 'No Madanalysis path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
+            error_msg = 'No valid MadAnalysis path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
             raise self.InvalidCmd(error_msg)  
         if not  td:
-            error_msg = 'No path to td directory correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
+            error_msg = 'No valid td path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
             raise self.InvalidCmd(error_msg)  
                      
         if len(args) == 0:
@@ -1167,6 +1172,58 @@ class CheckValidForCmd(object):
                  self.help_plot()
                  raise self.InvalidCmd('unknown options %s' % arg)        
     
+    def check_syscalc(self, args):
+        """Check the argument for the syscalc command
+        syscalc run_name modes"""
+
+        scdir = self.options['syscalc_path']
+        
+        if not scdir:
+            logger.info('Retry to read configuration file to find SysCalc')
+            self.set_configuration()
+
+        scdir = self.options['syscalc_path']
+        
+        if not scdir:
+            error_msg = 'No valid SysCalc path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Please note that you need to compile SysCalc first.'
+            raise self.InvalidCmd(error_msg)  
+                     
+        if len(args) == 0:
+            if not hasattr(self, 'run_name') or not self.run_name:
+                self.help_syscalc()
+                raise self.InvalidCmd('No run name currently defined. Please add this information.')             
+            args.append('all')
+            return
+
+        #deal options
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+        
+        if args[0] not in self._syscalc_mode:
+            self.set_run_name(args[0], tag=tag, level='syscalc')
+            del args[0]
+            if len(args) == 0:
+                args.append('all')
+        elif not self.run_name:
+            self.help_syscalc()
+            raise self.InvalidCmd('No run name currently defined. Please add this information.')                             
+        elif tag and tag != self.run_tag:
+            self.set_run_name(self.run_name, tag=tag, level='syscalc')
+            
+        for arg in args:
+            if arg not in self._syscalc_mode and arg != self.run_name:
+                 self.help_syscalc()
+                 raise self.InvalidCmd('unknown options %s' % arg)        
+
+        if self.run_card['use_syst'] not in self.true:
+            raise self.InvalidCmd('Run %s does not include ' % self.run_name + \
+                                  'systematics information needed for syscalc.')
+        
     
     def check_pgs(self, arg):
         """Check the argument for pythia command
@@ -1181,9 +1238,9 @@ class CheckValidForCmd(object):
       
         if not self.options['pythia-pgs_path'] or not \
             os.path.exists(pjoin(self.options['pythia-pgs_path'],'src')):
-            error_msg = 'No pythia-pgs path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
+            error_msg = 'No valid pythia-pgs path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
             raise self.InvalidCmd(error_msg)          
         
         tag = [a for a in arg if a.startswith('--tag=')]
@@ -1234,9 +1291,9 @@ class CheckValidForCmd(object):
             self.set_configuration()
       
         if not self.options['delphes_path']:
-            error_msg = 'No delphes path correctly set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
+            error_msg = 'No valid Delphes path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
             raise self.InvalidCmd(error_msg)  
 
         tag = [a for a in arg if a.startswith('--tag=')]
@@ -1534,6 +1591,24 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
+    def complete_syscalc(self, text, line, begidx, endidx):
+        """ Complete the syscalc command """
+        
+        output = {}
+        args = self.split_arg(line[0:begidx], error=False)
+                
+        if len(args) <=1:
+            output['RUN_NAME'] = self.list_completion(self.results.keys())
+        output['MODE'] =  self.list_completion(text, self._syscalc_mode)
+        output['options'] = ['-f']
+        if len(args) > 1 and (text.startswith('--t')):
+            run = args[1]
+            if run in self.results:
+                tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
+                output['options'] += tags
+        
+        return self.deal_multiple_categories(output)
+        
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """
      
@@ -1630,6 +1705,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     _calculate_decay_options = ['-f', '--accuracy=0.']
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
+    _syscalc_mode = ['all', 'parton','pythia']
     _clean_mode = _plot_mode
     _display_opts = ['run_name', 'options', 'variable', 'results']
     _save_opts = ['options']
@@ -1671,6 +1747,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
+                       'syscalc_path': './SysCalc',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -1689,7 +1766,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                          'cluster_nb_retry':1,
                          'cluster_retry_wait':300}
     
-    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main Commands', 'Documented Commands', 'Require MG5 directory',
                    'Advanced commands']
     
     ############################################################################
@@ -1892,18 +1969,34 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                 path = self.options[key]
                 if path is None:
                     continue
-                if os.path.isdir(path):
-                    self.options[key] = os.path.realpath(path)
-                    continue
-                path = pjoin(self.me_dir, self.options[key])
-                if os.path.isdir(path):
-                    self.options[key] = os.path.realpath(path)
-                    continue
-                elif self.options.has_key('mg5_path') and self.options['mg5_path']: 
+                if not os.path.isdir(path):
+                    path = pjoin(self.me_dir, self.options[key])
+                if self.options.has_key('mg5_path') and self.options['mg5_path']: 
                     path = pjoin(self.options['mg5_path'], self.options[key])
-                    if os.path.isdir(path):
-                        self.options[key] = os.path.realpath(path)
-                        continue
+                if os.path.isdir(path):
+                    self.options[key] = None
+                    if key == "pythia-pgs_path":
+                        if not os.path.exists(pjoin(path, 'src','pythia')):
+                            logger.warning("No valid pythia-pgs path found")
+                            continue
+                    elif key == "delphes_path":
+                        if not os.path.exists(pjoin(path, 'Delphes')):
+                            logger.warning("No valid Delphes path found")
+                            continue
+                    elif key == "madanalysis_path":
+                        if not os.path.exists(pjoin(path, 'plot_events')):
+                            logger.warning("No valid MadAnalysis path found")
+                            continue
+                    elif key == "td_path":
+                        if not os.path.exists(pjoin(path, 'td')):
+                            logger.warning("No valid td path found")
+                            continue
+                    elif key == "syscalc_path":
+                        if not os.path.exists(pjoin(path, 'sys_calc')):
+                            logger.warning("No valid SysCalc path found")
+                            continue
+                    self.options[key] = os.path.realpath(path)
+                    continue
                 self.options[key] = None
             elif key.startswith('cluster'):
                 pass              
@@ -2270,10 +2363,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         
     ############################################################################      
     def do_generate_events(self, line):
-        """Main commands: launch the full chain """
-
-
-        
+        """Main Commands: launch the full chain """
         
         args = self.split_arg(line)
         # Check argument's validity
@@ -2324,6 +2414,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             self.exec_cmd('combine_events', postcmd=False)
             self.print_results_in_shell(self.results.current)
+            self.run_syscalc('parton')
             self.create_plot('parton')
             self.exec_cmd('store_events', postcmd=False)
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
@@ -2332,7 +2423,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             
     
     def do_launch(self, line, *args, **opt):
-        """Main commands:exec generate_events for 2>N and calculate_width for 1>N"""
+        """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
         if self.ninitial == 1:
             self.do_calculate_decay_widths(line, *args, **opt)
         else:
@@ -2359,7 +2450,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
     
     ############################################################################      
     def do_calculate_decay_widths(self, line):
-        """Main commands:launch decay width calculation and automatic inclusion of
+        """Main Commands: launch decay width calculation and automatic inclusion of
         calculated widths and BRs in the param_card."""
 
         
@@ -3211,10 +3302,20 @@ calculator."""
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
              
         if os.path.exists(pjoin(self.me_dir,'Events','syst.dat')):
-            subprocess.call(['gzip','-f','syst.dat'], 
+            # Calculate syscalc info based on syst.dat
+            self.run_syscalc('Pythia')
+            # Store syst.dat
+            subprocess.call(['gzip','-f','syst.dat'],
                             cwd=pjoin(self.me_dir,'Events'))          
             files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+            # Store syscalc.dat
+            if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
+                filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                          '%s_syscalc.dat' % self.run_tag)
+                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
+                            filename)
+                os.system('gzip -f %s' % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -3394,7 +3495,7 @@ calculator."""
 
 
 
-    ################################################################################
+    ############################################################################
     def do_plot(self, line):
         """Create the plot for a given run"""
 
@@ -3457,12 +3558,52 @@ calculator."""
             else:
                 logger.info('No valid files for delphes plot')
 
+    ############################################################################
+    def do_syscalc(self, line):
+        """Evaluate systematics variation weights for a given run"""
+
+        # Since in principle, all systematics run are already done automaticaly
+        self.store_result()
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_syscalc(args)
+        logger.info('Calculating systematics for run %s' % self.run_name)
+        
+        self.ask_edit_cards(['run'], args)
                 
+        if any([arg in ['all','parton'] for arg in args]):
+            filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
+            if os.path.exists(filename+'.gz'):
+                os.system('gunzip -f %s' % (filename+'.gz') )
+            if  os.path.exists(filename):
+                shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
+                self.run_syscalc('parton')
+                shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
+                os.system('gzip -f %s' % filename)
+            else:
+                logger.info('No valid files for parton level systematics run.')
+                
+        if any([arg in ['all','pythia'] for arg in args]):
+            filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                          '%s_pythia_syst.dat' % self.run_tag)
+            if os.path.exists(filename+'.gz'):
+                os.system('gunzip -f %s' % (filename+'.gz') )
+            if  os.path.exists(filename):
+                shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
+                self.run_syscalc('Pythia')
+                shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
+                os.system('gzip -f %s' % filename)                
+                filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                          '%s_syscalc.dat' % self.run_tag)
+                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
+                            filename)
+                os.system('gzip -f %s' % filename)
+            else:
+                logger.info('No valid files for pythia level')
     
     def store_result(self):
         """ tar the pythia results. This is done when we are quite sure that 
         the pythia output will not be use anymore """
-
 
         if not self.run_name:
             return
@@ -3919,7 +4060,6 @@ calculator."""
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
-        
         if self.configured > time_mod and hasattr(self, 'random'):
             return
         else:
@@ -4005,7 +4145,8 @@ calculator."""
                        'pythia': ['pythia','pgs','delphes'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
-                       'plot':[]}
+                       'plot':[],
+                       'syscalc':[]}
         
         
 
@@ -4361,6 +4502,60 @@ calculator."""
         return True   
 
     
+    def run_syscalc(self, mode='parton', event_path=None, output=None):
+        """create the syscalc output""" 
+
+        logger.info('running syscalc on mode %s' % mode)
+        if self.run_card['use_syst'] not in self.true:
+            return
+        scdir = self.options['syscalc_path']
+        tag = self.run_card['run_tag']  
+        card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
+        template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
+        open(card,'w').write(template % self.run_card)
+        
+        
+        if not scdir or \
+            not os.path.exists(card):
+            return False
+        event_dir = pjoin(self.me_dir, 'Events')
+
+        if not event_path:
+            if mode == 'parton':
+                event_path = pjoin(event_dir,'unweighted_events.lhe')
+                output = pjoin(event_dir, 'syscalc.lhe')
+            elif mode == 'Pythia':
+                event_path = pjoin(event_dir,'syst.dat')
+                output = pjoin(event_dir, 'syscalc.dat')
+            else:
+                raise self.InvalidCmd, 'Invalid mode %s' % mode
+            
+        if not os.path.exists(event_path):
+            if os.path.exists(event_path+'.gz'):
+                os.system('gzip -f %s.gz ' % event_path)
+            else:
+                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+        
+        self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
+        try:
+            proc = misc.call([os.path.join(scdir, 'sys_calc'),
+                               event_path, card, output],
+                            stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
+                            stderr = subprocess.STDOUT,
+                            cwd=event_dir)
+            # Wait 5 s to make sure file is finished writing
+            time.sleep(5)            
+        except OSError, error:
+            logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
+        else:
+            if mode == 'parton' and os.path.exists(output):
+                files.mv(output, event_path)
+        self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
+                                                                 makehtml=False)
+        
+        return True   
+
+    
     def clean_pointless_card(self, mode):
         """ Clean the pointless card """
 
@@ -4396,7 +4591,7 @@ calculator."""
             name = {'0': 'auto', '1': 'parton', '2':'pythia', '3':'pgs', '4':'delphes'}
             options = available_mode + [name[val] for val in available_mode]
             question = """Which programs do you want to run?
-  0 / auto    : running existing card
+  0 / auto    : running existing cards
   1 / parton  :  Madevent\n"""
             if '2' in available_mode:
                 question += """  2 / pythia  : MadEvent + Pythia.
@@ -4654,12 +4849,13 @@ calculator."""
         card_name = {'pgs': 'pgs_card.dat',
                      'delphes': 'delphes_card.dat',
                      'trigger': 'delphes_trigger.dat',
-                     'param': 'param_card.dat'
+                     'param': 'param_card.dat',
+                     'run': 'run_card.dat'
                      }
 
         # Ask the user if he wants to edit any of the files
         #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?\n""" 
+        question = """Do you want to edit any card (press enter to bypass editing)?\n""" 
         possible_answer = ['0', 'done']
         card = {0:'done'}
         
@@ -5206,15 +5402,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
+            elif  args[start+1].lower() in ['t','.true.','true']:
                 self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
+            elif  args[start+1].lower() in ['f','.false.','false']:
                 self.setR(args[start], '.false.')
             else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
+                if args[0].startswith('sys_'):
+                    val = ' '.join(args[start+1:])
+                    val = val.split('#')[0]
+                else: 
+                    try:
+                        val = eval(args[start+1])
+                    except NameError:
+                        val = args[start+1]
                 self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
                               pjoin(self.me_dir,'Cards','run_card_default.dat'))
@@ -5224,7 +5424,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                                          and card != 'run_card':
             if args[start] == 'width':
                 args[start] = 'decay'
-                
+            
             if args[start+1] in self.conflict and card == '':
                 text = 'ambiguous name (present in both param_card and run_card. Please specify'
                 logger.warning(text)

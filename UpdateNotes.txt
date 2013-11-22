@@ -2,12 +2,11 @@ Update notes for MadGraph 5 (in reverse time order)
 
 1.6.0 (XX/XX/XX)  JA: Store parameters needed for systematics studies.
                       This can be turned on with the use_syst parameter in
-                      run_card.dat. Please read more in 
-                      Template/README.systematics
-                      Note that the Pythia/PGS package v. 2.2 is needed.
+                      run_card.dat.
                       This output can be used to generate event weights for
                       a variety of variational parameters, including scalefact,
-                      alpsfact, PDF choice, and matching scale.
+                      alpsfact, PDF choice, and matching scale. Note that this require
+                      pythia-pgs v2.2 for matching scale.
                   OM: Support for formfactor defined in the UFO model. and support for model
                       parameter presence inside the Lorentz expression.
                   JA: Included <clustering> tag in matched .lhe output, to be 

@@ -115,7 +115,10 @@
 #! relative path start from main directory
 # td_path = ./td
 
-
+#! SysCalc PATH
+#! Path to the directory containing syscalc executables
+#! relative path start from main directory
+# syscalc_path = ./SysCalc
 
 
 
