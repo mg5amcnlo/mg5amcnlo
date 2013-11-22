@@ -71,7 +71,7 @@ c Conflicting BW stuff
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
      & nbranch, ns_channel,nt_channel, pos_pz
 
-      integer*8       iseed
+      integer*8       iseed, P_seed
       common /to_seed/iseed
 
 
@@ -88,10 +88,10 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        open(unit=56,file='seeds.dat',status='old')
        read(56,*) iseed
        close(56)
-       open(unit=56,file='seeds.dat',status='unknown')
-       if (iseed.gt.900000000) iseed = 5
-       write(56,*) iseed+1
+       open(unit=56,file='offset.dat',status='old')
+       read(56,*) P_seed
        close(56)
+       iseed = iseed + P_seed
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events

@@ -19,6 +19,7 @@ import math
 import os
 import re
 import shutil
+import glob
 
 
 pjoin = os.path.join
@@ -433,13 +434,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 new block:
                 %s""" \
                 % (self.options['ms_dir'], name, orig_block, block)
-                
         
-        #generate_all.banner = self.banner
-        #generate_all.banner.add('slha', pjoin(self.options['ms_dir'], 'param_card.dat'))
-        #generate_all.banner.charge_card('slha')
-        #generate_all.all_ME.banner = banner
         # NOW we have all the information available for RUNNING
+        
+        if self.seed:
+            #seed is specified need to use that one:
+            open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.seed)
+            #remove all ranmar_state
+            for name in glob.glob(pjoin(self.options['ms_dir'], '*', 'SubProcesses','*','ranmar_state.dat')):
+                os.remove(name)    
         
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio

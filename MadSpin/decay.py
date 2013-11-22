@@ -1891,8 +1891,7 @@ class decay_all_events(object):
 
 
         # write down the seed:
-        seedfile=open(pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat'),'w')
-
+        seedfile=open(pjoin(self.path_me, 'seeds.dat'),'w')
         seedfile.write('  %s \n' % self.options['seed'])
         seedfile.close()       
  
@@ -2707,7 +2706,7 @@ class decay_all_events(object):
                 for dir in os.listdir(base_dir):
                     if dir[0] == 'P': list_prod.append(pjoin(base_dir, dir))
 
-        for me_path in list_prod:
+        for i,me_path in enumerate(list_prod):
 #            if direc[0] == "P" and os.path.isdir(pjoin(base_dir, direc)):
 #                new_path = pjoin(base_dir, direc)
                 new_path = me_path
@@ -2725,10 +2724,16 @@ class decay_all_events(object):
                 
                 if mode=='full_me':
                     file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'ranmar.f')
-                    shutil.copyfile(file_madspin, pjoin(new_path,"ranmar.f"))  
+                    shutil.copyfile(file_madspin, pjoin(new_path,"ranmar.f"))
+                    file_madspin=pjoin(path_me, 'seeds.dat')  
+                    files.ln(file_madspin, new_path)
+                    file_madspin=pjoin(new_path, 'offset.dat')
+                    open(file_madspin,'w').write('%i\n' % i)
                     
-                    file_madspin=pjoin(MG5DIR, 'MadSpin', 'src', 'seeds.dat')
-                    shutil.copyfile(file_madspin, pjoin(new_path,"seeds.dat"))  
+                    
+                      
+                    
+
                 
                 
                 if mode == 'full_me':
