@@ -1768,7 +1768,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'permutation', 'gauge', 'lorentz_invariance']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis', 
-                     'update', 'Delphes2']
+                     'update', 'Delphes2', 'SysCalc']
     _v4_export_formats = ['madevent', 'standalone', 'matrix'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
@@ -3089,7 +3089,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes3':'Delphes',
                 'pythia-pgs':'pythia-pgs', 'ExRootAnalysis': 'ExRootAnalysis',
-                'MadAnalysis':'MadAnalysis', 'Delphes2': 'Delphes'}
+                'MadAnalysis':'MadAnalysis', 'Delphes2': 'Delphes', 
+                'SysCalc':'SysCalc'}
         name = name[args[0]]
         
         try:
