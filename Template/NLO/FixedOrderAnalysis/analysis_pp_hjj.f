@@ -9,17 +9,15 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       character*(*) weights_info(*)
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      character*7 cc(2)
-      data cc/'       ','vbfcuts'/
+      character*8 cc(2)
+      data cc/'        ',' vbfcuts'/
       double precision pi
       PARAMETER (PI=3.14159265358979312D0)
       include 'dbook.inc'
       real*8 vetomin, vetomax
       integer nbinveto
       common /to_veto_hist/vetomin,vetomax,nbinveto
-      
-      cc(1)='       '
-      cc(2)='vbfcuts'
+c      
       call inihist
       vetomin = 0d0
       vetomax = 100d0
@@ -35,129 +33,129 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do kk=1,nwgt_analysis
       do i=1,2
         l=(kk-1)*108+(i-1)*54
-         call bookup(l+  1,'total rate   '
+         call bookup(l+  1,'total '
      &       //weights_info(kk)//cc(i),1.0d0,0.5d0,5.5d0)
 
-         call bookup(l+  2,'Higgs pT     '
+         call bookup(l+  2,'Higgs pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+  3,'Higgs pT     '
+         call bookup(l+  3,'Higgs pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+  4,'Higgs log pT '
+         call bookup(l+  4,'Higgs logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+  5,'Higgs eta    '
+         call bookup(l+  5,'Higgs eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+  6,'Higgs y      '
+         call bookup(l+  6,'Higgs y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+  7,'j1 pT        '
+         call bookup(l+  7,'j1 pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+  8,'j1 pT        '
+         call bookup(l+  8,'j1 pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+  9,'j1 log pT    '
+         call bookup(l+  9,'j1 logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 10,'j1 eta       '
+         call bookup(l+ 10,'j1 eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 11,'j1 y         '
+         call bookup(l+ 11,'j1 y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 12,'j2 pT        '
+         call bookup(l+ 12,'j2 pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+ 13,'j2 pT        '
+         call bookup(l+ 13,'j2 pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+ 14,'j2 log pT    '
+         call bookup(l+ 14,'j2 logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 15,'j2 eta       '
+         call bookup(l+ 15,'j2 eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 16,'j2 y         '
+         call bookup(l+ 16,'j2 y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 17,'j3 pT        '
+         call bookup(l+ 17,'j3 pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+ 18,'j3 pT        '
+         call bookup(l+ 18,'j3 pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+ 19,'j3 log pT    '
+         call bookup(l+ 19,'j3 logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 20,'j3 eta       '
+         call bookup(l+ 20,'j3 eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 21,'j3 y         '
+         call bookup(l+ 21,'j3 y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 22,'H+j1 pT      '
+         call bookup(l+ 22,'H+j1 pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+ 23,'H+j1 pT      '
+         call bookup(l+ 23,'H+j1 pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+ 24,'H+j1 log pT  '
+         call bookup(l+ 24,'H+j1 logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 25,'H+j1 eta     '
+         call bookup(l+ 25,'H+j1 eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 26,'H+j1 y       '
+         call bookup(l+ 26,'H+j1 y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 27,'j1+j2 pT     '
+         call bookup(l+ 27,'j1+j2 pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+ 28,'j1+j2 pT     '
+         call bookup(l+ 28,'j1+j2 pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+ 29,'j1+j2 log pT '
+         call bookup(l+ 29,'j1+j2 logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 30,'j1+j2 eta    '
+         call bookup(l+ 30,'j1+j2 eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 31,'j1+j2 y      '
+         call bookup(l+ 31,'j1+j2 y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 32,'syst pT      '
+         call bookup(l+ 32,'syst pT '
      &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
-         call bookup(l+ 33,'syst pT      '
+         call bookup(l+ 33,'syst pT '
      &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
-         call bookup(l+ 34,'syst log pT  '
+         call bookup(l+ 34,'syst logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 35,'syst eta     '
+         call bookup(l+ 35,'syst eta '
      &       //weights_info(kk)//cc(i),0.4d0,-10.d0,10.d0)
-         call bookup(l+ 36,'syst y       '
+         call bookup(l+ 36,'syst y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call bookup(l+ 37,'Dphi H-j1    '
+         call bookup(l+ 37,'Dphi H-j1 '
      &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
-         call bookup(l+ 38,'Dphi H-j2    '
+         call bookup(l+ 38,'Dphi H-j2 '
      &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
-         call bookup(l+ 39,'Dphi j1-j2   '
+         call bookup(l+ 39,'Dphi j1-j2 '
      &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
 
-         call bookup(l+ 40,'DR H-j1      '
+         call bookup(l+ 40,'DR H-j1 '
      &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
-         call bookup(l+ 41,'DR H-j2      '
+         call bookup(l+ 41,'DR H-j2 '
      &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
-         call bookup(l+ 42,'DR j1-j2     '
+         call bookup(l+ 42,'DR j1-j2 '
      &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
 
-         call bookup(l+ 43,'mj1j2        '
+         call bookup(l+ 43,'mj1j2 '
      &       //weights_info(kk)//cc(i),60.0d0,0d0,3000.d0)
 
 c Nason-Oleari plots (hep-ph/0911.5299)
-         call bookup(l+ 44,'|yj1-yj2|    '
+         call bookup(l+ 44,'|yj1-yj2| '
      &       //weights_info(kk)//cc(i),0.4d0,0.d0,10.d0)
-         call bookup(l+ 45,'yj3_rel      '
+         call bookup(l+ 45,'yj3_rel '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 46,'njets        '
+         call bookup(l+ 46,'njets '
      &       //weights_info(kk)//cc(i),1.d0,-0.5d0,9.5d0)
-         call bookup(l+ 47,'ptrel_j1     '
+         call bookup(l+ 47,'ptrel_j1 '
      &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
-         call bookup(l+ 48,'ptrel_j2     '
+         call bookup(l+ 48,'ptrel_j2 '
      &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
-         call bookup(l+ 49,'P-veto       '
+         call bookup(l+ 49,'P-veto '
      &       //weights_info(kk)//cc(i),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
-         call bookup(l+ 50,'jveto pT     '
+         call bookup(l+ 50,'jveto pT '
      &       //weights_info(kk)//cc(i),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
-         call bookup(l+ 51,'jveto pT     '
+         call bookup(l+ 51,'jveto pT '
      &       //weights_info(kk)//cc(i),
      1    ((2d0*vetomax-vetomin)/dble(nbinveto)),
      1    vetomin,2d0*vetomax)
-         call bookup(l+ 52,'jveto log pT '
+         call bookup(l+ 52,'jveto logpT '
      &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
-         call bookup(l+ 53,'jveto eta    '
+         call bookup(l+ 53,'jveto eta '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
-         call bookup(l+ 54,'jveto y      '
+         call bookup(l+ 54,'jveto y '
      &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
       enddo
@@ -423,13 +421,11 @@ c Nason-Oleari cuts (hep-ph/0911.5299)
 
 c this is the loop for w-o / w vbf cuts
       do i=1,2
-
       if(i.eq.1) then 
          ij1 = 1
          ij2 = 2
          ij3 = 3
       endif
-
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
