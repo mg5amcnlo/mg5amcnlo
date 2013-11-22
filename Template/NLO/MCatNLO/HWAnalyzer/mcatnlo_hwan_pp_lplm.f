@@ -149,7 +149,7 @@ C----------------------------------------------------------------------
      #  PLLB,ENLB,PTPAIR,DLL,CLL,AZI,AZINORM,XMLL,DETALLB
       INTEGER ICHSUM,ICHINI,IHEP,IV,IFV,IST,ID,IJ,ID1,JPR,IDENT,
      #  ILL,ILLB,IHRD,ILL0,ILLB0
-      LOGICAL DIDSOF,TEST1,TEST2,flag,ISLP,ISLM
+      LOGICAL DIDSOF,TEST1,TEST2,flag,ISLP,ISLM,FOUNDP,FOUNDM
       REAL*8 PI,wmass,wgamma,bwcutoff,getinvm,getdelphi,getrapidity,
      &getpseudorap
       PARAMETER (PI=3.14159265358979312D0)
@@ -166,7 +166,10 @@ C----------------------------------------------------------------------
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-      IDENT=23
+C CHOOSE IDENT = 11 FOR ELECTRON PAIRS
+C        IDENT = 13 FOR MUON PAIRS
+C        IDENT = 15 FOR TAU PAIRS
+      IDENT=13
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
@@ -181,46 +184,36 @@ C EFFECT, SO THROW THE EVENT AWAY
       ICHSUM=0
       ICHINI=ICHRG(IDHW(1))+ICHRG(IDHW(2))
       DIDSOF=.FALSE.
-      IFV=0
+      FOUNDP=.FALSE.
+      FOUNDM=.FALSE.
       DO 100 IHEP=1,NHEP
-        IF (IDHW(IHEP).EQ.16) DIDSOF=.TRUE.
-        IF (ISTHEP(IHEP).EQ.1) THEN
-          CALL HWVSUM(4,PHEP(1,IHEP),PSUM,PSUM)
-          ICHSUM=ICHSUM+ICHRG(IDHW(IHEP))
-        ENDIF
-        IST=ISTHEP(IHEP)      
-        ID=IDHW(IHEP)
-        ID1=IDHEP(IHEP)
-        ISLP=ID1.EQ. 11.OR.ID1.EQ. 13.OR.ID1.EQ. 15
-        ISLM=ID1.EQ.-11.OR.ID1.EQ.-13.OR.ID1.EQ.-15
-C Herwig relabels the vector boson V in Drell-Yan; this doesn't happen with
-C MC@NLO; in S events, V appears as HARD, in H as V, but with status 155
-C rather than 195. We add here 195 for future compatibility
-        IF(IPROC.LT.0)THEN
-          TEST1=IST.EQ.155.OR.IST.EQ.195
-          TEST2=ID1.EQ.IDENT
-          IF(IST.EQ.120.AND.ID1.EQ.0)IHRD=IHEP
-        ELSE
-          TEST1=IST.EQ.120.OR.IST.EQ.195
-          TEST2=ABS(ID1).EQ.IDENT
-        ENDIF
-        IF(TEST1.AND.TEST2)THEN
-          IV=IHEP
-          IFV=IFV+1
-        ENDIF
-        IF((IST.GE.120.AND.IST.LE.125).AND.ISLM)ILL0=IHEP
-        IF((IST.GE.120.AND.IST.LE.125).AND.ISLP)ILLB0=IHEP
-  100 CONTINUE
-      IF(IPROC.LT.0.AND.IFV.EQ.0)THEN
-        IV=IHRD
-        IFV=1
-      ENDIF
-      DO IJ=1,5
-        PPV(IJ)=PHEP(IJ,IV)
-      ENDDO
-      IF(IFV.EQ.0.AND.IERROR.EQ.0) THEN
-         CALL HWUEPR
-         CALL HWWARN('HWANAL',503)
+         IF (IDHW(IHEP).EQ.16) DIDSOF=.TRUE.
+         IF (ISTHEP(IHEP).EQ.1) THEN
+            CALL HWVSUM(4,PHEP(1,IHEP),PSUM,PSUM)
+            ICHSUM=ICHSUM+ICHRG(IDHW(IHEP))
+         ENDIF
+         IST=ISTHEP(IHEP)      
+         ID=IDHW(IHEP)
+         ID1=IDHEP(IHEP)
+         ISLP=ID1.EQ.IDENT
+         ISLM=ID1.EQ.-IDENT
+         IF((IST.GE.120.AND.IST.LE.125).AND.ISLM)THEN
+            ILL=IHEP
+            FOUNDM=.TRUE.
+         ENDIF
+         IF((IST.GE.120.AND.IST.LE.125).AND.ISLP)THEN
+            ILLB=IHEP
+            FOUNDP=.TRUE.
+         ENDIF
+ 100  CONTINUE
+      IF(.NOT.FOUNDP.OR..NOT.FOUNDM)THEN
+         WRITE(*,*)'NO LEPTONS FOUND.'
+         WRITE(*,*)'CURRENTLY THIS ANALYSIS LOOKS FOR'
+         IF(IDENT.EQ.11)WRITE(*,*)'ELECTRON PAIRS'
+         IF(IDENT.EQ.13)WRITE(*,*)'MUON PAIRS'
+         IF(IDENT.EQ.15)WRITE(*,*)'TAU PAIRS'
+         WRITE(*,*)'IF THIS IS NOT MEANT, PLEASE EDIT IT.'
+         STOP
       ENDIF
 C CHECK MOMENTUM AND CHARGE CONSERVATION
       IF (HWVDOT(3,PSUM,PSUM).GT.1.E-4*PHEP(4,1)**2) THEN
@@ -233,37 +226,12 @@ C CHECK MOMENTUM AND CHARGE CONSERVATION
          CALL HWWARN('HWANAL',113)
          GOTO 999
       ENDIF
-      IF(IFV.GT.1.AND.IERROR.EQ.0) THEN
-         CALL HWUEPR
-         CALL HWWARN('HWANAL',55)
-         GOTO 999
-      ENDIF
 C FIND THE LEPTONS
-      IF( IDHEP(JDAHEP(1,JDAHEP(1,IV))).GT.0 .AND.
-     #    IDHEP(JDAHEP(1,JDAHEP(2,IV))).LT.0 )THEN
-        ILL=JDAHEP(1,JDAHEP(1,IV))
-        ILLB=JDAHEP(1,JDAHEP(2,IV))
-      ELSEIF( IDHEP(JDAHEP(1,JDAHEP(2,IV))).GT.0 .AND.
-     #        IDHEP(JDAHEP(1,JDAHEP(1,IV))).LT.0 )THEN
-        ILL=JDAHEP(1,JDAHEP(2,IV))
-        ILLB=JDAHEP(1,JDAHEP(1,IV))
-      ELSE
-         ILL=ILL0
-         ILLB=ILLB0
-      ENDIF
       DO IJ=1,5
         PPL(IJ)=PHEP(IJ,ILL)
         PPLB(IJ)=PHEP(IJ,ILLB)
+        PPV(IJ)=PPL(IJ)+PPLB(IJ)
       ENDDO
-C CHECK THAT THE LEPTONS ARE FINAL-STATE LEPTONS
-      IF( ABS(IDHEP(ILL)).LT.11 .OR. ABS(IDHEP(ILL)).GT.16 .OR.
-     #    ABS(IDHEP(ILLB)).LT.11 .OR. ABS(IDHEP(ILLB)).GT.16 )THEN
-        goto 999
-      ENDIF
-      IF( (ISTHEP(ILL).NE.1.AND.ISTHEP(ILL).NE.195) .OR.
-     #    (ISTHEP(ILLB).NE.1.AND.ISTHEP(ILLB).NE.195) )THEN
-        goto 999
-      ENDIF
 C FILL THE HISTOS
       YCUT=2.5D0
 C Variables of the vector boson
