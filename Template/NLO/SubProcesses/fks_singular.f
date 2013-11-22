@@ -390,8 +390,8 @@ c For tests
      &                 total_wgt_sum_min
       common/csum_of_wgts/total_wgt_sum,total_wgt_sum_max,
      &                 total_wgt_sum_min
-      double precision virt_wgt
-      common/c_fks_singular/virt_wgt
+      double precision virt_wgt,born_wgt_ao2pi
+      common/c_fks_singular/virt_wgt,born_wgt_ao2pi
 
 c FxFx merging
       logical rewgt_mohdr_calculated,rewgt_izero_calculated
@@ -484,6 +484,7 @@ c points)
       bsv_wgt=0.d0
       virt_wgt=0d0
       born_wgt=0.d0
+      born_wgt_ao2pi=0.d0
       cnt_swgt=0.d0
       cnt_swgt_s=0.d0
       cnt_swgt_sc=0.d0
@@ -644,6 +645,7 @@ c Soft subtraction term:
               xnormsv=xlum_s*xsec
               call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt
      $             ,born_wgt)
+              born_wgt_ao2pi=born_wgt*g**2/(8d0*Pi**2)
 c For FxFx merging, include the compensation term
               if (rewgt_izero_calculated.and.rewgt_izero.lt.1d0) then
                  bsv_wgt=bsv_wgt-g**2/(4d0*Pi)*rewgt_exp_izero*born_wgt
@@ -667,6 +669,7 @@ c For FxFx merging, include the compensation term
               bsv_wgt=bsv_wgt*xnormsv
               virt_wgt=virt_wgt*xnormsv
               born_wgt=born_wgt*xnormsv
+              born_wgt_ao2pi=born_wgt_ao2pi*xnormsv
             endif
  548        continue
             iplot=0
@@ -809,6 +812,7 @@ c Apply the FxFx Sudakov damping on the S events
       bsv_wgt = bsv_wgt * enhanceS
       virt_wgt = virt_wgt * enhanceS
       born_wgt = born_wgt * enhanceS
+      born_wgt_ao2pi = born_wgt_ao2pi * enhanceS
       deg_wgt = deg_wgt * enhanceS
       deg_swgt = deg_swgt * enhanceS
 
@@ -832,6 +836,8 @@ c Apply the FxFx Sudakov damping on the S events
          call unweight_function(p_born,unwgtfun)
          dsig=dsig*unwgtfun
          virt_wgt=virt_wgt*unwgtfun*fkssymmetryfactorBorn*vegaswgt
+         born_wgt_ao2pi=born_wgt_ao2pi*unwgtfun*fkssymmetryfactorBorn
+     $        *vegaswgt
          if(doNLOreweight)then
            if(ifill2.eq.0.and.(ifill3.ne.0.or.ifill4.ne.0))then
              write(*,*)'Error #2[wg] in dsig',ifill2,ifill3,ifill4
@@ -880,9 +886,8 @@ c Plot observables for counterevents and Born
          plot_wgt=( cnt_wgt*fkssymmetryfactor +
      &              cnt_swgt*fkssymmetryfactor +
      &              bsv_wgt*fkssymmetryfactorBorn +
-     &              virt_wgt*fkssymmetryfactorBorn +
      &              deg_wgt*fkssymmetryfactorDeg +
-     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt
+     &              deg_swgt*fkssymmetryfactorDeg )*vegaswgt + virt_wgt
          if(abs(plot_wgt).gt.1.d-20) then
             if(iplot.eq.-3)then
                write(*,*)'Error #1 in dsig'
@@ -910,9 +915,8 @@ c for except PS points, this is the maximal approx for the virtual
          dsig_max = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
-     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
-     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
+     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun+virt_wgt
          total_wgt_sum_max=total_wgt_sum_max+
      &        ((dsig_max - central_wgt_saved)*vegaswgt)**2
 
@@ -922,9 +926,8 @@ c for except PS points, this is the minimal approx for the virtual
          dsig_min = ((ev_wgt+cnt_wgt)*fkssymmetryfactor +
      &        cnt_swgt*fkssymmetryfactor +
      &        bsv_wgt*fkssymmetryfactorBorn +
-     &        virt_wgt*fkssymmetryfactorBorn +
      &        deg_wgt*fkssymmetryfactorDeg +
-     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun
+     &        deg_swgt*fkssymmetryfactorDeg)*unwgtfun+virt_wgt
          total_wgt_sum_min=total_wgt_sum_min+
      &        ((central_wgt_saved - dsig_min)*vegaswgt)**2
       else

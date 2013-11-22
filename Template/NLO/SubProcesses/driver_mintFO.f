@@ -82,7 +82,7 @@ c For MINT:
       include "mint.inc"
       real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
      $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
-     $     ,x(ndimmax)
+     $     ,x(ndimmax),itmax_fl
       integer ixi_i,iphi_i,iy_ij,vn
       integer ifold(ndimmax) 
       common /cifold/ifold
@@ -364,9 +364,9 @@ c From dsample_fks
       common/ctotalpoints/itotalpoints
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision virt_wgt_current
-      double precision virt_wgt
-      common/c_fks_singular/virt_wgt
+      double precision virt_wgt_current,born_wgt_ao2pi_current
+      double precision virt_wgt,born_wgt_ao2pi
+      common/c_fks_singular/virt_wgt,born_wgt_ao2pi
       logical fillh
       integer mc_hel,ihel
       double precision volh
@@ -463,6 +463,7 @@ c Fill the importance sampling array
       endif
 
       virt_wgt_current=virt_wgt
+      born_wgt_ao2pi_current=born_wgt_ao2pi
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -506,7 +507,7 @@ c     account this Jacobian
       f(3)=virt_wgt_current
       f(4)=virtual_over_born
       f(5)=abs(virt_wgt_current)
-      f(6)=born_wgt
+      f(6)=born_wgt_ao2pi_current
 
       if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return

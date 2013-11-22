@@ -512,7 +512,7 @@ c     Update the average_virtual: a_new=(virt+a_old*born)/born
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
          virtual_fraction=max(min(virtual_fraction*
-     &        max(min(2d0*etot(3)/etot(1),2d0),0.25d0),1d0),0.01d0)
+     &        max(min(2d0*etot(3)/etot(1),2d0),0.25d0),1d0),0.005d0)
          write (*,'(a,1x,f7.3,1x,f7.3)') 'update virtual fraction to:'
      $        ,virtual_fraction,average_virtual
       elseif (imode.eq.1) then
