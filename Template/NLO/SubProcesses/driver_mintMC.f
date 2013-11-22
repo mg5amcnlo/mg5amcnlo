@@ -1,4 +1,4 @@
-       Program DRIVER
+      Program DRIVER
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
@@ -20,10 +20,8 @@ C
 C     LOCAL
 C
       integer i,j,l,l1,l2,ndim,nevts
-      double precision tot,mean,sigma,res_abs
       integer npoints
-      double precision y,jac,s1,s2,xmin
-      character*130 buf,string
+      character*130 buf
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -33,10 +31,6 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      integer           Minvar(maxdim,lmaxconfigs)
-      common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -60,7 +54,6 @@ c Vegas stuff
       external sigintF
 
       integer irestart
-      character * 70 idstring
       logical savegrid
 
       external initplot
@@ -145,7 +138,6 @@ c
       average_virtual=0d0
       virtual_fraction=virt_fraction
 c
-c
 c     Read process number
 c
       ntot=0
@@ -174,7 +166,7 @@ c
       nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
-      call setcuts               !Sets up cuts & particle masses
+      call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       call initcluster
@@ -1160,26 +1152,6 @@ c used.
       return
       end
 
-     
-      function sigintS(xx,w,ifl,f_abs)
-      implicit none
-      include 'mint.inc'
-      integer ifl
-      double precision xx(ndimmax),w,f_abs(2),sigintS
-      write (*,*) 'Generation of separate S-events no longer supported'
-      stop
-      end
-
-      function sigintH(xx,w,ifl,f_abs)
-      implicit none
-      include 'mint.inc'
-      integer ifl
-      double precision xx(ndimmax),w,f_abs(2),sigintH
-      write (*,*) 'Generation of separate H-events no longer supported'
-      stop
-      end
-
-
       subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f)
       implicit none
       include 'mint.inc'
@@ -1195,7 +1167,7 @@ c used.
      $     ,tot_sum,temp_shower_scale
       external ran2
       external dlum
-      integer i,j,ii,jj,k,kk
+      integer i,j,ii,jj,k,kk,is
      $     ,proc_map(0:fks_configs,0:fks_configs)
       logical unweight,firsttime
       data firsttime /.true./
@@ -1212,6 +1184,7 @@ c used.
       integer i_process
       common/c_addwrite/i_process
       logical unwgt
+      double precision evtsgn_save,evtsgn_target
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
       character*4 abrv
@@ -1432,77 +1405,105 @@ c just return the (correct) absolute value
          else
 c pick one at random and update reweight info and all that
             if (f(1).ne.0d0) then
-               rnd=ran2()
-               if (rnd.le.f_abs_H/f(1)) then
-                  Hevents=.true.
+c When there are large cancelations between the various contributions to
+c the integral (so that the ABS integral is much larger than the
+c integral itself), reduce the statistical fluctations beteen looping
+c over many 'unweight configurations'. Pick the sign according 
+               evtsgn_save=0d0
+               evtsgn_target=0d0
+               is=0
+ 200           continue
+               do while (is.lt.min(nint((f(1)+f(5))/abs(f(2))),20) .or.
+     $              evtsgn_target.ne.0d0)
+                  is=is+1
+                  rnd=ran2()
+                  if (rnd.le.f_abs_H/f(1)) then
+                     Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
-                  nFKSprocess=1
-                  i_process=1
-                  current=abs(unwgt_table(1,2,1))
-                  rnd=ran2()
-                  do while (current.lt.rnd*f_abs_H .and.
-     $                 (i_process.le.iproc_save(nFKSprocess) .or.
-     $                 nFKSprocess.le.fks_configs))
-                     i_process=i_process+1
-                     if (i_process.gt.iproc_save(nFKSprocess)) then
-                        i_process=1
-                        nFKSprocess=nFKSprocess+1
+                     nFKSprocess=1
+                     i_process=1
+                     current=abs(unwgt_table(1,2,1))
+                     rnd=ran2()
+                     do while (current.lt.rnd*f_abs_H .and.
+     $                    (i_process.le.iproc_save(nFKSprocess) .or.
+     $                    nFKSprocess.le.fks_configs))
+                        i_process=i_process+1
+                        if (i_process.gt.iproc_save(nFKSprocess)) then
+                           i_process=1
+                           nFKSprocess=nFKSprocess+1
+                        endif
+                        current=current+abs(unwgt_table(nFKSprocess,2
+     $                       ,i_process))
+                     enddo
+                     if (i_process.gt.iproc_save(nFKSprocess) .or.
+     $                    nFKSprocess.gt.fks_configs) then
+                        write (*,*) 'ERROR #4 in unweight table'
+     $                       ,i_process,nFKSprocess
+                        stop
                      endif
-                     current=current+abs(unwgt_table(nFKSprocess,2
+                     evtsgn=sign(1d0,unwgt_table(nFKSprocess,2
      $                    ,i_process))
-                  enddo
-                  if (i_process.gt.iproc_save(nFKSprocess) .or.
-     $                 nFKSprocess.gt.fks_configs) then
-                     write (*,*) 'ERROR #4 in unweight table',i_process
-     $                    ,nFKSprocess
-                     stop
-                  endif
-                  evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
-                  if (doreweight) then
-                     nFKSprocess_reweight(1)=nFKSprocess
-                  endif
-                  nFKSprocess_used=nFKSprocess
-               else
-                  Hevents=.false.
+                     evtsgn_save=evtsgn_save+evtsgn
+                     if (doreweight) then
+                        nFKSprocess_reweight(1)=nFKSprocess
+                     endif
+                     nFKSprocess_used=nFKSprocess
+                  else
+                     Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
-                  nFKSprocess=nFKSprocess_soft
-                  i_process=1
-                  current=abs(f_unwgt(nFKSprocess,1))
-                  rnd=ran2()
-                  do while (current.lt.rnd*f_abs_S .and.
-     $                 i_process.le.iproc_save(nFKSprocess))
-                     i_process=i_process+1
-                     current=current+abs(f_unwgt(nFKSprocess,i_process))
-                  enddo
-                  if (i_process.gt.iproc_save(nFKSprocess)) then
-                     write (*,*) 'ERROR #4 in unweight table',i_process
-     $                    ,maxproc_found,nFKSprocess
-     $                    ,iproc_save(nFKSprocess)
-                     stop
-                  endif
-                  evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+                     nFKSprocess=nFKSprocess_soft
+                     i_process=1
+                     current=abs(f_unwgt(nFKSprocess,1))
+                     rnd=ran2()
+                     do while (current.lt.rnd*f_abs_S .and.
+     $                    i_process.le.iproc_save(nFKSprocess))
+                        i_process=i_process+1
+                        current=current+abs(f_unwgt(nFKSprocess
+     $                       ,i_process))
+                     enddo
+                     if (i_process.gt.iproc_save(nFKSprocess)) then
+                        write (*,*) 'ERROR #4 in unweight table'
+     $                       ,i_process,maxproc_found,nFKSprocess
+     $                       ,iproc_save(nFKSprocess)
+                        stop
+                     endif
+                     evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+                     evtsgn_save=evtsgn_save+evtsgn
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-                  i_process=etoi(i_process,nFKSprocess)
-                  if (doreweight) then
+                     i_process=etoi(i_process,nFKSprocess)
+                     if (doreweight) then
 c for the reweight info, do not write the ones that gave a zero
 c contribution
-                     j=0
-                     do i=1,nScontributions
-                        sum=0d0
-                        do ii=1,iproc_save(proc_map(proc_map(0,1),i))
-                           sum=sum+unwgt_table(proc_map(proc_map(0,1),i)
-     &                          ,1,ii)
+                        j=0
+                        do i=1,nScontributions
+                           sum=0d0
+                           do ii=1,iproc_save(proc_map(proc_map(0,1),i))
+                              sum=sum+unwgt_table(proc_map(proc_map(0,1)
+     $                             ,i),1,ii)
+                           enddo
+                           if (sum.ne.0d0) then
+                              j=j+1
+                              nFKSprocess_reweight(j)=
+     $                             proc_map(proc_map(0,1),i)
+                           endif
                         enddo
-                        if (sum.ne.0d0) then
-                           j=j+1
-                           nFKSprocess_reweight(j)=
-     &                          proc_map(proc_map(0,1),i)
-                        endif
-                     enddo
-                     nScontributions=j
+                        nScontributions=j
+                     endif
                   endif
+                  if (evtsgn.eq.evtsgn_target) return
+               enddo
+c Pick the sign randomly according to all the signs accumulated. 
+               if (ran2().lt.0.5d0+0.5d0*evtsgn_save/is) then
+                  evtsgn_target=1d0
+               else
+                  evtsgn_target=-1d0
                endif
+c If the picked sign is not equal to the sign of the last 'unweight
+c configuration', go pick and pick a new unweight configuration until
+c you find one (and the return statement above is found).
+               if (evtsgn_target.ne.evtsgn) goto 200
+               return
             endif
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
@@ -1561,24 +1562,50 @@ c pick one at random and update reweight info and all that
             f(6)=f_B
             Hevents=.false.
             if (f(1).ne.0d0) then
-               rnd=ran2()
+c When there are large cancelations between the various contributions to
+c the integral (so that the ABS integral is much larger than the
+c integral itself), reduce the statistical fluctations beteen looping
+c over many 'unweight configurations'. Pick the sign according 
+               evtsgn_save=0d0
+               evtsgn_target=0d0
+               is=0
+ 201           continue
+               do while (is.lt.min(nint((f(1)+f(5))/abs(f(2))),20) .or.
+     $              evtsgn_target.ne.0d0)
+                  is=is+1
+                  rnd=ran2()
 c Pick one of the IPROC's of the Born
-               i_process=1
-               current=abs(f_unwgt(nFKSprocess_used_born,1))
-               do while (current.lt.rnd*f_abs_S .and.
-     $              i_process.le.maxproc_found)
-                  i_process=i_process+1
-                  current=current+abs(f_unwgt(nFKSprocess_used_born
-     &                 ,i_process))
-               enddo
-               if (i_process.gt.maxproc_found) then
-                  write (*,*) 'ERROR #4 in unweight table',i_process 
-                  stop
-               endif
-               evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born,i_process))
+                  i_process=1
+                  current=abs(f_unwgt(nFKSprocess_used_born,1))
+                  do while (current.lt.rnd*f_abs_S .and.
+     $                 i_process.le.maxproc_found)
+                     i_process=i_process+1
+                     current=current+abs(f_unwgt(nFKSprocess_used_born
+     &                    ,i_process))
+                  enddo
+                  if (i_process.gt.maxproc_found) then
+                     write (*,*) 'ERROR #4 in unweight table',i_process 
+                     stop
+                  endif
+                  evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born
+     $                 ,i_process))
+                  evtsgn_save=evtsgn_save + evtsgn
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-               i_process=etoi(i_process,nFKSprocess_used_born)
+                  i_process=etoi(i_process,nFKSprocess_used_born)
+                  if (evtsgn.eq.evtsgn_target) return
+               enddo
+c Pick the sign randomly according to all the signs accumulated. 
+               if (ran2().lt.0.5d0+0.5d0*evtsgn_save/is) then
+                  evtsgn_target=1d0
+               else
+                  evtsgn_target=-1d0
+               endif
+c If the picked sign is not equal to the sign of the last 'unweight
+c configuration', go pick and pick a new unweight configuration until
+c you find one (and the return statement above is found).
+               if (evtsgn_target.ne.evtsgn) goto 201
+               return
             endif
          endif
       endif

@@ -89,7 +89,7 @@ c others: same as 1 (for now)
      $     ,efrac(nintegrals),dummy
       integer kdim,kint,kpoint,nit,ncalls,iret,nintcurr,nintcurr_virt
      $     ,ifirst,nit_included,kpoint_iter,non_zero_point(nintegrals)
-     $     ,ntotcalls(nintegrals),nint_used,nint_used_virt
+     $     ,ntotcalls(nintegrals),nint_used,nint_used_virt,min_it
       real * 8 ran3
       external ran3,fun
       logical even,double_events,bad_iteration
@@ -102,10 +102,6 @@ c others: same as 1 (for now)
       data title(4)/'virtual ratio'/
       data title(5)/'ABS virtual  '/
       data title(6)/'born*ao2pi   '/
-
-      double precision f2
-
-      f2=0d0
 c if ncalls0 is greater than 0, use the default running, i.e. do not
 c double the events after each iteration as well as use a fixed number
 c of intervals in the grids.
@@ -132,12 +128,14 @@ c
 c Grids read from file
          even=.true.
          imode=0
+         min_it=min_it0
          do kdim=1,ndim
             ifold(kdim)=1
          enddo
       elseif(imode.eq.0) then
 c Initialize grids
          even=.true.
+         min_it=min_it0
          do kdim=1,ndim
             ifold(kdim)=1
             do kint=0,nint_used
@@ -150,6 +148,7 @@ c Initialize upper bounding envelope
          xint=ans(1)
          xint_virt=ans(5)
          even=.false.
+         min_it=min_it1
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
             nintcurr_virt=nint_used_virt/ifold(kdim)
@@ -273,24 +272,10 @@ c contribution to integral
             enddo
          else
 c this accumulated value will not be used
-c$$$             vol=3.3200157772795982D0 
-c$$$             x(1)= 0.72185880175311223D0 
-c$$$             x(2)=        0.86358405828575346D0
-c$$$             x(3)=        0.72809620807775799D0 
-c$$$             x(4)=         2.4610142871836042D-002  
-c$$$             x(5)=  0.52724831211765333D0 
-c$$$             x(6)=        0.92937266944336683D0
-c$$$             x(7)=       0.24200549739797475D0
-c$$$         call get_ave_virt(x,nint_used_virt,ndim,average_virtual)
-
             dummy=fun(x,vol,ifirst,f1)
             do i=1,nintegrals
                f(i)=f(i)+f1(i)
             enddo
-
-c$$$            write (*,*) f
-c$$$            stop
-
             ifirst=1
             call nextlexi(ndim,ifold,kfold,iret)
             if(iret.eq.0) goto 1
@@ -300,10 +285,6 @@ c closing call: accumulated value with correct sign
                f(i)=f1(i)
             enddo
          endif
-
-c$$$         f2=(f2*((kpoint_iter-1)*ncalls+kpoint-1)+f(2))/((kpoint_iter-1)*ncalls+kpoint)
-c$$$         write (*,*) f2
-
 c
          if(imode.eq.0) then
 c accumulate the function in xacc(icell(kdim),kdim) to adjust the grid later
@@ -365,7 +346,7 @@ c Special for the computation of the 'computed virtual'
          write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
          write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '
      &        ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
-         stop
+         stop 1
       endif
 c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
@@ -386,8 +367,9 @@ c the abs is to avoid tiny negative values
          endif
       enddo
       do i=1,nintegrals
-         write(*,'(a,1x,e10.4,1x,a,1x,e10.4,1x,a,1x,f7.3,1x,a)') title(i)
-     $        //' =',vtot(i),' +/- ',etot(i),' (',efrac(i)*100d0,'%)'
+         write(*,'(a,1x,e10.4,1x,a,1x,e10.4,1x,a,1x,f7.3,1x,a)')
+     $        title(i)//' =',vtot(i),' +/- ',etot(i),' (',efrac(i)*100d0
+     $        ,'%)'
       enddo
 C If there was a large fluctation in this iteration, be careful with
 C including it in the accumalated results and plots.

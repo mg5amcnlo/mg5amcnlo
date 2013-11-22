@@ -8,17 +8,16 @@ C     CONSTANTS
 C
       double precision zero
       parameter       (ZERO = 0d0)
-      include 'genps.inc'
       include 'nexternal.inc'
+      include 'genps.inc'
       INTEGER    ITMAX,   NCALL
+
       common/citmax/itmax,ncall
 C
 C     LOCAL
 C
       integer i,j,l,l1,l2,ndim
-      double precision dsig,tot,mean,sigma
       integer npoints
-      external dsig
       character*130 buf
 c
 c     Global
@@ -26,10 +25,6 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      integer           Minvar(maxdim,lmaxconfigs)
-      common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -49,11 +44,10 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigint,resA,errA,resS,errS,chi2
+      real*8 sigint
       external sigint
 
       integer irestart
-      character * 70 idstring
       logical savegrid
 
       logical            flat_grid
@@ -86,11 +80,10 @@ c For tests of virtuals
       integer n_mp, n_disc
 c For MINT:
       include "mint.inc"
-      real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
-     $     ,xerr,itmax_fl
-      real * 8 xint_virt,ymax_virt
-      real * 8 x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij
+      real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
+     $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
+     $     ,x(ndimmax)
+      integer ixi_i,iphi_i,iy_ij,vn
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer ifold_energy,ifold_phi,ifold_yij
@@ -100,6 +93,13 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
+     $     ,ndimmax)
+      double precision ave_virt(nintervals_virt,ndimmax)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
+     $     ,nvirt_acc
 
       logical SHsep
       logical Hevents
@@ -203,13 +203,15 @@ c at the NLO)
          else
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
-            do j=0,nintervals
+            read (12,*) (xgrid(0,i),i=1,ndim)
+            do j=1,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
+               read (12,*) (ave_virt(j,i),i=1,ndim)
             enddo
             if (ncall.gt.0 .and. accuracy.ne.0d0) then
-               read (12,*) xint,xerr,ncall,itmax
-c Update the number of PS points based on xerr, ncall and accuracy
-               itmax_fl=itmax*(xerr/accuracy)**2
+               read (12,*) ans(1),unc(1),ncall,itmax
+c Update the number of PS points based on unc(1), ncall and accuracy
+               itmax_fl=itmax*(unc(1)/accuracy)**2
                if (itmax_fl.le.4d0) then
                   itmax=max(nint(itmax_fl),2)
                elseif (itmax_fl.gt.4d0 .and. itmax_fl.le.16d0) then
@@ -219,9 +221,9 @@ c Update the number of PS points based on xerr, ncall and accuracy
                   itmax=nint(sqrt(itmax_fl))
                   ncall=nint(ncall*itmax_fl/nint(sqrt(itmax_fl)))
                endif
-               accuracy=accuracy/xint ! relative accuracy on the ABS X-section
+               accuracy=accuracy/ans(1) ! relative accuracy on the ABS X-section
             else
-               read (12,*) xint,xerr,dummy,dummy
+               read (12,*) ans(1),unc(1),dummy,dummy
             endif
             read (12,*) virtual_fraction,average_virtual
             close (12)
@@ -231,25 +233,27 @@ c
          call initplot
 c
          write (*,*) 'imode is ',imode
-         call mint(sigint,ndim,ncall,itmax,imode,xgrid,xint,ymax
-     $        ,xint_virt,ymax_virt,resA,errA,resS,errS,chi2)
+         call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
+     $        ,ans,unc,chi2)
          open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',resA,' +/-',errA
-         write(58,*)'Final result:',resS,' +/-',errS
+         write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(58,*)'Final result:',ans(2),' +/-',unc(2)
          close(58)
-         write(*,*)'Final result [ABS]:',resA,' +/-',errA
-         write(*,*)'Final result:',resS,' +/-',errS
-         write(*,*)'chi**2 per D.o.F.:',chi2
+         write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(*,*)'Final result:',ans(2),' +/-',unc(2)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*)resA, errA, 0d0, 0, 0, 0, 0, 0d0 ,0d0, resS 
+         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
-      
+c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
-         do j=0,nintervals
+         write (12,*) (xgrid(0,i),i=1,ndim)
+         do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
+            write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
-         write (12,*) resA,errA,ncall,itmax
+         write (12,*) ans(1),unc(1),ncall,itmax
          write (12,*) virtual_fraction,average_virtual
          close (12)
       else
