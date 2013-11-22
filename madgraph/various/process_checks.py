@@ -1965,8 +1965,8 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 #===============================================================================
 # Generate a loop matrix element
 #===============================================================================
-def generate_loop_matrix_element(process_definition, reuse, 
-                                                         cmd = FakeInterface()):
+def generate_loop_matrix_element(process_definition, reuse,
+                                        cmd = FakeInterface(),appendfix=""):
     """ Generate a loop matrix element from the process definition, and returns
     it along with the timing information dictionary.
     If reuse is True, it reuses the already output directory if found."""
@@ -1995,8 +1995,9 @@ def generate_loop_matrix_element(process_definition, reuse,
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s"%(
-                               '_'.join(process.shell_string().split('_')[1:])))
+    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s%s"%(
+                    '_'.join(process.shell_string().split('_')[1:]),appendfix))
+    
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
         # If reusing, return process instead of matrix element
@@ -2086,17 +2087,26 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
 # check_timing for loop processes
 #===============================================================================
 def check_stability(process_definition, param_card = None,cuttools="",tir={}, 
-                               options=None,nPoints=100, reuse=False, 
+                               options={},nPoints=100, 
                                cmd = FakeInterface(), MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
     
+    if "reuse" in options:
+        reuse=options['reuse']
+    else:
+        reuse=False
     
     keep_folder = reuse
     model=process_definition.get('model')
 
+    if "MLReductionLib" not in MLOptions:
+        appendfix="_1"
+    else:
+        appendfix="_%i"%MLOptions["MLReductionLib"]
+    
     timing, matrix_element = generate_loop_matrix_element(process_definition,
-                                                                 reuse, cmd=cmd)
+                                            reuse, cmd=cmd,appendfix=appendfix)
     reusing = isinstance(matrix_element, base_objects.Process)
     options['reuse'] = reusing
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
