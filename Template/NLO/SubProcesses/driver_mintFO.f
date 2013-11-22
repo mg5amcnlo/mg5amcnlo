@@ -203,9 +203,10 @@ c at the NLO)
          else
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
-            read (12,*) (xgrid(0,i),i=1,ndim)
-            do j=1,nintervals
+            do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
+            enddo
+            do j=1,nintervals_virt
                read (12,*) (ave_virt(j,i),i=1,ndim)
             enddo
             if (ncall.gt.0 .and. accuracy.ne.0d0) then
@@ -248,9 +249,10 @@ c
 c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
-         write (12,*) (xgrid(0,i),i=1,ndim)
-         do j=1,nintervals
+         do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
             write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          write (12,*) ans(1),unc(1),ncall,itmax

@@ -97,11 +97,11 @@ c others: same as 1 (for now)
       common/c_avg_virt/average_virtual,virtual_fraction
       character*13 title(nintegrals)
       data title(1)/'ABS integral '/
-      data title(2)/'    integral '/
-      data title(3)/'    virtual  '/
-      data title(4)/'virtual ratio'/
+      data title(2)/'Integral     '/
+      data title(3)/'Virtual      '/
+      data title(4)/'Virtual ratio'/
       data title(5)/'ABS virtual  '/
-      data title(6)/'born*ao2pi   '/
+      data title(6)/'Born*ao2pi   '/
 c if ncalls0 is greater than 0, use the default running, i.e. do not
 c double the events after each iteration as well as use a fixed number
 c of intervals in the grids.

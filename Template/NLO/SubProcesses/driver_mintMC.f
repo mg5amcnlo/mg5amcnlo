@@ -223,9 +223,10 @@ c initialize grids
          else
 c to restore grids:
             open (unit=12, file='preset_mint_grids',status='old')
-            read (12,*) (xgrid(0,i),i=1,ndim)
-            do j=1,nintervals
+            do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
+            enddo
+            do j=1,nintervals_virt
                read (12,*) (ave_virt(j,i),i=1,ndim)
             enddo
             read (12,*) (ans(i),i=1,nintegrals)
@@ -255,9 +256,10 @@ c
 c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
-         write (12,*) (xgrid(0,i),i=1,ndim)
-         do j=1,nintervals
+         do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
             write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          write (12,*) (ans(i),i=1,nintegrals)
@@ -275,9 +277,10 @@ c*************************************************************
          endif
 c to restore grids:
          open (unit=12, file='mint_grids',status='old')
-         read (12,*) (xgrid(0,i),i=1,ndim)
-         do j=1,nintervals
+         do j=0,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
             read (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          read (12,*) (ans(i),i=1,nintegrals)
@@ -316,6 +319,8 @@ c to save grids:
          do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
             write (12,*) (ymax(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
             write (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          write (12,*) ymax_virt
@@ -352,6 +357,8 @@ c to restore grids:
          do j=1,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
             read (12,*) (ymax(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
             read (12,*) (ave_virt(j,i),i=1,ndim)
          enddo
          read (12,*) ymax_virt
