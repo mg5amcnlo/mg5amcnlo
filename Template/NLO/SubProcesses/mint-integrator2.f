@@ -324,6 +324,10 @@ c enhancement due to the virtual_fraction. (And again limit by factor 2
 c at most).
             if (f(5)*virtual_fraction.gt.ymax_virt) ymax_virt=min(f(5)
      $           *virtual_fraction,ymax_virt*2d0)
+c for consistent printing in the log files (in particular when doing LO
+c runs), set also f(6) to zero when imode.eq.1 and the virtuals are not
+c included.
+            if (f(3).eq.0) f(6)=0d0
          endif
          do i=1,nintegrals
             if (f(i).ne.0d0) non_zero_point(i)=non_zero_point(i)+1

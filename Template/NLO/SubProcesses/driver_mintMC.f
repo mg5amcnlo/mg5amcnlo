@@ -394,8 +394,12 @@ c determine how many events for the virtual and how many for the no-virt
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
          write (*,*) 'Generation efficiencies:',x(1),x(4)
-         write (*,*) 'Integral from novi points computed',x(2),x(3)
-         write (*,*) 'Integral from virt points computed',x(5),x(6)
+c Uncomment the next to lines to plot the integral from the PS points
+c trown during event generation. This corresponds only to the cross
+c section if these points are thrown flat, so not using the xmmm() stuff
+c in mint.
+c$$$         write (*,*) 'Integral from novi points computed',x(2),x(3)
+c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
