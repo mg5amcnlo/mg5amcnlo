@@ -872,7 +872,6 @@ class OneTagResults(dict):
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error_pythia']
                     if 'rwt' in self.pythia:
-                        print 'rwt is here so the problem is in the template'
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:

@@ -486,7 +486,7 @@ class HelpToCmd(object):
         logger.info("   -f options: answer all question by default.")
         
     def help_syscalc(self):
-        logger.info("syntax: syscalc [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("syntax: syscalc [RUN] [%s] [-f | --tag=]" % '|'.join(self._plot_mode))
         logger.info("-- calculate systematics information for the RUN (current run by default)")
         logger.info("     at different stages of the event generation for scale/pdf/...")
 
@@ -1198,16 +1198,23 @@ class CheckValidForCmd(object):
             args.append('all')
             return
 
+        #deal options
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
         
         if args[0] not in self._syscalc_mode:
-            self.set_run_name(args[0], level='syscalc')
+            self.set_run_name(args[0], tag=tag, level='syscalc')
             del args[0]
             if len(args) == 0:
                 args.append('all')
         elif not self.run_name:
             self.help_syscalc()
             raise self.InvalidCmd('No run name currently defined. Please add this information.')                             
-        
+        elif tag and tag != self.run_tag:
+            self.set_run_name(self.run_name, tag=tag, level='syscalc')
+            
         for arg in args:
             if arg not in self._syscalc_mode and arg != self.run_name:
                  self.help_syscalc()
@@ -1216,7 +1223,7 @@ class CheckValidForCmd(object):
         if self.run_card['use_syst'] not in self.true:
             raise self.InvalidCmd('Run %s does not include ' % self.run_name + \
                                   'systematics information needed for syscalc.')
-            
+        
     
     def check_pgs(self, arg):
         """Check the argument for pythia command
@@ -1587,11 +1594,20 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_syscalc(self, text, line, begidx, endidx):
         """ Complete the syscalc command """
         
+        output = {}
         args = self.split_arg(line[0:begidx], error=False)
-        if len(args) > 1:
-            return self.list_completion(text, self._syscalc_mode)
-        else:
-            return self.list_completion(text, self._syscalc_mode + self.results.keys())
+                
+        if len(args) <=1:
+            output['RUN_NAME'] = self.list_completion(self.results.keys())
+        output['MODE'] =  self.list_completion(text, self._syscalc_mode)
+        output['options'] = ['-f']
+        if len(args) > 1 and (text.startswith('--t')):
+            run = args[1]
+            if run in self.results:
+                tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
+                output['options'] += tags
+        
+        return self.deal_multiple_categories(output)
         
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """
@@ -3553,7 +3569,7 @@ calculator."""
         self.check_syscalc(args)
         logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['syscalc'], args)
+        self.ask_edit_cards(['run'], args)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -3574,7 +3590,6 @@ calculator."""
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
-                print '3577 syst.dat', pjoin(self.me_dir, 'Events','syst.dat'), os.path.exists(pjoin(self.me_dir, 'Events','syst.dat'))
                 self.run_syscalc('Pythia')
                 shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
                 os.system('gzip -f %s' % filename)                
@@ -4524,15 +4539,13 @@ calculator."""
         
         self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
-            proc = misc.Popen([os.path.join(scdir, 'sys_calc'),
+            proc = misc.call([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
                             stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
                             stderr = subprocess.STDOUT,
-                            stdin=subprocess.PIPE,
                             cwd=event_dir)
-            proc.wait()
             # Wait 5 s to make sure file is finished writing
-            time.sleep(10)            
+            time.sleep(5)            
         except OSError, error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
@@ -4838,7 +4851,7 @@ calculator."""
                      'delphes': 'delphes_card.dat',
                      'trigger': 'delphes_trigger.dat',
                      'param': 'param_card.dat',
-                     'syscalc': 'syscalc_card.dat'
+                     'run': 'run_card.dat'
                      }
 
         # Ask the user if he wants to edit any of the files
