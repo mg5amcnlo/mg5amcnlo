@@ -2042,11 +2042,14 @@ def generate_loop_matrix_element(process_definition, reuse,
 # check profile for loop process (timings + stability in one go)
 #===============================================================================
 def check_profile(process_definition, param_card = None,cuttools="",tir={},
-                            options = None, cmd = FakeInterface(),MLOptions={}):
+                            options = {}, cmd = FakeInterface(),MLOptions={}):
     """For a single loop process, check both its timings and then its stability
     in one go without regenerating it."""
 
-    keep_folder = options['reuse']
+    if 'reuse' not in options:
+        keep_folder=False
+    else:
+        keep_folder = options['reuse']
 
     model=process_definition.get('model')
 
@@ -2137,12 +2140,15 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
 # check_timing for loop processes
 #===============================================================================
 def check_timing(process_definition, param_card= None, cuttools="",tir={},
-                                          options=None, cmd = FakeInterface(),
+                                          options={}, cmd = FakeInterface(),
                                           MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
 
-    keep_folder = options['reuse']
+    if 'reuse' not in options:
+        keep_folder = False
+    else:
+        keep_folder = options['reuse']
     model=process_definition.get('model')
     timing1, matrix_element = generate_loop_matrix_element(process_definition,
                                                            keep_folder, cmd=cmd)
