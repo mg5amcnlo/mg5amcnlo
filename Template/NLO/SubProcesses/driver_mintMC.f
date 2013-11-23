@@ -1424,8 +1424,8 @@ c over many 'unweight configurations'. Pick the sign according
                evtsgn_target=0d0
                is=0
  200           continue
-               do while (is.lt.min(nint((f(1)+f(5))/abs(f(2))),20) .or.
-     $              evtsgn_target.ne.0d0)
+               do while (is.lt.max(min(nint((f(1))/abs(f(2))),20),1)
+     $              .or.evtsgn_target.ne.0d0)
                   is=is+1
                   rnd=ran2()
                   if (rnd.le.f_abs_H/f(1)) then
@@ -1581,7 +1581,7 @@ c over many 'unweight configurations'. Pick the sign according
                evtsgn_target=0d0
                is=0
  201           continue
-               do while (is.lt.min(nint((f(1)+f(5))/abs(f(2))),20) .or.
+               do while (is.lt.max(min(nint((f(1))/abs(f(2))),20),1) .or.
      $              evtsgn_target.ne.0d0)
                   is=is+1
                   rnd=ran2()
