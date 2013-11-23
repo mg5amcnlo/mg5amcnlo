@@ -292,8 +292,9 @@ Block yukawa
 ###################################
 ## INFORMATION FOR DECAY
 ###################################
-DECAY  23 2.441404e+00 # set of param :1*WZ, 1*WH 
+DECAY  23 2.441404e+00 # WZ 
 DECAY  24 3.000000e+00 # WW 
+DECAY  25 2.441404e+00 # WH 
 ## Dependent parameters, given by model restrictions.
 ## Those values should be edited following the 
 ## analytical expression. MG5 ignores those values 
@@ -313,7 +314,6 @@ DECAY  15 0.000000 # ta- : 0.0
 DECAY  16 0.000000 # vt : 0.0 
 DECAY  21 0.000000 # g : 0.0 
 DECAY  22 0.000000 # a : 0.0 
-DECAY  25 2.441404 # h : WZ 
 """.split('\n')
 
         self.assertEqual(self.content.getvalue().split('\n'), goal)

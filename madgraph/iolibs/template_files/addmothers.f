@@ -1,5 +1,5 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
-     $                      npart,numproc)
+     $                      npart,numproc,flip)
 
       implicit none
       include 'genps.inc'
@@ -16,6 +16,7 @@
       double precision rscale,aqcd,aqed,targetamp(maxflow)
       character*300 buff
       character*20 cform
+      logical flip ! If .true., initial state is mirrored
 
       integer isym(nexternal,99), jsym
       integer i,j,k,ida(2),ns,nres,ires,icl,ito2,idenpart,nc,ic
@@ -25,6 +26,7 @@
       double precision qicl(-nexternal+3:2*nexternal-3), factpm
       double precision xtarget
       data iseed/0/
+      integer lconfig,idij(-nexternal+2:nexternal)
 
       integer diag_number
       common/to_diag_number/diag_number
@@ -76,7 +78,7 @@ c      integer ncols,ncolflow(maxamps),ncolalt(maxamps),icorg
 c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 
       double precision pt
-      integer get_color,elim_indices,set_colmp,fix_tchannel_color
+      integer get_color,elim_indices,set_colmp,fix_tchannel_color,combid
       real ran1
       external pt,ran1,get_color,elim_indices,set_colmp,fix_tchannel_color
 
@@ -90,13 +92,14 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,icorg
 c   
 c   Choose the config (diagram) which was actually used to produce the event
 c   
-c   ...unless the diagram is passed in igscl(1); then use that diagram
-c      if (igscl(0).ne.0) then
-c        if (btest(mlevel,3)) then
-c          write(*,*)'unwgt.f: write out diagram ',igscl(1)
-c        endif
-c        iconfig=igscl(1)
-c      endif
+c   ...unless the diagram is passed in igraphs(1); then use that diagram
+      lconfig=iconfig
+      if (ickkw.gt.0) then
+         if (btest(mlevel,3)) then
+            write(*,*)'unwgt.f: write out diagram ',igraphs(1)
+         endif
+         lconfig=igraphs(1)
+      endif
       
 c
 c    Choose a color flow which is certain to work with the propagator
@@ -108,14 +111,14 @@ c
       if(nc.gt.0)then
       if(icolamp(1,%(iconfig)s,iproc)) then
         targetamp(1)=jamp2(1)
-c        print *,'Color flow 1 allowed for config ',iconfig
+c        print *,'Color flow 1 allowed for config ',lconfig
       else
         targetamp(1)=0d0
       endif
       do ic =2,nc
         if(icolamp(ic,%(iconfig)s,iproc))then
           targetamp(ic) = jamp2(ic)+targetamp(ic-1)
-c          print *,'Color flow ',ic,' allowed for config ',iconfig,targetamp(ic)
+c          print *,'Color flow ',ic,' allowed for config ',lconfig,targetamp(ic)
         else
           targetamp(ic)=targetamp(ic-1)
         endif
@@ -175,6 +178,13 @@ c
 c     Get mother information from chosen graph
 c     
 
+c     Set idij for external particles (needed to keep track of BWs)
+        if(ickkw.gt.0) then
+           do i=1,nexternal
+              idij(i)=ishft(1,i-1)
+           enddo
+        endif
+
 c     First check number of resonant s-channel propagators
         ns=0
         nres=0
@@ -183,16 +193,18 @@ c     Loop over propagators to find mother-daughter information
         do i=-1,-nexternal+2,-1
 c       Daughters
           if(i.gt.-nexternal+2)then
-             ida(1)=iforest(1,i,iconfig)
-             ida(2)=iforest(2,i,iconfig)
+             ida(1)=iforest(1,i,lconfig)
+             ida(2)=iforest(2,i,lconfig)
              do j=1,2
                 if(ida(j).gt.0) ida(j)=isym(ida(j),jsym)
              enddo
+c            Set idij (needed to keep track of BWs)
+             if(ickkw.gt.0) idij(i)=combid(idij(ida(1)),idij(ida(2)))
           endif
 c       Decide s- or t-channel
           if(i.gt.-nexternal+2.and.
-     $         iabs(sprop(numproc,i,iconfig)).gt.0) then ! s-channel propagator
-            jpart(1,i)=sprop(numproc,i,iconfig)
+     $         iabs(sprop(numproc,i,lconfig)).gt.0) then ! s-channel propagator
+            jpart(1,i)=sprop(numproc,i,lconfig)
             ns=ns+1
           else if(nres.gt.0.and.maxcolor.gt.maxorg) then
 c         For t-channel propagators, just check that the colors are ok
@@ -206,16 +218,16 @@ c                  2, 1 and the last s-channel
                    ida(2)=i+1
                 else
 c                  The daughter info is in iforest
-                   ida(1)=iforest(1,i,iconfig)
-                   ida(2)=iforest(2,i,iconfig)
+                   ida(1)=iforest(1,i,lconfig)
+                   ida(2)=iforest(2,i,lconfig)
                 endif
 c            Reverse colors of t-channels to get right color ordering
                 ncolmp=0
                 ncolmp=set_colmp(ncolmp,icolmp,2,jpart,
-     $               iforest(1,-max_branch,iconfig),icolalt,
+     $               iforest(1,-max_branch,lconfig),icolalt,
      $               icolalt(2,2),icolalt(1,2))
              else
-                jpart(1,i)=tprid(i,iconfig)
+                jpart(1,i)=tprid(i,lconfig)
                 mo_color=get_color(jpart(1,i))
                 ncolmp=0
              endif
@@ -227,11 +239,11 @@ c            Reverse colors of t-channels to get right color ordering
              endif
 c            Set icolmp for daughters
              ncolmp=set_colmp(ncolmp,icolmp,ida(2),jpart,
-     $            iforest(1,-max_branch,iconfig),icolalt,
+     $            iforest(1,-max_branch,lconfig),icolalt,
      $            icolalt(1,ida(2)),icolalt(2,ida(2)))
 c            Reverse colors of t-channels to get right color ordering
              ncolmp=set_colmp(ncolmp,icolmp,ida(1),jpart,
-     $            iforest(1,-max_branch,iconfig),icolalt,
+     $            iforest(1,-max_branch,lconfig),icolalt,
      $            icolalt(2,ida(1)),icolalt(1,ida(1)))
 c            Fix t-channel color
 c             print *,'t-channel: ',i,ida(1),ida(2),mo_color
@@ -248,7 +260,8 @@ c          if((igscl(0).ne.0.and.
 c     $       (iabs(jpart(1,i)).gt.5.and.iabs(jpart(1,i)).lt.11).or.
 c     $       (iabs(jpart(1,i)).gt.16.and.iabs(jpart(1,i)).ne.21)).or.
 c     $       (igscl(0).eq.0.and.OnBW(i))) then 
-          if(OnBW(i)) then 
+          if(ickkw.eq.0.and.OnBW(i).or.
+     $       ickkw.gt.0.and.isbw(idij(i))) then 
 c         Resonance whose mass should be preserved
             jpart(6,i)=2
             nres=nres+1
@@ -262,7 +275,7 @@ c       Calculate momentum (p1+p2 for s-channel, p2-p1 for t-channel)
           enddo
           pb(4,i)=sqrt(max(0d0,pb(0,i)**2-pb(1,i)**2-pb(2,i)**2-pb(3,i)**2))
 c          if(jpart(6,i).eq.2.and.
-c     $       abs(pb(4,i)-prmass(i,iconfig)).gt.5d0*prwidth(i,iconfig)) then
+c     $       abs(pb(4,i)-prmass(i,lconfig)).gt.5d0*prwidth(i,lconfig)) then
 c            jpart(6,i)=3
 c            nres=nres-1
 c          endif
@@ -283,7 +296,7 @@ c     Reset list of color indices
 c     Add new color indices to list of color indices
           do j=1,2
              ncolmp=set_colmp(ncolmp,icolmp,ida(j),jpart,
-     $            iforest(1,-max_branch,iconfig),icolalt,
+     $            iforest(1,-max_branch,lconfig),icolalt,
      $            icolalt(1,ida(j)),icolalt(2,ida(j)))
           enddo
 c          print *,'s-channel: ',i,mo_color,ida(1),ida(2)
@@ -354,11 +367,47 @@ c
             pb(j,ito(i))=pb(j,i)
           enddo
         enddo
+c
+c     Set correct mother number for clustering info
+c
+        if (icluster(1,1).ne.0) then
+           do i=1,nexternal-2
+              if(icluster(4,i).gt.0)then
+                 icluster(4,i)=ito(icluster(4,i))
+              else
+                 icluster(4,i)=-1
+              endif
+              if(icluster(3,i).eq.0)then
+                 icluster(3,i)=-1
+              endif
+              if(ito(icluster(1,i)).gt.0)
+     $             icluster(1,i)=ito(icluster(1,i))
+              if(ito(icluster(2,i)).gt.0)
+     $             icluster(2,i)=ito(icluster(2,i))
+              if(flip)then
+                 if(icluster(1,i).le.2)
+     $             icluster(1,i)=3-icluster(1,i)
+                 if(icluster(2,i).le.2)
+     $             icluster(2,i)=3-icluster(2,i)
+                 if(icluster(3,i).ge.1.and.icluster(3,i).le.2)
+     $             icluster(3,i)=3-icluster(3,i)
+              endif
+           enddo
+        endif
+
+        if (flip) then
+c       Need to flip initial state color, since might be overwritten
+           do i=1,7
+              j=jpart(i,1)
+              jpart(i,1)=jpart(i,2)
+              jpart(i,2)=j
+           enddo
+        endif
 
         if(ickkw.gt.0) then
            write(cform,'(a4,i2,a6)') '(a1,',max(nexternal,10),'e15.7)'
            write(buff,cform) '#',(ptclus(i),i=3,nexternal)
-         endif
+        endif
         npart = nexternal+nres
 
       return

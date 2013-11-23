@@ -138,7 +138,7 @@ class TestMECmdShell(unittest.TestCase):
 #      PDG        Width""".split('\n'), data.strip().split('\n'))
         
     def test_creating_matched_plot(self):
-        """test that the creation of matched plot works"""
+        """test that the creation of matched plot works and the systematics as well"""
 
         cmd = os.getcwd()
         self.generate('p p > W+', 'sm')
@@ -156,9 +156,10 @@ class TestMECmdShell(unittest.TestCase):
         #modify the run_card
         run_card = self.cmd_line.run_card
         run_card['nevents'] = 44
+        run_card['use_syst'] = 'F'
         run_card.write('/tmp/MGPROCESS/Cards/run_card.dat',
                                     '/tmp/MGPROCESS/Cards/run_card_default.dat')
-            
+
         self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 44)
@@ -167,9 +168,9 @@ class TestMECmdShell(unittest.TestCase):
         
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 100)
         
-        self.check_parton_output()
-        self.check_parton_output('run_02', target_event=44)
-        self.check_pythia_output()        
+        self.check_parton_output(syst=True)
+        self.check_parton_output('run_02', target_event=44, syst=False)
+        self.check_pythia_output(syst=True)        
         f2 = self.check_matched_plot(mintime=start, tag='tag_1')        
         
         self.assertNotEqual(f1.split('\n'), f2.split('\n'))
@@ -276,20 +277,34 @@ class TestMECmdShell(unittest.TestCase):
         result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100):
+    def check_parton_output(self, run_name='run_01', target_event=100, syst=False):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
+        
+        if syst:
+            # check that the html has the information
+            self.assertTrue('syst' in data[0].parton)
+            # check that the code was runned correctly
+            fsock = open('/tmp/MGPROCESS/Events/%s/%s_parton_syscalc.log' % \
+                 (data[0]['run_name'], data[0]['tag']),'r')
+            text = fsock.read()
+            self.assertEqual(text.count('cross-section'),3)
+        
                 
-    def check_pythia_output(self, run_name='run_01'):
+    def check_pythia_output(self, run_name='run_01', syst=False):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
         self.assertTrue('lhe' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
+
+        if syst:
+            # check that the html has the information
+            self.assertTrue('rwt' in data[0].pythia)
 
     def check_matched_plot(self, run_name='run_01', mintime=None, tag='fermi'):
         """ """

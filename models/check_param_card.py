@@ -110,6 +110,8 @@ class Parameter (object):
         elif self.format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif self.format == 'str':
+            if self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -302,7 +304,10 @@ class ParamCard(dict):
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
-                cur_block.append(param)
+                try:
+                    cur_block.append(param)
+                except InvalidParamCard:
+                    pass
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)
@@ -835,7 +840,10 @@ def convert_to_slha1(path, outputpath=None ):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
-
+    if not 'usqmix' in card:
+        #already slha1
+        card.write(outputpath)
+        return
         
     # Mass 
     #card.reorder_mass() # needed?
@@ -1005,6 +1013,10 @@ def convert_to_mg5card(path, outputpath=None, writting=True):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
+    if 'usqmix' in card:
+        #already mg5(slha2) format
+        card.write(outputpath)
+        return
 
         
     # SMINPUTS

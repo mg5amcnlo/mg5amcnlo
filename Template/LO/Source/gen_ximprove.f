@@ -12,8 +12,8 @@ c
       character*(*) symfile
       parameter (symfile='symfact.dat')
 
-      include 'run_config.inc'
       include 'maxparticles.inc'
+      include 'run_config.inc'
       include 'maxconfigs.inc'
 c
 c     global
@@ -236,6 +236,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 
@@ -354,7 +355,16 @@ c         write(26,20) 'rm -f moffset.dat'
      &        '"  >> input_sg.txt' !Helicity 
          write(26,'(5x,3a)')'echo "',gn(io(i))(2:ip-1),
      $        '" >>input_sg.txt'
+      write(26,20) 'for try in $(seq 1 10);'
+      write(26,20) 'do'
          write(26,20) '../madevent >> $k <input_sg.txt'
+         write(26,25) 'if [ -s $k ]'
+         write(26,25) 'then'
+         write(26,25) '    break'
+         write(26,25) 'else'
+         write(26,25) '    echo $try > fail.log '
+         write(26,25) 'fi'
+         write(26,25) 'done'
          write(26,20) 'rm ftn25 ftn26'
          write(26,20) 'cat $k >> log.txt'
          write(26,20) 'cd ../'
@@ -380,6 +390,7 @@ c***********************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
 c
 c     Arguments
@@ -484,6 +495,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 c
@@ -681,7 +693,16 @@ c
      &        ' " >> input_sg.txt' !Helicity 0=exact
          write(26,'(9x,3a)')'echo "',gn(io(np))(2:ip-1),
      $        '" >>input_sg.txt'
+         write(26,25) 'for try in $(seq 1 10);'
+         write(26,25) 'do'
          write(26,25) '../madevent >> $k <input_sg.txt'
+         write(26,25) 'if [ -s $k ]'
+         write(26,25) 'then'
+         write(26,25) '    break'
+         write(26,25) 'else'
+         write(26,25) '    echo $try > fail.log '
+         write(26,25) 'fi'
+         write(26,25) 'done'
          write(26,25) 'cat $k >> log.txt'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
@@ -718,7 +739,16 @@ c         write(26,20) 'qsub -N $1$j public_sg.sh >> ../../running_jobs'
          write(26,25) 'if [[ -e ftn26 ]]; then'
          write(26,25) '     cp ftn26 ftn25'
          write(26,25) 'fi'
+                  write(26,25) 'for try in $(seq 1 10);'
+         write(26,25) 'do'
          write(26,25) '../madevent >> $k <input_sg.txt'
+         write(26,25) 'if [ -s $k ]'
+         write(26,25) 'then'
+         write(26,25) '    break'
+         write(26,25) 'else'
+         write(26,25) '    echo $try > fail.log '
+         write(26,25) 'fi'
+         write(26,25) 'done'
          write(26,25) 'cat $k >> log.txt'
          write(26,20) 'fi'
          write(26,20) 'cd ../'
@@ -747,6 +777,7 @@ c*****************************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'maxconfigs.inc'
 c
@@ -848,7 +879,16 @@ c
      &           ' " >> input_sg.txt' !Helicity 0=exact
             write(26,'(9x,3a)')'echo "',gn(i)(2:ip-1),
      $           '" >>input_sg.txt'
+                  write(26,25) 'for try in $(seq 1 10);'
+         write(26,25) 'do'
             write(26,25) '../madevent >> $k <input_sg.txt'
+         write(26,25) 'if [ -s $k ]'
+         write(26,25) 'then'
+         write(26,25) '    break'
+         write(26,25) 'else'
+         write(26,25) '    echo $try > fail.log '
+         write(26,25) 'fi'
+         write(26,25) 'done'
             write(26,25) 'cat $k >> log.txt'
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
@@ -876,7 +916,16 @@ c
             write(26,25) 'if [[ -e ftn26 ]]; then'
             write(26,25) '     cp ftn26 ftn25'
             write(26,25) 'fi'
+                     write(26,25) 'for try in $(seq 1 10);'
+         write(26,25) 'do'
             write(26,25) '../madevent >> $k <input_sg.txt'
+                     write(26,25) 'if [ -s $k ]'
+         write(26,25) 'then'
+         write(26,25) '    break'
+         write(26,25) 'else'
+         write(26,25) '    echo $try > fail.log '
+         write(26,25) 'fi'
+         write(26,25) 'done'
             write(26,25) 'cat $k >> log.txt'
             write(26,20) 'fi'
             write(26,20) 'cd ../'

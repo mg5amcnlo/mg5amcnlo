@@ -496,6 +496,7 @@ class RunCard(dict):
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
+        self.add_line('use_syst', 'bool', False)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
         self.add_line('ptj', 'float', 20)
@@ -613,8 +614,10 @@ class RunCard(dict):
         self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
-        
-        
+        # kt_ durham
+        self.add_line('ktdurham', 'float', 30., fortran_name='kt_durham')
+        self.add_line('dparameter', 'float', 0.4, fortran_name='d_parameter')
+
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
@@ -627,6 +630,10 @@ class RunCard(dict):
             self.add_line('gseed', 'int', 0, fortran_name='iseed')
         else:
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
+        #number of events
+        self.add_line('nevents', 'int', 10000)
+        self.add_line('gevents', 'int', 2000, log=10)
+            
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
         self.add_line('fixed_fac_scale', 'bool', True)
@@ -642,6 +649,7 @@ class RunCard(dict):
         if int(self['ickkw'])>0:
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
+            self.add_line('clusinfo', 'bool', False)
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')

@@ -112,7 +112,7 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_identical_parameters(self):
         """ check that we detect correctly identical parameter """
         
-        expected=set([('MZ','MH'), ('WZ','WH')])
+        expected=set([('MZ','MH')])
         result = self.model.detect_identical_parameters()
         result = [tuple([obj[0].name for obj in obj_list]) for obj_list in result]
         
@@ -123,7 +123,6 @@ class TestRestrictModel(unittest.TestCase):
         
         parameters = self.model.detect_identical_parameters()
         self.model.merge_iden_parameters(parameters[0])
-        self.model.merge_iden_parameters(parameters[1])
         
         
         #check that both MZ and MH are not anymore in the external_parameter
@@ -144,7 +143,7 @@ class TestRestrictModel(unittest.TestCase):
         # checked that the mass (and the width) of those particles identical
         self.assertEqual(self.model['particle_dict'][23]['mass'],
                          self.model['particle_dict'][25]['mass'])
-        self.assertEqual(self.model['particle_dict'][23]['width'],
+        self.assertNotEqual(self.model['particle_dict'][23]['width'],
                          self.model['particle_dict'][25]['width'])
         
 

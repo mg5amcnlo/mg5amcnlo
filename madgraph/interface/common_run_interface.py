@@ -304,7 +304,7 @@ class MadEventAlreadyRunning(InvalidCmd):
 class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     debug_output = 'ME5_debug'
-    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
 
     # The three options categories are treated on a different footage when a 
@@ -318,6 +318,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
+                       'syscalc_path': './SysCalc',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -1105,8 +1106,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 self.options[args[0]] = args[1]
                 
-        if 'cluster' in args[0] or args[0] == 'run_mode':
-            self.configure_run_mode(self.options['run_mode'])             
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        try:
+            args = self.split_arg(line)
+            if 'cluster' in args[0] or args[0] == 'run_mode':
+                self.configure_run_mode(self.options['run_mode'])             
+
+
+            # Check the validity of the arguments
+            self.check_set(args)
+            
+            if args[0] in self.options_configuration and '--no_save' not in args:
+                self.exec_cmd('save options --auto')
+            elif args[0] in self.options_madevent:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+            return stop
+        except self.InvalidCmd:
+            return stop
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
@@ -1637,17 +1655,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
+            elif  args[start+1].lower() in ['t','.true.','true']:
                 self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
+            elif  args[start+1].lower() in ['f','.false.','false']:
                 self.setR(args[start], '.false.')
             else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
+                if args[0].startswith('sys_'):
+                    val = ' '.join(args[start+1:])
+                    val = val.split('#')[0]
+                else: 
+                    try:
+                        val = eval(args[start+1])
+                    except NameError:
+                        val = args[start+1]
                 self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
+                                pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
         elif (args[start] in self.param_card or args[start] == 'width') \
@@ -1675,6 +1698,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
+                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                        for key in self.param_card[args[start]].param_dict:
+                            if (args[start], key) in self.restricted_value:
+                                continue
+                            else:
+                                self.setP(args[start], key, args[-1])
+                        self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        return
                     logger.warning('invalid set command %s (failed to identify LHA information)' % line)
                     return 
 
@@ -1796,7 +1827,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         return line
     
+    def do_compute_widths(self, line):
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','param_card.dat')
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        line = '%s %s' % (line, ' '.join(pdg))
+        if not '--path' in line:
+            line += ' --path=%s' % path
+        try:
+            return self.mother_interface.do_compute_widths(line)
+        except InvalidCmd, error:
+            logger.error("Invalid command: %s " % error)
 
+    def help_compute_widths(self):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.help_compute_widths()
+
+    def complete_compute_widths(self, *args, **opts):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.complete_compute_widths(*args,**opts)
         
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""

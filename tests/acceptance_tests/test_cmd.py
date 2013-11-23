@@ -319,6 +319,26 @@ class TestCmdShell2(unittest.TestCase,
         self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
+    def test_check_generate_optimize(self):
+        """Test that errors are raised appropriately for output"""
+
+        # Invalid since forbiddent by the optimize option
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate a > e+ e- --optimize')
+
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate b > t w- --optimize')
+
+        # Invalid since optimize is not allowed for cross-section
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate  p p > e+ e- --optimize') 
+        
+        # check that --optimize filter correctly
+        self.do('generate t > all all --optimize')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+              
+               
+
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
         os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),

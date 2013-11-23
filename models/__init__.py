@@ -40,8 +40,12 @@ def load_model(name, decay=False):
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]
-        __import__(dec_name)
-        output.all_decays = sys.modules[dec_name].all_decays
+        try:
+            __import__(dec_name)
+        except ImportError:
+            pass
+        else:
+            output.all_decays = sys.modules[dec_name].all_decays
     
     sys.path.pop(0)
     

@@ -49,6 +49,36 @@ Update notes for MadGraph 5 (in reverse time order)
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
 
+
+1.6.0 (XX/XX/XX)  JA+OM+AK: Store parameters needed for systematics studies.
+                      This can be turned on with the use_syst parameter in
+                      run_card.dat.
+                      This output can be used to generate event weights for
+                      a variety of variational parameters, including scalefact,
+                      alpsfact, PDF choice, and matching scale. Note that this require
+                      pythia-pgs v2.2 for matching scale.
+                  OM+JA+Chia: Implement MadDecay (automatic/smart computation of the widths)
+                  OM: Support for formfactor defined in the UFO model. and support for model
+                      parameter presence inside the Lorentz expression.
+                  JA: Included <clustering> tag in matched .lhe output, to be 
+                      used together with Pythia 8 CKKW-L matching. This can be 
+                      turned off with the clusinfo flag in run_card.dat.
+                  JA: New treatment of matching for diagrams that have no
+                      corresponding lower-multiplicity diagrams. Jets that
+                      are not classified as shower-type emission jets are
+                      flagged in the cluster scale info at the end of the event,
+                      which is recognized by the Pythia interface in Pythia-PGS
+                      package v. 2.2. For such jets, xqcut does not apply. This
+                      allows for consistent matching e.g. of p p > w+ b b~ in 
+                      the 4-flavor scheme. Note that auto_ptj_mjj must be set to
+                      .false. for this to work properly.
+                  OM: Change model restriction behavior: two widths with identical are not merged anymore.
+                  S.Pretzel(via OM): implement KT Durham cut. (thanks to Z. Marshall)
+		  OM: Improved check for unresponsive of PBS cluster (thanks J. Mc Fayden)
+                  OM: implement a maximum number (2500) of jobs which can be submitted at the same time
+                      by the PBS cluster. This number is currently not editable via configuration file.
+
+
 1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
                       In case of failure, you can re-submitted the failing jobs automatically. The maximal 
                       number of re-submission for a job can be parametrize (default 1) and how long you have to

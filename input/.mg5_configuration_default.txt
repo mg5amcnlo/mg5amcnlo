@@ -143,3 +143,9 @@
 #! Set what OLP to use for the loop ME generation
 # OLP = MadLoop
 
+#! SysCalc PATH
+#! Path to the directory containing syscalc executables
+#! relative path start from main directory
+# syscalc_path = ./SysCalc
+
+
