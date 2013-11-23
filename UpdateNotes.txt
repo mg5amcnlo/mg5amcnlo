@@ -25,7 +25,9 @@ Update notes for MadGraph 5 (in reverse time order)
                       .false. for this to work properly.
                   OM: Change model restriction behavior: two widths with identical are not merged anymore.
                   S.Pretzel(via OM): implement KT Durham cut. (thanks to Z. Marshall)
-
+		  OM: Improved check for unresponsive of PBS cluster (thanks J. Mc Fayden)
+                  OM: implement a maximum number (2500) of jobs which can be submitted at the same time
+                      by the PBS cluster. This number is currently not editable via configuration file.
 
 1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
                       In case of failure, you can re-submitted the failing jobs automatically. The maximal 

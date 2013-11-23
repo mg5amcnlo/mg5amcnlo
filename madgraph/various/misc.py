@@ -188,7 +188,7 @@ def multiple_try(nb_try=5, sleep=20):
                 except Exception, error:
                     global wait_once
                     if not wait_once:
-                        text = """Start waiting for update on filesystem. (more info in debug mode)"""
+                        text = """Start waiting for update. (more info in debug mode)"""
                         logger.info(text)
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))

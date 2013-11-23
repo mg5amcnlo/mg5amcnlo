@@ -164,8 +164,9 @@ class Cluster(object):
         raise NotImplemented, 'No implementation of how to control the job status to cluster \'%s\'' % self.name
 
     @check_interupt()
-    def wait(self, me_dir, fct):
-        """Wait that all job are finish"""
+    def wait(self, me_dir, fct, minimal_job=0):
+        """Wait that all job are finish.
+        if minimal_job set, then return if idle + run is lower than that number"""
         
         while 1: 
             idle, run, finish, fail = self.control(me_dir)
@@ -175,6 +176,8 @@ class Cluster(object):
                 #time.sleep(20) #security to ensure that the file are really written on the disk
                 logger.info('All jobs finished')
                 break
+            if idle + run < minimal_job:
+                return
             fct(idle, run, finish)
             time.sleep(30)
         self.submitted = 0
@@ -510,16 +513,24 @@ class PBSCluster(Cluster):
     idle_tag = ['Q']
     running_tag = ['T','E','R']
     complete_tag = ['C']
+    
+    maximum_submited_jobs = 2500
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
                required_output=[], nb_submit=0):
         """Submit a job prog to a PBS cluster"""
         
+        
         me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
         me_dir = hashlib.md5(me_dir).hexdigest()[-14:]
         if not me_dir[0].isalpha():
             me_dir = 'a' + me_dir[1:]
+
+        if len(self.submitted_ids) > self.maximum_submited_jobs:
+            fct = lambda idle, run, finish: logger.info('Waiting for free slot: %s %s %s' % (idle, run, finish))
+            self.wait(me_dir, fct, self.maximum_submited_jobs)
+
         
         text = ""
         if cwd is None:
@@ -557,9 +568,10 @@ class PBSCluster(Cluster):
             
         output = a.communicate(text)[0]
         id = output.split('.')[0]
-        if not id.isdigit():
+        if not id.isdigit() or a.returncode !=0:
             raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
-                                                                        % output 
+                                                                        % output
+            
         self.submitted += 1
         self.submitted_ids.append(id)
         return id
@@ -573,10 +585,14 @@ class PBSCluster(Cluster):
         
         for line in status.stdout:
             line = line.strip()
+            if 'cannot connect to server' in line or 'cannot read reply' in line:
+                raise ClusterManagmentError, 'server disconnected'
             if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
                 status = line.split()[4]
+        if status.returncode != 0:
+            raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
         if status in self.idle_tag:
             return 'I' 
         elif status in self.running_tag:                
@@ -599,6 +615,8 @@ class PBSCluster(Cluster):
         ongoing = []
         idle, run, fail = 0, 0, 0
         for line in status.stdout:
+            if 'cannot connect to server' in line or 'cannot read reply' in line:
+                raise ClusterManagmentError, 'server disconnected'
             if me_dir in line:
                 ongoing.append(line.split()[0].split('.')[0])
                 status = line.split()[4]
@@ -611,6 +629,11 @@ class PBSCluster(Cluster):
                         idle += 1
                 else:
                     fail += 1
+
+        if status.returncode != 0:
+            raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
+
+
             
         for id in list(self.submitted_ids):
             if id not in ongoing:
