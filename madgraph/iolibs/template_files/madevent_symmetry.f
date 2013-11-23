@@ -652,7 +652,7 @@ c-----
 c
 c     Now write the commands
 c      
-      write(lun,20) 'echo $i >& run.$script'
+c      write(lun,20) 'echo $i >& run.$script'
       write(lun,20) 'j=G$i'
       write(lun,20) 'if [[ ! -e $j ]]; then'
       write(lun,25) 'mkdir $j'
@@ -662,7 +662,17 @@ c
       write(lun,20) 'rm -f $k'
       write(lun,20) 'cat ../input_app.txt >& input_app.txt'
       write(lun,20) 'echo $i >> input_app.txt'
+      write(lun,20) 'for try in $(seq 1 10);'
+      write(lun,20) 'do'
       write(lun,20) '../madevent > $k <input_app.txt'
+      write(lun,20) 'if [ -s $k ]'
+      write(lun,20) 'then'
+      write(lun,20) '    break'
+      write(lun,20) 'else'
+      write(lun,20) 'sleep 1'
+c      write(lun,20) 'rm -rf $k; ../madevent > $k <input_app.txt'
+      write(lun,20) 'fi'
+      write(lun,20) 'done'
       write(lun,20) 'rm -f ftn25 ftn99'
       if(.not.gridpack) write(lun,20) 'rm -f ftn26'
       write(lun,20) 'cp $k log.txt'
