@@ -24,6 +24,7 @@ Update notes for MadGraph 5 (in reverse time order)
                       the 4-flavor scheme. Note that auto_ptj_mjj must be set to
                       .false. for this to work properly.
                   OM: Change model restriction behavior: two widths with identical are not merged anymore.
+                  S.Pretzel(via OM): implement KT Durham cut. (thanks to Z. Marshall)
 
 
 1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.

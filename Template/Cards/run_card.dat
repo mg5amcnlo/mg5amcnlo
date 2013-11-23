@@ -231,6 +231,11 @@
  0   = xetamin ! minimum rapidity for two jets in the WBF case  
  0   = deltaeta ! minimum rapidity for two jets in the WBF case 
 #*********************************************************************
+# KT DURHAM CUT                                                      *
+#*********************************************************************
+ 0    =  ktdurham     ! if 0 no KT Durham cut    
+ 0.4  =  dparameter 
+#*********************************************************************
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *
 #*********************************************************************
