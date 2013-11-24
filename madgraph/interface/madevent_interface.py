@@ -1795,7 +1795,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             args.remove(arg)
 
         if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
-                                "cluster_temp_path", "nb_core"]:
+                                "cluster_temp_path", "nb_core", "cluster_nb_retry",
+                                "cluster_retry_wait"]:
             return args
 
         if self.cluster_mode == 2 and not self.nb_core:
@@ -1908,6 +1909,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                         continue
                 self.options[key] = None
             elif key.startswith('cluster'):
+                if key in ('cluster_nb_retry','cluster_wait_retry'):
+                    self.options[key] = int(self.options[key])
+                if hasattr(self,'cluster'):
+                    del self.cluster
+
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
