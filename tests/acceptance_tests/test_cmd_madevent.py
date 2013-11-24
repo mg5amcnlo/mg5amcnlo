@@ -185,10 +185,10 @@ class TestMECmdShell(unittest.TestCase):
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
-        
+        self.run_dir = pjoin(self.path, 'MGPROC2')
         mg_cmd.exec_cmd('set group_subprocesses False')
         mg_cmd.exec_cmd('generate u u > u u')
-        mg_cmd.exec_cmd('output %s2' % self.run_dir)
+        mg_cmd.exec_cmd('output %s' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         
