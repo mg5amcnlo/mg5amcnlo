@@ -104,9 +104,7 @@ c-----
       itminx = itmin
       if (nsteps .lt. 1) nsteps=1
       nwrite = itmax*ncall/nsteps
-c      open(unit=66,file='.sample_warn',status='unknown')
-c      write(66,*) 'Warnings from sample run.',itmax,ncall
-c      close(66)
+
       call sample_init(ndim,ncall,itmax,ninvar,nconfigs)
       call graph_init
       do i=1,itmax
@@ -213,13 +211,15 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
-      close(66)
+      flush(66)
+      close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
          write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
-         close(66)
+         flush(66)
+         close(66, status='KEEP')
 
       endif
 c
@@ -373,13 +373,15 @@ c      do i=1,cur_it-1
       do i=cur_it-itsum,cur_it-1
          write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
       enddo
-      close(66)
+      flush(66)
+      close(66, status='KEEP')
       else
          open(unit=66,file='results.dat',status='unknown')
          write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,kevent,nw,
      &     1,0,0.,0.,0.
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
-         close(66)
+         flush(66)
+         close(66, status='KEEP')
 
       endif      
 
@@ -1863,7 +1865,8 @@ c 23   close(22)
       write(66,'(3e12.5,2i9,i5,i9,3e10.3)')0.,0.,0.,0,0,
      &     0,1,0.,0.,0.
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
-      close(66)
+      flush(66)
+      close(66, status='KEEP')
 
 c     Remove file events.lhe (otherwise event combination gets screwed up)
       write(*,*) 'Deleting file events.lhe'
