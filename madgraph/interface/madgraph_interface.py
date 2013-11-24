@@ -3152,7 +3152,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 text = open(path).read()
                 text = text.replace('FC=g77','FC=gfortran')
                 open(path, 'w').writelines(text)
-            os.environ['FC'] = 'compiler'
+            os.environ['FC'] = compiler
                             
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w') 
