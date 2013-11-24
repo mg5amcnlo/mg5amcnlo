@@ -615,7 +615,7 @@ class RunCard(dict):
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
         # kt_ durham
-        self.add_line('ktdurham', 'float', 30., fortran_name='kt_durham')
+        self.add_line('ktdurham', 'float', -1, fortran_name='kt_durham')
         self.add_line('dparameter', 'float', 0.4, fortran_name='d_parameter')
 
 

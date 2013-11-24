@@ -144,7 +144,8 @@ class TestCmdShell1(unittest.TestCase):
                     'OLP': 'MadLoop',
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
-                    'cluster_retry_wait': 300
+                    'cluster_retry_wait': 300,
+                    'syscalc_path':'./SysCalc'
                     }
 
         self.assertEqual(config, expected)

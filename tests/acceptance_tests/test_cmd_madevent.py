@@ -21,6 +21,7 @@ import shutil
 import sys
 import logging
 import time
+import tempfile   
 
 logger = logging.getLogger('test_cmd')
 
@@ -50,11 +51,20 @@ pjoin = os.path.join
 class TestMECmdShell(unittest.TestCase):
     """this treats all the command not related to MG_ME"""
     
+    def setUp(self):
+        
+        self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
+        self.run_dir = pjoin(self.path, 'MGPROC') 
+    
+    def tearDown(self):
+
+        shutil.rmtree(self.path)
+    
     def generate(self, process, model):
         """Create a process"""
 
         try:
-            shutil.rmtree('/tmp/MGPROCESS/')
+            shutil.rmtree(self.run_dir)
         except Exception, error:
             pass
 
@@ -91,10 +101,10 @@ class TestMECmdShell(unittest.TestCase):
             raise Exception, 'root is require for this test'
         interface.exec_cmd('set pythia-pgs_path %s --no_save' % pjoin(MG5DIR, 'pythia-pgs'))
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
-        interface.onecmd('output madevent /tmp/MGPROCESS/ -f')            
+        interface.onecmd('output madevent %s -f' % self.run_dir)            
         
         
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
 
     @staticmethod
@@ -122,9 +132,9 @@ class TestMECmdShell(unittest.TestCase):
         self.do('calculate_decay_widths -f')        
         
         # test the param_card is correctly written
-        self.assertTrue(os.path.exists('/tmp/MGPROCESS/Events/run_01/param_card.dat'))
+        self.assertTrue(os.path.exists('%s/Events/run_01/param_card.dat' % self.run_dir))
         
-        text = open('/tmp/MGPROCESS/Events/run_01/param_card.dat').read()
+        text = open('%s/Events/run_01/param_card.dat' % self.run_dir).read()
         data = text.split('DECAY  23')[1].split('DECAY',1)[0]
         self.assertEqual("""1.492240e+00
 #  BR             NDA  ID1    ID2   ...
@@ -144,9 +154,9 @@ class TestMECmdShell(unittest.TestCase):
         self.generate('p p > W+', 'sm')
         self.assertEqual(cmd, os.getcwd())        
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
-                    '/tmp/MGPROCESS/Cards/run_card.dat')
-        shutil.copy('/tmp/MGPROCESS/Cards/pythia_card_default.dat',
-                    '/tmp/MGPROCESS/Cards/pythia_card.dat')
+                    '%s/Cards/run_card.dat' % self.run_dir)
+        shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
+                    '%s/Cards/pythia_card.dat' % self.run_dir)
         self.do('generate_events -f')     
         
         
@@ -157,8 +167,8 @@ class TestMECmdShell(unittest.TestCase):
         run_card = self.cmd_line.run_card
         run_card['nevents'] = 44
         run_card['use_syst'] = 'F'
-        run_card.write('/tmp/MGPROCESS/Cards/run_card.dat',
-                                    '/tmp/MGPROCESS/Cards/run_card_default.dat')
+        run_card.write('%s/Cards/run_card.dat'% self.run_dir,
+                                    '%s/Cards/run_card_default.dat'% self.run_dir)
 
         self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
@@ -181,31 +191,23 @@ class TestMECmdShell(unittest.TestCase):
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
         
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
-            pass
 
         mg_cmd = MGCmd.MasterCmd()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
         mg_cmd.exec_cmd(' generate u u > u u')
-        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
-            pass
-        
+        self.run_dir = pjoin(self.path, 'MGPROC2')
         mg_cmd.exec_cmd('set group_subprocesses False')
         mg_cmd.exec_cmd('generate u u > u u')
-        mg_cmd.exec_cmd('output /tmp/MGPROCESS')
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        mg_cmd.exec_cmd('output %s' % self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         
         self.do('generate_events -f')        
@@ -223,19 +225,15 @@ class TestMECmdShell(unittest.TestCase):
     def test_e_p_collision(self):
         """check that e p > e j gives the correct result"""
         
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
-            pass
 
         mg_cmd = MGCmd.MasterCmd()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
         mg_cmd.exec_cmd(' generate e- p  > e- j')
-        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        mg_cmd.exec_cmd('output %s/'% self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
-                    '/tmp/MGPROCESS/Cards/run_card.dat')
+                    '%s/Cards/run_card.dat' % self.run_dir) 
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
@@ -248,19 +246,15 @@ class TestMECmdShell(unittest.TestCase):
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
         
-        try:
-            shutil.rmtree('/tmp/MGPROCESS/')
-        except Exception, error:
-            pass
 
         mg_cmd = MGCmd.MasterCmd()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
         mg_cmd.exec_cmd(' generate e+ e-  > t t~')
-        mg_cmd.exec_cmd('output /tmp/MGPROCESS/')
-        self.cmd_line = MECmd.MadEventCmdShell(me_dir= '/tmp/MGPROCESS')
+        mg_cmd.exec_cmd('output %s/' % self.run_dir)
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
-                    '/tmp/MGPROCESS/Cards/run_card.dat')
+                    '%s/Cards/run_card.dat' % self.run_dir)
         
         self.do('generate_events -f')
         val1 = self.cmd_line.results.current['cross']
@@ -274,7 +268,7 @@ class TestMECmdShell(unittest.TestCase):
         import madgraph.iolibs.save_load_object as save_load_object
         import madgraph.various.gen_crossxhtml as gen_crossxhtml
         
-        result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
+        result = save_load_object.load_from_file('%s/HTML/results.pkl' % self.run_dir)
         return result[run_name]
 
     def check_parton_output(self, run_name='run_01', target_event=100, syst=False):
@@ -289,8 +283,8 @@ class TestMECmdShell(unittest.TestCase):
             # check that the html has the information
             self.assertTrue('syst' in data[0].parton)
             # check that the code was runned correctly
-            fsock = open('/tmp/MGPROCESS/Events/%s/%s_parton_syscalc.log' % \
-                 (data[0]['run_name'], data[0]['tag']),'r')
+            fsock = open('%s/Events/%s/%s_parton_syscalc.log' % \
+                  (self.run_dir, data[0]['run_name'], data[0]['tag']),'r')
             text = fsock.read()
             self.assertEqual(text.count('cross-section'),3)
         
@@ -308,8 +302,8 @@ class TestMECmdShell(unittest.TestCase):
 
     def check_matched_plot(self, run_name='run_01', mintime=None, tag='fermi'):
         """ """
-        path = '/tmp/MGPROCESS/HTML/%(run)s/plots_pythia_%(tag)s/DJR1.ps' % \
-                                {'run': run_name, 'tag': tag}
+        path = '%(path)s/HTML/%(run)s/plots_pythia_%(tag)s/DJR1.ps' % \
+                                {'path':self.run_dir,'run': run_name, 'tag': tag}
         self.assertTrue(os.path.exists(path))
         
         if mintime:
