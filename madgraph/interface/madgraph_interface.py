@@ -4555,7 +4555,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     
     # Calculate decay width
     def do_compute_widths(self, line, model=None):
-        """Generate amplitudes for decay width calculation, with fixed
+        """Documented commands:Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
            
