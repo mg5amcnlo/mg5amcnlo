@@ -1546,17 +1546,19 @@ Integrated cross-section
 # Now display the general statistics
 # Recuperate the fraction of unstable PS points found in the runs for
 # the virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
-             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
-             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
-             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
-             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
-             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
-             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
-             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
-             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
+        UPS_stat_finder = re.compile(
+             r"Satistics from MadLoop:.*"+\
+             r"Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r"Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r"Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r"Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r"Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r"Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
 #        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
