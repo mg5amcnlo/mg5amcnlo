@@ -20,7 +20,7 @@ C
       PARAMETER ( paramFileName='MadLoopParams.dat')
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 
+      PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
       INTEGER    NCOLORROWS
 	  PARAMETER (NCOLORROWS=%(nloopamps)d)
 	  INTEGER    NEXTERNAL
@@ -46,6 +46,13 @@ C     These are constants related to the split orders
 	  PARAMETER (NSQSOXNLG=NSQUAREDSO*NLOOPGROUPS)
 	  INTEGER NSQUAREDSOP1
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
+C     The total number of loop reduction libraries
+C     At present, there are only CutTools,PJFry++,IREGI
+      INTEGER NLOOPLIB
+      PARAMETER (NLOOPLIB=3)
+C     Only CutTools provides QP
+      INTEGER QP_NLOOPLIB
+      PARAMETER (QP_NLOOPLIB=1)
 C     This parameter is designed for the check timing command of MG5
       LOGICAL SKIPLOOPEVAL
       PARAMETER (SKIPLOOPEVAL=.FALSE.)
@@ -65,7 +72,13 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H,DUMMY,I_LIB,I_QP_LIB
+C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+       LOGICAL QP_TOOLS_AVAILABLE
+       DATA QP_TOOLS_AVAILABLE/.FALSE./
+       SAVE QP_TOOLS_AVAILABLE
+       INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+       SAVE INDEX_QP_TOOLS
 	  INTEGER CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
 	  INTEGER NEWHELREF	  
@@ -121,6 +134,7 @@ C
 	  INTEGER ML5SQSOINDEX
       INTEGER ISSAME
       LOGICAL ISZERO
+      INTEGER SET_RET_CODE_U
 C  
 C GLOBAL VARIABLES
 C  
@@ -250,6 +264,16 @@ C ----------
 
 IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+  QP_TOOLS_AVAILABLE=.FALSE.
+  INDEX_QP_TOOLS(1:QP_NLOOPLIB)=0
+  J=0
+  DO I=1,NLOOPLIB
+     IF(MLReductionLib(I).EQ.1)THEN
+      J=J+1
+      IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+      INDEX_QP_TOOLS(J)=I
+     ENDIF	
+  ENDDO
   CALL SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
   HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
 OPEN(1, FILE="LoopFilter.dat", err=100, status='OLD',           action='READ')
@@ -428,7 +452,9 @@ DO K=1, 3
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
-
+C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP REDUCTION LIBRARY
+I_LIB=1
+I_QP_LIB=1
 200 CONTINUE
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
@@ -528,7 +554,10 @@ DO I=0,NSQUAREDSO
     BUFFR_BIS(J,I)=ANS(J,I)
   ENDDO
 ENDDO
+
 300 CONTINUE
+C     Free cache when using IREGI
+IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS
 DO I=0,NSQUAREDSO
   DO J=1,3
     ANS(J,I)=BUFFR_BIS(J,I)
@@ -729,7 +758,7 @@ ENDDO
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   STAB_INDEX=STAB_INDEX+1  
-  IF(DOING_QP_EVALS.AND.MLReductionLib(1).EQ.1) THEN
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
 C NOW,ONLY CUTTOOLS PROVIDES QP
     DO I=0,NSQUAREDSO
 	  DO K=1,3
@@ -744,7 +773,7 @@ C NOW,ONLY CUTTOOLS PROVIDES QP
 	ENDDO
   ENDIF
 
-  IF(DOING_QP_EVALS.AND.MLReductionLib(1).EQ.1) THEN	
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN	
       BASIC_CT_MODE=4
   ELSE
       BASIC_CT_MODE=1
@@ -760,33 +789,37 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   CTMODE=BASIC_CT_MODE
   
-  IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1.AND.MLReductionLib(1).EQ.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
+  IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
 	EVAL_DONE(3)=.TRUE.
 	CALL ROTATE_PS(PS,P,1)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
+	IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
 	goto 200
   ENDIF
 
-  IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2.AND.MLReductionLib(1).EQ.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
+  IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
 	EVAL_DONE(4)=.TRUE.
 	CALL ROTATE_PS(PS,P,2)
-	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
+	IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
 	goto 200
   ENDIF
 
   CALL ROTATE_PS(PS,P,0)
-  IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,0)
+  IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,0)
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
-  IF(DOING_QP_EVALS.AND.MLReductionLib(1).EQ.1) THEN
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
     CALL COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
 	DO I=0,NSQUAREDSO
 	  ACCURACY(I)=ACC(I)
 	ENDDO
-	RET_CODE_H=3	
+	RET_CODE_H=3
+	RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.TRUE.,.TRUE.)	
 	IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
+	  I_QP_LIB=I_QP_LIB+1
+	  IF(I_QP_LIB.GT.QP_NLOOPLIB.OR.INDEX_QP_TOOLS(I_QP_LIB).EQ.0)THEN
 	  RET_CODE_H=4
+	  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.TRUE.,.FALSE.)
 	  NEPS=NEPS+1
       CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
 	  IF(NEPS.LE.10) THEN	  
@@ -820,30 +853,86 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  IF(NEPS.EQ.10) THEN
 	    WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
 	  ENDIF
+    ELSE
+     I_LIB=INDEX_QP_TOOLS(I_QP_LIB)
+     EVAL_DONE(1)=.TRUE.
+     DO I=2,MAXSTABILITYLENGTH
+     EVAL_DONE(I)=.FALSE.
+     ENDDO
+     STAB_INDEX=0
+     goto 300
+    ENDIF
     ENDIF
   ELSEIF(.NOT.DOING_QP_EVALS)THEN
     CALL COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
 	IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
-	  DOING_QP_EVALS=.TRUE.
-	  EVAL_DONE(1)=.TRUE.
-	  DO I=2,MAXSTABILITYLENGTH
-        EVAL_DONE(I)=.FALSE.
-      ENDDO
-	  STAB_INDEX=0
-	  IF(MLReductionLib(1).EQ.1)THEN
+	  I_LIB=I_LIB+1
+	  IF((I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0).AND.QP_TOOLS_AVAILABLE)THEN
+	        I_LIB=INDEX_QP_TOOLS(1)
+		I_QP_LIB=1
+		DOING_QP_EVALS=.TRUE.
+	  	EVAL_DONE(1)=.TRUE.
+	  	DO I=2,MAXSTABILITYLENGTH
+        	EVAL_DONE(I)=.FALSE.
+      		ENDDO
+	  	STAB_INDEX=0
 		CTMODE=4
 	  	goto 200
+	  ELSEIF(I_LIB.LE.NLOOPLIB.AND.MLReductionLib(I_LIB).GT.0)THEN
+	        EVAL_DONE(1)=.TRUE.
+		DO I=2,MAXSTABILITYLENGTH
+		EVAL_DONE(I)=.FALSE.
+		ENDDO
+		STAB_INDEX=0
+		goto 300
+	  ELSE
+	     DO I=0,NSQUAREDSO
+	       ACCURACY(I)=ACC(I)
+	     ENDDO
+	     RET_CODE_H=4
+	     RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
+	     NEPS=NEPS+1
+             IF(NEPS.LE.10) THEN
+             WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+              IF (NSQUAREDSO.NE.1) THEN
+                  WRITE(*,*) 'Accuracies for each split order, starting with the summed case'
+              	  WRITE(*,*) 'DP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
+              ELSE
+              	WRITE(*,*) 'DP accuracy: ',ACC(1)
+	      ENDIF
+              DO J=0,NSQUAREDSO
+                  IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN
+                    IF (J.EQ.0) THEN
+                      WRITE(*,*) 'Details for all split orders summed :'
+                    ELSE
+                      WRITE(*,*) 'Details for split order index : ',J
+                    ENDIF
+                    WRITE(*,*) 'Best estimate (fin,1eps,2eps):',(ANS(I,J),I=1,3)
+               	     WRITE(*,*) 'Finite double precision evaluations :',(DP_RES(1,J,I),I=1,N_DP_EVAL)
+                  ENDIF
+                ENDDO
+            WRITE(*,*) 'PS point specification :'
+            WRITE(*,*) 'Renormalization scale MU_R=',MU_R
+            DO I=1,NEXTERNAL
+            WRITE (*,'(i2,1x,4e27.17)') i, P(0,i),P(1,i),P(2,i),P(3,i)
+            ENDDO
+            ENDIF
+            IF(NEPS.EQ.10) THEN
+             WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
+            ENDIF
 	  ENDIF
     ELSE
 	  DO I=0,NSQUAREDSO
 	    ACCURACY(I)=ACC(I)
 	  ENDDO
-      RET_CODE_H=2	
-	ENDIF	
+      	  RET_CODE_H=2
+	  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.TRUE.)	
+	  ENDIF	
   ENDIF
 ELSE
   RET_CODE_H=1
   ACCURACY=-1.0d0
+  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
 ENDIF
 
  9999 CONTINUE
@@ -856,10 +945,10 @@ ELSE
 ENDIF
 IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
   RET_CODE_H=1
+  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
   RET_CODE_T=RET_CODE_T+2
   ACCURACY=-1.0d0
 ENDIF
-RET_CODE_U=0
 
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN
@@ -1428,4 +1517,59 @@ C Reset it to default value not to affect next runs
 
 	  END
 
-
+	  INTEGER FUNCTION SET_RET_CODE_U(MLRed,DOING_QP,STABLE)
+C
+C This functions returns the value of U
+C
+C
+C     U == 0
+C         Not stable.
+C     U == 1
+C         Stable with CutTools in double precision.
+C     U == 2
+C         Stable with CutTools in quadruple precision.
+C     U == 3
+C         Stable with PJFry++.
+C     U == 4
+C         Stable with IREGI.
+C
+	IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+          INTEGER MLRed
+	  LOGICAL DOING_QP,STABLE
+C
+C LOCAL VARIABLES
+C
+C
+C FUNCTION
+C
+C
+C BEGIN CODE
+C
+	IF(.NOT.STABLE)THEN
+	SET_RET_CODE_U=0
+	RETURN
+	ENDIF
+	IF(DOING_QP)THEN
+	IF(MLRed.EQ.1)THEN
+	SET_RET_CODE_U=2
+	RETURN
+	ELSE
+	STOP 'Only CutTools can use quardruple precision'
+	ENDIF
+	ENDIF
+	IF(MLRed.EQ.1)THEN
+	SET_RET_CODE_U=1
+	ELSEIF(MLRed.EQ.2)THEN
+	SET_RET_CODE_U=2
+	ELSEIF(MLRed.EQ.3)THEN
+	SET_RET_CODE_U=3
+	ELSE
+	STOP 'Only CutTools,PJFry++,IREGI are available'
+	ENDIF
+	END 

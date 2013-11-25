@@ -1396,7 +1396,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             call = call + \
             "DCMPLX(%(LoopMass{0})s),".format(i+1)
         call = call + "%(LoopRank)d,"
-        call = call + "I_SO,%(loop_group_id)d)"
+        call = call + "I_SO,%(loop_group_id)d,I_LIB)"
         
         call_function = lambda amp: call % amp.get_helas_call_dict(\
                                                            OptimizedOutput=True)
