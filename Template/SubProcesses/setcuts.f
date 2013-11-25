@@ -134,6 +134,8 @@ c
             write(*,*) 'Note that this might affect non-radiated jets,'
             write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
           else if(mmjj.gt.xqcut)then
+c           In principle this should never happen since the banner.py
+c           is expected to correct this already.
             mmjj=0d0
             write(*,*) 'Warning! mmjj set to 0 since xqcut > 0 and'
             write(*,*) '         auto_ptj_mjj = F'

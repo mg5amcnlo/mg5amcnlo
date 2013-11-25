@@ -259,6 +259,7 @@ class RunCard(dict):
 
     #list of paramater which are allowed BUT not present in the _default file.
     hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
+    true = ['true', 'True','.true.','T', True, 1,'TRUE']
 
     def __init__(self, run_card):
         """ """
@@ -350,7 +351,6 @@ class RunCard(dict):
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
-        self.add_line('use_syst', 'bool', False)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
         self.add_line('ptj', 'float', 20)
@@ -494,19 +494,55 @@ class RunCard(dict):
         self.add_line('scale', 'float', 'float', 91.188)
         self.add_line('dsqrt_q2fact1','float', 91.188, fortran_name='sf1')
         self.add_line('dsqrt_q2fact2', 'float', 91.188, fortran_name='sf2')
+        
+        self.add_line('use_syst', 'bool', False)
+        #if use_syst is True, some parameter are automatically fixed.
+        if self['use_syst'] in self.true:
+            value = self.format('float',self.get_default('scalefact', 1.0, 30))
+            if value != self.format('float', 1.0):
+                logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
+                self['scalefact'] = 1.0
         self.add_line('scalefact', 'float', 1.0)
+        
         self.add_line('fixed_couplings', 'bool', True, log=10)
         self.add_line('ickkw', 'int', 0)
         self.add_line('chcluster', 'bool', False)
         self.add_line('ktscheme', 'int', 1)
         self.add_line('asrwgtflavor', 'int', 5)
+        
+        #CKKW TREATMENT!
         if int(self['ickkw'])>0:
+            #if use_syst is True, some parameter are automatically fixed.
+            if self['use_syst'] in self.true:
+                value = self.format('float',self.get_default('alpsfact', 1.0, 30))
+                if value != self.format('float', 1.0):
+                    logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
+                    self['alpsfact'] = 1.0
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
             self.add_line('clusinfo', 'bool', False)
+            # check that DRJJ and DRJL are set to 0 and MMJJ
+            if self.format('float', self['drjj']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+            if self.format('float', self['drjl']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+            if self.format('bool', self['auto_ptj_mjj']) == '.false.':
+                #ensure formatting
+                mmjj = self['mmjj']
+                if isinstance(mmjj,str):
+                    mmjj = float(mmjj.replace('d','e'))
+                xqcut = self['xqcut']
+                if isinstance(xqcut,str):
+                    xqcut = float(xqcut.replace('d','e'))
+                 
+                if mmjj > xqcut:
+                    logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
+                    self.add_line('mmjj','float',0)
+                    
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')
+        
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
         self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
