@@ -117,7 +117,7 @@ def compile_dir(arguments):
         misc.call(['./gensym'],cwd= this_dir,
                  stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                  stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
-        #compile madevent_mintMC/vegas
+        #compile madevent_mintMC/mintFO
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
@@ -948,7 +948,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO """
         
         self.start_time = time.time()
         argss = self.split_arg(line)
@@ -2424,8 +2424,7 @@ Integrated cross-section
         subdir = ' '.join(data).split()
                
         if args[0] == '0':
-            # MADEVENT VEGAS MODE
-#            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            # MADEVENT MINT FO MODE
             input_files.append(pjoin(cwd, 'madevent_mintFO'))
             input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
             #j=$2\_G$i
@@ -2439,9 +2438,6 @@ Integrated cross-section
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
-#                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-#                                                      if n.endswith('.sv1')]
-#                        to_move.append('mint_grids')
                         to_move = ['grid.MC_integer','mint_grids']
                     elif args[0] == '1':
                         to_move = ['mint_grids', 'grid.MC_integer']
@@ -2573,7 +2569,6 @@ Integrated cross-section
         if '+' in mode:
             mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
-#            exe = 'madevent_vegas'
             exe = 'madevent_mintFO'
             tests = ['test_ME']
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
