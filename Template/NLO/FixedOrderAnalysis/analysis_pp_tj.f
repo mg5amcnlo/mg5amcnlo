@@ -203,10 +203,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
             do j=0,3
                pQCD(j,nQCD)=p(j,i)
             enddo
-            if (abs(ipdg(i)).eq.5) then
-               nb=nb+1
-               is_b(nb)=i
-            endif
+         endif
+         if (abs(ipdg(i)).eq.5) then
+            nb=nb+1
+            is_b(nb)=nQCD
          endif
          if(abs(ipdg(i)).eq.6)itop=i
       enddo
