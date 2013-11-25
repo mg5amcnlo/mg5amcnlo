@@ -1535,6 +1535,7 @@ Integrated cross-section
 # Now display the general statistics
 # Recuperate the fraction of unstable PS points found in the runs for
 # the virtuals
+        
         UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
              r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
              r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
@@ -1550,7 +1551,7 @@ Integrated cross-section
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
+            logfile=open(gv_log,'r')            
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
             logfile.close()
             if not UPS_stats is None:
@@ -2287,6 +2288,7 @@ Integrated cross-section
             time.sleep(1) # security to allow all jobs to be launched
         if njob_split > 0:
             self.njobs = njob_split
+        
         self.wait_for_complete(run_type)
 
 

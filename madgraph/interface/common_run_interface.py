@@ -513,7 +513,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif path == 'delphes_trigger.dat':
                 return 'trigger'
             else:
-                raise Exception, 'Unknow cards name'
+                raise Exception, 'Unknow cards name %s' % path
             
         # Ask the user if he wants to edit any of the files
         #First create the asking text

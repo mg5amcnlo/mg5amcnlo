@@ -176,12 +176,23 @@ class Banner(dict):
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
         
-        assert tag in ['mgruncard'], 'invalid card %s' % tag
+        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'invalid card %s' % tag
         
-        if tag == 'mgruncard':
+        if tag == 'slha':
+            param_card = self[tag].split('\n')
+            self.param_card = param_card_reader.ParamCard(param_card)
+            return self.param_card
+        elif tag == 'mgruncard':
             run_card = self[tag].split('\n') 
-            self.run_card = RunCard(run_card)
+            if 'parton_shower' in self[tag]:
+                self.run_card = RunCardNLO(run_card)
+            else:
+                self.run_card = RunCard(run_card)
             return self.run_card
+        elif tag == 'mg5proccard':
+            proc_card = self[tag].split('\n')
+            self.proc_card = ProcCard(proc_card)
+            return self.proc_card
 
     ############################################################################
     #  WRITE BANNER
@@ -275,36 +286,7 @@ class Banner(dict):
         
         self[tag.lower()] = text
     
-    
-    def charge_card(self, tag):
-        """Build the python object associated to the card"""
-        
-        if tag == 'param_card':
-            tag = 'slha'
-        elif tag == 'run_card':
-            tag = 'mgruncard' 
-        elif tag == 'proc_card':
-            tag = 'mg5proccard' 
-        
-        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'invalid card %s' % tag
-        
-        if tag == 'slha':
-            param_card = self[tag].split('\n')
-            self.param_card = param_card_reader.ParamCard(param_card)
-            return self.param_card
-        elif tag == 'mgruncard':
-            run_card = self[tag].split('\n') 
-            if 'parton_shower' in self[tag]:
-                self.run_card = RunCardNLO(run_card)
-            else:
-                self.run_card = RunCard(run_card)
-            return self.run_card
-        elif tag == 'mg5proccard':
-            proc_card = self[tag].split('\n')
-            self.proc_card = ProcCard(proc_card)
-            return self.proc_card
-
-        
+            
     def get_detail(self, tag, *arg):
         """return a specific """
                 

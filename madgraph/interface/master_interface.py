@@ -281,10 +281,7 @@ class Switcher(object):
         return self.cmd.check_add(self, *args, **opts)
         
     def check_answer_in_input_file(self, *args, **opts):
-        return self.cmd.check_answer_in_input_file(self, *args, **opts)
-    
-    def check_calculate_width(self, *args, **opts):
-        return self.cmd.check_calculate_width(self, *args, **opts)   
+        return self.cmd.check_answer_in_input_file(self, *args, **opts)  
     
     def check_check(self, *args, **opts):
         return self.cmd.check_check(self, *args, **opts)
@@ -366,9 +363,6 @@ class Switcher(object):
 
     def complete_switch(self, *args, **opts):
         return self.cmd.complete_switch(self, *args, **opts)
-        
-    def complete_calculate_width(self, *args, **opts):
-        return self.cmd.complete_calculate_width(self, *args, **opts)
 
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
@@ -424,12 +418,6 @@ class Switcher(object):
       
     def do_EOF(self, *args, **opts):
         return self.cmd.do_EOF(self, *args, **opts)
-        
-    def do_calculate_width(self, *args, **opts):
-        return self.cmd.do_calculate_width(self, *args, **opts)
-
-    def do_check(self, *args, **opts):
-        return self.cmd.do_check(self, *args, **opts)
         
     def do_define(self, *args, **opts):
         return self.cmd.do_define(self, *args, **opts)

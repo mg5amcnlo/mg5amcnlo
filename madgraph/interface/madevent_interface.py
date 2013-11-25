@@ -890,11 +890,11 @@ class CheckValidForCmd(object):
         # Import model
         if not MADEVENT:
             modelname = self.find_model_name()
-            restrict_file = None
-            if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
-                restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            #restrict_file = None
+            #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
+            #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
             model = import_ufo.import_model(modelname, decay=True, 
-                        restrict_file=restrict_file)
+                        restrict=True)
             if self.mother.options['complex_mass_scheme']:
                 model.change_mass_to_complex_scheme()
         else:
@@ -2814,7 +2814,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if not opts['path']:
             opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
             if not opts['force'] :
-                self.ask_edit_cards(['param'],[], plot=False)
+                self.ask_edit_cards(['param_card'],[], plot=False)
         
         
         line = 'compute_widths %s %s' % \
@@ -2825,7 +2825,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         cmd.exec_cmd(line, model=opts['model'])
         self.child = None
         del cmd
-        
+
+
+    
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""

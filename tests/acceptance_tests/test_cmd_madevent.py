@@ -209,6 +209,7 @@ class TestMECmdShell(unittest.TestCase):
         mg_cmd.exec_cmd('output %s' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
+
         
         self.do('generate_events -f')        
         
@@ -249,7 +250,7 @@ class TestMECmdShell(unittest.TestCase):
 
         mg_cmd = MGCmd.MasterCmd()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
-        mg_cmd.exec_cmd(' generate e+ e-  > t t~')
+        mg_cmd.exec_cmd(' generate e+ e-  > e+ e-')
         mg_cmd.exec_cmd('output %s/' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
@@ -260,7 +261,7 @@ class TestMECmdShell(unittest.TestCase):
         val1 = self.cmd_line.results.current['cross']
         err1 = self.cmd_line.results.current['error']
         
-        target = 0.545
+        target = 155.9
         self.assertTrue(abs(val1 - target) / err1 < 1.)
         
     def load_result(self, run_name):

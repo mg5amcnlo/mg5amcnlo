@@ -29,7 +29,7 @@
 # Number of events and rnd seed                                      *
 # Warning: Do not generate more than 100K event in a single run      *
 #*********************************************************************
-  1000 = nevents ! Number of unweighted events requested 
+  500 = nevents ! Number of unweighted events requested 
       0       = iseed   ! rnd seed (0=assigned automatically=default))
 #*********************************************************************
 # Collider type and energy                                           *
@@ -50,8 +50,8 @@
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
- F        = fixed_ren_scale  ! if .true. use fixed ren scale
- F        = fixed_fac_scale  ! if .true. use fixed fac scale
+ T        = fixed_ren_scale  ! if .true. use fixed ren scale
+ T        = fixed_fac_scale  ! if .true. use fixed fac scale
  91.1880  = scale            ! fixed ren scale
  91.1880  = dsqrt_q2fact1    ! fixed fact scale for pdf1
  91.1880  = dsqrt_q2fact2    ! fixed fact scale for pdf2
@@ -59,7 +59,7 @@
 #*********************************************************************
 # Matching - Warning! ickkw > 1 is still beta
 #*********************************************************************
- 1        = ickkw            ! 0 no matching, 1 MLM, 2 CKKW matching
+ 0        = ickkw            ! 0 no matching, 1 MLM, 2 CKKW matching
  1        = highestmult      ! for ickkw=2, highest mult group
  1        = ktscheme         ! for ickkw=1, 1 Durham kT, 2 Pythia pTE
  1        = alpsfact         ! scale factor for QCD emission vx

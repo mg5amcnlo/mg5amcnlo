@@ -618,9 +618,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-        if value in alias:
+        
+        try:
+            if value in alias:
                 value = alias[value]
+        except TypeError:
+            pass
         if value == default and ask_class:
             value = question_instance.default(default)
         return value
@@ -1474,6 +1477,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
     
+    completion_prefix=''
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any

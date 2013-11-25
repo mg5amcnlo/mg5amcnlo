@@ -652,6 +652,7 @@ class MultiCore(Cluster):
             msg,  self.fail_msg = self.fail_msg, None
             self.remove()
             raise Exception, msg 
+        
             
     def remove(self, error=None):
         """Ensure that all thread are killed"""

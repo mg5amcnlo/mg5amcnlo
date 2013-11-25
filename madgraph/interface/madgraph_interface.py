@@ -5719,11 +5719,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         # Also reset _export_format and _export_dir
         self._export_format = None
 
-        # Remove previous generations from history
-        self.clean_history(to_remove=['add process'], remove_bef_last='generate',
-                           to_keep=['add','import','set','load'],
-                           allow_for_removal=['add process','generate','output'])
-
 
         # Setup before find_channels
         if not model:

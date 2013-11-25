@@ -188,9 +188,8 @@ class TestValidCmd(unittest.TestCase):
                         categories_nb[cat] += 1
                     else:
                         categories_nb[cat] = 1
-                    if cat == 'Not in help':
-                        print command
-        target = set(['Not in help', 'Main commands'])
+
+        target = set(['Not in help', 'Main commands', 'Documented commands'])
         self.assertEqual(target, category)
         self.assertEqual(categories_nb['Not in help'], 25)
     
