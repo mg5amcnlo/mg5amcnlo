@@ -1243,11 +1243,15 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # First create the starting external loop leg
             external_loop_wf=helas_objects.HelasWavefunction(\
                                                 tag[0][0], 0, model, decay_ids)
+            
             # When on the optimized output mode, the starting loop wavefunction
-            # can be recycled if it has the same pdg.
-            # It is anyway never output because whatever its pdg it has the
-            # same coefficients and loop momentum zero, so we never add it to
-            # the diagram wavefunctions.
+            # can be recycled if it has the same pdg because whatever its pdg 
+            # it has the same coefficients and loop momentum zero, 
+            # so it is in principle not necessary to add it to the 
+            # diagram_wavefunction. However, this is necessary for the function
+            # check_and_fix_fermion_flow to correctly update the dependances of
+            # previous diagrams to an external L-cut majorana wavefunction which
+            # needs flipping.
             if not self.optimized_output:
                 wavefunctionNumber=wavefunctionNumber+1
                 external_loop_wf.set('number',wavefunctionNumber)
@@ -1261,6 +1265,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     external_loop_wf.set('number',wavefunctionNumber)
                     external_loop_wfs_dict[external_loop_wf.get('pdg_code')]=\
                                                                 external_loop_wf
+                    diagram_wavefunctions.append(external_loop_wf)
+
             # Setup the starting point of the reading of the loop flow.
             last_loop_wfs.append(external_loop_wf)
 
@@ -1475,7 +1481,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             def check_lcut_fermion_flow_consistency(lcut_wf1, lcut_wf2):
                 """Checks that the two L-cut loop helas wavefunctions have                                                                                                                               
                 a consistent fermion flow."""
-                
                 if lcut_wf1.is_boson():
                     if lcut_wf1.get('state')!='final' or\
                             lcut_wf2.get('state')!='final':
@@ -1512,8 +1517,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 # loop_amp_wfs[0] is the last external loop wavefunction
                 # while loop_amp_wfs[1] is the first external loop wavefunction
                 rep={'incoming':'outgoing','outgoing':'incoming'}
+                # Check if we need to flip the state of the external L-cut majorana
                 other_external_loop_wf['state']=rep[loop_amp_wfs[1]['state']]
-                # other_external_loop_wf['fermionflow']=1
                 return
                                                             
             def process_counterterms(ct_vertices, wfNumber, amplitudeNumber):
@@ -1605,11 +1610,6 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # After generation of all wavefunctions and amplitudes,
             # add wavefunctions to diagram
             helas_diagram.set('wavefunctions', struct_wfs)
-            # And to the loop helas diagram if under the optimized output.
-            # In the default output, one use those stored in the loop amplitude
-            # since they are anyway not recycled.
-            if self.optimized_output:
-                helas_diagram.set('loop_wavefunctions',loop_wfs)
 
             # Of course we only allow to reuse the struct wavefunctions but
             # never the loop ones which have to be present and reused in each
@@ -1628,6 +1628,16 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     # Add one for the starting external loop wavefunctions
                     # which is fixed
                     wavefunctionNumber = wavefunctionNumber+1
+
+            # And to the loop helas diagram if under the optimized output.
+            # In the default output, one use those stored in the loop amplitude
+            # since they are anyway not recycled. Notice that we remove the 
+            # external L-cut loop wavefunctions from this list since they do 
+            # not need to be computed.
+            if self.optimized_output:
+                loop_wfs = helas_objects.HelasWavefunctionList(
+                         [lwf for lwf in loop_wfs if len(lwf.get('mothers'))>0])
+                helas_diagram.set('loop_wavefunctions',loop_wfs)
 
             # Return the diagram obtained
             return helas_diagram, wavefunctionNumber, amplitudeNumber      

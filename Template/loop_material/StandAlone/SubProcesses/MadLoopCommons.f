@@ -7,16 +7,19 @@
       integer i,j,k
 
       i =1
-      do while (i.le.LEN(str1) .and. str1(i:i).ne.' ')
+      do while (i.le.LEN(str1))
+      if(str1(i:i).eq.' ') goto 800     
       path(i:i) = str1(i:i)
       i=i+1
       enddo
+800   continue
       j=1
-      do while (j.le.LEN(str2) .and. str2(j:j).ne.' ')
+      do while (j.le.LEN(str2))
+      if(str2(j:j).eq.' ') goto 801
       path(i-1+j:i-1+j) = str2(j:j)
       j=j+1
       enddo
-
+801   continue
       k=i+j-1
       do while (k.le.LEN(path))
       path(k:k) = ' '

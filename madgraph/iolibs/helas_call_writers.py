@@ -1281,7 +1281,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         else:
             return '%s%s)'%(prefix, number)
 
-    def get_coef_construction_calls(self, matrix_element, group_loops=False,
+    def get_coef_construction_calls(self, matrix_element, group_loops=True,
                                             squared_orders=[], split_orders=[]):
         """ Return the calls to the helas routines to construct the coefficients
         of the polynomial representation of the loop numerator (i.e. Pozzorini
@@ -1294,14 +1294,20 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                   repr(matrix_element)
 
         res = []
-        sqso_max_lamp = [sqso[1][2] for sqso in squared_orders]
+        sqso_max_lamp = [sqso[1][2] for sqso in squared_orders]     
 
+        i=0
         for ldiag in matrix_element.get_loop_diagrams():
             res.append("# Coefficient construction for loop diagram with ID %d"\
                        %ldiag.get('number'))
             for lwf in ldiag.get('loop_wavefunctions'):
                     res.append(self.get_wavefunction_call(lwf))
             for lamp in ldiag.get_loop_amplitudes():
+                # If the loop grouping is not desired, then make sure it is 
+                # turned off here.
+                if not group_loops:
+                    lamp.set('loop_group_id',i)
+                    i=i+1
                 create_coef=[
                    'CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
                    '%(loop_rank)d','%(lcut_size)d',
@@ -1328,7 +1334,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         
         return res, coef_merge
 
-    def get_loop_CT_calls(self, matrix_element, group_loops=False, 
+    def get_loop_CT_calls(self, matrix_element, group_loops=True, 
                                             squared_orders=[], split_orders=[]):
         """ Return the calls to CutTools interface routines to launch the
         computation of the contribution of one loop group. The squared_orders 

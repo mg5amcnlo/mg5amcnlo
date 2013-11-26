@@ -1008,6 +1008,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         array_rep.append(self['color_key'])
         # Also need to specify if it is a loop wf
         array_rep.append(int(self['is_loop']))
+        
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
@@ -1544,10 +1545,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
-#        if not self['is_loop']:
         res.append(self.get_spin_state_number())
         res.append(self.find_outgoing_number())
-#        else:
+
         if self['is_loop']:
             res.append(self.get_loop_index())
             if not self.get('mothers'):
