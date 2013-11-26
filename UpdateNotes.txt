@@ -1,5 +1,8 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.14 (26/11/13) OM: Add warning about the fact that newprocess_mg5 is going to be remove in MG5_aMC_V2.0.0
+                  OM: Improved cluster submision/re-submition control. 
+
 1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
                       In case of failure, you can re-submitted the failing jobs automatically. The maximal 
                       number of re-submission for a job can be parametrize (default 1) and how long you have to
