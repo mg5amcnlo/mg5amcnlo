@@ -55,7 +55,24 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
     """
     # find diagrams with 3 point functions and use them as configurations
     id_ij = born_amp['process']['legs'][ij - 1]['id']
+    nlegs_b = len(born_amp['process']['legs'])
+    nlegs_r = len(real_amp['process']['legs'])
+    if nlegs_r - nlegs_b != 1:
+        raise FKSProcessError('Inconsistent number of born and real legs: %d %d' % (nlegs_b, nlegs_r))
 
+    #find the mapping of real legs onto the born ones
+    shift_dict = {}
+    for ir in range(1, nlegs_r + 1):
+        shift = 0
+        if ir > j:
+            shift += 1
+        if ir > i:
+            shift += 1
+        if ir > ij and ij <= max(i,j):
+            shift -= 1
+        shift_dict[ir] = ir - shift
+
+# now find the configurations
     minvert = min([max([len(vert.get('legs')) \
                         for vert in diag.get('vertices')]) \
                         for diag in born_amp.get('diagrams')])
@@ -117,34 +134,22 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
     #  real legs to match the born numbering.
 
     legs = []
+
     for d in good_diags: 
         for v in d['diagram'].get('vertices'):
             for l in v.get('legs'):
                 if l not in legs:
                     legs.append(copy.copy(l))
 
-    for good_diag in good_diags:
-        replaced_ij = False
-        for vert in good_diag['diagram'].get('vertices'):
-            for l in vert.get('legs'):
-                shift = 0
-                #shift the legs
-                if l.get('number') > 0 and l in legs:
-                    if l.get('number') > j:
-                        shift += 1
-                    if l.get('number') > i:
-                        shift += 1
-                    if l.get('number') > ij and ij < max(i,j):
-                        shift -= 1
-                    if l.get('number') != good_diag['leg_ij'] or replaced_ij:
-                        legs.remove(l)
-                        l['number'] -= shift
-                 #and relabel last_leg to ij
-                    if l.get('number') == good_diag['leg_ij'] and \
-                       l.get('id') == id_ij and not replaced_ij and l in legs:
-                        legs.remove(l)
-                        replaced_ij = True
-                        l['number'] = ij
+# now relabel the legs according to shift_dict
+# replace from lower to higher leg number, in order not to 
+# overwrite
+    for ir in range(1, nlegs_r + 1):
+        for good_diag in good_diags:
+            for vert in good_diag['diagram'].get('vertices'):
+                for l in vert.get('legs'):
+                    if l.get('number') == ir:
+                        l.set('number', shift_dict[l.get('number')])
 
     # this is to handle cases in which only one diagrams has to be linked
     if len(good_diags) == 1 and len(born_confs) == 1:

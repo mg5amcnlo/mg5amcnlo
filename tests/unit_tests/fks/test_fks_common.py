@@ -1618,8 +1618,8 @@ class TestLinkRBConfSM(unittest.TestCase):
                  {'born_conf':1, 'real_conf':4},
                  {'born_conf':2, 'real_conf':3}],
                 [{'born_conf':0, 'real_conf':0},
-                 {'born_conf':1, 'real_conf':3},
-                 {'born_conf':2, 'real_conf':4}] ]
+                 {'born_conf':1, 'real_conf':4},
+                 {'born_conf':2, 'real_conf':3}] ]
 
         for conf, link in zip(ij_conf, links):
             self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
@@ -1785,6 +1785,55 @@ class TestLinkRBConfSM(unittest.TestCase):
                  {'born_conf': 5, 'real_conf': 17},
                  {'born_conf': 6, 'real_conf': 9},
                  {'born_conf': 7, 'real_conf': 13}]]
+
+        conf = ij_conf[0]
+        fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij'])
+
+        for conf, link in zip(ij_conf, links):
+            self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
+
+
+    def test_link_duxhuduxux_guxhuuxux(self):
+        """tests that the real emission process and born process in h+3j  are
+        correctly linked"""
+
+
+        myleglist_r = fks_common.FKSLegList()
+        myleglist_r.append(fks_common.FKSLeg({'id':1, 'state':False, 'color':-3, 'massless':True, 'spin':2}))
+        myleglist_r.append(fks_common.FKSLeg({'id':-2, 'state':False, 'color':-3, 'massless':True, 'spin':2}))
+        myleglist_r.append(fks_common.FKSLeg({'id':25, 'state':True, 'color':1, 'massless':False, 'spin':1}))
+        myleglist_r.append(fks_common.FKSLeg({'id':2, 'state':True, 'color':3, 'massless':True, 'spin':2}))
+        myleglist_r.append(fks_common.FKSLeg({'id':1, 'state':True, 'color':3, 'massless':True, 'spin':2}))
+        myleglist_r.append(fks_common.FKSLeg({'id':-2, 'state':True, 'color':-3, 'massless':True, 'spin':2}))
+        myleglist_r.append(fks_common.FKSLeg({'id':-2, 'state':True, 'color':-3, 'massless':True, 'spin':2}))
+        realproc = MG.Process({'legs':myleglist_r,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':2, 'QED':3}})
+        realamp= diagram_generation.Amplitude(realproc)
+
+
+        myleglist_b = fks_common.FKSLegList()
+        myleglist_b.append(fks_common.FKSLeg({'id':21, 'state':False, 'color':8, 'massless':True, 'spin':3}))
+        myleglist_b.append(fks_common.FKSLeg({'id':-2, 'state':False, 'color':-3, 'massless':True, 'spin':2}))
+        myleglist_b.append(fks_common.FKSLeg({'id':25, 'state':True, 'color':1, 'massless':False, 'spin':1}))
+        myleglist_b.append(fks_common.FKSLeg({'id':2, 'state':True, 'color':3, 'massless':True, 'spin':2}))
+        myleglist_b.append(fks_common.FKSLeg({'id':-2, 'state':True, 'color':-3, 'massless':True, 'spin':2}))
+        myleglist_b.append(fks_common.FKSLeg({'id':-2, 'state':True, 'color':-3, 'massless':True, 'spin':2}))
+        bornproc = MG.Process({'legs':myleglist_b,
+                                       'model':self.base_model,
+                                       'orders':{'QCD':1, 'QED':3}})
+        bornamp= diagram_generation.Amplitude(bornproc)
+
+        ij_conf = [ {'i': 5, 'j':1, 'ij':1}] 
+
+        links =[[{'born_conf': 0, 'real_conf': 16},
+                 {'born_conf': 1, 'real_conf': 20},
+                 {'born_conf': 2, 'real_conf': 8},
+                 {'born_conf': 3, 'real_conf': 12},
+                 {'born_conf': 4, 'real_conf': 13},
+                 {'born_conf': 5, 'real_conf': 21},
+                 {'born_conf': 6, 'real_conf': 9},
+                 {'born_conf': 7, 'real_conf': 17}]]
 
         conf = ij_conf[0]
         fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij'])
