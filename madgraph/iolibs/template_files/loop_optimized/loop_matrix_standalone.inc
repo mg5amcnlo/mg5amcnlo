@@ -73,12 +73,6 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER I,J,K,H,DUMMY,I_LIB,I_QP_LIB
-C TILL NOW, ONLY CUTTOOLS PROVIDE QP
-       LOGICAL QP_TOOLS_AVAILABLE
-       DATA QP_TOOLS_AVAILABLE/.FALSE./
-       SAVE QP_TOOLS_AVAILABLE
-       INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
-       SAVE INDEX_QP_TOOLS
 	  INTEGER CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
 	  INTEGER NEWHELREF	  
@@ -211,6 +205,11 @@ C     loop split orders contributions have been reached already and the rest can
 	  integer I_SO
 	  DATA I_SO/1/
 	  common/I_SO/I_SO
+C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+       	  LOGICAL QP_TOOLS_AVAILABLE
+       	  DATA QP_TOOLS_AVAILABLE/.FALSE./
+       	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+       	  common/LOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
