@@ -259,8 +259,8 @@ class Cluster(object):
             #We are suppose to send the output to stdout
             special_output = True
             stderr = stdout + '.err'
-        id = self.submit2(prog, argument, cwd, stdout, stderr, log,
-                          required_output=required_output)
+        id = store_input(self.submit(prog, argument, cwd, stdout, stderr, log,
+                          required_output=required_output))
         
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
