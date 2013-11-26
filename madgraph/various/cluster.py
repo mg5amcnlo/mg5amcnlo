@@ -99,7 +99,8 @@ class Cluster(object):
         """How to make one submission. Return status id on the cluster.
         NO SHARE DISK"""
         
-        if not hasattr(self, 'temp_dir') or not self.temp_dir:
+        if not hasattr(self, 'temp_dir') or not self.temp_dir or \
+            (input_files == [] == output_files):
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
 
@@ -391,6 +392,10 @@ class CondorCluster(Cluster):
         """Submit the job on the cluster NO SHARE DISK
            input/output file should be give relative to cwd
         """
+        
+        if (input_files == [] == output_files):
+            return self.submit(prog, argument, cwd, stdout, stderr, log, 
+                               required_output=required_output, nb_submit=nb_submit)
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
