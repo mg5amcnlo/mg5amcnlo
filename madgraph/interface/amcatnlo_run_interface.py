@@ -1562,31 +1562,32 @@ Integrated cross-section
 #        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
-        for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
-            UPS_stats = re.search(UPS_stat_finder,logfile.read())
-            logfile.close()
-            if not UPS_stats is None:
-                channel_name = '/'.join(gv_log.split('/')[-5:-1])
-                try:
-                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
-                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
-                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
-                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
-                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
-                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
-                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
-                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
-                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
-                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
-                except KeyError:
-                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
-                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
-                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
-                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
-                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
+        if self.hasvirt:
+            for gv_log in log_GV_files:
+                logfile=open(gv_log,'r')             
+                UPS_stats = re.search(UPS_stat_finder,logfile.read())
+                logfile.close()
+                if not UPS_stats is None:
+                    channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                    try:
+                        stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
+                        stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
+                        stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
+                        stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
+                        stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
+                        stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
+                        stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
+                        stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
+                        stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
+                        stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
+                        stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
+                    except KeyError:
+                        stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
+                          int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
+                          int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
+                          int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
+                          int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
+                          int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -2660,9 +2661,10 @@ Integrated cross-section
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-                hasvirt = True
+                self.hasvirt = True
         else:
             os.unsetenv('madloop')
+            self.hasvirt = False
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

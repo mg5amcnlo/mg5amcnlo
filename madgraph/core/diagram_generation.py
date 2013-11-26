@@ -391,7 +391,9 @@ class Amplitude(base_objects.PhysicsObject):
         if isinstance(argument, base_objects.Process):
             super(Amplitude, self).__init__()
             self.set('process', argument)
+            print 'INIT', self['process'].nice_string()
             self.generate_diagrams()
+            print 'OUTIT', self['process'].nice_string()
         elif argument != None:
             # call the mother routine
             super(Amplitude, self).__init__(argument)

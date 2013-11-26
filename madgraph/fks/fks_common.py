@@ -60,6 +60,8 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
                         for vert in diag.get('vertices')]) \
                         for diag in born_amp.get('diagrams')])
 
+    print'MZminvert',  minvert
+
     born_confs = []
     real_confs = []
 
@@ -72,6 +74,8 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
             born_confs.append({'number' : k, 'diagram' : diag})
             k=k+1
 
+    print 'LEN born confs', len(born_confs)
+
     k=0
     for diag in real_amp.get('diagrams'):
         if any([len(vert.get('legs')) > minvert \
@@ -81,25 +85,37 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
             real_confs.append({'number': k, 'diagram': diag})
             k=k+1
 
+    print 'i,j,ij', i,j, ij, real_amp['process'].nice_string()
+    print 'LEN real confs', len(real_confs)
+
     good_diags = []
 
     # find the real diagrams that have i and j attached to the same vertex
+    # cehck also that the id of the third leg is id_ij
     real_confs_new = copy.deepcopy(real_confs)
     for diag in real_confs_new:
         for vert in diag['diagram'].get('vertices'):
-            vert_legs = [ l.get('number') for l in vert.get('legs')]
+            vert_legs = [l.get('number') for l in vert.get('legs')]
+            vert_ids = [l.get('id') for l in vert.get('legs')]
             if (i in vert_legs and not j in vert_legs) or \
                (j in vert_legs and not i in vert_legs):
                    break
 
             if i in vert_legs and j in vert_legs:
+                print 'vert_ids', vert_ids
+                vert_ids.remove(vert_ids[vert_legs.index(i)])
                 vert_legs.remove(i)
+                vert_ids.remove(vert_ids[vert_legs.index(j)])
                 vert_legs.remove(j)
                 last_leg = vert_legs[0]
-                diag['diagram']['vertices'].remove(vert)
-                good_diags.append({'diagram': diag['diagram'], 
-                                  'leg_ij': last_leg,
-                                  'number': diag['number']})
+                print 'ID_IJ', id_ij, vert_ids[0], len(vert_ids)
+                #check absolute value in order not to worry about 
+                #incoming/outgoing particles
+                if abs(vert_ids[0]) == abs(id_ij):
+                    diag['diagram']['vertices'].remove(vert)
+                    good_diags.append({'diagram': diag['diagram'], 
+                                      'leg_ij': last_leg,
+                                      'number': diag['number']})
                 break #no need to continue once the vertex is found
 
     # now good_diags contains the real_confs which had the splitting, 
@@ -108,6 +124,10 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
     # The legs in the born and real diags are ordered according to 
     #  the same criterion. Once we removed i-j, we have to re-label the
     #  real legs to match the born numbering.
+
+    print 'LEN good diags', len(good_diags)
+    for diag in good_diags:
+        print diag['diagram'].nice_string()
 
     legs = []
     for d in good_diags: 
