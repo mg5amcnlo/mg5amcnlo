@@ -72,7 +72,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY,I_LIB,I_QP_LIB
+      INTEGER I,J,K,H,DUMMY,I_QP_LIB
 	  INTEGER CTMODEINIT_BU
 	  %(real_dp_format)s MLSTABTHRES_BU
 	  INTEGER NEWHELREF	  
@@ -205,6 +205,9 @@ C     loop split orders contributions have been reached already and the rest can
 	  integer I_SO
 	  DATA I_SO/1/
 	  common/I_SO/I_SO
+	  integer I_LIB
+	  DATA I_LIB/1/
+	  common/I_LIB/I_LIB
 C TILL NOW, ONLY CUTTOOLS PROVIDE QP
        	  LOGICAL QP_TOOLS_AVAILABLE
        	  DATA QP_TOOLS_AVAILABLE/.FALSE./

@@ -1155,7 +1155,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                     fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)
-        
+    
         curr_attempt = 1
         while to_attempt!=[] and need_init():
             curr_attempt = to_attempt.pop()+1
@@ -1209,7 +1209,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         file.close()
 
     def setup_process(self, matrix_element, export_dir, reusing = False,
-                                                param_card = None,MLOptions={}):
+                                                param_card = None,MLOptions={},clean=True):
         """ Output the matrix_element in argument and perform the initialization
         while providing some details about the output in the dictionary returned. 
         Returns None if anything fails"""
@@ -1220,20 +1220,20 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                'Initialization' : None,
                'Process_compilation' : None}
 
-        if not reusing:
+        if not reusing and clean:
             if os.path.isdir(export_dir):
                 clean_up(self.mg_root)
                 if os.path.isdir(export_dir):
                     raise InvalidCmd(\
-                      "The directory %s already exist. Please remove it."\
-                                                               %str(export_dir))
+                            "The directory %s already exist. Please remove it."\
+                                                            %str(export_dir))
         else:
             if not os.path.isdir(export_dir):
                 raise InvalidCmd(\
                     "Could not find the directory %s to reuse."%str(export_dir))                           
         
 
-        if not reusing:
+        if not reusing and clean:
             model = matrix_element['processes'][0].get('model')
             # I do the import here because there is some cyclic import of export_v4
             # otherwise
@@ -1290,6 +1290,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         infos['dir_path']=dir_name
 
         attempts = [3,15]
+        # remove check and check_sa.o for running initialization again
+        try:
+            os.remove(os.path.join(dir_name,'check'))
+            os.remove(os.path.join(dir_name,'check_sa.o'))
+        except OSError:
+            pass
+        
         nPS_necessary = self.run_initialization(dir_name,
                                 os.path.join(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -1447,7 +1454,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 #===============================================================================
 
     def check_matrix_element_stability(self, matrix_element, options=None,
-                          infos = None, param_card = None, keep_folder = False,
+                          infos_IN = None, param_card = None, keep_folder = False,
                           MLOptions = {}):
         """ Output the matrix_element in argument, run in for nPoints and return
         a dictionary containing the stability information on each of these points.
@@ -1467,110 +1474,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         assert ((not reusing and isinstance(matrix_element, \
                  helas_objects.HelasMatrixElement)) or (reusing and 
                               isinstance(matrix_element, base_objects.Process)))            
-        
-        # Accuracy threshold of double precision evaluations above which the
-        # PS points is also evaluated in quadruple precision
-        accuracy_threshold=1.0e-1
-        
-        # Number of lorentz transformations to consider for the stability test
-        # (along with the loop direction test which is performed by default)
-        num_rotations = 1
-        
-        # Each evaluations is performed in different ways to assess its stability.
-        # There are two dictionaries, one for the double precision evaluation
-        # and the second one for quadruple precision (if it was needed).
-        # The keys are the name of the evaluation method and the value is the 
-        # float returned.
-        DP_stability = []
-        QP_stability = []
-        # The unstable point encountered are stored in this list
-        Unstable_PS_points = []
-        # The exceptional PS points are those which stay unstable in quad prec.
-        Exceptional_PS_points = []
-        
-        # Normally, this should work for loop-induced processes as well
-        if not reusing:
-            process = matrix_element['processes'][0]
-        else:
-            process = matrix_element
-        proc_name = process.shell_string()[2:]
-        export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
-                                                temp_dir_prefix+"_%s"%proc_name+\
-                            "_%i"%(1 if "MLReductionLib" not in MLOptions \
-                                   else MLOptions['MLReductionLib']))
-        if not infos:
-            infos = self.setup_process(matrix_element,export_dir, \
-                                                reusing, param_card,MLOptions)
-            if not infos:
-                return None
-        dir_path=infos['dir_path']
 
-        # Reuse old stability runs if present
-        if reusing:
-            if os.path.isfile(os.path.join(dir_path,'SavedStabilityRun.pkl')):
-                saved_run = save_load_object.load_from_file(os.path.join(\
-                                              dir_path,'SavedStabilityRun.pkl'))
-                #for key in saved_run.keys():
-                DP_stability = saved_run['DP_stability']
-                QP_stability = saved_run['QP_stability']
-                Unstable_PS_points = saved_run['Unstable_PS_points']
-                Exceptional_PS_points = saved_run['Exceptional_PS_points']
-
-        return_dict = {'DP_stability':DP_stability,
-               'QP_stability':QP_stability,
-               'Unstable_PS_points':Unstable_PS_points,
-               'Exceptional_PS_points':Exceptional_PS_points}
-
-        if nPoints==0:
-            if len(return_dict['DP_stability'])!=0:
-                return_dict['Process'] =  matrix_element.get('processes')[0] if not \
-                                                     reusing else matrix_element
-                return return_dict
-            else:
-                logging.info("ERROR: Not reusing a directory and the number"+\
-                                             " of point for the check is zero.")
-                return None
-
-        logger.info("Checking stability of process %s "%proc_name+\
-                    "with %d PS points."%nPoints)
-        if infos['Initialization'] != None:
-            time_per_ps_estimate = (infos['Initialization']/4.0)/2.0
-            sec_needed = int(time_per_ps_estimate*nPoints*4)
-        else:
-            sec_needed = 0
-        progress_bar = None
-        time_info = False
-        if sec_needed>5:
-            time_info = True
-            logger.info("This check should take about "+\
-                            "%s to run. Started on %s."%(\
-                            str(datetime.timedelta(seconds=sec_needed)),\
-                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M")))
-        if logger.getEffectiveLevel()<logging.WARNING and \
-                (sec_needed>5 or (reusing and infos['Initialization'] == None)):
-            widgets = ['Stability check:', pbar.Percentage(), ' ', 
-                                            pbar.Bar(),' ', pbar.ETA(), ' ']
-            progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
-                                                              fd=sys.stdout)
-        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-          read_ps = True, npoints = 1, hel_config = -1, split_orders=split_orders)
-        # Recompile (Notice that the recompilation is only necessary once) for
-        # the change above to take effect.
-        # Make sure to recreate the executable and modified sources
-        try:
-            os.remove(os.path.join(dir_path,'check'))
-            os.remove(os.path.join(dir_path,'check_sa.o'))
-        except OSError:
-            pass
-        # Now run make
-        devnull = open(os.devnull, 'w')
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_path, stdout=devnull, stderr=devnull)
-        devnull.close()    
-        if retcode != 0:
-            logging.info("Error while executing make in %s" % dir_path)
-            return None
-
+        # Helper functions
         def format_PS_point(ps, rotation=0):
             """ Write out the specified PS point to the file dir_path/PS.input
             while rotating it if rotation!=0. We consider only rotations of 90
@@ -1602,7 +1507,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 raise MadGraph5Error("Rotation id %i not implemented"%rotation)
             
             return '\n'.join([' '.join(['%.16E'%pi for pi in p]) for p in p_out])
-  
+        
         def pick_PS_point(proc, options):
             """ Randomly generate a PS point and make sure it is eligible. Then
             return it. Users can edit the cuts here if they want."""
@@ -1641,169 +1546,322 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 return p
             while not pass_cuts(p):
                 p, w_rambo = self.get_momenta(proc, options)
-            return p                
-
-        # First create the stability check fortran driver executable if not 
-        # already present.
-        if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
-            # Use the presence of the file born_matrix.f to check if this output
-            # is a loop_induced one or not.
-            if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
-                checkerName = 'StabilityCheckDriver.f'
-            else:
-                checkerName = 'StabilityCheckDriver_loop_induced.f'                
-            cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
-                   checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
+            return p
         
-        # Make sure to recompile the possibly modified files (time stamps can be
-        # off).
-        if os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver')):
-            os.remove(os.path.join(dir_path,'StabilityCheckDriver'))
-        if os.path.isfile(os.path.join(dir_path,'loop_matrix.o')):
-            os.remove(os.path.join(dir_path,'loop_matrix.o'))
-        misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
+        # Start loop on loop libraries        
+        # Accuracy threshold of double precision evaluations above which the
+        # PS points is also evaluated in quadruple precision
+        accuracy_threshold=1.0e-1
+        
+        # Number of lorentz transformations to consider for the stability test
+        # (along with the loop direction test which is performed by default)
+        num_rotations = 1
+        
+        if "MLReductionLib" not in MLOptions:
+            tools=[1]
+        else:
+            if MLOptions["MLReductionLib"]==-1:
+                tools=[1,3]
+            else:
+                tools=[MLOptions["MLReductionLib"]]
+
+        # Normally, this should work for loop-induced processes as well
+        if not reusing:
+            process = matrix_element['processes'][0]
+        else:
+            process = matrix_element
+        proc_name = process.shell_string()[2:]
+        export_dir=os.path.join(self.mg_root,("SAVED" if keep_folder else "")+\
+                                                temp_dir_prefix+"_%s"%proc_name)
+        
+        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI'}
+        return_dict={}
+        return_dict['Stability']={}
+        infos_save={'Process_output': None,
+               'HELAS_MODEL_compilation' : None,
+               'dir_path' : None,
+               'Initialization' : None,
+               'Process_compilation' : None}       
+        for tool in tools:
+            tool_name=tools_name[tool]
+            # Each evaluations is performed in different ways to assess its stability.
+            # There are two dictionaries, one for the double precision evaluation
+            # and the second one for quadruple precision (if it was needed).
+            # The keys are the name of the evaluation method and the value is the 
+            # float returned.
+            DP_stability = []
+            QP_stability = []
+            # The unstable point encountered are stored in this list
+            Unstable_PS_points = []
+            # The exceptional PS points are those which stay unstable in quad prec.
+            Exceptional_PS_points = []
+        
+            MLoptions={}
+            MLoptions["MLReductionLib"]=tool
+            clean=(tool==tools[0])
+            if infos_IN==None or (tool_name not in infos_IN):
+                infos=None
+            else:
+                infos=infos_IN[tool_name]
+            if not infos:
+                infos = self.setup_process(matrix_element,export_dir, \
+                                                reusing, param_card,MLoptions,clean)
+                if not infos:
+                    return None
+            if clean:
+                infos_save['Process_output']=infos['Process_output']
+                infos_save['HELAS_MODEL_compilation']=infos['HELAS_MODEL_compilation']
+                infos_save['dir_path']=infos['dir_path']
+                infos_save['Process_compilation']=infos['Process_compilation']
+            else:
+                if not infos['Process_output']:
+                    infos['Process_output']=infos_save['Process_output']
+                if not infos['HELAS_MODEL_compilation']:
+                    infos['HELAS_MODEL_compilation']=infos_save['HELAS_MODEL_compilation']
+                if not infos['dir_path']:
+                    infos['dir_path']=infos_save['dir_path']
+                if not infos['Process_compilation']:
+                    infos['Process_compilation']=infos_save['Process_compilation']
+                    
+            dir_path=infos['dir_path']
+
+            # Reuse old stability runs if present
+            savefile=('SavedStabilityRun%d'%tool)+'.pkl'
+            if reusing:
+                if os.path.isfile(os.path.join(dir_path,savefile)):
+                    saved_run = save_load_object.load_from_file(os.path.join(\
+                                              dir_path,savefile))
+                    #for key in saved_run.keys():
+                    DP_stability = saved_run['DP_stability']
+                    QP_stability = saved_run['QP_stability']
+                    Unstable_PS_points = saved_run['Unstable_PS_points']
+                    Exceptional_PS_points = saved_run['Exceptional_PS_points']
+
+            return_dict['Stability'][tool_name] = {'DP_stability':DP_stability,
+                              'QP_stability':QP_stability,
+                              'Unstable_PS_points':Unstable_PS_points,
+                              'Exceptional_PS_points':Exceptional_PS_points}
+
+            if nPoints==0:
+                if len(return_dict['DP_stability'])!=0:
+                    if tool == tools[-1]:
+                        return_dict['Process'] =  matrix_element.get('processes')[0] if not \
+                                                     reusing else matrix_element
+                        return return_dict
+                    else:
+                        continue
+                else:
+                    logging.info("ERROR: Not reusing a directory and the number"+\
+                                             " of point for the check is zero.")
+                    return None
+
+            logger.info("Checking stability of process %s "%proc_name+\
+                "with %d PS points by %s."%(nPoints,tool_name))
+            if infos['Initialization'] != None:
+                time_per_ps_estimate = (infos['Initialization']/4.0)/2.0
+                sec_needed = int(time_per_ps_estimate*nPoints*4)
+            else:
+                sec_needed = 0
+            
+            progress_bar = None
+            time_info = False
+            if sec_needed>5:
+                time_info = True
+                logger.info("This check should take about "+\
+                            "%s to run. Started on %s."%(\
+                            str(datetime.timedelta(seconds=sec_needed)),\
+                            datetime.datetime.now().strftime("%d-%m-%Y %H:%M")))
+            if logger.getEffectiveLevel()<logging.WARNING and \
+                (sec_needed>5 or (reusing and infos['Initialization'] == None)):
+                widgets = ['Stability check:', pbar.Percentage(), ' ', 
+                                            pbar.Bar(),' ', pbar.ETA(), ' ']
+                progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
+                                                              fd=sys.stdout)
+            self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+            read_ps = True, npoints = 1, hel_config = -1, split_orders=split_orders)
+            # Recompile (Notice that the recompilation is only necessary once) for
+            # the change above to take effect.
+            # Make sure to recreate the executable and modified sources
+            try:
+                os.remove(os.path.join(dir_path,'check'))
+                os.remove(os.path.join(dir_path,'check_sa.o'))
+            except OSError:
+                pass
+            # Now run make
+            devnull = open(os.devnull, 'w')
+            retcode = subprocess.call(['make','check'],
+                                   cwd=dir_path, stdout=devnull, stderr=devnull)
+            devnull.close()    
+            if retcode != 0:
+                logging.info("Error while executing make in %s" % dir_path)
+                return None
+                
+
+            # First create the stability check fortran driver executable if not 
+            # already present.
+            if not os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver.f')):
+                # Use the presence of the file born_matrix.f to check if this output
+                # is a loop_induced one or not.
+                if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
+                    checkerName = 'StabilityCheckDriver.f'
+                else:
+                    checkerName = 'StabilityCheckDriver_loop_induced.f'                
+                cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
+                    checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
+        
+            # Make sure to recompile the possibly modified files (time stamps can be
+            # off).
+            if os.path.isfile(os.path.join(dir_path,'StabilityCheckDriver')):
+                os.remove(os.path.join(dir_path,'StabilityCheckDriver'))
+            if os.path.isfile(os.path.join(dir_path,'loop_matrix.o')):
+                os.remove(os.path.join(dir_path,'loop_matrix.o'))
+            misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
                                               mode='fortran', job_specs = False)
 
-        StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
-          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+            
+            StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                                                                    cwd=dir_path)
-        start_index = len(DP_stability)
-        if progress_bar!=None:
-                progress_bar.start()
-        #for i in range(start_index,start_index+nPoints):
-            # Pick an eligible PS point with rambo
-        #    p = pick_PS_point(process)
-#            print "I use P_%i="%i,p
-        #    if progress_bar!=None:
-        #        progress_bar.update(i+1-start_index)
-            # Write it in the input file
-        #    PSPoint = format_PS_point(p,0)
-        # Flag to know if the run was interrupted or not
-        interrupted = False
-        # Flag to know wheter the run for one specific PS point got an IOError
-        # and must be retried
-        retry = 0
-        # We do not use a for loop because we want to manipulate the updater.
-        i=start_index
-        while i<(start_index+nPoints):
-            # To be added to the returned statistics  
-            qp_dict={}
-            dp_dict={}
-            UPS = None
-            EPS = None
-            # Pick an eligible PS point with rambo, if not already done
-            if retry==0:
-                p = pick_PS_point(process, options)
-#           print "I use P_%i="%i,p
-            try:
-                if progress_bar!=None:
-                    progress_bar.update(i+1-start_index)
+            start_index = len(DP_stability)
+            if progress_bar!=None:
+                    progress_bar.start()
+            #for i in range(start_index,start_index+nPoints):
+                # Pick an eligible PS point with rambo
+            #    p = pick_PS_point(process)
+    #            print "I use P_%i="%i,p
+            #    if progress_bar!=None:
+            #        progress_bar.update(i+1-start_index)
                 # Write it in the input file
-                PSPoint = format_PS_point(p,0)
-                dp_res=[]
-                dp_res.append(self.get_me_value(StabChecker,PSPoint,1,
-                                                     split_orders=split_orders))
-                dp_dict['CTModeA']=dp_res[-1]
-                dp_res.append(self.get_me_value(StabChecker,PSPoint,2,
-                                                     split_orders=split_orders))
-                dp_dict['CTModeB']=dp_res[-1]
-                for rotation in range(1,num_rotations+1):
-                    PSPoint = format_PS_point(p,rotation)
+                #    PSPoint = format_PS_point(p,0)
+                # Flag to know if the run was interrupted or not
+            interrupted = False
+            # Flag to know wheter the run for one specific PS point got an IOError
+            # and must be retried
+            retry = 0
+            # We do not use a for loop because we want to manipulate the updater.
+            i=start_index
+            while i<(start_index+nPoints):
+                # To be added to the returned statistics  
+                qp_dict={}
+                dp_dict={}
+                UPS = None
+                EPS = None
+                # Pick an eligible PS point with rambo, if not already done
+                if retry==0:
+                    p = pick_PS_point(process, options)
+#               print "I use P_%i="%i,p
+                try:
+                    if progress_bar!=None:
+                        progress_bar.update(i+1-start_index)
+                    # Write it in the input file
+                    PSPoint = format_PS_point(p,0)
+                    dp_res=[]
                     dp_res.append(self.get_me_value(StabChecker,PSPoint,1,
                                                      split_orders=split_orders))
-                    dp_dict['Rotation%i'%rotation]=dp_res[-1]
-                # Make sure all results make sense
-                if any([not res for res in dp_res]):
-                    return None
-                dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
-                dp_dict['Accuracy'] = dp_accuracy
-                if dp_accuracy>accuracy_threshold:
-                    UPS = [i,p]
-                    qp_res=[]
-                    PSPoint = format_PS_point(p,0)
-                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4,
+                    dp_dict['CTModeA']=dp_res[-1]
+                    dp_res.append(self.get_me_value(StabChecker,PSPoint,2,
                                                      split_orders=split_orders))
-                    qp_dict['CTModeA']=qp_res[-1]
-                    qp_res.append(self.get_me_value(StabChecker,PSPoint,5,
-                                                     split_orders=split_orders))
-                    qp_dict['CTModeB']=qp_res[-1]
+                    dp_dict['CTModeB']=dp_res[-1]
                     for rotation in range(1,num_rotations+1):
                         PSPoint = format_PS_point(p,rotation)
+                        dp_res.append(self.get_me_value(StabChecker,PSPoint,1,
+                                                     split_orders=split_orders))
+                        dp_dict['Rotation%i'%rotation]=dp_res[-1]
+                        # Make sure all results make sense
+                    if any([not res for res in dp_res]):
+                        return None
+                    dp_accuracy = (max(dp_res)-min(dp_res))/abs(sum(dp_res)/len(dp_res))
+                    dp_dict['Accuracy'] = dp_accuracy
+                    if dp_accuracy>accuracy_threshold and tool==1:
+                        # Only CutTools can use QP
+                        UPS = [i,p]
+                        qp_res=[]
+                        PSPoint = format_PS_point(p,0)
                         qp_res.append(self.get_me_value(StabChecker,PSPoint,4,
                                                      split_orders=split_orders))
-                        qp_dict['Rotation%i'%rotation]=qp_res[-1]
-                    # Make sure all results make sense
-                    if any([not res for res in qp_res]):
-                        return None
+                        qp_dict['CTModeA']=qp_res[-1]
+                        qp_res.append(self.get_me_value(StabChecker,PSPoint,5,
+                                                     split_orders=split_orders))
+                        qp_dict['CTModeB']=qp_res[-1]
+                        for rotation in range(1,num_rotations+1):
+                            PSPoint = format_PS_point(p,rotation)
+                            qp_res.append(self.get_me_value(StabChecker,PSPoint,4,
+                                                     split_orders=split_orders))
+                            qp_dict['Rotation%i'%rotation]=qp_res[-1]
+                        # Make sure all results make sense
+                        if any([not res for res in qp_res]):
+                            return None
                     
-                    qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
-                    qp_dict['Accuracy']=qp_accuracy
-                    if qp_accuracy>accuracy_threshold:
-                        EPS = [i,p]
-            except KeyboardInterrupt:
-                interrupted = True
-                break
-            except IOError, e:
-                if e.errno == errno.EINTR:
-                    if retry==100:
-                        logger.error("Failed hundred times consecutively because"+
+                        qp_accuracy = (max(qp_res)-min(qp_res))/abs(sum(qp_res)/len(qp_res))
+                        qp_dict['Accuracy']=qp_accuracy
+                        if qp_accuracy>accuracy_threshold:
+                            EPS = [i,p]
+                except KeyboardInterrupt:
+                    interrupted = True
+                    break
+                except IOError, e:
+                    if e.errno == errno.EINTR:
+                        if retry==100:
+                            logger.error("Failed hundred times consecutively because"+
                                                " of system call interruptions.")
-                        raise
-                    else:
-                        logger.debug("Recovered from a system call interruption."+\
+                            raise
+                        else:
+                            logger.debug("Recovered from a system call interruption."+\
                                         "PSpoint #%i, Attempt #%i."%(i,retry+1))
-                        # Sleep for half a second. Safety measure.
-                        time.sleep(0.5)                        
-                    # We will retry this PS point
-                    retry = retry+1
-                    # Make sure the MadLoop process is properly killed
-                    try:
-                        StabChecker.kill()
-                    except Exception: 
-                        pass
-                    StabChecker = subprocess.Popen(\
+                            # Sleep for half a second. Safety measure.
+                            time.sleep(0.5)                        
+                        # We will retry this PS point
+                        retry = retry+1
+                        # Make sure the MadLoop process is properly killed
+                        try:
+                            StabChecker.kill()
+                        except Exception: 
+                            pass
+                        StabChecker = subprocess.Popen(\
                                [os.path.join(dir_path,'StabilityCheckDriver')], 
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
                                            stderr=subprocess.PIPE, cwd=dir_path)
-                    continue
-                else:
-                    raise
+                        continue
+                    else:
+                        raise
                 
-            # Successfully processed a PS point so,
-            #  > reset retry
-            retry = 0
-            #  > Update the while loop counter variable
-            i=i+1
+                # Successfully processed a PS point so,
+                #  > reset retry
+                retry = 0
+                #  > Update the while loop counter variable
+                i=i+1
             
-            # Update the returned statistics
-            DP_stability.append(dp_dict)
-            QP_stability.append(qp_dict)
-            if not EPS is None:
-                Exceptional_PS_points.append(EPS)
-            if not UPS is None:
-                Unstable_PS_points.append(UPS)
+                # Update the returned statistics
+                DP_stability.append(dp_dict)
+                QP_stability.append(qp_dict)
+                if not EPS is None:
+                    Exceptional_PS_points.append(EPS)
+                if not UPS is None:
+                    Unstable_PS_points.append(UPS)
 
-        if progress_bar!=None:
-            progress_bar.finish()
-        if time_info:
-            logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
+            if progress_bar!=None:
+                progress_bar.finish()
+            if time_info:
+                logger.info('Finished check on %s.'%datetime.datetime.now().strftime(\
                                                               "%d-%m-%Y %H:%M"))
 
-        # Close the StabChecker process.
-        if not interrupted:
-            StabChecker.stdin.write('y\n')
-        else:
-            StabChecker.kill()
+            # Close the StabChecker process.
+            if not interrupted:
+                StabChecker.stdin.write('y\n')
+            else:
+                StabChecker.kill()
         
-        #return_dict = {'DP_stability':DP_stability,
-        #           'QP_stability':QP_stability,
-        #           'Unstable_PS_points':Unstable_PS_points,
-        #           'Exceptional_PS_points':Exceptional_PS_points}
+            #return_dict = {'DP_stability':DP_stability,
+            #           'QP_stability':QP_stability,
+            #           'Unstable_PS_points':Unstable_PS_points,
+            #           'Exceptional_PS_points':Exceptional_PS_points}
         
-        # Save the run for possible future use
-        save_load_object.save_to_file(os.path.join(dir_path,\
-                                           'SavedStabilityRun.pkl'),return_dict)
-
+            # Save the run for possible future use
+            save_load_object.save_to_file(os.path.join(dir_path,savefile),\
+                                          return_dict['Stability'][tool_name])
+            if interrupted:
+                break
+        
         return_dict['Process'] =  matrix_element.get('processes')[0] if not \
                                                      reusing else matrix_element
         return return_dict
@@ -1966,7 +2024,7 @@ def check_already_checked(is_ids, fs_ids, sorted_ids, process, model,
 # Generate a loop matrix element
 #===============================================================================
 def generate_loop_matrix_element(process_definition, reuse,
-                                        cmd = FakeInterface(),appendfix=""):
+                                        cmd = FakeInterface()):
     """ Generate a loop matrix element from the process definition, and returns
     it along with the timing information dictionary.
     If reuse is True, it reuses the already output directory if found."""
@@ -1995,8 +2053,8 @@ def generate_loop_matrix_element(process_definition, reuse,
     # Now generate a process based on the ProcessDefinition given in argument.
     process = process_definition.get_process(isids,fsids)
     
-    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s%s"%(
-                    '_'.join(process.shell_string().split('_')[1:]),appendfix))
+    proc_dir = os.path.join(mg_root,"SAVED"+temp_dir_prefix+"_%s"%(
+                    '_'.join(process.shell_string().split('_')[1:])))
     
     if reuse and os.path.isdir(proc_dir):
         logger.info("Reusing directory %s"%str(proc_dir))
@@ -2103,13 +2161,10 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     keep_folder = reuse
     model=process_definition.get('model')
 
-    if "MLReductionLib" not in MLOptions:
-        appendfix="_1"
-    else:
-        appendfix="_%i"%MLOptions["MLReductionLib"]
     
     timing, matrix_element = generate_loop_matrix_element(process_definition,
-                                            reuse, cmd=cmd,appendfix=appendfix)
+                                            reuse, cmd=cmd)
+            
     reusing = isinstance(matrix_element, base_objects.Process)
     options['reuse'] = reusing
     myStabilityChecker = LoopMatrixElementTimer(cuttools_dir=cuttools,tir_dir=tir,
@@ -2120,6 +2175,9 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
         MLoptions = {}
     else:
         MLoptions = MLOptions
+        if "MLReductionLib" not in MLOptions:
+            MLoptions["MLReductionLib"] = -1
+
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
                                                         keep_folder=keep_folder,
@@ -2128,11 +2186,6 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     if stability == None:
         return None
     else:
-        if 'MLReductionLib' not in MLoptions:
-            stability['tool_name']="CutTools"
-        else:
-            mlrlib={1:"CutTools",2:"PJFry++",3:"IREGI"}
-            stability['tool_name']=mlrlib[MLoptions['MLReductionLib']]
         stability['loop_optimized_output']=myStabilityChecker.loop_optimized_output
         return stability
 
@@ -2454,7 +2507,7 @@ def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
                                                               %str(logFilePath))
     return text
 
-def output_stability(stabilitylist, mg_root, reusing=False):
+def output_stability(stability, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
     under the MadGraph root folder (mg_root)"""
@@ -2533,30 +2586,30 @@ def output_stability(stabilitylist, mg_root, reusing=False):
     # Define shortcut
     f = format_output
     # change the format of stability list
-    stability={}
-    if isinstance(stabilitylist,list):
-        if len(stabilitylist)==0:
-            res_str += "= Could not produce the empty stability result"
-        stability['loop_optimized_output']=stabilitylist[0]['loop_optimized_output']
-        stability['Process']=stabilitylist[0]['Process']
-        stability['Stability']={}
-        for stab in stabilitylist:
-            toolname=stab['tool_name']
-            stability['Stability'][toolname]={}
-            stability['Stability'][toolname]['DP_stability']=stab['DP_stability']
-            stability['Stability'][toolname]['QP_stability']=stab['QP_stability']
-            stability['Stability'][toolname]['Unstable_PS_points']=stab['Unstable_PS_points']
-            stability['Stability'][toolname]['Exceptional_PS_points']=stab['Exceptional_PS_points']
-    else:
-        stability['loop_optimized_output']=stabilitylist['loop_optimized_output']
-        stability['Process']=stabilitylist['Process']
-        stability['Stability']={}
-        toolname=stabilitylist['tool_name']
-        stability['Stability'][toolname]={}
-        stability['Stability'][toolname]['DP_stability']=stabilitylist['DP_stability']
-        stability['Stability'][toolname]['QP_stability']=stabilitylist['QP_stability']
-        stability['Stability'][toolname]['Unstable_PS_points']=stabilitylist['Unstable_PS_points']
-        stability['Stability'][toolname]['Exceptional_PS_points']=stabilitylist['Exceptional_PS_points']        
+    #stability={}
+    #if isinstance(stabilitylist,list):
+    #    if len(stabilitylist)==0:
+    #        res_str += "= Could not produce the empty stability result"
+    #    stability['loop_optimized_output']=stabilitylist[0]['loop_optimized_output']
+    #    stability['Process']=stabilitylist[0]['Process']
+    #    stability['Stability']={}
+    #    for stab in stabilitylist:
+    #        toolname=stab['tool_name']
+    #        stability['Stability'][toolname]={}
+    #        stability['Stability'][toolname]['DP_stability']=stab['DP_stability']
+    #        stability['Stability'][toolname]['QP_stability']=stab['QP_stability']
+    #        stability['Stability'][toolname]['Unstable_PS_points']=stab['Unstable_PS_points']
+    #        stability['Stability'][toolname]['Exceptional_PS_points']=stab['Exceptional_PS_points']
+    #else:
+    #    stability['loop_optimized_output']=stabilitylist['loop_optimized_output']
+    #    stability['Process']=stabilitylist['Process']
+    #    stability['Stability']={}
+    #    toolname=stabilitylist['tool_name']
+    #    stability['Stability'][toolname]={}
+    #    stability['Stability'][toolname]['DP_stability']=stabilitylist['DP_stability']
+    #    stability['Stability'][toolname]['QP_stability']=stabilitylist['QP_stability']
+    #    stability['Stability'][toolname]['Unstable_PS_points']=stabilitylist['Unstable_PS_points']
+    #    stability['Stability'][toolname]['Exceptional_PS_points']=stabilitylist['Exceptional_PS_points']        
         
     opt = stability['loop_optimized_output']
 

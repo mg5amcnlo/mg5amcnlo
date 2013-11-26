@@ -538,7 +538,7 @@ C PJFry++
 C IREGI
 	      CALL DETECT_IREGI(NLOOPLINE,RANK,complex_mass,PASS)
 	    ELSE
-	      STOP 'ONLY CUTTOOLS,PJ++,IREGI are provided'
+	      STOP 'ONLY CUTTOOLS,PJFry++,IREGI are provided'
 	    ENDIF
 	    RETURN
           END
