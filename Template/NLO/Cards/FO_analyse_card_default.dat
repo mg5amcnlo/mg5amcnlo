@@ -10,6 +10,14 @@
 #                                                                               
 #######################################################################
 #
+# Analysis format. Can either be 'topdrawer', 'root', or 'none'.
+# Topdrawer is human-readable text format, which allows for easy
+# conversion to other formats. When choosing topdrawer, the
+# histogramming package 'dbook.f' is included in the code, while when
+# choosing root the 'rbook_fe.f' and 'rbook_be.cc' are included. If
+# 'none' is chosen, all the other entries below have to be set empty.
+FO_ANALYSIS_FORMAT = topdrawer
+#
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
 #
@@ -24,4 +32,4 @@ FO_INCLUDEPATHS =
 # User's analysis (to be put in the <PROCDIR>/FixedOrderAnalysis/
 # directory). Please use .o as extension and white spaces to separate
 # files.
-FO_ANALYSE = analysis_template.o
+FO_ANALYSE = analysis_td_template.o

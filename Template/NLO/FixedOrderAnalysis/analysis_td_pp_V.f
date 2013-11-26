@@ -56,6 +56,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       include 'dbook.inc'
+      call open_topdrawer_file
+      call mclear
       do i=1,NPLOTS
          call mopera(i,'+',i,i,xnorm,0.d0)
          call mfinal(i)
@@ -71,6 +73,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       call multitop(l+ 5,3,2,'mV       ',' ','LOG')
       enddo
       enddo
+      call close_topdrawer_file
       return                
       end
 

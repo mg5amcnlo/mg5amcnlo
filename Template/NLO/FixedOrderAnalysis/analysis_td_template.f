@@ -88,6 +88,10 @@ c Local variables
       common/c_analysis/nwgt_analysis
 c This defines NPLOTS:
       include 'dbook.inc'
+c Open the topdrawer file to write the histograms (do not remove the
+c next to calls)
+      call open_topdrawer_file
+      call mclear
 c Do not touch the folloing 4 lines. These lines make sure that the
 c histograms will have the correct overall normalisation: cross section
 c (in pb) per bin.
@@ -104,6 +108,8 @@ c convert them to a format suitable for writing
             call multitop(l+i,3,2,'total rate',ytit,'LIN')
          enddo
       enddo
+c Close the topdrawer file (Do not remove this call)
+      call close_topdrawer_file
       return
       end
 

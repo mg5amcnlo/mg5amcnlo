@@ -1263,16 +1263,29 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
             self.print_summary(options, 1, mode)
-            misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
-                                stdout=devnull, 
-                                cwd=pjoin(self.me_dir, 'SubProcesses'))
 
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
-            logger.info('The results of this run and the TopDrawer file with the plots' + \
+            if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
+                misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            elif self.analyse_card['fo_analysis_format'].lower() == 'root':
+#
+# PUT HERE THE COMBINE SCRIPT FOR ROOT
+#
+
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the Root file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            else:
+                logger.info('The results of this run' + \
+                            ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
@@ -2602,8 +2615,8 @@ Integrated cross-section
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
-            # write an analyse_opts with a default analysis so that compilation goes through
-            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o\n')
+            # write an analyse_opts with a dummy analysis so that compilation goes through
+            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o\nFO_FLAGS += -Wl,-U,_rinit_\n')
 
         #directory where to compile exe
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 

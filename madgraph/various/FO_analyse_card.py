@@ -26,7 +26,7 @@ class FOAnalyseCardError(Exception):
 class FOAnalyseCard(dict):
     """A simple handler for the fixed-order analyse card """
 
-    string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 'fo_analyse']
+    string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 'fo_analyse', 'fo_analysis_format']
 
     
     def __init__(self, card=None, testing=False):
@@ -41,6 +41,7 @@ class FOAnalyseCard(dict):
     
     def read_card(self, card_path):
         """read the FO_analyse_card, if testing card_path is the content"""
+        fo_analysis_formats = ['topdrawer','root','none']
         if not self.testing:
             content = open(card_path).read()
         else:
@@ -56,6 +57,8 @@ class FOAnalyseCard(dict):
                 # (i.e. libfastjet.a -> fastjet)
                 if key == 'fo_extralibs':
                     value = value.replace('lib', '').replace('.a', '')
+                elif key == 'fo_analysis_format' and value.lower() not in fo_analysis_formats:
+                    raise FO_AnalyseCardError('Unknown FO_ANALYSIS_FORMAT: %s' % value)
                 if value.lower() == 'none':
                     self[key] = ''
                 else:
@@ -71,6 +74,26 @@ class FOAnalyseCard(dict):
         if self.testing, the function returns its content"""
 
         lines = []
+        to_add = ''
+        for key in self.keylist:
+            value = self[key].lower()
+            if key in self.string_vars:
+                if key == 'fo_analysis_format':
+                    if value == 'topdrawer':
+                        to_add = 'dbook.o'
+# this mean that during the linking of the object files, unresolved
+# references to the 'rinit' function/subroutine are ignored:
+                        line='FO_FLAGS += -Wl,-U,_rinit_' 
+                        lines.append(line)
+                    elif value == 'root':
+                        to_add = 'rbook_fe.o rbook_be.o'
+                    else:
+                        to_add = 'analysis_dummy.o dbook.o'
+                        line='FO_FLAGS += -Wl,-U,_rinit_' 
+                        lines.append(line)
+                        
+
+
         for key in self.keylist:
             value = self[key]
             if key in self.string_vars:
@@ -86,11 +109,12 @@ class FOAnalyseCard(dict):
                     # add the -l flag
                     line = '%s=%s' % (key.upper(), 
                             ' '.join(['-l' + lib for lib in value.split()]))
-                else:
-                    line = '%s=%s' % (key.upper(), value)
+                elif key == 'fo_analyse':
+                    line = '%s=%s '% (key.upper(), value)
+                    line = line + to_add
                 lines.append(line)
             else:
-                raise ShowerCardError('Unknown key: %s = %s' % (key, value))
+                raise FO_AnalyseCardError('Unknown key: %s = %s' % (key, value))
 
         if self.testing:
             return ('\n'.join(lines) + '\n')

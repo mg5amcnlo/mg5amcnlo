@@ -1,5 +1,6 @@
 c Dummy analysis routines used for linking when not doing Fixed Order
-c calculations. DO NOT REMOVE OR CHANGE THIS FILE.
+c calculations or when having fo_analysis_format=none in the
+c FO_analyse_card.
       subroutine analysis_begin(nwgt,weights_info)
       implicit none
       integer nwgt
