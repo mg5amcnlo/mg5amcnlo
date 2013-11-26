@@ -110,7 +110,8 @@ class Cluster(object):
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
         
-        if not hasattr(self, 'temp_dir') or not self.temp_dir:
+        if not hasattr(self, 'temp_dir') or not self.temp_dir or \
+            (input_files == [] == output_files):
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
             
@@ -291,7 +292,8 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             
     @check_interupt()
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
-                        stderr=None, log=None, required_output=[], nb_submit=0):
+                        stderr=None, log=None, required_output=[], nb_submit=0,
+                        input_files=[], output_files=[]):
         """launch one job on the cluster and wait for it"""
         
         special_output = False # tag for concatenate the error with the output.
@@ -301,7 +303,8 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             stderr = stdout + '.err'
 
         id = self.submit2(prog, argument, cwd, stdout, stderr, log,
-                          required_output=required_output)
+                          required_output=required_output, input_files=input_files,
+                          output_files=output_files)
         
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
@@ -757,6 +760,10 @@ class CondorCluster(Cluster):
         """Submit the job on the cluster NO SHARE DISK
            input/output file should be give relative to cwd
         """
+        
+        if (input_files == [] == output_files):
+            return self.submit(prog, argument, cwd, stdout, stderr, log, 
+                               required_output=required_output, nb_submit=nb_submit)
         
         text = """Executable = %(prog)s
                   output = %(stdout)s
