@@ -4459,7 +4459,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
 
         all_categories = self.ask('','0',[], ask_class=AskforCustomize)
-        misc.sprint(all_categories)
         ## Make a Temaplate for  the restriction card. (card with no restrict)
         for block in param_card:
             value_dict = {}
@@ -4477,7 +4476,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         for category in all_categories:
             for options in category:
-                print options
                 if not options.status:
                     continue
                 param = param_card[options.lhablock].get(options.lhaid)
