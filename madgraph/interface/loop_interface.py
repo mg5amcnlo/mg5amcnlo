@@ -131,7 +131,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def rate_proc_difficulty(self, proc, mode):
         """ Gives an integer more or less representing the difficulty of the process.
         For now it is very basic and such that "difficult" processes start at 
-        a value of about 30."""
+        a value of about 35."""
         
         def pdg_difficulty(pdg):
             """ Gives a score from the pdg of a leg to state how it increases the
@@ -195,7 +195,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 30
+        difficulty_threshold = 35
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
