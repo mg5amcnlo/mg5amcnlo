@@ -1439,17 +1439,7 @@ class TestLinkRBConfHEFT(unittest.TestCase):
         bornproc = MG.Process({'legs':myleglist_b,
                                        'model':self.base_model,
                                        'orders':{'QCD':1, 'QED':0, 'HIG':1}})
-        print 'ZZ', [l['id'] for l in bornproc['legs']]
-        print 'ZZ', [l['number'] for l in bornproc['legs']]
         bornamp= diagram_generation.Amplitude(bornproc)
-        print 'ZZZZZ', bornamp['process'].nice_string()
-        print 'ZZ', [l['id'] for l in bornproc['legs']]
-        print 'ZZ', [l['id'] for l in bornamp['process']['legs']]
-
-#        for i, diag in enumerate(bornamp.get('diagrams')):
-#            print "B",i , diag.nice_string()
-#        for i, diag in enumerate(realamp.get('diagrams')):
-#            print "R",i , diag.nice_string()
 
 
         ij_conf = [ {'i': 4, 'j':1, 'ij':1}, 
@@ -1837,20 +1827,57 @@ class TestLinkRBConfSM(unittest.TestCase):
 
         ij_conf = [ {'i': 4, 'j':1, 'ij':1}] 
 
-#changechangechange
-        links =[[{'born_conf': 0, 'real_conf': 16},
-                 {'born_conf': 1, 'real_conf': 20},
-                 {'born_conf': 2, 'real_conf': 12},
-                 {'born_conf': 3, 'real_conf': 21},
-                 {'born_conf': 4, 'real_conf': 8},
-                 {'born_conf': 5, 'real_conf': 17},
-                 {'born_conf': 6, 'real_conf': 9},
-                 {'born_conf': 7, 'real_conf': 13}]]
+        links =[[{'born_conf': 0, 'real_conf': 80},
+               {'born_conf': 1, 'real_conf': 79},
+               {'born_conf': 2, 'real_conf': 85},
+               {'born_conf': 3, 'real_conf': 89},
+               {'born_conf': 4, 'real_conf': 88},
+               {'born_conf': 5, 'real_conf': 92},
+               {'born_conf': 6, 'real_conf': 91},
+               {'born_conf': 7, 'real_conf': 94},
+               {'born_conf': 8, 'real_conf': 49},
+               {'born_conf': 9, 'real_conf': 48},
+               {'born_conf': 10, 'real_conf': 61},
+               {'born_conf': 11, 'real_conf': 64},
+               {'born_conf': 12, 'real_conf': 63},
+               {'born_conf': 13, 'real_conf': 72},
+               {'born_conf': 14, 'real_conf': 71},
+               {'born_conf': 15, 'real_conf': 95},
+               {'born_conf': 16, 'real_conf': 51},
+               {'born_conf': 17, 'real_conf': 50},
+               {'born_conf': 18, 'real_conf': 59},
+               {'born_conf': 19, 'real_conf': 73},
+               {'born_conf': 20, 'real_conf': 76},
+               {'born_conf': 21, 'real_conf': 82},
+               {'born_conf': 22, 'real_conf': 81},
+               {'born_conf': 23, 'real_conf': 93},
+               {'born_conf': 24, 'real_conf': 53},
+               {'born_conf': 25, 'real_conf': 52},
+               {'born_conf': 26, 'real_conf': 56},
+               {'born_conf': 27, 'real_conf': 65},
+               {'born_conf': 28, 'real_conf': 68},
+               {'born_conf': 29, 'real_conf': 84},
+               {'born_conf': 30, 'real_conf': 83},
+               {'born_conf': 31, 'real_conf': 90},
+               {'born_conf': 32, 'real_conf': 54},
+               {'born_conf': 33, 'real_conf': 55},
+               {'born_conf': 34, 'real_conf': 57},
+               {'born_conf': 35, 'real_conf': 58},
+               {'born_conf': 36, 'real_conf': 60},
+               {'born_conf': 37, 'real_conf': 62},
+               {'born_conf': 38, 'real_conf': 66},
+               {'born_conf': 39, 'real_conf': 67},
+               {'born_conf': 40, 'real_conf': 69},
+               {'born_conf': 41, 'real_conf': 70},
+               {'born_conf': 42, 'real_conf': 74},
+               {'born_conf': 43, 'real_conf': 75},
+               {'born_conf': 44, 'real_conf': 77},
+               {'born_conf': 45, 'real_conf': 78},
+               {'born_conf': 46, 'real_conf': 86},
+               {'born_conf': 47, 'real_conf': 87}]]
 
         conf = ij_conf[0]
         fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij'])
-        print realproc.nice_string()
-        print bornproc.nice_string()
 
         for conf, link in zip(ij_conf, links):
             self.assertEqual(link, fks_common.link_rb_configs(bornamp, realamp, conf['i'], conf['j'], conf['ij']))
