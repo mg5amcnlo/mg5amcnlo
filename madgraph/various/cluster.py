@@ -252,7 +252,8 @@ class Cluster(object):
             
     @check_interupt()
     def launch_and_wait(self, prog, argument=[], cwd=None, stdout=None, 
-                        stderr=None, log=None, required_output=[], nb_submit=0):
+                        stderr=None, log=None, required_output=[], nb_submit=0,
+                        input_files=[], output_files=[]):
         """launch one job on the cluster and wait for it"""
         
         special_output = False # tag for concatenate the error with the output.
@@ -260,8 +261,9 @@ class Cluster(object):
             #We are suppose to send the output to stdout
             special_output = True
             stderr = stdout + '.err'
-        id = store_input(self.submit(prog, argument, cwd, stdout, stderr, log,
-                          required_output=required_output))
+        id = self.submit2(prog, argument, cwd, stdout, stderr, log,
+                          required_output=required_output, input_files=input_files,
+                          output_files=output_files)
         
         frame = inspect.currentframe()
         args, _, _, values = inspect.getargvalues(frame)
