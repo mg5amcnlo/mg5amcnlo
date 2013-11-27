@@ -17,7 +17,7 @@ c  Scales and pdf's are set in the run_card.dat.
 c
 c This file contains the following routines:
 c 
-c- madgraph original call to set the parameters
+c- MadGraph original call to set the parameters
 c- lh_readin is called from here.
 c  It talks to the lh_readin through the common block values.
 c      subroutine setpara

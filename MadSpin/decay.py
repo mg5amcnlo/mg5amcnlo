@@ -4,16 +4,16 @@ from __future__ import division
 
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ###############################################################################
 """
@@ -1436,7 +1436,7 @@ class width_estimate(object):
 
 
     def extract_br_from_width_evaluation(self, to_decay):
-        """ use madgraph to generate me's for res > all all  
+        """ use MadGraph5_aMC@NLO to generate me's for res > all all  
         """
         if os.path.isdir(pjoin(self.path_me,"width_calculator")):
             shutil.rmtree(pjoin(self.path_me,"width_calculator"))

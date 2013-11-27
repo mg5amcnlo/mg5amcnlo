@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -131,7 +131,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def rate_proc_difficulty(self, proc, mode):
         """ Gives an integer more or less representing the difficulty of the process.
         For now it is very basic and such that "difficult" processes start at 
-        a value of about 30."""
+        a value of about 35."""
         
         def pdg_difficulty(pdg):
             """ Gives a score from the pdg of a leg to state how it increases the
@@ -195,7 +195,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 30
+        difficulty_threshold = 35
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -259,7 +259,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
   guarantee a correct behavior of the code in this context. Please visit
   http://amcatnlo.cern.ch/list.htm for a list of processes we have 
   validated. If your process does not appear and you have successfully
-  studied it with MadGraph5 v2.0, please report it.
+  studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
@@ -293,7 +293,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 #                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     logger.info(\
                       "The default sm model does not allow to generate"+
-                      " loop processes. MG5 now loads 'loop_sm' instead.")
+                      " loop processes. MG5_aMC now loads 'loop_sm' instead.")
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
@@ -487,7 +487,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
 
-        # Fortran MadGraph Standalone
+        # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format == 'standalone':
             for me in matrix_elements:
                 calls = calls + \

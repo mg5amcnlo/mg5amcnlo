@@ -2,20 +2,20 @@
 
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
-"""This is a simple script to create a release for MadGraph 5, based
+"""This is a simple script to create a release for MadGraph5_aMC@NLO, based
 on the latest Bazaar commit of the present version. It performs the
 following actions:
 
@@ -32,7 +32,7 @@ following actions:
 import sys
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
+    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
 import glob

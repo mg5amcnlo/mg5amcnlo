@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 #
@@ -19,7 +19,7 @@
 # Line starting with # should be uncommented if you want to modify the default
 #    value.
 # Current value for all options can seen by typing "display options"
-#    after either ./bin/mg5 or ./bin/madevent 
+#    after either ./bin/mg5_aMC or ./bin/madevent 
 #
 # You can place this files in ~/.mg5/mg5_configuration.txt if you have more than
 #    one version of MG5 
@@ -78,7 +78,7 @@
 #  INFO FOR MADEVENT 
 ################################################################################
 # If this file is in a MADEVENT Template. 'main directory' is the directory
-# containing the SubProcesses directory. Otherwise this is the madgraph5 main
+# containing the SubProcesses directory. Otherwise this is the MadGraph5_aMC@NLO main
 # directory (containing the directories madgraph and Template)
 
 # Allow/Forbid the automatic opening of the web browser  (on the status page)

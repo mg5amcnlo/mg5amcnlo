@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -472,9 +472,9 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    target = target.replace('MadGraph 5 v. %(version)s, %(date)s'\
+                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
-                                          'MadGraph 5 v. %(version)s, %(date)s')
+                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

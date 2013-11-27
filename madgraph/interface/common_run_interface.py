@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -1080,9 +1080,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
-            opt = self.options
-            self.cluster = cluster.from_name[opt['cluster_type']](\
-                                 opt['cluster_queue'], opt['cluster_temp_path'])
+            # cluster (re)-initialization done later
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing

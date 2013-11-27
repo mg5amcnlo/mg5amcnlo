@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -132,7 +132,7 @@ def check_compiler(options, block=False):
     """check that the current fortran compiler is gfortran 4.6 or later.
     If block, stops the execution, otherwise just print a warning"""
 
-    msg = 'In order to be able to run MadGraph @NLO, you need to have ' + \
+    msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
             'gfortran 4.6 or later installed.\n%s has been detected'
     #first check that gfortran is installed
     if options['fortran_compiler']:
@@ -208,7 +208,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                    MadGraph/aMC@NLO 5                    *\n' + \
+        '#*                    MadGraph5_aMC@NLO                     *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -219,14 +219,16 @@ class CmdExtended(common_run.CommonRunCmd):
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "#*                           and                            *\n" + \
+        "#*                http://amcatnlo.cern.ch                   *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
         '#*               Command File for aMCatNLO                  *\n' + \
         '#*                                                          *\n' + \
-        '#*     run as ./bin/madevent.py filename                    *\n' + \
+        '#*     run as ./bin/aMCatNLO.py filename                    *\n' + \
         '#*                                                          *\n' + \
         '#************************************************************\n'
         
@@ -236,7 +238,7 @@ class CmdExtended(common_run.CommonRunCmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 5           *\n" + \
         "*                       a M C @ N L O                      *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
@@ -247,7 +249,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
@@ -783,7 +785,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     # survey options, dict from name to type, default value, and help text
     # Variables to store object information
     web = False
-    prompt = 'aMC@NLO_run>'
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
@@ -809,6 +810,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
+        self.prompt = "'%s' >"%os.path.basename(pjoin(self.me_dir))
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -1562,32 +1564,32 @@ Integrated cross-section
 #        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
-        if self.hasvirt:
-            for gv_log in log_GV_files:
-                logfile=open(gv_log,'r')             
-                UPS_stats = re.search(UPS_stat_finder,logfile.read())
-                logfile.close()
-                if not UPS_stats is None:
-                    channel_name = '/'.join(gv_log.split('/')[-5:-1])
-                    try:
-                        stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
-                        stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
-                        stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
-                        stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
-                        stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
-                        stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
-                        stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
-                        stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
-                        stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
-                        stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                        stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
-                    except KeyError:
-                        stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
-                          int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
-                          int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
-                          int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
-                          int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                          int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
+
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')             
+            UPS_stats = re.search(UPS_stat_finder,logfile.read())
+            logfile.close()
+            if not UPS_stats is None:
+                channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                try:
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
+                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
+                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
+                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
+                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
+                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
+                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
+                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
+                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
+                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
+                except KeyError:
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
+                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
+                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
+                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
+                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
+                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -2661,10 +2663,9 @@ Integrated cross-section
             os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-                self.hasvirt = True
+                hasvirt = True
         else:
             os.unsetenv('madloop')
-            self.hasvirt = False
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
