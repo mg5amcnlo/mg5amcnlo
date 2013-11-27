@@ -19,6 +19,8 @@ Update notes for MadGraph 5 (in reverse time order)
 		          the virtual corrections, leading to a speed up of the code.
 		      RF: Added a new parameter in the run_card to set the required accuracy for fixed 
 		          order runs.
+		      All: Default renormalisation and factorisation scales are now set to H_T/2.
+
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 

@@ -365,7 +365,7 @@ c the abs is to avoid tiny negative values
          etot(i)=sqrt(abs(etot(i)-vtot(i)**2)
      $        /dble(ntotcalls(i)))
          if (vtot(i).ne.0d0) then
-            efrac(i)=etot(i)/vtot(i)
+            efrac(i)=abs(etot(i)/vtot(i))
          else
             efrac(i)=0d0
          endif
@@ -489,7 +489,7 @@ c double the number of points for the next iteration
       nit_included=nit_included+1
       do i=1,nintegrals
          if (ans(i).ne.0d0) then
-            efrac(i)=unc(i)/ans(i)
+            efrac(i)=abs(unc(i)/ans(i))
          else
             efrac(i)=0d0
          endif
@@ -556,7 +556,7 @@ c Compute the results of the last three iterations
          enddo
          do i=1,2
             if (ans_l3(i).ne.0d0) then
-               efrac(i)=unc_l3(i)/ans_l3(i)
+               efrac(i)=abs(unc_l3(i)/ans_l3(i))
             else
                efrac(i)=0d0
             endif
