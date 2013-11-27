@@ -1197,10 +1197,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                 #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
                 to_always_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and
-                             '_' in file and \
+                             '_' in file and not '_G' in file and \
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
 
@@ -1305,7 +1307,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             cross, error = sum_html.make_all_html_results(self, folder_names[mode])
             self.results.add_detail('cross', cross)
             self.results.add_detail('error', error) 
-            self.update_status('Run completed', level='parton', update_results=True)
+            self.update_status('Run complete', level='parton', update_results=True)
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
@@ -1583,20 +1585,23 @@ Integrated cross-section
 # Now display the general statistics
 # Recuperate the fraction of unstable PS points found in the runs for
 # the virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
-             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
-             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
-             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
-             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
-             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
-             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
-             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
-             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
+        UPS_stat_finder = re.compile(
+             r"Satistics from MadLoop:.*"+\
+             r"Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r"Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r"Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r"Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r"Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r"Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
 #        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+
         for gv_log in log_GV_files:
             logfile=open(gv_log,'r')             
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
@@ -1811,7 +1816,7 @@ Integrated cross-section
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
-        self.update_status('Compiling MCatNLO for %s...' % shower, level='parton') 
+        self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
@@ -1831,7 +1836,7 @@ Integrated cross-section
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        self.update_status('Showering events...', level='parton')
+        self.update_status('Showering events...', level='shower')
         logger.info('(Running in %s)' % rundir)
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
@@ -1957,7 +1962,7 @@ Integrated cross-section
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
 
-        self.update_status('Run completed', level='parton', update_results=True)
+        self.update_status('Run complete', level='shower', update_results=True)
 
 
 
@@ -2890,7 +2895,6 @@ Integrated cross-section
     ############################################################################
     def ask_run_configuration(self, mode, options):
         """Ask the question when launching generate_events/multi_run"""
-        print "MODE", mode
         
         if 'parton' not in options:
             options['parton'] = False

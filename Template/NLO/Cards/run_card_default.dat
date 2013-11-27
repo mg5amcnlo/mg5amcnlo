@@ -58,7 +58,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   21100    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT)                   *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   HERWIG6   = parton_shower
@@ -130,6 +130,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 # When ptgmin=0, all the other parameters are ignored                  *
 #***********************************************************************
   20  = ptgmin    ! Min photon transverse momentum
+  -1  = etagamma  ! Max photon abs(pseudo-rap)
  0.4  = R0gamma   ! Radius of isolation code
  1.0  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
  1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442

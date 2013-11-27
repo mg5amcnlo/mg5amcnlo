@@ -31,7 +31,7 @@ except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     import internal.check_param_card as param_card_reader
-    import internal.various.shower_card as shower_card
+    import internal.shower_card as shower_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -768,6 +768,7 @@ class RunCardNLO(RunCard):
         self.add_line('bwcutoff', 'float', 15.0)
         # Photon isolation
         self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('etagamma', 'float', -1.0)
         self.add_line('R0gamma', 'float', 0.4)
         self.add_line('xn', 'float', 1.0)
         self.add_line('epsgamma', 'float', 1.0)

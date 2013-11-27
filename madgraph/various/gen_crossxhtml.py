@@ -604,6 +604,7 @@ class OneTagResults(dict):
         self.pythia = []
         self.pgs = []
         self.delphes = []
+        self.shower = []
         # data 
         self.status = ''
 
@@ -652,17 +653,25 @@ class OneTagResults(dict):
                                     exists(pjoin(path, "param_card.dat")):
                 self.parton.append('param_card')
 
+            if glob.glob(pjoin(path,"*.top")):
+                if self['run_mode'] in ['LO', 'NLO']:
+                    self.parton.append('top')
+
+        if level in ['shower','all'] and 'shower' not in nolevel:
             # this is for hep/top files fromamcatnlo
             if glob.glob(pjoin(path,"*.hep")) + \
                glob.glob(pjoin(path,"*.hep.gz")):
-                self.parton.append('hep')
+                self.shower.append('hep')
 
             if glob.glob(pjoin(path,"*.hepmc")) + \
                glob.glob(pjoin(path,"*.hepmc.gz")):
-                self.parton.append('hepmc')
+                self.shower.append('hepmc')
 
             if glob.glob(pjoin(path,"*.top")):
-                self.parton.append('top')
+                if self['run_mode'] in ['LO', 'NLO']:
+                    self.parton.append('top')
+                else:
+                    self.shower.append('top')
 
                 
         if level in ['pythia', 'all']:
@@ -751,8 +760,7 @@ class OneTagResults(dict):
         if level == 'parton':
             if 'gridpack' in self.parton:
                 out += self.special_link("./%(run_name)s_gridpack.tar",
-                                                         'gridpack', 'gridpack')
-            
+                                                    'gridpack', 'gridpack')
             if 'lhe' in self.parton:
                 if exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe')) or\
                   exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe.gz')):
@@ -769,21 +777,18 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
-
-            # this is to add the link to the results after shower for amcatnlo
-            for type in ['hep', 'hepmc', 'top']:
-                if type in self.parton:
-                    for f in \
-                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + type)) + \
-                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + type + '.gz')):
-                        out += " <a href=\"%s\">%s</a> " % (f, type.upper())
-
+            if 'top' in self.parton:
+            # fixed order plots
+                for f in \
+                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.top')):
+                    out += " <a href=\"%s\">%s</a> " % (f, 'TOP')
             return out % self
         
         if level == 'reweight':
             if 'plot' in self.reweight:
                 out += ' <a href="./HTML/%(run_name)s/plots_%(tag)s.html">plots</a>'           
             return out % self
+
         if level == 'pythia':          
             if 'log' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
@@ -805,7 +810,6 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             return out % self
 
-
         if level == 'pgs':
             if 'log' in self.pgs:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs.log">LOG</a>"""
@@ -821,7 +825,6 @@ class OneTagResults(dict):
             return out % self
         
         if level == 'delphes':
-            
             if 'log' in self.delphes:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
@@ -835,7 +838,16 @@ class OneTagResults(dict):
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             return out % self
 
-
+        if level == 'shower':
+        # this is to add the link to the results after shower for amcatnlo
+            for kind in ['hep', 'hepmc', 'top']:
+                if kind in self.shower:
+                    for f in \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
+                        out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+            
+            return out % self
                 
     
     def get_nb_line(self):
@@ -905,7 +917,7 @@ class OneTagResults(dict):
         
         first = None
         subresults_html = ''
-        for ttype in ['parton', 'pythia', 'pgs', 'delphes','reweight']:
+        for ttype in ['parton', 'pythia', 'pgs', 'delphes','reweight','shower']:
             data = getattr(self, ttype)
             if not data:
                 continue
@@ -956,6 +968,16 @@ class OneTagResults(dict):
                     local_dico['nb_event'] = self['nb_event']
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
+
+            elif ttype == 'shower':
+                template = sub_part_template_parton
+                if self.parton:           
+                    local_dico['cross_span'] = nb_line - 1
+                else:
+                    local_dico['cross_span'] = nb_line
+                local_dico['nb_event'] = self['nb_event']
+                local_dico['cross'] = self['cross']
+                local_dico['err'] = self['error']
             else:
                 template = sub_part_template_pgs   
             
@@ -964,6 +986,58 @@ class OneTagResults(dict):
 
             # Fill the actions
             if ttype == 'parton':
+                if runresults.web:
+                    local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+</FORM>"""
+                else:
+                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                    # this the detector simulation and pythia should be available only for madevent
+                    if self['run_mode'] == 'madevent':
+                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    else: 
+                        pass
+
+            elif ttype == 'shower':
+                if runresults.web:
+                    local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+</FORM>"""
+                else:
+                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                    # this the detector simulation and pythia should be available only for madevent
+                    if self['run_mode'] == 'madevent':
+                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    else: 
+                        pass
                 if runresults.web:
                     local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
