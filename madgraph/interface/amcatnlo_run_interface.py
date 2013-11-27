@@ -1703,7 +1703,7 @@ Integrated cross-section
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Prepairing MCatNLO run')
+        logger.info('   Preparing MCatNLO run')
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
