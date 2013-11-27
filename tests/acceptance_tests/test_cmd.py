@@ -145,7 +145,10 @@ class TestCmdShell1(unittest.TestCase):
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
                     'cluster_retry_wait': 300,
-                    'syscalc_path':'./SysCalc'
+                    'syscalc_path':'./SysCalc',
+                    'hepmc_path': './hepmc',
+                    'hwpp_path': './herwigPP',
+                    'thepeg_path': './thepeg'
                     }
 
         self.assertEqual(config, expected)

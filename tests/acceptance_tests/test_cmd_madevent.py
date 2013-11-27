@@ -103,6 +103,9 @@ class TestMECmdShell(unittest.TestCase):
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
+        if not os.path.exists(pjoin(interface.options['syscalc_path'],'syscalc')):
+            interface.onecmd('install SysCalc')
+        
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
