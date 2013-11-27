@@ -82,7 +82,7 @@ class FOAnalyseCard(dict):
                     if value == 'topdrawer':
                         to_add = 'dbook.o open_output_files_dummy.o'
                     elif value == 'root':
-                        to_add = 'rbook_fe.o rbook_be.o'
+                        to_add = 'rbook_fe8.o rbook_be8.o'
                     else:
                         to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o'
                         

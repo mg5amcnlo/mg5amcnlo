@@ -14,7 +14,7 @@
 # Topdrawer is human-readable text format, which allows for easy
 # conversion to other formats. When choosing topdrawer, the
 # histogramming package 'dbook.f' is included in the code, while when
-# choosing root the 'rbook_fe.f' and 'rbook_be.cc' are included. If
+# choosing root the 'rbook_fe8.f' and 'rbook_be8.cc' are included. If
 # 'none' is chosen, all the other entries below have to be set empty.
 FO_ANALYSIS_FORMAT = topdrawer
 #
