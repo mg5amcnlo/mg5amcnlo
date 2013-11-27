@@ -281,7 +281,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     def p_expression_power(self, p):
         'expression : expression POWER expression'
         try:
-            p3 = float(p[3].replace('_16','i'))
+            p3 = float(p[3].replace('_16',''))
             # Check if exponent is an integer
             if p3 == int(p3):
                 p3 = str(int(p3))
