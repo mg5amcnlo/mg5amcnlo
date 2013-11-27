@@ -1795,7 +1795,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             args.remove(arg)
 
         if args and args[0] in ["run_mode", "cluster_mode", "cluster_queue", 
-                                "cluster_temp_path", "nb_core"]:
+                                "cluster_temp_path", "nb_core", "cluster_nb_retry",
+                                "cluster_retry_wait"]:
             return args
 
         if self.cluster_mode == 2 and not self.nb_core:
@@ -1807,6 +1808,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             cluster_name = opt['cluster_type']
             self.cluster = cluster.from_name[cluster_name](opt['cluster_queue'],
                                                         opt['cluster_temp_path'])
+            self.cluster.nb_retry = opt['cluster_nb_retry']
+            self.cluster.cluster_retry_wait = int(opt['cluster_retry_wait'])
         return args
     
     ############################################################################            
@@ -1906,6 +1909,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
                         continue
                 self.options[key] = None
             elif key.startswith('cluster'):
+                if key in ('cluster_nb_retry','cluster_wait_retry'):
+                    self.options[key] = int(self.options[key])
+                if hasattr(self,'cluster'):
+                    del self.cluster
+
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
@@ -2199,13 +2207,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
             self.cluster = cluster.from_name[opt['cluster_type']](\
                                  opt['cluster_queue'], opt['cluster_temp_path'])
             self.cluster.nb_retry = self.options['cluster_nb_retry']
-            self.cluster_retry_wait = self.options['cluster_retry_wait']
+            self.cluster.cluster_retry_wait = int(self.options['cluster_retry_wait'])
         elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
             self.options[args[0]] = int(args[1])
             if args[0] == 'cluster_nb_retry':
                 self.cluster.nb_retry = int(args[1])
             else:
-                self.cluster_retry_wait = int(args[1])
+                self.cluster.cluster_retry_wait = int(args[1])
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -2845,7 +2853,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd):
         if self.cluster_mode == 1:
             self.cluster.launch_and_wait('../bin/internal/run_combine', 
                                         cwd=pjoin(self.me_dir,'SubProcesses'),
-                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'))
+                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
+                                        required_output=[pjoin(self.me_dir,'SubProcesses', 'combine.log')])
         else:
             misc.call(['../bin/internal/run_combine'],
                          cwd=pjoin(self.me_dir,'SubProcesses'), 
@@ -3071,15 +3080,19 @@ calculator."""
             
         if not self.run_name:
             self.check_pythia(args)
-            self.configure_directory()
+            self.configure_directory(html_opening =False)
         else:
             # initialize / remove lhapdf mode        
-            self.configure_directory()
+            self.configure_directory(html_opening =False)
             self.check_pythia(args)        
         
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
 
         # Update the banner with the pythia card
         if not self.banner:
@@ -3903,7 +3916,7 @@ calculator."""
         return name % (max(data+[0])+1) 
 
     ############################################################################   
-    def configure_directory(self):
+    def configure_directory(self, html_opening=True):
         """ All action require before any type of run """   
 
 
@@ -3919,7 +3932,7 @@ calculator."""
         else:
             self.configured = time.time()
         self.update_status('compile directory', level=None)
-        if self.options['automatic_html_opening']:
+        if self.options['automatic_html_opening'] and html_opening:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
             #open only once the web page
