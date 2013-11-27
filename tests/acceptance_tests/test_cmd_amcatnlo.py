@@ -198,12 +198,12 @@ class TestMECmdShell(unittest.TestCase):
                 if files.is_uptodate(proc_path, min_time=self.loadtime):
                     if hasattr(self, 'cmd_line'):
                         self.cmd_line.exec_cmd('quit')
-                        
-                    self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
-                    self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
                     os.system('rm -rf /tmp/MGPROCESS/RunWeb')
                     os.system('rm -rf /tmp/MGPROCESS/Events/run_01')
-                    os.system('rm -rf /tmp/MGPROCESS/Events/run_01_LO')
+                    os.system('rm -rf /tmp/MGPROCESS/Events/run_01_LO')                        
+                    self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '/tmp/MGPROCESS')
+                    self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+
                     card = open('/tmp/MGPROCESS/Cards/run_card_default.dat').read()
                     self.assertTrue( '10000 = nevents' in card)
                     card = card.replace('10000 = nevents', '100 = nevents')
@@ -565,9 +565,9 @@ class TestMECmdShell(unittest.TestCase):
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
-            self.assertAlmostEqual(4232.0, cross_section,delta=50)
+            self.assertAlmostEqual(4151.0, cross_section,delta=50)
         except TypeError:
-            self.assertTrue(cross_section < 4282. and cross_section > 4182.)
+            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])
