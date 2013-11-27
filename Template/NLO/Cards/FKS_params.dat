@@ -64,6 +64,12 @@
 1.0d0
 ! Default :: 1.0d0
 !
+! This parameter sets the minimal fraction of the events for which the
+! virtual matrix elements should be included.
+#MinVirtualFraction
+0.005d0
+! Default :: 0.005d0
+!
 ! ==========================================================================
 ! End of FKS_params.dat file
 ! ==========================================================================
