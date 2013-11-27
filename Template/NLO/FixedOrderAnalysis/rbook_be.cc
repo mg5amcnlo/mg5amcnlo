@@ -6,14 +6,19 @@
 //
 // (C) 31/08/2006 NIKHEF / Wouter Verkerke
 // -------------------------------------------------------------------
+//
+// Modified on 22/11/2013 by SF to use double precision; changes to
+// ROPERA (made it more similar to MOPERA), and turned off storage
+// of errors (do not make sense at NLO fixed order)
+//
 
 #include <iostream>
 #include <map>
 #include <math.h>
 #include "TObject.h"
 #include "TH1.h"
-#include "TH1F.h"
-#include "TH2F.h"
+#include "TH1D.h"
+#include "TH2D.h"
 #include "TFile.h"
 #include "TROOT.h"
 
@@ -31,13 +36,13 @@ TROOT* _theRoot = 0 ;
 extern "C" 
 {
   int rinit_be__(char* , int*) ;
-  void rbook_be__(int*, char*, int*, int*, float*, float*);
-  void rbook2_be__(int*, char*, int*, int*, float*, float*, int*, float*, float*);
-  void rfill_be__(int *, float*, float*);
-  void rfill2_be__(int *, float*, float*, float*);
+  void rbook_be__(int*, char*, int*, int*, double*, double*);
+  void rbook2_be__(int*, char*, int*, int*, double*, double*, int*, double*, double*);
+  void rfill_be__(int *, double*, double*);
+  void rfill2_be__(int *, double*, double*, double*);
   void rclos_be__() ;
   void rwrit_be__() ;
-  void ropera_be__(int*, char*, int*, int*, int*, float*, float*) ;
+  void ropera_be__(int*, char*, int*, int*, int*, double*, double*) ;
   void rcopy_be__(int*,int*) ;
 }
 
@@ -113,20 +118,21 @@ void rclos_be__()
 // --------------------------------------
 // RBOOK back end -- Create 1D histogram
 // --------------------------------------
-void rbook_be__(int* id, char* fname, int* nfname, int* nbins, float* xlo, float* xhi)
+void rbook_be__(int* id, char* fname, int* nfname, int* nbins, double* xlo, double* xhi)
 {
   // Convert fortran name to C++ string
   char cname[256] ;
   memcpy(cname,fname,*nfname) ; cname[*nfname]=0 ;
 
   // Print message
-  cout << "RBOOK -- Creating TH1F " << Form("h%d",*id) << "[" << *xlo << "-" << *xhi << ":" << *nbins << "] : " << cname << endl ;
+  cout << "RBOOK -- Creating TH1D " << Form("h%d",*id) << "[" << *xlo << "-" << *xhi << ":" << *nbins << "] : " << cname << endl ;
 
   // Create a TH1D object
-  TH1F* h = new TH1F(Form("h%d",*id),cname,*nbins,*xlo,*xhi) ;
+  TH1D* h = new TH1D(Form("h%d",*id),cname,*nbins,*xlo,*xhi) ;
   
   // Tell TH1 to keep track of weights for sum(w2) errors
-  h->Sumw2() ;
+  //UNCOMMENT WHAT FOLLOWS TO REINSTATE ERRORS
+  //h->Sumw2() ;
 
   // Save histogram in master list
   _theList[*id] = h ;
@@ -137,22 +143,23 @@ void rbook_be__(int* id, char* fname, int* nfname, int* nbins, float* xlo, float
 // ---------------------------------------
 // RBOOK2 back end -- Create 2D histogram
 // ---------------------------------------
-void rbook2_be__(int* id, char* fname, int* nfname, int* xbins, float* xlo, float* xhi, 
-		int* ybins, float* ylo, float* yhi)
+void rbook2_be__(int* id, char* fname, int* nfname, int* xbins, double* xlo, double* xhi, 
+		int* ybins, double* ylo, double* yhi)
 {
   // Convert fortran name to C++ string
   char cname[256] ;
   memcpy(cname,fname,*nfname) ; cname[*nfname]=0 ;
 
   // Print message
-  cout << "RBOOK2 -- Creating TH2F " << Form("h%d",*id) << "[" << *xlo << "-" << *xhi << ":" << *xbins << "," 
+  cout << "RBOOK2 -- Creating TH2D " << Form("h%d",*id) << "[" << *xlo << "-" << *xhi << ":" << *xbins << "," 
        << *ylo << "-" << *yhi << ":" << *ybins << "] : " << cname << endl ;
 
   // Create a TH1D object
-  TH2F* h = new TH2F(Form("h%d",*id),cname,*xbins,*xlo,*xhi,*ybins,*ylo,*yhi) ;
+  TH2D* h = new TH2D(Form("h%d",*id),cname,*xbins,*xlo,*xhi,*ybins,*ylo,*yhi) ;
   
   // Tell TH1 to keep track of weights for sum(w2) errors
-  h->Sumw2() ;
+  //UNCOMMENT WHAT FOLLOWS TO REINSTATE ERRORS
+  //h->Sumw2() ;
 
   // Save histogram in master list
   _theList[*id] = h ;
@@ -163,7 +170,7 @@ void rbook2_be__(int* id, char* fname, int* nfname, int* xbins, float* xlo, floa
 // ------------------------------------
 // RFILL back end -- Fill 1D histogram
 // ------------------------------------
-void rfill_be__(int* h, float* x, float* wgt) 
+void rfill_be__(int* h, double* x, double* wgt) 
 {
   // Pull the request histogram from the master list
   TH1D* hh = (TH1D*) _theList[*h] ;
@@ -182,7 +189,7 @@ void rfill_be__(int* h, float* x, float* wgt)
 // ------------------------------------
 // RFILL2 back end -- Fill 2D histogram
 // ------------------------------------
-void rfill2_be__(int* h, float* x, float* y, float* wgt) 
+void rfill2_be__(int* h, double* x, double* y, double* wgt) 
 {
   // Pull the request histogram from the master list
   TH2D* hh = (TH2D*) _theList[*h] ;
@@ -200,7 +207,7 @@ void rfill2_be__(int* h, float* x, float* y, float* wgt)
 // -------------------------------------------
 // ROPERA back end -- Manipulate histograms
 // ------------------------------------------
-void ropera_be__(int* ih1, char* oper, int* operlen, int* ih2, int* ih3, float* x, float* y)
+void ropera_be__(int* ih1, char* oper, int* operlen, int* ih2, int* ih3, double* x, double* y)
 {
   // Convert fortran name to C++ string
   char op[256] ;
@@ -212,16 +219,32 @@ void ropera_be__(int* ih1, char* oper, int* operlen, int* ih2, int* ih3, float* 
   TH1D* h3 = (TH1D*) _theList[*ih3] ;
 
   // Check histogram have been created for given IDs
+  // Modified on 22/11/2013 by SF: do not stop if h1 or h2 are not booked,
+  // just quit; if h3 is not booked, book it. This is in keeping with
+  // the original MOPERA
   if (!h1) {
-    cout << "ROPERA -- Error: no input histogram defined with ID " << *ih1 << endl ;
+    //    cout << "ROPERA -- Error: no input histogram defined with ID " << *ih1 << endl ;
     return ;
   }
   if (!h2) {
-    cout << "ROPERA -- Error: no input histogram defined with ID " << *ih2 << endl ;
+    //    cout << "ROPERA -- Error: no input histogram defined with ID " << *ih2 << endl ;
     return ;
   }
   if (!h3) {
-    cout << "ROPERA -- Error: no output histogram defined with ID " << *ih3 << endl ;
+    //    cout << "ROPERA -- Error: no output histogram defined with ID " << *ih3 << endl ;
+
+    // Clone h1 into h3, so the same title and binning will be used
+    TH1D* h3 = (TH1D*)h1->Clone();
+
+    // Rename the histogram (root finds histograms by name)
+    h3->SetName(Form("h%d",*ih3));
+
+    // Set all bins of the new histogram equal to zero
+    h3->Scale(0.0);
+
+    // Save the new histogram in master list
+    _theList[*ih3] = h3 ;
+
     return ;
   }  
 

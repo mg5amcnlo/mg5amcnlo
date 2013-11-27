@@ -6,6 +6,9 @@ c     the C++ back-end functions
 c
 c     (C) 31/08/2006 NIKHEF / Wouter Verkerke
 c     -------------------------------------------------------------------
+c
+c Modified on 22/11/2013 by SF to use double precision
+c
 c The following routines allow booking and filling of histograms
 c
 c - rinit(filename)
@@ -21,7 +24,7 @@ c
 c - rbook(id,histname,binsize,xlo,xhi)
 c    character*(*) histname
 c    integer id
-c    real binsize,xlo,xhi
+c    double precision binsize,xlo,xhi
 c      Books a one-dimensional histogram, identified by integer id and
 c      tagged with name histname. The x axis ranges from xlo to xhi, with
 c      bin size equal to binsize
@@ -29,18 +32,18 @@ c
 c - rbook2(id,histname,xbinsize,xlo,xhi,ybinsize,ylo,yhi)
 c    character*(*) histname
 c    integer id
-c    real xbinsize,xlo,xhi,ybinsize,ylo,yhi
+c    double precision xbinsize,xlo,xhi,ybinsize,ylo,yhi
 c      Analogous to rbook(), but relevant to a two-dimensional histogram
 c
 c - rfill(id,xval,wgt)
 c    integer id
-c    real xval,wgt
+c    double precision xval,wgt
 c      Fills one-dimensional histogram identified by id [opened with 
 c      rbook(id,...)]; x value equal to xval, weight equal to wgt
 c
 c - rfill2(id,xval,yval,wgt)
 c    integer id
-c    real xval,yval,wgt
+c    double precision xval,yval,wgt
 c      Analogous to rfill(), but relevant to a two-dimensional histogram
 c
 
@@ -90,9 +93,9 @@ c      --------------------------------------------
        subroutine rbook(id,name,xbin,xlo,xhi)
        character*(*) name
        integer id,nbin
-       real xbin,xlo,xhi
+       double precision xbin,xlo,xhi
 
-       nbin = int((xhi-xlo)/(xbin*0.9999))
+       nbin = int((xhi-xlo)/(xbin*0.9999d0))
 c      -- Call C++ back end function --
        call rbook_be_(id,name,len(name),nbin,xlo,xhi)
       
@@ -106,10 +109,10 @@ c      --------------------------------------------
        subroutine rbook2(id,name,xbin,xlo,xhi,ybin,ylo,yhi)
        character*(*) name
        integer id,nbinx,nbiny
-       real xbin,xlo,xhi,ybin,ylo,yhi
+       double precision xbin,xlo,xhi,ybin,ylo,yhi
 
-       nbinx = int((xhi-xlo)/(xbin*0.9999))
-       nbiny = int((yhi-ylo)/(ybin*0.9999))
+       nbinx = int((xhi-xlo)/(xbin*0.9999d0))
+       nbiny = int((yhi-ylo)/(ybin*0.9999d0))
 c      -- Call C++ back end function --
        call rbook2_be_(id,name,len(name),nbinx,xlo,xhi,nbiny,ylo,yhi)
       
@@ -122,7 +125,7 @@ c      RFILL front end -- Fill ROOT TH1 histogram
 c      ------------------------------------------
        subroutine rfill(ihisto,xval,wgt)
        integer ihisto
-       real xval,wgt
+       double precision xval,wgt
 
 c      -- Call C++ back end function --
        call rfill_be_(ihisto,xval,wgt)
@@ -136,7 +139,7 @@ c      RFILL2 front end -- Fill ROOT TH2 histogram
 c      ------------------------------------------
        subroutine rfill2(ihisto,xval,yval,wgt)
        integer ihisto
-       real xval,yval,wgt
+       double precision xval,yval,wgt
 
 c      -- Call C++ back end function --
        call rfill2_be_(ihisto,xval,yval,wgt)
@@ -150,7 +153,7 @@ c     ------------------------------------------
       subroutine ropera(ih1,oper,ih2,ih3,x,y)
       integer ih1,ih2,ih3
       character*(*) oper
-      real x,y
+      double precision x,y
 
 c     -- Call C++ back end function --
       call ropera_be_(ih1,oper,len(oper),ih2,ih3,x,y)

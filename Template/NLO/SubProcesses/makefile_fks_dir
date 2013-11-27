@@ -103,16 +103,13 @@ check_poles: $(POLES) $(libmadloop)
 	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS)  $(FO_FLAGS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS)  $(FO_FLAGS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) \
-	$(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(FO_FLAGS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)

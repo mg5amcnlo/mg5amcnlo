@@ -80,17 +80,11 @@ class FOAnalyseCard(dict):
             if key in self.string_vars:
                 if key == 'fo_analysis_format':
                     if value == 'topdrawer':
-                        to_add = 'dbook.o'
-# this mean that during the linking of the object files, unresolved
-# references to the 'rinit' function/subroutine are ignored:
-                        line='FO_FLAGS += -Wl,-U,_rinit_' 
-                        lines.append(line)
+                        to_add = 'dbook.o open_output_files_dummy.o'
                     elif value == 'root':
                         to_add = 'rbook_fe.o rbook_be.o'
                     else:
-                        to_add = 'analysis_dummy.o dbook.o'
-                        line='FO_FLAGS += -Wl,-U,_rinit_' 
-                        lines.append(line)
+                        to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o'
                         
 
 
@@ -112,6 +106,8 @@ class FOAnalyseCard(dict):
                 elif key == 'fo_analyse':
                     line = '%s=%s '% (key.upper(), value)
                     line = line + to_add
+                else:
+                    line = ''
                 lines.append(line)
             else:
                 raise FO_AnalyseCardError('Unknown key: %s = %s' % (key, value))

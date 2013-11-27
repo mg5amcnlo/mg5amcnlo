@@ -58,7 +58,10 @@ c Wrapper routines for the fixed order analyses
       common/cusexinteg/usexinteg,mint
       integer itmax,ncall
       common/citmax/itmax,ncall
+      logical useitmax
+      common/cuseitmax/useitmax
       real*8 xnorm
+c
       if(usexinteg.and..not.mint) then
          xnorm=1.d0/float(itmax)
       elseif(mint) then
@@ -66,6 +69,7 @@ c Wrapper routines for the fixed order analyses
       else
          xnorm=1d0
       endif
+      if(useitmax)xnorm=xnorm/float(itmax)
       call analysis_end(xnorm)
       return                
       end
