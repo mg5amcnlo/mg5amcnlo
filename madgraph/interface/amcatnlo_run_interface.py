@@ -1566,7 +1566,7 @@ Integrated cross-section
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
 
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
+            logfile=open(gv_log,'r')            
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
             logfile.close()
             if not UPS_stats is None:
@@ -2304,6 +2304,7 @@ Integrated cross-section
             time.sleep(1) # security to allow all jobs to be launched
         if njob_split > 0:
             self.njobs = njob_split
+        
         self.wait_for_complete(run_type)
 
 

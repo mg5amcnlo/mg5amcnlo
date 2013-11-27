@@ -243,6 +243,34 @@ class Width(aloha_lib.FactoryLorentz):
     @classmethod
     def get_unique_name(self, particle):
         return '_W%s' % particle
+
+#===============================================================================
+# Param
+#===============================================================================
+class L_Param(aloha_lib.LorentzObject):
+    """ Object for a Model Parameter """
+ 
+    
+    def __init__(self, Lname, name):
+        self.varname = name
+        aloha_lib.LorentzObject.__init__(self, name, [], [])
+        
+    def create_representation(self):
+        param = aloha_lib.Variable( self.varname, aloha_lib.ExtVariable)
+
+        self.representation= aloha_lib.LorentzObjectRepresentation(
+                            param, [], [])
+
+class Param(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Param
+    
+    @classmethod
+    def get_unique_name(self, name):
+        if name == 'Pi':
+            KERNEL.has_pi = True
+        return 'Param_%s' % name
+
 #===============================================================================
 # Scalar
 #===============================================================================

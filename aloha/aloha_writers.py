@@ -7,6 +7,7 @@ except Exception:
 
 import aloha
 import aloha.aloha_lib as aloha_lib
+import cmath
 import os
 import re 
 from numbers import Number
@@ -18,6 +19,8 @@ from cStringIO import StringIO
 # For knowing how to deal with long strings efficiently.
 import itertools
 
+KERNEL = aloha_lib.KERNEL
+pjoin = os.path.join
 
 class WriteALOHA: 
     """ Generic writing functions """ 
@@ -35,6 +38,8 @@ class WriteALOHA:
             self.momentum_size = 4
         else:
             self.momentum_size = 2
+            
+        self.has_model_parameter = False
         
         name = get_routine_name(abstract = abstract_routine)
 
@@ -263,7 +268,7 @@ class WriteALOHA:
             vartype = obj.vartype
         except Exception:
             return self.change_number_format(obj)
-
+        
         # The order is from the most current one to the les probable one
         if vartype == 1 : # AddVariable
             return self.write_obj_Add(obj, prefactor)
@@ -347,7 +352,8 @@ class WriteALOHA:
                 file_str.write(')')
         if number:
             total = sum(number)
-            file_str.write('+ %s' % self.change_number_format(total))                
+            file_str.write('+ %s' % self.change_number_format(total))
+
         file_str.write(')')
         return file_str.getvalue()
                 
@@ -491,14 +497,24 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         out = StringIO()
         out.write('implicit none\n')
+        # Check if we are in formfactor mode
+        if self.has_model_parameter:
+            out.write(' include "../MODEL/input.inc"\n')
+            out.write(' include "../MODEL/coupl.inc"\n')
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
+            if KERNEL.has_pi:
+                out.write(' double*16 PI\n')
         else:
             out.write(' complex*16 CI\n')
+            if KERNEL.has_pi:
+                out.write(' double precision PI\n')
         out.write(' parameter (CI=(%s,%s))\n' % 
                     (self.change_number_format(0),self.change_number_format(1)))
+        if KERNEL.has_pi:
+            out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -635,10 +651,15 @@ class ALOHAWriterForFortran(WriteALOHA):
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
         
+        if isinstance(name, aloha_lib.ExtVariable):
+            # external parameter nothing to do
+            self.has_model_parameter = True
+            return name
+        
         if '_' in name:
-            type = name.type
+            vtype = name.type
             decla = name.split('_',1)[0]
-            self.declaration.add(('list_%s' % type, decla))
+            self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -2096,6 +2117,35 @@ class WriterFactory(object):
             raise Exception, 'Unknown output format'
 
 
+    
+unknow_fct_template = """
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+       double complex %(fct_name)s(%(args)s)
+       implicit none
+c      Include Model parameter / coupling
+       include \"../MODEL/input.inc\"
+       include \"../MODEL/coupl.inc\"
+c      Defintion of the arguments       
+%(definitions)s
+       
+c      enter HERE the code corresponding to your function.
+c      The output value should be put to the %(fct_name)s variable.
 
 
+       return
+       end
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+"""
+        
+def write_template_fct(fct_name, nb_args, output_dir):
+        """create a template for function not recognized by ALOHA"""
+
+        dico = {'fct_name' : fct_name,
+                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
+                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
+
+        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
+        ff.write(unknow_fct_template % dico)
+        ff.close()
 

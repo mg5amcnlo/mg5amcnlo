@@ -304,7 +304,7 @@ class MadEventAlreadyRunning(InvalidCmd):
 class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     debug_output = 'ME5_debug'
-    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
 
     # The three options categories are treated on a different footage when a 
@@ -318,6 +318,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
+                       'syscalc_path': './SysCalc',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -325,7 +326,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'fortran_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
-                       'cluster_status_update': (600, 30)}
+                       'cluster_status_update': (600, 30),
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300}
     
     options_madgraph= {'stdout_level':None}
     
@@ -535,7 +538,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif path == 'delphes_trigger.dat':
                 return 'trigger'
             else:
-                raise Exception, 'Unknow cards name'
+                raise Exception, 'Unknow cards name %s' % path
             
         # Ask the user if he wants to edit any of the files
         #First create the asking text
@@ -871,6 +874,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
         except Exception:
             pass
+         
         pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                             argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
@@ -1089,7 +1093,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
-            # cluster (re)-initialization done later
+            # self.cluster update at the end of the routine
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
+            self.options[args[0]] = int(args[1])
+            # self.cluster update at the end of the routine
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -1124,8 +1131,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 self.options[args[0]] = args[1]
                 
-        if 'cluster' in args[0] or args[0] == 'run_mode':
-            self.configure_run_mode(self.options['run_mode'])             
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        try:
+            args = self.split_arg(line)
+            if 'cluster' in args[0] or args[0] == 'run_mode':
+                self.configure_run_mode(self.options['run_mode'])             
+
+
+            # Check the validity of the arguments
+            self.check_set(args)
+            
+            if args[0] in self.options_configuration and '--no_save' not in args:
+                self.exec_cmd('save options --auto')
+            elif args[0] in self.options_madevent:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+            return stop
+        except self.InvalidCmd:
+            return stop
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
@@ -1251,6 +1275,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_path=config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
             return self.set_configuration(config_path=me5_config, final=final,initdir=self.me_dir)
 
         config_file = open(config_path)
@@ -1314,7 +1340,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+                              'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
@@ -1444,8 +1471,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.run_card = {}
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
-        except check_param_card.InvalidParamCard:
+        except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
+            logger.error('problem detected: %s' % e)
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
@@ -1621,7 +1649,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
-                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))                
+                if args[0] == 'param_card':
+                    self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+                elif args[0] == 'run_card':
+                    self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
                 return
             else:
                 card = args[0]
@@ -1648,17 +1680,22 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
+            elif  args[start+1].lower() in ['t','.true.','true']:
                 self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
+            elif  args[start+1].lower() in ['f','.false.','false']:
                 self.setR(args[start], '.false.')
             else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
+                if args[0].startswith('sys_'):
+                    val = ' '.join(args[start+1:])
+                    val = val.split('#')[0]
+                else: 
+                    try:
+                        val = eval(args[start+1])
+                    except NameError:
+                        val = args[start+1]
                 self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
+                                pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
         elif (args[start] in self.param_card or args[start] == 'width') \
@@ -1686,6 +1723,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
+                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                        for key in self.param_card[args[start]].param_dict:
+                            if (args[start], key) in self.restricted_value:
+                                continue
+                            else:
+                                self.setP(args[start], key, args[-1])
+                        self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        return
                     logger.warning('invalid set command %s (failed to identify LHA information)' % line)
                     return 
 
@@ -1807,7 +1852,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         return line
     
+    def do_compute_widths(self, line):
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','param_card.dat')
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        line = '%s %s' % (line, ' '.join(pdg))
+        if not '--path' in line:
+            line += ' --path=%s' % path
+        try:
+            return self.mother_interface.do_compute_widths(line)
+        except InvalidCmd, error:
+            logger.error("Invalid command: %s " % error)
 
+    def help_compute_widths(self):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.help_compute_widths()
+
+    def complete_compute_widths(self, *args, **opts):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.complete_compute_widths(*args,**opts)
         
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
