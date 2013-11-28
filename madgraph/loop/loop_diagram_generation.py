@@ -32,7 +32,7 @@ def ldg_debug_info(msg,val):
     # This subroutine has typically quite large DEBUG info.
     # So even in debug mode, they are turned off by default.
     # Remove the line below for loop diagram generation diagnostic
-    #return
+    return
     flag = "LoopGenInfo: "
     if len(msg)>40:
         logger.debug(flag+msg[:35]+" [...] = %s"%str(val))
