@@ -3090,38 +3090,39 @@ Please, shower the Les Houches events before using them for physics analyses."""
         run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
         self.banner.add_text('run_settings', run_settings)
 
-        self.run_card = self.banner.charge_card('run_card')
-        self.run_tag = self.run_card['run_tag']
-        self.run_name = self.find_available_run_name(self.me_dir)
-        #add a tag in the run_name for distinguish run_type
-        if self.run_name.startswith('run_'):
-            if mode in ['LO','aMC@LO','noshowerLO']:
-                self.run_name += '_LO' 
-        self.set_run_name(self.run_name, self.run_tag, 'parton')
+        if not mode =='onlyshower':
+            self.run_card = self.banner.charge_card('run_card')
+            self.run_tag = self.run_card['run_tag']
+            self.run_name = self.find_available_run_name(self.me_dir)
+            #add a tag in the run_name for distinguish run_type
+            if self.run_name.startswith('run_'):
+                if mode in ['LO','aMC@LO','noshowerLO']:
+                    self.run_name += '_LO' 
+            self.set_run_name(self.run_name, self.run_tag, 'parton')
+            
+            if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+                logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+                raise self.InvalidCmd(error)
+            elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+                logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+    samples of various multiplicities without double counting, you
+    have to remove some events after showering 'by hand'.  Please
+    read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+                if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                    logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                    raise self.InvalidCmd(error)
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                    question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                        "Type \'n\' to stop or \'y\' to continue"
+                    answers = ['n','y']
+                    answer = self.ask(question, 'n', answers, alias=alias)
+                    if answer == 'n':
+                        error = '''Stop opertation'''
+                        self.ask_run_configuration(mode, options)
+    #                    raise aMCatNLOError(error)
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
-        
-        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
-            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
-            raise self.InvalidCmd(error)
-        elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
-            logger.warning("""You are running with FxFx merging enabled.  To be able to merge
-samples of various multiplicities without double counting, you
-have to remove some events after showering 'by hand'.  Please
-read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
-            if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
-                logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
-                raise self.InvalidCmd(error)
-            elif self.run_card['parton_shower'].upper() != 'HERWIG6':
-                question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
-                    "Type \'n\' to stop or \'y\' to continue"
-                answers = ['n','y']
-                answer = self.ask(question, 'n', answers, alias=alias)
-                if answer == 'n':
-                    error = '''Stop opertation'''
-                    self.ask_run_configuration(mode, options)
-#                    raise aMCatNLOError(error)
-        
+            
         return mode
 
 
