@@ -22,10 +22,10 @@ user can choose to use either fortran, python or C++ to run aloha, and the
 second option stands for obtaining the output in a specific directory chosen 
 by the user.
 
-II. To run ALOHA inside Madgraph 5:
+II. To run ALOHA inside MadGraph5_aMC@NLO:
 ---------------------------------------------------
 The only prerequisite for this option is to have the UFO model copied inside
-the madgraph5/models folder. Madgraph 5 will automatically use ALOHA 
+the madgraph5/models folder. MadGraph5_aMC@NLO will automatically use ALOHA 
 to generate the helicity routines required in each process.
 
 
@@ -35,7 +35,7 @@ Description of the main ALOHA files
 * aloha_lib.py     - This module contains the code needed for the analytical 
                      computations and for the evaluation of the representation 
                      of the objects.
-* aloha_object.py  - This module contains the deﬁnition of all basic objects 
+* aloha_object.py  - This module contains the definition of all basic objects 
                      used by ALOHA.
 * aloha_writers.py - This module contains the code that writes ALOHA functions 
                      in different languages (currently Python, Fortran and C++)

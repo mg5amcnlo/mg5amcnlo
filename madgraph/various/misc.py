@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -69,7 +69,7 @@ def parse_info_str(fsock):
 # get_pkg_info
 #===============================================================================
 def get_pkg_info(info_str=None):
-    """Returns the current version information of the MadGraph package, 
+    """Returns the current version information of the MadGraph5_aMC@NLO package, 
     as written in the VERSION text file. If the file cannot be found, 
     a dictionary with empty values is returned. As an option, an info
     string can be passed to be read instead of the file content.
@@ -222,7 +222,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
                   'is required to compile %s.\nPlease install it and retry.'%cwd
             else:
                 logger_stderr.error('ERROR, you could not compile %s because'%cwd+\
-             ' your version of gfortran is older than 4.6. MadGraph will carry on,'+\
+             ' your version of gfortran is older than 4.6. MadGraph5_aMC@NLO will carry on,'+\
                               ' but will not be able to compile an executable.')
                 return p.returncode
         # Other reason

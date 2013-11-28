@@ -1,8 +1,7 @@
 #***********************************************************************
-#                       MadGraph/MadEvent                              *
-#                  http://madgraph.hep.uiuc.edu                        *
+#                        MadGraph5_aMC@NLO                             *
 #                                                                      *
-#                        run_card.dat                                  *
+#                      run_card.dat aMC@NLO                            *
 #                                                                      *
 #  This file is used to set the parameters of the run.                 *
 #                                                                      *
