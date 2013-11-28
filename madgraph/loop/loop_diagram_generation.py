@@ -568,7 +568,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         self.check_factorization(user_orders)
 
         # Now find an upper bound for the loop diagram generation.
-        self.guess_loop_orders(user_orders)
+        self.guess_loop_orders_from_squared()
         
         # If the user had not specified any fixed squared order other than 
         # WEIGHTED, we will use the guessed weighted order to assign a bound to
