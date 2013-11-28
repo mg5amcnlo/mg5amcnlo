@@ -891,6 +891,12 @@ class OneTagResults(dict):
         <td> %(links)s</td>
         <td> %(action)s</td> 
         </tr>"""        
+
+        sub_part_template_shower = """
+        <td> %(type)s %(run_mode)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
         
         # Compute the HTMl output for subpart
         nb_line = self.get_nb_line()
@@ -970,14 +976,11 @@ class OneTagResults(dict):
                 local_dico['err'] = self['error_pythia']
 
             elif ttype == 'shower':
-                template = sub_part_template_parton
+                template = sub_part_template_shower
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
                 else:
                     local_dico['cross_span'] = nb_line
-                local_dico['nb_event'] = self['nb_event']
-                local_dico['cross'] = self['cross']
-                local_dico['err'] = self['error']
             else:
                 template = sub_part_template_pgs   
             

@@ -1234,7 +1234,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['grid*'])
+                cross, error = sum_html.make_all_html_results(self, ['born*'])
                 self.results.add_detail('cross', cross)
                 self.results.add_detail('error', error) 
 
