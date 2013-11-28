@@ -493,25 +493,15 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
     def calculate_loopsymmetryfactor(self):
         """ Calculate the loop symmetry factor. For one-loop matrix elements,
         it is always 2 for bubble with identical particles and 1 otherwise."""
+
+        self['loopsymmetryfactor']=1
         
-        # HSS 27/09/2012
-        #print len(self.get('wavefunctions'))
-        #print len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])
-        #print [wf.get('pdg_code') for wf in self.get('wavefunctions')]
-        #print len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))
-        if ((len(self.get('wavefunctions'))==3 and \
-           len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==3) or\
-	   (len(self.get('wavefunctions'))==4 and \
-	   len([wf for wf in self.get('wavefunctions') if wf.get('self_antipart')])==4)) and\
-	   len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1:
-        #if len(self.get('wavefunctions'))==4 and \
-        #   len([wf for wf in self.get('wavefunctions') if wf.get('pdg_code')==21])==4:
-	# HSS        
-            self['loopsymmetryfactor']=2
-        else:
-            self['loopsymmetryfactor']=1
-        #print self['loopsymmetryfactor']
-        #raise TypeError,"haha"
+        # Make sure all particles are self-conjugated and identical in the loop
+        if len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1 and \
+          not any([not wf.get('self_antipart') for wf in self.get('wavefunctions')]):
+            # Now make sure we only include tadpoles or bubble
+            if len(self.get('wavefunctions')) in [3,4]:
+                self['loopsymmetryfactor']=2
         
 #===============================================================================
 # LoopHelasDiagram
