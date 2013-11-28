@@ -40,6 +40,9 @@ RUN= $(FILES) cuts.o add_write_info.o BinothLHA.o madfks_dbook.o	\
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
 
+# Files for vegas
+MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
+
 # Files for mintMC
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
 	handling_lhe_events.o iproc_map.o
@@ -97,6 +100,9 @@ madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
 
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+
+madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
+	$(FC) $(FFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS)

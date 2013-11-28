@@ -1,6 +1,6 @@
       Program DRIVER
 c**************************************************************************
-c     This is the driver for the whole calulation
+c     This is the driver for the whole calculation
 c**************************************************************************
       implicit none
 C
@@ -8,18 +8,16 @@ C     CONSTANTS
 C
       double precision zero
       parameter       (ZERO = 0d0)
-      include 'genps.inc'
       include 'nexternal.inc'
+      include 'genps.inc'
       INTEGER    ITMAX,   NCALL
+
       common/citmax/itmax,ncall
 C
 C     LOCAL
 C
       integer i,j,l,l1,l2,ndim
-      double precision dsig,tot,mean,sigma
       integer npoints
-      double precision x,y,jac,s1,s2,xmin
-      external dsig
       character*130 buf
 c
 c     Global
@@ -27,10 +25,6 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      integer           Minvar(maxdim,lmaxconfigs)
-      common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -50,11 +44,10 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigint,res,err,chi2a
+      real*8 sigint
       external sigint
 
       integer irestart
-      character * 70 idstring
       logical savegrid
 
       logical            flat_grid
@@ -62,11 +55,6 @@ c Vegas stuff
 
       external initplot
 
-      logical usexinteg,mint
-      common/cusexinteg/usexinteg,mint
-
-      double precision average_virtual,virtual_fraction
-      common/c_avg_virt/average_virtual,virtual_fraction
 
 c For tests
       real*8 fksmaxwgt,xisave,ysave
@@ -80,13 +68,6 @@ c For tests
       common/ccheckcnt/i_momcmp_count,xratmax
 
 c For tests of virtuals
-      double precision vobmax,vobmin
-      common/cvirt0test/vobmax,vobmin
-      double precision vNsumw,vAsumw,vSsumw,vNsumf,vAsumf,vSsumf
-      common/cvirt1test/vNsumw,vAsumw,vSsumw,vNsumf,vAsumf,vSsumf
-      integer nvtozero
-      logical doVirtTest
-      common/cvirt2test/nvtozero,doVirtTest
       integer ivirtpoints,ivirtpointsExcept
       double precision  virtmax,virtmin,virtsum
       common/cvirt3test/virtmax,virtmin,virtsum,ivirtpoints,
@@ -97,22 +78,54 @@ c For tests of virtuals
      &                 total_wgt_sum_min
 
       integer n_mp, n_disc
+c For MINT:
+      include "mint.inc"
+      real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
+     $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
+     $     ,x(ndimmax),itmax_fl
+      integer ixi_i,iphi_i,iy_ij,vn
+      integer ifold(ndimmax) 
+      common /cifold/ifold
+      integer ifold_energy,ifold_phi,ifold_yij
+      common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
+      logical putonshell
+      integer imode,dummy
+      logical unwgt
+      double precision evtsgn
+      common /c_unwgt/evtsgn,unwgt
+      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
+     $     ,ndimmax)
+      double precision ave_virt(nintervals_virt,ndimmax)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
+     $     ,nvirt_acc
+
+      logical SHsep
+      logical Hevents
+      common/SHevents/Hevents
+      character*10 dum
 c statistics for MadLoop      
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
 
 c general MadFKS parameters
       include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
-C-----
+C-----  
 c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
       average_virtual=0d0
-      virtual_fraction=Virt_fraction
+      virtual_fraction=virt_fraction
 c
 c     Read process number
 c
@@ -127,7 +140,7 @@ c
       nini=0
       n10=0
       n1=0
-
+      
       open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
       read (lun+1,'(a130)',err=11,end=11) buf
       l1=index(buf,'P')
@@ -150,9 +163,8 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,iconfig,irestart,idstring
-     &     ,savegrid)
-      if(irestart.eq.1)then
+      call get_user_params(ncall,itmax,iconfig,imode)
+      if(imode.eq.0)then
         flat_grid=.true.
       else
         flat_grid=.false.
@@ -160,7 +172,6 @@ c
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -171,97 +182,93 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
-
-      if(doVirtTest)then
-        vobmax=-1.d8
-        vobmin=1.d8
-        vNsumw=0.d0
-        vAsumw=0.d0
-        vSsumw=0.d0
-        vNsumf=0.d0
-        vAsumf=0.d0
-        vSsumf=0.d0
-        nvtozero=0
-        virtmax=-1d99
-        virtmin=1d99
-        virtsum=0d0
-      endif
       itotalpoints=0
       ivirtpoints=0
       ivirtpointsExcept=0
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
-
       i_momcmp_count=0
       xratmax=0.d0
-
-      if(savegrid)then
-         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
-     &        ,ncall,res,err,chi2a,savegrid)
-         usexinteg=.false.
-      else
+      unwgt=.false.
+      call addfil(dum)
+      if (imode.eq.-1.or.imode.eq.0) then
+         if(imode.eq.0)then
+            do j=0,nintervals
+               do i=1,ndimmax
+                  xgrid(j,i)=0.d0
+               enddo
+            enddo
+         else
+c to restore grids:
+            open (unit=12, file='mint_grids',status='old')
+            do j=0,nintervals
+               read (12,*) (xgrid(j,i),i=1,ndim)
+            enddo
+            do j=1,nintervals_virt
+               read (12,*) (ave_virt(j,i),i=1,ndim)
+            enddo
+            if (ncall.gt.0 .and. accuracy.ne.0d0) then
+               read (12,*) ans(1),unc(1),ncall,itmax
+c Update the number of PS points based on unc(1), ncall and accuracy
+               itmax_fl=itmax*(unc(1)/accuracy)**2
+               if (itmax_fl.le.4d0) then
+                  itmax=max(nint(itmax_fl),2)
+               elseif (itmax_fl.gt.4d0 .and. itmax_fl.le.16d0) then
+                  ncall=nint(ncall*itmax_fl/4d0)
+                  itmax=4
+               else
+                  itmax=nint(sqrt(itmax_fl))
+                  ncall=nint(ncall*itmax_fl/nint(sqrt(itmax_fl)))
+               endif
+               accuracy=accuracy/ans(1) ! relative accuracy on the ABS X-section
+            else
+               read (12,*) ans(1),unc(1),dummy,dummy
+            endif
+            read (12,*) virtual_fraction,average_virtual
+            close (12)
+            write (*,*) "Update iterations and points to",itmax,ncall
+         endif
+c
          call initplot
-         call xinteg(sigint,ndim,itmax,ncall,res,err)
-         usexinteg=.true.
+c
+         write (*,*) 'imode is ',imode
+         call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
+     $        ,ans,unc,chi2)
+         open(unit=58,file='res_0',status='unknown')
+         write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(58,*)'Final result:',ans(2),' +/-',unc(2)
+         close(58)
+         write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(*,*)'Final result:',ans(2),' +/-',unc(2)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1)
+         open(unit=58,file='results.dat',status='unknown')
+         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
+         close(58)
+c
+c to save grids:
+         open (unit=12, file='mint_grids',status='unknown')
+         do j=0,nintervals
+            write (12,*) (xgrid(j,i),i=1,ndim)
+         enddo
+         do j=1,nintervals_virt
+            write (12,*) (ave_virt(j,i),i=1,ndim)
+         enddo
+         write (12,*) ans(1),unc(1),ncall,itmax
+         write (12,*) virtual_fraction,average_virtual
+         close (12)
+      else
+         write (*,*) 'Unknown imode',imode
+         stop
       endif
 
-      write (*,*) ''
-      write (*,*) '----------------------------------------------------'
-      write(*,*)'Final result:',res,'+/-',err
-      write(*,*)'Maximum weight found:',fksmaxwgt
-      write(*,*)'Found for:',xisave,ysave
-      write (*,*) '----------------------------------------------------'
-      write (*,*) ''
+c Finialize plots
+      call mclear
+      open(unit=99,file='MADatNLO.top',status='unknown')
+      call topout
+      close(99)
 
-      if(doVirtTest)then
-        write(*,*)'  '
-        write(*,*)'Statistics for virtuals'
-        write(*,*)'max[V/(as/(2*pi)B)]:',vobmax
-        write(*,*)'min[V/(as/(2*pi)B)]:',vobmin
-        if(vNsumw.ne.0.d0)then
-          vAsumw=vAsumw/vNsumw
-          vSsumw=vSsumw/vNsumw
-          write(*,*)'Weighted:'
-          write(*,*)'  average=',vAsumw
-          if(vSsumw.lt.(vAsumw**2*0.9999d0))then
-            write(*,*)'Error in sigma',vSsumw,vAsumw
-          else
-            write(*,*)'  std dev=',sqrt(abs(vSsumw-vAsumw**2))
-          endif
-        else
-          write(*,*)'Sum of weights [virt_w] is zero'
-        endif
-c
-        if(vNsumf.ne.0.d0)then
-          vAsumf=vAsumf/vNsumf
-          vSsumf=vSsumf/vNsumf
-          write(*,*)'Flat:'
-          write(*,*)'  average=',vAsumf
-          if(vSsumf.lt.(vAsumf**2*0.9999d0))then
-            write(*,*)'Error in sigma',vSsumf,vAsumf
-          else
-            write(*,*)'  std dev=',sqrt(abs(vSsumf-vAsumf**2))
-          endif
-        else
-          write(*,*)'Sum of weights [virt_f] is zero'
-        endif
-c
-        if(nvtozero.ne.0)then
-          write(*,*)
-     &          '# of points (passing cuts) with Born=0 and virt=0:',
-     &          nvtozero
-        endif
-        write (*,*) 'virtual weights directly from BinothLHA.f:'
-        if (ivirtpoints.ne.0) then
-           write (*,*) 'max(virtual/Born/ao2pi)= ',virtmax
-           write (*,*) 'min(virtual/Born/ao2pi)= ',virtmin
-           write (*,*) 'avg(virtual/Born/ao2pi)= ',
-     &          virtsum/dble(ivirtpoints)
-        endif
-      endif
 
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
@@ -308,12 +315,6 @@ c
      &        "  Unknown return code (1):                         ",n1
       endif
 
-      if(savegrid)call initplot
-      call mclear
-      open(unit=99,file='MADatNLO.top',status='unknown')
-      call topout
-      close(99)
-
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
@@ -323,13 +324,15 @@ c
       end
 
 
-      function sigint(xx,peso)
+      function sigint(xx,peso,ifl,f)
 c From dsample_fks
       implicit none
       include 'nexternal.inc'
-      real*8 sigint,peso,xx(58)
+      include 'mint.inc'
+      real*8 sigint,peso,xx(ndimmax),f(nintegrals)
       integer ione
       parameter (ione=1)
+      integer ifl
       integer ndim
       common/tosigint/ndim
       integer           iconfig
@@ -361,11 +364,22 @@ c From dsample_fks
       double precision vol,sigintR
       integer itotalpoints
       common/ctotalpoints/itotalpoints
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      double precision virt_wgt_current,born_wgt_ao2pi_current
+      double precision virt_wgt,born_wgt_ao2pi
+      common/c_fks_singular/virt_wgt,born_wgt_ao2pi
       logical fillh
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
 c
+      if (ifl.ne.0) then
+         write (*,*) 'ifl not equal to zero in sigint()',ifl
+         stop
+      endif
+      virtual_over_born=0d0
+
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
      &        then
@@ -444,11 +458,14 @@ c
       call setfksfactor(iconfig)
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
-      sigint = sigint+dsig(p,wgt,peso)
+      sigint = sigint+dsig(p,wgt,peso)*peso
       if (mc_hel.ne.0 .and. fillh) then
 c Fill the importance sampling array
-         call fill_MC_integer(2,ihel,abs(sigint*peso*volh))
+         call fill_MC_integer(2,ihel,abs(sigint*volh))
       endif
+
+      virt_wgt_current=virt_wgt
+      born_wgt_ao2pi_current=born_wgt_ao2pi
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum.
@@ -466,7 +483,7 @@ c THIS CAN BE OPTIMIZED
                call setfksfactor(iconfig)
                wgt=1d0
                call generate_momenta(ndim,iconfig,wgt,x,p)
-               sigint = sigint+dsig(p,wgt,peso)
+               sigint = sigint+dsig(p,wgt,peso)*peso
             enddo
          else                   ! Monte Carlo over nFKSprocess
             nFKSprocess=nFKSprocess_all
@@ -481,18 +498,25 @@ c     nFKSprocess. Need to divide by it here to correctly take into
 c     account this Jacobian
             wgt=1d0/vol
             call generate_momenta(ndim,iconfig,wgt,x,p)
-            sigintR = dsig(p,wgt,peso)
-            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*peso*vol)
+            sigintR = dsig(p,wgt,peso)*peso
+            call fill_MC_integer(1,nFKSprocess,abs(sigintR)*vol)
             sigint = sigint+ sigintR
          endif
       endif
+
+      f(1)=abs(sigint+virt_wgt_current)
+      f(2)=sigint+virt_wgt_current
+      f(3)=virt_wgt_current
+      f(4)=virtual_over_born
+      f(5)=abs(virt_wgt_current)
+      f(6)=born_wgt_ao2pi_current
+
       if (sigint.ne.0d0)itotalpoints=itotalpoints+1
       return
       end
 
 c
-      subroutine get_user_params(ncall,itmax,iconfig,
-     #                           irestart,idstring,savegrid)
+      subroutine get_user_params(ncall,itmax,iconfig,irestart)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -514,10 +538,6 @@ c
 c
 c     Global
 c
-      logical fillh
-      integer mc_hel,ihel
-      double precision volh
-      common/mc_int2/volh,mc_hel,ihel,fillh
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -561,19 +581,24 @@ c
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      logical fillh
+      integer mc_hel,ihel
+      double precision volh
+      common/mc_int2/volh,mc_hel,ihel,fillh
+
 
 c-----
 c  Begin Code
 c-----
       doVirtTest=.true.
-      mint=.false.
+      mint=.true.
       unwgt=.false.
       write(*,'(a)') 'Enter number of events and iterations: '
       read(*,*) ncall,itmax
       write(*,*) 'Number of events and iterations ',ncall,itmax
-      write(*,'(a)') 'Enter desired fractional accuracy: '
+      write(*,'(a)') 'Enter desired accuracy: '
       read(*,*) accuracy
-      write(*,*) 'Desired fractional accuracy: ',accuracy
+      write(*,*) 'Desired absolute accuracy: ',accuracy
 
       write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
       read(*,*) use_cut

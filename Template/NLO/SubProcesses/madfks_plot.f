@@ -49,7 +49,7 @@ c
          ytit='sigma per bin '
       endif
       xnorm1=1.d0/float(itmax)
-      xnorm2=1.d0/float(ncall*itmax)
+      xnorm2=1.d0/float(ncall)
       do i=1,NPLOTS
         if(usexinteg.and..not.mint) then
            call mopera(i,'+',i,i,xnorm1,0.d0)
