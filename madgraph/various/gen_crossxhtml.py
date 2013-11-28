@@ -116,6 +116,8 @@ status_template = """
                     %(pythia_card)s
                     %(pgs_card)s
                     %(delphes_card)s
+                    %(shower_card)s
+                    %(fo_analyse_card)s
         </TD>
         <TD nowrap ROWSPAN=2> %(results)s </TD> 
         %(status)s
@@ -383,7 +385,15 @@ class AllResults(dict):
                 status_dict['delphes_card'] = """ <a href="./Cards/delphes_card.dat">delphes_card</a><BR>"""
             else:
                 status_dict['delphes_card'] = ""
-                
+            if exists(pjoin(self.path, 'Cards', 'shower_card.dat')):
+                status_dict['shower_card'] = """ <a href="./Cards/shower_card.dat">shower_card</a><BR>"""
+            else:
+                status_dict['shower_card'] = ""
+            if exists(pjoin(self.path, 'Cards', 'FO_analyse_card.dat')):
+                status_dict['fo_analyse_card'] = """ <a href="./Cards/FO_analyse_card.dat">FO_analyse_card</a><BR>"""
+            else:
+                status_dict['fo_analyse_card'] = ""                
+
             if self.web:
                 status_dict['stop_form'] = """
                  <TR ALIGN=CENTER><TD COLSPAN=7 text-align=center>
