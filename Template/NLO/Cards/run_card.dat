@@ -34,8 +34,9 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 5000   = npoints_FO_grid  ! number of points to set-up int. grids
- 5      = niters_FO_grid   ! number of iterations to set-up int. grids
+ 0.01   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
+ 	                   ! number of points and iter. below)
+# These numbers are ignored except if req_acc_FO is equal to -1
  6000   = npoints_FO_virt  ! number of points to compute Xsec (virt)
  2      = niters_FO_virt   ! number of iter. to compute Xsec (virt)
  10000  = npoints_FO       ! number of points to compute Xsec (no virt)
@@ -130,6 +131,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 # When ptgmin=0, all the other parameters are ignored                  *
 #***********************************************************************
   20  = ptgmin    ! Min photon transverse momentum
+  -1  = etagamma  ! Max photon abs(pseudo-rap)
  0.4  = R0gamma   ! Radius of isolation code
  1.0  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
  1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442

@@ -119,7 +119,7 @@ def compile_dir(arguments):
         misc.call(['./gensym'],cwd= this_dir,
                  stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                  stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
-        #compile madevent_mintMC/vegas
+        #compile madevent_mintMC/mintFO
         misc.compile([exe], cwd=this_dir, job_specs = False)
         if not os.path.exists(pjoin(this_dir, exe)):
             raise aMCatNLOError('%s compilation failed' % exe)
@@ -950,7 +950,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO """
         
         self.start_time = time.time()
         argss = self.split_arg(line)
@@ -1048,7 +1048,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         
-        if int(self.run_card['nevents']) == 0:
+        if int(self.run_card['nevents']) == 0 and not mode in ['LO', 'NLO']:
             logger.info('No event file generated: grids have been set-up with a '\
                             'relative precision of %s' % self.run_card['req_acc'])
             return
@@ -1156,8 +1156,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             self.cluster = cluster.MultiCore(**self.options)
         self.update_random_seed()
         #find and keep track of all the jobs
-        folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
-                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
+        folder_names = {'LO': ['born_G*'], 'NLO': ['all_G*'],
+                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
@@ -1179,10 +1179,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
                 #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
                 to_always_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and
-                             '_' in file and \
+                             '_' in file and not '_G' in file and \
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
 
@@ -1202,62 +1204,45 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
 
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
+                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
+                req_acc = self.run_card['req_acc_FO']
                 if not options['only_generation']:
                     self.update_status('Setting up grid', level=None)
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
-                    self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
-                p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
-                                    stdout=subprocess.PIPE, 
-                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
-                if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                    self.update_status('Improving grid using NLO', level=None)
-                    self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
-                                     'Improving grids using NLO')
-                p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
-                                   stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                npoints = self.run_card['npoints_FO_virt']
-                niters = self.run_card['niters_FO_virt']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
+                                   stdout=subprocess.PIPE, \
+                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+
+                output = p.communicate()
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(options, 0, mode)
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
+                self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
 
-            p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
+            p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
@@ -1278,11 +1263,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 #
 # PUT HERE THE COMBINE SCRIPT FOR ROOT
 #
-
-                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The results of this run and the Root file with the plots' + \
-                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+#                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+#                                pjoin(self.me_dir, 'Events', self.run_name))
+#                logger.info('The results of this run and the Root file with the plots' + \
+#                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The Root files with the plots are in the SubProcesses/P*/*_G*/' + \
+                        'directories.')
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
@@ -1353,11 +1339,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, 
-                                     [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], 
-                                     status, split_jobs = split)
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'all', i) 
+                        self.run_all(job_dict, [['2', 'F', '%d' % i]], status, split_jobs = split)
                         
                     elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
@@ -1373,9 +1356,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                    stdout=subprocess.PIPE, 
                                    cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
-                             pjoin(self.me_dir, 'Events', self.run_name))
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_tot.txt' % i), \
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
@@ -1406,8 +1387,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             random seed found in 'randinit' is 33
             Integrated abs(cross-section)
             7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
-            Found 4 correctly terminated jobs 
-            Integrated cross-section
+             Integrated cross-section
             6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
         for aMC@NLO/aMC@LO, and as
 
@@ -1420,7 +1400,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
 \s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-Found (\d+) correctly terminated jobs 
 Integrated cross-section
 \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:
@@ -1433,15 +1412,16 @@ Integrated cross-section
         if not match or output[1]:
             logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results')
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+            'Please check the .log files inside the directories which failed.')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
-                    'xsect' : float(match.groups()[6]),
-                    'errt' : float(match.groups()[7])}
+                    'xsect' : float(match.groups()[5]),
+                    'errt' : float(match.groups()[6])}
         else:
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
@@ -1465,25 +1445,20 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'noshower']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','GV*','log_MINT*.txt'))
-            all_log_files = sum([glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*',\
-                                    'G%s*'%foldname,'log*.txt')) for foldname in ['V','F']],[])
-        elif mode in ['aMC@LO', 'noshowerLO']: 
-            log_GV_files = ''
+                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
-                                          'SubProcesses', 'P*','GB*','log*.txt'))
+                                          'SubProcesses', 'P*','G*','log*.txt'))
         elif mode == 'NLO':
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','viSB_G*','log*.txt'))
+                                    'SubProcesses', 'P*','all_G*','log*.txt'))
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
-                                                                   'viSB_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['all_']],[])
         elif mode == 'LO':
             log_GV_files = ''
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','born_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
         # Find the number of potential errors found in all log files
@@ -1558,20 +1533,23 @@ Integrated cross-section
 # Now display the general statistics
 # Recuperate the fraction of unstable PS points found in the runs for
 # the virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
-             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
-             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
-             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
-             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
-             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
-             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
-             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
-             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
+        UPS_stat_finder = re.compile(
+             r"Satistics from MadLoop:.*"+\
+             r"Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r"Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r"Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r"Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r"Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r"Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
 #        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
 #                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
+
         for gv_log in log_GV_files:
             logfile=open(gv_log,'r')             
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
@@ -1652,6 +1630,7 @@ Integrated cross-section
                 if nTot1 != 0:
                     debug_msg += '\n          Unknown return code (1):             %d'%nTot1
         logger.info(message+'\n')
+        open(pjoin(self.me_dir, 'Events', self.run_name, 'summary.txt'), 'w').write(message+'\n')
                  
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
@@ -1711,7 +1690,7 @@ Integrated cross-section
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Prepairing MCatNLO run')
+        logger.info('   Preparing MCatNLO run')
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
@@ -2433,6 +2412,7 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
         if os.path.exists(pjoin(cwd,'nevents.tar')):
@@ -2463,8 +2443,8 @@ Integrated cross-section
         subdir = ' '.join(data).split()
                
         if args[0] == '0':
-            # MADEVENT VEGAS MODE
-            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            # MADEVENT MINT FO MODE
+            input_files.append(pjoin(cwd, 'madevent_mintFO'))
             input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
             #j=$2\_G$i
             for i in subdir:
@@ -2473,12 +2453,11 @@ Integrated cross-section
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
                 if len(args) == 4:
+                    args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
-                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-                                                      if n.endswith('.sv1')]
-                        to_move.append('grid.MC_integer')
+                        to_move = ['grid.MC_integer','mint_grids']
                     elif args[0] == '1':
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
@@ -2546,7 +2525,7 @@ Integrated cross-section
 
         content = \
 """-1 12      ! points, iterations
-0.05       ! desired fractional accuracy
+0.03       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
@@ -2561,7 +2540,7 @@ Integrated cross-section
         file.write(content)
         file.close()
 
-    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters, accuracy='0'):
         """writes the madin.run_mode file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
@@ -2572,7 +2551,7 @@ Integrated cross-section
 
         content = \
 """%s %s  ! points, iterations
-0 ! accuracy
+%s ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
 1 ! 0 for exact hel sum
@@ -2582,7 +2561,7 @@ Integrated cross-section
 %s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
 %s        ! all, born, real, virt
 """ \
-                    % (npoints,niters,vegas_mode,run_mode)
+                    % (npoints,niters,accuracy,vegas_mode,run_mode)
         file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
         file.write(content)
         file.close()
@@ -2609,7 +2588,7 @@ Integrated cross-section
         if '+' in mode:
             mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
-            exe = 'madevent_vegas'
+            exe = 'madevent_mintFO'
             tests = ['test_ME']
             self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
@@ -2674,6 +2653,7 @@ Integrated cross-section
                 hasvirt = True
         else:
             os.unsetenv('madloop')
+            hasvirt = False
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

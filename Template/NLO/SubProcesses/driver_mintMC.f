@@ -13,14 +13,15 @@ C
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
+      integer ncall_virt,ncall_novi
+      character*4 abrv
+      common /to_abrv/ abrv
 C
 C     LOCAL
 C
       integer i,j,l,l1,l2,ndim,nevts
-      double precision tot,mean,sigma,res_abs
       integer npoints
-      double precision y,jac,s1,s2,xmin
-      character*130 buf,string
+      character*130 buf
 
       integer lunlhe
       parameter (lunlhe=98)
@@ -30,10 +31,6 @@ c
       integer                                      nsteps
       character*40          result_file,where_file
       common /sample_status/result_file,where_file,nsteps
-      integer           Minvar(maxdim,lmaxconfigs)
-      common /to_invar/ Minvar
-      real*8          dsigtot(10)
-      common/to_dsig/ dsigtot
       integer ngroup
       common/to_group/ngroup
       data ngroup/0/
@@ -53,11 +50,10 @@ c Vegas stuff
       integer ipole
       common/tosigint/ndim,ipole
 
-      real*8 sigintH,sigintS,sigintF,resA,errA,resS,errS,chi2
-      external sigintH,sigintS,sigintF
+      real*8 sigintF
+      external sigintF
 
       integer irestart
-      character * 70 idstring
       logical savegrid
 
       external initplot
@@ -89,21 +85,37 @@ c For tests
       double precision xratmax
       common/ccheckcnt/i_momcmp_count,xratmax
 
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
+
       double precision weight
 c For MINT:
       include "mint.inc"
-      real * 8 xgrid(0:nintervals,ndimmax),xint,ymax(nintervals,ndimmax)
-      real * 8 x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij
+      real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
+     $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
+     $     ,x(ndimmax)
+      integer ixi_i,iphi_i,iy_ij,vn
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
       integer imode
+      common /c_imode/imode
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
+      integer nvirt(nintervals_virt,ndimmax),nvirt_acc(nintervals_virt
+     $     ,ndimmax)
+      double precision ave_virt(nintervals_virt,ndimmax)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
+     $     ,nvirt_acc
+      double precision ran2
+      external ran2
 
       logical SHsep
       logical Hevents
@@ -123,7 +135,8 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
-c
+      average_virtual=0d0
+      virtual_fraction=virt_fraction
 c
 c     Read process number
 c
@@ -153,7 +166,7 @@ c
       nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
-      call setcuts               !Sets up cuts & particle masses
+      call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
       call run_printout          !Prints out a summary of the run settings
       call initcluster
@@ -171,7 +184,6 @@ c
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
@@ -182,28 +194,27 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-
       write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
-
       itotalpoints=0
       ivirtpoints=0
       ivirtpointsExcept=0
       total_wgt_sum=0d0
       total_wgt_sum_max=0d0
       total_wgt_sum_min=0d0
-
       i_momcmp_count=0
       xratmax=0.d0
-
       unwgt=.false.
-
 c Plots
       plotEv=.false.
       plotKin=.false.
-
       call addfil(dum)
+
+c*************************************************************
+c     setting of the grids
+c*************************************************************
       if (imode.eq.-1.or.imode.eq.0) then
          if(imode.eq.0)then
+c initialize grids
             do j=0,nintervals
                do i=1,ndimmax
                   xgrid(j,i)=0.d0
@@ -215,8 +226,12 @@ c to restore grids:
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
-            read (12,*) xint
+            do j=1,nintervals_virt
+               read (12,*) (ave_virt(j,i),i=1,ndim)
+            enddo
+            read (12,*) (ans(i),i=1,nintegrals)
             read (12,*) ifold_energy,ifold_phi,ifold_yij
+            read (12,*) virtual_fraction,average_virtual
             close (12)
          endif
 c
@@ -226,49 +241,51 @@ c
          endif
 c
          write (*,*) 'imode is ',imode
-         if (Hevents.and.SHsep) then
-            call mint(sigintH,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         elseif(.not.SHsep) then
-            call mint(sigintF,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         else
-            call mint(sigintS,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         endif
+         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
+     $        ,ans,unc,chi2)
          open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',resA,' +/-',errA
-         write(58,*)'Final result:',resS,' +/-',errS
+         write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(58,*)'Final result:',ans(2),' +/-',unc(2)
          close(58)
-         write(*,*)'Final result [ABS]:',resA,' +/-',errA
-         write(*,*)'Final result:',resS,' +/-',errS
-         write(*,*)'chi**2 per D.o.F.:',chi2
+         write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
+         write(*,*)'Final result:',ans(2),' +/-',unc(2)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*)resA, errA, 0d0, 0, 0, 0, 0, 0d0 ,0d0, resS 
+         write(58,*) ans(1),unc(1),0d0,0,0,0,0,0d0,0d0,ans(2)
          close(58)
-      
+c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
          do j=0,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
          enddo
-         write (12,*) xint
+         do j=1,nintervals_virt
+            write (12,*) (ave_virt(j,i),i=1,ndim)
+         enddo
+         write (12,*) (ans(i),i=1,nintegrals)
          write (12,*) ifold_energy,ifold_phi,ifold_yij
+         write (12,*) virtual_fraction,average_virtual
          close (12)
 
+c*************************************************************
+c     computation of upper bounding envelope
+c*************************************************************
       elseif(imode.eq.1) then
          if(plotKin)then
             open(unit=99,file='MADatNLO.top',status='unknown')
             call initplot
          endif
-
 c to restore grids:
          open (unit=12, file='mint_grids',status='old')
          do j=0,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
          enddo
-         read (12,*) xint
+         do j=1,nintervals_virt
+            read (12,*) (ave_virt(j,i),i=1,ndim)
+         enddo
+         read (12,*) (ans(i),i=1,nintegrals)
          read (12,*) ifold_energy,ifold_phi,ifold_yij
+         read (12,*) virtual_fraction,average_virtual
          close (12)
 
 c Prepare the MINT folding
@@ -284,24 +301,17 @@ c Prepare the MINT folding
          ifold(ifold_yij)=iy_ij
          
          write (*,*) 'imode is ',imode
-         if (Hevents.and.SHsep) then
-            call mint(sigintH,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         elseif (.not.SHsep) then
-            call mint(sigintF,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         else
-            call mint(sigintS,ndim,ncall,itmax,imode,
-     &           xgrid,xint,ymax,resA,errA,resS,errS,chi2)
-         endif
+         call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
+     $        ,ans,unc,chi2)
          open(unit=58,file='res_1',status='unknown')
-         write(58,*)'Final result [ABS]:',resA,' +/-',errA
-         write(58,*)'Final result:',resS,' +/-',errS
+         write(58,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
+     $        ,sqrt(unc(1)**2+unc(5)**2)
+         write(58,*)'Final result:',ans(2),' +/-',unc(2)
          close(58)
-
-         write(*,*)'Final result [ABS]:',resA,' +/-',errA
-         write(*,*)'Final result:',resS,' +/-',errS
-         write(*,*)'chi**2 per D.o.F.:',chi2
+         write(*,*)'Final result [ABS]:',ans(1)+ans(5),' +/-'
+     $        ,sqrt(unc(1)**2+unc(5)**2)
+         write(*,*)'Final result:',ans(2),' +/-',unc(2)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1)
 
 c to save grids:
          open (unit=12, file='mint_grids_NLO',status='unknown')
@@ -310,19 +320,25 @@ c to save grids:
             write (12,*) (xgrid(j,i),i=1,ndim)
             write (12,*) (ymax(j,i),i=1,ndim)
          enddo
+         do j=1,nintervals_virt
+            write (12,*) (ave_virt(j,i),i=1,ndim)
+         enddo
+         write (12,*) ymax_virt
          write (12,*) (ifold(i),i=1,ndim)
-         write (12,*) resS,errS
+         write (12,*) (ans(i),i=1,nintegrals)
+         write (12,*) (unc(i),i=1,nintegrals)
+         write (12,*) virtual_fraction,average_virtual
          close (12)
 
 
-c Event generation
+c*************************************************************
+c     event generation
+c*************************************************************
       elseif(imode.eq.2) then
-
 c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
          putonshell=.true.
 c$$$         putonshell=.false.
-
          unwgt=.true.
          open (unit=99,file='nevts',status='old',err=999)
          read (99,*) nevts
@@ -334,7 +350,7 @@ c$$$         putonshell=.false.
             stop
          endif
          ncall=nevts ! Update ncall with the number found in 'nevts'
-         
+
 c to restore grids:
          open (unit=12, file='mint_grids_NLO',status='unknown')
          read (12,*) (xgrid(0,i),i=1,ndim)
@@ -342,62 +358,55 @@ c to restore grids:
             read (12,*) (xgrid(j,i),i=1,ndim)
             read (12,*) (ymax(j,i),i=1,ndim)
          enddo
+         do j=1,nintervals_virt
+            read (12,*) (ave_virt(j,i),i=1,ndim)
+         enddo
+         read (12,*) ymax_virt
          read (12,*) (ifold(i),i=1,ndim)
-         read (12,*) resS,errS
+         read (12,*) (ans(i),i=1,nintegrals)
+         read (12,*) (unc(i),i=1,nintegrals)
+         read (12,*) virtual_fraction,average_virtual
          close (12)
 
-         open(unit=58,file='res_1',status='old')
-         read(58,'(a)')string
-         read(string(index(string,':')+1:index(string,'+/-')-1),*) res_abs
-         close(58)
-   
+c determine how many events for the virtual and how many for the no-virt
+         ncall_virt=int(ans(5)/(ans(1)+ans(5)) * ncall)
+         ncall_novi=ncall-ncall_virt
+
+         write (*,*) "Generating virt :: novi approx.",ncall_virt
+     $        ,ncall_novi
+
          if(plotEv)open(unit=99,file='hard-events.top',status='unknown')
          open(unit=lunlhe,file='events.lhe',status='unknown')
 
-         call write_header_init(lunlhe,ncall,resS,res_abs,errS)
+         call write_header_init(lunlhe,ncall,ans(2),ans(1)+ans(5),unc(2))
          if(plotEv)call initplot
-         open(unit=58,file='res_1',status='old')
-         read(58,'(a)')string
-         read(string(index(string,'[ABS]:')+6:index(string,'+/-')-1),*)
-     &        res_abs
-         close(58)
 
-         weight=res_abs/(itmax*ncall)
+         weight=(ans(1)+ans(5))/ncall
 
          write (*,*) 'imode is ',imode
-         if (Hevents.and.SHsep) then
-            imode=0 
-            call gen(sigintH,ndim,xgrid,ymax,imode,x) 
-            imode=1 
-            do j=1,ncall
-               call gen(sigintH,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
-            enddo 
-            imode=3 
-            call gen(sigintH,ndim,xgrid,ymax,imode,x) 
-         elseif (.not.SHsep) then
-            imode=0 
-            call gen(sigintF,ndim,xgrid,ymax,imode,x) 
-            imode=1 
-            do j=1,ncall
-               call gen(sigintF,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
-            enddo 
-            imode=3 
-            call gen(sigintF,ndim,xgrid,ymax,imode,x) 
-         else
-            imode=0 
-            call gen(sigintS,ndim,xgrid,ymax,imode,x) 
-            imode=1 
-            do j=1,ncall
-               call gen(sigintS,ndim,xgrid,ymax,imode,x) 
-               call finalize_event(x,weight,lunlhe,plotEv,putonshell)
-            enddo 
-            imode=3 
-            call gen(sigintS,ndim,xgrid,ymax,imode,x) 
-         endif
-         write (*,*) 'Generation efficiency:',x(1)
-
+         vn=-1
+         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
+         do j=1,ncall
+            if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
+               abrv='virt'
+               vn=1
+               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+            else
+               abrv='novi'
+               vn=2
+               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+            endif
+            call finalize_event(x,weight,lunlhe,plotEv,putonshell)
+         enddo
+         vn=-1
+         call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
+         write (*,*) 'Generation efficiencies:',x(1),x(4)
+c Uncomment the next to lines to plot the integral from the PS points
+c trown during event generation. This corresponds only to the cross
+c section if these points are thrown flat, so not using the xmmm() stuff
+c in mint.
+c$$$         write (*,*) 'Integral from novi points computed',x(2),x(3)
+c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write (lunlhe,'(a)') "</LesHouchesEvents>"
          close(lunlhe)
       endif
@@ -663,7 +672,7 @@ c
 
 
 
-      function sigintF(xx,w,ifl,f_abs)
+      function sigintF(xx,w,ifl,f)
 c From dsample_fks
       implicit none
       include 'mint.inc'
@@ -683,7 +692,7 @@ c From dsample_fks
       real*8 sigintF,xx(ndimmax),w
       integer ione
       parameter (ione=1)
-      double precision wgt,dsigS,dsigH,f_abs,lum,dlum
+      double precision wgt,dsigS,dsigH,f(nintegrals),lum,dlum
       external dlum
       logical unwgt
       double precision evtsgn
@@ -696,8 +705,8 @@ c From dsample_fks
       double precision f_check
       double precision x(99),sigintF_without_w,f_abs_without_w
       common /c_sigint/ x,sigintF_without_w,f_abs_without_w
-      double precision f(2),result(0:fks_configs,2)
-      save f,result
+      double precision f1(2),result(0:fks_configs,2)
+      save f1,result
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       character*4 abrv
@@ -727,14 +736,17 @@ c From dsample_fks
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
-      double precision unwgt_table(0:fks_configs,2,maxproc)
+      double precision unwgt_table(0:fks_configs,3,maxproc)
       common/c_unwgt_table/unwgt_table
       save proc_map
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
       logical fillh
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
-c
+      double precision double_check(nintegrals)
+      save double_check
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
@@ -960,23 +972,30 @@ c IRPOC's
       fold=ifl
       if (ifl.eq.0) then
          do k=1,maxproc_save
-            do j=1,2
+            do j=1,3
                do i=0,fks_configs
                   unwgt_table(i,j,k)=0d0
                enddo
             enddo
          enddo
-         f(1)=0d0
-         f(2)=0d0
+         f1(1)=0d0
+         f1(2)=0d0
+         virtual_over_born=0d0
          do i=0,fks_configs
             result(i,1)=0d0
             result(i,2)=0d0
          enddo
          dsigS=0d0
          dsigH=0d0
+         do i=1,nintegrals
+            f(i)=0d0
+         enddo
       endif
 
       if (ifl.eq.0)then
+         do i=1,nintegrals
+            double_check(i)=0d0
+         enddo
          do i=1,99
             if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
      &           then
@@ -1036,13 +1055,12 @@ c THIS CAN BE OPTIMIZED
          call dsigF(p,wgt,w,dsigS,dsigH)
          result(0,1)= w*dsigS
          result(0,2)= w*dsigH
-         f(1) = f(1)+result(0,1)
-         f(2) = f(2)+result(0,2)
+         f1(1) = f1(1)+result(0,1)
+         f1(2) = f1(2)+result(0,2)
          if (mc_hel.ne.0 .and. fillh) then
 c Fill the importance sampling array
-            call fill_MC_integer(2,ihel,(abs(f(1))+abs(f(2)))*volh)
+            call fill_MC_integer(2,ihel,(abs(f1(1))+abs(f1(2)))*volh)
          endif
-
 c
 c Compute the subtracted real-emission corrections either as an explicit
 c sum or a Monte Carlo sum or a combination
@@ -1086,15 +1104,16 @@ c much. Do this by overwrite the 'wgt' variable
                sigintR = sigintR+(abs(dsigS)+abs(dsigH))*vol1*w
                result(nFKSprocess,1)= w*dsigS
                result(nFKSprocess,2)= w*dsigH
-               f(1) = f(1)+result(nFKSprocess,1)
-               f(2) = f(2)+result(nFKSprocess,2)
+               f1(1) = f1(1)+result(nFKSprocess,1)
+               f1(2) = f1(2)+result(nFKSprocess,2)
             enddo
             call fill_MC_integer(1,proc_map(0,1),sigintR)
          endif
-         sigintF=f(1)+f(2)
+         f(2)=f1(1)+f1(2)
+         sigintF=f(2)
          unwgt=.false.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
-     $        ,f_abs)
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
+         f_check=f(2)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
      $           .gt.1d-1) then
@@ -1107,58 +1126,59 @@ c much. Do this by overwrite the 'wgt' variable
      $              ,sigintF,f_check
             endif
          endif
-         if (f_abs.ne.0d0) itotalpoints=itotalpoints+1
+         if (f(1).ne.0d0) itotalpoints=itotalpoints+1
+         do i=1,nintegrals
+            double_check(i)=f(i)
+         enddo
       elseif(ifl.eq.1) then
          write (*,*) 'Folding not implemented'
          stop
       elseif(ifl.eq.2) then
          unwgt=.true.
-         call update_unwgt_table(unwgt_table,proc_map,unwgt,f_check
-     $        ,f_abs)
+         call update_unwgt_table(unwgt_table,proc_map,unwgt,f)
+         f_check=f(2)
+         sigintF=f_check
 c The following two are needed when writing events to do NLO/Born
 c reweighting
-         sigintF=f_check
          sigintF_without_w=sigintF/w
-         f_abs_without_w=f_abs/w
+         f_abs_without_w=f(1)/w
+c Double check the consistency. This check will fail when folding is
+c used.
+         do i=1,nintegrals
+            if (double_check(i).ne.0d0) then
+               if (abs(1d0-f(i)/double_check(i)).gt.1d-12) then
+                  write (*,*) "Not consistent numbers in driver_mintMC"
+                  write (*,*) f
+                  write (*,*) double_check
+                  stop 1
+               endif
+            elseif (f(i).ne.0d0) then
+               write (*,*) "Not consistent numbers in driver_mintMC"
+               write (*,*) f
+               write (*,*) double_check
+               stop 1
+            endif
+         enddo
       endif
       return
       end
 
-     
-      function sigintS(xx,w,ifl,f_abs)
+      subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f)
       implicit none
       include 'mint.inc'
-      integer ifl
-      double precision xx(ndimmax),w,f_abs,sigintS
-      write (*,*) 'Generation of separate S-events no longer supported'
-      stop
-      end
-
-      function sigintH(xx,w,ifl,f_abs)
-      implicit none
-      include 'mint.inc'
-      integer ifl
-      double precision xx(ndimmax),w,f_abs,sigintH
-      write (*,*) 'Generation of separate H-events no longer supported'
-      stop
-      end
-
-
-      subroutine update_unwgt_table(unwgt_table,proc_map,unweight,f
-     $     ,f_abs)
-      implicit none
       include 'nexternal.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
       include 'madfks_mcatnlo.inc'
       include 'run.inc'
-      double precision unwgt_table(0:fks_configs,2,maxproc),f,f_abs
-     $     ,dummy,dlum,f_abs_H,f_abs_S,rnd,ran2,current,f_abs_S_un
-     $     ,f_unwgt(fks_configs,maxproc),sum,tot_sum,temp_shower_scale
+      double precision unwgt_table(0:fks_configs,3,maxproc)
+     $     ,f(nintegrals),dummy,dlum,f_abs_H,f_abs_S,f_V,f_B,f_V_abs,rnd
+     $     ,ran2,current,f_abs_S_un,f_unwgt(fks_configs,maxproc),sum
+     $     ,tot_sum,temp_shower_scale
       external ran2
       external dlum
-      integer i,j,ii,jj,k,kk
+      integer i,j,ii,jj,k,kk,is
      $     ,proc_map(0:fks_configs,0:fks_configs)
       logical unweight,firsttime
       data firsttime /.true./
@@ -1175,6 +1195,7 @@ c reweighting
       integer i_process
       common/c_addwrite/i_process
       logical unwgt
+      double precision evtsgn_save,evtsgn_target
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
       character*4 abrv
@@ -1190,7 +1211,10 @@ c reweighting
       integer iproc_save(fks_configs),eto(maxproc,fks_configs)
      $     ,etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-
+      double precision virtual_over_born
+      common/c_vob/virtual_over_born
+      integer imode
+      common /c_imode/imode
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
          if (unwgt_table(0,2,i).ne.0d0) then
@@ -1205,21 +1229,23 @@ c Trivial check on the Born contribution
 c*******************************************************************
 c Compute the total rate. This is simply the sum of all
 c
-      f=0d0
+      do i=1,nintegrals
+         f(i)=0d0
+      enddo
       if (.not.( abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') ) then
-         f=0d0
 c all the (n+1)-body contributions
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
             do j=1,iproc_save(nFKSprocess)
-               f = f + unwgt_table(nFKSprocess,1,j)+
+               f(2) = f(2) + unwgt_table(nFKSprocess,1,j)+
      &              unwgt_table(nFKSprocess,2,j)
             enddo
          enddo
 c and the n-body contributions
          do j=1,iproc_save(nFKSprocess_used_born)
-            f=f+unwgt_table(0,1,j)+unwgt_table(0,2,j)
+            f(2)=f(2)+unwgt_table(0,1,j)+unwgt_table(0,2,j)
+     $           +unwgt_table(0,3,j)
          enddo
 c*******************************************************************
 c Compute the abs of the total rate. Need to take ABS of all
@@ -1229,6 +1255,9 @@ c scale, this might happen for S-events)
 c     
          f_abs_H=0d0
          f_abs_S=0d0
+         f_V=0d0
+         f_B=0d0
+         f_V_abs=0d0
 c Nothing to combine for H-events, so need to sum them independently
          do i=1,proc_map(proc_map(0,1),0)
             nFKSprocess=proc_map(proc_map(0,1),i)
@@ -1290,9 +1319,21 @@ c nFKSprocess_soft)
                   if (nFKSprocess.eq.nFKSprocess_soft) then
                      do j=1,iproc_save(nFKSprocess_used_born)
                         if (eto(j,nFKSprocess_used_born).eq.i) then
-                           f_unwgt(nFKSprocess_soft,i) =
-     &                          f_unwgt(nFKSprocess_soft,i) +
-     &                          unwgt_table(0,1,i)+unwgt_table(0,2,i)
+c If when computing upper bounding envelope (imode.eq.1) do not include
+c the virtual corrections, because a separate bound is computed for them
+                           if (imode.eq.1) then
+                              f_unwgt(nFKSprocess_soft,i) =
+     $                             f_unwgt(nFKSprocess_soft,i) +
+     $                             unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                           else
+                              f_unwgt(nFKSprocess_soft,i) =
+     $                             f_unwgt(nFKSprocess_soft,i) +
+     $                             unwgt_table(0,1,i)+unwgt_table(0,2,i)
+     $                             +unwgt_table(0,3,i)
+                           endif
+                           f_V=f_V+unwgt_table(0,3,i)
+                           f_B=f_B+unwgt_table(1,3,i)
+                           f_V_abs=f_V_abs+abs(unwgt_table(0,3,i))
                         endif
                      enddo
                   endif
@@ -1310,8 +1351,21 @@ c the n+1-body to it
                   nFKSprocess_soft=nFKSprocess
                   do j=1,iproc_save(nFKSprocess_used_born)
                      if (eto(j,nFKSprocess_used_born).eq.i) then
-                        f_unwgt(nFKSprocess,i) = f_unwgt(nFKSprocess,i)
-     $                       +unwgt_table(0,1,i)+unwgt_table(0,2,i)
+c If when computing upper bounding envelope (imode.eq.1) do not include
+c the virtual corrections, because a separate bound is computed for them
+                        if (imode.eq.1) then
+                           f_unwgt(nFKSprocess,i) =
+     $                          f_unwgt(nFKSprocess,i)
+     $                          +unwgt_table(0,1,i)+unwgt_table(0,2,i)
+                        else
+                           f_unwgt(nFKSprocess,i) =
+     $                          f_unwgt(nFKSprocess,i)
+     $                          +unwgt_table(0,1,i)+unwgt_table(0,2,i)
+     $                          +unwgt_table(0,3,i)
+                        endif
+                        f_V=f_V+unwgt_table(0,3,i)
+                        f_B=f_B+unwgt_table(1,3,i)
+                        f_V_abs=f_V_abs+abs(unwgt_table(0,3,i))
                      endif
                   enddo
                   do j=1,iproc_save(nFKSprocess)
@@ -1325,6 +1379,11 @@ c the n+1-body to it
 c Sum here all together for the S-event contributions
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_soft,i))
          enddo
+         f(1)=f_abs_H+f_abs_S
+         f(3)=f_V
+         f(5)=f_V_abs
+         f(4)=virtual_over_born
+         f(6)=f_B
 c absolute values of total rate are now filled (including the f_unwgt
 c array for the S-event contributions)
 c*******************************************************************
@@ -1354,82 +1413,108 @@ c directories (take the weighted average):
 c*******************************************************************
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs=f_abs_H+f_abs_S
          else
 c pick one at random and update reweight info and all that
-            f_abs=f_abs_H+f_abs_S
-            if (f_abs.ne.0d0) then
-               rnd=ran2()
-               if (rnd.le.f_abs_H/f_abs) then
-                  Hevents=.true.
+            if (f(1).ne.0d0) then
+c When there are large cancelations between the various contributions to
+c the integral (so that the ABS integral is much larger than the
+c integral itself), reduce the statistical fluctations beteen looping
+c over many 'unweight configurations'. Pick the sign according 
+               evtsgn_save=0d0
+               evtsgn_target=0d0
+               is=0
+ 200           continue
+               do while (is.lt.max(min(nint((f(1))/abs(f(2))),20),1)
+     $              .or.evtsgn_target.ne.0d0)
+                  is=is+1
+                  rnd=ran2()
+                  if (rnd.le.f_abs_H/f(1)) then
+                     Hevents=.true.
 c Pick one of the nFKSprocesses and one of the IPROC's 
-                  nFKSprocess=1
-                  i_process=1
-                  current=abs(unwgt_table(1,2,1))
-                  rnd=ran2()
-                  do while (current.lt.rnd*f_abs_H .and.
-     $                 (i_process.le.iproc_save(nFKSprocess) .or.
-     $                 nFKSprocess.le.fks_configs))
-                     i_process=i_process+1
-                     if (i_process.gt.iproc_save(nFKSprocess)) then
-                        i_process=1
-                        nFKSprocess=nFKSprocess+1
+                     nFKSprocess=1
+                     i_process=1
+                     current=abs(unwgt_table(1,2,1))
+                     rnd=ran2()
+                     do while (current.lt.rnd*f_abs_H .and.
+     $                    (i_process.le.iproc_save(nFKSprocess) .or.
+     $                    nFKSprocess.le.fks_configs))
+                        i_process=i_process+1
+                        if (i_process.gt.iproc_save(nFKSprocess)) then
+                           i_process=1
+                           nFKSprocess=nFKSprocess+1
+                        endif
+                        current=current+abs(unwgt_table(nFKSprocess,2
+     $                       ,i_process))
+                     enddo
+                     if (i_process.gt.iproc_save(nFKSprocess) .or.
+     $                    nFKSprocess.gt.fks_configs) then
+                        write (*,*) 'ERROR #4 in unweight table'
+     $                       ,i_process,nFKSprocess
+                        stop
                      endif
-                     current=current+abs(unwgt_table(nFKSprocess,2
+                     evtsgn=sign(1d0,unwgt_table(nFKSprocess,2
      $                    ,i_process))
-                  enddo
-                  if (i_process.gt.iproc_save(nFKSprocess) .or.
-     $                 nFKSprocess.gt.fks_configs) then
-                     write (*,*) 'ERROR #4 in unweight table',i_process
-     $                    ,nFKSprocess
-                     stop
-                  endif
-                  evtsgn=sign(1d0,unwgt_table(nFKSprocess,2,i_process))
-                  if (doreweight) then
-                     nFKSprocess_reweight(1)=nFKSprocess
-                  endif
-                  nFKSprocess_used=nFKSprocess
-               else
-                  Hevents=.false.
+                     evtsgn_save=evtsgn_save+evtsgn
+                     if (doreweight) then
+                        nFKSprocess_reweight(1)=nFKSprocess
+                     endif
+                     nFKSprocess_used=nFKSprocess
+                  else
+                     Hevents=.false.
 c Pick one of the nFKSprocesses and IPROC's of the Born
-                  nFKSprocess=nFKSprocess_soft
-                  i_process=1
-                  current=abs(f_unwgt(nFKSprocess,1))
-                  rnd=ran2()
-                  do while (current.lt.rnd*f_abs_S .and.
-     $                 i_process.le.iproc_save(nFKSprocess))
-                     i_process=i_process+1
-                     current=current+abs(f_unwgt(nFKSprocess,i_process))
-                  enddo
-                  if (i_process.gt.iproc_save(nFKSprocess)) then
-                     write (*,*) 'ERROR #4 in unweight table',i_process
-     $                    ,maxproc_found,nFKSprocess
-     $                    ,iproc_save(nFKSprocess)
-                     stop
-                  endif
-                  evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+                     nFKSprocess=nFKSprocess_soft
+                     i_process=1
+                     current=abs(f_unwgt(nFKSprocess,1))
+                     rnd=ran2()
+                     do while (current.lt.rnd*f_abs_S .and.
+     $                    i_process.le.iproc_save(nFKSprocess))
+                        i_process=i_process+1
+                        current=current+abs(f_unwgt(nFKSprocess
+     $                       ,i_process))
+                     enddo
+                     if (i_process.gt.iproc_save(nFKSprocess)) then
+                        write (*,*) 'ERROR #4 in unweight table'
+     $                       ,i_process,maxproc_found,nFKSprocess
+     $                       ,iproc_save(nFKSprocess)
+                        stop
+                     endif
+                     evtsgn=sign(1d0,f_unwgt(nFKSprocess,i_process))
+                     evtsgn_save=evtsgn_save+evtsgn
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-                  i_process=etoi(i_process,nFKSprocess)
-                  if (doreweight) then
+                     i_process=etoi(i_process,nFKSprocess)
+                     if (doreweight) then
 c for the reweight info, do not write the ones that gave a zero
 c contribution
-                     j=0
-                     do i=1,nScontributions
-                        sum=0d0
-                        do ii=1,iproc_save(proc_map(proc_map(0,1),i))
-                           sum=sum+unwgt_table(proc_map(proc_map(0,1),i)
-     &                          ,1,ii)
+                        j=0
+                        do i=1,nScontributions
+                           sum=0d0
+                           do ii=1,iproc_save(proc_map(proc_map(0,1),i))
+                              sum=sum+unwgt_table(proc_map(proc_map(0,1)
+     $                             ,i),1,ii)
+                           enddo
+                           if (sum.ne.0d0) then
+                              j=j+1
+                              nFKSprocess_reweight(j)=
+     $                             proc_map(proc_map(0,1),i)
+                           endif
                         enddo
-                        if (sum.ne.0d0) then
-                           j=j+1
-                           nFKSprocess_reweight(j)=
-     &                          proc_map(proc_map(0,1),i)
-                        endif
-                     enddo
-                     nScontributions=j
+                        nScontributions=j
+                     endif
                   endif
+                  if (evtsgn.eq.evtsgn_target) return
+               enddo
+c Pick the sign randomly according to all the signs accumulated. 
+               if (ran2().lt.0.5d0+0.5d0*evtsgn_save/is) then
+                  evtsgn_target=1d0
+               else
+                  evtsgn_target=-1d0
                endif
+c If the picked sign is not equal to the sign of the last 'unweight
+c configuration', go pick and pick a new unweight configuration until
+c you find one (and the return statement above is found).
+               if (evtsgn_target.ne.evtsgn) goto 200
+               return
             endif
          endif
       else  ! abrv='born' or 'grid' or 'vi*' (ie. doing only the nbody)
@@ -1443,47 +1528,95 @@ c and the n-body contributions
                write (*,*) 'Error #4 in unwgt_table',unwgt_table(0,2,j)
                stop
             endif
-            f=f+unwgt_table(0,1,j)
+            f(2)=f(2)+unwgt_table(0,1,j)+unwgt_table(0,3,j)
          enddo
          f_abs_H=0d0
          f_abs_S=0d0
+         f_V=0d0
+         f_V_abs=0d0
+         f_B=0d0
+         f_V_abs=0d0
          do i=1,maxproc_found
             do j=1,iproc_save(nFKSprocess_used_born)
                if (eto(j,nFKSprocess_used_born).eq.i) then
-                  f_unwgt(nFKSprocess_used_born,i)=
-     &                 f_unwgt(nFKSprocess_used_born,i)+
-     &                 unwgt_table(0,1,i)
+c If when computing upper bounding envelope (imode.eq.1) do not include
+c the virtual corrections, because a separate bound is computed for them
+                  if (imode.eq.1) then
+                     f_unwgt(nFKSprocess_used_born,i)=
+     &                    f_unwgt(nFKSprocess_used_born,i)+
+     &                    unwgt_table(0,1,i)
+                  else
+                     f_unwgt(nFKSprocess_used_born,i)=
+     &                    f_unwgt(nFKSprocess_used_born,i)+
+     &                    unwgt_table(0,1,i)+unwgt_table(0,3,i)
+                  endif
+                  f_V=f_V+unwgt_table(0,3,i)
+                  f_B=f_B+unwgt_table(1,3,i)
+                  f_V_abs=f_V_abs+abs(unwgt_table(0,3,i))
                endif
             enddo
             f_abs_S=f_abs_S+abs(f_unwgt(nFKSprocess_used_born,i))
          enddo
          if (.not.unweight)then
 c just return the (correct) absolute value
-            f_abs=f_abs_H+f_abs_S
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(5)=f_V_abs
+            f(4)=virtual_over_born
+            f(6)=f_B
          else
 c pick one at random and update reweight info and all that
-            f_abs=f_abs_H+f_abs_S
+            f(1)=f_abs_H+f_abs_S
+            f(3)=f_V
+            f(5)=f_V_abs
+            f(4)=virtual_over_born
+            f(6)=f_B
             Hevents=.false.
-            if (f_abs.ne.0d0) then
-               rnd=ran2()
+            if (f(1).ne.0d0) then
+c When there are large cancelations between the various contributions to
+c the integral (so that the ABS integral is much larger than the
+c integral itself), reduce the statistical fluctations beteen looping
+c over many 'unweight configurations'. Pick the sign according 
+               evtsgn_save=0d0
+               evtsgn_target=0d0
+               is=0
+ 201           continue
+               do while (is.lt.max(min(nint((f(1))/abs(f(2))),20),1) .or.
+     $              evtsgn_target.ne.0d0)
+                  is=is+1
+                  rnd=ran2()
 c Pick one of the IPROC's of the Born
-               i_process=1
-               current=abs(f_unwgt(nFKSprocess_used_born,1))
-               do while (current.lt.rnd*f_abs_S .and.
-     $              i_process.le.maxproc_found)
-                  i_process=i_process+1
-                  current=current+abs(f_unwgt(nFKSprocess_used_born
-     &                 ,i_process))
-               enddo
-               if (i_process.gt.maxproc_found) then
-                  write (*,*) 'ERROR #4 in unweight table',i_process 
-                  stop
-               endif
-               evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born,i_process))
+                  i_process=1
+                  current=abs(f_unwgt(nFKSprocess_used_born,1))
+                  do while (current.lt.rnd*f_abs_S .and.
+     $                 i_process.le.maxproc_found)
+                     i_process=i_process+1
+                     current=current+abs(f_unwgt(nFKSprocess_used_born
+     &                    ,i_process))
+                  enddo
+                  if (i_process.gt.maxproc_found) then
+                     write (*,*) 'ERROR #4 in unweight table',i_process 
+                     stop
+                  endif
+                  evtsgn=sign(1d0,f_unwgt(nFKSprocess_used_born
+     $                 ,i_process))
+                  evtsgn_save=evtsgn_save + evtsgn
 c Set the i_process to one of the (n+1)-body configurations that leads
 c to this Born configuration. Needed for add_write_info to work properly
-               i_process=etoi(i_process
-     &              ,nFKSprocess_used_born)
+                  i_process=etoi(i_process,nFKSprocess_used_born)
+                  if (evtsgn.eq.evtsgn_target) return
+               enddo
+c Pick the sign randomly according to all the signs accumulated. 
+               if (ran2().lt.0.5d0+0.5d0*evtsgn_save/is) then
+                  evtsgn_target=1d0
+               else
+                  evtsgn_target=-1d0
+               endif
+c If the picked sign is not equal to the sign of the last 'unweight
+c configuration', go pick and pick a new unweight configuration until
+c you find one (and the return statement above is found).
+               if (evtsgn_target.ne.evtsgn) goto 201
+               return
             endif
          endif
       endif

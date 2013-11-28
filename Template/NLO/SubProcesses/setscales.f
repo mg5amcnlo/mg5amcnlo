@@ -291,7 +291,8 @@ c geometric mean (to reweight alphaS)
             palg=1.d0
             rfj=0.4d0
             sycut=0d0
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
+     $           ,njet,jet)
             if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/
@@ -512,10 +513,10 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2,sumdot
+      double precision tmp,pt,et,dot,xm2,sumdot,xmt2
       external pt,et,dot,sumdot
       integer i,itype
-      parameter (itype=2)
+      parameter (itype=3)
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
 c
@@ -534,6 +535,15 @@ c Sum of transverse masses
           tmp=tmp+sqrt(pt(pp(0,i))**2+xm2)
         enddo
         temp_scale_id='sum_i mT(i), i=final state'
+      elseif(itype.eq.3)then
+c Sum of transverse masses divided by 2
+         do i=nincoming+1,nexternal
+c     m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
+            xmt2=(pp(0,i)+pp(3,i))*(pp(0,i)-pp(3,i))
+c     take max() to avoid numerical instabilities
+            tmp=tmp+sqrt(max(xmt2,0d0))/2d0
+         enddo
+         temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
       else
         write(*,*)'Unknown option in scale_global_reference',itype
         stop

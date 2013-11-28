@@ -137,7 +137,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
 
         amps = self.get('amplitudes')
-        for amp in amps:
+        for i, amp in enumerate(amps):
+            logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
+                % (amp['process'].nice_string(print_weighted=False).replace(\
+                                                                 'Process', ''),
+                 i + 1, len(amps)))
+
             born = FKSProcess(amp)
             self['born_processes'].append(born)
             born.generate_reals(self['pdgs'], self['real_amplitudes'])
@@ -220,7 +225,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                      '%s at the output stage only.'%self['OLP'])
             return
 
-        for born in self['born_processes']:
+        for i, born in enumerate(self['born_processes']):
                 logger.info('Generating virtual matrix elements using MadLoop:')
                 myproc = copy.copy(born.born_proc)
                 myproc['orders'] = copy.copy(born.born_proc['orders'])
@@ -229,9 +234,10 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 if 'WEIGHTED' in myproc['squared_orders'].keys():
                     del myproc['squared_orders']['WEIGHTED']
                 myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-                logger.info('Generating virtual matrix element with MadLoop for process%s' \
-                        % myproc.nice_string(print_weighted = False).replace(\
-                                                                 'Process', ''))
+                logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
+                        % (myproc.nice_string(print_weighted = False).replace(\
+                                                                 'Process', ''),
+                            i + 1, len(self['born_processes'])))
                 myamp = loop_diagram_generation.LoopAmplitude(myproc)
                 if myamp.get('diagrams'):
                     born.virt_amp = myamp
@@ -388,10 +394,6 @@ class FKSProcess(object):
 
             self.born_proc.set('legs_with_decays', MG.LegList())
 
-            logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_proc.nice_string(print_weighted=False).replace(\
-                                                                 'Process', '')) 
-
 #            self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
                                     self.born_proc['legs'], self.born_proc['model'])
@@ -463,6 +465,18 @@ class FKSProcess(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
+        self.link_born_reals()
+
+
+    def link_born_reals(self):
+        """create the rb_links in the real matrix element to find 
+        which configuration in the real correspond to which in the born
+        """
+        for real in self.real_amps:
+            for info in real.fks_infos:
+                info['rb_links'] = fks_common.link_rb_configs(\
+                        self.born_amp, real.amplitude,
+                        info['i'], info['j'], info['ij'])
 
 
     def find_reals(self, pert_order):

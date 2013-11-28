@@ -176,7 +176,9 @@ c     -- Call C++ back end function --
 
 C This is a dummy subroutine that is called during integration, but
 C should not do anything when ROOT is linked.
-      subroutine accum()
+      subroutine accum(incl)
+      logical incl
       end
-      subroutine addfil()
+      subroutine addfil(string)
+      character*(*) string
       end

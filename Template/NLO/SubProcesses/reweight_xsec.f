@@ -28,7 +28,7 @@ c
           enddo
         enddo
       elseif(itype.ge.2.and.itype.le.4)then
-        icnt=2-itype
+        icnt=itype-2
         do i=1,nexternal
           do j=0,3
             wgtkin(j,i,itype)=p1_cnt(j,i,icnt)

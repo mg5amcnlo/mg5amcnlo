@@ -328,7 +328,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     # generate_directories_fks
     #===============================================================================
     def generate_directories_fks(self, matrix_element, fortran_model, me_number,
-                                                path=os.getcwd(),OLP='MadLoop'):
+                                    me_ntot, path=os.getcwd(),OLP='MadLoop'):
         """Generate the Pxxxxx_i directories for a subprocess in MadFKS,
         including the necessary matrix.f and various helper files"""
         proc = matrix_element.born_matrix_element['processes'][0]
@@ -354,7 +354,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         (matrix_element.get('processes')[0].shell_string())
         os.mkdir(borndir)
         os.chdir(borndir)
-        logger.info('Writing files in %s' % borndir)
+        logger.info('Writing files in %s (%d / %d)' % (borndir, me_number + 1, me_ntot))
 
 ## write the files corresponding to the born process in the P* directory
         self.generate_born_fks_files(matrix_element,
@@ -457,6 +457,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'FKSParamReader.f',
                      'cuts.inc',
                      'driver_mintMC.f',
+                     'driver_mintFO.f',
                      'driver_vegas.f',
                      'driver_reweight.f',
                      'fastjetfortran_madfks_core.cc',
@@ -517,6 +518,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in linkfiles:
             ln('../' + file , '.')
 
+
+        os.system("ln -s ../../Cards/param_card.dat .")
 
         #copy the makefile 
         os.system("ln -s ../makefile_fks_dir ./makefile")
@@ -658,11 +661,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         born_me=matrix_element.born_matrix_element
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
             iFKS=iFKS+1
-            fks_matrix_element=matrix_element.real_processes[conf['n_me'] - 1].matrix_element
-            links=fks_common.link_rb_configs(
-                born_me.get('base_amplitude'),
-                fks_matrix_element.get('base_amplitude'),
-                conf['fks_info']['i'],conf['fks_info']['j'],conf['fks_info']['ij'])
+            links=conf['fks_info']['rb_links']
             max_links=max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:

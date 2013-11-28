@@ -65,7 +65,7 @@ c
       if(usexinteg.and..not.mint) then
          xnorm=1.d0/float(itmax)
       elseif(mint) then
-         xnorm=1.d0/float(ncall*itmax)
+         xnorm=1.d0/float(ncall)
       else
          xnorm=1d0
       endif

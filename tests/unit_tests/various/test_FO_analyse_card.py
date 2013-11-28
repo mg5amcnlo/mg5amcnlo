@@ -65,9 +65,9 @@ FO_ANALYSE     = analysis_fixed_order.o dummy1.o dummy2.o # User's analysis and 
         """test that the default card is correctly written"""
         goal = \
 """FO_EXTRALIBS=
-FO_EXTRAPATHS=
+FO_EXTRAPATHS= 
 FO_INCLUDEPATHS=
-FO_ANALYSE=analysis_fixed_order.o
+FO_ANALYSE=analysis_fixed_order.o 
 """
         text = self.card_default.write_card('')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -79,9 +79,9 @@ FO_ANALYSE=analysis_fixed_order.o
         """test that the card with extra libraries is correctly written"""
         goal = \
 """FO_EXTRALIBS=-ldummy1 -ldummy2
-FO_EXTRAPATHS=-L/path/to/dummy1 -L/path/to/dummy2
+FO_EXTRAPATHS=-Wl,-rpath,/path/to/dummy1 -Wl,-rpath,/path/to/dummy2 -L/path/to/dummy1 -L/path/to/dummy2
 FO_INCLUDEPATHS=-I/path/to/dummy1/include -I/path/to/dummy2/include
-FO_ANALYSE=analysis_fixed_order.o dummy1.o dummy2.o
+FO_ANALYSE=analysis_fixed_order.o dummy1.o dummy2.o 
 """
         text = self.card_analyse.write_card('')
         for a, b in zip(text.split('\n'), goal.split('\n')):
