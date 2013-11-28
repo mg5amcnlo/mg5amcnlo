@@ -1544,9 +1544,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                  self.dir_path+'/bin/internal/me5_logging.conf') 
         cp(_file_path+'/interface/coloring_logging.py', 
                                  self.dir_path+'/bin/internal/coloring_logging.py')
-        # shower card. Although not needed, it is imported by banner.py
+        # shower card and FO_analyse_card. 
+        #  Although not needed, it is imported by banner.py
         cp(_file_path+'/various/shower_card.py', 
                                  self.dir_path+'/bin/internal/shower_card.py') 
+        cp(_file_path+'/various/FO_analyse_card.py', 
+                                 self.dir_path+'/bin/internal/FO_analyse_card.py') 
  
  
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 

@@ -40,6 +40,19 @@
              if (NHelForMCoverHels .lt. -1) then
                stop 'NHelForMCoverHels must be >= -1.'
              endif 
+           else if (buff .eq. '#VirtualFraction') then
+             read(666,*,end=999) Virt_fraction
+             if (Virt_fraction .lt. 0 .or. virt_fraction .gt.1) then
+                stop 'VirtualFraction should be a fraction'/
+     $               /' between 0 and 1'
+             endif 
+           else if (buff .eq. '#MinVirtualFraction') then
+             read(666,*,end=999) Min_Virt_fraction
+             if (min_virt_fraction .lt. 0 .or. min_virt_fraction .gt.1)
+     $            then
+                stop 'VirtualFraction should be a fraction'/
+     $               /' between 0 and 1'
+             endif 
            else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
@@ -80,6 +93,8 @@ C     a non existing or malformed parameter file
       write(*,*) ' > PrecisionVirtualAtRunTime = '
      $     ,PrecisionVirtualAtRunTime
       write(*,*) ' > NHelForMCoverHels         = ',NHelForMCoverHels
+      write(*,*) ' > VirtualFraction           = ',Virt_fraction
+      write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -99,4 +114,6 @@ C     a non existing or malformed parameter file
       IRPoleCheckThreshold=1.0d-5
       NHelForMCoverHels=5
       PrecisionVirtualAtRunTime=1d-3
+      Virt_fraction=1d0
+      Min_virt_fraction=0.005d0
       end

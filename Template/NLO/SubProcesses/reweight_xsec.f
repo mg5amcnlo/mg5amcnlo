@@ -810,7 +810,7 @@ c
       nFKSprocess=save_nFKSprocess
 c
       wgtNLO11=xsec11
-      wgtNLO12=xsec12
+      wgtNLO12=xsec12-xsec20
       wgtNLO20=xsec20
       xsec=xsec11+xsec12
       compute_rwgt_wgt_NLO=xsec
@@ -1519,7 +1519,7 @@ c
       wgtrefNLO12=wgtNLO12
       wgtrefNLO20=wgtNLO20
 c
-      if(doNLOscaleunc)then
+      if(do_rwgt_scale)then
         do kr=1,numscales
           do kf=1,numscales
             pr_muR_over_ref=ymuR_over_ref*yfactR(kr)
@@ -1535,7 +1535,7 @@ c
         enddo
       endif
 c
-      if(doNLOPDFunc)then
+      if(do_rwgt_pdf)then
         do n=0,numPDFs-1
           call InitPDF(n)
           dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
@@ -1561,11 +1561,12 @@ c
       include 'run.inc'
       include "reweight.inc"
       include "reweightNLO.inc"
-      integer i,itmp,nsets,npairs
+      include "../../Source/pdf.inc"
+      integer i,itmp,nsets
       double precision delta
 c
-      if( (doNLOscaleunc.or.doNLOPDFunc).and.
-     #    (.not.doNLOreweight) )then
+      if( (do_rwgt_scale.or.do_rwgt_pdf).and.
+     #    (.not.doreweight) )then
         write(*,*)'Error #0 in setup_fill_rwgt_NLOplot'
         write(*,*)' NLO weights are not being saved:'
         write(*,*)' set doNLOreweight=.true.'
@@ -1577,37 +1578,31 @@ c
       ymuF1_over_ref=muF1_over_ref
       ymuF2_over_ref=muF2_over_ref
 c
-      if(.not.doNLOscaleunc)goto 111
-      numscales=numscales_init
+      if(.not.do_rwgt_scale)goto 111
+      numscales=3
       if(numscales.gt.maxscales)then
         write(*,*)'Error #1 in setup_fill_rwgt_NLOplot'
         write(*,*)' Increase maxscales in reweight0.inc'
         stop
       endif
-      yfactF(1)=yfactF0
-      yfactF(2)=yfactFlow
-      delta=(yfactFupp-yfactFlow)/dfloat(numscales-2)
-      do i=3,numscales
-        yfactF(i)=yfactF(i-1)+delta
-      enddo
-      yfactR(1)=yfactR0
-      yfactR(2)=yfactRlow
-      delta=(yfactRupp-yfactRlow)/dfloat(numscales-2)
-      do i=3,numscales
-        yfactR(i)=yfactR(i-1)+delta
-      enddo
+      yfactF(1)=1d0
+      yfactF(2)=rw_Fscale_up
+      yfactF(3)=rw_Fscale_down
+      yfactR(1)=1d0
+      yfactR(2)=rw_Rscale_up
+      yfactR(3)=rw_Rscale_down
 c
  111  continue
-      if(.not.doNLOPDFunc)goto 222
-      idpdf(0)=idefPDF
-      idpdf(1)=ifirstPDF
-      itmp=ilastPDF
+      if(.not.do_rwgt_pdf)goto 222
+      idpdf(0)=lhaid
+      idpdf(1)=pdf_set_min
+      itmp=pdf_set_max
       nsets=itmp-idpdf(1)+1
       if(mod(nsets,2).ne.0)then
         write(*,*)'The number of error sets must be even',nsets
         stop
       else
-        npairs=nsets/2
+        numPDFpairs=nsets/2
       endif
       do i=2,nsets
         idpdf(i)=idpdf(1)+i-1

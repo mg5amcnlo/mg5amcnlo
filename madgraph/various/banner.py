@@ -23,6 +23,7 @@ pjoin = os.path.join
 try:
     import madgraph.various.misc as misc
     import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as FO_analyse_card
     import madgraph.iolibs.file_writers as file_writers
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
@@ -32,6 +33,7 @@ except ImportError:
     import internal.file_writers as file_writers
     import internal.check_param_card as param_card_reader
     import internal.shower_card as shower_card
+    import internal.FO_analyse_card as FO_analyse_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -165,31 +167,6 @@ class Banner(dict):
             ff.write(text)
             ff.close()
 
-    ############################################################################
-    #  SPLIT BANNER
-    ############################################################################
-    def charge_card(self, tag):
-        """Build the python object associated to the card"""
-        
-        if tag == 'param_card':
-            tag = 'slha'
-        elif tag == 'run_card':
-            tag = 'mgruncard' 
-        elif tag == 'proc_card':
-            tag = 'mg5proccard' 
-        elif tag == 'shower_card':
-            tag = 'mgshowercard'
-        
-        assert tag in ['mgruncard', 'mgshowercard'], 'invalid card %s' % tag
-        
-        if tag == 'mgruncard':
-            run_card = self[tag].split('\n') 
-            self.run_card = RunCard(run_card)
-            return self.run_card
-        elif tag ==' mgshowercard':
-            shower_content = self[tag] 
-            self.shower_card = shower_card.shower_card(shower_content, True)
-            return self.shower_card
 
     ############################################################################
     #  WRITE BANNER
@@ -277,6 +254,8 @@ class Banner(dict):
                 tag = 'MGShowerCard'
             elif 'madspin_card' in card_name:
                 tag = 'madspin'
+            elif 'FO_analyse_card' in card_name:
+                tag = 'foanalyse'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -299,8 +278,10 @@ class Banner(dict):
             tag = 'mg5proccard' 
         elif tag == 'shower_card':
             tag = 'mgshowercard'
+        elif tag == 'FO_analyse_card':
+            tag = 'foanalyse'
 
-        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard'], 'invalid card %s' % tag
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse'], 'invalid card %s' % tag
         
         if tag == 'slha':
             param_card = self[tag].split('\n')
@@ -324,7 +305,13 @@ class Banner(dict):
             #  the card content instead of the card path"
             self.shower_card.testing = False
             return self.shower_card
-
+        elif tag =='foanalyse':
+            analyse_content = self[tag] 
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.FOanalyse_card = FO_analyse_card.FOAnalyseCard(analyse_content, True)
+            self.FOanalyse_card.testing = False
+            return self.FOanalyse_card
         
     def get_detail(self, tag, *arg):
         """return a specific """
