@@ -4,7 +4,7 @@ P01=$(shell echo $(P0) | cut -d'/' -f3)
 INCLUDE=-I../SubProcesses/$(P01)
 FF=gfortran -g -fno-automatic -ffixed-line-length-132 -fbounds-check $(INCLUDE)
 FILES=handling_lhe_events.o fill_MC_mshell.o
-FILES2=madfks_plot.f madfks_dbook.f setcuts.o
+FILES2=madfks_plot.f analysis_fixed_order.o madfks_dbook.f setcuts.o
 
 %.o : %.f
 	$(FF) -c $<

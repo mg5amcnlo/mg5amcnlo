@@ -60,7 +60,7 @@ c Vegas stuff
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
-      external initplot
+      external initplot_dummy
 
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
@@ -198,12 +198,14 @@ c at the NLO)
       i_momcmp_count=0
       xratmax=0.d0
 
+c Setup for parton-level NLO reweighting
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
+      call initplot
       if(savegrid)then
-         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
-     &        ,ncall,res,err,chi2a,savegrid)
+         call integrate(initplot_dummy,sigint,idstring,itmax,irestart
+     $        ,ndim,ncall,res,err,chi2a,savegrid)
          usexinteg=.false.
       else
-         call initplot
          call xinteg(sigint,ndim,itmax,ncall,res,err)
          usexinteg=.true.
       endif
@@ -308,11 +310,8 @@ c
      &        "  Unknown return code (1):                         ",n1
       endif
 
-      if(savegrid)call initplot
-      call mclear
-      open(unit=99,file='MADatNLO.top',status='unknown')
+      if(savegrid)call initplot_dummy
       call topout
-      close(99)
 
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
@@ -322,6 +321,9 @@ c
 
       end
 
+      subroutine initplot_dummy
+      return
+      end
 
       function sigint(xx,peso)
 c From dsample_fks

@@ -547,10 +547,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
         if plot:
-            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'        

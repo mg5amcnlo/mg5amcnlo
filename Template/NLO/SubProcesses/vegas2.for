@@ -64,6 +64,18 @@ c concatenates str1 and str2 into str. Ignores trailing blanks of str1,str2
       if(l1+l2+1.le.l) str(l1+l2+1:l)= ' '
       end
 
+      block data skiphistos
+c If integrate will be allowed to save and restore histograms
+c (the default mode of operation till Nov 2013), then set:
+c  skiph=.false.
+c here. Otherwise, if skiph=.true., no information on the histograms
+c will be saved in the .sv1 and .sv2 by the routine integrate()
+      implicit none
+      logical skiph
+      common/cskiph/skiph
+      data skiph/.true./
+      end
+
       subroutine
      # integrate(init,sig,str,n,inew,idim,icalls,avgi,sd,chi2a,isave)
       implicit real * 8 (a-h,o-z)
@@ -232,6 +244,8 @@ c Abort. (if itmp=2 this is not the case)
 
       common/runstr/runstr
       character * (*) name, statf
+      logical skiph
+      common/cskiph/skiph
 c
 c Salva gli istogrammi in uso (marcati 'YES' in book(j))
 c e tutte le informazioni per vegas, il seme del numero
@@ -250,6 +264,7 @@ c version of save file
 c runstring
       write(97,101)  runstr
 c booked histograms
+      if(.not.skiph)then
       write(97,104)  nmb
       write(97,102)  (book(j),j=1,nmb)
 c Mbook block
@@ -261,6 +276,7 @@ c Mbook block
      &      (ihis(j,k),k=1,nbin(j)),iuscore(j),ioscore(j),ient(j)
          endif
       enddo
+      endif
 c Vegas block
       write(97,104)
      & ndo,it,num1,num2,ndim
@@ -295,6 +311,7 @@ c run string
       string = ' '
       read(97,101,err=2,end=2) string
 c marked histograms
+      if(.not.skiph)then
       read(unit=97,fmt=104,err=2,end=2) nhs
       if(nhs.gt.nmb) then
          write(*,*) 'Error: save files had nmb=',nhs
@@ -312,6 +329,7 @@ c Mbook block
      &      (ihis(j,k),k=1,nbin(j)),iuscore(j),ioscore(j),ient(j)
          endif
       enddo
+      endif
 c vegas block
       read(unit=97,fmt=104,err=1,end=1)
      & ndo,it,num1,num2,ndim
@@ -359,6 +377,8 @@ c
 
       common/runstr/runstr
       character * (*) name, statf
+      logical skiph
+      common/cskiph/skiph
 c
 c Salva gli istogrammi in uso (marcati 'YES' in book(j))
 c e tutte le informazioni per vegas, il seme del numero
@@ -372,6 +392,7 @@ c version of save program
 c run string
       write(97)  runstr
 c Mbook Block
+      if(.not.skiph)then
       write(97) nmb
       write(97)  (book(j),j=1,nmb)
       do j=1,nmb
@@ -384,6 +405,7 @@ c Mbook Block
      &     ,ient(j)
          endif
       enddo
+      endif
 c Vegas Block
       write(97)
      & ndo,it,num1,num2,ndim
@@ -416,6 +438,7 @@ c run string
       string = ' '
       read(unit=97,err=2,end=2) string
 c Mbook block
+      if(.not.skiph)then
       read(97,err=2,end=2) nhs
       if(nhs.gt.nmb) then
          write(*,*) 'Error: save files had nmb=',nhs
@@ -434,6 +457,7 @@ c Mbook block
      &      ,ient(j)
          endif
       enddo
+      endif
 c Vegas Block
       read(97,err=1,end=1)
      & ndo,it,num1,num2,ndim

@@ -231,11 +231,14 @@ c Update the number of PS points based on unc(1), ncall and accuracy
             write (*,*) "Update iterations and points to",itmax,ncall
          endif
 c
-         call initplot
-c
          write (*,*) 'imode is ',imode
+c
+c Setup for parton-level NLO reweighting
+         if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
+         call initplot
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
+         call topout
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
          write(58,*)'Final result:',ans(2),' +/-',unc(2)
@@ -262,13 +265,6 @@ c to save grids:
          write (*,*) 'Unknown imode',imode
          stop
       endif
-
-c Finialize plots
-      call mclear
-      open(unit=99,file='MADatNLO.top',status='unknown')
-      call topout
-      close(99)
-
 
       write (*,*) ''
       write (*,*) '----------------------------------------------------'
