@@ -853,7 +853,7 @@ class OneTagResults(dict):
     def get_nb_line(self):
         
         nb_line = 0
-        for i in [self.parton, self.reweight, self.pythia, self.pgs, self.delphes]:
+        for i in [self.parton, self.reweight, self.pythia, self.pgs, self.delphes, self.shower]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -1013,31 +1013,6 @@ class OneTagResults(dict):
                         pass
 
             elif ttype == 'shower':
-                if runresults.web:
-                    local_dico['action'] = """
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
-<INPUT TYPE=HIDDEN NAME=level VALUE="all">
-<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove run">
-</FORM>
-                    
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
-</FORM>"""
-                else:
-                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
-                                                                       % (self['run_name'], self['tag']))
-                    # this the detector simulation and pythia should be available only for madevent
-                    if self['run_mode'] == 'madevent':
-                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
-                    else: 
-                        pass
                 if runresults.web:
                     local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">

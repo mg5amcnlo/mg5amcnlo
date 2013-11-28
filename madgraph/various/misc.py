@@ -164,7 +164,9 @@ def multiple_try(nb_try=5, sleep=20):
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
                     wait_once = True
+                    print 'SLEEPING', i, sleep 
                     time.sleep(sleep * (i+1))
+
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
