@@ -285,10 +285,14 @@ class Event:
                     continue
                 self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
                 return 1
+            elif '<' in line:
+                line_type = 'other_block'
             
             
             if line_type == 'none':
                 continue
+            elif line_type == 'other_block':
+                self.diese += line
             # read the line and assign the date accordingly                
             elif line_type == 'init':
                 line_type = 'event'
@@ -1551,13 +1555,34 @@ class width_estimate(object):
 
         particle_set = list(particle_set)
         argument = {'particles': particle_set, 
-                    'input': pjoin(self.path_me, 'param_card.dat'),
-                    'output': pjoin(self.path_me, 'param_card.dat')}
+                    'path': pjoin(self.path_me, 'param_card.dat'),
+                    'output': pjoin(self.path_me, 'param_card.dat'),
+                    'body_decay': 2}
         
-        me_interface.MadEventCmd.compute_widths(model, argument)
+        self.compute_widths(model, argument)
         self.extract_br_from_card(pjoin(self.path_me, 'param_card.dat'))
         return      
-                                         
+          
+    def compute_widths(self, model, opts):
+                
+        from madgraph.interface.master_interface import MasterCmd
+        cmd = MasterCmd()
+        #self.define_child_cmd_interface(cmd, interface=False)
+        cmd.exec_cmd('set automatic_html_opening False --no_save')
+        if not opts['path']:
+            opts['path'] = pjoin(self.me_dir, 'Cards', 'param_card.dat')
+            if not opts['force'] :
+                self.ask_edit_cards(['param_card'],[], plot=False)
+        
+        
+        line = 'compute_widths %s %s' % \
+                (' '.join([str(i) for i in opts['particles']]),
+                 ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
+                        if key not in ['model', 'force', 'particles'] and value))
+        
+        cmd.exec_cmd(line, model=model)
+        #self.child = None
+        del cmd                                
 
     def extract_br_from_banner(self, banner):
         """get the branching ratio from the banner object:

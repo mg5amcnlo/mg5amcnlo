@@ -212,8 +212,8 @@ class Particle(PhysicsObject):
         self['spin'] = 1
         self['color'] = 1
         self['charge'] = 1.
-        self['mass'] = 'zero'
-        self['width'] = 'zero'
+        self['mass'] = 'ZERO'
+        self['width'] = 'ZERO'
         self['pdg_code'] = 0
         self['texname'] = 'none'
         self['antitexname'] = 'none'
@@ -503,7 +503,7 @@ class ParticleList(PhysicsObjectList):
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
             if not particle.get('self_antipart'):
-                antipart = copy.copy(particle)
+                antipart = copy.deepcopy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
 
@@ -1058,7 +1058,8 @@ class Model(PhysicsObject):
                                     os.path.basename(modeldir).rsplit("-",1)[0])
             if os.path.exists(modeldir):
                 return modeldir 
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')        
+
+            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1089,7 +1090,7 @@ class Model(PhysicsObject):
                 
         return Model.__bases__[0].get(self, name) # call the mother routine
 
-    def set(self, name, value):
+    def set(self, name, value, force = False):
         """Special set for particles and interactions - need to
         regenerate dictionaries."""
 
@@ -1113,11 +1114,13 @@ class Model(PhysicsObject):
             self['order_hierarchy'] = {}
             self['expansion_order'] = None
 
-        Model.__bases__[0].set(self, name, value) # call the mother routine
+        result = Model.__bases__[0].set(self, name, value, force) # call the mother routine
 
         if name == 'particles':
             # Recreate particle_dict
             self.get('particle_dict')
+
+        return result
 
     def actualize_dictionaries(self):
         """This function actualizes the dictionaries"""
@@ -1547,6 +1550,12 @@ class Model(PhysicsObject):
                 pos = i + 1
         self.get('parameters')[new_param.depend].insert(pos, new_param)
 
+
+    #def __repr__(self):
+    #    """ """
+    #    raise Exception
+    #    return "Model(%s)" % self.get_name()
+    #__str__ = __repr__
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################

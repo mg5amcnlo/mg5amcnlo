@@ -71,7 +71,10 @@ class Parameter (object):
         except:
             self.format = 'str'
             pass
-
+        else:
+            if self.lhablock == 'modsel':
+                self.format = 'int'
+                self.value = int(self.value)
 
     def load_decay(self, text):
         """ initialize the decay information from a str"""
@@ -104,11 +107,16 @@ class Parameter (object):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+        elif self.format == 'int':
+            return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif self.format == 'str':
+            if self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
-        
+        elif self.format == 'int':
+            return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         else:
             if self.lhablock == 'decay':
                 return 'DECAY %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
@@ -160,7 +168,6 @@ class Block(list):
                 raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
                     (self.name, obj.lhacode, self.param_dict[tuple(obj.lhacode)].value, obj.value)
             return
-        
         list.append(self, obj)
         # update the dictionary of key
         self.param_dict[tuple(obj.lhacode)] = obj
@@ -187,13 +194,16 @@ class Block(list):
         data = data.lower()
         data = data.split()
         self.name = data[1] # the first part of data is model
-        
         if len(data) == 3:
             if data[2].startswith('q='):
                 #the last part should be of the form Q=
                 self.scale = float(data[2][2:])
             elif self.name == 'qnumbers':
                 self.name += ' %s' % data[2]
+        elif len(data) == 4 and data[2] == 'q=':
+            #the last part should be of the form Q=
+            self.scale = float(data[3])                
+            
         return self
     
     def keys(self):
@@ -207,15 +217,15 @@ class Block(list):
         text = """###################################""" + \
                """\n## INFORMATION FOR %s""" % self.name.upper() +\
                """\n###################################\n"""
-        
+
         #special case for decay chain
         if self.name == 'decay':
             for param in self:
-                id = param.lhacode[0]
+                pid = param.lhacode[0]
                 param.set_block('decay')
                 text += str(param)+ '\n'
-                if self.decay_table.has_key(id):
-                    text += str(self.decay_table[id])+'\n'
+                if self.decay_table.has_key(pid):
+                    text += str(self.decay_table[pid])+'\n'
             return text
         elif self.name.startswith('decay'):
             text = '' # avoid block definition
@@ -226,7 +236,6 @@ class Block(list):
             text += 'BLOCK %s Q= %e # %s\n' % (self.name.upper(), self.scale, self.comment)
         
         text += '\n'.join([str(param) for param in self])
-            
         return text + '\n'
 
 
@@ -295,13 +304,16 @@ class ParamCard(dict):
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
-                cur_block.append(param)
+                try:
+                    cur_block.append(param)
+                except InvalidParamCard:
+                    pass
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)
                 param.load_str(line)
                 cur_block.append(param)
-                    
+                  
         return self
     
     def write(self, outpath):
@@ -309,7 +321,6 @@ class ParamCard(dict):
   
         # order the block in a smart way
         blocks = self.order_block()
-        
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
@@ -376,6 +387,7 @@ class ParamCard(dict):
         self[obj.name] = obj
         if not obj.name.startswith('decay_table'): 
             self.order.append(obj)
+        
         
         
     def has_block(self, name):
@@ -828,7 +840,10 @@ def convert_to_slha1(path, outputpath=None ):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
-
+    if not 'usqmix' in card:
+        #already slha1
+        card.write(outputpath)
+        return
         
     # Mass 
     #card.reorder_mass() # needed?
@@ -998,6 +1013,10 @@ def convert_to_mg5card(path, outputpath=None, writting=True):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
+    if 'usqmix' in card:
+        #already mg5(slha2) format
+        card.write(outputpath)
+        return
 
         
     # SMINPUTS
@@ -1204,8 +1223,12 @@ def check_valid_param_card(path, restrictpath=None):
         restrictpath = os.path.join(restrictpath, os.pardir, os.pardir, 'Source', 
                                                  'MODEL', 'param_card_rule.dat')
         if not os.path.exists(restrictpath):
-            return True
-        
+            restrictpath = os.path.dirname(path)
+            restrictpath = os.path.join(restrictpath, os.pardir, 'Source', 
+                                                 'MODEL', 'param_card_rule.dat')
+            if not os.path.exists(restrictpath):
+                return True
+    
     cardrule = ParamCardRule()
     cardrule.load_rule(restrictpath)
     cardrule.check_param_card(path, modify=False)

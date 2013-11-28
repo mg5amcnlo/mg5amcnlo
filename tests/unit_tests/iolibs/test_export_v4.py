@@ -673,9 +673,9 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    1
- 2    2
- 3    -2
+        goal_symfact_dat = """ 1   1
+ 2   2
+ 3  -2
 """
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_symfact_dat)
@@ -1094,15 +1094,15 @@ C     Only run if IMODE is 0
           RETURN
         ENDIF
         CALL SMATRIX(PP,DSIGUU)
+C       Select a flavor combination (need to do here for right sign)
+        CALL RANMAR(R)
+        IPSEL=0
+        DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+          IPSEL=IPSEL+1
+          R=R-DABS(PD(IPSEL))/PD(0)
+        ENDDO
         DSIGUU=DSIGUU*REWGT(PP)*NFACT
         IF (DSIGUU.LT.1D199) THEN
-C         Select a flavor combination (need to do here for right sign)
-          CALL RANMAR(R)
-          IPSEL=0
-          DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
-            IPSEL=IPSEL+1
-            R=R-DABS(PD(IPSEL))/PD(0)
-          ENDDO
 C         Set sign of dsig based on sign of PDF and matrix element
           DSIG=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
         ELSE
@@ -1377,10 +1377,11 @@ C         Call UNWGT to unweight and store events
 			  'AMP2(6)=AMP2(6)+AMP(6)*dconjg(AMP(6))'])
         # Test configs.inc
 
-        exporter.write_configs_file(\
-            writers.FortranWriter(self.give_pos('test')),
-            subprocess_group,
-            subprocess_group.get('diagrams_for_configs'))
+        mapconfigs, (s_and_t_channels, nqcd_list) = \
+                       exporter.write_configs_file(\
+                                writers.FortranWriter(self.give_pos('test')),
+                                subprocess_group,
+                                subprocess_group.get('diagrams_for_configs'))
 
         goal_configs = """C     Diagram 1
       DATA MAPCONFIG(1)/1/
@@ -1420,6 +1421,22 @@ C     Number of configs
 """
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_configs)
+
+        # Test config_nqcd.inc
+
+        exporter.write_config_nqcd_file(\
+            writers.FortranWriter(self.give_pos('test')),
+            nqcd_list)
+
+        goal_nqcd = """      DATA NQCD(1)/2/
+      DATA NQCD(2)/0/
+      DATA NQCD(3)/0/
+      DATA NQCD(4)/2/
+      DATA NQCD(5)/0/
+      DATA NQCD(6)/0/
+"""
+        #print open(self.give_pos('test')).read()
+        self.assertFileContains('test', goal_nqcd)
 
         # Test config_subproc_map.inc
 
@@ -1481,12 +1498,12 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    1
- 2    1
- 3    1
- 4    1
- 5    1
- 6    1
+        goal_symfact_dat = """ 1   1
+ 2   1
+ 3   1
+ 4   1
+ 5   1
+ 6   1
 """
         self.assertFileContains('test', goal_symfact_dat)
 
@@ -1957,15 +1974,15 @@ C     Only run if IMODE is 0
         RETURN
       ENDIF
       CALL SMATRIX1(PP,DSIGUU)
+C     Select a flavor combination (need to do here for right sign)
+      CALL RANMAR(R)
+      IPSEL=0
+      DO WHILE (R.GE.0D0 .AND. IPSEL.LT.IPROC)
+        IPSEL=IPSEL+1
+        R=R-DABS(PD(IPSEL))/PD(0)
+      ENDDO
       DSIGUU=DSIGUU*REWGT(PP)*NFACT
       IF (DSIGUU.LT.1D199) THEN
-C       Select a flavor combination (need to do here for right sign)
-        CALL RANMAR(R)
-        IPSEL=0
-        DO WHILE (R.GT.0D0 .AND. IPSEL.LT.IPROC)
-          IPSEL=IPSEL+1
-          R=R-DABS(PD(IPSEL))/PD(0)
-        ENDDO
 C       Set sign of dsig based on sign of PDF and matrix element
         DSIG1=DSIGN(PD(0)*CONV*DSIGUU,DSIGUU*PD(IPSEL))
       ELSE
@@ -2763,14 +2780,14 @@ C     Number of configs
             symmetry)
         
         #print open(self.give_pos('test')).read()
-        goal_symfact_dat = """ 1    1
- 2    -1
- 3    -1
- 4    -1
- 5    -1
- 6    -1
- 7    -1
- 8    -1
+        goal_symfact_dat = """ 1   1
+ 2  -1
+ 3  -1
+ 4  -1
+ 5  -1
+ 6  -1
+ 7  -1
+ 8  -1
 """
         self.assertFileContains('test', goal_symfact_dat)
 
@@ -3648,12 +3665,12 @@ C     Number of configs
         exporter.write_symfact_file(\
             writers.FortranWriter(self.give_pos('test')),
             symmetry)
-        goal_symfact_dat = """ 1    2
- 2    -1
- 3    2
- 4    -3
- 5    2
- 6    -5
+        goal_symfact_dat = """ 1   2
+ 2  -1
+ 3   2
+ 4  -3
+ 5   2
+ 6  -5
 """
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test', goal_symfact_dat)
@@ -4044,7 +4061,7 @@ JAMP(6)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)-AMP(8)-AMP(11)-AM
 
         # Test configs.inc file
         writer = writers.FortranWriter(self.give_pos('test'))
-        mapconfigs, s_and_t_channels = exporter.write_configs_file(writer,
+        mapconfigs, (s_and_t_channels, nqcd_list) = exporter.write_configs_file(writer,
                                                                  matrix_element)
         writer.close()
 
@@ -4884,8 +4901,8 @@ JAMP(6)=+2D0*(+AMP(3)-AMP(1)+AMP(4)-AMP(6))""")
         
         # Test configs.inc file
         writer = writers.FortranWriter(self.give_pos('test'))
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                     matrix_element)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                 exporter.write_configs_file(writer, matrix_element)
         writer.close()
         #print open(self.give_pos('test')).read()
         self.assertFileContains('test',
@@ -6603,8 +6620,8 @@ CALL CL1_L2_0(W(1,2),W(1,3),W(1,5),G1,G2,AMP(3))""".split('\n'))
 
         # Test configs.inc file
         writer = writers.FortranWriter(self.give_pos('test'))
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                     matrix_element)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                 exporter.write_configs_file(writer, matrix_element)
         writer.close()
         #print open(self.give_pos('test')).read()
 
@@ -6991,8 +7008,8 @@ CALL FFV1_0(W(1,2),W(1,6),W(1,5),GG,AMP(4))""".split('\n')
         myfortranmodel = helas_call_writers.FortranHelasCallWriter(mybasemodel)
 
         # Test configs.inc file
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                     matrix_element)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                      exporter.write_configs_file(writer, matrix_element)
         writer.close()
 
         #print open(self.give_pos('test')).read()
@@ -8729,7 +8746,7 @@ CALL IOSXXX(W(1,5),W(1,2),W(1,12),MGVX350,AMP(8))""".split('\n'))
         writer = writers.FortranWriter(self.give_pos('test'))
 
         # Test configs.inc file
-        mapconfigs, s_and_t_channels = exporter.write_configs_file(writer,
+        mapconfigs, (s_and_t_channels, nqcd_list) = exporter.write_configs_file(writer,
                                      me)
         writer.close()
         #print open(self.give_pos('test')).read()
@@ -10169,8 +10186,8 @@ CALL FFS1C1_0(W(1,2),W(1,9),W(1,4),GELN1P,AMP(12))""".split('\n')
         exporter = export_v4.ProcessExporterFortranME()
 
         # Test configs file
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                                                 me)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                 exporter.write_configs_file(writer, me)
         writer.close()
         #print open(self.give_pos('test')).read()
 
@@ -10485,8 +10502,8 @@ C     Number of configs
         exporter = export_v4.ProcessExporterFortranME()
 
         # Test configs file
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                                                me)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                 exporter.write_configs_file(writer, me)
         writer.close()
         #print open(self.give_pos('test')).read()
 
@@ -10672,7 +10689,8 @@ C     Number of configs
         exporter = export_v4.ProcessExporterFortranME()
 
         # Test configs file
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer, me)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                                      exporter.write_configs_file(writer, me)
         writer.close()
 
         #print open(self.give_pos('test')).read()
@@ -10932,8 +10950,8 @@ C     Number of configs
         exporter = export_v4.ProcessExporterFortranME()
 
         # Test configs file
-        nconfig, s_and_t_channels = exporter.write_configs_file(writer,
-                                                                matrix_element)
+        nconfig, (s_and_t_channels, nqcd_list) = \
+                 exporter.write_configs_file(writer, matrix_element)
         writer.close()
 #        print open(self.give_pos('test')).read()
         self.assertFileContains('test',

@@ -119,7 +119,7 @@ class ProcessExporterFortran(object):
             logger.info('remove old information in %s' % \
                                                   os.path.basename(self.dir_path))
             if os.environ.has_key('MADGRAPH_BASE'):
-                subprocess.call([pjoin('bin', 'internal', 'clean_template'),
+                misc.call([pjoin('bin', 'internal', 'clean_template'),
                                  '--web'], cwd=self.dir_path)
             else:
                 try:
@@ -229,6 +229,7 @@ class ProcessExporterFortran(object):
         ln(self.dir_path + '/Source/genps.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxconfigs.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/run_config.inc', self.dir_path + '/SubProcesses', log=False)
 
     #===========================================================================
     # export the helas routine
@@ -1495,6 +1496,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         filename = pjoin(self.dir_path,'SubProcesses','driver.f')
         self.write_driver(writers.FortranWriter(filename))
+        #
+        filename = pjoin(self.dir_path,'SubProcesses','addmothers.f')
+        self.write_addmothers(writers.FortranWriter(filename))
         # Copy the different python file in the Template
         self.copy_python_file()
         
@@ -1658,9 +1662,13 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                              matrix_element)
 
         filename = 'configs.inc'
-        mapconfigs, s_and_t_channels = self.write_configs_file(\
+        mapconfigs, (s_and_t_channels, nqcd_list) = self.write_configs_file(\
             writers.FortranWriter(filename),
             matrix_element)
+
+        filename = 'config_nqcd.inc'
+        self.write_config_nqcd_file(writers.FortranWriter(filename),
+                               nqcd_list)
 
         filename = 'config_subproc_map.inc'
         self.write_config_subproc_map_file(writers.FortranWriter(filename),
@@ -1733,8 +1741,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         # Generate diagrams
         filename = "matrix.ps"
@@ -1767,6 +1774,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'run.inc',
                      'maxconfigs.inc',
                      'maxparticles.inc',
+                     'run_config.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -1846,7 +1854,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         logger.info("Generate web pages")
         # Create the WebPage using perl script
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
                                                                 stdout = devnull)
 
         os.chdir(os.path.pardir)
@@ -1867,17 +1875,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             output_file.write(text)
             output_file.close()
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin('SubProcesses', 'subproc.mg')):
             if os.path.exists('madevent.tar.gz'):
                 os.remove('madevent.tar.gz')
-            subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
+            misc.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull)
 
-        subprocess.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+        misc.call([pjoin(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)
 
         #return to the initial dir
@@ -2092,7 +2100,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         return True
 
     #===========================================================================
-    # write_coloramps_file
+    # write_colors_file
     #===========================================================================
     def write_colors_file(self, writer, matrix_elements):
         """Write the get_color.f file for MadEvent, which returns color
@@ -2110,10 +2118,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                for d in me.get('diagrams')], []) \
                           for me in matrix_elements], []))
 
-        leg_ids = set(sum([sum([[l.get('id') for l in \
-                                 p.get_legs_with_decays()] for p in \
-                                me.get('processes')], []) for me in
-                           matrix_elements], []))
+        leg_ids = set(sum([sum([sum([[l.get('id'), 
+                          model.get_particle(l.get('id')).get_anti_pdg_code()] \
+                                  for l in p.get_legs_with_decays()], []) \
+                                for p in me.get('processes')], []) \
+                           for me in matrix_elements], []))
         particle_ids = sorted(list(wf_ids.union(leg_ids)))
 
         lines = """function get_color(ipdg)
@@ -2145,6 +2154,22 @@ c           This is dummy particle used in multiparticle vertices
         end
         """
         
+        # Write the file
+        writer.writelines(lines)
+
+        return True
+
+    #===========================================================================
+    # write_config_nqcd_file
+    #===========================================================================
+    def write_config_nqcd_file(self, writer, nqcd_list):
+        """Write the config_nqcd.inc with the number of QCD couplings
+        for each config"""
+
+        lines = []
+        for iconf, n in enumerate(nqcd_list):
+            lines.append("data nqcd(%d)/%d/" % (iconf+1, n))
+
         # Write the file
         writer.writelines(lines)
 
@@ -2244,6 +2269,8 @@ c           This is dummy particle used in multiparticle vertices
 
         s_and_t_channels = []
 
+        nqcd_list = []
+
         minvert = min([max([d for d in config if d][0].get_vertex_leg_numbers()) \
                        for config in configs])
 
@@ -2303,6 +2330,19 @@ c           This is dummy particle used in multiparticle vertices
             # Correspondance between the config and the diagram = amp2
             lines.append("data mapconfig(%d)/%d/" % (nconfigs,
                                                      mapconfigs[iconfig]))
+            # Number of QCD couplings in this diagram
+            nqcd = 0
+            for h in helas_diags:
+                if h:
+                    try:
+                        nqcd = h.calculate_orders()['QCD']
+                    except KeyError:
+                        pass
+                    break
+                else:
+                    continue
+
+            nqcd_list.append(nqcd)
 
             for verts in allchannels:
                 if verts in schannels:
@@ -2341,7 +2381,7 @@ c           This is dummy particle used in multiparticle vertices
         # Write the file
         writer.writelines(lines)
 
-        return s_and_t_channels
+        return s_and_t_channels, nqcd_list
 
     #===========================================================================
     # write_config_subproc_map_file
@@ -2418,6 +2458,20 @@ c           This is dummy particle used in multiparticle vertices
         writer.write(text)
         
         return True
+
+    #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'diag_number'}
+        writer.write(text)
+        
+        return True
+
 
     #===========================================================================
     # write_combine_events
@@ -2689,9 +2743,9 @@ c           This is dummy particle used in multiparticle vertices
         # Write out lines for symswap.inc file (used to permute the
         # external leg momenta
         lines = [ form %(i+1, s) for i,s in enumerate(symmetry) if s != 0] 
-
         # Write the file
-        writer.writelines(lines)
+        writer.write('\n'.join(lines))
+        writer.write('\n')
 
         return True
 
@@ -2842,10 +2896,14 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                            subproc_diagrams_for_config)
 
         filename = 'configs.inc'
-        nconfigs, s_and_t_channels = self.write_configs_file(\
+        nconfigs, (s_and_t_channels, nqcd_list) = self.write_configs_file(\
             writers.FortranWriter(filename),
             subproc_group,
             subproc_diagrams_for_config)
+
+        filename = 'config_nqcd.inc'
+        self.write_config_nqcd_file(writers.FortranWriter(filename),
+                                    nqcd_list)
 
         filename = 'decayBW.inc'
         self.write_decayBW_file(writers.FortranWriter(filename),
@@ -2914,8 +2972,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 ident_perms)
 
         filename = 'symfact_orig.dat'
-        self.write_symfact_file(writers.FortranWriter(filename),
-                           symmetry)
+        self.write_symfact_file(open(filename, 'w'), symmetry)
 
         filename = 'symperms.inc'
         self.write_symperms_file(writers.FortranWriter(filename),
@@ -2942,6 +2999,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                      'run.inc',
                      'maxconfigs.inc',
                      'maxparticles.inc',
+                     'run_config.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',
@@ -3038,6 +3096,20 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
                                 me in matrix_elements])))
         # Write the file
         writer.writelines(lines)
+
+    #===========================================================================
+    # write_addmothers
+    #===========================================================================
+    def write_addmothers(self, writer):
+        """Write the SubProcess/addmothers.f"""
+
+        path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
+
+        text = open(path).read() % {'iconfig': 'iconfig'}
+        writer.write(text)
+        
+        return True
+
 
     #===========================================================================
     # write_coloramps_file

@@ -281,14 +281,38 @@ class Switcher(object):
         return self.cmd.check_add(self, *args, **opts)
         
     def check_answer_in_input_file(self, *args, **opts):
-        return self.cmd.check_answer_in_input_file(self, *args, **opts)
-        
+        return self.cmd.check_answer_in_input_file(self, *args, **opts)  
+    
     def check_check(self, *args, **opts):
         return self.cmd.check_check(self, *args, **opts)
         
     def check_define(self, *args, **opts):
         return self.cmd.check_define(self, *args, **opts)
-        
+
+    def check_decay_diagram(self, *args, **opts):
+        return self.cmd.check_decay_diagram(self, *args, **opts)
+
+    def complete_decay_diagram(self, *args, **opts):
+        return self.cmd.complete_decay_diagram(self, *args, **opts)
+
+    def do_decay_diagram(self, *args, **opts):
+        return self.cmd.do_decay_diagram(self, *args, **opts)
+
+    def help_decay_diagram(self, *args, **opts):
+        return self.cmd.help_decay_diagram(self, *args, **opts)
+
+    def check_compute_widths(self, *args, **opts):
+        return self.cmd.check_compute_widths(self, *args, **opts)
+    
+    def complete_compute_widths(self, *args, **opts):
+        return self.cmd.complete_compute_widths(self, *args, **opts)
+
+    def do_compute_widths(self, *args, **opts):
+        return self.cmd.do_compute_widths(self, *args, **opts)
+
+    def help_compute_widths(self, *args, **opts):
+        return self.cmd.help_compute_widths(self, *args, **opts)
+
     def check_display(self, *args, **opts):
         return self.cmd.check_display(self, *args, **opts)
         
@@ -339,7 +363,7 @@ class Switcher(object):
 
     def complete_switch(self, *args, **opts):
         return self.cmd.complete_switch(self, *args, **opts)
-        
+
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
         
