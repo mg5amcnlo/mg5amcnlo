@@ -465,6 +465,18 @@ class FKSProcess(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
+        self.link_born_reals()
+
+
+    def link_born_reals(self):
+        """create the rb_links in the real matrix element to find 
+        which configuration in the real correspond to which in the born
+        """
+        for real in self.real_amps:
+            for info in real.fks_infos:
+                info['rb_links'] = fks_common.link_rb_configs(\
+                        self.born_amp, real.amplitude,
+                        info['i'], info['j'], info['ij'])
 
 
     def find_reals(self, pert_order):

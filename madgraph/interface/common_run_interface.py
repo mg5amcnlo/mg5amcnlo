@@ -423,6 +423,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
@@ -479,18 +480,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
                 
+                
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_states()
                 # check those which are charged under qcd
-                if not MADEVENT and pjoin(self.me_dir,'bin') not in sys.path:
-                        sys.path.append(pjoin(self.me_dir,'bin'))                    
+                if not MADEVENT and pjoin(self.me_dir,'bin') not in sys.path:                    
+                        sys.path.insert(0,pjoin(self.me_dir,'bin'))
+
+                #Ensure that the model that we are going to load is the current
+                #one.                    
+                to_del = [name  for name in sys.modules.keys() 
+                                                if name.startswith('internal')]
+                for name in to_del:
+                    del(sys.modules[name]) 
+
                 import internal.ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles 
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
                            and p.color != 1 and p.width != zero]
-
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
@@ -1080,9 +1089,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
-            opt = self.options
-            self.cluster = cluster.from_name[opt['cluster_type']](\
-                                 opt['cluster_queue'], opt['cluster_temp_path'])
+            # cluster (re)-initialization done later
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing

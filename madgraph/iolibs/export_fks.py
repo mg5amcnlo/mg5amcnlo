@@ -649,11 +649,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         born_me=matrix_element.born_matrix_element
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
             iFKS=iFKS+1
-            fks_matrix_element=matrix_element.real_processes[conf['n_me'] - 1].matrix_element
-            links=fks_common.link_rb_configs(
-                born_me.get('base_amplitude'),
-                fks_matrix_element.get('base_amplitude'),
-                conf['fks_info']['i'],conf['fks_info']['j'],conf['fks_info']['ij'])
+            links=conf['fks_info']['rb_links']
             max_links=max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
