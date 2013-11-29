@@ -113,6 +113,7 @@ c
             scale=pmass(1)
             fixed_ren_scale=.true.
             fixed_fac_scale=.true.
+            use_syst=.false.
          endif
 c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
