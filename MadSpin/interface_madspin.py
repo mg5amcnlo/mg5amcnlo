@@ -368,7 +368,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if pid in self.final_state:
                 break
         else:
-            logger.info("Nothing to decay1 ...")
+            logger.info("Nothing to decay ...")
             return
         
 
@@ -406,8 +406,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
-    
-  
+
+        # Now arxiv the shower card used if RunMaterial is present
+        ms_card_path = pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')
+        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
+        if os.path.exists(ms_card_path):
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar -xzf RunMaterial.tar.gz'], cwd=run_dir, shell=True)
+                misc.call(['cp %s %s'%(str(ms_card_path), str(pjoin(run_dir,
+                    'RunMaterial','madspin_card_for_%s.dat'%os.path.basename(
+                          decayed_evt_file).replace('.lhe', ''))))], shell=True)
+                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], cwd=run_dir,
+                                                                     shell=True)
+                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+            else:
+                misc.call(['cp %s %s'%(str(ms_card_path),
+                                    str(pjoin(run_dir,'madspin_card_for_%s.dat'\
+                            %os.path.basename(decayed_evt_file))))], shell=True)
+
     def run_from_pickle(self):
         import madgraph.iolibs.save_load_object as save_load_object
         

@@ -1554,13 +1554,8 @@ Integrated cross-section
                           pjoin('Cards','FKS_params.dat'),
                           pjoin('Cards','run_card.dat'),                          
                           pjoin('Subprocesses','setscales.f'),
-                          pjoin('Subprocesses','cuts.f'),
-                          pjoin('Subprocesses','madfks_plot.f')]
-        
-        if mode in ['aMC@NLO', 'aMC@LO']:
-            files_to_arxiv.append(pjoin('Cards','shower_card.dat'))
-            if not mode in ['noshower', 'noshowerLO']:
-                files_to_arxiv.append(pjoin('Cards','madspin_card.dat'))
+                          pjoin('Subprocesses','cuts.f')]
+
         if mode in ['NLO', 'LO']:
             files_to_arxiv.append(pjoin('Cards','FO_analyse_card.dat'))
 
@@ -1697,8 +1692,68 @@ Integrated cross-section
         virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
                      "-?(?P<v_frac>[\d\+-Eed\.]*)\s*-?(?P<v_average>[\d\+-Eed\.]*)")
         
-        # Now we want to use the latest occurence of accumulated result in the log file
+        channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
+        
+        channel_contr_list = {}
         for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-3:-1])
+            vf_stats = None
+            for vf_stats in re.finditer(virt_frac_finder, log):
+                pass
+            if not vf_stats is None:
+                v_frac = float(vf_stats.group('v_frac'))
+                v_average = float(vf_stats.group('v_average'))
+                try:
+                    if v_frac < stats['virt_stats']['v_frac_min'][0]:
+                        stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
+                    if v_frac > stats['virt_stats']['v_frac_max'][0]:
+                        stats['virt_stats']['v_frac_max']=(v_frac,channel_name)
+                    stats['virt_stats']['v_frac_avg'][0] += v_frac
+                    stats['virt_stats']['v_frac_avg'][1] += 1
+                except KeyError:
+                    stats['virt_stats']['v_frac_min']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_max']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_avg']=[v_frac,1]
+
+
+            ccontr_stats = None
+            for ccontr_stats in re.finditer(channel_contr_finder, log):
+                pass
+            if not ccontr_stats is None:
+                contrib = float(ccontr_stats.group('v_contr'))
+                try:
+                    if contrib>channel_contr_list[channel_name]:
+                        channel_contr_list[channel_name]=contrib
+                except KeyError:
+                    channel_contr_list[channel_name]=contrib
+                
+                
+        # Now build the list of relevant virt log files to look for the maxima
+        # of virt fractions and such.
+        average_contrib = 0.0
+        for value in channel_contr_list.values():
+            average_contrib += value
+        average_contrib = average_contrib / len(channel_contr_list.values())
+        
+        relevant_log_GV_files = []
+        excluded_channels = set([])
+        all_channels = set([])
+        for log_file in log_GV_files:
+            channel_name = '/'.join(log_file.split('/')[-3:-1])
+            all_channels.add(channel_name)
+            try:
+                if channel_contr_list[channel_name] > (0.1*average_contrib):
+                    relevant_log_GV_files.append(log_file)
+                else:
+                    excluded_channels.add(channel_name)
+            except KeyError:
+                    relevant_log_GV_files.append(log_file)
+        
+        # Now we want to use the latest occurence of accumulated result in the log file
+        for gv_log in relevant_log_GV_files:
             logfile=open(gv_log,'r')
             log = logfile.read()
             logfile.close()
@@ -1739,7 +1794,7 @@ Integrated cross-section
                     stats['virt_stats']['v_contr_max']=[v_contr,channel_name]
                     stats['virt_stats']['v_contr_err_min']=[v_contr_err,channel_name]
                     stats['virt_stats']['v_contr_err_max']=[v_contr_err,channel_name]
-    
+        
             vf_stats = None
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
@@ -1747,13 +1802,6 @@ Integrated cross-section
                 v_frac = float(vf_stats.group('v_frac'))
                 v_average = float(vf_stats.group('v_average'))
                 try:
-                    if v_frac < stats['virt_stats']['v_frac_min'][0]:
-                        stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
-                    if v_frac > stats['virt_stats']['v_frac_max'][0]:
-                        stats['virt_stats']['v_frac_max']=(v_frac,channel_name)
-                    stats['virt_stats']['v_frac_avg'][0] += v_frac
-                    stats['virt_stats']['v_frac_avg'][1] += 1
-                    
                     if v_average < stats['virt_stats']['v_average_min'][0]:
                         stats['virt_stats']['v_average_min']=(v_average,channel_name)
                     if v_average > stats['virt_stats']['v_average_max'][0]:
@@ -1761,9 +1809,6 @@ Integrated cross-section
                     stats['virt_stats']['v_average_avg'][0] += v_average
                     stats['virt_stats']['v_average_avg'][1] += 1
                 except KeyError:
-                    stats['virt_stats']['v_frac_min']=[v_frac,channel_name]
-                    stats['virt_stats']['v_frac_max']=[v_frac,channel_name]
-                    stats['virt_stats']['v_frac_avg']=[v_frac,1]
                     stats['virt_stats']['v_average_min']=[v_average,channel_name]
                     stats['virt_stats']['v_average_max']=[v_average,channel_name]
                     stats['virt_stats']['v_average_avg']=[v_average,1]
@@ -1777,6 +1822,8 @@ Integrated cross-section
                                        %tuple(stats['virt_stats']['v_frac_min'])
             debug_msg += '\n    Average virt fraction computed         %.3f'\
               %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
+            debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
+                 (len(excluded_channels),len(all_channels))
             debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
                                     %tuple(stats['virt_stats']['v_average_max'])          
             debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
@@ -2044,7 +2091,21 @@ Integrated cross-section
                             (hep_file, evt_file, shower))
 
             else:
-                raise aMCatNLOError('No file has been generated, an error occurred. More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                raise aMCatNLOError('No file has been generated, an error occurred.'+\
+             ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                
+            # Now arxiv the shower card used if RunMaterial is present
+            run_dir_path = pjoin(rundir,self.run_name)
+            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+                misc.call(['tar -xzf RunMaterial.tar.gz'], 
+                                                   cwd=run_dir_path, shell=True)
+                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                              %(shower, count)))
+                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], 
+                                                   cwd=run_dir_path, shell=True)
+                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+            
         else:
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
@@ -2080,7 +2141,6 @@ Integrated cross-section
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
-
 
 
     ############################################################################
