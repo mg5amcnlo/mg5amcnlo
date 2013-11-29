@@ -1570,7 +1570,7 @@ Integrated cross-section
         for path in files_to_arxiv:
             if os.path.isfile(pjoin(self.me_dir,path)):
                 files.cp(pjoin(self.me_dir,path),pjoin(evt_path,'RunMaterial'))
-        misc.call(['tar -czf .RunMaterial.tar.gz RunMaterial'],
+        misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'],
                                                        cwd=evt_path, shell=True)
         shutil.rmtree(pjoin(evt_path,'RunMaterial'))
 
