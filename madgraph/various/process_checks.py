@@ -1561,7 +1561,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tools=[1]
         else:
             if MLOptions["MLReductionLib"]==-1:
-                tools=[1,3]
+                tools=[1,2,3]
             else:
                 tools=[MLOptions["MLReductionLib"]]
 

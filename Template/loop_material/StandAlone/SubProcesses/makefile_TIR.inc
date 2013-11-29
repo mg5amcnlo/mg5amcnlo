@@ -2,7 +2,7 @@ include ../../Source/make_opts
 
 LIBDIR = ../../lib/
 PROG   = check
-PJDIR = /Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/
+PJDIR = /Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta2/pjfry_install/lib/
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
 LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel %(link_tir_libs)s -L$(PJDIR) -lpjfry
