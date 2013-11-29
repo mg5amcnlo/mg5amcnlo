@@ -1,8 +1,7 @@
 #***********************************************************************
-#                       MadGraph/MadEvent                              *
-#                  http://madgraph.hep.uiuc.edu                        *
+#                        MadGraph5_aMC@NLO                             *
 #                                                                      *
-#                        run_card.dat                                  *
+#                      run_card.dat aMC@NLO                            *
 #                                                                      *
 #  This file is used to set the parameters of the run.                 *
 #                                                                      *
@@ -37,10 +36,10 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  0.01   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)
 # These numbers are ignored except if req_acc_FO is equal to -1
- 6000   = npoints_FO_virt  ! number of points to compute Xsec (virt)
- 2      = niters_FO_virt   ! number of iter. to compute Xsec (virt)
- 10000  = npoints_FO       ! number of points to compute Xsec (no virt)
- 6      = niters_FO        ! number of iter. to compute Xsec (no virt)
+ 5000   = npoints_FO_grid  ! number of points to setup grids
+ 4      = niters_FO_grid   ! number of iter. to setup grids
+ 10000  = npoints_FO       ! number of points to compute Xsec
+ 6      = niters_FO        ! number of iter. to compute Xsec
 #***********************************************************************
 # Random number seed                                                   *
 #***********************************************************************

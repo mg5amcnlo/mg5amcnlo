@@ -12,6 +12,7 @@ c
 c     include
 c
       include 'PDF/pdf.inc'
+      include 'maxparticles.inc'
       include 'run.inc'
       include 'alfas.inc'
 c

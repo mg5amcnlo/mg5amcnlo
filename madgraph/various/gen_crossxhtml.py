@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Create gen_crossxhtml """
@@ -683,6 +683,9 @@ class OneTagResults(dict):
                 else:
                     self.shower.append('top')
 
+            if 'syst' not in self.parton and \
+                                    exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
+                self.parton.append('syst')
                 
         if level in ['pythia', 'all']:
             
@@ -700,6 +703,11 @@ class OneTagResults(dict):
                             (exists(pjoin(path,"%s_pythia_events.hep.gz" % tag)) or
                              exists(pjoin(path,"%s_pythia_events.hep" % tag))):
                 self.pythia.append('hep')
+            
+            if 'rwt' not in self.pythia and \
+                            (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_syscalc.dat" % tag))):
+                self.pythia.append('rwt')
             
             if 'root' not in self.pythia and \
                               exists(pjoin(path,"%s_pythia_events.root" % tag)):
@@ -792,6 +800,9 @@ class OneTagResults(dict):
                 for f in \
                   glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.top')):
                     out += " <a href=\"%s\">%s</a> " % (f, 'TOP')
+            #if 'rwt' in self.parton:
+            #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
+
             return out % self
         
         if level == 'reweight':
@@ -816,6 +827,11 @@ class OneTagResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_events.root">rootfile (LHE)</a>"""
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
+            if 'rwt' in self.pythia:
+                link = './Events/%(run_name)s/%(tag)s_systematics.dat'
+                level = 'pythia'
+                name = 'systematics'
+                out += self.special_link(link, level, name)                 
             if 'plot' in self.pythia:
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             return out % self
@@ -883,8 +899,8 @@ class OneTagResults(dict):
         # Compute the text for eachsubpart
         
         sub_part_template_parton = """
-        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g </a></center></td>
-        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s %(run_mode)s </td>
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g</a> %(syst)s </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
         </tr>"""
@@ -938,7 +954,7 @@ class OneTagResults(dict):
             if not data:
                 continue
             
-            local_dico = {'type': ttype, 'run': self['run_name']}
+            local_dico = {'type': type, 'run': self['run_name'], 'syst': ''}
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
@@ -954,6 +970,9 @@ class OneTagResults(dict):
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 elif self['cross_pythia']:
                     if self.parton:
                         local_dico['cross_span'] = nb_line -1
@@ -965,11 +984,17 @@ class OneTagResults(dict):
                         local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error_pythia']
+                    if 'rwt' in self.pythia:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                     
             elif ttype == 'pythia' and self['cross_pythia']:
                 template = sub_part_template_parton
@@ -982,6 +1007,9 @@ class OneTagResults(dict):
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
+                if 'rwt' in self.pythia:
+                    local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
 
@@ -992,7 +1020,7 @@ class OneTagResults(dict):
                 else:
                     local_dico['cross_span'] = nb_line
             else:
-                template = sub_part_template_pgs   
+                template = sub_part_template_pgs             
             
             # Fill the links
             local_dico['links'] = self.get_links(ttype)
@@ -1136,7 +1164,8 @@ class OneTagResults(dict):
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
                            'action': action,
-                           'run_mode': ''
+                           'run_mode': '',
+                           'syst':''
                            }                                
                                   
         if self.debug is KeyboardInterrupt:

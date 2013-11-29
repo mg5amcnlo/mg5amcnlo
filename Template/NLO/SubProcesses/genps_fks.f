@@ -2305,8 +2305,8 @@ c because of numerical stabilities.
             pass=.false.
             return
          else
-            call boostx(pb(0,itree(1,i)),pb(0,i),pb(0,itree(1,i)))
-            call boostx(pb(0,itree(2,i)),pb(0,i),pb(0,itree(2,i)))
+            call boostm(pb(0,itree(1,i)),pb(0,i),m(i),pb(0,itree(1,i)))
+            call boostm(pb(0,itree(2,i)),pb(0,i),m(i),pb(0,itree(2,i)))
          endif
       enddo
 c

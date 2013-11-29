@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -136,7 +136,7 @@ def check_compiler(options, block=False):
     """check that the current fortran compiler is gfortran 4.6 or later.
     If block, stops the execution, otherwise just print a warning"""
 
-    msg = 'In order to be able to run MadGraph @NLO, you need to have ' + \
+    msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
             'gfortran 4.6 or later installed.\n%s has been detected'
     #first check that gfortran is installed
     if options['fortran_compiler']:
@@ -212,7 +212,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                    MadGraph/aMC@NLO 5                    *\n' + \
+        '#*                    MadGraph5_aMC@NLO                     *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -223,14 +223,16 @@ class CmdExtended(common_run.CommonRunCmd):
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "#*                           and                            *\n" + \
+        "#*                http://amcatnlo.cern.ch                   *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
         '#*               Command File for aMCatNLO                  *\n' + \
         '#*                                                          *\n' + \
-        '#*     run as ./bin/madevent.py filename                    *\n' + \
+        '#*     run as ./bin/aMCatNLO.py filename                    *\n' + \
         '#*                                                          *\n' + \
         '#************************************************************\n'
         
@@ -240,7 +242,7 @@ class CmdExtended(common_run.CommonRunCmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 5           *\n" + \
         "*                       a M C @ N L O                      *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
@@ -251,7 +253,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
@@ -790,7 +792,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     # survey options, dict from name to type, default value, and help text
     # Variables to store object information
     web = False
-    prompt = 'aMC@NLO_run>'
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
@@ -814,6 +815,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         self.mode = 'aMCatNLO'
         self.nb_core = 0
+        self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -1225,8 +1227,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
                 req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation']:
+                if not options['only_generation'] and req_acc != '-1':
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
+                    self.update_status('Setting up grids', level=None)
+                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
+                elif not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters) 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
@@ -1247,9 +1255,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
                 req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation']:
+                if not options['only_generation'] and req_acc != '-1':
                     self.update_status('Setting up grid', level=None)
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
+                elif not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters) 
+                    self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
@@ -1588,7 +1602,7 @@ Integrated cross-section
 #                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
 
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
+            logfile=open(gv_log,'r')            
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
             logfile.close()
             if not UPS_stats is None:
@@ -2352,6 +2366,7 @@ Integrated cross-section
             time.sleep(1) # security to allow all jobs to be launched
         if njob_split > 0:
             self.njobs = njob_split
+        
         self.wait_for_complete(run_type)
 
 

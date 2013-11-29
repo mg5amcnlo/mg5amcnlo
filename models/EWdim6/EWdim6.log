@@ -1,13 +1,13 @@
-# This file was automatically created by FeynRules 1.7.127
+# This file was automatically created by FeynRules 2.1.0
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (November 6, 2010)
-# Date: Tue 22 Jan 2013 16:06:42
+# Date: Tue 15 Oct 2013 22:01:29
 
 
 # 
 # This is the logfile for the model EWdim6
 
 # Authors: C. Degrande
-# Model version: 1.0
+# Model version: 1.1
 # Checking the Quantum numbers
    * Electric charge defined.
 # Checking the Lagrangians
@@ -24,6 +24,7 @@
    * Assigned PDG number 9000003 to particle ghWp
    * Assigned PDG number 9000004 to particle ghWm
    * Assigned PDG number 9000005 to particle ghG
+   * Assigned PDG number 9000006 to particle h1
 
 
 # Compulsory PDG codes:
@@ -40,36 +41,42 @@
    * Parameter CBL2 has no value. Default value 1 assigned.
    * Parameter CPWWWL2 has no value. Default value 1 assigned.
    * Parameter CPWL2 has no value. Default value 1 assigned.
+   * Parameter CphidL2 has no value. Default value 1 assigned.
+   * Parameter CphiWL2 has no value. Default value 1 assigned.
+   * Parameter CphiBL2 has no value. Default value 1 assigned.
+   * Parameter lam has no value. Default value 1 assigned.
+   * Parameter muH has no value. Default value 1 assigned.
 
 
 # Vertices
    * Calling FeynmanRules for 1 Lagrangians.
-   * Number of classes vertices: 58
-   * Number of flavored vertices: 96
+   * Number of classes vertices: 61
+   * Number of flavored vertices: 101
    * Saved vertices in InterfaceRun[ 1 ].
    * Checked QNumber conservation.
       - Quantum number GhostNumber conserved in all vertices.
       - Quantum number LeptonNumber conserved in all vertices.
       - Quantum number Q conserved in all vertices.
+      - Quantum number Y conserved in all vertices.
    * particles.py written.
    * parameters.py written.
 #
 # Vertex definitions
 #
 
-   * 96 vertices written.
+   * 101 vertices written.
    * vertices.py written.
 #
 # Lorentz structure definitions
 #
 
-   * 81 lorentz structures written.
+   * 80 lorentz structures written.
    * lorentz.py written.
 #
 # Coupling definitions
 #
 
-   * 140 couplings written.
+   * 153 couplings written.
    * couplings.py written.
 #
 # Coupling order definitions
@@ -81,7 +88,7 @@
 # Decay definitions
 #
 
-   * 6 decays written.
+   * 8 decays written.
    * decay.py not written
 #
 # CTCoupling definitions

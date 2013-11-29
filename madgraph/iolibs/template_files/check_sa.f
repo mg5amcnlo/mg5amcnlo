@@ -53,7 +53,7 @@ c     in coupl.inc .
 
 c---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
-c     the madgraph matrix-element.       
+c     the MadGraph5_aMC@NLO matrix-element.       
 c     Alternatevely, here the user can call or set the four momenta at his will, see below.
 c     	
       IF(nincoming.EQ.1) THEN
@@ -136,7 +136,7 @@ C****************************************************************************
 
 
 	  SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
-C---- auxiliary function to change convention between madgraph and rambo
+C---- auxiliary function to change convention between MadGraph5_aMC@NLO and rambo
 c---- four momenta. 	  
 	  IMPLICIT NONE
 	  INCLUDE "nexternal.inc"

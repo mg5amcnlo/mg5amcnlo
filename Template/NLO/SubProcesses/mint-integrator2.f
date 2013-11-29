@@ -1219,17 +1219,19 @@ c reset the acc values
       do kdim=1,ndim
          do i=ninter,1,-1
             ave_virt(i*2,kdim)=ave_virt(i,kdim)
-            if (i.ne.1) ave_virt(i*2-1,kdim)=(ave_virt(i,kdim)
-     $           +ave_virt(i-1,kdim))/2d0
-            nvirt(i*2,kdim)=nvirt(i,kdim)/2
-            if ( (nvirt(i,kdim).eq.0 .and. nvirt(i-1,kdim).eq.1) .or.
-     &           (nvirt(i,kdim).eq.1 .and. nvirt(i-1,kdim).eq.0) ) then
-               nvirt(i*2-1,kdim)=1
+            if (nvirt(i,kdim).ne.0) then
+               nvirt(i*2,kdim)=max(nvirt(i,kdim)/2,1)
             else
-               if (i.ne.1) then
-                  nvirt(i*2-1,kdim)=(nvirt(i,kdim)+nvirt(i-1,kdim))/4
+               nvirt(i*2,kdim)=0
+            endif
+            if (i.ne.1) then
+               ave_virt(i*2-1,kdim)=(ave_virt(i,kdim)
+     $              +ave_virt(i-1,kdim))/2d0
+               if (nvirt(i,kdim)+nvirt(i-1,kdim).ne.0) then
+                  nvirt(i*2-1,kdim)=
+     &                 max((nvirt(i,kdim)+nvirt(i-1,kdim))/4,1)
                else
-                  nvirt(i,kdim)=nvirt(i,kdim)/2
+                  nvirt(i*2-1,kdim)=0
                endif
             endif
          enddo

@@ -45,7 +45,7 @@ cd madevent
 and after that it is ready to go. There is also an option to compile
 madevent with dynamic libraries. Use
 ./bin/compile dynamic
-to compile with dynamic libraries for the madgraph source files. This
+to compile with dynamic libraries for the MadGraph5_aMC@NLO source files. This
 will replace all makefiles with makefile_dynamic and compile using
 these new makefiles. Using dynamic libraries is greatly encouraged,
 because it can make the compiled gridpack significantly smaller.
@@ -65,8 +65,8 @@ much as possible and is particularly useful for the decay of (anti)
 top quarks E.g. for the decay of top quarks up to 95% of the
 correlations are preserved. 
 Note that DECAY also needs the HELAS directory to compile.
-The DECAY package can be found in the MadGraph 5 developer's kit that
-can be downloaded from the MadGraph /MadEvent Downloads webpage or
+The DECAY package can be found in the MadGraph5_aMC@NLO developer's kit that
+can be downloaded from the MadGraph5_aMC@NLO /MadEvent Downloads webpage or
 from Launchpad. To add the package to the gridpack, simply untar the
 gridpack to get the ./madevent/ directory and the ./run.sh
 script. Move the DECAY and the HELAS directories from the MG 5 developer's kit to the
@@ -115,7 +115,7 @@ massless, the decay of Z bosons is unfavored to any specific lepton
 flavor, we could as well have generated events with only muons and
 then randomly replacing the muons in the event file by electrons or
 tau's with 33% probability for each. This is exactly what the REPLACE
-script has been designed to do. Note that for MadGraph 5, this is less
+script has been designed to do. Note that for MadGraph5_aMC@NLO, this is less
 of a problem, and in general the full process should be run
 (preferentially using sm-no_masses to get as few run directories as
 possible).

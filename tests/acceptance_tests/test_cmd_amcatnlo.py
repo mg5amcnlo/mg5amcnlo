@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from __future__ import division
@@ -264,8 +264,10 @@ class TestMECmdShell(unittest.TestCase):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( '10000  = npoints_FO' in card)
         card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
-        self.assertTrue( '6000   = npoints_FO' in card)
-        card = card.replace('6000   = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '5000   = npoints_FO_grid' in card)
+        card = card.replace('5000   = npoints_FO_grid', '100  = npoints_FO_grid')
+        self.assertTrue( '0.01   = req_acc_FO' in card)
+        card = card.replace('0.01   = req_acc_FO', '-1   = req_acc_FO')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
         self.do('launch NLO -f')

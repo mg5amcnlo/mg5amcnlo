@@ -1,5 +1,5 @@
 c
-c Example analysis for "p p > l+ l- [QCD]" process.
+c Example analysis for "p p > ta+ ta- [QCD]" process.
 c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()

@@ -1,0 +1,26 @@
+** This file has been generated automatically by FeynRules
+*********************************************************
+CKMBLOCK 1 cabi
+SMINPUTS 1 aEWM1
+SMINPUTS 2 Gf
+SMINPUTS 3 aS
+YUKAWA 4 ymc
+YUKAWA 5 ymb
+YUKAWA 6 ymt
+YUKAWA 15 ymtau
+MASS 1 MD
+MASS 2 MU
+MASS 3 MS
+MASS 4 MC
+MASS 5 MB
+MASS 6 MT
+MASS 11 Me
+MASS 13 MM
+MASS 15 MTA
+MASS 23 MZ
+MASS 24 MW
+MASS 25 MH
+DECAY 6 WT
+DECAY 23 WZ
+DECAY 24 WW
+DECAY 25 WH

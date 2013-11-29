@@ -1,7 +1,7 @@
-Update notes for MadGraph 5 (in reverse time order)
+Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-2.0.0.beta4(xx/xx/xx) OM: Merge with 1.5.9-12 (See informtation below)
+2.0.0(xx/xx/xx)       OM: Merge with 1.5.9-14 (See information below)
                       VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
                       VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
@@ -21,7 +21,33 @@ Update notes for MadGraph 5 (in reverse time order)
 		          order runs.
 		      All: Default renormalisation and factorisation scales are now set to H_T/2.
 		      SF+RF: Improved handling of fixed order analysis
-
+                      JA+OM+AK: Store parameters needed for systematics studies.
+                         This can be turned on with the use_syst parameter in
+                         run_card.dat.
+                         This output can be used to generate event weights for
+                         a variety of variational parameters, including scalefact,
+                         alpsfact, PDF choice, and matching scale. Note that this require
+                         pythia-pgs v2.2 for matching scale.
+                     OM+JA+Chia: Implement MadWidth (automatic/smart computation of the widths)
+                     OM: Support for formfactor defined in the UFO model. and support for model
+                         parameter presence inside the Lorentz expression.
+                     JA: Included <clustering> tag in matched .lhe output, to be 
+                         used together with Pythia 8 CKKW-L matching. This can be 
+                         turned off with the clusinfo flag in run_card.dat.
+                     JA: New treatment of matching for diagrams that have no
+                         corresponding lower-multiplicity diagrams. Jets that
+                         are not classified as shower-type emission jets are
+                         flagged in the cluster scale info at the end of the event,
+                         which is recognized by the Pythia interface in Pythia-PGS
+                         package v. 2.2. For such jets, xqcut does not apply. This
+                         allows for consistent matching e.g. of p p > w+ b b~ in 
+                         the 4-flavor scheme. Note that auto_ptj_mjj must be set to
+                         .false. for this to work properly.
+                     OM: Change model restriction behavior: two widths with identical are not merged anymore.
+                     S.Pretzel(via OM): implement KT Durham cut. (thanks to Z. Marshall)
+		     OM: Improved check for unresponsive of PBS cluster (thanks J. Mc Fayden)
+                     OM: implement a maximum number (2500) of jobs which can be submitted at the same time
+                         by the PBS cluster. This number is currently not editable via configuration file.
 
 2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
                       OM: Allow the customize_model to be scriptable in a 
@@ -57,6 +83,28 @@ Update notes for MadGraph 5 (in reverse time order)
                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
                         information.
+
+1.5.14 (26/11/13) OM: Add warning about the fact that newprocess_mg5 is going to be remove in MG5_aMC_V2.0.0
+                  OM: Improved cluster submision/re-submition control. 
+
+1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
+                      In case of failure, you can re-submitted the failing jobs automatically. The maximal 
+                      number of re-submission for a job can be parametrize (default 1) and how long you have to
+                      wait before this resubmission [to avoid slow filesystem problem, i.e. condor](default 300s)
+                      Supported cluster for this function: condor, lsf, pbs
+                  OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
+                      (tt~+4jets).
+                  BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
+                      Higgs interactions) 
+                  OM: use evince by default to open eps file instead of gv.
+		  OM: Fix a problem with the set command for the card edition for the mssm model.
+                  OM: Update EWdim6 paper according to the snowmass paper. (3 more operator)
+                      The default model is restricted in order to exclude those operators. In order
+                      to have those you have to use import model EWdim6-full
+                  OM: Fix bug #1243189, impossible to load v4 model if a local directory has the name of
+                      the models (which is present in the models directory)
+                  OM: Fix a bug in the complex mass scheme in the reading of the param_card (it was clearly stated)
+                  OM: Improve numerical stability of the phase-space point generation. (thanks Z. Surujon)
 
 1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
                       the cross-section were slightly (~4%) under-evaluated due to such strong cut.
