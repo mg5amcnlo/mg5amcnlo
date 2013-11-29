@@ -112,7 +112,7 @@ madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
-	$(FC) $(FFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
 
 madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
 	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
