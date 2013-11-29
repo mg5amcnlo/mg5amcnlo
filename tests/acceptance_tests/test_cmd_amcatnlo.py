@@ -102,6 +102,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
         self.cmd_line.exec_cmd('set automatic_html_opening False --no_save')
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
     @staticmethod
     def join_path(*path):
@@ -327,6 +328,7 @@ class TestMECmdShell(unittest.TestCase):
                  set nevents 100
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
+        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
         self.cmd_line.import_command_file('/tmp/mg5_cmd')
         #self.do('import command %s/mg5_cmd')
         #self.do('generate_events LO -f')        

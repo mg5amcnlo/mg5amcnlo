@@ -980,9 +980,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         self.update_status('Starting run', level=None, update_results=True)
 
-        if self.options_madevent['automatic_html_opening']:
+        if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+            self.options['automatic_html_opening'] = False
 
         self.compile(mode, options) 
         self.run(mode, options)
@@ -1017,9 +1017,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         self.update_status('Starting run', level=None, update_results=True)
 
-        if self.options_madevent['automatic_html_opening']:
+        if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options_madevent['automatic_html_opening'] = False
+            self.options['automatic_html_opening'] = False
 
         self.compile(mode, options) 
         evt_file = self.run(mode, options)

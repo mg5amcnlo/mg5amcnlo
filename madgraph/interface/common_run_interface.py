@@ -491,7 +491,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 #Ensure that the model that we are going to load is the current
                 #one.                    
                 to_del = [name  for name in sys.modules.keys() 
-                                                if name.startswith('internal')]
+                                                if name.startswith('internal.')]
                 for name in to_del:
                     del(sys.modules[name]) 
 
