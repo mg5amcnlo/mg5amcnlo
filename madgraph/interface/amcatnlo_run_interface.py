@@ -812,7 +812,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
-        self.prompt = "'%s' >"%os.path.basename(pjoin(self.me_dir))
+        self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
@@ -1207,8 +1207,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
                 req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation']:
+                if not options['only_generation'] and req_acc != '-1':
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
+                    self.update_status('Setting up grids', level=None)
+                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
+                elif not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters) 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
@@ -1226,9 +1232,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
                 req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation']:
+                if not options['only_generation'] and req_acc != '-1':
                     self.update_status('Setting up grid', level=None)
                     self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
+                elif not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters) 
+                    self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']

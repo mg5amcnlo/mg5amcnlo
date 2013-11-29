@@ -113,6 +113,7 @@ c
             scale=pmass(1)
             fixed_ren_scale=.true.
             fixed_fac_scale=.true.
+            use_syst=.false.
          endif
 c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
@@ -455,7 +456,11 @@ c
 c     Compute Smin (for efficiency
 c
       do i=nincoming+1,nexternal-1
-        smin=0.0d0**2
+      do j=nincoming+1,nexternal-1
+         if(j.lt.i)then
+            s_min(i,j) = s_min(j,i)
+         else
+            smin=0.0d0**2
 
             if(do_cuts(i).and.do_cuts(j)) then
                if(is_a_j(i).and.is_a_j(j)) s_min(j,i)=mmjj*dabs(mmjj)
@@ -474,6 +479,8 @@ c
      &            (idup(i,1,1)*idup(j,1,1).lt.0))
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
             endif
+         endif
+      enddo
       enddo
 
 c

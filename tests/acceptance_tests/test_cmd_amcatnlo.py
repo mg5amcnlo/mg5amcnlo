@@ -127,7 +127,7 @@ class TestMECmdShell(unittest.TestCase):
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
         self.assertTrue( 'ANALYSE     =' in card)
-        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwanstp.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
         self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
         card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
@@ -260,10 +260,10 @@ class TestMECmdShell(unittest.TestCase):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( '10000  = npoints_FO' in card)
         card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
-        self.assertTrue( '6000   = npoints_FO' in card)
-        card = card.replace('6000   = npoints_FO', '100  = npoints_FO')
-        self.assertTrue( '5000   = npoints_FO' in card)
-        card = card.replace('5000   = npoints_FO', '100  = npoints_FO')
+        self.assertTrue( '5000   = npoints_FO_grid' in card)
+        card = card.replace('5000   = npoints_FO_grid', '100  = npoints_FO_grid')
+        self.assertTrue( '0.01   = req_acc_FO' in card)
+        card = card.replace('0.01   = req_acc_FO', '-1   = req_acc_FO')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
         self.do('launch NLO -f')
