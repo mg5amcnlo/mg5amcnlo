@@ -1748,7 +1748,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
         self.results.def_web_mode(self.web)
         
-        self.prompt = "'%s' >"%os.path.basename(pjoin(self.me_dir))
+        self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
         self.configured = 0 # time for reading the card
         self._options = {} # for compatibility with extended_cmd
     
@@ -3361,9 +3361,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         self.check_syscalc(args)
+        if self.ninitial == 1:
+            logger.error('SysCalc can\'t be run for decay processes')
+            return
+        
         logger.info('Calculating systematics for run %s' % self.run_name)
         
-        self.ask_edit_cards(['run'], args)
+        self.ask_edit_cards(['run_card'], args)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')

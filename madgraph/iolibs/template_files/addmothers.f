@@ -260,11 +260,18 @@ c          if((igscl(0).ne.0.and.
 c     $       (iabs(jpart(1,i)).gt.5.and.iabs(jpart(1,i)).lt.11).or.
 c     $       (iabs(jpart(1,i)).gt.16.and.iabs(jpart(1,i)).ne.21)).or.
 c     $       (igscl(0).eq.0.and.OnBW(i))) then 
-          if(ickkw.eq.0.and.OnBW(i).or.
-     $       ickkw.gt.0.and.isbw(idij(i))) then 
+          if(ickkw.eq.0.and.OnBW(i))then
 c         Resonance whose mass should be preserved
             jpart(6,i)=2
             nres=nres+1
+          else if (ickkw.gt.0) then
+             if(isbw(idij(i))) then 
+c         Resonance whose mass should be preserved
+                jpart(6,i)=2
+                nres=nres+1
+             else
+                jpart(6,i)=3
+             endif
           else
 c         Propagator for documentation only - not included
             jpart(6,i)=3

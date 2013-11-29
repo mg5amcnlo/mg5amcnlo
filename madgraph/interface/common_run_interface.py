@@ -487,10 +487,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_states()
-                # check those which are charged under qcd
-                if not MADEVENT and pjoin(self.me_dir,'bin') not in sys.path:                    
-                        sys.path.insert(0,pjoin(self.me_dir,'bin'))
-
+                
                 #Ensure that the model that we are going to load is the current
                 #one.                    
                 to_del = [name  for name in sys.modules.keys() 
@@ -498,6 +495,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 for name in to_del:
                     del(sys.modules[name]) 
 
+                # check those which are charged under qcd
+                if pjoin(self.me_dir,'bin') not in sys.path:                    
+                        sys.path.insert(0,pjoin(self.me_dir,'bin'))
                 import internal.ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles 

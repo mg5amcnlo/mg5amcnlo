@@ -1092,6 +1092,8 @@ c     ipart gives external particle number chain
       rewgt=1.0d0
       clustered=.false.
 
+      if(ickkw.le.0.and..not.use_syst) return
+
 c   Set mimimum kt scale, depending on highest mult or not
       if(hmult.or.ickkw.eq.1)then
         pt2min=0
@@ -1105,6 +1107,7 @@ c   Since we use pdf reweighting, need to know particle identities
       if (btest(mlevel,1)) then
          write(*,*) 'Set process number ',ipsel
       endif
+
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)

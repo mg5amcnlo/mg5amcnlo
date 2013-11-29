@@ -88,12 +88,13 @@ class Cluster(object):
         self.cluster_queue = opts['cluster_queue']
         self.temp_dir = opts['cluster_temp_path']
         self.options = {'cluster_status_update': (600, 30)}
+        for key,value in opts.items():
+            self.options[key] = value
         self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' else 0
         self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
-        for key,value in opts.items():
-            self.options[key] = value
+
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                log=None, required_output=[], nb_submit=0):
