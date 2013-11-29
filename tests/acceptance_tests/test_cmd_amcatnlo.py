@@ -127,7 +127,7 @@ class TestMECmdShell(unittest.TestCase):
 
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
         self.assertTrue( 'ANALYSE     =' in card)
-        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwanstp.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
+        card = card.replace('ANALYSE     =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
         self.assertTrue( 'EXTRALIBS   = stdhep Fmcfio' in card)
         card = card.replace('EXTRALIBS   = stdhep Fmcfio', 'EXTRALIBS   = fastjet')
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
