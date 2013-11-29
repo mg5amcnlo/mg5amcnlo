@@ -413,16 +413,24 @@ class MadSpinInterface(extended_cmd.Cmd):
         if os.path.exists(ms_card_path):
             if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
                 misc.call(['tar -xzf RunMaterial.tar.gz'], cwd=run_dir, shell=True)
-                misc.call(['cp %s %s'%(str(ms_card_path), str(pjoin(run_dir,
-                    'RunMaterial','madspin_card_for_%s.dat'%os.path.basename(
-                          decayed_evt_file).replace('.lhe', ''))))], shell=True)
-                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], cwd=run_dir,
-                                                                     shell=True)
-                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+                base_path = pjoin(run_dir,'RunMaterial')
             else:
-                misc.call(['cp %s %s'%(str(ms_card_path),
-                                    str(pjoin(run_dir,'madspin_card_for_%s.dat'\
-                            %os.path.basename(decayed_evt_file))))], shell=True)
+                base_path = pjoin(run_dir)
+
+            evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
+            ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
+            count = 0    
+            while os.path.exists(ms_card_to_copy):
+                count +=1
+                ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
+                                                               (evt_name,count))
+            misc.call(['cp %s %s'%(str(ms_card_path),
+                                             str(ms_card_to_copy))], shell=True)
+            
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], 
+                                                         cwd=run_dir,shell=True)
+                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
 
     def run_from_pickle(self):
         import madgraph.iolibs.save_load_object as save_load_object
