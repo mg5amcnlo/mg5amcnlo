@@ -1530,9 +1530,8 @@ Integrated cross-section
 
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
-        
         debug_msg = self.compile_advanced_stats(log_GV_files, all_log_files)
-                           
+        
         logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
         
@@ -1543,7 +1542,6 @@ Integrated cross-section
                                        'w').write(message+'\n\n'+debug_msg+'\n')
                                        
         self.archive_files(evt_path,mode)
-
 
     def archive_files(self, evt_path, mode):
         """ Copies in the Events/Run_<xxx> directory relevant files characterizing

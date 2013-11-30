@@ -31,6 +31,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
+import madgraph.iolibs.files as files
 import madgraph.various.banner as banner
 
 import models.import_ufo as import_ufo
@@ -424,8 +425,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 count +=1
                 ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
                                                                (evt_name,count))
-            misc.call(['cp %s %s'%(str(ms_card_path),
-                                             str(ms_card_to_copy))], shell=True)
+            files.cp(str(ms_card_path),str(ms_card_to_copy))
             
             if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
                 misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], 
