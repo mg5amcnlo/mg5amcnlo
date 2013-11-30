@@ -218,6 +218,10 @@ c Setup for parton-level NLO reweighting
       write (*,*) '----------------------------------------------------'
       write (*,*) ''
 
+      open(unit=58,file='results.dat',status='unknown')
+      write(58,*)res, err, 0d0, 0, 0, 0, 0, 0d0 ,0d0, res
+      close(58)
+
       if(doVirtTest)then
         write(*,*)'  '
         write(*,*)'Statistics for virtuals'

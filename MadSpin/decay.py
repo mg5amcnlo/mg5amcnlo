@@ -2006,6 +2006,7 @@ class decay_all_events(object):
             for equiv_decay in decay_mapping[tag]:
                 self.inverted_decay_mapping[equiv_decay[0]]=tag
  
+        self.mscmd.update_status('MadSpin: Estimate the maximum weight')
         # Estimation of the maximum weight
         #=================================
         if max_weight_arg>0:
@@ -2028,7 +2029,7 @@ class decay_all_events(object):
     def ending_run(self):
         """launch the unweighting and deal with final information"""    
         # launch the decay and reweighting
-        efficiency = self.decaying_events(self.inverted_decay_mapping)
+        self.mscmd.update_status('MadSpin: Decaying Events')
         if  efficiency != 1:
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
@@ -2123,6 +2124,8 @@ class decay_all_events(object):
                 if (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                     running_time = misc.format_timer(time.time()-starttime)
                     logger.info('Event nb %s %s' % (event_nb, running_time))
+                    self.mscmd.update_status(('$events',1,event_nb, 'decaying events'), 
+                                             force=False, print_log=False)
                 if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
             indices_for_mc_masses, values_for_mc_masses=self.get_montecarlo_masses_from_event(decay['decay_struct'], event_map, decay['prod2full'])
@@ -2900,6 +2903,10 @@ class decay_all_events(object):
 
     
             logger.debug('Event %s/%s: ' % (ev+1, len(decay_set)*numberev))
+            if (len(decay_set)*numberev -(ev+2)) >0:
+                self.mscmd.update_status((len(decay_set)*numberev -(ev+2),1,ev+1, 
+                                          'MadSpin: Maximum weight'), 
+                                         force=False, print_log=False)
             #logger.debug('Selected topology               : '+str(tag_topo))
 
             max_decay = {}

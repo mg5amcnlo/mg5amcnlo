@@ -103,13 +103,15 @@ class TestMECmdShell(unittest.TestCase):
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
-        if not os.path.exists(pjoin(interface.options['syscalc_path'],'syscalc')):
+        if not os.path.exists(pjoin(interface.options['syscalc_path'],'sys_calc')):
             interface.onecmd('install SysCalc')
         
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
-
+        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
+        
+    
     @staticmethod
     def join_path(*path):
         """join path and treat spaces"""     

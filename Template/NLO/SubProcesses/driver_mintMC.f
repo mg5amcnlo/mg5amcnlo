@@ -184,7 +184,7 @@ c
       ndim = 3*(nexternal-2)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
-c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
+c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
 c at the NLO)
       if( ( fixed_fac_scale .and.
      #       (muF1_over_ref*muF1_ref_fixed) .ne.
@@ -312,6 +312,10 @@ c Prepare the MINT folding
      $        ,sqrt(unc(1)**2+unc(5)**2)
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
+c write the results.dat file 
+         open(unit=58,file='results.dat',status='unknown')
+         write(58,*)ans(1)+ans(5), unc(2), 0d0, 0, 0, 0, 0, 0d0 ,0d0, ans(2) 
+         close(58)
 
 c to save grids:
          open (unit=12, file='mint_grids_NLO',status='unknown')

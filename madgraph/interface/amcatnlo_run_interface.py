@@ -60,6 +60,7 @@ try:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.sum_html as sum_html
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
 
@@ -77,6 +78,7 @@ except ImportError, error:
     import internal.cluster as cluster
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card
     aMCatNLO = True
@@ -267,9 +269,12 @@ class CmdExtended(common_run.CommonRunCmd):
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
         try:
+            if hasattr(self, 'cluster'):
+                logger.info('rm jobs on queue')
+                self.cluster.remove()
             if hasattr(self, 'results'):
-                self.update_status('Stop by the user', level=None, makehtml=False, error=True)
-                self.add_error_log_in_html()
+                self.update_status('Stop by the user', level=None, makehtml=True, error=True)
+                self.add_error_log_in_html(KeyboardInterrupt)
         except:
             pass
     
@@ -808,8 +813,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
         #common_run.CommonRunCmd.__init__(self, me_dir, options)
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
@@ -818,10 +821,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
             self.results.resetall(self.me_dir)
+            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
+            self.last_mode = ''
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -842,6 +847,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
         self.run_mcatnlo(evt_file)
+
+        self.update_status('', level='all', update_results=True)
 
     ################################################################################
     def do_plot(self, line):
@@ -967,16 +974,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         
         mode = argss[0]
         self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         self.run(mode, options)
+        self.update_status('', level='all', update_results=True)
 
         
     ############################################################################      
@@ -996,20 +1008,27 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         mode = 'aMC@' + argss[0]
         if options['parton'] and mode == 'aMC@NLO':
             mode = 'noshower'
         elif options['parton'] and mode == 'aMC@LO':
             mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         if not options['parton']:
             self.run_mcatnlo(evt_file)
+
+        self.update_status('', level='all', update_results=True)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1037,14 +1056,19 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options['automatic_html_opening'] = False
-
         mode = argss[0]
         if mode in ['LO', 'NLO']:
             options['parton'] = True
         mode = self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         if '+' in mode:
             mode = mode.split('+')[0]
         self.compile(mode, options) 
@@ -1067,12 +1091,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
 
+
+        self.update_status('', level='all', update_results=True)
         if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
             logger.warning("""You are running with FxFx merging enabled.
 To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
-
 
 
 
@@ -1092,11 +1117,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.compile(mode, options) 
 
 
-    def update_status(self, status, level, makehtml=False, force=True, 
-                      error=False, starttime = None, update_results=False):
-        
-        common_run.CommonRunCmd.update_status(self, status, level, makehtml, 
-                                        force, error, starttime, update_results)
+        self.update_status('', level='all', update_results=True)
+
 
 
     def update_random_seed(self):
@@ -1132,8 +1154,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
-
-        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
@@ -1227,6 +1247,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['born*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
@@ -1252,6 +1275,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['all*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
                 self.update_status('Computing cross-section', level=None)
                 self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
@@ -1265,6 +1291,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
+            
             if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
                 misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
                                 stdout=devnull, 
@@ -1286,6 +1313,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+                
+            cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
+            self.update_status('Run complete', level='parton', update_results=True)
+
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
@@ -1376,6 +1409,10 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(options, i, mode)
 
+                    cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+                    self.results.add_detail('cross', cross)
+                    self.results.add_detail('error', error) 
+
                 #check that split jobs are all correctly terminated
                 if split:
                     self.check_event_files()
@@ -1452,7 +1489,7 @@ Integrated cross-section
                 process = line.replace('generate ', '')
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
@@ -1675,7 +1712,7 @@ Integrated cross-section
         if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
-        self.update_status('Collecting events', level='parton')
+        self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'))
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
@@ -1699,12 +1736,14 @@ Integrated cross-section
             self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
+        self.results.add_detail('nb_event', nevents)
+        self.update_status('Events generated', level='parton', update_results=True)
         return evt_file
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Preparing MCatNLO run')
+        logger.info('Prepairing MCatNLO run')
         self.run_name = os.path.split(\
                     os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
@@ -1776,7 +1815,7 @@ Integrated cross-section
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
-        self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
+        self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
@@ -1796,8 +1835,8 @@ Integrated cross-section
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
-                level='parton')
+        self.update_status('Showering events...', level='shower')
+        logger.info('(Running in %s)' % rundir)
         if shower != 'PYTHIA8':
             files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
@@ -1922,6 +1961,8 @@ Integrated cross-section
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
 
+        self.update_status('Run complete', level='shower', update_results=True)
+
 
 
     ############################################################################
@@ -1979,7 +2020,7 @@ Integrated cross-section
             #This is only for case when you want to trick the interface
             logger.warning('Trying to run data on unknown run.')
             self.results.add_run(name, self.run_card)
-            self.results.update('add run %s' % name, 'all', makehtml=False)
+            self.results.update('add run %s' % name, 'all', makehtml=True)
         else:
             for tag in upgrade_tag[level]:
                 
@@ -2013,6 +2054,32 @@ Integrated cross-section
                 tagRun = self.results[self.run_name][i]
                 if tagRun.pythia:
                     return tagRun['tag']
+
+
+    def store_result(self):
+        """ tar the pythia results. This is done when we are quite sure that 
+        the pythia output will not be use anymore """
+
+        if not self.run_name:
+            return
+
+        self.results.save()
+
+        if not self.to_store:
+            return 
+        
+        tag = self.run_card['run_tag']
+#        if 'pythia' in self.to_store:
+#            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+#            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
+#                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
+#                   'tag':tag})
+#            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
+#                                pjoin(self.me_dir,'Events',self.run_name), tag))
+#            self.to_store.remove('pythia')
+#            self.update_status('Done', level='pythia',makehtml=False,error=True)
+        
+        self.to_store = []
 
 
     def get_init_dict(self, evt_file):
@@ -2050,9 +2117,6 @@ Integrated cross-section
         return init_dict
 
 
-
-            
-
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
         It also checks if the lhapdf library is used"""
@@ -2069,10 +2133,6 @@ Integrated cross-section
             pdg = int(line.split()[0])
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
-
-        # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
-            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
 
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
@@ -2104,14 +2164,17 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
-        lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
+        # check if need to link lhapdf
+        if pdlabel =='\'lhapdf\'':
+            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if lhapdfpath:
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
         else:
-            #overwrite the PDFCODE variable in order to use internal lhapdf
+            #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
+
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
@@ -2270,7 +2333,7 @@ Integrated cross-section
         starttime = time.time()
         #logger.info('     Waiting for submitted jobs to complete')
         update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
-                      starttime=starttime, level='parton', update_results=False)
+                      starttime=starttime, level='parton', update_results=True)
         try:
             self.cluster.wait(self.me_dir, update_status)
         except:
@@ -2585,11 +2648,20 @@ Integrated cross-section
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
+        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
+
+
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         test_log = pjoin(self.me_dir, 'test.log')
+
+        self.update_status('Compiling the code', level=None, update_results=True)
+
 
         libdir = pjoin(self.me_dir, 'lib')
         sourcedir = pjoin(self.me_dir, 'Source')
@@ -2897,6 +2969,58 @@ Integrated cross-section
             question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
             return question
 
+
+        def modify_switch(mode, answer, switch):
+            if '=' in answer:
+                key, status = answer.split('=')
+                switch[key] = status
+                if (key, status) in force_switch:
+                    for key2, status2 in force_switch[(key, status)].items():
+                        if switch[key2] not in  [status2, void]:
+                            logger.info('For coherence \'%s\' is set to \'%s\''
+                                        % (key2, status2), '$MG:color:BLACK')
+                            switch[key2] = status2
+            elif answer in ['0', 'auto', 'done']:
+                return 
+            elif answer in special_values:
+                logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                if answer == 'LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'noshower':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')                                                    
+                elif answer == 'noshowerLO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                if mode:
+                    return
+            return switch
+
+
+        modify_switch(mode, self.last_mode, switch)
+        
         if not self.force:
             answer = ''
             while answer not in ['0', 'done', 'auto', 'onlyshower']:
@@ -2910,51 +3034,9 @@ Integrated cross-section
                     opt1 = allowed_switch_value[key][0]
                     opt2 = allowed_switch_value[key][1]
                     answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
-                if '=' in answer:
-                    key, status = answer.split('=')
-                    switch[key] = status
-                    if (key, status) in force_switch:
-                        for key2, status2 in force_switch[(key, status)].items():
-                            if switch[key2] not in  [status2, void]:
-                                logger.info('For coherence \'%s\' is set to \'%s\''
-                                            % (key2, status2), '$MG:color:BLACK')
-                                switch[key2] = status2
-                elif answer in ['0', 'auto', 'done']:
+
+                if not modify_switch(mode, answer, switch):
                     break
-                elif answer in special_values:
-                    logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
-                    if answer == 'LO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'ON'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'NLO':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'ON'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'aMC@NLO':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'ON')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'aMC@LO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'ON')
-                        assign_switch('madspin', 'OFF')
-                    elif answer == 'noshower':
-                        switch['order'] = 'NLO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')                                                    
-                    elif answer == 'noshowerLO':
-                        switch['order'] = 'LO'
-                        switch['fixed_order'] = 'OFF'
-                        assign_switch('shower', 'OFF')
-                        assign_switch('madspin', 'OFF')
-                    if mode:
-                        break
 
         #assign the mode depending of the switch
         if not mode or mode == 'auto':
@@ -2981,8 +3063,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
+        ignore = []
         if mode in ['LO', 'NLO']:
             options['parton'] = True
+            ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
         elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
@@ -2993,86 +3077,61 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if options['reweightonly']:
             cards = ['run_card.dat']
 
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore)
         
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
-        if not options['force'] and not  self.force:
+        if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False)
-            
 
+        self.banner = banner_mod.Banner()
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
-        self.run_tag = self.run_card['run_tag']
-        self.run_name = self.find_available_run_name(self.me_dir)
-        #add a tag in the run_name for distinguish run_type
-        if self.run_name.startswith('run_'):
-            if mode in ['LO','aMC@LO','noshowerLO']:
-                self.run_name += '_LO' 
-        self.set_run_name(self.run_name, self.run_tag, 'parton')
-        #create the shower_card or the analyse card if needed 
+        # store the cards in the banner
+        for card in cards:
+            self.banner.add(pjoin(self.me_dir, 'Cards', card))
+        # and the run settings
+        run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
+        self.banner.add_text('run_settings', run_settings)
+
+        if not mode =='onlyshower':
+            self.run_card = self.banner.charge_card('run_card')
+            self.run_tag = self.run_card['run_tag']
+            self.run_name = self.find_available_run_name(self.me_dir)
+            #add a tag in the run_name for distinguish run_type
+            if self.run_name.startswith('run_'):
+                if mode in ['LO','aMC@LO','noshowerLO']:
+                    self.run_name += '_LO' 
+            self.set_run_name(self.run_name, self.run_tag, 'parton')
+            if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+                logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+                raise self.InvalidCmd(error)
+            elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+                logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+    samples of various multiplicities without double counting, you
+    have to remove some events after showering 'by hand'.  Please
+    read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+                if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                    logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                    raise self.InvalidCmd(error)
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                    question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                        "Type \'n\' to stop or \'y\' to continue"
+                    answers = ['n','y']
+                    answer = self.ask(question, 'n', answers, alias=alias)
+                    if answer == 'n':
+                        error = '''Stop opertation'''
+                        self.ask_run_configuration(mode, options)
+    #                    raise aMCatNLOError(error)
         if 'aMC@' in mode or mode == 'onlyshower':
-            shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-            self.shower_card = shower_card.ShowerCard(shower_card_path)
+            self.shower_card = self.banner.charge_card('shower_card')
+            
         elif mode in ['LO', 'NLO']:
             analyse_card_path = pjoin(self.me_dir, 'Cards','FO_analyse_card.dat')
-            self.analyse_card = analyse_card.FOAnalyseCard(analyse_card_path)
-        
-        if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
-            logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
-            raise self.InvalidCmd(error)
-        elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
-            logger.warning("""You are running with FxFx merging enabled.  To be able to merge
-samples of various multiplicities without double counting, you
-have to remove some events after showering 'by hand'.  Please
-read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
-            if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
-                logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
-                raise self.InvalidCmd(error)
-            elif self.run_card['parton_shower'].upper() != 'HERWIG6':
-                question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
-                    "Type \'n\' to stop or \'y\' to continue"
-                answers = ['n','y']
-                answer = self.ask(question, 'n', answers, alias=alias)
-                if answer == 'n':
-                    error = '''Stop opertation'''
-                    self.ask_run_configuration(mode, options)
-#                    raise aMCatNLOError(error)
+            self.analyse_card = self.banner.charge_card('FO_analyse_card')
+
         
         return mode
-
-
-    def do_quit(self, line):
-        """ """
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
-#        try:
-#            self.store_result()
-#        except:
-#            # If nothing runs they they are no result to update
-#            pass
-#        try:
-#            self.update_status('', level=None)
-#        except Exception, error:         
-#            pass
-        devnull = os.open(os.devnull, os.O_RDWR) 
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-
-        return super(aMCatNLOCmd, self).do_quit(line)
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-
-
 
 
 #===============================================================================
