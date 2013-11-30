@@ -413,7 +413,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
         if os.path.exists(ms_card_path):
             if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar -xzf RunMaterial.tar.gz'], cwd=run_dir, shell=True)
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'], cwd=run_dir)
                 base_path = pjoin(run_dir,'RunMaterial')
             else:
                 base_path = pjoin(run_dir)
@@ -428,8 +428,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             files.cp(str(ms_card_path),str(ms_card_to_copy))
             
             if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
-                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], 
-                                                         cwd=run_dir,shell=True)
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                                    cwd=run_dir)
                 shutil.rmtree(pjoin(run_dir,'RunMaterial'))
 
     def run_from_pickle(self):

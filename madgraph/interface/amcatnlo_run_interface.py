@@ -1563,8 +1563,7 @@ Integrated cross-section
         for path in files_to_arxiv:
             if os.path.isfile(pjoin(self.me_dir,path)):
                 files.cp(pjoin(self.me_dir,path),pjoin(evt_path,'RunMaterial'))
-        misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'],
-                                                       cwd=evt_path, shell=True)
+        misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
         shutil.rmtree(pjoin(evt_path,'RunMaterial'))
 
     def compile_advanced_stats(self,log_GV_files,all_log_files):
@@ -2095,13 +2094,12 @@ Integrated cross-section
             # Now arxiv the shower card used if RunMaterial is present
             run_dir_path = pjoin(rundir,self.run_name)
             if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
-                misc.call(['tar -xzf RunMaterial.tar.gz'], 
-                                                   cwd=run_dir_path, shell=True)
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
                 files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
                    pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
                                                               %(shower, count)))
-                misc.call(['tar -czf RunMaterial.tar.gz RunMaterial'], 
-                                                   cwd=run_dir_path, shell=True)
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                               cwd=run_dir_path)
                 shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
             
         else:
