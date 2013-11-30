@@ -1,3 +1,6 @@
+c
+c Example analysis for "p p > h j j [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -10,96 +13,162 @@ C----------------------------------------------------------------------
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
+      include 'reweight0.inc'
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
+      character*8 cc(2)
+      data cc/'        ',' vbfcuts'/
       real*8 pi
       PARAMETER (PI=3.14159265358979312D0)
-      integer i,kk
-      character*7 cc(2)
+      integer i,kk,l
       real*8 vetomin, vetomax
       integer nbinveto
       common /to_veto_hist/vetomin,vetomax,nbinveto
-      
-      cc(1)='       '
-      cc(2)='vbfcuts'
+c      
       call inihist
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c To be changed !!
+      nwgt=1
+      weights_info(nwgt)="central value  "
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       vetomin = 0d0
       vetomax = 100d0
       nbinveto = 50
-
+      nwgt_analysis=nwgt
+      do kk=1,nwgt_analysis
       do i=1,2
-         kk=(i-1)*100
-         call mbook(kk+  1,'total rate    '//cc(i),1.0d0,0.5d0,5.5d0)
+        l=(kk-1)*108+(i-1)*54
+         call mbook(l+  1,'total '
+     &       //weights_info(kk)//cc(i),1.0d0,0.5d0,5.5d0)
 
-         call mbook(kk+  2,'Higgs pT      '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+  3,'Higgs pT      '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+  4,'Higgs log pT  '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+  5,'Higgs eta     '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+  6,'Higgs y       '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+  2,'Higgs pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+  3,'Higgs pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+  4,'Higgs logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+  5,'Higgs eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+  6,'Higgs y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+  7,'j1 pT         '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+  8,'j1 pT         '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+  9,'j1 log pT     '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 10,'j1 eta        '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 11,'j1 y          '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+  7,'j1 pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+  8,'j1 pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+  9,'j1 logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 10,'j1 eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 11,'j1 y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 12,'j2 pT         '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+ 13,'j2 pT         '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+ 14,'j2 log pT     '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 15,'j2 eta        '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 16,'j2 y          '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 12,'j2 pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+ 13,'j2 pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+ 14,'j2 logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 15,'j2 eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 16,'j2 y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 17,'j3 pT         '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+ 18,'j3 pT         '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+ 19,'j3 log pT     '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 20,'j3 eta        '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 21,'j3 y          '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 17,'j3 pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+ 18,'j3 pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+ 19,'j3 logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 20,'j3 eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 21,'j3 y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 22,'H+j1 pT       '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+ 23,'H+j1 pT       '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+ 24,'H+j1 log pT   '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 25,'H+j1 eta      '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 26,'H+j1 y        '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 22,'H+j1 pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+ 23,'H+j1 pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+ 24,'H+j1 logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 25,'H+j1 eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 26,'H+j1 y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 27,'j1+j2 pT      '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+ 28,'j1+j2 pT      '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+ 29,'j1+j2 log pT  '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 30,'j1+j2 eta     '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 31,'j1+j2 y       '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 27,'j1+j2 pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+ 28,'j1+j2 pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+ 29,'j1+j2 logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 30,'j1+j2 eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 31,'j1+j2 y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 32,'syst pT       '//cc(i),8.0d0,0.d0,400.d0)
-         call mbook(kk+ 33,'syst pT       '//cc(i),16.0d0,0.d0,800.d0)
-         call mbook(kk+ 34,'syst log pT   '//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 35,'syst eta      '//cc(i),0.4d0,-10.d0,10.d0)
-         call mbook(kk+ 36,'syst y        '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 32,'syst pT '
+     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+         call mbook(l+ 33,'syst pT '
+     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+         call mbook(l+ 34,'syst logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 35,'syst eta '
+     &       //weights_info(kk)//cc(i),0.4d0,-10.d0,10.d0)
+         call mbook(l+ 36,'syst y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
-         call mbook(kk+ 37,'Dphi H-j1     '//cc(i),pi/50.d0,0d0,pi)
-         call mbook(kk+ 38,'Dphi H-j2     '//cc(i),pi/50.d0,0d0,pi)
-         call mbook(kk+ 39,'Dphi j1-j2    '//cc(i),pi/50.d0,0d0,pi)
+         call mbook(l+ 37,'Dphi H-j1 '
+     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+         call mbook(l+ 38,'Dphi H-j2 '
+     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+         call mbook(l+ 39,'Dphi j1-j2 '
+     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
 
-         call mbook(kk+ 40,'DR H-j1       '//cc(i),0.2d0,0d0,10.d0)
-         call mbook(kk+ 41,'DR H-j2       '//cc(i),0.2d0,0d0,10.d0)
-         call mbook(kk+ 42,'DR j1-j2      '//cc(i),0.2d0,0d0,10.d0)
+         call mbook(l+ 40,'DR H-j1 '
+     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+         call mbook(l+ 41,'DR H-j2 '
+     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+         call mbook(l+ 42,'DR j1-j2 '
+     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
 
-         call mbook(kk+ 43,'mj1j2         '//cc(i),60.0d0,0d0,3000.d0)
+         call mbook(l+ 43,'mj1j2 '
+     &       //weights_info(kk)//cc(i),60.0d0,0d0,3000.d0)
 
 c Nason-Oleari plots (hep-ph/0911.5299)
-         call mbook(kk+ 44,'|yj1-yj2|     '//cc(i),0.4d0,0.d0,10.d0)
-         call mbook(kk+ 45,'yj3_rel       '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 46,'njets         '//cc(i),1.d0,-0.5d0,9.5d0)
-         call mbook(kk+ 47,'ptrel_j1      '//cc(i),4.d0,0.d0,200.d0)
-         call mbook(kk+ 48,'ptrel_j2      '//cc(i),4.d0,0.d0,200.d0)
-         call mbook(kk+ 49,'P-veto        '//cc(i),
+         call mbook(l+ 44,'|yj1-yj2| '
+     &       //weights_info(kk)//cc(i),0.4d0,0.d0,10.d0)
+         call mbook(l+ 45,'yj3_rel '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 46,'njets '
+     &       //weights_info(kk)//cc(i),1.d0,-0.5d0,9.5d0)
+         call mbook(l+ 47,'ptrel_j1 '
+     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+         call mbook(l+ 48,'ptrel_j2 '
+     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+         call mbook(l+ 49,'P-veto '
+     &       //weights_info(kk)//cc(i),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
-         call mbook(kk+ 50,'jveto pT    '//cc(i),
+         call mbook(l+ 50,'jveto pT '
+     &       //weights_info(kk)//cc(i),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
-         call mbook(kk+ 51,'jveto pT    '//cc(i),
+         call mbook(l+ 51,'jveto pT '
+     &       //weights_info(kk)//cc(i),
      1    ((2d0*vetomax-vetomin)/dble(nbinveto)),
      1    vetomin,2d0*vetomax)
-         call mbook(kk+ 52,'jveto log pT'//cc(i),0.08d0,0.d0,4.d0)
-         call mbook(kk+ 53,'jveto eta   '//cc(i),0.24d0,-6.d0,6.d0)
-         call mbook(kk+ 54,'jveto y     '//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 52,'jveto logpT '
+     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+         call mbook(l+ 53,'jveto eta '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+         call mbook(l+ 54,'jveto y '
+     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
 
       enddo
-
+      enddo
  999  END
 
 C----------------------------------------------------------------------
@@ -108,87 +177,91 @@ C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,K,kk
+      INTEGER I,J,kk,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='HERVBF.top',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,200              
+      DO I=1,NPL
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+200)
-        CALL MOPERA(I+200,'F',I+200,I+200,(XNORM),0.D0)
- 	CALL MFINAL3(I+200)             
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)             
       ENDDO                          
 C
+      do kk=1,nwgt_analysis
       do i=1,2
-         kk=(i-1)*100
-         call multitop(200+kk+  1,99,3,2,'total rate       ',' ','LOG')
+        l=(kk-1)*108+(i-1)*54
+         call multitop(NPL+l+  1,NPL-1,3,2,'total rate       ',' ','LOG')
 
-         call multitop(200+kk+  2,99,3,2,'Higgs pT         ',' ','LOG')
-         call multitop(200+kk+  3,99,3,2,'Higgs pT         ',' ','LOG')
-         call multitop(200+kk+  4,99,3,2,'Higgs log pT     ',' ','LOG')
-         call multitop(200+kk+  5,99,3,2,'Higgs eta        ',' ','LOG')
-         call multitop(200+kk+  6,99,3,2,'Higgs y          ',' ','LOG')
+         call multitop(NPL+l+  2,NPL-1,3,2,'Higgs pT         ',' ','LOG')
+         call multitop(NPL+l+  3,NPL-1,3,2,'Higgs pT         ',' ','LOG')
+         call multitop(NPL+l+  4,NPL-1,3,2,'Higgs log pT     ',' ','LOG')
+         call multitop(NPL+l+  5,NPL-1,3,2,'Higgs eta        ',' ','LOG')
+         call multitop(NPL+l+  6,NPL-1,3,2,'Higgs y          ',' ','LOG')
 
-         call multitop(200+kk+  7,99,3,2,'j1 pT            ',' ','LOG')
-         call multitop(200+kk+  8,99,3,2,'j1 pT            ',' ','LOG')
-         call multitop(200+kk+  9,99,3,2,'j1 log pT        ',' ','LOG')
-         call multitop(200+kk+ 10,99,3,2,'j1 eta           ',' ','LOG')
-         call multitop(200+kk+ 11,99,3,2,'j1 y             ',' ','LOG')
+         call multitop(NPL+l+  7,NPL-1,3,2,'j1 pT            ',' ','LOG')
+         call multitop(NPL+l+  8,NPL-1,3,2,'j1 pT            ',' ','LOG')
+         call multitop(NPL+l+  9,NPL-1,3,2,'j1 log pT        ',' ','LOG')
+         call multitop(NPL+l+ 10,NPL-1,3,2,'j1 eta           ',' ','LOG')
+         call multitop(NPL+l+ 11,NPL-1,3,2,'j1 y             ',' ','LOG')
 
-         call multitop(200+kk+ 12,99,3,2,'j2 pT            ',' ','LOG')
-         call multitop(200+kk+ 13,99,3,2,'j2 pT            ',' ','LOG')
-         call multitop(200+kk+ 14,99,3,2,'j2 log pT        ',' ','LOG')
-         call multitop(200+kk+ 15,99,3,2,'j2 eta           ',' ','LOG')
-         call multitop(200+kk+ 16,99,3,2,'j2 y             ',' ','LOG')
+         call multitop(NPL+l+ 12,NPL-1,3,2,'j2 pT            ',' ','LOG')
+         call multitop(NPL+l+ 13,NPL-1,3,2,'j2 pT            ',' ','LOG')
+         call multitop(NPL+l+ 14,NPL-1,3,2,'j2 log pT        ',' ','LOG')
+         call multitop(NPL+l+ 15,NPL-1,3,2,'j2 eta           ',' ','LOG')
+         call multitop(NPL+l+ 16,NPL-1,3,2,'j2 y             ',' ','LOG')
 
-         call multitop(200+kk+ 17,99,3,2,'j3 pT            ',' ','LOG')
-         call multitop(200+kk+ 18,99,3,2,'j3 pT            ',' ','LOG')
-         call multitop(200+kk+ 19,99,3,2,'j3 log pT        ',' ','LOG')
-         call multitop(200+kk+ 20,99,3,2,'j3 eta           ',' ','LOG')
-         call multitop(200+kk+ 21,99,3,2,'j3 y             ',' ','LOG')
+         call multitop(NPL+l+ 17,NPL-1,3,2,'j3 pT            ',' ','LOG')
+         call multitop(NPL+l+ 18,NPL-1,3,2,'j3 pT            ',' ','LOG')
+         call multitop(NPL+l+ 19,NPL-1,3,2,'j3 log pT        ',' ','LOG')
+         call multitop(NPL+l+ 20,NPL-1,3,2,'j3 eta           ',' ','LOG')
+         call multitop(NPL+l+ 21,NPL-1,3,2,'j3 y             ',' ','LOG')
 
-         call multitop(200+kk+ 22,99,3,2,'H+j1 pT          ',' ','LOG')
-         call multitop(200+kk+ 23,99,3,2,'H+j1 pT          ',' ','LOG')
-         call multitop(200+kk+ 24,99,3,2,'H+j1 log pT      ',' ','LOG')
-         call multitop(200+kk+ 25,99,3,2,'H+j1 eta         ',' ','LOG')
-         call multitop(200+kk+ 26,99,3,2,'H+j1 y           ',' ','LOG')
+         call multitop(NPL+l+ 22,NPL-1,3,2,'H+j1 pT          ',' ','LOG')
+         call multitop(NPL+l+ 23,NPL-1,3,2,'H+j1 pT          ',' ','LOG')
+         call multitop(NPL+l+ 24,NPL-1,3,2,'H+j1 log pT      ',' ','LOG')
+         call multitop(NPL+l+ 25,NPL-1,3,2,'H+j1 eta         ',' ','LOG')
+         call multitop(NPL+l+ 26,NPL-1,3,2,'H+j1 y           ',' ','LOG')
 
-         call multitop(200+kk+ 27,99,3,2,'j1+j2 pT         ',' ','LOG')
-         call multitop(200+kk+ 28,99,3,2,'j1+j2 pT         ',' ','LOG')
-         call multitop(200+kk+ 29,99,3,2,'j1+j2 log pT     ',' ','LOG')
-         call multitop(200+kk+ 30,99,3,2,'j1+j2 eta        ',' ','LOG')
-         call multitop(200+kk+ 31,99,3,2,'j1+j2 y          ',' ','LOG')
+         call multitop(NPL+l+ 27,NPL-1,3,2,'j1+j2 pT         ',' ','LOG')
+         call multitop(NPL+l+ 28,NPL-1,3,2,'j1+j2 pT         ',' ','LOG')
+         call multitop(NPL+l+ 29,NPL-1,3,2,'j1+j2 log pT     ',' ','LOG')
+         call multitop(NPL+l+ 30,NPL-1,3,2,'j1+j2 eta        ',' ','LOG')
+         call multitop(NPL+l+ 31,NPL-1,3,2,'j1+j2 y          ',' ','LOG')
 
-         call multitop(200+kk+ 32,99,3,2,'syst pT          ',' ','LOG')
-         call multitop(200+kk+ 33,99,3,2,'syst pT          ',' ','LOG')
-         call multitop(200+kk+ 34,99,3,2,'syst log pT      ',' ','LOG')
-         call multitop(200+kk+ 35,99,3,2,'syst eta         ',' ','LOG')
-         call multitop(200+kk+ 36,99,3,2,'syst y           ',' ','LOG')
+         call multitop(NPL+l+ 32,NPL-1,3,2,'syst pT          ',' ','LOG')
+         call multitop(NPL+l+ 33,NPL-1,3,2,'syst pT          ',' ','LOG')
+         call multitop(NPL+l+ 34,NPL-1,3,2,'syst log pT      ',' ','LOG')
+         call multitop(NPL+l+ 35,NPL-1,3,2,'syst eta         ',' ','LOG')
+         call multitop(NPL+l+ 36,NPL-1,3,2,'syst y           ',' ','LOG')
 
-         call multitop(200+kk+ 37,99,3,2,'Dphi H-j1        ',' ','LOG')
-         call multitop(200+kk+ 38,99,3,2,'Dphi H-j2        ',' ','LOG')
-         call multitop(200+kk+ 39,99,3,2,'Dphi j1-j2       ',' ','LOG')
+         call multitop(NPL+l+ 37,NPL-1,3,2,'Dphi H-j1        ',' ','LOG')
+         call multitop(NPL+l+ 38,NPL-1,3,2,'Dphi H-j2        ',' ','LOG')
+         call multitop(NPL+l+ 39,NPL-1,3,2,'Dphi j1-j2       ',' ','LOG')
 
-         call multitop(200+kk+ 40,99,3,2,'DR H-j1          ',' ','LOG')
-         call multitop(200+kk+ 41,99,3,2,'DR H-j2          ',' ','LOG')
-         call multitop(200+kk+ 42,99,3,2,'DR j1-j2         ',' ','LOG')
+         call multitop(NPL+l+ 40,NPL-1,3,2,'DR H-j1          ',' ','LOG')
+         call multitop(NPL+l+ 41,NPL-1,3,2,'DR H-j2          ',' ','LOG')
+         call multitop(NPL+l+ 42,NPL-1,3,2,'DR j1-j2         ',' ','LOG')
 
-         call multitop(200+kk+ 43,99,3,2,'mj1j2            ',' ','LOG')
+         call multitop(NPL+l+ 43,NPL-1,3,2,'mj1j2            ',' ','LOG')
 
-         call multitop(200+kk+ 44,99,3,2,'|yj1-yj2|        ',' ','LOG')
-         call multitop(200+kk+ 45,99,3,2,'yj3_rel          ',' ','LOG')
-         call multitop(200+kk+ 46,99,3,2,'njets            ',' ','LOG')
-         call multitop(200+kk+ 47,99,3,2,'ptrel_j1         ',' ','LOG')
-         call multitop(200+kk+ 48,99,3,2,'ptrel_j2         ',' ','LOG')
-         call multitop(200+kk+ 49,99,3,2,'P-veto           ',' ','LOG')
-         call multitop(200+kk+ 50,99,3,2,'jv pT            ',' ','LOG')
-         call multitop(200+kk+ 51,99,3,2,'jv pT            ',' ','LOG')
-         call multitop(200+kk+ 52,99,3,2,'jv log pT        ',' ','LOG')
-         call multitop(200+kk+ 53,99,3,2,'jv eta           ',' ','LOG')
-         call multitop(200+kk+ 54,99,3,2,'jv y             ',' ','LOG')
+         call multitop(NPL+l+ 44,NPL-1,3,2,'|yj1-yj2|        ',' ','LOG')
+         call multitop(NPL+l+ 45,NPL-1,3,2,'yj3_rel          ',' ','LOG')
+         call multitop(NPL+l+ 46,NPL-1,3,2,'njets            ',' ','LOG')
+         call multitop(NPL+l+ 47,NPL-1,3,2,'ptrel_j1         ',' ','LOG')
+         call multitop(NPL+l+ 48,NPL-1,3,2,'ptrel_j2         ',' ','LOG')
+         call multitop(NPL+l+ 49,NPL-1,3,2,'P-veto           ',' ','LOG')
+         call multitop(NPL+l+ 50,NPL-1,3,2,'jv pT            ',' ','LOG')
+         call multitop(NPL+l+ 51,NPL-1,3,2,'jv pT            ',' ','LOG')
+         call multitop(NPL+l+ 52,NPL-1,3,2,'jv log pT        ',' ','LOG')
+         call multitop(NPL+l+ 53,NPL-1,3,2,'jv eta           ',' ','LOG')
+         call multitop(NPL+l+ 54,NPL-1,3,2,'jv y             ',' ','LOG')
       enddo
-
+      enddo
       CLOSE(99)
       END
 
@@ -197,8 +270,9 @@ C----------------------------------------------------------------------
 C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
+      include 'reweight0.inc'
       DOUBLE PRECISION HWVDOT,PSUM(4),PJJ(4)
-      INTEGER ICHSUM,ICHINI,IHEP,IST,ID,IJ,J,NN,I,k
+      INTEGER ICHSUM,ICHINI,IHEP,IST,ID,IJ,J,NN,I,jj,l
       LOGICAL DIDSOF
       double precision getpt,getpseudorap
 c jet stuff
@@ -215,7 +289,7 @@ c jet stuff
      &getdrv4,getpseudorapv4
       double precision yjet(nmax),pH(4),pj1(4),pj2(4),pj3(4),pHj(4),
      &psyst(4),ptH,etaH,yH,ptj1,etaj1,yj1,ptj2,etaj2,yj2,ptj3,etaj3,yj3,
-     &ptHj,etaHj,yHj,ptjj,etajj,yjj,ptsyst,etasyst,ysyst,yjmax,
+     &ptHj,etaHj,yHj,ptjj,etajj,yjj,ptsyst,etasyst,ysyst,
      &DphiHj1,DphiHj2,Dphij1j2,DRHj1,DRHj2,DRj1j2,mj1j2
       double precision ptj_cut, yj_cut, ptj_tag,deltay12,mj1j2min
       logical pass_tag_cuts,flag,accepted
@@ -235,7 +309,21 @@ c jet stuff
       integer nbinveto
       common /to_veto_hist/vetomin,vetomax,nbinveto
       double precision pt_veto, pjveto(4), xsecup2
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
 c
+      IF(MOD(NEVHEP,10000).EQ.0)RETURN
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c To be changed !!
+      ww(1)=1d0
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
 C INITIALISE
       do i=1,nmax
         do j=1,4
@@ -243,14 +331,15 @@ C INITIALISE
         enddo
       enddo
       xsecup2=1d0
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
         CALL HWWARN('HWANAL',111)
         GOTO 999
       ENDIF
-      WWW0=EVWGT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
       ICHSUM=0
       NN=0
       NH=0
@@ -342,32 +431,28 @@ c Nason-Oleari cuts (hep-ph/0911.5299)
       deltay12 = 4.d0
       mj1j2min = 600d0
 
-
 c this is the loop for w-o / w vbf cuts
       do i=1,2
-      kk=(i-1)*100
-
       if(i.eq.1) then 
          ij1 = 1
          ij2 = 2
          ij3 = 3
       endif
-
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
       endif
 
 c Load momenta
-         do k=1,4
-             pH(k)   =phep(k,ih)
-             pj1(k)  =pjet(k,ij1)
-             pj2(k)  =pjet(k,ij2)
-             pj3(k)  =pjet(k,ij3)
-             pjj(k)  =pjet(k,ij1)+pjet(k,ij2)
-             pHj(k)  =pjet(k,ij1)+pH(k)
-             psyst(k)=pjet(k,ij1)+pjet(k,ij2)+pH(k)
-             pjveto(k)=pjet(k,ijveto)
+         do jj=1,4
+             pH(jj)   =phep(jj,ih)
+             pj1(jj)  =pjet(jj,ij1)
+             pj2(jj)  =pjet(jj,ij2)
+             pj3(jj)  =pjet(jj,ij3)
+             pjj(jj)  =pjet(jj,ij1)+pjet(jj,ij2)
+             pHj(jj)  =pjet(jj,ij1)+pH(jj)
+             psyst(jj)=pjet(jj,ij1)+pjet(jj,ij2)+pH(jj)
+             pjveto(jj)=pjet(jj,ijveto)
          enddo
 
 c Define observables
@@ -419,7 +504,6 @@ c
       chy2=cosh(yj2)
       shy2=sinh(yj2)
       chy2mo=chy2-1.d0
-
 c boostwdir3 is the same as boostwdir2, but with
 c components from 1 to 4, rather than from 0 to 3
       call boostwdir3(chy1,shy1,chy1mo,xd,pj1,pj1boost)
@@ -442,7 +526,6 @@ c components from 1 to 4, rather than from 0 to 3
          flag=pass_tag_cuts
       endif
 
-
       do j=1,nn
          if(njet.ge.1.and.jet(j).eq.1)then
            call boostwdir3(chy1,shy1,chy1mo,xd,pp(1,j),ppboost(1,j))
@@ -455,90 +538,83 @@ c components from 1 to 4, rather than from 0 to 3
          endif
       enddo
 
-         if(flag)then
-            call mfill(kk+  1,(1d0),(www0))
-            call mfill(kk+  2,(ptH),(www0))
-            call mfill(kk+  3,(ptH),(www0))
-            if(ptH.gt.0d0)
-     &      call mfill(kk+  4,(log10(ptH)),(www0))
-            call mfill(kk+  5,(etaH),(www0))
-            call mfill(kk+  6,(yH),(www0))
-            call mfill(kk+ 46,(njdble),(www0))
-cc            call mfill(kk+ 48,(temp_scalup),(www0))
-            
-            if(njet.ge.1)then
-               call mfill(kk+  7,(ptj1),(www0))
-               call mfill(kk+  8,(ptj1),(www0))
-               call mfill(kk+  9,(log10(ptj1)),(www0))
-               call mfill(kk+ 10,(etaj1),(www0))
-               call mfill(kk+ 11,(yj1),(www0))
-               call mfill(kk+ 22,(ptHj),(www0))
-               call mfill(kk+ 23,(ptHj),(www0))
-               if(ptHj.gt.0d0)
-     &         call mfill(kk+ 24,(log10(ptHj)),(www0))
-               call mfill(kk+ 25,(etaHj),(www0))
-               call mfill(kk+ 26,(yHj),(www0))
-               call mfill(kk+ 37,(DphiHj1),(www0))
-               call mfill(kk+ 40,(DRHj1),(www0))
-               call mfill(kk+ 47,(ptrel_j1),(www0))
-            endif 
+      do kk=1,nwgt_analysis
+      l=(kk-1)*108+(i-1)*54
+      if(flag)then
+         call mfill(l+  1,1d0,www(kk))
+         call mfill(l+  2,ptH,www(kk))
+         call mfill(l+  3,ptH,www(kk))
+         if(ptH.gt.0d0) call mfill(l+  4,log10(ptH),www(kk))
+         call mfill(l+  5,etaH,www(kk))
+         call mfill(l+  6,yH,www(kk))
+         call mfill(l+ 46,njdble,www(kk))
 
-            if(njet.ge.2)then
-               call mfill(kk+ 12,(ptj2),(www0))
-               call mfill(kk+ 13,(ptj2),(www0))
-               call mfill(kk+ 14,(log10(ptj2)),(www0))
-               call mfill(kk+ 15,(etaj2),(www0))
-               call mfill(kk+ 16,(yj2),(www0))
-               call mfill(kk+ 27,(ptjj),(www0))
-               call mfill(kk+ 28,(ptjj),(www0))
-               if(ptjj.gt.0d0)
-     &         call mfill(kk+ 29,(log10(ptjj)),(www0))
-               call mfill(kk+ 30,(etajj),(www0))
-               call mfill(kk+ 31,(yjj),(www0))
-               call mfill(kk+ 32,(ptsyst),(www0))
-               call mfill(kk+ 33,(ptsyst),(www0))
-               if(ptsyst.gt.0d0)
-     &         call mfill(kk+ 34,(log10(ptsyst)),(www0))
-               call mfill(kk+ 35,(etasyst),(www0))
-               call mfill(kk+ 36,(ysyst),(www0))
-               call mfill(kk+ 38,(DphiHj2),(www0))
-               call mfill(kk+ 39,(Dphij1j2),(www0))
-               call mfill(kk+ 41,(DRHj2),(www0))
-               call mfill(kk+ 42,(DRj1j2),(www0))
-               call mfill(kk+ 43,(mj1j2),(www0))
-               call mfill(kk+ 44,(Dyj1j2),(www0))
-               call mfill(kk+ 48,(ptrel_j2),(www0))
-            endif
-
-            if(njet.ge.3)then
-               call mfill(kk+ 17,(ptj3),(www0))
-               call mfill(kk+ 18,(ptj3),(www0))
-               call mfill(kk+ 19,(log10(ptj3)),(www0))
-               call mfill(kk+ 20,(etaj3),(www0))
-               call mfill(kk+ 21,(yj3),(www0))
-               call mfill(kk+ 45,(yj3rel),(www0))
-            endif
-            if (ijveto.gt.0) then
-                pt_veto = getptv4(pjveto)
-                do k=1,nbinveto
-                   if (pt_veto.gt.
-     &          (vetomin+(vetomax-vetomin)*dble(k-1)/dble(nbinveto))) 
-     &               then
-                       call mfill(kk+49, 
-     &                  ((vetomax-vetomin)*
-     &                     dble(k)/dble(nbinveto)*0.99),
-     &                     (www0/xsecup2))
-                   endif
-                enddo
-                call mfill(kk+50,(pt_veto),(www0))
-                call mfill(kk+51,(pt_veto),(www0))
-                if (pt_veto.gt.0d0)
-     &           call mfill(kk+52,(dlog10(pt_veto)),(www0))
-             call mfill(kk+53,(getpseudorapv4(pjveto)),(www0))
-             call mfill(kk+54,(getrapidityv4(pjveto)),(www0))
-            endif
-
+         if(njet.ge.1)then
+            call mfill(l+  7,ptj1,www(kk))
+            call mfill(l+  8,ptj1,www(kk))
+            if (ptj1.gt.0d0) call mfill(l+  9,log10(ptj1),www(kk))
+            call mfill(l+ 10,etaj1,www(kk))
+            call mfill(l+ 11,yj1,www(kk))
+            call mfill(l+ 22,ptHj,www(kk))
+            call mfill(l+ 23,ptHj,www(kk))
+            if(ptHj.gt.0d0) call mfill(l+ 24,log10(ptHj),www(kk))
+            call mfill(l+ 25,etaHj,www(kk))
+            call mfill(l+ 26,yHj,www(kk))
+            call mfill(l+ 37,DphiHj1,www(kk))
+            call mfill(l+ 40,DRHj1,www(kk))
+            call mfill(l+ 47,ptrel_j1,www(kk))
+         endif 
+         
+         if(njet.ge.2)then
+            call mfill(l+ 12,ptj2,www(kk))
+            call mfill(l+ 13,ptj2,www(kk))
+            if (ptj2.gt.0d0) call mfill(l+ 14,log10(ptj2),www(kk))
+            call mfill(l+ 15,etaj2,www(kk))
+            call mfill(l+ 16,yj2,www(kk))
+            call mfill(l+ 27,ptjj,www(kk))
+            call mfill(l+ 28,ptjj,www(kk))
+            if(ptjj.gt.0d0) call mfill(l+ 29,log10(ptjj),www(kk))
+            call mfill(l+ 30,etajj,www(kk))
+            call mfill(l+ 31,yjj,www(kk))
+            call mfill(l+ 32,ptsyst,www(kk))
+            call mfill(l+ 33,ptsyst,www(kk))
+            if(ptsyst.gt.0d0) call mfill(l+ 34,log10(ptsyst),www(kk))
+            call mfill(l+ 35,etasyst,www(kk))
+            call mfill(l+ 36,ysyst,www(kk))
+            call mfill(l+ 38,DphiHj2,www(kk))
+            call mfill(l+ 39,Dphij1j2,www(kk))
+            call mfill(l+ 41,DRHj2,www(kk))
+            call mfill(l+ 42,DRj1j2,www(kk))
+            call mfill(l+ 43,mj1j2,www(kk))
+            call mfill(l+ 44,Dyj1j2,www(kk))
+            call mfill(l+ 48,ptrel_j2,www(kk))
          endif
+         
+         if(njet.ge.3)then
+            call mfill(l+ 17,ptj3,www(kk))
+            call mfill(l+ 18,ptj3,www(kk))
+            if(ptj3.gt.0d0) call mfill(l+ 19,log10(ptj3),www(kk))
+            call mfill(l+ 20,etaj3,www(kk))
+            call mfill(l+ 21,yj3,www(kk))
+            call mfill(l+ 45,yj3rel,www(kk))
+         endif
+         if (ijveto.gt.0) then
+            pt_veto = getptv4(pjveto)
+            do jj=1,nbinveto
+               if (pt_veto.gt. (vetomin+(vetomax-vetomin)*dble(jj-1)
+     $              /dble(nbinveto))) then
+                  call mfill(l+49, (vetomax-vetomin)* dble(jj)
+     $                 /dble(nbinveto)*0.99, www(kk)/xsecup2)
+               endif
+            enddo
+            call mfill(l+50,pt_veto,www(kk))
+            call mfill(l+51,pt_veto,www(kk))
+            if (pt_veto.gt.0d0) call mfill(l+52,dlog10(pt_veto),www(kk))
+            call mfill(l+53,getpseudorapv4(pjveto),www(kk))
+            call mfill(l+54,getrapidityv4(pjveto),www(kk))
+         endif
+      endif
+      enddo
       enddo
 
  999  END
