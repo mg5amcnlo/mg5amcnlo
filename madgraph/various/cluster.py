@@ -404,8 +404,9 @@ class MultiCore(Cluster):
         self.submitted +=1
         if cwd is None:
             cwd = os.getcwd()
-        if not os.path.exists(prog) and not misc.which(prog):
-            prog = os.path.join(cwd, prog)
+        if isinstance(prog, str):
+            if not os.path.exists(prog) and not misc.which(prog):
+                prog = os.path.join(cwd, prog)
         
         import thread
         if self.waiting_submission or self.nb_used == self.nb_core:
@@ -424,7 +425,8 @@ class MultiCore(Cluster):
         
         
     def launch(self, exe, argument, cwd, stdout):
-        """ way to launch for multicore."""
+        """ way to launch for multicore. If exe is a string then treat it as
+        an executable. Otherwise treat it as a function"""
         import thread
         def end(self, pid):
             self.nb_used -= 1
@@ -436,26 +438,32 @@ class MultiCore(Cluster):
             
         fail_msg = None
         try:  
-            if os.path.exists(exe) and not exe.startswith('/'):
-                exe = './' + exe
-            proc = misc.Popen([exe] + argument, cwd=cwd, stdout=stdout, 
-                                                           stderr=subprocess.STDOUT)
-            pid = proc.pid
-            self.pids.append(pid)
-            proc.wait()
-            if proc.returncode not in [0, 143, -15]:
-                fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
-                        (' '.join([exe]+argument), proc.returncode)
-                #self.fail_msg = fail_msg
-                logger.warning(fail_msg)
-                try:
-                    log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
-                    logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
-                            (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
-                except IOError, AttributeError:
-                    logger.warning('Please look for possible logfiles in %s' % cwd)
-                    pass
-                self.remove(fail_msg)
+            if isinstance(exe,str):
+                if os.path.exists(exe) and not exe.startswith('/'):
+                    exe = './' + exe
+                proc = misc.Popen([exe] + argument, cwd=cwd, stdout=stdout, 
+                                                               stderr=subprocess.STDOUT)
+                pid = proc.pid
+                self.pids.append(pid)
+                proc.wait()
+                if proc.returncode not in [0, 143, -15]:
+                    fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
+                            (' '.join([exe]+argument), proc.returncode)
+                    #self.fail_msg = fail_msg
+                    logger.warning(fail_msg)
+                    try:
+                        log = open(glob.glob(pjoin(cwd,'*','log.txt'))[0]).read()
+                        logger.warning('Last 15 lines of logfile %s:\n%s\n' % \
+                                (pjoin(cwd,'*','log.txt'), '\n'.join(log.split('\n')[-15:-1]) + '\n'))
+                    except IOError, AttributeError:
+                        logger.warning('Please look for possible logfiles in %s' % cwd)
+                        pass
+                    self.remove(fail_msg)
+            else:
+                pid = max(self.pids + [0]) + 1
+                self.pids.append(pid)
+                exe(argument)
+
             
             # release the lock for allowing to launch the next job
             security = 0       
