@@ -1645,6 +1645,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Invalid set command %s (need two arguments)' % line)
             return
 
+        # Special case for the qcut value
+        if args[0].lower() == 'qcut':
+            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            if os.path.exists(pythia_path):
+                logger.info('add line QCUT = %s in pythia_card.dat' % args[1])
+                p_card = open(pythia_path,'r').read()
+                p_card, n = re.subn('''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''', 
+                                    ''' QCUT = %s ''' % args[1], \
+                                    p_card, flags=(re.M+re.I))
+                if n==0:
+                    p_card = '%s \n QCUT= %s' % (p_card, args[1])
+                open(pythia_path, 'w').write(p_card)
+                return
+
         card = '' #store which card need to be modify (for name conflict)
         if args[0] in ['run_card', 'param_card']:
             if args[1] == 'default':

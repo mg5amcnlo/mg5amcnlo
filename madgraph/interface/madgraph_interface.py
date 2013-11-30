@@ -4560,7 +4560,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 options=self.options,**options)
             else:
                 # This is a width computation
-                print 'call external launcher'
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
                                 options=self.options,**options)

@@ -90,6 +90,9 @@ class MadEventError(Exception):
 
 class ZeroResult(MadEventError):
     pass
+
+class SysCalcError(InvalidCmd): pass
+
 MadEventAlreadyRunning = common_run.MadEventAlreadyRunning
 
 #===============================================================================
@@ -3094,21 +3097,25 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             files.mv(pjoin(self.me_dir,'Events','beforeveto.tree.gz'), 
                      pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))
              
-        if os.path.exists(pjoin(self.me_dir,'Events','syst.dat')):
+        if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
-            self.run_syscalc('Pythia')
-            # Store syst.dat
-            subprocess.call(['gzip','-f','syst.dat'],
-                            cwd=pjoin(self.me_dir,'Events'))          
-            files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
-                     pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
-            # Store syscalc.dat
-            if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
-                filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                          '%s_syscalc.dat' % self.run_tag)
-                shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
-                            filename)
-                os.system('gzip -f %s' % filename)
+            try:
+                self.run_syscalc('Pythia')
+            except SysCalcError, error:
+                logger.error(str(error))
+            else:
+                # Store syst.dat
+                subprocess.call(['gzip','-f','syst.dat'],
+                                cwd=pjoin(self.me_dir,'Events'))          
+                files.mv(pjoin(self.me_dir,'Events','syst.dat.gz'), 
+                         pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                # Store syscalc.dat
+                if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
+                    filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                              '%s_syscalc.dat' % self.run_tag)
+                    shutil.move(pjoin(self.me_dir, 'Events','syscalc.dat'), 
+                                filename)
+                    os.system('gzip -f %s' % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -3388,7 +3395,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 os.system('gunzip -f %s' % (filename+'.gz') )
             if  os.path.exists(filename):
                 shutil.move(filename, pjoin(self.me_dir, 'Events','syst.dat'))
-                self.run_syscalc('Pythia')
+                try:
+                    self.run_syscalc('Pythia')
+                except SysCalcError, error:
+                    logger.warning(str(error))
+                    return
+                    
                 shutil.move(pjoin(self.me_dir, 'Events','syst.dat'), filename)
                 os.system('gzip -f %s' % filename)                
                 filename = pjoin(self.me_dir, 'Events' ,self.run_name,
@@ -3903,12 +3915,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         logger.info('running syscalc on mode %s' % mode)
         if self.run_card['use_syst'] not in self.true:
             return
+        
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
         open(card,'w').write(template % self.run_card)
-        
         
         if not scdir or \
             not os.path.exists(card):
@@ -3920,6 +3932,19 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 event_path = pjoin(event_dir,'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
             elif mode == 'Pythia':
+                if 'mgpythiacard' in self.banner:
+                    pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
+                    data = pat.search(self.banner['mgpythiacard'])
+                    if data:
+                        qcut = float(data.group(1))
+                        xqcut = abs(self.run_card['xqcut'])
+                        for value in self.run_card['sys_matchscale'].split():
+                            if float(value) < qcut:
+                                raise SysCalcError, 'qcut value for sys_matchscale lower than qcut in pythia_card. Bypass syscalc'
+                            if float(value) < xqcut:
+                                raise SysCalcError, 'qcut value for sys_matchscale lower than xqcut in run_card. Bypass syscalc'
+                        
+                        
                 event_path = pjoin(event_dir,'syst.dat')
                 output = pjoin(event_dir, 'syscalc.dat')
             else:
@@ -3929,7 +3954,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             if os.path.exists(event_path+'.gz'):
                 os.system('gzip -f %s.gz ' % event_path)
             else:
-                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+                raise SysCalcError, 'Events file %s does not exits' % event_path
         
         self.update_status('Calculating systematics for %s level' % mode, level = mode.lower())
         try:
