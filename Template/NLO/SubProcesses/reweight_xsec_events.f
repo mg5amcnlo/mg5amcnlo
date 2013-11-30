@@ -85,11 +85,11 @@ c
 
       if(do_rwgt_scale)then
         yfactR(1)=1.d0
-        yfactR(2)=rw_Rscale_down
-        yfactR(3)=rw_Rscale_up
+        yfactR(2)=rw_Rscale_up
+        yfactR(3)=rw_Rscale_down
         yfactF(1)=1.d0
-        yfactF(2)=rw_Fscale_down
-        yfactF(3)=rw_Fscale_up
+        yfactF(2)=rw_Fscale_up
+        yfactF(3)=rw_Fscale_down
         write(*,*) 'Doing scale reweight:'
         write(*,*) rw_Fscale_down, ' < mu_F < ', rw_Fscale_up
         write(*,*) rw_Rscale_down, ' < mu_R < ', rw_Rscale_up

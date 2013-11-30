@@ -487,18 +487,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_states()
-                
+                # check those which are charged under qcd
+                if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:                    
+                        sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
+
                 #Ensure that the model that we are going to load is the current
                 #one.                    
                 to_del = [name  for name in sys.modules.keys() 
-                                                if name.startswith('internal')]
+                                                if name.startswith('internal.ufomodel')
+                                                or name.startswith('ufomodel')]
                 for name in to_del:
                     del(sys.modules[name]) 
 
-                # check those which are charged under qcd
-                if pjoin(self.me_dir,'bin') not in sys.path:                    
-                        sys.path.insert(0,pjoin(self.me_dir,'bin'))
-                import internal.ufomodel as ufomodel
+                import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles 
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
@@ -550,10 +551,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
         if plot:
-            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'        
@@ -1093,6 +1094,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
+            # cluster (re)-initialization done later
             # self.cluster update at the end of the routine
         elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
             self.options[args[0]] = int(args[1])
@@ -1201,10 +1203,41 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
 
+    def do_quit(self, line):
+        """Not in help: exit """
+  
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except Exception:
+            pass
+        try:
+            self.store_result()
+        except Exception:
+            # If nothing runs they they are no result to update
+            pass
+        
+        try:
+            self.update_status('', level=None)
+        except Exception, error:        
+            pass
+        devnull = open(os.devnull, 'w')
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+
+        return super(CommonRunCmd, self).do_quit(line)
+    
+    # Aliases
+    do_EOF = do_quit
+    do_exit = do_quit
   
 
     def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None, update_results=True):
+                      error=False, starttime = None, update_results=True,
+                      print_log=True):
         """ update the index status """
         
         if makehtml and not force:
@@ -1212,23 +1245,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return
             else:
                 self.next_update = time.time() + 3
-        
-        if isinstance(status, str):
-            if '<br>' not  in status:
-                logger.info(status)
-        elif starttime:
-            running_time = misc.format_timer(time.time()-starttime)
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
-                       (status[0], status[1], status[2], running_time))
-        else: 
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+                
+        if print_log:
+            if isinstance(status, str):
+                if '<br>' not  in status:
+                    logger.info(status)
+            elif starttime:
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
+                           (status[0], status[1], status[2], running_time))
+            else: 
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
         
         
     ############################################################################
-    def keep_cards(self, need_card=[]):
+    def keep_cards(self, need_card=[], ignore=[]):
         """Ask the question when launching generate_events/multi_run"""
         
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
@@ -1237,6 +1271,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
+            if card in ignore:
+                continue
             if card not in need_card:
                 if os.path.exists(pjoin(cards_path, card)):
                     os.remove(pjoin(cards_path, card))
@@ -1399,9 +1435,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0]) 
-        
+        madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt) 
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
+        
         madspin_cmd.import_command_file(path)
                 
         # create a new run_name directory for this output
@@ -1427,14 +1464,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info(new_file)        
  
         if hasattr(self, 'results'):
+            current = self.results.current
             nb_event = self.results.current['nb_event']
-            cross = self.results.current['cross']
-            error = self.results.current['error']
+            if not nb_event:
+                current = self.results[self.run_name][0]
+                nb_event = current['nb_event']
+            
+            cross = current['cross']
+            error = current['error']
             self.results.add_run( new_run, self.run_card)
             self.results.add_detail('nb_event', nb_event)
             self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
             self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+            self.results.add_detail('run_mode', current['run_mode'])
+    
         self.run_name = new_run
+        self.banner.add(path)
+        self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
+                                (self.run_name, self.run_tag)))
         self.update_status('MadSpin Done', level='parton', makehtml=False)
         if 'unweighted' in os.path.basename(args[0]):
             self.create_plot('parton')
@@ -1643,6 +1690,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
             return
+
+        # Special case for the qcut value
+        if args[0].lower() == 'qcut':
+            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            if os.path.exists(pythia_path):
+                logger.info('add line QCUT = %s in pythia_card.dat' % args[1])
+                p_card = open(pythia_path,'r').read()
+                p_card, n = re.subn('''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''', 
+                                    ''' QCUT = %s ''' % args[1], \
+                                    p_card, flags=(re.M+re.I))
+                if n==0:
+                    p_card = '%s \n QCUT= %s' % (p_card, args[1])
+                open(pythia_path, 'w').write(p_card)
+                return
 
         card = '' #store which card need to be modify (for name conflict)
         if args[0] in ['run_card', 'param_card']:

@@ -4560,7 +4560,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                 options=self.options,**options)
             else:
                 # This is a width computation
-                print 'call external launcher'
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
                                 shell = hasattr(self, 'do_shell'),
                                 options=self.options,**options)
@@ -5901,10 +5900,17 @@ class AskforCustomize(cmd.SmartQuestion):
            
     def do_set(self, line):
         """ """
+        self.value = 'repeat'
         
         args = line.split()
-        if len(args) != 2 or args[0] not in self.name2options:
-            logger.warning('Invalid set command. (type \'help set\' for more information')
+        if args[0] not in self.name2options:
+            logger.warning('Invalid set command. %s not recognize options. Valid options are: \n  %s' %
+                           (args[0], ', '.join(self.name2options.keys()) ))
+            return 
+        elif len(args) != 2:
+            logger.warning('Invalid set command. Not correct number of argument')
+            return
+
         
         if args[1] in ['True','1','.true.','T',1,True,'true','TRUE']:
             self.name2options[args[0]].status = True
@@ -5913,7 +5919,7 @@ class AskforCustomize(cmd.SmartQuestion):
         else:
             logger.warning('%s is not True/False. Didn\'t do anything.' % args[1])
         
-        self.value = 'repeat'
+
         
     def get_question(self):
         """define the current question."""

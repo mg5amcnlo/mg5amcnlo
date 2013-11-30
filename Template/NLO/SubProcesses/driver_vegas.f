@@ -60,10 +60,13 @@ c Vegas stuff
       logical            flat_grid
       common/to_readgrid/flat_grid                !Tells if grid read from file
 
-      external initplot
+      external initplot_dummy
 
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
+
+      double precision average_virtual,virtual_fraction
+      common/c_avg_virt/average_virtual,virtual_fraction
 
 c For tests
       real*8 fksmaxwgt,xisave,ysave
@@ -108,6 +111,8 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
+      average_virtual=0d0
+      virtual_fraction=Virt_fraction
 c
 c     Read process number
 c
@@ -193,12 +198,14 @@ c at the NLO)
       i_momcmp_count=0
       xratmax=0.d0
 
+c Setup for parton-level NLO reweighting
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
+      call initplot
       if(savegrid)then
-         call integrate(initplot,sigint,idstring,itmax,irestart,ndim
-     &        ,ncall,res,err,chi2a,savegrid)
+         call integrate(initplot_dummy,sigint,idstring,itmax,irestart
+     $        ,ndim,ncall,res,err,chi2a,savegrid)
          usexinteg=.false.
       else
-         call initplot
          call xinteg(sigint,ndim,itmax,ncall,res,err)
          usexinteg=.true.
       endif
@@ -210,6 +217,10 @@ c at the NLO)
       write(*,*)'Found for:',xisave,ysave
       write (*,*) '----------------------------------------------------'
       write (*,*) ''
+
+      open(unit=58,file='results.dat',status='unknown')
+      write(58,*)res, err, 0d0, 0, 0, 0, 0, 0d0 ,0d0, res
+      close(58)
 
       if(doVirtTest)then
         write(*,*)'  '
@@ -303,11 +314,8 @@ c
      &        "  Unknown return code (1):                         ",n1
       endif
 
-      if(savegrid)call initplot
-      call mclear
-      open(unit=99,file='MADatNLO.top',status='unknown')
+      if(savegrid)call initplot_dummy
       call topout
-      close(99)
 
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
@@ -317,6 +325,9 @@ c
 
       end
 
+      subroutine initplot_dummy
+      return
+      end
 
       function sigint(xx,peso)
 c From dsample_fks
@@ -354,12 +365,12 @@ c From dsample_fks
       integer nFKSprocessBorn(2)
       save nFKSprocessBorn,foundB
       double precision vol,sigintR
+      integer itotalpoints
+      common/ctotalpoints/itotalpoints
       logical fillh
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
-      integer itotalpoints
-      common/ctotalpoints/itotalpoints
 c
       do i=1,99
          if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
@@ -440,7 +451,6 @@ c
       wgt=1d0
       call generate_momenta(ndim,iconfig,wgt,x,p)
       sigint = sigint+dsig(p,wgt,peso)
-
       if (mc_hel.ne.0 .and. fillh) then
 c Fill the importance sampling array
          call fill_MC_integer(2,ihel,abs(sigint*peso*volh))

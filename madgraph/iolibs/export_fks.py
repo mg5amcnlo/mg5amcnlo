@@ -118,8 +118,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
 
-        # Duplicate run_card and plot_card
-        for card in ['plot_card']:
+        # Duplicate run_card and FO_analyse_card
+        for card in ['run_card', 'FO_analyse_card', 'shower_card']:
             try:
                 shutil.copy(pjoin(self.dir_path, 'Cards',
                                          card + '.dat'),
@@ -169,6 +169,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/various/shower_card.py', self.dir_path+'/bin/internal/shower_card.py')        
+        cp(_file_path+'/various/FO_analyse_card.py', self.dir_path+'/bin/internal/FO_analyse_card.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
         cp(_file_path+'/iolibs/save_load_object.py', 
                               self.dir_path+'/bin/internal/save_load_object.py') 
@@ -455,8 +456,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'FKSParams.inc',
                      'FKSParamReader.f',
                      'cuts.inc',
-                     'dbook.inc',
                      'driver_mintMC.f',
+                     'driver_mintFO.f',
                      'driver_vegas.f',
                      'driver_reweight.f',
                      'fastjetfortran_madfks_core.cc',
@@ -472,10 +473,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
-                     'ktclusdble.f',
-                     'madfks_dbook.f',
                      'madfks_mcatnlo.inc',
+                     'open_output_files.f',
+                     'open_output_files_dummy.f',
                      'madfks_plot.f',
+                     'analysis_dummy.f',
                      'mint-integrator2.f',
                      'MC_integer.f',
                      'mint.inc',
@@ -618,6 +620,17 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             text = ('\n'.join(history) + '\n') % misc.get_time_info()
             output_file.write(text)
             output_file.close()
+
+        # Duplicate run_card and FO_analyse_card
+        for card in ['run_card', 'FO_analyse_card', 'shower_card']:
+            try:
+                shutil.copy(pjoin(self.dir_path, 'Cards',
+                                         card + '.dat'),
+                           pjoin(self.dir_path, 'Cards',
+                                        card + '_default.dat'))
+            except IOError:
+                logger.warning("Failed to copy " + card + ".dat to default")
+
 
         subprocess.call([os.path.join(old_pos, self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
                         stdout = devnull)

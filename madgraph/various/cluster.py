@@ -94,7 +94,6 @@ class Cluster(object):
         self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
-        
 
 
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
