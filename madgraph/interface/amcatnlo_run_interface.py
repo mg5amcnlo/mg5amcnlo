@@ -33,6 +33,7 @@ import traceback
 import time
 import signal
 import tarfile
+import copy
 
 try:
     import readline
@@ -86,14 +87,11 @@ except ImportError, error:
 class aMCatNLOError(Exception):
     pass
 
-def init_worker():
-    """this is to catch ctrl+c with Pool""" 
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def compile_dir(arguments):
     """compile the direcory p_dir
     arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
-    this function needs not to be a class method in order to use pool to do
+    this function needs not to be a class method in order to do
     the compilation on multicore"""
 
     (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
@@ -2755,20 +2753,24 @@ Integrated cross-section
                     self.nb_core = int(self.options['nb_core'])
                 except TypeError:
                     self.nb_core = multiprocessing.cpu_count()
-
-            mypool = multiprocessing.Pool(self.nb_core, init_worker) 
-            logger.info('Compiling on %d cores' % self.nb_core)
-            mypool.map(compile_dir,
-                    ((self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode']) for p_dir in p_dirs))
-            time.sleep(1) # sleep one second to make sure all ajob* files are written
-            mypool.terminate() # kill all the members of the multiprocessing pool
         except ImportError: 
             self.nb_core = 1
-            logger.info('Multiprocessing module not found. Compiling on 1 core')
-            for p_dir in p_dirs:
-                compile_dir(self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode'])
+
+        compile_options = copy.copy(self.options)
+        compile_options['nb_core'] = self.nb_core
+        compile_cluster = cluster.MultiCore(**compile_options)
+        logger.info('Compiling on %d cores' % self.nb_core)
+
+        update_status = lambda i, r, f: self.donothing(i,r,f)
+        for p_dir in p_dirs:
+            compile_cluster.submit(prog = compile_dir, 
+                               argument = [self.me_dir, p_dir, mode, options, 
+                    tests, exe, self.options['run_mode']])
+        try:
+            compile_cluster.wait(self.me_dir, update_status)
+        except:
+            compile_cluster.remove()
+            raise
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
@@ -2783,6 +2785,8 @@ Integrated cross-section
         os.unsetenv('madloop')
 
 
+    def donothing(*args):
+        pass
 
 
     def check_tests(self, test, dir):
