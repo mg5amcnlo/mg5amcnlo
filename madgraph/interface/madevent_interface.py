@@ -3795,37 +3795,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
         fsock.writelines('r=%s\n' % self.random)
-
-    def do_quit(self, line):
-        """Not in help: exit """
-  
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
-        try:
-            self.store_result()
-        except Exception:
-            # If nothing runs they they are no result to update
-            pass
-        
-        try:
-            self.update_status('', level=None)
-        except Exception, error:        
-            pass
-        devnull = open(os.devnull, 'w')
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        devnull.close()
-
-        return super(MadEventCmd, self).do_quit(line)
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
         
     ############################################################################
     def treat_ckkw_matching(self):

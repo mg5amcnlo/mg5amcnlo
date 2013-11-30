@@ -487,18 +487,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_states()
-                
+                # check those which are charged under qcd
+                if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:                    
+                        sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
+
                 #Ensure that the model that we are going to load is the current
                 #one.                    
                 to_del = [name  for name in sys.modules.keys() 
-                                                if name.startswith('internal.')]
+                                                if name.startswith('internal.ufomodel')
+                                                or name.startswith('ufomodel')]
                 for name in to_del:
                     del(sys.modules[name]) 
 
-                # check those which are charged under qcd
-                if pjoin(self.me_dir,'bin') not in sys.path:                    
-                        sys.path.insert(0,pjoin(self.me_dir,'bin'))
-                import internal.ufomodel as ufomodel
+                import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles 
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
@@ -1202,6 +1203,36 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
 
+    def do_quit(self, line):
+        """Not in help: exit """
+  
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except Exception:
+            pass
+        try:
+            self.store_result()
+        except Exception:
+            # If nothing runs they they are no result to update
+            pass
+        
+        try:
+            self.update_status('', level=None)
+        except Exception, error:        
+            pass
+        devnull = open(os.devnull, 'w')
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+
+        return super(CommonRunCmd, self).do_quit(line)
+    
+    # Aliases
+    do_EOF = do_quit
+    do_exit = do_quit
   
 
     def update_status(self, status, level, makehtml=True, force=True, 

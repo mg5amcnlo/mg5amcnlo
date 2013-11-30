@@ -109,6 +109,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
         self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
 
     @staticmethod
     def join_path(*path):

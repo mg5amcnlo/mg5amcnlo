@@ -3134,37 +3134,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
         return mode
 
 
-    def do_quit(self, line):
-        """ """
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
-        try:
-            self.store_result()
-        except:
-            # If nothing runs they they are no result to update
-            pass
-        try:
-            self.update_status('', level=None)
-        except Exception, error:         
-            pass
-        devnull = os.open(os.devnull, os.O_RDWR) 
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-
-        return super(aMCatNLOCmd, self).do_quit(line)
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-
-
-
-
 #===============================================================================
 # aMCatNLOCmd
 #===============================================================================
