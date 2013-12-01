@@ -273,7 +273,7 @@ def get_gfortran_version(compiler='gfortran'):
     """ Returns the gfortran version as a string.
         Returns '0' if it failed."""
     try:    
-        p = Popen([compiler, ' -dumpversion'], stdout=subprocess.PIPE, 
+        p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
