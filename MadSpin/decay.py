@@ -2030,6 +2030,7 @@ class decay_all_events(object):
         """launch the unweighting and deal with final information"""    
         # launch the decay and reweighting
         self.mscmd.update_status('MadSpin: Decaying Events')
+        efficiency = self.decaying_events(self.inverted_decay_mapping)
         if  efficiency != 1:
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)

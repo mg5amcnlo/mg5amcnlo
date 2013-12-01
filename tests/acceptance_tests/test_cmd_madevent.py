@@ -326,6 +326,20 @@ class TestMEfromfile(unittest.TestCase):
     def test_add_time_of_flight(self):
         """checking time of flight is working fine"""
 
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+
         try:
             shutil.rmtree('/tmp/MGPROCESS/')
         except Exception, error:
