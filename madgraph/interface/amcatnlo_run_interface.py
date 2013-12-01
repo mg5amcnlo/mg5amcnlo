@@ -1733,7 +1733,8 @@ Integrated cross-section
         average_contrib = 0.0
         for value in channel_contr_list.values():
             average_contrib += value
-        average_contrib = average_contrib / len(channel_contr_list.values())
+        if len(channel_contr_list.values()) !=0:
+            average_contrib = average_contrib / len(channel_contr_list.values())
         
         relevant_log_GV_files = []
         excluded_channels = set([])
