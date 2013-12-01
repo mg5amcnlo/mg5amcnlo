@@ -31,6 +31,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
+import madgraph.iolibs.files as files
 import madgraph.various.banner as banner
 
 import models.import_ufo as import_ufo
@@ -373,7 +374,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if pid in self.final_state:
                 break
         else:
-            logger.info("Nothing to decay1 ...")
+            logger.info("Nothing to decay ...")
             return
         
 
@@ -414,8 +415,31 @@ class MadSpinInterface(extended_cmd.Cmd):
         misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
-    
-  
+
+        # Now arxiv the shower card used if RunMaterial is present
+        ms_card_path = pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')
+        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
+        if os.path.exists(ms_card_path):
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'], cwd=run_dir)
+                base_path = pjoin(run_dir,'RunMaterial')
+            else:
+                base_path = pjoin(run_dir)
+
+            evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
+            ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
+            count = 0    
+            while os.path.exists(ms_card_to_copy):
+                count +=1
+                ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
+                                                               (evt_name,count))
+            files.cp(str(ms_card_path),str(ms_card_to_copy))
+            
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                                    cwd=run_dir)
+                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+
     def run_from_pickle(self):
         import madgraph.iolibs.save_load_object as save_load_object
         
