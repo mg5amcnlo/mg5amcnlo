@@ -1299,15 +1299,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-#
-# PUT HERE THE COMBINE SCRIPT FOR ROOT
-#
-#                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-#                                pjoin(self.me_dir, 'Events', self.run_name))
-#                logger.info('The results of this run and the Root file with the plots' + \
-#                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The Root files with the plots are in the SubProcesses/P*/*_G*/' + \
-                        'directories.')
+                misc.call(['./combine_root.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
