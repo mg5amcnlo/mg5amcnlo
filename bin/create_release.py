@@ -175,7 +175,7 @@ if status:
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
-    if not data.endswith('mg5') and not data.endswidth('mg5_aMC'):
+    if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
         os.remove(data)
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
