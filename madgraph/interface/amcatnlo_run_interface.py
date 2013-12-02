@@ -1491,9 +1491,6 @@ Integrated cross-section
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
-        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
-        # > Errors is a list of tuples with this format (log_file,nErrors)
-        stats = {'UPS':{}, 'Errors':[]}
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','G*','log_MINT*.txt'))
@@ -1510,19 +1507,6 @@ Integrated cross-section
               '%sG*'%foldName,'log*.txt')) for foldName in ['born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
-        # Find the number of potential errors found in all log files
-        # This re is a simple match on a case-insensitve 'error' but there is 
-        # also some veto added for excluding the sentence 
-        #  "See Section 6 of paper for error calculation."
-        # which appear in the header of lhapdf in the logs.
-        err_finder = re.compile(\
-             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
-        for log in all_log_files:
-            logfile=open(log,'r')
-            nErrors = len(re.findall(err_finder, logfile.read()))
-            logfile.close()
-            if nErrors != 0:
-                stats['Errors'].append((str(log),nErrors))
             
         
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
@@ -1579,9 +1563,60 @@ Integrated cross-section
             logger.info(message+'\n')
             return
 
-# Now display the general statistics
-# Recuperate the fraction of unstable PS points found in the runs for
-# the virtuals
+        # Some advanced general statistics are shown in the debug message at the
+        # end of the run
+        debug_msg = self.compile_advanced_stats(log_GV_files, all_log_files)
+        
+        logger.info(message+'\n')
+        logger.debug(debug_msg+'\n')
+        
+        # Now copy relevant information in the Events/Run_<xxx> directory
+        evt_path = pjoin(self.me_dir, 'Events', self.run_name)
+        open(pjoin(evt_path, 'summary.txt'),'w').write(message+'\n')
+        open(pjoin(evt_path, '.full_summary.txt'), 
+                                       'w').write(message+'\n\n'+debug_msg+'\n')
+                                       
+        self.archive_files(evt_path,mode)
+
+    def archive_files(self, evt_path, mode):
+        """ Copies in the Events/Run_<xxx> directory relevant files characterizing
+        the run."""
+
+        files_to_arxiv = [pjoin('Cards','param_card.dat'),
+                          pjoin('Cards','MadLoopParams.dat'),
+                          pjoin('Cards','FKS_params.dat'),
+                          pjoin('Cards','run_card.dat'),                          
+                          pjoin('Subprocesses','setscales.f'),
+                          pjoin('Subprocesses','cuts.f')]
+
+        if mode in ['NLO', 'LO']:
+            files_to_arxiv.append(pjoin('Cards','FO_analyse_card.dat'))
+
+        if not os.path.exists(pjoin(evt_path,'RunMaterial')):
+            os.mkdir(pjoin(evt_path,'RunMaterial'))
+
+        for path in files_to_arxiv:
+            if os.path.isfile(pjoin(self.me_dir,path)):
+                files.cp(pjoin(self.me_dir,path),pjoin(evt_path,'RunMaterial'))
+        misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
+        shutil.rmtree(pjoin(evt_path,'RunMaterial'))
+
+    def compile_advanced_stats(self,log_GV_files,all_log_files):
+        """ This functions goes through the log files given in arguments and 
+        compiles statistics about MadLoop stability, virtual integration 
+        optimization and detection of potential error messages into a nice
+        debug message to printed at the end of the run """
+        
+        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
+        # > Errors is a list of tuples with this format (log_file,nErrors)
+        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}}
+    
+        # ==================================     
+        # == MadLoop stability statistics ==
+        # ==================================
+    
+        # Recuperate the fraction of unstable PS points found in the runs for
+        # the virtuals
         UPS_stat_finder = re.compile(
              r"Satistics from MadLoop:.*"+\
              r"Total points tried\:\s+(?P<ntot>\d+).*"+\
@@ -1595,10 +1630,7 @@ Integrated cross-section
              r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
              r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
              r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
-#        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
-#                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
-#                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
-
+    
         for gv_log in log_GV_files:
             logfile=open(gv_log,'r')            
             UPS_stats = re.search(UPS_stat_finder,logfile.read())
@@ -1641,46 +1673,219 @@ Integrated cross-section
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
             if maxUPS[1]>0.001:
-                message += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                message += '\n          Stability unknown:                   %d'%nTotsun
-                message += '\n          Stable PS point:                     %d'%nTotsps
-                message += '\n          Unstable PS point (and rescued):     %d'%nTotups
-                message += '\n          Unstable PS point (and not rescued): %d'%nToteps
-                message += '\n          Only double precision used:          %d'%nTotddp
-                message += '\n          Quadruple precision used:            %d'%nTotqdp
-                message += '\n          Initialization phase-space points:   %d'%nTotini
+                message += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+                message += '\n    Stability unknown:                   %d'%nTotsun
+                message += '\n    Stable PS point:                     %d'%nTotsps
+                message += '\n    Unstable PS point (and rescued):     %d'%nTotups
+                message += '\n    Unstable PS point (and not rescued): %d'%nToteps
+                message += '\n    Only double precision used:          %d'%nTotddp
+                message += '\n    Quadruple precision used:            %d'%nTotqdp
+                message += '\n    Initialization phase-space points:   %d'%nTotini
                 if nTot100 != 0:
-                    message += '\n          Unknown return code (100):           %d'%nTot100
+                    message += '\n    Unknown return code (100):           %d'%nTot100
                 if nTot10 != 0:
-                    message += '\n          Unknown return code (10):            %d'%nTot10
+                    message += '\n    Unknown return code (10):            %d'%nTot10
                 if nTot1 != 0:
-                    message += '\n          Unknown return code (1):             %d'%nTot1
-                message += '\n      Total number of unstable PS point detected:'+\
+                    message += '\n    Unknown return code (1):             %d'%nTot1
+                message += '\n  Total number of unstable PS point detected:'+\
                                  ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
-                message += '\n      Maximum fraction of UPS points in '+\
+                message += '\n    Maximum fraction of UPS points in '+\
                           'channel %s (%4.2f%%)'%maxUPS
-                message += '\n      Please report this to the authors while '+\
+                message += '\n    Please report this to the authors while '+\
                                                                 'providing the file'
-                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                message += '\n    %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                debug_msg += '\n          Stability unknown:                   %d'%nTotsun
-                debug_msg += '\n          Stable PS point:                     %d'%nTotsps
-                debug_msg += '\n          Unstable PS point (and rescued):     %d'%nTotups
-                debug_msg += '\n          Unstable PS point (and not rescued): %d'%nToteps
-                debug_msg += '\n          Only double precision used:          %d'%nTotddp
-                debug_msg += '\n          Quadruple precision used:            %d'%nTotqdp
-                debug_msg += '\n          Initialization phase-space points:   %d'%nTotini
+                debug_msg += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+                debug_msg += '\n    Stability unknown:                   %d'%nTotsun
+                debug_msg += '\n    Stable PS point:                     %d'%nTotsps
+                debug_msg += '\n    Unstable PS point (and rescued):     %d'%nTotups
+                debug_msg += '\n    Unstable PS point (and not rescued): %d'%nToteps
+                debug_msg += '\n    Only double precision used:          %d'%nTotddp
+                debug_msg += '\n    Quadruple precision used:            %d'%nTotqdp
+                debug_msg += '\n    Initialization phase-space points:   %d'%nTotini
                 if nTot100 != 0:
-                    debug_msg += '\n          Unknown return code (100):           %d'%nTot100
+                    debug_msg += '\n  Unknown return code (100):             %d'%nTot100
                 if nTot10 != 0:
-                    debug_msg += '\n          Unknown return code (10):            %d'%nTot10
+                    debug_msg += '\n  Unknown return code (10):              %d'%nTot10
                 if nTot1 != 0:
-                    debug_msg += '\n          Unknown return code (1):             %d'%nTot1
-        logger.info(message+'\n')
-        open(pjoin(self.me_dir, 'Events', self.run_name, 'summary.txt'), 'w').write(message+'\n')
-                 
+                    debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+    
+        # ====================================================
+        # == aMC@NLO virtual integration optimization stats ==
+        # ====================================================
+    
+        virt_tricks_finder = re.compile(
+          r"accumulated results Virtual ratio\s*=\s*-?(?P<v_ratio>[\d\+-Eed\.]*)"+\
+            r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_ratio_err>[\d\+-Eed\.]*)\s*\%\)\s*\n"+\
+          r"accumulated results ABS virtual\s*=\s*-?(?P<v_abs_contr>[\d\+-Eed\.]*)"+\
+            r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_abs_contr_err>[\d\+-Eed\.]*)\s*\%\)")
+    
+        virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
+                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*-?(?P<v_average>[\d\+-Eed\.]*)")
+        
+        channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
+        
+        channel_contr_list = {}
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-3:-1])
+            vf_stats = None
+            for vf_stats in re.finditer(virt_frac_finder, log):
+                pass
+            if not vf_stats is None:
+                v_frac = float(vf_stats.group('v_frac'))
+                v_average = float(vf_stats.group('v_average'))
+                try:
+                    if v_frac < stats['virt_stats']['v_frac_min'][0]:
+                        stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
+                    if v_frac > stats['virt_stats']['v_frac_max'][0]:
+                        stats['virt_stats']['v_frac_max']=(v_frac,channel_name)
+                    stats['virt_stats']['v_frac_avg'][0] += v_frac
+                    stats['virt_stats']['v_frac_avg'][1] += 1
+                except KeyError:
+                    stats['virt_stats']['v_frac_min']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_max']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_avg']=[v_frac,1]
+
+
+            ccontr_stats = None
+            for ccontr_stats in re.finditer(channel_contr_finder, log):
+                pass
+            if not ccontr_stats is None:
+                contrib = float(ccontr_stats.group('v_contr'))
+                try:
+                    if contrib>channel_contr_list[channel_name]:
+                        channel_contr_list[channel_name]=contrib
+                except KeyError:
+                    channel_contr_list[channel_name]=contrib
+                
+                
+        # Now build the list of relevant virt log files to look for the maxima
+        # of virt fractions and such.
+        average_contrib = 0.0
+        for value in channel_contr_list.values():
+            average_contrib += value
+        if len(channel_contr_list.values()) !=0:
+            average_contrib = average_contrib / len(channel_contr_list.values())
+        
+        relevant_log_GV_files = []
+        excluded_channels = set([])
+        all_channels = set([])
+        for log_file in log_GV_files:
+            channel_name = '/'.join(log_file.split('/')[-3:-1])
+            all_channels.add(channel_name)
+            try:
+                if channel_contr_list[channel_name] > (0.1*average_contrib):
+                    relevant_log_GV_files.append(log_file)
+                else:
+                    excluded_channels.add(channel_name)
+            except KeyError:
+                    relevant_log_GV_files.append(log_file)
+        
+        # Now we want to use the latest occurence of accumulated result in the log file
+        for gv_log in relevant_log_GV_files:
+            logfile=open(gv_log,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-3:-1])
+            
+            vt_stats = None
+            for vt_stats in re.finditer(virt_tricks_finder, log):
+                pass
+            if not vt_stats is None:
+                vt_stats_group = vt_stats.groupdict()
+                v_ratio = float(vt_stats.group('v_ratio'))
+                v_ratio_err = float(vt_stats.group('v_ratio_err'))
+                v_contr = float(vt_stats.group('v_abs_contr'))
+                v_contr_err = float(vt_stats.group('v_abs_contr_err'))
+                try:
+                    if v_ratio < stats['virt_stats']['v_ratio_min'][0]:
+                        stats['virt_stats']['v_ratio_min']=(v_ratio,channel_name)
+                    if v_ratio > stats['virt_stats']['v_ratio_max'][0]:
+                        stats['virt_stats']['v_ratio_max']=(v_ratio,channel_name)
+                    if v_ratio < stats['virt_stats']['v_ratio_err_min'][0]:
+                        stats['virt_stats']['v_ratio_err_min']=(v_ratio_err,channel_name)
+                    if v_ratio > stats['virt_stats']['v_ratio_err_max'][0]:
+                        stats['virt_stats']['v_ratio_err_max']=(v_ratio_err,channel_name)
+                    if v_contr < stats['virt_stats']['v_contr_min'][0]:
+                        stats['virt_stats']['v_contr_min']=(v_contr,channel_name)
+                    if v_contr > stats['virt_stats']['v_contr_max'][0]:
+                        stats['virt_stats']['v_contr_max']=(v_contr,channel_name)
+                    if v_contr_err < stats['virt_stats']['v_contr_err_min'][0]:
+                        stats['virt_stats']['v_contr_err_min']=(v_contr_err,channel_name)
+                    if v_contr_err > stats['virt_stats']['v_contr_err_max'][0]:
+                        stats['virt_stats']['v_contr_err_max']=(v_contr_err,channel_name)
+                except KeyError:
+                    stats['virt_stats']['v_ratio_min']=[v_ratio,channel_name]
+                    stats['virt_stats']['v_ratio_max']=[v_ratio,channel_name]
+                    stats['virt_stats']['v_ratio_err_min']=[v_ratio_err,channel_name]
+                    stats['virt_stats']['v_ratio_err_max']=[v_ratio_err,channel_name]
+                    stats['virt_stats']['v_contr_min']=[v_contr,channel_name]
+                    stats['virt_stats']['v_contr_max']=[v_contr,channel_name]
+                    stats['virt_stats']['v_contr_err_min']=[v_contr_err,channel_name]
+                    stats['virt_stats']['v_contr_err_max']=[v_contr_err,channel_name]
+        
+            vf_stats = None
+            for vf_stats in re.finditer(virt_frac_finder, log):
+                pass
+            if not vf_stats is None:
+                v_frac = float(vf_stats.group('v_frac'))
+                v_average = float(vf_stats.group('v_average'))
+                try:
+                    if v_average < stats['virt_stats']['v_average_min'][0]:
+                        stats['virt_stats']['v_average_min']=(v_average,channel_name)
+                    if v_average > stats['virt_stats']['v_average_max'][0]:
+                        stats['virt_stats']['v_average_max']=(v_average,channel_name)
+                    stats['virt_stats']['v_average_avg'][0] += v_average
+                    stats['virt_stats']['v_average_avg'][1] += 1
+                except KeyError:
+                    stats['virt_stats']['v_average_min']=[v_average,channel_name]
+                    stats['virt_stats']['v_average_max']=[v_average,channel_name]
+                    stats['virt_stats']['v_average_avg']=[v_average,1]
+        
+        try:
+            debug_msg += '\n\n  Statistics on virtual integration optimization : '
+            
+            debug_msg += '\n    Maximum virt fraction computed         %.3f (%s)'\
+                                       %tuple(stats['virt_stats']['v_frac_max'])
+            debug_msg += '\n    Minimum virt fraction computed         %.3f (%s)'\
+                                       %tuple(stats['virt_stats']['v_frac_min'])
+            debug_msg += '\n    Average virt fraction computed         %.3f'\
+              %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
+            debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
+                 (len(excluded_channels),len(all_channels))
+            debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
+                                    %tuple(stats['virt_stats']['v_average_max'])          
+            debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
+                                     %tuple(stats['virt_stats']['v_ratio_max'])
+            debug_msg += '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
+                                  %tuple(stats['virt_stats']['v_ratio_err_max'])
+            debug_msg += '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
+                                  %tuple(stats['virt_stats']['v_contr_err_max'])
+        except KeyError:
+            debug_msg += '\n  Could not find statistics on the integration optimization. '
+    
+        # =============================     
+        # == log file eror detection ==
+        # =============================
+        
+        # Find the number of potential errors found in all log files
+        # This re is a simple match on a case-insensitve 'error' but there is 
+        # also some veto added for excluding the sentence 
+        #  "See Section 6 of paper for error calculation."
+        # which appear in the header of lhapdf in the logs.
+        err_finder = re.compile(\
+             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
+        for log in all_log_files:
+            logfile=open(log,'r')
+            nErrors = len(re.findall(err_finder, logfile.read()))
+            logfile.close()
+            if nErrors != 0:
+                stats['Errors'].append((str(log),nErrors))
+         
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
             debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
@@ -1697,9 +1902,8 @@ Integrated cross-section
                 debug_msg += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-        logger.debug(debug_msg)
-
-
+                           
+        return debug_msg
 
 
     def reweight_and_collect_events(self, options, mode, nevents, event_norm):
@@ -1922,7 +2126,20 @@ Integrated cross-section
                             (hep_file, evt_file, shower))
 
             else:
-                raise aMCatNLOError('No file has been generated, an error occurred. More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                raise aMCatNLOError('No file has been generated, an error occurred.'+\
+             ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                
+            # Now arxiv the shower card used if RunMaterial is present
+            run_dir_path = pjoin(rundir,self.run_name)
+            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
+                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                              %(shower, count)))
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                               cwd=run_dir_path)
+                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+            
         else:
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
@@ -1960,7 +2177,6 @@ Integrated cross-section
                         evt_file, shower))
 
         self.update_status('Run complete', level='shower', update_results=True)
-
 
 
     ############################################################################

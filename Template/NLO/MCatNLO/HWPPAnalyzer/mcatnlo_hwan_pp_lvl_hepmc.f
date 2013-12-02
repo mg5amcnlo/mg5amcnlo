@@ -1,7 +1,10 @@
 c
-c Example analysis for "p p > w+ [QCD]" process.
-c Example analysis for "p p > w- [QCD]" process.
-c Example analysis for "p p > z [QCD]" process.
+c Example analysis for "p p > e+ ve [QCD]" process.
+c Example analysis for "p p > e- ve~ [QCD]" process.
+c Example analysis for "p p > mu+ vm [QCD]" process.
+c Example analysis for "p p > mu- vm~ [QCD]" process.
+c Example analysis for "p p > ta+ vt [QCD]" process.
+c Example analysis for "p p > ta- vt~ [QCD]" process.
 c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
@@ -16,10 +19,7 @@ C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      real * 8 xm0,gam,xmlow,xmupp,bin
-      real * 8 xmi,xms,pi
-      PARAMETER (PI=3.14159265358979312D0)
-      integer j,kk,l,jpr
+      integer j,kk,l,i
       character*5 cc(2)
       data cc/'     ','     '/
       integer nwgt,max_weight,nwgt_analysis
@@ -36,25 +36,30 @@ c To be changed !!
       weights_info(nwgt)="central value  "
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       nwgt_analysis=nwgt
-      xmi=40.d0
-      xms=120.d0
-      bin=1.0d0
-      do j=1,1
+      do i=1,1
       do kk=1,nwgt_analysis
-      l=(kk-1)*10+(j-1)*5
-      call mbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
-     &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
-     &     ,0.05d0,0.d0,5.d0)
-      call mbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
-     &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
-     &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
-     &     ,bin,xmi,xms)
+        l=(kk-1)*16+(i-1)*8
+        call mbook(l+1,'total rate  '//weights_info(kk)//cc(i),
+     &       1.0d0,0.5d0,5.5d0)
+        call mbook(l+2,'e rapidity  '//weights_info(kk)//cc(i),
+     &       0.5d0,-5d0,5d0)
+        call mbook(l+3,'e pt        '//weights_info(kk)//cc(i),
+     &       10d0,0d0,200d0)
+        call mbook(l+4,'et miss     '//weights_info(kk)//cc(i),
+     &       10d0,0d0,200d0)
+        call mbook(l+5,'trans. mass '//weights_info(kk)//cc(i),
+     &       5d0,0d0,200d0)
+        call mbook(l+6,'w rapidity  '//weights_info(kk)//cc(i),
+     &       0.5d0,-5d0,5d0)
+        call mbook(l+7,'w pt        '//weights_info(kk)//cc(i),
+     &       10d00,0d0,200d0)
+        call mbook(l+8,'cphi[e,ve]  '//weights_info(kk)//cc(i),
+     &       0.05d0,-1d0,1d0)
       enddo
       enddo
  999  END
+
+
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
@@ -65,7 +70,7 @@ C----------------------------------------------------------------------
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
-      OPEN(UNIT=99,FILE='HERSVB.TOP',STATUS='UNKNOWN')
+      OPEN(UNIT=99,FILE='HERLL.TOP',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
@@ -78,12 +83,15 @@ C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
 C
       do i=1,1
       do kk=1,nwgt_analysis
-      l=(kk-1)*10+(i-1)*5
-      call multitop(NPL+l+ 1,NPL-1,3,2,'V pt     ',' ','LOG')
-      call multitop(NPL+l+ 2,NPL-1,3,2,'V log pt ',' ','LOG')
-      call multitop(NPL+l+ 3,NPL-1,3,2,'V y      ',' ','LOG')
-      call multitop(NPL+l+ 4,NPL-1,3,2,'V eta    ',' ','LOG')
-      call multitop(NPL+l+ 5,NPL-1,3,2,'mV       ',' ','LOG')
+         l=(kk-1)*16+(i-1)*8
+         call multitop(NPL+l+1,NPL-1,3,2,'total rate ',' ','LIN')
+         call multitop(NPL+l+2,NPL-1,3,2,'e rapidity ',' ','LIN')
+         call multitop(NPL+l+3,NPL-1,3,2,'e pt       ',' ','LOG')
+         call multitop(NPL+l+4,NPL-1,3,2,'et miss    ',' ','LOG')
+         call multitop(NPL+l+5,NPL-1,3,2,'trans. mass',' ','LOG')
+         call multitop(NPL+l+6,NPL-1,3,2,'w rapidity ',' ','LIN')
+         call multitop(NPL+l+7,NPL-1,3,2,'w pt       ',' ','LOG')
+         call multitop(NPL+l+8,NPL-1,3,2,'cphi[e,ve] ',' ','LOG')
       enddo
       enddo
       CLOSE(99)
@@ -95,19 +103,16 @@ C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      DOUBLE PRECISION HWVDOT,PSUM(4),XME,PPV(5),PPE(5),PPNU(5),
-     # PPDCE(5),PPDCNU(5),WT,ETAEMIN(2),ETAEMAX(2),PTEMIN(2),
-     # XMV,PTV,YV,GETRAPIDITY,PTE,THE,ETAE,PTNU,THNU,ETANU,
-     # PTDCE,THDCE,ETADCE,PTDCNU,THDCNU,ETADCNU,ETAV,GETPSEUDORAP
-      INTEGER ICHSUM,ICHINI,IHEP,JPR,IDENT,IFV,IST,ID,ID1,IHRD,IV,
-     # IJ,IE,INU,J
-      LOGICAL DIDSOF,TEST1,TEST2,FLAG
-      REAL*8 PI
+      DOUBLE PRECISION HWVDOT,PSUM(4),PPV(5),PTW,YW,YE,PPL(5),PPLB(5),
+     & PTE,PLL,PTLB,PLLB,var,mtr,etmiss,cphi
+      INTEGER ICHSUM,ICHINI,IHEP,IV,IFV,IST,ID,IJ,ID1,JPR,IDENT,
+     #  ILL,ILLB,IHRD,NL,NN
+      LOGICAL DIDSOF,FOUNDL,FOUNDN,ISL,ISN
+      REAL*8 PI,getrapidity
       PARAMETER (PI=3.14159265358979312D0)
-      REAL*8 TINY
-      INTEGER KK,i,l
+      REAL*8 WWW0,TINY,SIGNL,SIGNN
+      INTEGER KK,I,L,IL,IN
       DATA TINY/.1D-5/
-      DATA XME/5.11D-4/
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
@@ -123,9 +128,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-c
-c CHOOSE IDENT=24 FOR W+, IDENT=-24 FOR W-, IDENT=23 FOR Z0
-      IDENT=24
+C CHOOSE IDENT = 11 FOR E - NU_E
+C        IDENT = 13 FOR MU - NU_MU
+C        IDENT = 15 FOR TAU - NU_TAU
+      IDENT=11
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
@@ -137,80 +143,70 @@ C EFFECT, SO THROW THE EVENT AWAY
       ENDDO
       ICHSUM=0
       DIDSOF=.FALSE.
-      IFV=0
+      FOUNDL=.FALSE.
+      FOUNDN=.FALSE.
+      NL=0
+      NN=0
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-        TEST1=ID1.EQ.IDENT
-        TEST2=IST.EQ.1.OR.IST.EQ.11
-        IF(TEST1.AND.TEST2)THEN
-          IV=IHEP
-          IFV=IFV+1
-          DO IJ=1,5
-             PPV(IJ)=PHEP(IJ,IHEP)
-          ENDDO
-        ENDIF
+        ISL=ABS(ID1).EQ.IDENT
+        ISN=ABS(ID1).EQ.IDENT+1
+        IF(IST.EQ.1.AND.NL.EQ.0.AND.ISL)THEN
+            NL=NL+1
+            IL=IHEP
+            FOUNDL=.TRUE.
+            SIGNL=SIGN(1D0,DBLE(ID1))
+         ENDIF
+         IF(IST.EQ.1.AND.NN.EQ.0.AND.ISN)THEN
+            NN=NN+1
+            IN=IHEP
+            FOUNDN=.TRUE.
+            SIGNN=SIGN(1D0,DBLE(ID1))
+         ENDIF
   100 CONTINUE
-      IF(IFV.EQ.0) THEN
-        CALL HWWARN('HWANAL',503)
-        GOTO 999
+      IF(.NOT.FOUNDL.OR..NOT.FOUNDN)THEN
+         WRITE(*,*)'NO LEPTONS FOUND.'
+         WRITE(*,*)'CURRENTLY THIS ANALYSIS LOOKS FOR'
+         IF(IDENT.EQ.11)WRITE(*,*)'E - NU_E'
+         IF(IDENT.EQ.13)WRITE(*,*)'MU - NU_MU'
+         IF(IDENT.EQ.15)WRITE(*,*)'TAU - NU_TAU'
+         WRITE(*,*)'IF THIS IS NOT MEANT,'
+         WRITE(*,*)'PLEASE CHANGE THE VALUE OF IDENT IN THIS FILE.'
+         STOP
       ENDIF
-C FILL THE HISTOS
-C Variables of the vector boson
-      xmv=ppv(5)
-      ptv=sqrt(ppv(1)**2+ppv(2)**2)
-      yv=getrapidity(ppv(4),ppv(3))
-      etav=getpseudorap(ppv(4),ppv(1),ppv(2),ppv(3))
-C
+      IF(SIGNN.EQ.SIGNL)THEN
+         WRITE(*,*)'TWO SAME SIGN LEPTONS!'
+         WRITE(*,*)IL,IN,SIGNL,SIGNN
+         STOP
+      ENDIF
+      DO IJ=1,5
+        PPL(IJ)=PHEP(IJ,IN)
+        PPLB(IJ)=PHEP(IJ,IL)
+        PPV(IJ)=PPL(IJ)+PPLB(IJ)
+      ENDDO
+      ye     = getrapidity(pplb(4), pplb(3))
+      yw     = getrapidity(ppv(4), ppv(3))
+      pte    = dsqrt(pplb(1)**2 + pplb(2)**2)
+      ptw    = dsqrt(ppv(1)**2+ppv(2)**2)
+      etmiss = dsqrt(ppl(1)**2 + ppl(2)**2)
+      mtr    = dsqrt(2d0*pte*etmiss-2d0*ppl(1)*pplb(1)-2d0*ppl(2)*pplb(2))
+      cphi   = (ppl(1)*pplb(1)+ppl(2)*pplb(2))/pte/etmiss
+      var    = 1.d0
       do i=1,1
          do kk=1,nwgt_analysis
-            l=(kk-1)*10+(i-1)*5
-            call mfill(l+1,ptv,WWW(kk))
-            if(ptv.gt.0) call mfill(l+2,log10(ptv),WWW(kk))
-            call mfill(l+3,yv,WWW(kk))
-            call mfill(l+4,etav,WWW(kk))
-            call mfill(l+5,xmv,WWW(kk))
+            l=(kk-1)*16+(i-1)*8
+            call mfill(l+1,var,www(kk))
+            call mfill(l+2,ye,www(kk))
+            call mfill(l+3,pte,www(kk))
+            call mfill(l+4,etmiss,www(kk))
+            call mfill(l+5,mtr,www(kk))
+            call mfill(l+6,yw,www(kk))
+            call mfill(l+7,ptw,www(kk))
+            call mfill(l+8,cphi,www(kk))
          enddo
       enddo
-C
  999  END
-
-
-      function getrapidity(en,pl)
-      implicit none
-      real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-      parameter (tiny=1.d-5)
-c
-      xplus=en+pl
-      xminus=en-pl
-      if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
-      endif
-      getrapidity=y
-      return
-      end
-
-      function getpseudorap(en,ptx,pty,pl)
-      implicit none
-      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
-      parameter (tiny=1.d-5)
-c
-      pt=sqrt(ptx**2+pty**2)
-      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
-        eta=sign(1.d0,pl)*1.d8
-      else
-        th=atan2(pt,pl)
-        eta=-log(tan(th/2.d0))
-      endif
-      getpseudorap=eta
-      return
-      end
 
 
 C-----------------------------------------------------------------------
@@ -288,3 +284,82 @@ c$$$         CALL HWUBPR
       return
       end
 
+      function getrapidity(en,pl)
+      implicit none
+      real*8 getrapidity,en,pl,tiny,xplus,xminus,y
+      parameter (tiny=1.d-8)
+      xplus=en+pl
+      xminus=en-pl
+      if(xplus.gt.tiny.and.xminus.gt.tiny)then
+         if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+            y=0.5d0*log( xplus/xminus  )
+         else
+            y=sign(1.d0,pl)*1.d8
+         endif
+      else 
+         y=sign(1.d0,pl)*1.d8
+      endif
+      getrapidity=y
+      return
+      end
+
+
+      function getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      getpseudorap=eta
+      return
+      end
+
+
+      function getinvm(en,ptx,pty,pl)
+      implicit none
+      real*8 getinvm,en,ptx,pty,pl,tiny,tmp
+      parameter (tiny=1.d-5)
+c
+      tmp=en**2-ptx**2-pty**2-pl**2
+      if(tmp.gt.0.d0)then
+        tmp=sqrt(tmp)
+      elseif(tmp.gt.-tiny)then
+        tmp=0.d0
+      else
+        write(*,*)'Attempt to compute a negative mass'
+        stop
+      endif
+      getinvm=tmp
+      return
+      end
+
+
+      function getdelphi(ptx1,pty1,ptx2,pty2)
+      implicit none
+      real*8 getdelphi,ptx1,pty1,ptx2,pty2,tiny,pt1,pt2,tmp
+      parameter (tiny=1.d-5)
+c
+      pt1=sqrt(ptx1**2+pty1**2)
+      pt2=sqrt(ptx2**2+pty2**2)
+      if(pt1.ne.0.d0.and.pt2.ne.0.d0)then
+        tmp=ptx1*ptx2+pty1*pty2
+        tmp=tmp/(pt1*pt2)
+        if(abs(tmp).gt.1.d0+tiny)then
+          write(*,*)'Cosine larger than 1'
+          stop
+        elseif(abs(tmp).ge.1.d0)then
+          tmp=sign(1.d0,tmp)
+        endif
+        tmp=acos(tmp)
+      else
+        tmp=1.d8
+      endif
+      getdelphi=tmp
+      return
+      end

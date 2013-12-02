@@ -1,3 +1,8 @@
+c
+c Example analysis for "p p > t j [QCD]" process.
+c Example analysis for "p p > t j $$ w+ w- [QCD]" process.
+c Example analysis for "p p > w+ > t j  [QCD]" process.
+c
 C----------------------------------------------------------------------
       SUBROUTINE RCLOS()
 C     DUMMY IF HBOOK IS USED
@@ -10,42 +15,82 @@ C----------------------------------------------------------------------
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
-      REAL*8 pi
-      PARAMETER (PI=3.14159265358979312D0)
-      integer j,kk,jj
-
+      include 'reweight0.inc'
+      integer j,kk,l
+      character*5 cc(2)
+      data cc/'     ','     '/
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
       call inihist
-      kk=0
-      call mbook(kk+ 1,'t pt',5d0,0d0,200d0)
-      call mbook(kk+ 2,'t log pt',0.05d0,0d0,5d0)
-      call mbook(kk+ 3,'t y',0.25d0,-6d0,6d0)
-      call mbook(kk+ 4,'t eta',0.25d0,-6d0,6d0)
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c To be changed !!
+      nwgt=1
+      weights_info(nwgt)="central value  "
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      nwgt_analysis=nwgt
+      do j=1,2
+      do kk=1,nwgt_analysis
+      l=(kk-1)*48+(j-1)*24
+      call mbook(l+ 1,'t pt        '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+ 2,'t log pt    '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+ 3,'t y         '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+ 4,'t eta       '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(kk+ 5,'j1 pt',5d0,0d0,200d0)
-      call mbook(kk+ 6,'j1 log pt',0.05d0,0d0,5d0)
-      call mbook(kk+ 7,'j1 y',0.25d0,-6d0,6d0)
-      call mbook(kk+ 8,'j1 eta',0.25d0,-6d0,6d0)
+      call mbook(l+ 5,'j1 pt       '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+ 6,'j1 log pt   '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+ 7,'j1 y        '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+ 8,'j1 eta      '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(kk+ 9,'j2 pt',5d0,0d0,200d0)
-      call mbook(kk+10,'j2 log pt',0.05d0,0d0,5d0)
-      call mbook(kk+11,'j2 y',0.25d0,-6d0,6d0)
-      call mbook(kk+12,'j2 eta',0.25d0,-6d0,6d0)
+      call mbook(l+ 9,'j2 pt       '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+10,'j2 log pt   '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+11,'j2 y        '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+12,'j2 eta      '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(kk+13,'bj1 pt',5d0,0d0,200d0)
-      call mbook(kk+14,'bj1 log pt',0.05d0,0d0,5d0)
-      call mbook(kk+15,'bj1 y',0.25d0,-6d0,6d0)
-      call mbook(kk+16,'bj1 eta',0.25d0,-6d0,6d0)
+      call mbook(l+13,'bj1 pt      '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+14,'bj1 log pt  '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+15,'bj1 y       '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+16,'bj1 eta     '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(kk+17,'bj2 pt',5d0,0d0,200d0)
-      call mbook(kk+18,'bj2 log pt',0.05d0,0d0,5d0)
-      call mbook(kk+19,'bj2 y',0.25d0,-6d0,6d0)
-      call mbook(kk+20,'bj2 eta',0.25d0,-6d0,6d0)
+      call mbook(l+17,'bj2 pt      '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+18,'bj2 log pt  '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+19,'bj2 y       '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+20,'bj2 eta     '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(kk+21,'syst pt',5d0,0d0,200d0)
-      call mbook(kk+22,'syst log pt',0.05d0,0d0,5d0)
-      call mbook(kk+23,'syst y',0.25d0,-6d0,6d0)
-      call mbook(kk+24,'syst eta',0.25d0,-6d0,6d0)
+      call mbook(l+21,'syst pt     '//weights_info(kk)//cc(j)
+     &     ,5d0,0d0,200d0)
+      call mbook(l+22,'syst log pt '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0d0,5d0)
+      call mbook(l+23,'syst y      '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
+      call mbook(l+24,'syst eta    '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-6d0,6d0)
 c
+      enddo
+      enddo
       END
 
 
@@ -55,50 +100,55 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,K
+      INTEGER I,J,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTST.top',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
-      DO I=1,500              
+      DO I=1,NPL
  	CALL MFINAL3(I)             
-        CALL MCOPY(I,I+500)
-        CALL MOPERA(I+500,'F',I+500,I+500,(XNORM),0.D0)
- 	CALL MFINAL3(I+500)
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)
       ENDDO
-
-C
-      k=0
-      call multitop(500+k+ 1,499,2,3,'t pt',' ','LOG')
-      call multitop(500+k+ 2,499,2,3,'t log pt',' ','LOG')
-      call multitop(500+k+ 3,499,2,3,'t y',' ','LOG')
-      call multitop(500+k+ 4,499,2,3,'t eta',' ','LOG')
+      do i=1,1
+      do kk=1,nwgt_analysis
+      l=(kk-1)*48+(i-1)*24
+      call multitop(NPL+l+ 1,NPL-1,2,3,'t pt',' ','LOG')
+      call multitop(NPL+l+ 2,NPL-1,2,3,'t log pt',' ','LOG')
+      call multitop(NPL+l+ 3,NPL-1,2,3,'t y',' ','LOG')
+      call multitop(NPL+l+ 4,NPL-1,2,3,'t eta',' ','LOG')
 c
-      call multitop(500+k+ 5,499,2,3,'j1 pt',' ','LOG')
-      call multitop(500+k+ 6,499,2,3,'j1 log pt',' ','LOG')
-      call multitop(500+k+ 7,499,2,3,'j1 y',' ','LOG')
-      call multitop(500+k+ 8,499,2,3,'j1 eta',' ','LOG')
+      call multitop(NPL+l+ 5,NPL-1,2,3,'j1 pt',' ','LOG')
+      call multitop(NPL+l+ 6,NPL-1,2,3,'j1 log pt',' ','LOG')
+      call multitop(NPL+l+ 7,NPL-1,2,3,'j1 y',' ','LOG')
+      call multitop(NPL+l+ 8,NPL-1,2,3,'j1 eta',' ','LOG')
 c
-      call multitop(500+k+ 9,499,2,3,'j2 pt',' ','LOG')
-      call multitop(500+k+10,499,2,3,'j2 log pt',' ','LOG')
-      call multitop(500+k+11,499,2,3,'j2 y',' ','LOG')
-      call multitop(500+k+12,499,2,3,'j2 eta',' ','LOG')
+      call multitop(NPL+l+ 9,NPL-1,2,3,'j2 pt',' ','LOG')
+      call multitop(NPL+l+10,NPL-1,2,3,'j2 log pt',' ','LOG')
+      call multitop(NPL+l+11,NPL-1,2,3,'j2 y',' ','LOG')
+      call multitop(NPL+l+12,NPL-1,2,3,'j2 eta',' ','LOG')
 c
-      call multitop(500+k+13,499,2,3,'bj1 pt',' ','LOG')
-      call multitop(500+k+14,499,2,3,'bj1 log pt',' ','LOG')
-      call multitop(500+k+15,499,2,3,'bj1 y',' ','LOG')
-      call multitop(500+k+16,499,2,3,'bj1 eta',' ','LOG')
+      call multitop(NPL+l+13,NPL-1,2,3,'bj1 pt',' ','LOG')
+      call multitop(NPL+l+14,NPL-1,2,3,'bj1 log pt',' ','LOG')
+      call multitop(NPL+l+15,NPL-1,2,3,'bj1 y',' ','LOG')
+      call multitop(NPL+l+16,NPL-1,2,3,'bj1 eta',' ','LOG')
 c
-      call multitop(500+k+17,499,2,3,'bj2 pt',' ','LOG')
-      call multitop(500+k+18,499,2,3,'bj2 log pt',' ','LOG')
-      call multitop(500+k+19,499,2,3,'bj2 y',' ','LOG')
-      call multitop(500+k+20,499,2,3,'bj2 eta',' ','LOG')
+      call multitop(NPL+l+17,NPL-1,2,3,'bj2 pt',' ','LOG')
+      call multitop(NPL+l+18,NPL-1,2,3,'bj2 log pt',' ','LOG')
+      call multitop(NPL+l+19,NPL-1,2,3,'bj2 y',' ','LOG')
+      call multitop(NPL+l+20,NPL-1,2,3,'bj2 eta',' ','LOG')
 c
-      call multitop(500+k+21,499,2,3,'syst pt',' ','LOG')
-      call multitop(500+k+22,499,2,3,'syst log pt',' ','LOG')
-      call multitop(500+k+23,499,2,3,'syst y',' ','LOG')
-      call multitop(500+k+24,499,2,3,'syst eta',' ','LOG')
+      call multitop(NPL+l+21,NPL-1,2,3,'syst pt',' ','LOG')
+      call multitop(NPL+l+22,NPL-1,2,3,'syst log pt',' ','LOG')
+      call multitop(NPL+l+23,NPL-1,2,3,'syst y',' ','LOG')
+      call multitop(NPL+l+24,NPL-1,2,3,'syst eta',' ','LOG')
 c
+      enddo
+      enddo
       CLOSE(99)
       END
 
@@ -109,13 +159,14 @@ C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C     BASED ON AN ANALYSIS FILE WRITTEN BY E.RE
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
+      include 'reweight0.inc'
       DOUBLE PRECISION HWVDOT,PSUM(4)
       REAL*8 PI
       PARAMETER (PI=3.14159265358979312D0)
       REAL*8 WWW0
-      INTEGER kk,mu,jpart,i,j,ihep,ichsum,nt,nb,nbjets,ist,id,
-     &njets,id1,i1,i2,ibi1jmatch,ichini,k,ihadr,count_j,count_bj
-      integer maxtrack,maxjet,maxnum
+      INTEGER kk,mu,jpart,i,j,ihep,ichsum,nt,nb,nbjet,ist,id,
+     &njet,id1,i1,i2,ibmatch,ichini,k,ihadr,count_j,count_bj
+      integer maxtrack,maxjet,maxnum,l
       parameter (maxtrack=2048,maxjet=2048,maxnum=30)
       integer ntracks,jetvec(maxtrack),ib1
       double precision pttop,etatop,ytop,ptj1,etaj1,yj1,ptbj1,etabj1,
@@ -125,20 +176,37 @@ C----------------------------------------------------------------------
      &p_bjet(4,maxnum),psyst(4),ptsyst,ysyst,etasyst,ptj2,yj2,etaj2
       logical is_b_jet(maxnum)
       integer btrack(maxnum),ib(maxnum)
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
 c
+      IF(MOD(NEVHEP,10000).EQ.0)RETURN
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c To be changed !!
+      ww(1)=1d0
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
         CALL HWWARN('PYANAL',111)
         GOTO 999
       ENDIF
-      WWW0=EVWGT
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
+
 C INITIALIZE
       NT=0
       NB=0
-      NBJETS=0
+      NBJET=0
       NTRACKS=0
-      NJETS=0
+      NJET=0
 
       DO IHEP=1,NHEP
          IST=ISTHEP(IHEP)      
@@ -180,111 +248,109 @@ C END OF LOOP OVER IHEP
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C KT ALGORITHM, FASTJET IMPLEMENTATION
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-      NJETS=0
+      NJET=0
       JET_KTRADIUS = 0.7D0          
       JET_KTPTMIN  = 5D0
       PALG=1D0
       CALL fastjetppgenkt(PTRACK,NTRACKS,JET_KTRADIUS,JET_KTPTMIN,PALG,
-     $     PJET,NJETS,JETVEC)
+     $     PJET,NJET,JETVEC)
 
 c Check that jets are ordered in pt
-      do i=1,njets-1
+      do i=1,njet-1
          if (getpt(pjet(1,i)).lt.getpt(pjet(1,i+1)) ) then
             write (*,*) 'ERROR jets not ordered'
             stop
          endif
       enddo
          
-C TAG B-FLAVOURED JETS 
-      nbjets=0
-      do i=1,njets
+C b-jet 
+      do i=1,njet
          is_b_jet(i)=.false.
          do j=1,NB
             if (JETVEC(BTRACK(j)).eq.i) then
-c B-jet found
                is_b_jet(i)=.true.
                exit
             endif
          enddo
-         if (is_b_jet(i)) then
-            nbjets=nbjets+1
-            do mu=1,4
-               p_bjet(mu,nbjets)=pjet(mu,i)
-            enddo
-         endif
       enddo
 
-      kk=0
       pttop = getpt(p_top(1,1))
       ytop  = getrapidity(p_top(1,1))
       etatop= getpseudorap(p_top(1,1))
-      call mfill(kk+1,(pttop),(www0))
-      if(pttop.gt.0d0)
-     &call mfill(kk+2,(log10(pttop)),(www0))
-      call mfill(kk+3,(ytop),(www0))
-      call mfill(kk+4,(etatop),(www0))
 
-      count_j=1
-      do i=1,njets
+      count_j=0
+      count_bj=0
+      do i=1,njet
          if(.not.is_b_jet(i))then
+            count_j=count_j+1
             if(count_j.eq.1)then
                ptj1 = getpt(pjet(1,i))
                yj1  = getrapidity(pjet(1,i))
                etaj1= getpseudorap(pjet(1,i))
-               call mfill(kk+5,(ptj1),(www0))
-               call mfill(kk+6,(log10(ptj1)),(www0))
-               call mfill(kk+7,(yj1),(www0))
-               call mfill(kk+8,(etaj1),(www0))
                do mu=1,4
                   psyst(mu)=p_top(mu,1)+pjet(mu,i)
                enddo
                ptsyst = getpt(psyst)
                ysyst  = getrapidity(psyst)
                etasyst= getpseudorap(psyst)
-               call mfill(kk+21,(ptsyst),(www0))
-               if(ptsyst.gt.0d0)
-     &         call mfill(kk+22,(log10(ptsyst)),(www0))
-               call mfill(kk+23,(ysyst),(www0))
-               call mfill(kk+24,(etasyst),(www0))
             elseif(count_j.eq.2)then
                ptj2 = getpt(pjet(1,i))
                yj2  = getrapidity(pjet(1,i))
                etaj2= getpseudorap(pjet(1,i))
-               call mfill(kk+9,(ptj2),(www0))
-               call mfill(kk+10,(log10(ptj2)),(www0))
-               call mfill(kk+11,(yj2),(www0))
-               call mfill(kk+12,(etaj2),(www0))
-            elseif(count_j.eq.3)then
-               exit
             endif
-            count_j=count_j+1
+         elseif(is_b_jet(i))then
+            count_bj=count_bj+1
+            if (count_bj.eq.1) then
+               ptbj1 = getpt(pjet(1,i))
+               ybj1  = getrapidity(pjet(1,i))
+               etabj1= getpseudorap(pjet(1,i))
+            elseif (count_bj.eq.2) then
+               ptbj2 = getpt(pjet(1,i))
+               ybj2  = getrapidity(pjet(1,i))
+               etabj2= getpseudorap(pjet(1,i))
+            endif
          endif
       enddo
-      
-      count_bj=1
-      do i=1,nbjets
-            if (count_bj.eq.1) then
-               ptbj1 = getpt(p_bjet(1,i))
-               ybj1  = getrapidity(p_bjet(1,i))
-               etabj1= getpseudorap(p_bjet(1,i))
-               call mfill(kk+13,(ptbj1),(www0))
-               call mfill(kk+14,(log10(ptbj1)),(www0))
-               call mfill(kk+15,(ybj1),(www0))
-               call mfill(kk+16,(etabj1),(www0))
-            elseif (count_bj.eq.2) then
-               ptbj2 = getpt(p_bjet(1,i))
-               ybj2  = getrapidity(p_bjet(1,i))
-               etabj2= getpseudorap(p_bjet(1,i))
-               call mfill(kk+17,(ptbj2),(www0))
-               call mfill(kk+18,(log10(ptbj2)),(www0))
-               call mfill(kk+19,(ybj2),(www0))
-               call mfill(kk+20,(etabj2),(www0))
-            elseif(count_bj.eq.3)then
-               exit
+      nbjet=count_bj
+c fill the histograms
+      do i=1,2
+         do kk=1,nwgt_analysis
+            l=(kk-1)*48+(i-1)*24
+            call mfill(l+1,pttop,www(kk))
+            if(pttop.gt.0d0) call mfill(l+2,log10(pttop),www(kk))
+            call mfill(l+3,ytop,www(kk))
+            call mfill(l+4,etatop,www(kk))
+            if(njet.ge.1)then
+               call mfill(l+5,ptj1,www(kk))
+               if (ptj1.gt.0d0) call mfill(l+6,log10(ptj1),www(kk))
+               call mfill(l+7,yj1,www(kk))
+               call mfill(l+8,etaj1,www(kk))
+               call mfill(l+21,ptsyst,www(kk))
+               if(ptsyst.gt.0d0) call mfill(l+22,log10(ptsyst),www(kk))
+               call mfill(l+23,ysyst,www(kk))
+               call mfill(l+24,etasyst,www(kk))
             endif
-            count_bj=count_bj+1
+            if(njet.ge.2)then
+               call mfill(l+9,ptj2,www(kk))
+               if(ptj2.gt.0d0) call mfill(l+10,log10(ptj2),www(kk))
+               call mfill(l+11,yj2,www(kk))
+               call mfill(l+12,etaj2,www(kk))
+            endif
+            if(nbjet.ge.1)then
+               call mfill(l+13,ptbj1,www(kk))
+               if (ptbj1.gt.0d0) call mfill(l+14,log10(ptbj1),www(kk))
+               call mfill(l+15,ybj1,www(kk))
+               call mfill(l+16,etabj1,www(kk))
+            endif
+            if(nbjet.ge.2)then
+               call mfill(l+17,ptbj2,www(kk))
+               if (ptbj2.gt.0d0) call mfill(l+18,log10(ptbj2),www(kk))
+               call mfill(l+19,ybj2,www(kk))
+               call mfill(l+20,etabj2,www(kk))
+            endif
          enddo
-
+      enddo
+      
  999  RETURN
       END
 
