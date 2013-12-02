@@ -158,8 +158,8 @@ if rev_nb:
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
-filepath = "MadGraph5_v" + misc.get_pkg_info()['version'].replace(".", "_")
-filename = "MadGraph5_v" + misc.get_pkg_info()['version'] + ".tar.gz"
+filepath = "MG5_aMC_v" + misc.get_pkg_info()['version'].replace(".", "_")
+filename = "MG5_aMC_v" + misc.get_pkg_info()['version'] + ".tar.gz"
 if path.exists(filepath):
     logging.info("Removing existing directory " + filepath)
     shutil.rmtree(filepath)
@@ -175,7 +175,7 @@ if status:
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
-    if not data.endswith('mg5'):
+    if not data.endswith('mg5') and not data.endswidth('mg5_aMC'):
         os.remove(data)
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
