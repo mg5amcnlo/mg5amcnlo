@@ -2224,7 +2224,7 @@ Integrated cross-section
 
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
