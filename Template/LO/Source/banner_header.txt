@@ -9,7 +9,7 @@
 #                                                                    *
 #                   http://madgraph.hep.uiuc.edu                     *
 #                   http://madgraph.phys.ucl.ac.be                   *
-#                   http://madgraph.roma2.infn.it                    *
+#                   http://amcatnlo.cern.ch                          *
 #                                                                    *
 #                     The MadGraph5_aMC@NLO team                     *
 #                                                                    *

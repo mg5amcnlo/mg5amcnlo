@@ -69,7 +69,7 @@ def parse_info_str(fsock):
 #===============================================================================
 # mute_logger (designed to be a decorator)
 #===============================================================================
-def mute_logger(names=['madgraph','aloha','cmdprint','madevent'], levels=[50,50,50,50]):
+def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,50,50]):
     """change the logger level and restore those at their initial value at the
     end of the function decorated."""
     def control_logger(f):
@@ -82,7 +82,7 @@ def mute_logger(names=['madgraph','aloha','cmdprint','madevent'], levels=[50,50,
             old_levels = []
             for name, level in zip(names, levels):
                 log_module = logging.getLogger(name)
-                old_levels.append(level)
+                old_levels.append(log_module.level)
                 log_module.setLevel(level)
             try:
                 out = f(self, *args, **opt)
@@ -273,8 +273,8 @@ def get_gfortran_version(compiler='gfortran'):
     """ Returns the gfortran version as a string.
         Returns '0' if it failed."""
     try:    
-        p = Popen(compiler+' -dumpversion', stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE, shell=True)
+        p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
         output, error = p.communicate()
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
         version = version_finder.search(output).group('version')

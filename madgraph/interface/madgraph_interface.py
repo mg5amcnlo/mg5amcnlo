@@ -4204,6 +4204,23 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             files.cp(pjoin(MG5DIR, 'Delphes','examples','delphes_card_CMS.tcl'),
                      pjoin(MG5DIR,'Template', 'Common', 'Cards', 'delphes_card_default.dat'))  
         
+        #reset the position of the executable
+        options_name = {'Delphes': 'delphes_path',
+                           'Delphes2': 'delphes_path',
+                           'Delphes3': 'delphes_path',
+                           'ExRootAnalysis': 'exrootanalysis_path',
+                           'MadAnalysis': 'madanalysis_path',
+                           'SysCalc': 'syscalc_path',
+                           'pythia-pgs':'pythia-pgs_path'}
+        
+        if args[0] in options_name:
+            opt = options_name[args[0]]
+            if self.options[opt] != self.options_configuration[opt]:
+                self.options[opt] = self.options_configuration[opt]
+                self.exec_cmd('save options')
+        
+        
+        
     def install_update(self, args, wget):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
@@ -4753,6 +4770,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not '--auto' in args:
                 for key, default in self.options_madevent.items():
                     if self.options_madevent[key] != self.options[key] != None:
+                        if '_path' in key and os.path.basename(self.options[key]) == 'None':
+                            continue
                         to_define[key] = self.options[key]
                     elif key == 'cluster_queue' and self.options[key] is None:
                         to_define[key] = self.options[key]
