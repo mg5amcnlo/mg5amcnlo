@@ -1,12 +1,11 @@
 #######################################################################
-#                                                                               
+#                             
 # This file contains the settings for analyses to be linked to aMC@NLO
 # fixed order runs. Analyse files are meant to be put (or linked)
 # inside <PROCDIR>/FixedOrderAnalysis/ (<PROCDIR> is the name of the
-# exported process directory). The histograms should be declared and
-# filled using the 'hbook' package (which is already included in the
-# code). See the <PROCDIR>/FixedOrderAnalysis/analysis_template.f file
-# for details on how to write your own analysis.
+# exported process directory). See the
+# <PROCDIR>/FixedOrderAnalysis/analysis_template.f file for details on
+# how to write your own analysis.
 #                                                                               
 #######################################################################
 #
