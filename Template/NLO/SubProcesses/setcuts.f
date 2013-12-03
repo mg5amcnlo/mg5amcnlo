@@ -184,6 +184,10 @@ c BW stuff
      &     cBW_width(-nexternal:-1,-1:1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+      double precision s_mass(-nexternal:-1)
+     $     ,s_mass_FKS(fks_configs,-nexternal:nexternal)
+      save s_mass_FKS
+      common/to_phase_space_s_channel/s_mass
 c
       real*8         emass(nexternal)
       common/to_mass/emass
@@ -354,6 +358,17 @@ c the previous iteration of the loop
             enddo
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c Determine the "minimal" s-channel invariant masses
+            do i=nincoming+1,nexternal-1
+               s_mass_FKS(iFKS,i)=xm(i)**2
+            enddo
+            do i=-1,-(nexternal-3),-1 ! All propagators
+               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
+               s_mass_FKS(iFKS,i)=(sqrt(s_mass_FKS(iFKS,itree(1,i)))
+     $              +sqrt(s_mass_FKS(iFKS,itree(2,i))))**2
+            enddo
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
             do i=nincoming+1,nexternal-1
@@ -395,22 +410,23 @@ c     set the daughters also as conflicting (recursively)
                   do j=i,-1
                      if (cBW_FKS(iFKS,j).ne.0) then
                         do k=1,2 ! loop over the 2 daughters
-                           if(cBW_FKS(iFKS,itree(k,j)).ne.2 .and.
-     &                          itree(k,j).lt.0) then
-                              cBW_FKS(iFKS,itree(k,j))=1
-                              cBW_FKS_level(iFKS,itree(k,j))=
-     &                             cBW_FKS_level(iFKS,j)+1
-                              cBW_FKS_level_max(iFKS)=
-     $                             max(cBW_FKS_level_max(iFKS)
-     $                             ,cBW_FKS_level(iFKS,itree(k,j)))
+                           if (itree(k,j).lt.0) then
+                              if(cBW_FKS(iFKS,itree(k,j)).ne.2) then
+                                 cBW_FKS(iFKS,itree(k,j))=1
+                                 cBW_FKS_level(iFKS,itree(k,j))=
+     &                                cBW_FKS_level(iFKS,j)+1
+                                 cBW_FKS_level_max(iFKS)=
+     $                                max(cBW_FKS_level_max(iFKS)
+     $                                ,cBW_FKS_level(iFKS,itree(k,j)))
 c     Set here the mass (and width) of the alternative mass; it's the
 c     difference between the mother and the sister masses. (3rd argument
 c     is '-1', because this alternative mass is SMALLER than the
 c     resonance mass).
-                              cBW_FKS_mass(iFKS,itree(k,j),-1)=
-     &                             pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
-                              cBW_FKS_width(iFKS,itree(k,j),-1)=
-     &                             pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
+                                 cBW_FKS_mass(iFKS,itree(k,j),-1)=
+     &                                pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
+                                 cBW_FKS_width(iFKS,itree(k,j),-1)=
+     &                                pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
+                              endif
                            endif
                         enddo
                      endif
@@ -455,6 +471,7 @@ c
             cBW_mass(i,j)=cBW_FKS_mass(nFKSprocess,i,j)
             cBW_width(i,j)=cBW_FKS_width(nFKSprocess,i,j)
          enddo
+         s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess)
          

@@ -1,0 +1,120 @@
+      integer WTRACK_WORD
+      parameter (WTRACK_WORD = 10*FLOAT_WORD)
+
+      structure /wtrack_struct/
+        DFLOAT px      !Px
+        DFLOAT py      !Py
+        DFLOAT pz      !Pz
+        DFLOAT E       !E
+        DFLOAT x       !x
+        DFLOAT y       !y
+        DFLOAT z       !z
+        DFLOAT pt      !Pt = sqrt(px**2 + py**2)
+        DFLOAT p       !Momentum
+        DFLOAT q       !Charge
+      end structure
+
+c    Reconstructed charged tracks. Since there are two representations
+c    (central and forward tracks) we adopt a standard parametrization of
+c    a 4-momentum and a 3-position.
+
+#include "const.inc"
+#include "wtrack_struct.inc"
+
+      structure /offline_track_struct/
+        record /wtrack_struct/ w  !Track parameters
+        DFLOAT mass         !Mass
+        DFLOAT cov(7,7)     !Covariance matrix
+        integer icov        !0 ==> covariance matrix not defined
+                            !1 ==> covariance matrix defined
+        integer hep         !Pos. of corresp. track in HEPEVT list
+        integer origin      !1 = forward, 2 = central
+        integer pos         !Pos. of track in central or forward list
+      end structure
+#endif
+#include "offline_track_struct.inc"
+
+c    Offline reconstructed charged tracks.
+
+      integer trk_off_max
+      parameter (trk_off_max = 400)
+
+      integer trk_off_num                       !Number of tracks
+      record /offline_track_struct/ trk_off     !Track parameters
+
+      common /trk_off1/
+     *  trk_off_num
+
+      common /trk_off2/
+     *  trk_off(trk_off_max)
+ 
+-
+-
+-
+-
+-
+--
+-
+-
+-
+-
+-
+-
+-
+--
+
+-
+-
+-
+ 
+ typedef struct _wtrack_struct {
+        double px;      
+        double py;      
+        double pz;      
+        double E;       
+        double x;       
+        double y;       
+        double z;       
+        double pt;      
+        double p;      
+        double q;       
+} wtrack_struct;
+ 
+typedef struct _offline_track_struct {
+        wtrack_struct w;
+        double mass;        
+        double cov[7][7];   
+        int icov;       
+        int hep;        
+        int origin;      
+        int pos;        
+}offline_track_struct; 
+
+
+#define TRK_OFF_MAX 400 
+extern struct trk_off1 {
+  int trk_off_num;
+}trk_off1_;
+
+extern struct trk_off2 {
+   offline_track_struct trk_off[TRK_OFF_MAX];
+}trk_off2_;
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """  A file containing different extension of the cmd basic python library"""
@@ -237,10 +237,10 @@ class BasicCmd(cmd.Cmd):
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
-        #print self.completion_matches
 
-        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
-                      and l or (l+' ')) for l in self.completion_matches if l]
+        self.completion_matches = [ l if l[-1] in [' ','@','=',os.path.sep]
+                                    else ((l + ' ') if not l.endswith('\\$') else l[:-2])
+                                  for l in self.completion_matches if l] 
         
         try:
             return self.completion_matches[state]
@@ -564,7 +564,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None, **opt):
+            timeout = True, fct_timeout=None, ask_class=None, alias={},**opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -601,11 +601,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
+        if alias:
+            choices += alias.keys()
+        
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
+            if answer in alias:
+                answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
             return answer
@@ -613,7 +618,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
+        
+        try:
+            if value in alias:
+                value = alias[value]
+        except TypeError:
+            pass
         if value == default and ask_class:
             value = question_instance.default(default)
         return value
@@ -705,7 +715,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
            logger.error(error)
-            
+
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         # Create a nice error output
@@ -727,10 +737,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
-
-        debug_file.close()
-        text =  open(self.debug_output).read()        
-
+        
+        #add the cards:
+        for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat']:
+            try:
+                ff = open(pjoin(self.me_dir, 'Cards', card))
+                debug_file.write(ff.read())
+                ff.close()
+            except Exception:
+                pass
+            
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -850,7 +866,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
-        if printcmd:
+        if printcmd and not line.startswith('#'):
             logger.info(line)
         if self.child:
             current_interface = self.child
@@ -925,6 +941,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if self.log:
             logger.info("History written to " + output_file.name)
+
+    def compile(self, *args, **opts):
+        """ """
+        
+        return misc.compile(nb_core=self.options['nb_core'], *args, **opts)
 
     def avoid_history_duplicate(self, line, no_break=[]):
         """remove all line in history (but the last) starting with line.
@@ -1183,7 +1204,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
-                outstr += misc.nice_representation(var, nb_space=4)                
+                outstr += misc.nice_representation(var, nb_space=4)
+            split =  args[1].split('.')
+            for i, name in enumerate(split):
+                try:
+                    __import__('.'.join(split[:i+1]))                    
+                    exec('%s=sys.modules[\'%s\']' % (split[i], '.'.join(split[:i+1])))
+                except ImportError:
+                    try:
+                        var = eval(args[1])
+                    except Exception, error:
+                        outstr += 'EXTERNAL:\nVariable %s is not a external variable\n' % args[1]
+                        break
+                    else:
+                        outstr += 'EXTERNAL:\n'
+                        outstr += misc.nice_representation(var, nb_space=4)                        
+                else:
+                    var = eval(args[1])
+                    outstr += 'EXTERNAL:\n'
+                    outstr += misc.nice_representation(var, nb_space=4)                        
             
             pydoc.pager(outstr)
     
@@ -1438,6 +1477,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
     
+    completion_prefix=''
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any

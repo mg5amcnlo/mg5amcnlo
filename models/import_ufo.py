@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ How to import a UFO model to the MG5 format """
@@ -21,7 +21,8 @@ import os
 import re
 import sys
 
-from madgraph import MadGraph5Error, MG5DIR
+
+from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.color_algebra as color
@@ -130,12 +131,15 @@ def import_model(model_name, decay=False, restrict=True):
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
                                             keep_external=keep_external)
+        model.path = model_path
+
     return model
 
 _import_once = []
 def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
+
 
     assert model_path == find_ufo_path(model_path)
             
@@ -171,10 +175,10 @@ def import_full_model(model_path, decay=False):
                 return model
 
     if (model_path, aloha.unitary_gauge) in _import_once:
-        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
 
     # Load basic information
-    ufo_model = ufomodels.load_model(model_path)
+    ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
     
@@ -201,7 +205,9 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
             
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
+    if ReadWrite:
+        save_load_object.save_to_file(os.path.join(model_path, pickle_name),
+                                   model, log=False) 
  
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
@@ -367,7 +373,6 @@ class UFOMG5Converter(object):
                 return
             elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
                 return      
-                      
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -392,18 +397,32 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
+                elif key == 'propagator':
+                    if aloha.unitary_gauge:
+                        particle.set(key, str(value[0]))
+                    else: 
+                        particle.set(key, str(value[1]))
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':
                 loop_particles = value
             elif key == 'counterterm':
                 counterterms = value
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
-                # add charge -we will check later if those are conserved 
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstone',
+                                             'goldstoneboson','partial_widths'):
+                # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-        
-        assert(12 == nb_property) #basic check that all the information is there         
+
+        if not hasattr(particle_info, 'propagator'):
+            nb_property += 1
+            if particle.get('spin') >= 3:
+                if particle.get('mass').lower() == 'zero':
+                    particle.set('propagator', 0) 
+                elif particle.get('spin') == 3 and not aloha.unitary_gauge:
+                    particle.set('propagator', 0)
+                
+        assert(13 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
@@ -802,7 +821,7 @@ class UFOMG5Converter(object):
         data_string = '*'.join(output)
 
         # Change convention for summed indices
-        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        p = re.compile(r'\'\w(?P<number>\d+)\'')
         data_string = p.sub('-\g<number>', data_string)
          
         # Shift indices by -1
@@ -1203,6 +1222,9 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
+            if param.lhablock.lower() == 'decay':
+                continue
+            
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
             if key in block_value_to_var:
@@ -1418,40 +1440,52 @@ class RestrictModel(model_reader.ModelReader):
         if simplify:
             # check if the parameters is still usefull:
             re_str = '|'.join(special_parameters)
-            re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-            used = set()
-            # check in coupling
-            for name, coupling_list in self['couplings'].items():
-                for coupling in coupling_list:
-                    for use in  re_pat.findall(coupling.expr):
-                        used.add(use)
+            if len(re_str) > 25000: # size limit on mac
+                split = len(special_parameters) // 2
+                re_str = ['|'.join(special_parameters[:split]),
+                          '|'.join(special_parameters[split:])]
+            else:
+                re_str = [ re_str ]
+            for expr in re_str:
+                re_pat = re.compile(r'''\b(%s)\b''' % expr)
+                used = set()
+                # check in coupling
+                for name, coupling_list in self['couplings'].items():
+                    for coupling in coupling_list:
+                        for use in  re_pat.findall(coupling.expr):
+                            used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         
         # simplify the regular expression
-        re_str = '|'.join([param for param in special_parameters 
-                                                      if param not in used])
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)            
-        param_info = {}
-        # check in parameters
-        for dep, param_list in self['parameters'].items():
-            for tag, parameter in enumerate(param_list):
-                # update information concerning zero/one parameters
-                if parameter.name in special_parameters:
-                    param_info[parameter.name]= {'dep': dep, 'tag': tag, 
-                                                           'obj': parameter}
-                    continue
-                                    
-                # Bypass all external parameter
-                if isinstance(parameter, base_objects.ParamCardVariable):
-                    continue
-                
-                # If there is no further special parameter to look for
-                if re_str!='' and simplify:
-                    # check the presence of zero/one parameter
-                    for use in  re_pat.findall(parameter.expr):
-                        used.add(use)
-        
+        re_str = '|'.join([param for param in special_parameters if param not in used])
+        if len(re_str) > 25000: # size limit on mac
+            split = len(special_parameters) // 2
+            re_str = ['|'.join(special_parameters[:split]),
+                          '|'.join(special_parameters[split:])]
+        else:
+            re_str = [ re_str ]
+        for expr in re_str:                                                      
+            re_pat = re.compile(r'''\b(%s)\b''' % expr)
+               
+            param_info = {}
+            # check in parameters
+            for dep, param_list in self['parameters'].items():
+                for tag, parameter in enumerate(param_list):
+                    # update information concerning zero/one parameters
+                    if parameter.name in special_parameters:
+                        param_info[parameter.name]= {'dep': dep, 'tag': tag, 
+                                                               'obj': parameter}
+                        continue
+                                        
+                    # Bypass all external parameter
+                    if isinstance(parameter, base_objects.ParamCardVariable):
+                        continue
+    
+                    if simplify:
+                        for use in  re_pat.findall(parameter.expr):
+                            used.add(use)
+                        
         # modify the object for those which are still used
         for param in used:
             if not param:

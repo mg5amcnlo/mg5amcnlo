@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -704,14 +704,24 @@ class CPPWriter(FileWriter):
 
         while len(res_lines[-1]) > self.line_length:
             long_line = res_lines[-1]
-            split_at = self.line_length
+            split_at = -1
             for character in split_characters:
                 index = long_line[(self.line_length - self.max_split): \
                                       self.line_length].rfind(character)
                 if index >= 0:
                     split_at = self.line_length - self.max_split + index + 1
                     break
-            
+                
+            # no valid breaking so find the first breaking allowed:
+            if split_at == -1:
+                split_at = len(long_line)
+                for character in split_characters:
+                    split = long_line[self.line_length].find(character)
+                    if split > 0:
+                        split_at = min(split, split_at)
+            if split_at == len(long_line):
+                break
+                    
             # Don't allow split within quotes
             quotes = self.quote_chars.findall(long_line[:split_at])
             if quotes and len(quotes) % 2 == 1:

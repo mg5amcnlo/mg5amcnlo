@@ -385,8 +385,6 @@ c
      #                IDWTUP,NPRUP
       read(ifile,*)XSECUP,XERRUP,XMAXUP,LPRUP
       read(ifile,'(a)')string
-c 501  format(2(1x,i6),2(1x,d14.8),2(1x,i2),2(1x,i6),1x,i2,1x,i3)
-c 502  format(3(1x,d14.8),1x,i6)
 c
       return
       end
@@ -400,7 +398,7 @@ c
      # PUP(5,*),VTIMUP(*),SPINUP(*)
       character*140 buff
       integer ifile,i
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -455,7 +453,7 @@ c
       enddo
       if(buff(1:1).eq.'#' .and. .not.rwgt_skip) then
         write(ifile,'(a)') buff(1:len_trim(buff))
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -512,7 +510,8 @@ c
               write(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               write(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              write(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  write(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -538,7 +537,10 @@ c$$$                 enddo
                     write(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-                 
+                 write(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 write(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               write(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -557,12 +559,16 @@ c$$$                 enddo
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    write(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+              write(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 write(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              write(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              write(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
@@ -609,7 +615,6 @@ c$$$                 enddo
         endif
       endif
       write(ifile,'(a)') '  </event>'
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -638,7 +643,7 @@ c
       character*80 string
       character*12 dummy12
       character*2 dummy2
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -658,7 +663,7 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -715,7 +720,8 @@ c
               read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              read(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -743,7 +749,10 @@ c
                     read(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-              
+                 read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -762,12 +771,16 @@ c
      &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
      &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
      &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+              read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
@@ -800,11 +813,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+                 call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+              call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
@@ -816,7 +829,6 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -827,7 +839,6 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
- 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -846,7 +857,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       character*80 string
       character*12 dummy12
       character*2 dummy2
-      character*1 ch1
+      character*9 ch1
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       integer ii,j,nps,nng,iFKS,idwgt
@@ -876,7 +887,7 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -933,7 +944,8 @@ c
               read(ifile,'(1x,e14.8)') wgtqes2_all(2,0)
               read(ifile,405)wgtwborn_all,wgtwns_all,
      &             wgtwnsmuf_all,wgtwnsmur_all
-              
+              read(ifile,404) wgtmuR2_all(2,0),wgtmuF12_all(2,0)
+     $             ,wgtmuF22_all(2,0)
               do ii=1,nScontributions
                  read(ifile,'(1x,i4)') nFKSprocess_reweight(ii)
                  iFKS=nFKSprocess_reweight(ii)*2-1
@@ -961,7 +973,10 @@ c
                     read(ifile,442)wgtwmcxsec_all(i,iFKS),
      &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
                  enddo
-                 
+                 read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1
+     $                ,iFKS),wgtmuF22_all(1,iFKS)
+                 read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2
+     $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
               read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
@@ -976,16 +991,20 @@ c
                  read(ifile,405)(wgtkin_all(j,i,2,iFKS),j=0,3)
               enddo
               read(ifile,402)
-     &                wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
-     &                wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
-     &                wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
-     &                wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
-                 read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
-     &                ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
-                 do i=1,iwgtnumpartn_all(iFKS)
-                    read(ifile,442)wgtwmcxsec_all(i,iFKS),
-     &                   wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
-                 enddo
+     &             wgtxbj_all(1,1,iFKS),wgtxbj_all(2,1,iFKS),
+     &             wgtxbj_all(1,2,iFKS),wgtxbj_all(2,2,iFKS),
+     &             wgtxbj_all(1,3,iFKS),wgtxbj_all(2,3,iFKS),
+     &             wgtxbj_all(1,4,iFKS),wgtxbj_all(2,4,iFKS)
+              read(ifile,441)wgtwreal_all(1,iFKS),wgtwreal_all(2
+     &             ,iFKS),wgtwreal_all(3,iFKS),wgtwreal_all(4,iFKS)
+              do i=1,iwgtnumpartn_all(iFKS)
+                 read(ifile,442)wgtwmcxsec_all(i,iFKS),
+     &                wgtmcxbj_all(1,i,iFKS),wgtmcxbj_all(2,i,iFKS)
+              enddo
+              read(ifile,404) wgtmuR2_all(1,iFKS),wgtmuF12_all(1,iFKS)
+     $             ,wgtmuF22_all(1,iFKS)
+              read(ifile,404) wgtmuR2_all(2,iFKS),wgtmuF12_all(2,iFKS)
+     $             ,wgtmuF22_all(2,iFKS)
            else
               write (*,*) 'Not an S- or H-event in write_lhef_event'
               stop
@@ -1018,11 +1037,11 @@ c
            wgtref=XWGTUP
            do i=1,numscales
               do j=1,numscales
-                 read(ifile,601) dummy12,idwgt,dummy2,wgtxsecmu(i,j)
+                call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
            do i=1,2*numPDFpairs
-              read(ifile,601) dummy12,idwgt,dummy2,wgtxsecPDF(i)
+             call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
            if (numscales.eq.0 .and. numPDFpairs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
@@ -1034,7 +1053,6 @@ c
         string=buff(1:len_trim(buff))
         buff=' '
       endif
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i2,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -1045,7 +1063,6 @@ c
  442  format(1x,e16.10,2(1x,e14.8))
  503  format(1x,i2,1x,i6,4(1x,e14.8))
  504  format(1x,i8,1x,i2,4(1x,i4),5(1x,e14.8),2(1x,e10.4))
- 601  format(a12,i4,a2,1x,e11.5,a7)
 c
       return
       end
@@ -1060,14 +1077,14 @@ c
       buff2=' '
       do while(.true.)
          read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)write(outfile,*)buff2
+         if(index(buff2,'= nevents').eq.0)write(outfile,'(a)')buff2
          if(index(buff2,'= nevents').ne.0)exit
       enddo
       write(outfile,*)
      &nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
-         write(outfile,*)buff2
+         write(outfile,'(a)')buff2
       enddo
 c
       return
@@ -1134,4 +1151,22 @@ c
       return
       end
 
+
+      subroutine read_rwgt_line(unit,id,wgt)
+c read a line in the <rwgt> tag. The syntax should be
+c  <wgt id='1001'> 0.1234567e+01 </wgt>
+c The id should be exactly 4 digits long.
+      implicit none
+      integer unit,id,wgt_start,id_start
+      double precision wgt
+      character*100 buff
+      read (unit,'(a)') buff
+c Use char() to make sure that the non-standard characters are compiler
+c independent (char(62)=">", char(61)="=", char(39)="'")
+      wgt_start=index(buff,CHAR(39)//CHAR(62))+2
+      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
+      read (buff(id_start:100),'(i4)') id
+      read (buff(wgt_start:100),*) wgt
+      return
+      end
 

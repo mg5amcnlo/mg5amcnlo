@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Command interface for MadSpin """
@@ -19,6 +19,7 @@ import math
 import os
 import re
 import shutil
+import glob
 
 
 pjoin = os.path.join
@@ -30,6 +31,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
+import madgraph.iolibs.files as files
 import madgraph.various.banner as banner
 
 import models.import_ufo as import_ufo
@@ -46,6 +48,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     
     prompt = 'MadSpin>'
     debug_output = 'MS_debug'
+    
     
     @misc.mute_logger()
     def __init__(self, event_path=None, *completekey, **stdin):
@@ -67,7 +70,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'max_weight_ps_point': 400,
                         'BW_cut':-1,
                         'zeromass_for_max_weight':5,
-                        'nb_sigma':0}
+                        'nb_sigma':0,
+                        'ms_dir':None}
         
 
         
@@ -266,18 +270,20 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
-        if args[0] in  ['max_weight', 'BW_effect']:
+        if args[0] in  ['max_weight', 'BW_effect','ms_dir']:
             self.options[args[0]] = args[1]
+            if args[0] == 'ms_dir':
+                self.options['curr_dir'] = self.options['ms_dir']
         elif args[0] == 'seed':
             import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
         else:
-             self.options[args[0]] = int(args[1])
+            self.options[args[0]] = int(args[1])
     
     def complete_set(self,  text, line, begidx, endidx):
         
-     try:
+
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -287,9 +293,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif len(args) == 2:
             if args[1] == 'BW_effect':
                 return self.list_completion(text, ['True', 'False']) 
-     except Exception, error:
-         print error
-         
+            if args[1] == 'ms_dir':
+                return self.path_completion(text, '.', only_dirs = True)
+        elif args[1] == 'ms_dir':
+            curr_path = pjoin(*[a for a in args \
+                                                   if a.endswith(os.path.sep)])
+            return self.path_completion(text, curr_path, only_dirs = True)
+        
     def help_set(self):
         """help the set command"""
         
@@ -308,6 +318,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_define(self, line):
         """ """
         return self.mg5cmd.do_define(line)
+    
+    def update_status(self, *args, **opts):
+        """ """
+        pass # function overwritten for MS launched by ME
     
     def complete_define(self, *args):
         """ """
@@ -346,6 +360,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
+        if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
+            return self.run_from_pickle()
+        
+    
         args = self.split_arg(line)
         self.check_launch(args)
         for part in self.list_branches.keys():
@@ -356,7 +374,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             if pid in self.final_state:
                 break
         else:
-            logger.info("Nothing to decay1 ...")
+            logger.info("Nothing to decay ...")
             return
         
 
@@ -364,17 +382,25 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if not self.seed:
             import random
-            self.seed = random.randint(0, int(2**32))
+            self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
             self.history.insert(0, 'set seed %s' % self.seed)
+
+        if self.seed > 30081*30081: # can't use too big random number
+            msg = 'Random seed too large ' + str(self.seed) + ' > 30081*30081'
+            raise Exception, msg
+
         self.options['seed'] = self.seed
         text = '%s\n' % '\n'.join([ line for line in self.history if line])
         self.banner.add_text('madspin' , text)
         
-
+        
+        self.update_status('generating Madspin matrix element')
         generate_all = madspin.decay_all_events(self, self.banner, self.events_file, 
                                                     self.options)
+        
+        self.update_status('running MadSpin')
         generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio
@@ -389,6 +415,80 @@ class MadSpinInterface(extended_cmd.Cmd):
         misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
         if not self.mother:
             logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)
+
+        # Now arxiv the shower card used if RunMaterial is present
+        ms_card_path = pjoin(self.options['curr_dir'],'Cards','madspin_card.dat')
+        run_dir = os.path.realpath(os.path.dirname(decayed_evt_file))
+        if os.path.exists(ms_card_path):
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'], cwd=run_dir)
+                base_path = pjoin(run_dir,'RunMaterial')
+            else:
+                base_path = pjoin(run_dir)
+
+            evt_name = os.path.basename(decayed_evt_file).replace('.lhe', '')
+            ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s.dat'%evt_name)
+            count = 0    
+            while os.path.exists(ms_card_to_copy):
+                count +=1
+                ms_card_to_copy = pjoin(base_path,'madspin_card_for_%s_%d.dat'%\
+                                                               (evt_name,count))
+            files.cp(str(ms_card_path),str(ms_card_to_copy))
+            
+            if os.path.exists(pjoin(run_dir,'RunMaterial.tar.gz')):
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                                    cwd=run_dir)
+                shutil.rmtree(pjoin(run_dir,'RunMaterial'))
+
+    def run_from_pickle(self):
+        import madgraph.iolibs.save_load_object as save_load_object
+        
+        generate_all = save_load_object.load_from_file(pjoin(self.options['ms_dir'], 'madspin.pkl'))
+        # Re-create information which are not save in the pickle.
+        generate_all.evtfile = self.events_file
+        generate_all.curr_event = madspin.Event(self.events_file) 
+        generate_all.mgcmd = self.mg5cmd
+        generate_all.mscmd = self 
+        generate_all.pid2width = lambda pid: generate_all.banner.get('param_card', 'decay', abs(pid)).value
+        generate_all.pid2mass = lambda pid: generate_all.banner.get('param_card', 'mass', abs(pid)).value
+        
+        if not hasattr(self.banner, 'param_card'):
+            self.banner.charge_card('slha')
+        for name, block in self.banner.param_card.items():
+            if name.startswith('decay'):
+                continue
+            orig_block = generate_all.banner.param_card[name]
+            if block != orig_block:
+                raise Exception, """The directory %s is specific to a mass spectrum. 
+                Your event file is not compatible with this one. (Different param_card: %s different)
+                orig block:
+                %s
+                new block:
+                %s""" \
+                % (self.options['ms_dir'], name, orig_block, block)
+        
+        # NOW we have all the information available for RUNNING
+        
+        if self.seed:
+            #seed is specified need to use that one:
+            open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.seed)
+            #remove all ranmar_state
+            for name in glob.glob(pjoin(self.options['ms_dir'], '*', 'SubProcesses','*','ranmar_state.dat')):
+                os.remove(name)    
+        
+        generate_all.ending_run()
+        self.branching_ratio = generate_all.branching_ratio
+        evt_path = self.events_file.name
+        try:
+            self.events_file.close()
+        except:
+            pass
+        misc.call(['gzip -f %s' % evt_path], shell=True)
+        decayed_evt_file=evt_path.replace('.lhe', '_decayed.lhe')
+        shutil.move(pjoin(self.options['curr_dir'],'decayed_events.lhe'), decayed_evt_file)
+        misc.call(['gzip -f %s' % decayed_evt_file], shell=True)
+        if not self.mother:
+            logger.info("Decayed events have been written in %s.gz" % decayed_evt_file)    
     
     
     def load_model(self, name, use_mg_default, complex_mass=False):

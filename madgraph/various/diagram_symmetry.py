@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -287,14 +287,17 @@ def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
 #===============================================================================
 
 class IdentifySGConfigTag(diagram_generation.DiagramTag):
-    """DiagramTag daughter class to identify configs giving the same
-    config. Need to compare state, spin, mass, width, and color."""
+    """DiagramTag daughter class to identify diagrams giving the same
+    config. Need to compare state, spin, mass, width, and color.
+    Warning: If changing this tag, then also CanonicalConfigTag in 
+             helas_objects.py must be changed!
+    """
 
     @staticmethod
     def link_from_leg(leg, model):
-        """Returns the end link for a leg needed to identify matrix
-        elements: ((leg numer, state, spin, self_antipart, mass,
-        width, color, decay and is_part), number)."""
+        """Returns the end link for a leg needed to identify symmetric
+        configs: ((leg number for initial state, spin, mass,
+        width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
 
@@ -303,43 +306,29 @@ class IdentifySGConfigTag(diagram_generation.DiagramTag):
             # Distinguish identical initial state particles
             state = leg.get('number')
 
-        return [((state, part.get('spin'), part.get('color'),
+        if part.get('color') != 1:
+            charge = 0
+        else:
+            charge = abs(part.get('charge'))
+        
+        return [((state, part.get('spin'), part.get('color'), charge,
                   part.get('mass'), part.get('width')),
                  leg.get('number'))]
         
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
-        """Returns the info needed to identify matrix elements:
-        interaction color, lorentz, coupling, and wavefunction
-        spin, self_antipart, mass, width, color, decay and
-        is_part. Note that is_part needs to be flipped if we move the
-        final vertex around."""
+        """Returns the info needed to identify symmetric configs:
+        interaction color, mass, width."""
 
         inter = model.get_interaction(vertex.get('id'))
-        ret_list = 0
                    
         if last_vertex:
-            return (ret_list,)
+            return (0,)
         else:
             part = model.get_particle(vertex.get('legs')[-1].get('id'))
             return ((part.get('color'),
-                     part.get('mass'), part.get('width')),
-                    ret_list)
+                     part.get('mass'), part.get('width')),)
 
-    @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
-        """Move the wavefunction part of vertex id appropriately"""
-
-        if len(new_vertex) == 1 and len(old_vertex) == 2:
-            # We go from a last link to next-to-last link - add propagator info
-            return (old_vertex[0],new_vertex[0])
-        elif len(new_vertex) == 2 and len(old_vertex) == 1:
-            # We go from next-to-last link to last link - remove propagator info
-            return (new_vertex[1],)
-        # We should not get here
-        raise diagram_generation.DiagramTag.DiagramTagError, \
-              "Error in IdentifyConfigTag, wrong setup of vertices in link."
-        
 def find_symmetry_subproc_group(subproc_group):
     """Find symmetric configs by directly comparing the configurations
     using IdentifySGConfigTag."""
@@ -393,7 +382,6 @@ def find_symmetry_subproc_group(subproc_group):
         else:
             diagram_classes[ind].append(idiag + 1)
             perms[ind].append(tag.get_external_numbers())
-
     for inum, diag_number in enumerate(diagram_numbers):
         if symmetry[inum] == 0:
             continue

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Definitions of all basic objects used in the core code: particle, 
@@ -25,6 +25,7 @@ import re
 import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -200,7 +201,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -211,13 +212,14 @@ class Particle(PhysicsObject):
         self['spin'] = 1
         self['color'] = 1
         self['charge'] = 1.
-        self['mass'] = 'zero'
-        self['width'] = 'zero'
+        self['mass'] = 'ZERO'
+        self['width'] = 'ZERO'
         self['pdg_code'] = 0
         self['texname'] = 'none'
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -501,7 +503,7 @@ class ParticleList(PhysicsObjectList):
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
             if not particle.get('self_antipart'):
-                antipart = copy.copy(particle)
+                antipart = copy.deepcopy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
 
@@ -1056,7 +1058,8 @@ class Model(PhysicsObject):
                                     os.path.basename(modeldir).rsplit("-",1)[0])
             if os.path.exists(modeldir):
                 return modeldir 
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')        
+
+            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1087,7 +1090,7 @@ class Model(PhysicsObject):
                 
         return Model.__bases__[0].get(self, name) # call the mother routine
 
-    def set(self, name, value):
+    def set(self, name, value, force = False):
         """Special set for particles and interactions - need to
         regenerate dictionaries."""
 
@@ -1111,11 +1114,13 @@ class Model(PhysicsObject):
             self['order_hierarchy'] = {}
             self['expansion_order'] = None
 
-        Model.__bases__[0].set(self, name, value) # call the mother routine
+        result = Model.__bases__[0].set(self, name, value, force) # call the mother routine
 
         if name == 'particles':
             # Recreate particle_dict
             self.get('particle_dict')
+
+        return result
 
     def actualize_dictionaries(self):
         """This function actualizes the dictionaries"""
@@ -1331,7 +1336,7 @@ class Model(PhysicsObject):
                 '%s particles with pdg code %s is in conflict with MG ' + \
                 'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
-                'MadGraph convention'
+                'MadGraph5_aMC@NLO convention'
                 
                 raise MadGraph5Error, error_text % \
                                      (part.get_name(), part.get_pdg_code(), pdg)                
@@ -1545,6 +1550,12 @@ class Model(PhysicsObject):
                 pos = i + 1
         self.get('parameters')[new_param.depend].insert(pos, new_param)
 
+
+    #def __repr__(self):
+    #    """ """
+    #    raise Exception
+    #    return "Model(%s)" % self.get_name()
+    #__str__ = __repr__
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################
@@ -2608,11 +2619,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 
@@ -2686,17 +2700,22 @@ class Process(PhysicsObject):
         """Give the pdg code of the process including decay"""
         
         finals = self.get_final_ids()
-        to_add = []
         for proc in self.get('decay_chains'):
             init = proc.get_initial_ids()[0]
-            while 1:
-                try:
-                    finals.remove(init)
-                except:
-                    break
-            to_add += proc.get_final_ids_after_decay()
-        finals += to_add
-        return finals 
+            #while 1:
+            try:
+                pos = finals.index(init)
+            except:
+                break
+            finals[pos] = proc.get_final_ids_after_decay()
+        output = []
+        for d in finals:
+            if isinstance(d, list):
+                output += d
+            else:
+                output.append(d)
+        
+        return output
     
 
     def get_final_legs(self):

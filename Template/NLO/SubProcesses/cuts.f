@@ -86,7 +86,7 @@ c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
       double precision plab(0:3, nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmerge
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
 c Photon isolation
       integer nph,nem,k,nin
@@ -94,6 +94,7 @@ c Photon isolation
       double precision Etsum(0:nexternal)
       real drlist(nexternal)
       double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
+     $     ,pgammalab(0:3)
       logical alliso
 c Sort array of results: ismode>0 for real, isway=0 for ascending order
       integer ismode,isway,izero,isorted(nexternal)
@@ -283,7 +284,7 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-         call fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
 c
 c******************************************************************************
 
@@ -361,6 +362,16 @@ c Loop over all photons
           if(ptg.lt.ptgmin)then
             passcuts=.false.
             return
+          endif
+
+          if (etagamma.gt.0d0) then
+c     for rapidity cut, boost this one gamma to the lab frame
+             call boostwdir2(chybst,shybst,chybstmo,xd,
+     &            pgamma(0,j),pgammalab)
+             if (abs(eta(pgammalab)).gt.etagamma) then
+                passcuts=.false.
+                return
+             endif
           endif
 
 c Isolate from hadronic energy

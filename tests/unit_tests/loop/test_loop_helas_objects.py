@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -30,6 +30,7 @@ import tests.unit_tests as unittest
 
 import tests.unit_tests.loop.test_loop_diagram_generation as looptest
 import madgraph.core.drawing as draw_lib
+import aloha.create_aloha as create_aloha
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
@@ -63,6 +64,169 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
 #            _input_file_path,'LoopModelTest'))
         self.myloopmodel = models.import_full_model(os.path.join(\
             _input_file_path,'LoopSMTest'))
+        
+    def test_get_aloha_input(self):
+        """ Check that the function aloha_get_input in the class 
+        HelasWavefunction and HelasAmplitude behaves as expected """
+        
+        d_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(1),
+                                'number':1,
+                                'is_loop':False,
+                                'state':'initial'})
+        antid_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(-1),
+                                'number':2,
+                                'is_loop':True,
+                                'state':'initial'})
+        g_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(21),
+                                'number':3,
+                                'is_loop':True,
+                                'lorentz':['FFV1','FFV2','FFV3'],
+                                'state':'final',
+                                'pdg_codes':[1,-1,21],
+                                'interaction_id':18})
+        
+        g_helas_wf.set('mothers',helas_objects.HelasWavefunctionList(\
+                                                   [antid_helas_wf,d_helas_wf]))
+        
+        a_opt_input = g_helas_wf.get_aloha_info(optimized_output=True)
+        a_def_input = g_helas_wf.get_aloha_info(optimized_output=False)
+        
+        self.assertEqual(a_opt_input,(('FFV1', 'FFV2', 'FFV3'), ('L1', 'P0'), 3))
+        self.assertEqual(a_def_input,(('FFV1', 'FFV2', 'FFV3'), ('L', 'P0'), 3))
+        
+    def test_get_analytic_info(self):
+        """ Check that the function get_analytic_info and compute_analytic
+        info in the class HelasWavefunction behaves as expected """
+
+        alohaModel = create_aloha.AbstractALOHAModel(self.myloopmodel.get('name'))
+        alohaModel.add_Lorentz_object(self.myloopmodel.get('lorentz'))
+        
+        d_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(1),
+                                'number':1,
+                                'is_loop':False,
+                                'state':'initial'})
+        antid_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(21),
+                                'number':2,
+                                'is_loop':True,
+                                'state':'initial'})
+        g_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(1),
+                                'number':5,
+                                'is_loop':True,
+                                'lorentz':['FFV1','FFV2'],
+                                'state':'intermediate',
+                                'pdg_codes':[1,-1,21],
+                                'interaction_id':18})
+        
+        g_helas_wf.set('mothers',helas_objects.HelasWavefunctionList(\
+                                                   [antid_helas_wf,d_helas_wf]))
+        
+        final_d_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(1),
+                                'number':3,
+                                'is_loop':False,
+                                'state':'final'})
+        final_antid_helas_wf = helas_objects.HelasWavefunction({
+                                'particle':self.myloopmodel.get_particle(21),
+                                'number':4,
+                                'is_loop':True,
+                                'pdg_codes':[1,-1,21],
+                                'lorentz':['FFV1','FFV2'],
+                                'interaction_id':18,
+                                'state':'final'})
+        
+        final_antid_helas_wf.set('mothers',helas_objects.HelasWavefunctionList(\
+                                                 [g_helas_wf,final_d_helas_wf]))
+
+        
+        # First make sure that, alone, with an alohaModel, the wavefunction can
+        # return some analytic information.
+        for (lwf, trgt_interaction_rank, trgt_wavefunction_rank) in \
+            [(antid_helas_wf,0,0),(g_helas_wf,1,1),(final_antid_helas_wf,0,1)]:
+            
+            wf_rank = lwf.get_analytic_info('wavefunction_rank', \
+                                                        alohaModel = alohaModel)
+            self.assertEqual(wf_rank,trgt_wavefunction_rank)
+            self.assertTrue('wavefunction_rank' in lwf['analytic_info'].keys())
+            inter_rank = lwf.get_analytic_info('interaction_rank', \
+                                                        alohaModel = alohaModel)
+            self.assertEqual(inter_rank,trgt_interaction_rank)
+            self.assertTrue('interaction_rank' in lwf['analytic_info'].keys())
+            
+            # Now make sure it is recovered without the alohaModel (so that the
+            # caching works
+            wf_rank = lwf.get_analytic_info('wavefunction_rank')
+            self.assertEqual(wf_rank,trgt_wavefunction_rank)        
+            inter_rank = lwf.get_analytic_info('interaction_rank')
+            self.assertEqual(inter_rank,trgt_interaction_rank)
+            
+        for lwf in [antid_helas_wf,g_helas_wf,final_antid_helas_wf]:
+            # Clean up for the next tests
+            lwf['analytic_info'] = {}
+        
+        myProcess = base_objects.Process({'model':self.myloopmodel})
+        
+        
+        # Build a loopME by hand. I know, it looks very complicated and...
+        # ... in fact, it is very involved.
+        
+        myLoopHelasAmp = loop_helas_objects.LoopHelasAmplitude({
+                        'amplitudes':helas_objects.HelasAmplitudeList([
+                            helas_objects.HelasAmplitude({
+                                'mothers':helas_objects.HelasWavefunctionList(
+                                                  [final_antid_helas_wf,])})])})
+        myLoopME = loop_helas_objects.LoopHelasMatrixElement({
+            'diagrams':helas_objects.HelasDiagramList([
+                loop_helas_objects.LoopHelasDiagram({
+                    'amplitudes':helas_objects.HelasAmplitudeList([
+                        myLoopHelasAmp]),
+                    'wavefunctions':helas_objects.HelasWavefunctionList([
+                        d_helas_wf,final_d_helas_wf]),
+                    'loop_wavefunctions':helas_objects.HelasWavefunctionList([
+                        antid_helas_wf,g_helas_wf,final_antid_helas_wf])
+                    }
+                )]),
+            'processes':base_objects.ProcessList([myProcess])})
+
+        # Now make sure that the compute_all_analytic information works indeed
+        myLoopME.compute_all_analytic_information()
+        for (lwf, trgt_interaction_rank, trgt_wavefunction_rank) in \
+            [(antid_helas_wf,0,0),(g_helas_wf,1,1),(final_antid_helas_wf,0,1)]:
+            wf_rank = lwf.get_analytic_info('wavefunction_rank')
+            self.assertEqual(wf_rank,trgt_wavefunction_rank)        
+            inter_rank = lwf.get_analytic_info('interaction_rank')
+            self.assertEqual(inter_rank,trgt_interaction_rank)
+            
+        # Check that it works for the loop amplitude too
+        wf_rank = myLoopHelasAmp.get_analytic_info('wavefunction_rank')
+        self.assertEqual(wf_rank,1)
+        inter_rank = myLoopHelasAmp.get_analytic_info('interaction_rank')
+        self.assertEqual(inter_rank,0)        
+            
+        for lwf in [antid_helas_wf,g_helas_wf,final_antid_helas_wf]:
+            # Clean up for the test that follows            
+            lwf['analytic_info'] = {}
+
+        # Also check the the compute_all_analytic_information works when one 
+        # provides its own aloha model
+        myLoopME.compute_all_analytic_information(alohaModel)
+        for (lwf, trgt_interaction_rank, trgt_wavefunction_rank) in \
+            [(antid_helas_wf,0,0),(g_helas_wf,1,1),(final_antid_helas_wf,0,1)]:
+            wf_rank = lwf.get_analytic_info('wavefunction_rank')
+            self.assertEqual(wf_rank,trgt_wavefunction_rank)        
+            inter_rank = lwf.get_analytic_info('interaction_rank')
+            self.assertEqual(inter_rank,trgt_interaction_rank)
+
+        # Check that it works for the loop amplitude too
+        wf_rank = myLoopHelasAmp.get_analytic_info('wavefunction_rank')
+        self.assertEqual(wf_rank,1)
+        inter_rank = myLoopHelasAmp.get_analytic_info('interaction_rank')
+        self.assertEqual(inter_rank,0)
 
     def check_HME_individual_diag_sanity(self,Amplitude, process,\
           mode='collective', selection=None, verbose=False, checkColor=True):
@@ -740,16 +904,16 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
         myloopamplitude.generate_diagrams()
         
         ME=self.check_LHME_individual_diag_sanity(myloopamplitude,myloopproc)
-        target_lorentz=[(('VVVV1',), ('L',), 1), (('FFV1',), (), 1), 
-                        (('R2_GG_1', 'R2_GG_3'), (), 0), (('VVV1',), ('L',), 1),
+        target_lorentz=[(('VVVV1',), ('L','P0'), 1), (('FFV1',), (), 1), 
+                        (('R2_GG_1', 'R2_GG_3'), (), 0), (('VVV1',), ('L','P0'), 1),
                         (('FFV1',), ('L',), 1), (('FFV1',), (), 0),
                         (('GHGHG',), ('L',), 1), (('VVV1',), (), 0), 
                         (('R2_GG_1',), (), 0), (('FFV1',), (), 2), 
                         (('GHGHG',), ('L',), 2), 
-                        (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), (), 1),
-                        (('FFV1',), ('L',), 3), (('FFV1',), (), 3),
-                        (('FFV1',), ('L',), 2), (('VVVV4',), ('L',), 1), 
-                        (('R2_QQ_1',), (), 0), (('VVVV3',), ('L',), 1)]
+                        (('R2_GG_1', 'R2_GG_2'), (), 0), (('VVV1',), ('P0',), 1),
+                        (('FFV1',), ('L','P0'), 3), (('FFV1',), ('P0',), 3),
+                        (('FFV1',), ('L',), 2), (('VVVV4',), ('L','P0'), 1), 
+                        (('R2_QQ_1',), (), 0), (('VVVV3',), ('L','P0'), 1)]
         self.assertEqual(set(target_lorentz),set(ME.get_used_lorentz()))
 
     def test_helas_diagrams_gd_ggd(self):

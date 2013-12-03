@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -25,13 +25,13 @@ class SaveObjectError(Exception):
     object to file."""
     pass
 
-def save_to_file(filename, object):
+def save_to_file(filename, object, log=True):
     """Save any Python object to file filename"""
 
     if not isinstance(filename, basestring):
         raise SaveObjectError, "filename must be a string"
 
-    files.write_to_file(filename, pickle_object, object)
+    files.write_to_file(filename, pickle_object, object, log=log)
 
     return True
     

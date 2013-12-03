@@ -4,14 +4,9 @@ c Read the params from the run_card.dat file
 c---------------------------------------------------------------------- 
       implicit none
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c     
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       integer npara
 c
 c     local
@@ -41,7 +36,10 @@ c
 c     open file
 c
       call open_file(iunit,'run_card.dat',fopened)
-      if(fopened) then
+      if(.not.fopened) then
+         write(*,*) 'Error: File run_card.dat not found'
+         stop
+      else
 c
 c     first look for process-specific parameters
 c
@@ -71,8 +69,9 @@ c
              call case_trap2(ctemp)
              param(npara)=ctemp
 c
+ 11          cycle
          endif
- 11   enddo
+      enddo
  20   rewind(iunit)
 c
 c     read in values
@@ -139,8 +138,9 @@ c
              call case_trap2(ctemp)
              param(npara)=ctemp
 c
+ 21          cycle
          endif
- 21   enddo
+       enddo
  30   rewind(iunit)
 c
 c     read in values
@@ -185,15 +185,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       real*8 var,def_value
       character*20 c_param,c_name
@@ -231,17 +226,53 @@ c     finds the parameter named "name" in param and associate to "value" in valu
 c----------------------------------------------------------------------------------
       implicit none
 c
-c     parameters
+c     arguments
 c
-      integer maxpara
-      parameter (maxpara=1000)
+      integer npara
+      character*20 param(*),value(*)
+      character*(*)  name
+      integer var,def_value
+      character*20 c_param,c_name
+c
+c     local
+c
+      logical found
+      integer i
+c
+c     start
+c
+      i=1
+      found=.false.
+      do while(.not.found.and.i.le.npara)
+         call firststring(c_param,param(i))
+          call firststring(c_name,name)
+         found = (c_param .eq. c_name)
+         if (found) read(value(i),*) var
+c         if (found) write (*,*) name,var
+         i=i+1
+      enddo
+      if (.not.found) then
+         write (*,*) "Warning: parameter ",name," not found"
+         write (*,*) "         setting it to default value ",def_value
+         var=def_value
+      endif
+      return
+
+      end
+c
+      subroutine get_int8(npara,param,value,name,var,def_value)
+c----------------------------------------------------------------------------------
+c     finds the parameter named "name" in param and associate to "value" in value 
+c----------------------------------------------------------------------------------
+      implicit none
 c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
-      integer var,def_value
+      integer def_value
+      integer*8 var
       character*20 c_param,c_name
 c
 c     local
@@ -277,15 +308,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       character*(*)  var,def_value
       character*20 c_param,c_name
@@ -323,15 +349,10 @@ c-------------------------------------------------------------------------------
       implicit none
 
 c
-c     parameters
-c
-      integer maxpara
-      parameter (maxpara=1000)
-c
 c     arguments
 c
       integer npara
-      character*20 param(maxpara),value(maxpara)
+      character*20 param(*),value(*)
       character*(*)  name
       logical  var,def_value
       character*20 c_param,c_name
@@ -373,7 +394,7 @@ c**********************************************************
 c
 c     ARGUMENT
 c      
-      character*20 name
+      character*(*) name
 c
 c     LOCAL
 c
@@ -399,13 +420,13 @@ c**********************************************************
 c
 c     ARGUMENT
 c      
-      character*20 name
+      character*(*) name
 c
 c     LOCAL
 c
       integer i,k
 
-      do i=1,20
+      do i=1,len(name)
          k=ichar(name(i:i))
          if(k.gt.90) then  !upper case A-Z
             k=ichar(name(i:i))-32   

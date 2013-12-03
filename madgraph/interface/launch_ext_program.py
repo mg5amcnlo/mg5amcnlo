@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -462,9 +462,16 @@ class MELauncher(ExtLauncher):
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
         for line in set_cmd:
+            arg = line.split()
+            if arg[1] not in usecmd.options_configuration:
+                continue
+            if arg[1] not in usecmd.options_madgraph:
+                continue
+            if arg[1] not in usecmd.options_madevent:
+                continue
             try:
                 usecmd.do_set(line[3:], log=False)
-            except Exception:
+            except usecmd.InvalidCmd:
                 pass
         usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
         #ensure that the logger level 
@@ -496,6 +503,7 @@ the computation of the width.'''
             os.remove('ME5_debug')
         except:
            pass
+
         launch.run_cmd(command)
         launch.run_cmd('quit')
         

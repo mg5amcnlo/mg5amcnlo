@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -199,7 +199,7 @@ class CheckValidForCmd(object):
         elif '_card.dat' in args[0]:   
             name = args[0].replace('_card.dat','_card_default.dat')
             if os.path.isfile(os.path.join(path,'Cards', name)):
-                files.cp(path + '/Cards/' + name, path + '/Cards/'+ args[0])
+                files.cp(os.path.join(path,'Cards', name), os.path.join(path,'Cards', args[0]))
                 args[0] = os.path.join(path,'Cards', args[0])
             else:
                 raise self.InvalidCmd('No default path for this file')
@@ -304,18 +304,21 @@ class MadEventAlreadyRunning(InvalidCmd):
 class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     debug_output = 'ME5_debug'
-    helporder = ['Main commands', 'Documented commands', 'Require MG5 directory',
+    helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
 
     # The three options categories are treated on a different footage when a 
     # set/save configuration occur. current value are kept in self.options
     options_configuration = {'pythia8_path': './pythia8',
+                       'hwpp_path': './herwigPP',
+                       'thepeg_path': './thepeg',
+                       'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
-                       'MCatNLO-utilities_path':'./MCatNLO-utilities',
+                       'syscalc_path': './SysCalc',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,
@@ -323,7 +326,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'fortran_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
-                       'cluster_status_update': (600, 30)}
+                       'cluster_status_update': (600, 30),
+                       'cluster_nb_retry':1,
+                       'cluster_retry_wait':300}
     
     options_madgraph= {'stdout_level':None}
     
@@ -421,6 +426,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
+
         keepwidth = False
         if '--keepwidth' in line:
             keepwidth = True
@@ -436,6 +442,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+
+            if amcatnlo and int(run_card['ickkw']) == 3:
+                # For FxFx merging, make sure that:
+                # 1. Renormalization and factorization (and ellis-sexton scales) are not fixed
+                scales=['fixed_ren_scale','fixed_fac_scale','fixed_QES_scale']
+                for scale in scales:
+                    if  banner_mod.RunCard.format('bool',run_card[scale]) == '.true.':
+                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to false'''
+                                    % scale,'$MG:color:BLACK')
+                        run_card[scale]='F'
+                # 2. Use kT algorithm for jets with pseudo-code size R=1.0
+                jetparams=['jetradius','jetalgo']
+                for jetparam in jetparams:
+                    if float(run_card[jetparam]) != 1.0:
+                        logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
+                               % jetparam ,'$MG:color:BLACK')
+                        run_card[jetparam]='1.0'
+
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
         
         if mode in ['param', 'all']: 
@@ -459,18 +483,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                              cwd=pjoin(self.me_dir,'bin','internal','ufomodel'))
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
                 
+                
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
                 pids = self.get_pid_final_states()
                 # check those which are charged under qcd
-                if not MADEVENT and pjoin(self.me_dir,'bin') not in sys.path:
-                        sys.path.append(pjoin(self.me_dir,'bin'))                    
-                import internal.ufomodel as ufomodel
+                if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:                    
+                        sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
+
+                #Ensure that the model that we are going to load is the current
+                #one.                    
+                to_del = [name  for name in sys.modules.keys() 
+                                                if name.startswith('internal.ufomodel')
+                                                or name.startswith('ufomodel')]
+                for name in to_del:
+                    del(sys.modules[name]) 
+
+                import ufomodel as ufomodel
                 zero = ufomodel.parameters.ZERO
                 no_width = [p for p in ufomodel.all_particles 
                         if (str(p.pdg_code) in pids or str(-p.pdg_code) in pids)
                            and p.color != 1 and p.width != zero]
-
                 done = []
                 for part in no_width:
                     if abs(part.pdg_code) in done:
@@ -483,25 +516,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                     % part.name,'$MG:color:BLACK')
                         param.value = 0
                 
-                
-                
             param_card.write_inc_file(outfile, ident_card, default)
 
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True):
         """ """
-        
+        if not self.options['madanalysis_path']:
+            plot = False
+            
+        self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
+                                  self.ask)
+    
+    @staticmethod
+    def ask_edit_card_static(cards, mode='fixed', plot=True, 
+                             timeout=0, ask=None, **opt):
+        if not ask:
+            ask = CommonRunCmd.ask
+
         def path2name(path):
             if '_card' in path:
                 return path.split('_card')[0]
             elif path == 'delphes_trigger.dat':
                 return 'trigger'
             else:
-                raise Exception, 'Unknow cards name'
+                raise Exception, 'Unknow cards name %s' % path
             
         # Ask the user if he wants to edit any of the files
         #First create the asking text
-        question = """Do you want to edit one cards (press enter to bypass editing)?\n""" 
+        question = """Do you want to edit a card (press enter to bypass editing)?\n""" 
         possible_answer = ['0', 'done']
         card = {0:'done'}
         
@@ -509,11 +551,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-9s : %s\n' % (i+1, imode, card_name)
+            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
             card[i+1] = imode
-        
-        if plot and self.options['madanalysis_path']:
-            question += '  9 / %-9s : plot_card.dat\n' % 'plot'
+        if plot:
+            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'        
@@ -531,9 +572,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         out = 'to_run'
         while out not in ['0', 'done']:
-            out = self.ask(question, '0', possible_answer, timeout=int(1.5*self.options['timeout']), 
+            out = ask(question, '0', possible_answer, timeout=int(1.5*timeout), 
                               path_msg='enter path', ask_class = AskforEditCard,
-                              cards=cards, mode=mode)
+                              cards=cards, mode=mode, **opt)
 
             
     @staticmethod
@@ -586,11 +627,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'unknown'
 
     ############################################################################
-    def create_plot(self, mode='parton', event_path=None, output=None):
+    def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot""" 
 
         madir = self.options['madanalysis_path']
-        tag = self.run_card['run_tag']  
+        if not tag:
+            tag = self.run_card['run_tag']  
         td = self.options['td_path']
 
         if not madir or not td or \
@@ -635,6 +677,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if os.path.exists(event_path):
                         break
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
+             
             elif mode == 'Pythia':
                 event_path = pjoin(self.me_dir, 'Events','pythia_events.lhe')
                 output = pjoin(self.me_dir, 'HTML',self.run_name, 
@@ -650,6 +693,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                               'plots_delphes_%s.html' % tag) 
             else:
                 raise self.InvalidCmd, 'Invalid mode %s' % mode
+        elif mode == 'reweight' and not output:
+                output = pjoin(self.me_dir, 'HTML',self.run_name, 
+                              'plots_%s.html' % tag)   
 
             
             
@@ -660,9 +706,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd, 'Events file %s does not exits' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
-               
-        plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
-                
+        
+        mode = mode.lower()
+        if mode not in ['parton', 'reweight']:
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s_%s' % (mode.lower(),tag))
+        elif mode == 'parton':
+            plot_dir = pjoin(self.me_dir, 'HTML', self.run_name,'plots_parton')
+        else:
+            plot_dir =pjoin(self.me_dir, 'HTML', self.run_name,'plots_%s' % (tag))
+             
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir) 
         
@@ -688,6 +740,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
                             stderr = subprocess.STDOUT,
                             cwd=pjoin(self.me_dir, 'HTML', self.run_name))
+
             shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
                                                                          output)
 
@@ -822,6 +875,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.remove(pjoin(self.me_dir, 'Events', 'pgs.done'))
         except Exception:
             pass
+         
         pgs_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_pgs.log" % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pgs', 
                             argument=[pgsdir], cwd=pjoin(self.me_dir,'Events'),
@@ -1040,9 +1094,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if args[1] == 'None':
                 args[1] = None
             self.options[args[0]] = args[1]
-            opt = self.options
-            self.cluster = cluster.from_name[opt['cluster_type']](\
-                                 opt['cluster_queue'], opt['cluster_temp_path'])
+            # cluster (re)-initialization done later
+            # self.cluster update at the end of the routine
+        elif args[0] in ['cluster_nb_retry', 'cluster_retry_wait']:
+            self.options[args[0]] = int(args[1])
+            # self.cluster update at the end of the routine
         elif args[0] == 'nb_core':
             if args[1] == 'None':
                 import multiprocessing
@@ -1077,8 +1133,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 self.options[args[0]] = args[1]
                 
-        if 'cluster' in args[0] or args[0] == 'run_mode':
-            self.configure_run_mode(self.options['run_mode'])             
+    def post_set(self, stop, line):
+        """Check if we need to save this in the option file"""
+        try:
+            args = self.split_arg(line)
+            if 'cluster' in args[0] or args[0] == 'run_mode':
+                self.configure_run_mode(self.options['run_mode'])             
+
+
+            # Check the validity of the arguments
+            self.check_set(args)
+            
+            if args[0] in self.options_configuration and '--no_save' not in args:
+                self.exec_cmd('save options --auto')
+            elif args[0] in self.options_madevent:
+                logger.info('This option will be the default in any output that you are going to create in this session.')
+                logger.info('In order to keep this changes permanent please run \'save options\'')
+            return stop
+        except self.InvalidCmd:
+            return stop
 
     def configure_run_mode(self, run_mode):
         """change the way to submit job 0: single core, 1: cluster, 2: multicore"""
@@ -1130,10 +1203,41 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             os.system('ln -s %s ME5_debug &> /dev/null' % self.debug_output)
 
 
+    def do_quit(self, line):
+        """Not in help: exit """
+  
+        try:
+            os.remove(pjoin(self.me_dir,'RunWeb'))
+        except Exception:
+            pass
+        try:
+            self.store_result()
+        except Exception:
+            # If nothing runs they they are no result to update
+            pass
+        
+        try:
+            self.update_status('', level=None)
+        except Exception, error:        
+            pass
+        devnull = open(os.devnull, 'w')
+        try:
+            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
+                        stdout=devnull, stderr=devnull)
+        except Exception:
+            pass
+        devnull.close()
+
+        return super(CommonRunCmd, self).do_quit(line)
+    
+    # Aliases
+    do_EOF = do_quit
+    do_exit = do_quit
   
 
     def update_status(self, status, level, makehtml=True, force=True, 
-                      error=False, starttime = None, update_results=True):
+                      error=False, starttime = None, update_results=True,
+                      print_log=True):
         """ update the index status """
         
         if makehtml and not force:
@@ -1141,30 +1245,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return
             else:
                 self.next_update = time.time() + 3
-        
-        if isinstance(status, str):
-            if '<br>' not  in status:
-                logger.info(status)
-        elif starttime:
-            running_time = misc.format_timer(time.time()-starttime)
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
-                       (status[0], status[1], status[2], running_time))
-        else: 
-            logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+                
+        if print_log:
+            if isinstance(status, str):
+                if '<br>' not  in status:
+                    logger.info(status)
+            elif starttime:
+                running_time = misc.format_timer(time.time()-starttime)
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s [ %s ]' % \
+                           (status[0], status[1], status[2], running_time))
+            else: 
+                logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
         
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
         
         
     ############################################################################
-    def keep_cards(self, need_card=[]):
+    def keep_cards(self, need_card=[], ignore=[]):
         """Ask the question when launching generate_events/multi_run"""
         
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
-                      'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat']
+                      'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
+                      'reweight_card.dat']
         
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
+            if card in ignore:
+                continue
             if card not in need_card:
                 if os.path.exists(pjoin(cards_path, card)):
                     os.remove(pjoin(cards_path, card))
@@ -1203,6 +1311,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_path=config_file, final=False,initdir=MG5DIR)
+            else:
+                self.options['mg5_path'] = None
             return self.set_configuration(config_path=me5_config, final=final,initdir=self.me_dir)
 
         config_file = open(config_path)
@@ -1266,7 +1376,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
                     self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level']:
+            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
+                              'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
                 try:
                     self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
@@ -1324,9 +1435,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0]) 
-        
+        madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt) 
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
+        
         madspin_cmd.import_command_file(path)
                 
         # create a new run_name directory for this output
@@ -1352,14 +1464,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info(new_file)        
  
         if hasattr(self, 'results'):
+            current = self.results.current
             nb_event = self.results.current['nb_event']
-            cross = self.results.current['cross']
-            error = self.results.current['error']
+            if not nb_event:
+                current = self.results[self.run_name][0]
+                nb_event = current['nb_event']
+            
+            cross = current['cross']
+            error = current['error']
             self.results.add_run( new_run, self.run_card)
             self.results.add_detail('nb_event', nb_event)
             self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
             self.results.add_detail('error', error * madspin_cmd.branching_ratio)
+            self.results.add_detail('run_mode', current['run_mode'])
+    
         self.run_name = new_run
+        self.banner.add(path)
+        self.banner.write(pjoin(self.me_dir,'Events',self.run_name, '%s_%s_banner.txt' %
+                                (self.run_name, self.run_tag)))
         self.update_status('MadSpin Done', level='parton', makehtml=False)
         if 'unweighted' in os.path.basename(args[0]):
             self.create_plot('parton')
@@ -1377,19 +1499,37 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     set command define and modifying the param_card/run_card correctly"""
     
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
-        
+
+        # Initiation
+        if 'pwd' in opt:
+            self.me_dir = opt['pwd']
+            del opt['pwd']
+
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
-        self.me_dir = self.mother_interface.me_dir
-        self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+
+        if not hasattr(self, 'me_dir') or not self.me_dir:
+            self.me_dir = self.mother_interface.me_dir
+
+        # read the card
+
+        try:
+            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+        except IOError:
+            self.run_card = {}
         try:
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))   
-        except check_param_card.InvalidParamCard:
+        except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
+            logger.error('problem detected: %s' % e)
             files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'), 
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
-        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))   
-    
+        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+        try:
+            run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+        except IOError:
+            run_card_def = {}
+            
         self.pname2block = {}
         self.conflict = []
         self.restricted_value = {}
@@ -1429,10 +1569,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     else:
                         self.pname2block[var] = [(bname, lha_id)]
         
-                    
+        if run_card_def:
+            self.run_set = run_card_def.keys() + self.run_card.hidden_param
+        elif self.run_card:
+            self.run_set = self.run_card.keys()
+        else:
+            self.run_set = []            
         # check for conflict with run_card
         for var in self.pname2block:                
-            if var in self.run_card:
+            if var in self.run_set:
                 self.conflict.append(var)        
                             
     
@@ -1480,7 +1625,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           self.list_completion(text, ['run_card', 'param_card'])
         
         if 'run_card' in allowed.keys():
-            opts = self.run_card.keys()
+            opts = self.run_set
             if allowed['run_card'] == 'default':
                 opts.append('default')
             
@@ -1537,17 +1682,39 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
 
         args = self.split_arg(line.lower())
+        if '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=')
+            args += [arg1, arg2]
+
         start = 0
         if len(args) < 2:
             logger.warning('Invalid set command %s (need two arguments)' % line)
             return
+
+        # Special case for the qcut value
+        if args[0].lower() == 'qcut':
+            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            if os.path.exists(pythia_path):
+                logger.info('add line QCUT = %s in pythia_card.dat' % args[1])
+                p_card = open(pythia_path,'r').read()
+                p_card, n = re.subn('''^\s*QCUT\s*=\s*[\de\+\-\.]*\s*$''', 
+                                    ''' QCUT = %s ''' % args[1], \
+                                    p_card, flags=(re.M+re.I))
+                if n==0:
+                    p_card = '%s \n QCUT= %s' % (p_card, args[1])
+                open(pythia_path, 'w').write(p_card)
+                return
 
         card = '' #store which card need to be modify (for name conflict)
         if args[0] in ['run_card', 'param_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
-                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))                
+                if args[0] == 'param_card':
+                    self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+                elif args[0] == 'run_card':
+                    self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
                 return
             else:
                 card = args[0]
@@ -1557,9 +1724,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         #### RUN CARD
-        if args[start] in [l.lower() for l in self.run_card.keys()] and card != 'param_card':
-            if args[start] not in self.run_card.keys():
-                args[start] = [l for l in self.run_card.keys() \
+        if args[start] in [l.lower() for l in self.run_set] and card != 'param_card':
+            if args[start] not in self.run_set:
+                args[start] = [l for l in self.run_set \
                                                  if l.lower() == args[start]][0]
             
             if args[start+1] in self.conflict and card == '':
@@ -1572,18 +1739,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]]) 
                 else:
+                    logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1] in ['t','.true.']:
+            elif  args[start+1].lower() in ['t','.true.','true']:
                 self.setR(args[start], '.true.')
-            elif  args[start+1] in ['f','.false.']:
+            elif  args[start+1].lower() in ['f','.false.','false']:
                 self.setR(args[start], '.false.')
             else:
-                try:
-                    val = eval(args[start+1])
-                except NameError:
-                    val = args[start+1]
+                if args[0].startswith('sys_'):
+                    val = ' '.join(args[start+1:])
+                    val = val.split('#')[0]
+                else: 
+                    try:
+                        val = eval(args[start+1])
+                    except NameError:
+                        val = args[start+1]
                 self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'))
+            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
+                                pjoin(self.me_dir,'Cards','run_card_default.dat'))
             
         ### PARAM_CARD WITH BLOCK NAME
         elif (args[start] in self.param_card or args[start] == 'width') \
@@ -1611,6 +1784,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     key = tuple([int(i) for i in args[start+1:-1]])
                 except ValueError:
+                    if args[start] == 'decay' and args[start+1:-1] == ['all']:
+                        for key in self.param_card[args[start]].param_dict:
+                            if (args[start], key) in self.restricted_value:
+                                continue
+                            else:
+                                self.setP(args[start], key, args[-1])
+                        self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        return
                     logger.warning('invalid set command %s (failed to identify LHA information)' % line)
                     return 
 
@@ -1634,7 +1815,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.setP(args[start], key, value)
             else:
                 logger.warning('invalid set command %s' % line)
-                return                   
+                return
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
         # PARAM_CARD NO BLOCK NAME
@@ -1732,7 +1913,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         return line
     
+    def do_compute_widths(self, line):
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','param_card.dat')
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        text = open(path).read()
+        pdg = pattern.findall(text)
+        line = '%s %s' % (line, ' '.join(pdg))
+        if not '--path' in line:
+            line += ' --path=%s' % path
+        try:
+            return self.mother_interface.do_compute_widths(line)
+        except InvalidCmd, error:
+            logger.error("Invalid command: %s " % error)
 
+    def help_compute_widths(self):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.help_compute_widths()
+
+    def complete_compute_widths(self, *args, **opts):
+        signal.alarm(0) # avoid timer if any
+        return self.mother_interface.complete_compute_widths(*args,**opts)
         
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""

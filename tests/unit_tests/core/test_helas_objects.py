@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from madgraph.iolibs import helas_call_writers
@@ -1602,7 +1602,7 @@ class HelasMatrixElementTest(unittest.TestCase):
             for idiag in range(len(diagrams)):
                 if idiag in photon_none[ngluons]:
                     vertices, tchannels = \
-                       diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                       diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                     for ivert in range(len(vertices)):
                         if ivert in photon_none[ngluons][idiag]:
                             self.assertEqual(False,
@@ -1643,7 +1643,7 @@ class HelasMatrixElementTest(unittest.TestCase):
             for idiag in range(len(diagrams)):
                 if idiag in quark_none[ngluons]:
                     vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                     for ivert in range(len(vertices)):
                         if ivert in quark_none[ngluons][idiag]:
                             self.assertEqual(False,
@@ -2731,10 +2731,11 @@ class HelasDecayChainProcessTest(unittest.TestCase):
                          goal_no_quark)
 
         diagrams = helas_amplitude.get('diagrams')
+        wf_dict = {}
         for idiag in range(len(diagrams)):
             if idiag in quark_none:
                 vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg
@@ -2794,7 +2795,7 @@ class HelasDecayChainProcessTest(unittest.TestCase):
         for idiag in range(len(diagrams)):
             if idiag in quark_none:
                 vertices, tchannels = \
-                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, 20)
+                      diagrams[idiag].get('amplitudes')[0].get_s_and_t_channels(2, self.mymodel, 20)
                 for ivert in range(len(vertices)):
                     if ivert in quark_none[idiag]:
                         # This is forbidden leg

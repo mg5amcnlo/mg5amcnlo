@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 import copy
@@ -221,6 +221,11 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         for name in mg4_part.sorted_keys:
             if name in not_equiv:
                 continue
+            if name == 'propagator':
+                if mg4_part.get('mass') == 'ZERO':
+                    if ufo_part.get('propagator') == 0:
+                        continue
+            
             self.assertEqual(mg4_part.get(name), ufo_part.get(name), 
                     'fail for particle %s different property for %s, %s != %s' %
                     (mg4_part['name'], name, mg4_part.get(name), \
