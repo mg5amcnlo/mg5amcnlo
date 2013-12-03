@@ -101,7 +101,7 @@ c Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (ismode=1)
       parameter (isway=0)
       parameter (izero=0)
-
+      logical passUNLOPScuts
 
 
       integer mm
@@ -248,6 +248,15 @@ c more than the Born).
 c Uncomment for bypassing jet algo and cuts
 c$$$      goto 122
       if (ptj.ne.0d0) then
+         if (ickkw.eq.4) then
+c Use special pythia pt cut for minimal pT
+            call pythia_UNLOPS(p,.false.,passUNLOPScuts)
+            if (.not. passUNLOPScuts) then
+               passcuts=.false.
+               return
+            endif
+            goto 122
+         endif
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
@@ -731,5 +740,3 @@ c
       iso_getdelphi=tmp
       return
       end
-
-

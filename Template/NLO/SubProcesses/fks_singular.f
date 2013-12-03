@@ -1815,7 +1815,7 @@ c Set the ybst_til_tolab before applying the cuts.
      &     nbody)goto 550
 
       if (ickkw.eq.4) then
-         call pythia_UNLOPS(pp,passUNLOPScut)
+         call pythia_UNLOPS(pp,.true.,passUNLOPScut)
          if (.not.passUNLOPScut) goto 550
       endif
 
@@ -5754,6 +5754,5 @@ c
       IF(SEED.LE.0) SEED = SEED + M
       FK88RANDOM = SEED*MINV
       END
-
 
 
