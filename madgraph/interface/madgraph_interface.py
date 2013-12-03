@@ -2846,7 +2846,7 @@ This implies that with decay chains:
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
             elif option[0]=='--reduction':
-                MLoptions['MLReductionLib']=int(option[1])
+                MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
             i=i-1
         args = args[:i+1]
         

@@ -709,7 +709,16 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 if MLOptions[key]:
                     mode = 4
             elif key == "MLReductionLib":
-                MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%d"\
+                value=MLOptions[key]
+                if isinstance(value,list):
+                    if value:
+                        mlred="|".join([str(vl) for vl in value])
+                    else:
+                        mlred="1"
+                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%s"\
+                        %(mlred),MLParams)
+                else:
+                    MLParams = re.sub(r"#MLReductionLib\n\S+","#MLReductionLib\n%d"\
                             %(MLOptions[key] if MLOptions[key] else 1),MLParams)
             else:
                 logger.error("Key %s is not a valid MadLoop option."%key)
@@ -1560,10 +1569,18 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if "MLReductionLib" not in MLOptions:
             tools=[1]
         else:
-            if MLOptions["MLReductionLib"]==-1:
-                tools=[1,2,3]
-            else:
-                tools=[MLOptions["MLReductionLib"]]
+            tools=MLOptions["MLReductionLib"]
+            tools=list(set(tools)) # remove the duplication ones
+        #    if MLOptions["MLReductionLib"]==0:
+        #        tools=[1,2,3]
+        #    elif MLOptions["MLReductionLib"]==-1:
+        #        tools=[2,3]
+        #    elif MLOptions["MLReductionLib"]==-2:
+        #        tools=[1,3]
+        #    elif MLOptions["MLReductionLib"]==-3:
+        #        tools=[1,2]
+        #    else:
+        #        tools=[MLOptions["MLReductionLib"]]
 
         # Normally, this should work for loop-induced processes as well
         if not reusing:
@@ -2134,7 +2151,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
     timing = dict(timing1.items()+timing2.items())
 
     stability = myProfiler.check_matrix_element_stability(matrix_element,                                            
-                            options=options, infos=timing,param_card=param_card,
+                            options=options, infos_IN=timing,param_card=param_card,
                                                       keep_folder = keep_folder,
                                                       MLOptions = MLoptions)
     if stability == None:
@@ -2176,7 +2193,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     else:
         MLoptions = MLOptions
         if "MLReductionLib" not in MLOptions:
-            MLoptions["MLReductionLib"] = -1
+            MLoptions["MLReductionLib"] = [1,2,3]
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
