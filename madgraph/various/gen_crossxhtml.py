@@ -671,8 +671,9 @@ class OneTagResults(dict):
                 if self['run_mode'] in ['LO', 'NLO']:
                     self.parton.append('top')
 
-        if level in ['shower','all'] and 'shower' not in nolevel:
-            # this is for hep/top files fromamcatnlo
+        if level in ['shower','all'] and 'shower' not in nolevel \
+          and self['run_mode'] != 'madevent':
+            # this is for hep/top files from amcatnlo
             if glob.glob(pjoin(path,"*.hep")) + \
                glob.glob(pjoin(path,"*.hep.gz")):
                 self.shower.append('hep')
@@ -990,6 +991,7 @@ class OneTagResults(dict):
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
+                    local_dico['type'] += ' %s' % self['run_mode']
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
