@@ -956,7 +956,7 @@ class OneTagResults(dict):
             if not data:
                 continue
             
-            local_dico = {'type': type, 'run': self['run_name'], 'syst': ''}
+            local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
