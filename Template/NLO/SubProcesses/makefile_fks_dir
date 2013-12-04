@@ -79,13 +79,13 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 %.o: $(ANADIR)/%.for
 	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
 %.o: %.c
-	$(CXX) -g -c -I. $^
+	$(CXX) $(CFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.c
-	$(CXX) -g -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 %.o: %.cc
-	$(CXX) -g -c $(CXXFLAGS) -I. $^
+	$(CXX) $(CXXFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.cc
-	$(CXX) -g -c $(CXXFLAGS) -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
 	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
