@@ -1892,8 +1892,6 @@ Integrated cross-section
                     stats['timings'][time_stats.group('name')][channel_name]=\
                                                  float(time_stats.group('time'))
         
-        print stats['timings']
-        
         # usefule inline function
         Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
         try:
