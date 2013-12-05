@@ -34,6 +34,7 @@ import time
 import signal
 import tarfile
 import copy
+import datetime
 
 try:
     import readline
@@ -1605,8 +1606,9 @@ Integrated cross-section
         
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
-        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}}
+        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
     
+        mint_search = re.compile(r"MINT(?P<ID>\d*).txt")
         # ==================================     
         # == MadLoop stability statistics ==
         # ==================================
@@ -1864,6 +1866,79 @@ Integrated cross-section
         except KeyError:
             debug_msg += '\n  Could not find statistics on the integration optimization. '
     
+        # =======================================
+        # == aMC@NLO timing profile statistics ==
+        # =======================================
+    
+        timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
+                     "(?P<time>[\d\+-Eed\.]*)\s*")
+        print 'all_log_files=',all_log_files
+        for logf in all_log_files:
+            logfile=open(logf,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(logf.split('/')[-3:-1])
+            mint = re.search(mint_search,logf)
+            if not mint is None:
+               channel_name =   channel_name+' [step %s]'%mint.group('ID')
+
+            for time_stats in re.finditer(timing_stat_finder, log):
+                try:
+                    stats['timings'][time_stats.group('name')][channel_name]+=\
+                                                 float(time_stats.group('time'))
+                except KeyError:
+                    if time_stats.group('name') not in stats['timings'].keys():
+                        stats['timings'][time_stats.group('name')] = {}
+                    stats['timings'][time_stats.group('name')][channel_name]=\
+                                                 float(time_stats.group('time'))
+        
+        print stats['timings']
+        
+        # usefule inline function
+        Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
+        try:
+            totTimeList = [(time, chan) for chan, time in \
+                                              stats['timings']['Total'].items()]
+        except KeyError:
+            totTimeList = []
+
+        totTimeList.sort()
+        if len(totTimeList)>0:
+            debug_msg += '\n\n  Inclusive timing profile :'
+            debug_msg += '\n    Overall slowest channel          %s (%s)'%\
+                                     (Tstr(totTimeList[-1][0]),totTimeList[-1][1])
+            debug_msg += '\n    Average channel running time     %s'%\
+                       Tstr(sum([el[0] for el in totTimeList])/len(totTimeList))
+            debug_msg += '\n    Aggregated total running time    %s'%\
+                                        Tstr(sum([el[0] for el in totTimeList]))       
+        else:            
+            debug_msg += '\n\n  Inclusive timing profile non available.'
+        
+        for name in stats['timings'].keys():
+            if name=='Total':
+                continue
+            if sum(stats['timings'][name].values())<=0.0:
+                debug_msg += '\n  Zero time record for %s.'%name
+                continue
+            try:
+                TimeList = [((100.0*time/stats['timings']['Total'][chan]), 
+                     chan) for chan, time in stats['timings'][name].items()]
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n\n  Timing profile for %s unavailable.'%name
+                continue
+            TimeList.sort()
+            debug_msg += '\n  Timing profile for %s :'%name
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
+            try:
+                debug_msg += '\n    Overall fraction of time         %.3f %%'%\
+                       float((100.0*(sum(stats['timings'][name].values())/
+                                      sum(stats['timings']['Total'].values()))))
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n    Overall fraction of time unavailable.'
+
         # =============================     
         # == log file eror detection ==
         # =============================

@@ -114,6 +114,15 @@ c statistics for MadLoop
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
 
+c timing statistics
+      double precision tbefore, tAfter
+      double precision tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0d0/
+      data tOLP/0.0d0/
+      data tFastJet/0.0d0/
+      data tPDF/0.0d0/
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
 c general MadFKS parameters
       include "FKSParams.inc"
 
@@ -121,6 +130,10 @@ C-----
 C  BEGIN CODE
 C-----  
 c
+c     Setup the timing variable
+c
+      call cpu_time(tBefore)
+
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
@@ -311,6 +324,12 @@ c to save grids:
      &        "  Unknown return code (1):                         ",n1
       endif
 
+      call cpu_time(tAfter)
+      tTot = tTot +(tAfter-tBefore)
+      write(*,*) 'Time spent in OLP : ',tOLP
+      write(*,*) 'Time spent in PDF_engine : ',tPDF
+      write(*,*) 'Time spent in clustering : ',tFastJet
+      write(*,*) 'Time spent in Total : ',tTot
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
