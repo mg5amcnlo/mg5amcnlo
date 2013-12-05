@@ -1562,7 +1562,8 @@ Integrated cross-section
 
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
-        debug_msg = self.compile_advanced_stats(log_GV_files, all_log_files)
+        message, debug_msg = \
+               self.compile_advanced_stats(log_GV_files, all_log_files, message)
         
         logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
@@ -1598,7 +1599,7 @@ Integrated cross-section
         misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
         shutil.rmtree(pjoin(evt_path,'RunMaterial'))
 
-    def compile_advanced_stats(self,log_GV_files,all_log_files):
+    def compile_advanced_stats(self,log_GV_files,all_log_files,message):
         """ This functions goes through the log files given in arguments and 
         compiles statistics about MadLoop stability, virtual integration 
         optimization and detection of potential error messages into a nice
@@ -1670,21 +1671,25 @@ Integrated cross-section
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
+
+            tmpStr = ""
+            tmpStr += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+            tmpStr += '\n    Stability unknown:                   %d'%nTotsun
+            tmpStr += '\n    Stable PS point:                     %d'%nTotsps
+            tmpStr += '\n    Unstable PS point (and rescued):     %d'%nTotups
+            tmpStr += '\n    Unstable PS point (and not rescued): %d'%nToteps
+            tmpStr += '\n    Only double precision used:          %d'%nTotddp
+            tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
+            tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            if nTot100 != 0:
+                debug_msg += '\n  Unknown return code (100):             %d'%nTot100
+            if nTot10 != 0:
+                debug_msg += '\n  Unknown return code (10):              %d'%nTot10
+            if nTot1 != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+
             if maxUPS[1]>0.001:
-                message += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                message += '\n    Stability unknown:                   %d'%nTotsun
-                message += '\n    Stable PS point:                     %d'%nTotsps
-                message += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                message += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                message += '\n    Only double precision used:          %d'%nTotddp
-                message += '\n    Quadruple precision used:            %d'%nTotqdp
-                message += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    message += '\n    Unknown return code (100):           %d'%nTot100
-                if nTot10 != 0:
-                    message += '\n    Unknown return code (10):            %d'%nTot10
-                if nTot1 != 0:
-                    message += '\n    Unknown return code (1):             %d'%nTot1
+                message += tmpStr
                 message += '\n  Total number of unstable PS point detected:'+\
                                  ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
                 message += '\n    Maximum fraction of UPS points in '+\
@@ -1694,20 +1699,8 @@ Integrated cross-section
                 message += '\n    %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                debug_msg += '\n    Stability unknown:                   %d'%nTotsun
-                debug_msg += '\n    Stable PS point:                     %d'%nTotsps
-                debug_msg += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                debug_msg += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                debug_msg += '\n    Only double precision used:          %d'%nTotddp
-                debug_msg += '\n    Quadruple precision used:            %d'%nTotqdp
-                debug_msg += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    debug_msg += '\n  Unknown return code (100):             %d'%nTot100
-                if nTot10 != 0:
-                    debug_msg += '\n  Unknown return code (10):              %d'%nTot10
-                if nTot1 != 0:
-                    debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+                debug_msg += tmpStr
+
     
         # ====================================================
         # == aMC@NLO virtual integration optimization stats ==
@@ -1859,10 +1852,22 @@ Integrated cross-section
                                     %tuple(stats['virt_stats']['v_average_max'])          
             debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
                                      %tuple(stats['virt_stats']['v_ratio_max'])
-            debug_msg += '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
+            tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
-            debug_msg += '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
+            debug_msg += tmpStr
+            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+                message += "\n  Suspiciouly large MC error in :"
+            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+                message += tmpStr
+
+            tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_contr_err_max'])
+            debug_msg += tmpStr
+            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+                message += tmpStr
+            
+
         except KeyError:
             debug_msg += '\n  Could not find statistics on the integration optimization. '
     
@@ -1972,7 +1977,7 @@ Integrated cross-section
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
                            
-        return debug_msg
+        return message, debug_msg
 
 
     def reweight_and_collect_events(self, options, mode, nevents, event_norm):
