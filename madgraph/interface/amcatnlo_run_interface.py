@@ -1562,9 +1562,13 @@ Integrated cross-section
 
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
-        message, debug_msg = \
+        # Make sure it never stops a run
+        try:
+            message, debug_msg = \
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
-        
+        except Exception as e:
+            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+
         logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
         
@@ -1608,8 +1612,8 @@ Integrated cross-section
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
-    
         mint_search = re.compile(r"MINT(?P<ID>\d*).txt")
+
         # ==================================     
         # == MadLoop stability statistics ==
         # ==================================
