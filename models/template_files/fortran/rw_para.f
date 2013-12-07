@@ -12,10 +12,7 @@ c************************************************************************
       character*(*) param_name
       logical readlha
 
-      include 'coupl.inc'
-      include 'input.inc'
-      include 'mp_coupl.inc'
-      include 'mp_input.inc'
+      %(includes)s
 
       integer maxpara
       parameter (maxpara=5000)
@@ -23,7 +20,7 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
-      call LHA_loadcard(param_name,npara,param,value)
+      %(load_card)s
       include 'param_read.inc'
       call coup()
 
@@ -40,7 +37,6 @@ c************************************************************************
       logical found
 
       character(512) ParamCardPath
-      DATA ParamCardPath/'.'/
       common/ParamCardPath/ParamCardPath
 
       if (param_name(1:1).ne.' ') then
@@ -71,5 +67,3 @@ c************************************************************************
       return
 
       end
-
-

@@ -99,8 +99,9 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
+	  DATA USERHEL/-1/	  	  
 	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
-	  DATA USERHEL/-1/	  
+
 C ----------
 C BEGIN CODE
 C ----------

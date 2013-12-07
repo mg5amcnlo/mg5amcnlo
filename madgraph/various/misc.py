@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -25,6 +25,7 @@ import StringIO
 import sys
 import optparse
 import time
+import shutil
 
 try:
     # Use in MadGraph
@@ -66,10 +67,39 @@ def parse_info_str(fsock):
 
 
 #===============================================================================
+# mute_logger (designed to be a decorator)
+#===============================================================================
+def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,50,50]):
+    """change the logger level and restore those at their initial value at the
+    end of the function decorated."""
+    def control_logger(f):
+        def restore_old_levels(names, levels):
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)            
+        
+        def f_with_no_logger(self, *args, **opt):
+            old_levels = []
+            for name, level in zip(names, levels):
+                log_module = logging.getLogger(name)
+                old_levels.append(log_module.level)
+                log_module.setLevel(level)
+            try:
+                out = f(self, *args, **opt)
+                restore_old_levels(names, old_levels)
+                return out
+            except:
+                restore_old_levels(names, old_levels)
+                raise
+            
+        return f_with_no_logger
+    return control_logger
+
+#===============================================================================
 # get_pkg_info
 #===============================================================================
 def get_pkg_info(info_str=None):
-    """Returns the current version information of the MadGraph package, 
+    """Returns the current version information of the MadGraph5_aMC@NLO package, 
     as written in the VERSION text file. If the file cannot be found, 
     a dictionary with empty values is returned. As an option, an info
     string can be passed to be read instead of the file content.
@@ -103,7 +133,8 @@ def get_time_info():
 #===============================================================================
 def which(program):
     def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+        return os.path.exists(fpath) and os.access(\
+                                               os.path.realpath(fpath), os.X_OK)
 
     if not program:
         return None
@@ -158,13 +189,14 @@ def multiple_try(nb_try=5, sleep=20):
                 except Exception, error:
                     global wait_once
                     if not wait_once:
-                        text = """Start waiting for update on filesystem. (more info in debug mode)"""
+                        text = """Start waiting for update. (more info in debug mode)"""
                         logger.info(text)
                         logger_stderr.debug('fail to do %s function with %s args. %s try on a max of %s (%s waiting time)' %
                                  (str(f), ', '.join([str(a) for a in args]), i+1, nb_try, sleep * (i+1)))
                         logger_stderr.debug('error is %s' % str(error))
                     wait_once = True
                     time.sleep(sleep * (i+1))
+
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
@@ -222,7 +254,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
                   'is required to compile %s.\nPlease install it and retry.'%cwd
             else:
                 logger_stderr.error('ERROR, you could not compile %s because'%cwd+\
-             ' your version of gfortran is older than 4.6. MadGraph will carry on,'+\
+             ' your version of gfortran is older than 4.6. MadGraph5_aMC@NLO will carry on,'+\
                               ' but will not be able to compile an executable.')
                 return p.returncode
         # Other reason
@@ -234,7 +266,6 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'Please try to fix this compilations issue and retry.\n'
         error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
         error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
-
         raise MadGraph5Error, error_text
     return p.returncode
 
@@ -242,8 +273,8 @@ def get_gfortran_version(compiler='gfortran'):
     """ Returns the gfortran version as a string.
         Returns '0' if it failed."""
     try:    
-        p = Popen(compiler+' -dumpversion', stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE, shell=True)
+        p = Popen([compiler, '-dumpversion'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
         output, error = p.communicate()
         version_finder=re.compile(r"(?P<version>(\d.)*\d)")
         version = version_finder.search(output).group('version')
@@ -270,36 +301,6 @@ def mod_compilator(directory, new='gfortran', current=None):
         text= pattern.sub(new, text)
         open(name,'w').write(text)
 
-
-#===============================================================================
-# mute_logger (designed to be a decorator)
-#===============================================================================
-def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,50,50]):
-    """change the logger level and restore those at their initial value at the
-    end of the function decorated."""
-    def control_logger(f):
-        def restore_old_levels(names, levels):
-            for name, level in zip(names, levels):
-                log_module = logging.getLogger(name)
-                log_module.setLevel(level)            
-        
-        def f_with_no_logger(self, *args, **opt):
-            old_levels = []
-            for name, level in zip(names, levels):
-                log_module = logging.getLogger(name)
-                old_levels.append(log_module.level)
-                log_module.setLevel(level)
-            try:
-                out = f(self, *args, **opt)
-                restore_old_levels(names, old_levels)
-                return out
-            except:
-                restore_old_levels(names, old_levels)
-                raise
-            
-        return f_with_no_logger
-    return control_logger
-
 #===============================================================================
 # mute_logger (designed to work as with statement)
 #===============================================================================
@@ -314,10 +315,10 @@ class MuteLogger(object):
         
         self.names = names
         self.levels = levels
-        if files:
+        if isinstance(files, list):
             self.files = files
         else:
-            self.files = [None] * len(names)
+            self.files = [files] * len(names)
         self.logger_saved_info = {}
         self.opts = opt
 
@@ -333,11 +334,11 @@ class MuteLogger(object):
         self.levels = old_levels
         
     def __exit__(self, ctype, value, traceback ):
-        for name, level, path in zip(self.names, self.levels, self.files):
+        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
             if 'keep' in self.opts and not self.opts['keep']:
-                self.restore_logFile_for_logger(name, path=path)
+                self.restore_logFile_for_logger(name, level, path=path)
             else:
-                self.restore_logFile_for_logger(name)
+                self.restore_logFile_for_logger(name, level)
             
             log_module = logging.getLogger(name)
             log_module.setLevel(level)         
@@ -360,13 +361,13 @@ class MuteLogger(object):
             self.logger_saved_info[logname] = [hdlr, my_logger.handlers]
             #for h in my_logger.handlers:
             #    h.setLevel(logging.CRITICAL)
-            for old_hdlr in my_logger.handlers:
+            for old_hdlr in list(my_logger.handlers):
                 my_logger.removeHandler(old_hdlr)
             my_logger.addHandler(hdlr)
             #my_logger.setLevel(level)
             my_logger.debug('Log of %s' % logname)
 
-    def restore_logFile_for_logger(self, full_logname, path=None, **opts):
+    def restore_logFile_for_logger(self, full_logname, level, path=None, **opts):
         """ Setup the logger by redirecting them all to logfiles in tmp """
         
         logs = full_logname.split('.')
@@ -379,13 +380,15 @@ class MuteLogger(object):
                 except Exception, error:
                     pass
             my_logger = logging.getLogger(logname)
-            my_logger.removeHandler(self.logger_saved_info[logname][0])
-            for old_hdlr in self.logger_saved_info[logname][1]:
-                my_logger.addHandler(old_hdlr)
-            #my_logger.setLevel(cls.logger_saved_info[logname][1])
+            if logname in self.logger_saved_info:
+                my_logger.removeHandler(self.logger_saved_info[logname][0])
+                for old_hdlr in self.logger_saved_info[logname][1]:
+                    my_logger.addHandler(old_hdlr)
+            else:
+                my_logger.setLevel(level)
+        
             #for i, h in enumerate(my_logger.handlers):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
-
 
 
 def detect_current_compiler(path):
@@ -572,6 +575,7 @@ the file and returns last line in an internal buffer."""
         else:
             raise StopIteration
 
+
 def write_PS_input(filePath, PS):
     """ Write out in file filePath the PS point to be read by the MadLoop."""
     try:
@@ -602,6 +606,23 @@ def format_timer(running_time):
     return running_time
     
 
+#===============================================================================
+# TMP_directory (designed to work as with statement)
+#===============================================================================
+class TMP_directory(object):
+    """create a temporary directory and ensure this one to be cleaned.
+    """
+
+    def __init__(self, suffix='', prefix='tmp', dir=None):
+        import tempfile   
+        self.path = tempfile.mkdtemp(suffix, prefix, dir)
+
+
+    def __exit__(self, ctype, value, traceback ):
+        shutil.rmtree(self.path)
+        
+    def __enter__(self):
+        return self.path
 
 #
 # Global function to open supported file types
@@ -652,7 +673,7 @@ class open_file(object):
         
         # first for eps_viewer
         if not cls.eps_viewer:
-           cls.eps_viewer = cls.find_valid(['gv', 'ggv', 'evince'], 'eps viewer') 
+           cls.eps_viewer = cls.find_valid(['evince','gv', 'ggv'], 'eps viewer') 
             
         # Second for web browser
         if not cls.web_browser:

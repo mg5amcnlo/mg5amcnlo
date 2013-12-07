@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -568,7 +568,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
                         self._curr_exporter.generate_directories_fks(me, 
-                        self._curr_fortran_model, ime, path,self.options['OLP'])
+                        self._curr_fortran_model, 
+                        ime, len(self._curr_matrix_elements.get('matrix_elements')), 
+                        path,self.options['OLP'])
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')

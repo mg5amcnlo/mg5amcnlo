@@ -11,7 +11,7 @@ class Matrix_%(process_string)s(object):
         #  
         %(info_lines)s
         # 
-        # MadGraph StandAlone Version
+        # MadGraph5_aMC@NLO StandAlone Version
         # 
         # Returns amplitude squared summed/avg over colors
         # and helicities

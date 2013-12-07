@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """A File for splitting"""
@@ -22,6 +22,8 @@ pjoin = os.path.join
 
 try:
     import madgraph.various.misc as misc
+    import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as FO_analyse_card
     import madgraph.iolibs.file_writers as file_writers
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
@@ -30,6 +32,8 @@ except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     import internal.check_param_card as param_card_reader
+    import internal.shower_card as shower_card
+    import internal.FO_analyse_card as FO_analyse_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -163,25 +167,6 @@ class Banner(dict):
             ff.write(text)
             ff.close()
 
-    ############################################################################
-    #  SPLIT BANNER
-    ############################################################################
-    def charge_card(self, tag):
-        """Build the python object associated to the card"""
-        
-        if tag == 'param_card':
-            tag = 'slha'
-        elif tag == 'run_card':
-            tag = 'mgruncard' 
-        elif tag == 'proc_card':
-            tag = 'mg5proccard' 
-        
-        assert tag in ['mgruncard'], 'invalid card %s' % tag
-        
-        if tag == 'mgruncard':
-            run_card = self[tag].split('\n') 
-            self.run_card = RunCard(run_card)
-            return self.run_card
 
     ############################################################################
     #  WRITE BANNER
@@ -265,6 +250,12 @@ class Banner(dict):
                 tag = 'MGProcCard'
             elif 'procdef_mg5' in card_name:
                 tag = 'MGProcCard'
+            elif 'shower_card' in card_name:
+                tag = 'MGShowerCard'
+            elif 'madspin_card' in card_name:
+                tag = 'madspin'
+            elif 'FO_analyse_card' in card_name:
+                tag = 'foanalyse'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -285,8 +276,12 @@ class Banner(dict):
             tag = 'mgruncard' 
         elif tag == 'proc_card':
             tag = 'mg5proccard' 
-        
-        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'invalid card %s' % tag
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+        elif tag == 'FO_analyse_card':
+            tag = 'foanalyse'
+
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse'], 'invalid card %s' % tag
         
         if tag == 'slha':
             param_card = self[tag].split('\n')
@@ -303,8 +298,22 @@ class Banner(dict):
             proc_card = self[tag].split('\n')
             self.proc_card = ProcCard(proc_card)
             return self.proc_card
-
+        elif tag =='mgshowercard':
+            shower_content = self[tag] 
+            self.shower_card = shower_card.ShowerCard(shower_content, True)
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.shower_card.testing = False
+            return self.shower_card
+        elif tag =='foanalyse':
+            analyse_content = self[tag] 
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.FOanalyse_card = FO_analyse_card.FOAnalyseCard(analyse_content, True)
+            self.FOanalyse_card.testing = False
+            return self.FOanalyse_card
         
+
     def get_detail(self, tag, *arg):
         """return a specific """
                 
@@ -325,7 +334,10 @@ class Banner(dict):
             tag = 'mg5proccard' 
             attr_tag = 'proc_card'
             arg = ('generate',)
-        assert tag in ['slha', 'mgruncard', 'mg5proccard'], 'not recognized'
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+            attr_tag = 'shower_card'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
         
         if not hasattr(self, attr_tag):
             self.charge_card(attr_tag) 
@@ -389,6 +401,7 @@ class RunCard(dict):
 
     #list of paramater which are allowed BUT not present in the _default file.
     hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
+    true = ['true', 'True','.true.','T', True, 1,'TRUE']
 
     def __init__(self, run_card):
         """ """
@@ -613,8 +626,10 @@ class RunCard(dict):
         self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
-        
-        
+        # kt_ durham
+        self.add_line('ktdurham', 'float', -1, fortran_name='kt_durham')
+        self.add_line('dparameter', 'float', 0.4, fortran_name='d_parameter')
+
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
@@ -627,24 +642,65 @@ class RunCard(dict):
             self.add_line('gseed', 'int', 0, fortran_name='iseed')
         else:
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
+        #number of events
+        self.add_line('nevents', 'int', 10000)
+        self.add_line('gevents', 'int', 2000, log=10)
+            
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
         self.add_line('fixed_fac_scale', 'bool', True)
         self.add_line('scale', 'float', 'float', 91.188)
         self.add_line('dsqrt_q2fact1','float', 91.188, fortran_name='sf1')
         self.add_line('dsqrt_q2fact2', 'float', 91.188, fortran_name='sf2')
+        
+        self.add_line('use_syst', 'bool', False)
+        #if use_syst is True, some parameter are automatically fixed.
+        if self['use_syst'] in self.true:
+            value = self.format('float',self.get_default('scalefact', 1.0, 30))
+            if value != self.format('float', 1.0):
+                logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
+                self['scalefact'] = 1.0
         self.add_line('scalefact', 'float', 1.0)
+        
         self.add_line('fixed_couplings', 'bool', True, log=10)
         self.add_line('ickkw', 'int', 0)
         self.add_line('chcluster', 'bool', False)
         self.add_line('ktscheme', 'int', 1)
         self.add_line('asrwgtflavor', 'int', 5)
+        
+        #CKKW TREATMENT!
         if int(self['ickkw'])>0:
+            #if use_syst is True, some parameter are automatically fixed.
+            if self['use_syst'] in self.true:
+                value = self.format('float',self.get_default('alpsfact', 1.0, 30))
+                if value != self.format('float', 1.0):
+                    logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
+                    self['alpsfact'] = 1.0
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
+            self.add_line('clusinfo', 'bool', False)
+            # check that DRJJ and DRJL are set to 0 and MMJJ
+            if self.format('float', self['drjj']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+            if self.format('float', self['drjl']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+            if self.format('bool', self['auto_ptj_mjj']) == '.false.':
+                #ensure formatting
+                mmjj = self['mmjj']
+                if isinstance(mmjj,str):
+                    mmjj = float(mmjj.replace('d','e'))
+                xqcut = self['xqcut']
+                if isinstance(xqcut,str):
+                    xqcut = float(xqcut.replace('d','e'))
+                 
+                if mmjj > xqcut:
+                    logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
+                    self.add_line('mmjj','float',0)
+                    
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')
+        
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
         self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
@@ -731,9 +787,10 @@ class RunCardNLO(RunCard):
         self.add_line('reweight_PDF', 'bool', True, fortran_name='do_rwgt_pdf')
         self.add_line('PDF_set_min', 'int', 21101)
         self.add_line('PDF_set_max', 'int', 21140)
-
-       # self.add_line('fixed_couplings', 'bool', True, log=10)
-        self.add_line('jetalgo', 'int', 1)
+        # FxFx merging stuff
+        self.add_line('ickkw', 'int', 0)
+        # self.add_line('fixed_couplings', 'bool', True, log=10)
+        self.add_line('jetalgo', 'float', 1.0)
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
         self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
@@ -743,6 +800,7 @@ class RunCardNLO(RunCard):
         self.add_line('bwcutoff', 'float', 15.0)
         # Photon isolation
         self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('etagamma', 'float', -1.0)
         self.add_line('R0gamma', 'float', 0.4)
         self.add_line('xn', 'float', 1.0)
         self.add_line('epsgamma', 'float', 1.0)

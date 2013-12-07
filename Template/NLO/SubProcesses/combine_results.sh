@@ -38,7 +38,7 @@ for dir in "$@" ; do
     N=`ls -d P*/$dir | wc -l`
     NTOT=`expr $NTOT + $N`
     ls -d P*/$dir >> dirs.txt
-    grep -H 'Final result \[ABS\]' P*/$dir/res_$arg1 >> res.txt
+    grep -H 'Final result' P*/$dir/res_$arg1 >> res.txt
 done
 echo N of directories: $NTOT
 if [[ $arg1 == '0' ]] ; then
@@ -47,20 +47,9 @@ elif [[ $arg1 == '1' ]] ; then
     echo 'Updating the number of unweighted events per channel'
 fi
 ./sumres.py $NTOT $arg2 $arg3
+
 echo 'Integrated abs(cross-section)' 
-tail -n1 res.txt
-mv res.txt res_$arg1\_abs.txt
-rm dirs.txt
-touch res.txt
-touch dirs.txt
-NTOT=0
-for dir in "$@" ; do
-    N=`ls -d P*/$dir | wc -l`
-    NTOT=`expr $NTOT + $N`
-    ls -d P*/$dir >> dirs.txt
-    grep -H 'Final result:' P*/$dir/res_$arg1 >> res.txt
-done
-./sumres.py $NTOT -1 -1
+tail -n2 res.txt | head -n1
 echo 'Integrated cross-section' 
 tail -n1 res.txt
-mv res.txt res_$arg1\_tot.txt
+mv res.txt res_$arg1.txt

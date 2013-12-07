@@ -172,7 +172,6 @@ c account)
             stop
          endif
       endif
-      
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -226,7 +225,7 @@ c exists, which should be the case when firsttime is false.
                      goodhel(j)=goodhel(i)
                      hel(0)=hel(0)+1
                      hel(j)=i
-                  endif
+                 endif
                enddo
                goto 202
 201            continue

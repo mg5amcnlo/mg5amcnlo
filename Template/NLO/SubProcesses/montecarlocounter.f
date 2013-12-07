@@ -1553,7 +1553,9 @@ c Compute deadzones
          max_scale(npartner)=
      &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
          max_scale(npartner)=max(max_scale(npartner),3d0)
-         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
+c         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
+         if(ptHWPP.gt.max_scale(npartner))lzone(npartner)=.false.
+         
 c EW deadzone (QED branching when either the mother or a daughter is a photon)
 c to be updated !!!!!!
         if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.

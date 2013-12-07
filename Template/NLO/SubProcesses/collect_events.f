@@ -4,12 +4,14 @@
       character*19 basicfile,nextbasicfile
       character*15 outputfile
       integer istep,i,numoffiles,nbunches,nevents,ievents,junit(80)
-      double precision xtotal,absxsec,evwgt
+      double precision xtotal,absxsec,evwgt,xsecfrac
       integer i_orig
       common /c_i_orig/i_orig
       integer ioutput
       parameter(ioutput=99)
       integer nevents_file(80)
+      double precision xsecfrac_all(80)
+      common /to_xsecfrac/xsecfrac_all
       common /to_nevents_file/nevents_file
 
       write (*,*) "Overwrite the event weights?"
@@ -51,10 +53,12 @@
       do while (.true.)
          read(10,'(120a)',err=2,end=2) string120
          eventfile=string120(2:index(string120,'   '))
-         read(string120(index(string120,'   '):120),*) ievents,absxsec
+         read(string120(index(string120,'   '):120),*)
+     $    ievents,absxsec,xsecfrac
          if (ievents.eq.0) cycle
          nevents=nevents+ievents
          numoffiles=numoffiles+1
+         xsecfrac_all(numoffiles) = xsecfrac
 c store here the number of events per file         
          nevents_file(numoffiles) = ievents
          xtotal=xtotal+absxsec
@@ -186,6 +190,8 @@ c
       parameter (debug=.false.)
       integer nevents_file(80)
       common /to_nevents_file/nevents_file
+      double precision xsecfrac_all(80)
+      common /to_xsecfrac/xsecfrac_all
       include 'reweight_all.inc'
 c
       if(debug) then
@@ -217,7 +223,8 @@ c      header. Check consistency in this case
       endif
       maxevt=mx_of_evt(1)
 
-      xerrup=xerrup**2
+      xerrup=xerrup**2 * xsecfrac_all(ione)
+      xsecup = xsecup * xsecfrac_all(ione)
       do ii=2,numoffiles
         call read_lhef_header(junit(ii),nevents,MonteCarlo1)
         if (nevents .gt. 0) then
@@ -242,8 +249,8 @@ c      header. Check consistency in this case
         call read_lhef_init(junit(ii),
      #    IDBMUP1,EBMUP1,PDFGUP1,PDFSUP1,IDWTUP1,NPRUP1,
      #    XSECUP1,XERRUP1,XMAXUP1,LPRUP1)
-        xsecup=xsecup+xsecup1
-        xerrup=xerrup+xerrup1**2
+        xsecup=xsecup+xsecup1 * xsecfrac_all(ii)
+        xerrup=xerrup+xerrup1**2 * xsecfrac_all(ii)
         if(
      #     IDBMUP(1).ne.IDBMUP1(1) .or.
      #     IDBMUP(2).ne.IDBMUP1(2) .or.

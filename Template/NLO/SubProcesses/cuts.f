@@ -94,6 +94,7 @@ c Photon isolation
       double precision Etsum(0:nexternal)
       real drlist(nexternal)
       double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
+     $     ,pgammalab(0:3)
       logical alliso
 c Sort array of results: ismode>0 for real, isway=0 for ascending order
       integer ismode,isway,izero,isorted(nexternal)
@@ -361,6 +362,16 @@ c Loop over all photons
           if(ptg.lt.ptgmin)then
             passcuts=.false.
             return
+          endif
+
+          if (etagamma.gt.0d0) then
+c     for rapidity cut, boost this one gamma to the lab frame
+             call boostwdir2(chybst,shybst,chybstmo,xd,
+     &            pgamma(0,j),pgammalab)
+             if (abs(eta(pgammalab)).gt.etagamma) then
+                passcuts=.false.
+                return
+             endif
           endif
 
 c Isolate from hadronic energy
