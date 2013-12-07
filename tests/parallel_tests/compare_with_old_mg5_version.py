@@ -387,7 +387,7 @@ class OLDMG5Comparator(unittest.TestCase):
         values = {'number_of_P0': '1', 
          'number_of_P1': '1', 
          'cross_P0_qq_wpg': '0.27889E+04', 
-         'cross_P1_gg_wpqq': '0.48043E+03'}      
+         'cross_P1_gg_wpqq': '0.45254E+03'}      
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm2.log")

@@ -72,7 +72,7 @@ class GaugeComparator(unittest.TestCase):
         if filename:
             my_comp.output_result(filename=filename)
         
-                # Store output to a pickle file in the input_files directory
+        # Store output to a pickle file in the input_files directory
         if pickle_file:
             me_comparator.PickleRunner.store_comparison(\
                 os.path.join(_pickle_path, pickle_file),
@@ -175,7 +175,7 @@ class GaugeComparator(unittest.TestCase):
     def test_cross_gauge_p2(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically        
-        my_proc_list = ['p p > b b~ u d~ s c~']
+        my_proc_list = ['p p > b b~ e- ve~ mu+ vm']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},model = 'sm',
