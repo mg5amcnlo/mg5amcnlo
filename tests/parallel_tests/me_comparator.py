@@ -424,7 +424,10 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        if model != 'mssm':
+            v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s \n" %  model
         v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -941,8 +944,8 @@ class MEComparatorGauge(MEComparator):
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
                        
-            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
-               diff_unit > 1e-2:                
+            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-3 or \
+               diff_unit > 1e-2:          
                 fail_str += proc+" "
 
         test_object.assertEqual(fail_str, "")    

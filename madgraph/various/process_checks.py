@@ -2395,7 +2395,6 @@ def check_process(process, evaluator, quick, options):
 def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
-
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
         logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)

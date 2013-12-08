@@ -1310,7 +1310,7 @@ class RestrictModel(model_reader.ModelReader):
             # delete the old parameters
             if not keep_external:                
                 external_parameters.remove(obj)
-            elif obj.lhablock in ['MASS','DECAY']:
+            elif obj.lhablock.upper() in ['MASS','DECAY']:
                 external_parameters.remove(obj)
             else:
                 obj.name = ''

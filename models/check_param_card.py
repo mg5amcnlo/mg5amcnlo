@@ -146,7 +146,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise
+                raise KeyError, 'id %s is not in %s' % (tuple(lhacode), self.name)
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')

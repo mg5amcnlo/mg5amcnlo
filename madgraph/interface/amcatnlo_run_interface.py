@@ -65,7 +65,7 @@ try:
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
 
-    from madgraph import InvalidCmd, aMCatNLOError
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
     aMCatNLO = False
 except ImportError, error:
     logger.debug(error)
@@ -98,36 +98,32 @@ def compile_dir(arguments):
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
-    #compile everything
 
-    # compile and run tests
-    for test in tests:
-        misc.compile([test], cwd = this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, test)):
-            raise aMCatNLOError('%s compilation failed' % test)
-        input = pjoin(me_dir, '%s_input.txt' % test)
-        #this can be improved/better written to handle the output
-        misc.call(['./%s' % (test)], cwd=this_dir, 
-                stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
-        
-    if not options['reweightonly']:
-        misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'gensym')):
-            raise aMCatNLOError('gensym compilation failed')
+    try:
+        #compile everything
+        # compile and run tests
+        for test in tests:
+            misc.compile([test], cwd = this_dir, job_specs = False)
+            input = pjoin(me_dir, '%s_input.txt' % test)
+            #this can be improved/better written to handle the output
+            misc.call(['./%s' % (test)], cwd=this_dir, 
+                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+            
+        if not options['reweightonly']:
+            misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
+            misc.call(['./gensym'],cwd= this_dir,
+                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
+            #compile madevent_mintMC/mintFO
+            misc.compile([exe], cwd=this_dir, job_specs = False)
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
-        open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
-        misc.call(['./gensym'],cwd= this_dir,
-                 stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                 stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
-        #compile madevent_mintMC/mintFO
-        misc.compile([exe], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, exe)):
-            raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
-        misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-            raise aMCatNLOError('reweight_xsec_events compilation failed')
-    logger.info('    %s done.' % p_dir) 
+        logger.info('    %s done.' % p_dir) 
+        return 0
+    except MadGraph5Error, msg:
+        return msg
 
 
 def check_compiler(options, block=False):
@@ -2224,7 +2220,7 @@ Integrated cross-section
 
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -2681,9 +2677,6 @@ Integrated cross-section
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
-                for f in input_files:
-                    if not os.path.exists(f):
-                        print 'DONT EXIST', f
                 self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files)
 
@@ -2714,16 +2707,8 @@ Integrated cross-section
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
       
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
-            to_add = ['MadLoopParams.dat', 'ColorDenomFactors.dat', 
-                                   'ColorNumFactors.dat','HelConfigs.dat']
-            for name in to_add:
-                input_files.append(pjoin(cwd, name))
-
-                to_check = ['HelFilter.dat','LoopFilter.dat']
-            for name in to_check:
-                if os.path.exists(pjoin(cwd, name)):
-                    input_files.append(pjoin(cwd, name))
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
+            input_files.append(pjoin(cwd, 'MadLoop5_resources'))
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 
@@ -2984,9 +2969,10 @@ Integrated cross-section
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
+
         except:
             compile_cluster.remove()
-            raise
+            self.quit()
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:

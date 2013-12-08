@@ -116,14 +116,16 @@ class IOExportFKSEWTest(unittest.TestCase,\
         """tests the correct writing of the B-LH order file"""
 
         goal = \
-"""#OLE_order written by MadGraph 5
+"""#OLE_order written by MadGraph5_aMC@NLO
 
-MatrixElementSquareType CHsummed
+MatrixElementSquareType CHaveraged
 CorrectionType          QED
 IRregularisation        CDR
 AlphasPower             0
 AlphaPower              2
 NJetSymmetrizeFinal     Yes
+ModelFile               ./param_card.dat
+Parameters              alpha_s
 
 # process
 22 22 -> 6 -6 

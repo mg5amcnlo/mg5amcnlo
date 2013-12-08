@@ -123,10 +123,12 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       logical islast,isnum,found
       character*20 temp_val
 
+      logical isBlank
       integer i
       character(512) IdentCardPath      
 
       character(512) ParamCardPath
+      data ParamCardPath/'.'/
       common/ParamCardPath/ParamCardPath
 
 c     *********************************************************************
@@ -135,12 +137,16 @@ c
 
       IdentCardPath=''
       i =1
+      isBlank = .False.
       do while (i.le.LEN(ParamCardPath) .and. 
-     \            ParamCardPath(i:i).ne.' ')
-        i=i+1
+     \            .not. isBlank)
+        if (ParamCardPath(i:i).eq.' ') then
+            isBlank=.True.
+        else
+          i=i+1
+        endif
       enddo
       IdentCardPath = ParamCardPath(1:i-1)//'/ident_card.dat'
-
       ref_file = 20
       call LHA_open_file(ref_file,IdentCardPath,fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!

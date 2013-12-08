@@ -1309,7 +1309,7 @@ end
     # write_lh_order
     #===============================================================================
     #test written
-    def write_lh_order(self, filename, matrix_elements, OLP):
+    def write_lh_order(self, filename, matrix_elements, OLP='MadLoop'):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. For now it is generic."""
         
@@ -1345,7 +1345,8 @@ end
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHaveraged'
-        replace_dict['corr'] = 'QCD'
+        replace_dict['corr'] = ' '.join(matrix_elements.get('processes')[0].\
+                                                  get('perturbation_couplings'))
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
         replace_dict['aepow'] = QED

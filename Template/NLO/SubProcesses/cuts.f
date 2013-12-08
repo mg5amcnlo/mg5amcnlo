@@ -232,7 +232,6 @@ c From the run_card.dat, maxjetflavor defines if b quark should be
 c considered here (via the logical variable 'is_a_jet').  nQCD becomes
 c the number of (light) QCD partons at the real-emission level (i.e. one
 c more than the Born).
-
          nQCD=0
          do j=nincoming+1,nexternal
             if (is_a_j(j)) then
@@ -245,9 +244,10 @@ c more than the Born).
 
       endif
 
+
 c Uncomment for bypassing jet algo and cuts
 c$$$      goto 122
-      if (ptj.ne.0d0) then
+      if (ptj.gt.0d0.or.nQCD.gt.1) then
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
@@ -261,6 +261,7 @@ c no possible divergence related to it (e.g. t-channel single top)
             passcuts=.false.
             return
          endif
+
 
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
          palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt

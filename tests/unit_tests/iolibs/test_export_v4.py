@@ -222,8 +222,8 @@ C
 C     GLOBAL VARIABLES
 C     
       INTEGER USERHEL
-      DATA USERHEL/-1/
       COMMON/HELUSERCHOICE/USERHEL
+      DATA USERHEL/-1/
 
       DATA (NHEL(I,   1),I=1,5) /-1,-1,-1,-1,-1/
       DATA (NHEL(I,   2),I=1,5) /-1,-1,-1,-1, 1/

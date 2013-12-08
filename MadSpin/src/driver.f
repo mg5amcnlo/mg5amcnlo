@@ -150,7 +150,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       ! set masses 
       call set_parameters(p,Ecollider)
-      call coup()
 
       include 'props_production.inc'
 
@@ -494,6 +493,8 @@ c Masses of particles. Should be filled in setcuts.f
 
       include "../parameters.inc"
       stot=Ecollider**2
+
+      call coup()
 
       include 'pmass.inc'
 
