@@ -473,7 +473,10 @@ class CPPWriter(FileWriter):
                 if myline[1] == ";":
                     breakline_index = 2
                 elif myline[1:].lstrip()[:2] == "//":
-                    breakline_index = len(myline) - 1
+                    if myline.endswith('\n'):
+                        breakline_index = len(myline) - 1
+                    else:
+                        breakline_index = len(myline)
             res_lines.append("\n".join(self.split_line(\
                                        myline[:breakline_index],
                                        self.split_characters)) + "\n")

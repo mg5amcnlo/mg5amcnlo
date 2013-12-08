@@ -260,8 +260,6 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
-        if s_orig == s_new:
-            raise self.InvalidCmd, 'original card and new card are identical'
         old_param = check_param_card.ParamCard(s_orig.splitlines())
         new_param =  check_param_card.ParamCard(s_new.splitlines())
         card_diff = old_param.create_diff(new_param)

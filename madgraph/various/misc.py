@@ -815,14 +815,18 @@ def sprint(*args, **opt):
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
-def equal(a,b,sig_fig=6):
+def equal(a,b,sig_fig=6, zero_limit=True):
     """function to check if two float are approximatively equal"""
     import math
 
-    if a:
-        power = sig_fig - int(math.log10(abs(a))) + 1
+    if not a or not b:
+        if zero_limit:
+            power = sig_fig + 1
+        else:
+            return a == b  
     else:
-        power = sig_fig + 1
+        power = sig_fig - int(math.log10(abs(a))) + 1
+
     return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
 
 ################################################################################

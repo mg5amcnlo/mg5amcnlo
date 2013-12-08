@@ -1763,7 +1763,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion['options'] = self.list_completion(text, 
                             ['--path=', '--output=', '--min_br=0.\$',
                              '--precision_channel=0.\$', '--body_decay='])
-            completion['particles'] = self.model_completion(text, '')            
+            completion['particles'] = self.model_completion(text, '', line)            
         
         return self.deal_multiple_categories(completion)
     
