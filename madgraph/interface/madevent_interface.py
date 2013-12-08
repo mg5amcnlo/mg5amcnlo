@@ -2370,6 +2370,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         decay_info[particle].append([decay_products, partial_width])
                     except KeyError:
                         decay_info[particle] = [[decay_products, partial_width]]
+                    if line_number == len(param_card):
+                        break
                     line=param_card[line_number]
                 if particle and particle not in decay_info:
                     # No decays given, only total width       
