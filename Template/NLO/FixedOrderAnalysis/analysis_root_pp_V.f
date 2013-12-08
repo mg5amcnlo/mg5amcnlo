@@ -1,5 +1,7 @@
 c
-c Example analysis for "p p > ta+ ta- [QCD]" process.
+c Example analysis for "p p > w+ [QCD]" process.
+c Example analysis for "p p > w- [QCD]" process.
+c Example analysis for "p p > z [QCD]" process.
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine analysis_begin(nwgt,weights_info)
@@ -7,30 +9,30 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       integer nwgt
       character*(*) weights_info(*)
-      integer i,kk,l,nwgt_analysis
+      integer j,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
       data cc/'     ',' Born'/
-      include 'dbook.inc'
-      call inihist
+      real * 8 bin,xmi,xms,pi
+      parameter (pi=3.14159265358979312d0)
+      call open_root_file()
       nwgt_analysis=nwgt
-      if (nwgt_analysis*8.gt.nplots/4) then
-         write (*,*) 'error in analysis_begin: '/
-     &        /'too many histograms, increase NPLOTS to',
-     &        nwgt_analysis*8*4
-         stop 1
-      endif
-      do i=1,2
+      xmi=40.d0
+      xms=120.d0
+      bin=1.0d0
+      do j=1,2
       do kk=1,nwgt_analysis
-        l=(kk-1)*8+(i-1)*4
-        call bookup(l+1,'total rate  '//weights_info(kk)//cc(i),
-     &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+2,'ta+ta- mass '//weights_info(kk)//cc(i),
-     &       5d0,0d0,200d0)
-        call bookup(l+3,'ta+ta- rap  '//weights_info(kk)//cc(i),
-     &       0.25d0,-5d0,5d0)
-        call bookup(l+4,'ta+ta- pt   '//weights_info(kk)//cc(i),
-     &       20d0,0d0,400d0)
+      l=(kk-1)*10+(j-1)*5
+      call rbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
+     &     ,2.d0,0.d0,200.d0)
+      call rbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
+     &     ,0.05d0,0.d0,5.d0)
+      call rbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-9.d0,9.d0)
+      call rbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
+     &     ,0.25d0,-9.d0,9.d0)
+      call rbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
+     &     ,bin,xmi,xms)
       enddo
       enddo
       return
@@ -41,29 +43,22 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine analysis_end(xnorm)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-      character*14 ytit
       double precision xnorm
-      integer i
+      integer i,jj
       integer kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      include 'dbook.inc'
-      call open_topdrawer_file
-      call mclear
-      do i=1,NPLOTS
-         call mopera(i,'+',i,i,xnorm,0.d0)
-         call mfinal(i)
-      enddo
-      ytit='sigma per bin '
+c Do not touch the following lines. These lines make sure that the
+c histograms will have the correct overall normalisation: cross section
+c (in pb) per bin.
       do i=1,2
       do kk=1,nwgt_analysis
-         l=(kk-1)*8+(i-1)*4
-         call multitop(l+1,3,2,'total rate  ',ytit,'LIN')
-         call multitop(l+2,3,2,'ta+ ta- mass',ytit,'LOG')
-         call multitop(l+3,3,2,'ta+ ta- rap ',ytit,'LOG')
-         call multitop(l+4,3,2,'ta+ ta- pt  ',ytit,'LOG')
+      l=(kk-1)*10+(i-1)*5
+      do jj=1,5
+        call ropera(l+jj,'+',l+jj,l+jj,xnorm,0.d0)
       enddo
       enddo
-      call close_topdrawer_file
+      enddo
+      call close_root_file
       return                
       end
 
@@ -81,60 +76,61 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       double precision wgt,var
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      double precision ph(0:3),yh,xmh,pth,www
-      double precision getrapidity,dot
-      external getrapidity,dot
-      if (nexternal.ne.5) then
+      double precision www,pv(0:3),xmv,ptv,yv,etav
+      double precision getrapidity,getpseudorap,dot
+      external getrapidity,getpseudorap,dot
+      if (nexternal.ne.4) then
          write (*,*) 'error #1 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
+     &        /'only for process "p p > V [QCD]"'
          stop 1
       endif
       if (.not. (abs(ipdg(1)).le.5 .or. ipdg(1).eq.21)) then
          write (*,*) 'error #2 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
+     &        /'only for process "p p > V [QCD]"'
          stop 1
       endif
       if (.not. (abs(ipdg(2)).le.5 .or. ipdg(2).eq.21)) then
          write (*,*) 'error #3 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
+     &        /'only for process "p p > V [QCD]"'
          stop 1
       endif
-      if (.not. (abs(ipdg(5)).le.5 .or. ipdg(5).eq.21)) then
+      if (.not. (abs(ipdg(4)).le.5 .or. ipdg(4).eq.21)) then
          write (*,*) 'error #4 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
+     &        /'only for process "p p > V [QCD]"'
          stop 1
       endif
-      if (ipdg(3).ne.-15) then
+      if (abs(ipdg(3)).ne.24.and.ipdg(3).ne.23) then
          write (*,*) 'error #5 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
+     &        /'only for process "p p > V [QCD]"'
          stop 1
       endif
-      if (ipdg(4).ne.15) then
-         write (*,*) 'error #6 in analysis_fill: '/
-     &        /'only for process "p p > ta+ ta- [QCD]"'
-         stop 1
-      endif
+C
       do i=0,3
-        ph(i)=p(i,3)+p(i,4)
+        pv(i)=p(i,3)
       enddo
-      xmh = sqrt(max(dot(ph,ph),0d0))
-      yh  = getrapidity(ph(0),ph(3))
-      pth = sqrt(max(ph(1)**2+ph(2)**2,0d0))
-      var = 1.d0
+      xmv=sqrt(max(dot(pv,pv),0d0))
+      ptv=sqrt(max(pv(1)**2+pv(2)**2,0d0))
+      yv=getrapidity(pv(0),pv(3))
+      etav=getpseudorap(pv(0),pv(1),pv(2),pv(3))
+C
       do i=1,2
          do kk=1,nwgt_analysis
             www=wgts(kk)
-            l=(kk-1)*8+(i-1)*4
+            l=(kk-1)*10+(i-1)*5
             if (ibody.ne.3 .and.i.eq.2) cycle
-            call mfill(l+1,var,www)
-            call mfill(l+2,xmh,www)
-            call mfill(l+3,yh,www)
-            call mfill(l+4,pth,www)
+            call rfill(l+1,ptv,WWW)
+            if(ptv.gt.0) call rfill(l+2,log10(ptv),WWW)
+            call rfill(l+3,yv,WWW)
+            call rfill(l+4,etav,WWW)
+            call rfill(l+5,xmv,WWW)
          enddo
       enddo
+C
  999  return      
       end
-      
+
+
+
       function getrapidity(en,pl)
       implicit none
       real*8 getrapidity,en,pl,tiny,xplus,xminus,y
@@ -154,3 +150,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       return
       end
 
+
+      function getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      getpseudorap=eta
+      return
+      end

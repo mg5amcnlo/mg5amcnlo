@@ -11,25 +11,18 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
       data cc/'     ',' Born'/
-      include 'dbook.inc'
-      call inihist
+      call open_root_file()
       nwgt_analysis=nwgt
-      if (nwgt_analysis*8.gt.nplots/4) then
-         write (*,*) 'error in analysis_begin: '/
-     &        /'too many histograms, increase NPLOTS to',
-     &        nwgt_analysis*8*4
-         stop 1
-      endif
       do i=1,2
       do kk=1,nwgt_analysis
         l=(kk-1)*8+(i-1)*4
-        call bookup(l+1,'total rate  '//weights_info(kk)//cc(i),
+        call rbook(l+1,'total rate  '//weights_info(kk)//cc(i),
      &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+2,'ta+ta- mass '//weights_info(kk)//cc(i),
+        call rbook(l+2,'ta+ta- mass '//weights_info(kk)//cc(i),
      &       5d0,0d0,200d0)
-        call bookup(l+3,'ta+ta- rap  '//weights_info(kk)//cc(i),
+        call rbook(l+3,'ta+ta- rap  '//weights_info(kk)//cc(i),
      &       0.25d0,-5d0,5d0)
-        call bookup(l+4,'ta+ta- pt   '//weights_info(kk)//cc(i),
+        call rbook(l+4,'ta+ta- pt   '//weights_info(kk)//cc(i),
      &       20d0,0d0,400d0)
       enddo
       enddo
@@ -41,29 +34,22 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine analysis_end(xnorm)
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
-      character*14 ytit
       double precision xnorm
-      integer i
+      integer i,jj
       integer kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
-      include 'dbook.inc'
-      call open_topdrawer_file
-      call mclear
-      do i=1,NPLOTS
-         call mopera(i,'+',i,i,xnorm,0.d0)
-         call mfinal(i)
-      enddo
-      ytit='sigma per bin '
+c Do not touch the following lines. These lines make sure that the
+c histograms will have the correct overall normalisation: cross section
+c (in pb) per bin.
       do i=1,2
       do kk=1,nwgt_analysis
          l=(kk-1)*8+(i-1)*4
-         call multitop(l+1,3,2,'total rate  ',ytit,'LIN')
-         call multitop(l+2,3,2,'ta+ ta- mass',ytit,'LOG')
-         call multitop(l+3,3,2,'ta+ ta- rap ',ytit,'LOG')
-         call multitop(l+4,3,2,'ta+ ta- pt  ',ytit,'LOG')
+         do jj=1,4
+            call ropera(l+jj,'+',l+jj,l+jj,xnorm,0.d0)
+         enddo
       enddo
       enddo
-      call close_topdrawer_file
+      call close_root_file
       return                
       end
 
@@ -126,10 +112,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
             www=wgts(kk)
             l=(kk-1)*8+(i-1)*4
             if (ibody.ne.3 .and.i.eq.2) cycle
-            call mfill(l+1,var,www)
-            call mfill(l+2,xmh,www)
-            call mfill(l+3,yh,www)
-            call mfill(l+4,pth,www)
+            call rfill(l+1,var,www)
+            call rfill(l+2,xmh,www)
+            call rfill(l+3,yh,www)
+            call rfill(l+4,pth,www)
          enddo
       enddo
  999  return      

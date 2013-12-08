@@ -34,11 +34,9 @@ fi
 
 thisdir=`pwd`
 i=0
-for p in P* ; do
-    for el in $* ; do
-	i=`expr $i + 1`
-	echo $thisdir/$p/$el/MADatNLO.root >> temp_root_files.txt
-    done
+for p in P*/$* ; do
+    i=`expr $i + 1`
+    echo $thisdir/$p/MADatNLO.root >> temp_root_files.txt
 done
 
 if [ -f definitely_temporary.txt ]

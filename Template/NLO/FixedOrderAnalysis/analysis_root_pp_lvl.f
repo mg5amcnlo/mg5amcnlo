@@ -48,7 +48,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       implicit none
       double precision xnorm
-      integer i
+      integer i,jj
       integer kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
 c Do not touch the following lines. These lines make sure that the
@@ -57,14 +57,9 @@ c (in pb) per bin.
       do i=1,2
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call ropera(l+1,'+',l+1,l+1,xnorm,0.d0)
-        call ropera(l+2,'+',l+2,l+2,xnorm,0.d0)
-        call ropera(l+3,'+',l+3,l+3,xnorm,0.d0)
-        call ropera(l+4,'+',l+4,l+4,xnorm,0.d0)
-        call ropera(l+5,'+',l+5,l+5,xnorm,0.d0)
-        call ropera(l+6,'+',l+6,l+6,xnorm,0.d0)
-        call ropera(l+7,'+',l+7,l+7,xnorm,0.d0)
-        call ropera(l+8,'+',l+8,l+8,xnorm,0.d0)
+        do jj=1,8
+          call ropera(l+jj,'+',l+jj,l+jj,xnorm,0.d0)
+        enddo
       enddo
       enddo
       call close_root_file
