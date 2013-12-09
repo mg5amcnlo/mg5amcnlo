@@ -374,7 +374,7 @@ class GaugeComparatorLoop(unittest.TestCase):
         my_proc_list = []
         my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
         #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
-        my_proc_list.append(('e+ e- > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
+        #my_proc_list.append(('e+ e- > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
         #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
         my_proc_list.append(('d d~ > d~ u u~ d',{'QED':4,'QCD':0},['QCD'],{'QCD':2,'QED':8}))        
         #my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))
