@@ -50,6 +50,7 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
 ! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
   USE funlib
   USE ti_reduce
+  USE cti_reduce
   USE global
   IMPLICIT NONE
   INTEGER,INTENT(IN)::NLOOPLINE,RANK,NLOOPCOEFS,CTMODE
@@ -76,6 +77,8 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
   COMPLEX(KIND(1d0)),PARAMETER::cnorm=DCMPLX(0d0,-0.1013211836423377714438794632d0) ! 1/pi**2/i
   INTEGER::nnonzeromass,ml5_sign,ipostemp
   LOGICAL::exist
+  LOGICAL::comp_mass_scheme
+  INTEGER::scal_save
   !    LOGICAL::INIT=.TRUE.
   !    SAVE INIT
   !    IF(INIT)THEN
@@ -91,8 +94,12 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
   ENDIF
   nnonzeromass=0
   massref(1:20)=0d0
+  comp_mass_scheme=.FALSE.
   DO i=1,NLOOPLINE
-     M2LR(i)=DBLE(M2L(i))
+     M2LR(i)=DREAL(M2L(i))
+     IF(DIMAG(M2L(i)).GT.ZEROTHR_IREGI)THEN
+        comp_mass_scheme=.TRUE.
+     ENDIF
      IF(ABS(M2LR(i)).GT.ZEROTHR_IREGI)THEN
         exist=.FALSE.
         DO J=1,nnonzeromass
@@ -121,8 +128,17 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
   ! IMODE=2, PaVe reduction with stablility improved by IBP reduction
   ! I HARD-CODED IMODE=2 HERE
   !IMODE=2
-  CALL tensor_integral_reduce(IMODE,NLOOPLINE,RANK,nlenrank,&
-       PL,M2LR,MUR,TCOEFS(0:nlenrank-1,1:4),TSTABLE,CTMODE)
+  IF(.NOT.comp_mass_scheme)THEN
+     CALL tensor_integral_reduce(IMODE,NLOOPLINE,RANK,nlenrank,&
+          PL,M2LR,MUR,TCOEFS(0:nlenrank-1,1:4),TSTABLE,CTMODE)
+  ELSE
+     scal_save=scalarlib
+     scalarlib=2
+     ! complex mass scheme
+     CALL comp_tensor_integral_reduce(IMODE,NLOOPLINE,RANK,nlenrank,&
+          PL,M2L,MUR,TCOEFS(0:nlenrank-1,1:4),TSTABLE,CTMODE)
+     scalarlib=scal_save
+  ENDIF
   STABLE=TSTABLE
   ! TO MATCH THE CONVENTION OF PJFRY++
   ! MULTIPLY GAMMA(1-eps)*(Pi)^eps instead of GAMMA(1-eps)*(4*Pi)^eps
@@ -154,6 +170,8 @@ SUBROUTINE IREGI_FREE_PS
   IMPLICIT NONE
   CALL free_ibppave_save
   CALL free_xyzmatrices_bt(xyzmatrices_save)
+  CALL free_cxyzmatrices_bt(cxyzmatrices_save)
   CALL free_rsmatrices_bt(rsmatrices_save)
+  CALL free_crsmatrices_bt(crsmatrices_save)
   RETURN
 END SUBROUTINE IREGI_FREE_PS

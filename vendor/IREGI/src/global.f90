@@ -99,6 +99,18 @@ MODULE global
      TYPE( ibppave_node2 ), POINTER :: right
   END TYPE ibppave_node2
   TYPE(ibppave_node2),POINTER::ibp_save2,pave_save2,shiftpaveden_save2
+  TYPE cibppave_node
+     INTEGER :: NLOOPLINE
+     LOGICAL :: stable
+     INTEGER,DIMENSION(0:10) :: indices
+     COMPLEX(KIND(1d0)),DIMENSION(10) :: M2L
+     REAL(KIND(1d0)),DIMENSION(10,0:3) :: PCL
+     COMPLEX(KIND(1d0)),DIMENSION(1:4) :: value
+     TYPE( cibppave_node ), POINTER :: parent
+     TYPE( cibppave_node ), POINTER :: left
+     TYPE( cibppave_node ), POINTER :: right
+  END TYPE cibppave_node
+  TYPE(cibppave_node),POINTER::cibp_save,cpave_save,cshiftpaveden_save
   TYPE xyzmatrices_node
      !NLOOPLINE,PCL,M2L,XMATRIX,YMATRIX,ZMATRIX,detY,detZ
      INTEGER::NLOOPLINE
@@ -112,6 +124,18 @@ MODULE global
      TYPE( xyzmatrices_node ), POINTER :: right
   END TYPE xyzmatrices_node
   TYPE(xyzmatrices_node),POINTER::xyzmatrices_save
+  TYPE cxyzmatrices_node
+     INTEGER::NLOOPLINE
+     REAL(KIND(1d0)),DIMENSION(10,0:3)::PCL
+     COMPLEX(KIND(1d0)),DIMENSION(10)::M2L
+     COMPLEX(KIND(1d0)),DIMENSION(10,10)::XMATRIX,YMATRIX
+     COMPLEX(KIND(1d0)),DIMENSION(2:10,2:10)::ZMATRIX
+     COMPLEX(KIND(1d0))::detY,detZ
+     TYPE( cxyzmatrices_node ), POINTER :: parent
+     TYPE( cxyzmatrices_node ), POINTER :: left
+     TYPE( cxyzmatrices_node ), POINTER :: right
+  END TYPE cxyzmatrices_node
+  TYPE(cxyzmatrices_node),POINTER::cxyzmatrices_save
   TYPE rsmatrices_node
      ! NLOOPLINE,PCL,M2L,rmatrix,smatrix,rdet,sdet
      INTEGER::NLOOPLINE
@@ -125,5 +149,17 @@ MODULE global
      TYPE(rsmatrices_node),POINTER::right
   END TYPE rsmatrices_node
   TYPE(rsmatrices_node),POINTER::rsmatrices_save
+  TYPE crsmatrices_node
+     INTEGER::NLOOPLINE
+     REAL(KIND(1d0)),DIMENSION(10,0:3)::PCL
+     COMPLEX(KIND(1d0)),DIMENSION(10)::M2L
+     COMPLEX(KIND(1d0)),DIMENSION(0:10,0:10)::smatrix
+     COMPLEX(KIND(1d0)),DIMENSION(10,10)::rmatrix
+     COMPLEX(KIND(1d0))::detR,detS
+     TYPE(crsmatrices_node),POINTER::parent
+     TYPE(crsmatrices_node),POINTER::left
+     TYPE(crsmatrices_node),POINTER::right
+  END TYPE crsmatrices_node
+  TYPE(crsmatrices_node),POINTER::crsmatrices_save
   SAVE
 END MODULE global
