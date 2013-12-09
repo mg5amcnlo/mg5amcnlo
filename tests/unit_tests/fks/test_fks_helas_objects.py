@@ -151,14 +151,14 @@ class testFKSHelasObjects(unittest.TestCase):
                 self.assertEqual(len(born.born_amp['diagrams']), 1)
                 for amp in born.real_amps:
                     if amp.pdgs[0] != 21 or amp.pdgs[1] != 21:
-                        self.assertEqual(len(amp.amplitude['diagrams']), 12)
+                        self.assertEqual(len(amp.amplitude['diagrams']), 10)
                     else:
                         self.assertEqual(len(amp.amplitude['diagrams']), 4)
             else:
             # qq initiated
-                self.assertEqual(len(born.born_amp['diagrams']), 4)
+                self.assertEqual(len(born.born_amp['diagrams']), 3)
                 for amp in born.real_amps:
-                    self.assertEqual(len(amp.amplitude['diagrams']), 12)
+                    self.assertEqual(len(amp.amplitude['diagrams']), 10)
 
         my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, gen_color = False)
         for born in my_helas_mp['matrix_elements']:
@@ -169,14 +169,14 @@ class testFKSHelasObjects(unittest.TestCase):
                 for real in born.real_processes:
                     pdgs = [l['id'] for l in real.matrix_element['base_amplitude']['process']['legs']]
                     if pdgs[0] != 21 or pdgs[1] != 21:
-                        self.assertEqual(len(real.matrix_element['diagrams']), 12)
+                        self.assertEqual(len(real.matrix_element['diagrams']), 10)
                     else:
                         self.assertEqual(len(real.matrix_element['diagrams']), 4)
             else:
             # qq initiated
-                self.assertEqual(len(born.born_matrix_element['diagrams']), 4)
+                self.assertEqual(len(born.born_matrix_element['diagrams']), 3)
                 for real in born.real_processes:
-                    self.assertEqual(len(real.matrix_element['diagrams']), 12)
+                    self.assertEqual(len(real.matrix_element['diagrams']), 10)
 
 
 
