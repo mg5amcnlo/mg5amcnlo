@@ -1185,7 +1185,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # CutTools/TIR call the loops with same denominator structure
     group_loops=True
     # TIR things
-    all_tir=['iregi']
+    all_tir=['pjfry','iregi']
+    tir_available_dict={'pjfry':True,'iregi':True}
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1202,7 +1203,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             else:
                 setattr(self,tir_dir,'')
 
-
     def copy_v4template(self, modelname):
         """Additional actions needed for setup of Template
         """
@@ -1210,21 +1210,34 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
         tir_libs=[]
+        # special for PJFry++
+        link_pjfry_lib=""
+        pjfry_lib=""
+        pjdir=""
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
             libpath=getattr(self,tir_dir)
             libname="lib%s.a"%tir
             tir_name=tir
-            self.link_TIR(os.path.join(self.dir_path, 'lib'),
+            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
                               libpath,libname,tir_name=tir_name)
-            link_tir_libs.extend(['-l%s'%tir])
-            tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+            if goodlink==True:
+                if tir!="pjfry":
+                    link_tir_libs.extend(['-l%s'%tir])
+                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+                else:
+                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
+                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
+                    pjdir=libpath
+        if link_pjfry_lib!="":
+            link_tir_libs.extend([link_pjfry_lib])
+            tir_libs.extend([pjfry_lib])
             #if tir=="iregi":
             #    link_tir_libs.extend(['-lff','-lqcdloop','-lavh_olo'])
             #    tir_libs.extend(['$(LIBDIR)libff.$(libext)',
             #                     '$(LIBDIR)libqcdloop.$(libext)',
             #                     '$(LIBDIR)libavh_olo.$(libext)'])
-        if self.all_tir:
+        if self.all_tir and link_tir_libs:
             os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
             cwd = os.getcwd()
             dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -1235,7 +1248,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 return 0
             filename = 'makefile'
             calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
-                                          link_tir_libs,tir_libs)
+                                          link_tir_libs,tir_libs,pjdir)
             # Return to original PWD
             os.chdir(cwd)
                      
@@ -1262,13 +1275,23 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         except os.error:
             logger.error('Could not cd to directory %s' % targetPath)
             return 0
+        if not os.path.exists(libpath):
+            logger.warning('Directory for TIR %s is not well defined.'%tir_name+\
+                           'It will be negelected below.')
+            self.tir_available_dict[tir_name]=False
+            return False
         if not os.path.exists(os.path.join(libpath,libname)):
+            if libname=="libpjfry.a":
+                logger.warning('Loop library for TIR %s is compiled well.'%tir_name+\
+                           'It will be negelected below.')
+                self.tir_available_dict[tir_name]=False
+                return False    
             logger.info(('Compiling %s. This has to be done only once and'%tir_name)+\
-                              ' can take a couple of minutes.','$MG:color:BLACK')
+                        ' can take a couple of minutes.','$MG:color:BLACK')
             current = misc.detect_current_compiler(os.path.join(\
-                                                  libpath,'makefile'))
+                                                                libpath,'makefile'))
             new = 'gfortran' if self.fortran_compiler is None else \
-                                                           self.fortran_compiler
+                                                        self.fortran_compiler
             if current != new:
                 misc.mod_compilator(libpath, new,current)
             misc.compile(cwd=libpath, job_specs = False)
@@ -1279,12 +1302,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             #    linkfiles.extend(["qcdloop/libff.a","qcdloop/libqcdloop.a",\
             #                      "oneloop/libavh_olo.a"])
             for file in linkfiles:
-                ln(libpath+'/%s' % file)
+                # don't link the pjfry lib
+                if file!="libpjfry.a":
+                    ln(libpath+'/%s' % file)
         else:
             raise MadGraph5Error,"%s could not be correctly compiled."%tir_name
 
         # Return to original PWD
         os.chdir(cwd)
+        self.tir_available_dict[tir_name]=True
+        return True
         
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
@@ -1311,7 +1338,55 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
-            
+        # TIR stuff
+        for tir in self.all_tir:
+            if self.tir_available_dict[tir]:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    "        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
+                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"        CALL SORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)"
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    "        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
+                    +"RANK,PDEN,M2L,MU_R,TIRCOEFS,STABLE)"
+                    self.general_replace_dict['iregi_free_ps']=\
+                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
+                    self.general_replace_dict['initiregi']=\
+                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
+                else:
+                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
+            else:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
+                    +"        STOP"
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
+                    +"        STOP"
+                    self.general_replace_dict['initiregi']=''
+                    self.general_replace_dict['iregi_free_ps']=''
+        # the first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be care about the order in the following
+        if "pjfry" in self.all_tir:
+            if self.tir_available_dict["pjfry"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        if "iregi" in self.all_tir:
+            if self.tir_available_dict["iregi"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
+        +','.join(looplibs_av)+"/"
         # Now some features specific to the optimized output        
         max_loop_rank=matrix_element.get_max_loop_rank()
         self.general_replace_dict['maxrank']=max_loop_rank
@@ -1429,7 +1504,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             return file
         
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs):
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
         """ Create the file makefile which links to the TIR libraries."""
             
         file = open(os.path.join(self.loop_dir,'StandAlone',
@@ -1439,6 +1514,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         replace_dict['tir_libs']=' '.join(tir_libs)
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
+        replace_dict['pjdir']='PJDIR='+PJDIR
         file=file%replace_dict
         
         if writer:
@@ -1935,7 +2011,8 @@ ENDDO""")
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        
+        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
+        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   

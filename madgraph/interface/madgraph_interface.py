@@ -2161,6 +2161,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
+                       'pjfry':None,
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
@@ -2234,7 +2235,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._comparisons = None
         self._nlo_modes_for_completion = ['all','virt','real']
 
-        # Load the configuration file
+        # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
 
     def setup(self):
@@ -2917,6 +2918,8 @@ This implies that with decay chains:
         TIR_dir={}
         if "_iregi_dir" in dir(self):
             TIR_dir['iregi_dir']=self._iregi_dir
+        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
+            TIR_dir['pjfry_dir']=self.options['pjfry']
         #if "_pjfry_dir" in dir(self):
         #    TIR_dir['pjfry_dir']=self._pjfry_dir
         
@@ -4348,7 +4351,7 @@ This implies that with decay chains:
                     self.options[name] = value
                 if value.lower() == "none":
                     self.options[name] = None
-
+                    
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
@@ -4839,7 +4842,8 @@ This implies that with decay chains:
                 logger.warning('%s is not ' % args[1] + \
                         'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
-
+        elif args[0] == "pjfry":
+            pass
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
