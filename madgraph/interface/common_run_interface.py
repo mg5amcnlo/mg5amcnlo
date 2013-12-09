@@ -596,7 +596,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin|set)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -623,6 +623,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
+        elif 'launch' in text and 'set' in text:
+            return 'reweight_card.dat'
         else:
             return 'unknown'
 

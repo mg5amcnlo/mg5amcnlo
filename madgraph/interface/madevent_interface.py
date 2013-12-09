@@ -1853,23 +1853,23 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     self.options[key] = None
                     if key == "pythia-pgs_path":
                         if not os.path.exists(pjoin(path, 'src','pythia')):
-                            logger.warning("No valid pythia-pgs path found")
+                            logger.info("No valid pythia-pgs path found")
                             continue
                     elif key == "delphes_path":
                         if not os.path.exists(pjoin(path, 'Delphes')):
-                            logger.warning("No valid Delphes path found")
+                            logger.info("No valid Delphes path found")
                             continue
                     elif key == "madanalysis_path":
                         if not os.path.exists(pjoin(path, 'plot_events')):
-                            logger.warning("No valid MadAnalysis path found")
+                            logger.info("No valid MadAnalysis path found")
                             continue
                     elif key == "td_path":
                         if not os.path.exists(pjoin(path, 'td')):
-                            logger.warning("No valid td path found")
+                            logger.info("No valid td path found")
                             continue
                     elif key == "syscalc_path":
                         if not os.path.exists(pjoin(path, 'sys_calc')):
-                            logger.warning("No valid SysCalc path found")
+                            logger.info("No valid SysCalc path found")
                             continue
                     self.options[key] = os.path.realpath(path)
                     continue
