@@ -404,7 +404,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
 }; 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 
 #endif  // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
@@ -715,7 +715,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 }
 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         exporter = export_cpp.ProcessExporterPythia8(self.mymatrixelement,
@@ -1016,7 +1016,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
 }
 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         exporter.write_process_cc_file(\
@@ -1402,7 +1402,7 @@ class Sigma_sm_gd_ddxd : public Sigma3Process
 
 }; 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 
 #endif  // Pythia8_Sigma_sm_gd_ddxd_H
 """ % misc.get_pkg_info()

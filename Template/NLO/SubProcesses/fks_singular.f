@@ -2456,8 +2456,8 @@ c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
             rfj=1.0d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
-     $           ,njet,jet)
+            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     $           pjet,njet,jet)
             do i=1,NN
                di_cnt(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
@@ -2493,8 +2493,8 @@ c can be changed
             palg=1.d0           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
             sycut=0.d0          ! minimum jet pt
             rfj=1.0d0           ! the radius parameter
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
-     $           ,njet,jet)
+            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     $           pjet,njet,jet)
             do i=1,NN
                di_ev(i)=sqrt(amcatnlo_fastjetdmergemax(i-1))
                if(i.gt.1) then
@@ -4240,6 +4240,11 @@ c For tests of virtuals
       double precision virtual_over_born
       common/c_vob/virtual_over_born
 
+c timing statistics
+      double precision tbefore, tAfter
+      double precision tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
 c For the MINT folding
       integer fold
       common /cfl/fold
@@ -4404,7 +4409,10 @@ c convert to Binoth Les Houches Accord standards
          if (fold.eq.0) then
             if ((ran2().le.virtual_fraction .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
+               call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
+               call cpu_time(tAfter)
+               tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
                virt_wgt=(virt_wgt-average_virtual*born_wgt*ao2pi)
                if (abrv.ne.'virt') then
@@ -5691,7 +5699,6 @@ c no bias considering the *semi*-random numbers from VEGAS.
       endif
       return
       end
-
 
       function get_ptrel(pp,i_fks,j_fks)
       implicit none

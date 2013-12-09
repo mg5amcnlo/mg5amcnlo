@@ -146,7 +146,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise
+                raise KeyError, 'id %s is not in %s' % (tuple(lhacode), self.name)
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
@@ -355,7 +355,7 @@ class ParamCard(dict):
                 lhacode = param.lhacode
                 value = param.value
                 new_value = new_card[blockname].get(lhacode).value
-                if not misc.equal(value, new_value, 6):
+                if not misc.equal(value, new_value, 6, zero_limit=False):
                     lhacode = ' '.join([str(i) for i in lhacode])
                     diff += 'set param_card %s %s %s # orig: %s\n' % \
                                        (blockname, lhacode , new_value, value)

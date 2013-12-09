@@ -72,7 +72,7 @@ class GaugeComparator(unittest.TestCase):
         if filename:
             my_comp.output_result(filename=filename)
         
-                # Store output to a pickle file in the input_files directory
+        # Store output to a pickle file in the input_files directory
         if pickle_file:
             me_comparator.PickleRunner.store_comparison(\
                 os.path.join(_pickle_path, pickle_file),
@@ -175,7 +175,7 @@ class GaugeComparator(unittest.TestCase):
     def test_cross_gauge_p2(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically        
-        my_proc_list = ['p p > b b~ u d~ s c~']
+        my_proc_list = ['p p > b b~ e- ve~ mu+ vm']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},model = 'sm',
@@ -374,7 +374,7 @@ class GaugeComparatorLoop(unittest.TestCase):
         my_proc_list = []
         my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
         #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':4,'QCD':2},['QCD'],{'QCD':6,'QED':8}))
-        my_proc_list.append(('u u~ > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
+        #my_proc_list.append(('e+ e- > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
         #my_proc_list.append(('g g > b b~ e+ ve mu- vm~',{'QED':6,'QCD':0},['QCD'],{'QCD':2,'QED':12}))
         my_proc_list.append(('d d~ > d~ u u~ d',{'QED':4,'QCD':0},['QCD'],{'QCD':2,'QED':8}))        
         #my_proc_list.append(('g g > d d~',{'QCD':2,'QED':0},['QCD'],{'QCD':6,'QED':0}))

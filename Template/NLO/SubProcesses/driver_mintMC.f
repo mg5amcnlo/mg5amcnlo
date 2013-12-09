@@ -125,6 +125,15 @@ c statistics for MadLoop
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
+c timing statistics
+      double precision tbefore, tAfter
+      double precision tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0d0/
+      data tOLP/0.0d0/
+      data tFastJet/0.0d0/
+      data tPDF/0.0d0/
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
 c general MadFKS parameters
       include "FKSParams.inc"
 
@@ -132,6 +141,10 @@ C-----
 C  BEGIN CODE
 C-----  
 c
+c     Setup the timing variable
+c
+      call cpu_time(tBefore)
+
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
@@ -455,6 +468,14 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write(*,*)
      &        "  Unknown return code (1):                         ",n1
       endif
+
+      call cpu_time(tAfter)
+      tTot = tTot +(tAfter-tBefore)
+      write(*,*) 'Time spent in OLP : ',tOLP
+      write(*,*) 'Time spent in PDF_engine : ',tPDF
+      write(*,*) 'Time spent in clustering : ',tFastJet
+      write(*,*) 'Time spent in Total : ',tTot
+
       return
  999  write (*,*) 'nevts file not found'
       stop

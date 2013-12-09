@@ -6,13 +6,13 @@ ANADIR = ../../FixedOrderAnalysis/
 
 #check if fastjet-config is set
 ifeq ($(fastjet_config),None) 
-    fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o
+    fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o
     FJLIBS += -lstdc++
 else
     FASTJET_CONFIG = $(fastjet_config)
     CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
     FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
-    fastjetfortran_madfks=fastjetfortran_madfks_full.o
+    fastjetfortran_madfks=fastjetfortran_madfks_full.o fastjet_wrapper.o
 endif
 
 NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
@@ -79,13 +79,13 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 %.o: $(ANADIR)/%.for
 	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
 %.o: %.c
-	$(CXX) -g -c -I. $^
+	$(CXX) $(CFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.c
-	$(CXX) -g -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 %.o: %.cc
-	$(CXX) -g -c $(CXXFLAGS) -I. $^
+	$(CXX) $(CXXFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.cc
-	$(CXX) -g -c $(CXXFLAGS) -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
 
 gensym: $(SYM)
 	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)

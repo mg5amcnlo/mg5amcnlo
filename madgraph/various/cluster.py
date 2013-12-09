@@ -462,7 +462,13 @@ class MultiCore(Cluster):
             else:
                 pid = max(self.pids + [0]) + 1
                 self.pids.append(pid)
-                exe(argument)
+                # the function should return 0 if everything is fine
+                # the error message otherwise
+                returncode = exe(argument)
+                if returncode != 0:
+                    logger.warning(returncode)
+                    self.remove()
+
 
             
             # release the lock for allowing to launch the next job

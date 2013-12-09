@@ -278,6 +278,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
+        elif args[0] == 'BW_cut':
+            self.options[args[0]] = float(args[1])
         else:
             self.options[args[0]] = int(args[1])
     

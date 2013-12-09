@@ -463,6 +463,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
                      'fjcore.cc',
+                     'fastjet_wrapper.f',
                      'fjcore.hh',
                      'fks_Sij.f',
                      'fks_powers.inc',

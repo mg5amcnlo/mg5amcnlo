@@ -3903,7 +3903,8 @@ class UFO_model_to_mg4(object):
 
     def create_model_functions_inc(self):
         """ Create model_functions.inc which contains the various declarations
-        of auxiliary functions which might be used in the couplings expressions"""
+        of auxiliary functions which might be used in the couplings expressions
+        """
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
@@ -3915,7 +3916,9 @@ class UFO_model_to_mg4(object):
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
-        of auxiliary functions which might be used in the couplings expressions"""
+        of auxiliary functions which might be used in the couplings expressions
+        Add the functions.f functions for formfactors support
+        """
 
         fsock = self.open('model_functions.f', format='fortran')
         fsock.writelines("""double complex function cond(condition,truecase,falsecase)
@@ -3959,6 +3962,14 @@ class UFO_model_to_mg4(object):
                  mp_reglog=log(arg)
               endif
               end"""%{'complex_mp_format':self.mp_complex_format})            
+
+        #check for the file functions.f
+        model_path = self.model.get('modelpath')
+        if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
+            fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
+            input = pjoin(self.model_path,'Fortran','functions.f')
+            fsock.writelines(open(input).read())
+            fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
 
     def create_makeinc(self):
         """create makeinc.inc containing the file to compile """
