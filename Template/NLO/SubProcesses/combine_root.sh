@@ -38,7 +38,7 @@ for p in P* ; do
   cd $p
   for el in $* ; do
        i=`expr $i + 1`
-       echo $p/$el"/MADatNLO.root" >> ../temp_root_files.txt
+       echo $thisdir/$p/$el"/MADatNLO.root" >> ../temp_root_files.txt
   done
   cd ../
 done
