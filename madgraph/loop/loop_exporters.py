@@ -1861,12 +1861,6 @@ ENDDO""")
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
         
-        find=re.compile("\%[^\(]")
-        for i in find.findall(file):
-            print 'FUUUCK',i
-#            if i not in replace_dict.keys():
-#                print "NotInDic",i
-        
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   
