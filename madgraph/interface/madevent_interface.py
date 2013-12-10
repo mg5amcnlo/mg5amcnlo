@@ -1794,7 +1794,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
             self.set_configuration(me5_config, final=False, initdir=self.me_dir)
                 
-            if self.options.has_key('mg5_path'):
+            if self.options.has_key('mg5_path') and self.options['mg5_path']:
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_file, final=False,initdir=MG5DIR)
