@@ -1857,17 +1857,19 @@ Integrated cross-section
             tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
             debug_msg += tmpStr
-            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
-                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
-                message += "\n  Suspiciouly large MC error in :"
-            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
-                message += tmpStr
+            # After all it was decided that it is better not to alarm the user unecessarily
+            # with such printout of the statistics.
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+#                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += "\n  Suspiciously large MC error in :"
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += tmpStr
 
             tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_contr_err_max'])
             debug_msg += tmpStr
-            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
-                message += tmpStr
+#            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+#                message += tmpStr
             
 
         except KeyError:
@@ -1899,7 +1901,7 @@ Integrated cross-section
                     stats['timings'][time_stats.group('name')][channel_name]=\
                                                  float(time_stats.group('time'))
         
-        # usefule inline function
+        # useful inline function
         Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
         try:
             totTimeList = [(time, chan) for chan, time in \
