@@ -1309,7 +1309,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
             self.set_configuration(config_path=me5_config, final=False, initdir=self.me_dir)
                 
-            if self.options.has_key('mg5_path'):
+            if self.options.has_key('mg5_path') and self.options['mg5_path']:
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_path=config_file, final=False,initdir=MG5DIR)
@@ -1374,6 +1374,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         continue
                 self.options[key] = None
             elif key.startswith('cluster') and key != 'cluster_status_update':
+                if key in ('cluster_nb_retry','cluster_wait_retry'):
+                    self.options[key] = int(self.options[key])
+                if hasattr(self,'cluster'):
+                    del self.cluster
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
