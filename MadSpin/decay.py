@@ -1988,7 +1988,12 @@ class decay_all_events(object):
                 MC_masses[pid]=value
                 if pid in pid_heavyquarks:
                     value_ME=self.banner.get('param_card','mass', pid).value
-                    if value_ME>1E-10: MC_masses[pid]=value_ME
+                    if value_ME>1E-10:
+                        if pid==5:
+                            logger.warning('set the mass of the b-quark to its value in the param_card.dat: %s GeV ' % value_ME)
+                        if pid==4:
+                            logger.warning('set the mass of the c-quark to its value in the param_card.dat: %s GeV ' % value_ME)
+                        MC_masses[pid]=value_ME
             
         return MC_masses 
 
