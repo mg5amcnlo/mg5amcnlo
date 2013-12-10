@@ -118,6 +118,34 @@ def which(program):
             if is_exe(exe_file):
                 return exe_file
     return None
+#===============================================================================
+# find a library
+#===============================================================================
+def which_lib(program):
+    def is_lib(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.R_OK)
+
+    if not program:
+        return None
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_lib(program):
+            return program
+    else:
+        if "LD_LIBRARY_PATH" in os.environ:
+            ev_path="LD_LIBRARY_PATH"
+        elif "PATH" in os.environ:
+            ev_path="PATH"
+        else:
+            ev_path=None
+        if ev_path !=None:
+            for path in os.environ[ev_path].split(os.pathsep):
+                lib_file = os.path.join(path, program)
+                if is_lib(lib_file):
+                    return lib_file
+    return None
+
 
 #===============================================================================
 # Return Nice display for a random variable

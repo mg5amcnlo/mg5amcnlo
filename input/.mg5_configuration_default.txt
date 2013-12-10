@@ -145,3 +145,8 @@
 # Set what OLP to use for the loop ME generation
 # OLP = MadLoop
 
+# Set the PJFry++ lib libpjfry.a directory
+# if None: try to find it automatically on the system
+# e.g. pjfry=pjfry=/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta2/pjfry_install/lib
+# pjfry = None
+

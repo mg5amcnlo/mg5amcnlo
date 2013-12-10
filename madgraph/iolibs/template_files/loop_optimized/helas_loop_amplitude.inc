@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM, LIBINDEX)
+      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -20,7 +20,7 @@ C
       %(mass_dp_format)s %(margsdecl)s
       %(pairingdecl)s
       INTEGER RANK, LSYMFACT
-	  INTEGER SQUAREDSOINDEX, LOOPNUM, LIBINDEX
+	  INTEGER SQUAREDSOINDEX, LOOPNUM
 C
 C LOCAL VARIABLES 
 C
@@ -53,6 +53,8 @@ C
 	  %(real_dp_format)s LSCALE 
 	  INTEGER CTMODE
           common/CT/LSCALE,CTMODE
+	  INTEGER LIBINDEX
+	  common/I_LIB/LIBINDEX
 C ----------
 C BEGIN CODE
 C ----------
@@ -79,7 +81,8 @@ C since some reduction libraries, e.g.PJFry++ and IREGI, are still
 C not able to deal with complex masses
       complex_mass=.FALSE.
       DO I=1,NLOOPLINE
-      	 IF(IMAG(M2L(I)).NE.0d0)THEN
+      	 IF(DIMAG(M2L(I)).EQ.0d0)CYCLE
+      	 IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1d-15)THEN
 	   complex_mass=.TRUE.
 	   EXIT
 	 ENDIF

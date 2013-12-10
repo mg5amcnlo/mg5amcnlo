@@ -2914,12 +2914,23 @@ This implies that with decay chains:
             CT_dir = self._cuttools_dir
         else:
             CT_dir =""
+            if "MLReductionLib" in MLoptions:
+                if 1 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(1)
         # directories for TIR
         TIR_dir={}
         if "_iregi_dir" in dir(self):
             TIR_dir['iregi_dir']=self._iregi_dir
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 3 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(3)
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
             TIR_dir['pjfry_dir']=self.options['pjfry']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 2 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(2)
         #if "_pjfry_dir" in dir(self):
         #    TIR_dir['pjfry_dir']=self._pjfry_dir
         
@@ -4370,7 +4381,14 @@ This implies that with decay chains:
                         self.options['pythia8_path'] = None
                     else:
                         continue
-
+            elif key == 'pjfry':
+                if self.options['pjfry'] == None:
+                    # try to find it automatically on the system
+                    program = misc.which_lib('libpjfry.a')
+                    if program != None:             
+                        fpath, fname = os.path.split(program)
+                        self.options['pjfry']=fpath
+                        
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -4387,8 +4405,8 @@ This implies that with decay chains:
                                    % key)
                 else:
                     if key in self.options_madgraph:
-                        self.history.append('set %s %s' % (key, self.options[key]))             
-        
+                        self.history.append('set %s %s' % (key, self.options[key]))
+                             
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
           
@@ -4843,7 +4861,18 @@ This implies that with decay chains:
                         'v3 or greater. Please install FastJet v3+.' + \
                         'You will NOT be able to run aMC@NLO otherwise.\n')
         elif args[0] == "pjfry":
-            pass
+            program = misc.which_lib(os.path.join(args[1],"libpjfry.a"))
+            if program!=None:
+                res = 0
+                logger.info('set pjfry to %s' % args[1])
+                self.options[args[0]] = args[1]
+            else:
+                res = 1
+
+            if res != 0 :
+                logger.warning('%s does not seem to correspond to a valid pjfry lib ' % args[1] + \
+                        '. Please enter the full PATH/TO/pjfry/lib .\n' + \
+                        'You will NOT be able to run PJFry++ otherwise.\n')
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,

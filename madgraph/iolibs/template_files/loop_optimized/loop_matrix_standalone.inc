@@ -214,7 +214,7 @@ C     loop split orders contributions have been reached already and the rest can
 C TILL NOW, ONLY CUTTOOLS PROVIDE QP
        	  LOGICAL QP_TOOLS_AVAILABLE
        	  DATA QP_TOOLS_AVAILABLE/.FALSE./
-       	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+       	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
        	  common/LOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
 	  %(dp_born_amps_decl)s	  
@@ -270,7 +270,7 @@ C ----------
 IF(NTRY.EQ.0) THEN
   CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
   QP_TOOLS_AVAILABLE=.FALSE.
-  INDEX_QP_TOOLS(1:QP_NLOOPLIB)=0
+  INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
 C SKIP THE ONES THAT NOT AVAILABLE
   J=1
   DO I=1,NLOOPLIB
@@ -282,6 +282,9 @@ C SKIP THE ONES THAT NOT AVAILABLE
 	J=J+1
      ENDIF
   ENDDO
+  IF(MLReductionLib(1).EQ.0)THEN
+     STOP "No available loop reduction lib is provided. Make sure MLReductionLib is correct."
+  ENDIF
   J=0
   DO I=1,NLOOPLIB
      IF(MLReductionLib(I).EQ.1)THEN
@@ -809,19 +812,19 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
   IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.1).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.1)) ) THEN
 	EVAL_DONE(3)=.TRUE.
 	CALL ROTATE_PS(PS,P,1)
-	IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
+	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,1)
 	goto 200
   ENDIF
 
   IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NRotations_QP.GE.2).OR.((.NOT.DOING_QP_EVALS).AND.NRotations_DP.GE.2)) ) THEN
 	EVAL_DONE(4)=.TRUE.
 	CALL ROTATE_PS(PS,P,2)
-	IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
+	IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,2)
 	goto 200
   ENDIF
 
   CALL ROTATE_PS(PS,P,0)
-  IF (DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) CALL MP_ROTATE_PS(MP_PS,MP_P,0)
+  IF (DOING_QP_EVALS) CALL MP_ROTATE_PS(MP_PS,MP_P,0)
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
@@ -877,7 +880,11 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
      EVAL_DONE(I)=.FALSE.
      ENDDO
      STAB_INDEX=0
-     goto 300
+     IF(NRotations_QP.GE.1)THEN
+	goto 200
+     ELSE
+	goto 300
+     ENDIF
     ENDIF
     ENDIF
   ELSEIF(.NOT.DOING_QP_EVALS)THEN
@@ -901,7 +908,11 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 		EVAL_DONE(I)=.FALSE.
 		ENDDO
 		STAB_INDEX=0
-		goto 300
+		IF(NRotations_DP.GE.1)THEN
+		   goto 200
+		ELSE
+		   goto 300
+		ENDIF
 	  ELSE
 	     DO I=0,NSQUAREDSO
 	       ACCURACY(I)=ACC(I)
@@ -911,6 +922,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	     NEPS=NEPS+1
              IF(NEPS.LE.10) THEN
              WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+	     WRITE(*,*) '##W03 WARNING No quadruple precision will be used.'
               IF (NSQUAREDSO.NE.1) THEN
                   WRITE(*,*) 'Accuracies for each split order, starting with the summed case'
               	  WRITE(*,*) 'DP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
@@ -1483,11 +1495,11 @@ C         Not stable.
 C     U == 1
 C         Stable with CutTools in double precision.
 C     U == 2
-C         Stable with CutTools in quadruple precision.
-C     U == 3
 C         Stable with PJFry++.
-C     U == 4
-C         Stable with IREGI.         
+C     U == 3
+C         Stable with IREGI.
+C     U == 9
+C         Stable with CutTools in quadruple precision.         
 C
       IMPLICIT NONE
 C  
@@ -1544,11 +1556,11 @@ C         Not stable.
 C     U == 1
 C         Stable with CutTools in double precision.
 C     U == 2
-C         Stable with CutTools in quadruple precision.
-C     U == 3
 C         Stable with PJFry++.
-C     U == 4
+C     U == 3
 C         Stable with IREGI.
+C     U == 9
+C         Stable with CutTools in quadruple precision.
 C
 	IMPLICIT NONE
 C
@@ -1574,18 +1586,14 @@ C
 	ENDIF
 	IF(DOING_QP)THEN
 	IF(MLRed.EQ.1)THEN
-	SET_RET_CODE_U=2
+	SET_RET_CODE_U=9
 	RETURN
 	ELSE
 	STOP 'Only CutTools can use quardruple precision'
 	ENDIF
 	ENDIF
-	IF(MLRed.EQ.1)THEN
-	SET_RET_CODE_U=1
-	ELSEIF(MLRed.EQ.2)THEN
-	SET_RET_CODE_U=2
-	ELSEIF(MLRed.EQ.3)THEN
-	SET_RET_CODE_U=3
+	IF(MLRed.GE.1.AND.MLRed.LE.3)THEN
+	SET_RET_CODE_U=MLRed
 	ELSE
 	STOP 'Only CutTools,PJFry++,IREGI are available'
 	ENDIF

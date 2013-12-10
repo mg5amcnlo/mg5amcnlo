@@ -103,7 +103,7 @@
              endif
           else if (buff .eq. '#MLReductionLib') then
              read(666,*,end=999) MLReductionLib_str
-             MLReductionLib(1:3)=0
+             MLReductionLib(1:4)=0
              MLReductionLib_str_save=MLReductionLib_str
              j=0
              DO

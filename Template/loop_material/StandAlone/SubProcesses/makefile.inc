@@ -9,7 +9,7 @@ LINKLIBS =  -L$(LIBDIR) -lcts -ldhelas -lmodel %(link_tir_libs)s
 LIBS =  $(LIBDIR)libcts.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) %(tir_libs)s
 PROCESS= loop_matrix.o improve_ps.o\
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard born_matrix.f)) \
-		 loop_num.o CT_interface.o TIR_interface.o\
+		 loop_num.o CT_interface.o \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard polynomial.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard MadLoopParamReader.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard helas_calls*.f)) \
@@ -19,7 +19,8 @@ PROCESS= loop_matrix.o improve_ps.o\
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_helas_calls*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard coef_construction_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard loop_CT_calls_*.f)) \
-		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_coef_construction_*.f))
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_coef_construction_*.f)) \
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f))
 
 $(PROG): check_sa.o $(PROCESS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) check_sa.o $(PROCESS) $(LINKLIBS)

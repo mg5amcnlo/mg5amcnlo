@@ -171,10 +171,31 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                     os.path.join(self.dir_path, 'lib'))
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile","SubProcesses/makefile",\
+        #cpfiles= ["Source/makefile","SubProcesses/makefile",\
+        #          "SubProcesses/MadLoopParamReader.f",
+        #          "Cards/MadLoopParams.dat",
+        #          "SubProcesses/MadLoopParams.inc"]
+        cpfiles= ["Source/makefile",\
                   "SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
+        # first write SubProcesses/makefile from SubProcesses/makefile.inc
+        # dummy variables
+        link_tir_libs=[]
+        tir_libs=[]
+        pjdir=""
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                          link_tir_libs,tir_libs,pjdir)
+        # Return to original PWD
+        os.chdir(cwd)
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
@@ -198,7 +219,26 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Return to original PWD
         os.chdir(cwd)
-
+    # I put it here not in optimized one, because I want to use the same makefile.inc
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+        """ Create the file makefile which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.loop_dir,'StandAlone',
+                                 'SubProcesses','makefile.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['pjdir']='PJDIR='+PJDIR
+        if not PJDIR.endswith('/'):
+            replace_dict['pjdir']=replace_dict['pjdir']+"/"
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+        
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
         """ Caches the aloha model created here when writing out the aloha 
@@ -1275,7 +1315,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         except os.error:
             logger.error('Could not cd to directory %s' % targetPath)
             return 0
-        if not os.path.exists(libpath):
+        if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
             logger.warning('Directory for TIR %s is not well defined.'%tir_name+\
                            'It will be negelected below.')
             self.tir_available_dict[tir_name]=False
@@ -1504,23 +1544,25 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             return file
         
-    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
-        """ Create the file makefile which links to the TIR libraries."""
-            
-        file = open(os.path.join(self.loop_dir,'StandAlone',
-                                 'SubProcesses','makefile_TIR.inc')).read()  
-        replace_dict={}
-        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
-        replace_dict['tir_libs']=' '.join(tir_libs)
-        replace_dict['dotf']='%.f'
-        replace_dict['doto']='%.o'
-        replace_dict['pjdir']='PJDIR='+PJDIR
-        file=file%replace_dict
-        
-        if writer:
-            writer.writelines(file)
-        else:
-            return file
+#    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+#        """ Create the file makefile which links to the TIR libraries."""
+#            
+#        file = open(os.path.join(self.loop_dir,'StandAlone',
+#                                 'SubProcesses','makefile_TIR.inc')).read()  
+#        replace_dict={}
+#        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+#        replace_dict['tir_libs']=' '.join(tir_libs)
+#        replace_dict['dotf']='%.f'
+#        replace_dict['doto']='%.o'
+#        replace_dict['pjdir']='PJDIR='+PJDIR
+#        if not PJDIR.endswith('/'):
+#            replace_dict['pjdir']=replace_dict['pjdir']+"/"
+#        file=file%replace_dict
+#        
+#        if writer:
+#            writer.writelines(file)
+#        else:
+#            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling

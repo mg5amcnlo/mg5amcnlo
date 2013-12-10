@@ -2193,7 +2193,13 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     else:
         MLoptions = MLOptions
         if "MLReductionLib" not in MLOptions:
-            MLoptions["MLReductionLib"] = [1,2,3]
+            MLoptions["MLReductionLib"] = []
+            if cuttools:
+                MLoptions["MLReductionLib"].extend([1])
+            if "iregi_dir" in tir:
+                MLoptions["MLReductionLib"].extend([3])
+            if "pjfry_dir" in tir:
+                MLoptions["MLReductionLib"].extend([2])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 

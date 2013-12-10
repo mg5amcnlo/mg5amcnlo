@@ -7,7 +7,7 @@
 !
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
      &CTLoopLibrary,NRotations_DP,NRotations_QP,ImprovePSPoint,
-     &MLReductionLib(3),IREGIMODE
+     &MLReductionLib(4),IREGIMODE
 
       real*8 MLStabThres,CTStabThres,ZeroThres
 
