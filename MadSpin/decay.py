@@ -285,6 +285,9 @@ class Event:
                     continue
                 self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
                 return 1
+            elif line_type == 'rwgt' and 'wgt' in line:
+                # force to continue to be in rwgt line up to </rwgt>
+                line_type = 'rwgt'
             elif '<' in line:
                 line_type = 'other_block'
             
