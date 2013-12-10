@@ -15,14 +15,14 @@ c negative number of events
       double precision remcmass(-5:21)
       common/cremcmass/remcmass
       integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
-     # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
+     # itoterr,numproc,numconn,idup_eff(22),icolup_eff(2,22)
       logical wrong
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -675,17 +675,17 @@ c
 c Fills common block /cprocesses/ and return numproc, the number of the current
 c process in the list of processes idups_proc
       implicit none
-      integer npart,numproc,idup_eff(10)
+      integer npart,numproc,idup_eff(22)
       integer i,j
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
 c mxlproc=current maximum number of different processes
 c idups_proc(n,-1)=number of identical processes identified by n
 c idups_proc(n,0)=number of particles in process n
 c idups_proc(n,i)=ID of particle #i in process n; 1<=i<=idups_proc(n,0)
 c
-      if(npart.gt.10)then
+      if(npart.gt.22)then
         write(*,*)'Array idup_eff too small',npart
         stop
       endif
@@ -731,10 +731,10 @@ c
       integer iunit
       integer maxevt,iprocsum,iHW6procsum,nevS,nevH,i,id1,id2,ihpro
       logical isalquark,isagluon
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
 c Derived from conventions used by HW6 
 C  401    q qbar -> X
@@ -862,12 +862,12 @@ c Fills common block /ccolconn/ and return numconn, the number of the current
 c colour connection in the list of connections icolups_proc.
 c This routine works at fixed process number numproc
       implicit none
-      integer npart,numproc,numconn,icolup_eff(2,10)
-      integer i,j,ic,newline,jline(501:510),jcolup(2,10)
+      integer npart,numproc,numconn,icolup_eff(2,22)
+      integer i,j,ic,newline,jline(501:510),jcolup(2,22)
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c icolups_proc(numproc,0,1,1)=total number of colour connections
 c icolups_proc(numproc,n,0,1)=number of identical connections identified by n
@@ -947,9 +947,9 @@ c
       integer iev,numproc,numconn
       logical wrong
       integer npart,i,j,icol,iacl,iid,ncol1,ncol2,nacl1,nacl2,nneg
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c
       npart=idups_proc(numproc,0)
