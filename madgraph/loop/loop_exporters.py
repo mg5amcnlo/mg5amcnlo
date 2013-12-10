@@ -231,7 +231,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         replace_dict['dotf']='%.f'
         replace_dict['doto']='%.o'
         replace_dict['pjdir']='PJDIR='+PJDIR
-        if not PJDIR.endswith('/'):
+        if not PJDIR.endswith('/') and PJDIR!="":
             replace_dict['pjdir']=replace_dict['pjdir']+"/"
         file=file%replace_dict
         if writer:
@@ -1316,8 +1316,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             logger.error('Could not cd to directory %s' % targetPath)
             return 0
         if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
-            logger.warning('Directory for TIR %s is not well defined.'%tir_name+\
-                           'It will be negelected below.')
+            logger.warning("The %s tensor integration library could not be found"%tir_name\
+             +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+             +" It will not be available.")
             self.tir_available_dict[tir_name]=False
             return False
         if not os.path.exists(os.path.join(libpath,libname)):
