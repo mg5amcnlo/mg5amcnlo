@@ -81,8 +81,8 @@ c
       external alphasPDF
 
 c timing statistics
-      double precision tbefore, tAfter
-      double precision tTot, tOLP, tFastJet, tPDF
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
       common/timings/tTot, tOLP, tFastJet, tPDF
 
 c     This function takes 20 micro seconds to run, so it

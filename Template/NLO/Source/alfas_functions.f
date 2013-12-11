@@ -75,8 +75,8 @@ ccc
       external ALPHAS_not_timed
 
 c     timing statistics
-      double precision tbefore, tAfter
-      double precision tTot, tOLP, tFastJet, tPDF
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
       common/timings/tTot, tOLP, tFastJet, tPDF
 
 c     This function takes roughly 0.6 micro-seconds and the function

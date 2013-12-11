@@ -883,8 +883,8 @@ double precision p(0:3, nexternal)
 double precision wgt
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-double precision tbefore, tAfter
-double precision tTot, tOLP, tFastJet, tPDF
+real*4 tbefore, tAfter
+real*4 tTot, tOLP, tFastJet, tPDF
 common/timings/tTot, tOLP, tFastJet, tPDF
 call cpu_time(tbefore)
 """
