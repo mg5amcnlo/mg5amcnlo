@@ -540,7 +540,7 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': 21, 'state':True})])
         
 
-        dict = {'legs' : leglist, 'orders':{'QCD':2, 'QED':0},
+        dict = {'legs' : leglist, 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                    'model': self.mymodel,
                    'id': 1,
                    'required_s_channels':[],

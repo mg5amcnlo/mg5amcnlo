@@ -207,9 +207,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
     def get_real_amplitudes(self):
         """return an amplitudelist with the real amplitudes"""
-#        return diagram_generation.AmplitudeList([real.amplitude \
-#                           for born in self['born_processes'] \
-#                           for real in born.real_amps])
         return self.get('real_amplitudes')
 
 
@@ -226,21 +223,18 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             return
 
         for i, born in enumerate(self['born_processes']):
-                logger.info('Generating virtual matrix elements using MadLoop:')
-                myproc = copy.copy(born.born_proc)
-                myproc['orders'] = copy.copy(born.born_proc['orders'])
-                if 'WEIGHTED' in myproc['orders'].keys():
-                    del myproc['orders']['WEIGHTED']
-                if 'WEIGHTED' in myproc['squared_orders'].keys():
-                    del myproc['squared_orders']['WEIGHTED']
-                myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-                logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
-                        % (myproc.nice_string(print_weighted = False).replace(\
-                                                                 'Process', ''),
-                            i + 1, len(self['born_processes'])))
-                myamp = loop_diagram_generation.LoopAmplitude(myproc)
-                if myamp.get('diagrams'):
-                    born.virt_amp = myamp
+            logger.info('Generating virtual matrix elements using MadLoop:')
+            myproc = copy.copy(born.born_proc)
+            # take the orders that are actually used bu the matrix element
+            myproc['orders'] = fks_common.find_orders(born.born_amp)
+            myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+            logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
+                    % (myproc.nice_string(print_weighted = False).replace(\
+                                                             'Process', ''),
+                        i + 1, len(self['born_processes'])))
+            myamp = loop_diagram_generation.LoopAmplitude(myproc)
+            if myamp.get('diagrams'):
+                born.virt_amp = myamp
 
 
 class FKSRealProcess(object): 
@@ -274,14 +268,19 @@ class FKSRealProcess(object):
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
+        # compute the weighted order if not present
+        if not 'WEIGHTED' in orders:
+            orders['WEIGHTED'] = sum([v * born_proc.get('model').get('order_hierarchy')[o] \
+                        for o, v in orders.items()])
+
         for order in perturbed_orders:
             try:
                 orders[order] +=1
             except KeyError:
                 pass
             orders['WEIGHTED'] += born_proc.get('model').get('order_hierarchy')[order]
-        self.process.set('orders', orders)
 
+        self.process.set('orders', orders)
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs]) 
         self.colors = [leg['color'] for leg in leglist]
@@ -371,7 +370,6 @@ class FKSProcess(object):
         self.nlegs = 0
         self.fks_ipos = []
         self.fks_j_from_i = {}
-#        self.color_links = []
         self.real_amps = []
         self.remove_reals = remove_reals
         self.nincoming = 0
@@ -394,7 +392,6 @@ class FKSProcess(object):
 
             self.born_proc.set('legs_with_decays', MG.LegList())
 
-#            self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
                                     self.born_proc['legs'], self.born_proc['model'])
             self.nlegs = len(self.leglist)
@@ -405,8 +402,10 @@ class FKSProcess(object):
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
-            # find the correct qcd/qed orders from born_amp
-            self.orders = fks_common.find_orders(self.born_amp)
+            self.orders = self.born_amp['process']['orders']
+            # this is for cases in which the user specifies e.g. QED=0
+            if sum(self.orders.values()) == 0:
+                self.orders = fks_common.find_orders(self.born_amp)
                 
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
