@@ -382,6 +382,8 @@ class CheckValidForCmd(object):
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
+
+        self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
     
     def check_plot(self, args):
@@ -2022,8 +2024,6 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('Prepairing MCatNLO run')
-        self.run_name = os.path.split(\
-                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
@@ -2260,8 +2260,9 @@ Integrated cross-section
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
                        'pythia': ['pythia','pgs','delphes'],
+                       'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[]}
