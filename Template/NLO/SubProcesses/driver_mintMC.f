@@ -400,18 +400,28 @@ c determine how many events for the virtual and how many for the no-virt
 
          weight=(ans(1)+ans(5))/ncall
 
+         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born') then
+            write (*,*) 'CANNOT GENERATE EVENTS FOR ABRV',abrv
+            stop 1
+         endif
+
          write (*,*) 'imode is ',imode
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
          do j=1,ncall
-            if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
-               abrv='virt'
-               vn=1
+            if (abrv(1:4).eq.'born') then
+               vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               abrv='novi'
-               vn=2
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
+                  abrv='virt'
+                  vn=1
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               else
+                  abrv='novi'
+                  vn=2
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               endif
             endif
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
          enddo

@@ -858,7 +858,7 @@ c imode=3 store generation efficiency in x(1)
       endif
       if (vn.eq.1) then
          mcalls_virt=mcalls_virt+1
-      elseif(vn.eq.2) then
+      elseif(vn.eq.2 .or. vn.eq.3) then
          mcalls=mcalls+1
       else
          write (*,*) 'vn not correct in mint-integrator2.f',vn,imode
@@ -867,7 +867,7 @@ c imode=3 store generation efficiency in x(1)
  10   continue
       if (vn.eq.1) then
          icalls_virt=icalls_virt+1
-      elseif(vn.eq.2) then
+      elseif(vn.eq.2 .or. vn.eq.3) then
          icalls=icalls+1
       endif
       if (vn.eq.1) then
@@ -876,7 +876,7 @@ c Choose cell flat
             ncell(kdim)=min(int(ran3(.false.)*nintcurr)+1,nintcurr)
             rand(kdim)=ran3(.false.)
          enddo
-      elseif(vn.eq.2) then
+      elseif(vn.eq.2 .or. vn.eq.3) then
          do kdim=1,ndim
             nintcurr=nintervals/ifold(kdim)
             r=ran3(.false.)
@@ -889,7 +889,7 @@ c Choose cell flat
             rand(kdim)=ran3(.false.)
          enddo
       endif
-      if (vn.eq.2) then
+      if (vn.eq.2 .or. vn.eq.3) then
          ubound=1
          do kdim=1,ndim
             ubound=ubound*ymax(ncell(kdim),kdim)
@@ -916,16 +916,10 @@ c Choose cell flat
       if (vn.eq.1) then
          ubound=ymax_virt
       endif
-
-c$$$      write (*,*) vol,(x(i),i=1,ndim)
-
       dummy=fun(x,vol,ifirst,f1)
       do i=1,nintegrals
          f(i)=f(i)+f1(i)
       enddo
-c$$$      write (*,*) f
-c$$$      stop
-
       ifirst=1
       call nextlexi(ndim,ifold,kfold,iret)
       if(iret.eq.0) goto 5
@@ -934,12 +928,9 @@ c get final value (x and vol not used in this call)
       do i=1,nintegrals
          f(i)=f1(i)
       enddo
-      if (vn.eq.2) then
+      if (vn.eq.2 .or. vn.eq.3) then
          xx(2)=xx(2)+f(2)
          xx(3)=xx(3)+f(1)
-
-c$$$         write (*,*) xx(2)/icalls
-
       else
          xx(5)=xx(5)+f(2)
          xx(6)=xx(6)+f(1)
@@ -950,7 +941,7 @@ c$$$         write (*,*) xx(2)/icalls
       else
          if (vn.eq.1) then
             icalls_virt_nz=icalls_virt_nz+1
-         elseif(vn.eq.2) then
+         elseif(vn.eq.2 .or.vn.eq.3) then
             icalls_nz=icalls_nz+1
          endif
       endif
@@ -961,8 +952,10 @@ c$$$         write (*,*) xx(2)/icalls
       if(f(1).gt.ubound) then
          if (vn.eq.2) then
             call increasecnt('ubound fail novi',imode)
-         else
+         elseif (vn.eq.1) then
             call increasecnt('ubound fail virt',imode)
+         elseif (vn.eq.3) then
+            call increasecnt('ubound fail born',imode)
          endif
       endif
       ubound=ubound*ran3(.false.)
@@ -973,8 +966,10 @@ c$$$         write (*,*) xx(2)/icalls
       endif
       if (vn.eq.2) then
          call increasecnt('events gen novi',imode)
-      else
+      elseif (vn.eq.1) then
          call increasecnt('events gen virt',imode)
+      elseif (vn.eq.3) then
+         call increasecnt('events gen born',imode)
       endif
       end
 
