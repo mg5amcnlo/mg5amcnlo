@@ -69,9 +69,30 @@ ccc
       return
       end
 
+      DOUBLE PRECISION FUNCTION ALPHAS(Q)
+
+      DOUBLE PRECISION Q,ALPHAS_not_timed
+      external ALPHAS_not_timed
+
+c     timing statistics
+      double precision tbefore, tAfter
+      double precision tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
+c     This function takes roughly 0.6 micro-seconds and the function
+c     cpu_time takes 0.3 so it does not make much sense to always leave
+c     the timing profile. But it can be uncommented for dedicated study.
+c      call cpu_time(tbefore)
+      ALPHAS=ALPHAS_not_timed(Q)
+c      call cpu_time(tAfter)
+      
+c      tPDF = tPDF + (tAfter-tBefore)
+      RETURN
+      end
+
 C-----------------------------------------------------------------------------
 C
-      DOUBLE PRECISION FUNCTION ALPHAS(Q)
+      DOUBLE PRECISION FUNCTION ALPHAS_not_timed(Q)
 c
 c     Evaluation of strong coupling constant alpha_S
 c     Author: R.K. Ellis
@@ -150,7 +171,7 @@ c--- evaluate strong coupling at scale q
       T=2D0*DLOG(Q/ZMASS)
       CALL NEWTON1(T,asmz,AS_OUT,NLOOP,NF5)
       ENDIF
-      ALPHAS=AS_OUT
+      ALPHAS_not_timed=AS_OUT
       RETURN
       END
 

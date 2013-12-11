@@ -80,7 +80,19 @@ c
       REAL*8 Q,alphasPDF
       external alphasPDF
 
+c timing statistics
+      double precision tbefore, tAfter
+      double precision tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
+c     This function takes 20 micro seconds to run, so it
+c     is fine to time it with cpu_time which takes 0.3 microsec only
+
+      call cpu_time(tbefore)
       ALPHAS=alphasPDF(Q)
+      call cpu_time(tAfter)
+      
+      tPDF = tPDF + (tAfter-tBefore)
 
       RETURN
       END
