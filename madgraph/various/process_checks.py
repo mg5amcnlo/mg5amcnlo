@@ -2649,6 +2649,47 @@ def output_stability(stability, mg_root, reusing=False):
     nPSmax=0
     max_acc=0.0
     min_acc=1.0
+    if stability['Stability']:
+        toolnames= stability['Stability'].keys()
+        toolnamestr="     |     ".join(toolnames)
+        DP_stability = [[eval['Accuracy'] for eval in stab['DP_stability']] \
+                        for key,stab in stability['Stability'].items()]
+        med_dp_stab_str="     |     ".join([f(median(dp_stab),'%.2e') for dp_stab in  DP_stability])
+        min_dp_stab_str="     |     ".join([f(min(dp_stab),'%.2e') for dp_stab in  DP_stability])
+        max_dp_stab_str="     |     ".join([f(max(dp_stab),'%.2e') for dp_stab in  DP_stability])
+        UPS = [stab['Unstable_PS_points'] for key,stab in stability['Stability'].items()]
+        res_str_i  = "\n= Double precision results....... %s\n"%toolnamestr
+        res_str_i += "|= Median accuracy............... %s\n"%med_dp_stab_str
+        res_str_i += "|= Max accuracy.................. %s\n"%min_dp_stab_str
+        res_str_i += "|= Min accuracy.................. %s\n"%max_dp_stab_str
+        pmedminlist=[]
+        pfraclist=[]
+        for key,stab in stability['Stability'].items():
+            (pmed,pmin,pfrac)=loop_direction_test_power(stab['DP_stability'])
+            pmedminlist.extend(["%s,%s"%(f(pmed,'%.1f'),f(pmin,'%.1f'))])
+            pfraclist.extend(["%s"%f(pfrac,'%.2e')])
+        pmedminlist_str="     |     ".join(pmedminlist)
+        pfraclist_str="     |     ".join(pfraclist)
+        len_UPS=["%i"%len(upup) for upup in UPS]
+        len_UPS_str="     |     ".join(len_UPS)
+        res_str_i += "|= Overall DP loop_dir test power %s\n"\
+                                                %pmedminlist_str
+        res_str_i += "|= Fraction of evts with power<-3 %s\n"%pfraclist_str
+        res_str_i += "\n= Number of Unstable PS points    : %s\n"%len_UPS_str
+        res_str_i += \
+            """
+= Legend for the statistics of the stability tests. (all log below ar log_10)
+The loop direction test power P is computed as follow:
+    P = accuracy(loop_dir_test) / accuracy(all_other_test)
+    So that log(P) is positive if the loop direction test is effective.
+  The tuple printed out is (log(median(P)),log(min(P)))
+  The consistency test C is computed when QP evaluations are available:
+     C = accuracy(all_DP_test) / abs(best_QP_eval-best_DP_eval)
+  So a consistent test would have log(C) as close to zero as possible.
+  The tuple printed out is (log(median(C)),log(min(C)),log(max(C)))"""
+        res_str_i+="\n"
+        res_str+=res_str_i
+        
     for key in stability['Stability'].keys():
         toolname=key
         stab=stability['Stability'][key]
@@ -2668,15 +2709,15 @@ def output_stability(stability, mg_root, reusing=False):
         res_str_i = "\n%i PS points evaluated with %s\n"\
                                            %(nPS,toolname)    
         
-        res_str_i += "\n= Double precision results\n"
-        res_str_i += "|= Median accuracy............... %s\n"%f(median(DP_stability),'%.2e')
-        res_str_i += "|= Max accuracy.................. %s\n"%f(min(DP_stability),'%.2e')
-        res_str_i += "|= Min accuracy.................. %s\n"%f(max(DP_stability),'%.2e')
-        (pmed,pmin,pfrac)=loop_direction_test_power(stab['DP_stability'])
-        res_str_i += "|= Overall DP loop_dir test power %s,%s\n"\
-                                                %(f(pmed,'%.1f'),f(pmin,'%.1f'))
-        res_str_i += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
-        res_str_i += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
+        #res_str_i += "\n= Double precision results\n"
+        #res_str_i += "|= Median accuracy............... %s\n"%f(median(DP_stability),'%.2e')
+        #res_str_i += "|= Max accuracy.................. %s\n"%f(min(DP_stability),'%.2e')
+        #res_str_i += "|= Min accuracy.................. %s\n"%f(max(DP_stability),'%.2e')
+        #(pmed,pmin,pfrac)=loop_direction_test_power(stab['DP_stability'])
+        #res_str_i += "|= Overall DP loop_dir test power %s,%s\n"\
+        #                                        %(f(pmed,'%.1f'),f(pmin,'%.1f'))
+        #res_str_i += "|= Fraction of evts with power<-3 %s\n"%f(pfrac,'%.2e')
+        #res_str_i += "\n= Number of Unstable PS points    : %i\n"%len(UPS)
         if len(UPS)>0:
             res_str_i += "|= DP Median inaccuracy.......... %.2e\n"%median(UPS_stability_DP)
             res_str_i += "|= DP Max accuracy............... %.2e\n"%min(UPS_stability_DP)
@@ -2723,7 +2764,8 @@ def output_stability(stability, mg_root, reusing=False):
                                                 %(f(pmed,'%.1f'),f(pmin,'%.1f'))
             res_str_i += "|= EPS QP fraction with power<-3. %s\n"%f(pfrac,'%.2e')
 
-        res_str_i += \
+        if len(UPS)>0 or len(EPS)>0:
+            res_str_i += \
             """
 = Legend for the statistics of the stability tests. (all log below ar log_10)
 The loop direction test power P is computed as follow:
@@ -2788,6 +2830,7 @@ The loop direction test power P is computed as follow:
         logFile.write('First row is DP, second is QP.\n\n')
         logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
                              else '%.3e\n'%QP_stability[i]) for i in range(nPS))
+        res_str+=res_str_i
     logFile.close()
     res_str += "\n= Stability details of the run are output to the file"+\
                           " stability_%s_%s.log\n"%(mode,process.shell_string())
