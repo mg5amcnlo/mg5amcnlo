@@ -883,6 +883,10 @@ double precision p(0:3, nexternal)
 double precision wgt
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
+real*4 tbefore, tAfter
+real*4 tTot, tOLP, tFastJet, tPDF
+common/timings/tTot, tOLP, tFastJet, tPDF
+call cpu_time(tbefore)
 """
         for n, info in enumerate(matrix_element.get_fks_info_list()):
             file += \
@@ -894,7 +898,8 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
 stop
 endif
-
+call cpu_time(tAfter)
+tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """

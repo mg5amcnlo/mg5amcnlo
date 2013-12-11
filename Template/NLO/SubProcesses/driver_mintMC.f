@@ -126,12 +126,8 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
-      double precision tbefore, tAfter
-      double precision tTot, tOLP, tFastJet, tPDF
-      data tTot/0.0d0/
-      data tOLP/0.0d0/
-      data tFastJet/0.0d0/
-      data tPDF/0.0d0/
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
       common/timings/tTot, tOLP, tFastJet, tPDF
 
 c general MadFKS parameters
@@ -490,6 +486,19 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
  999  write (*,*) 'nevts file not found'
       stop
       end
+
+
+      block data timing
+c timing statistics
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0/
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
+      end
+
 
       subroutine get_user_params(ncall,itmax,iconfig,
      &     imode,ixi_i,iphi_i,iy_ij,SHsep)
