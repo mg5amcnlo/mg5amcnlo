@@ -628,6 +628,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             return 'unknown'
 
+
+    ############################################################################
+    def get_available_tag(self):
+        """create automatically a tag"""
+        
+        used_tags = [r['tag'] for r in self.results[self.run_name]]
+        i=0
+        while 1:
+            i+=1
+            if 'tag_%s' %i not in used_tags:
+                return 'tag_%s' % i
+   
+    
     ############################################################################
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot""" 
