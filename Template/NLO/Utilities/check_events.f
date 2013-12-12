@@ -9,7 +9,7 @@ c negative number of events
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
      # isavePDF,itemp
-      double precision chtot,xint,xinterr,qtiny
+      double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
       double precision remcmass(-5:21)
@@ -86,7 +86,7 @@ c negative number of events
       write (*,*) 'Enter event file name'
       read (*,'(a)') event_file
 
-      write (*,*) 'Enter 0 to get integrals from res_1_tot.txt'
+      write (*,*) 'Enter 0 to get integrals from res_1.txt'
       write (*,*) '      1 otherwise'
       read (*,*) iuseres_1
 
@@ -110,20 +110,21 @@ c read from events
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
+      open (unit=51,file='res_wgt',status='unknown')
       if(iuseres_1.eq.0)then
         jfile=50
-        open (unit=jfile,file='res_1_tot.txt',status='old')
+        open (unit=jfile,file='res_1.txt',status='old')
         do while(buff(1:6).ne.'Total:')
            read(jfile,*)buff
         enddo
+        read(jfile,*)xinta,pm,xintaerr
         read(jfile,*)xint,pm,xinterr
         if(pm.ne.'+-')then
-           write(*,*)'File res_1_tot.txt has unexpected format'
+           write(*,*)'File res_1.txt has unexpected format'
            stop
         endif
       elseif(iuseres_1.eq.1)then
-        jfile=50
-        open (unit=jfile,file='res_wgt',status='unknown')
+         continue
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -503,18 +504,23 @@ c Don't check momentum conservation in that case
         diff=sum_wgt-xint
         if( (diff.le.0.d0.and.diff+toterr.lt.0.d0) .or.
      #      (diff.gt.0.d0.and.diff-toterr.gt.0.d0) )then
-c Error if more that 1sigma away
+c Error if more that one sigma away
           itoterr=itoterr+1
           write(44,*)'WEIGHTS'
           write(44,*)'Integral:',xint,' +-',xinterr
           write(44,*)'Weights: ',sum_wgt,' +-',err_wgt
           write(44,*)' '
-          write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/
-     &sqrt(xinterr**2+err_wgt**2)
+          write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/sqrt(xinterr**2+err_wgt**2)
         endif
+        write (51,*) 'Xsec     (check_events) = ',sum_wgt,' +-',err_wgt
+        write (51,*) 'Xsec     (res_1.txt)    = ',xint   ,' +-',xinterr
+        write (51,*) ' '
+        write (51,*) 'Xsec ABS (check_events) = ',sum_abs_wgt,' +-',err_wgt
+        write (51,*) 'Xsec ABS (res_1.txt)    = ',xinta,' +-',xintaerr
       elseif(iuseres_1.eq.1)then
-        write (50,*) 'Xsec from the sum of the weights is:',
-     &sum_wgt,' +-',err_wgt
+        write (51,*) 'Xsec     (check_events) = ',sum_wgt,' +-',err_wgt
+        write (51,*) ' '
+        write (51,*) 'Xsec ABS (check_events) = ',sum_abs_wgt,' +-',err_wgt
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -610,6 +616,7 @@ c Error if more that 1sigma away
       close(34)
       close(44)
       close(50)
+      close(51)
       close(54)
       if(rwgtinfo)close(64)
 
