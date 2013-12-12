@@ -1034,7 +1034,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################
     def set_configuration(self, amcatnlo=True, **opt):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      

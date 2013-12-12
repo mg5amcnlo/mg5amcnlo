@@ -1771,130 +1771,56 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return True
         else: 
             return False
-            
+
     ############################################################################
-    def set_configuration(self, config_path=None, final=True, initdir=None):
-        """ assign all configuration variable from file 
-            ./Cards/mg5_configuration.txt. assign to default if not define """
-
-        if not hasattr(self, 'options') or not self.options:  
-            self.options = dict(self.options_configuration)
-            self.options.update(self.options_madgraph)
-            self.options.update(self.options_madevent) 
-        if not config_path:
-            if os.environ.has_key('MADGRAPH_BASE'):
-                config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path, final)
-                return
-            if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5', 
-                                                        'mg5_configuration.txt')
-                if os.path.exists(config_path):
-                    self.set_configuration(config_path, final=False)
-            me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
-            self.set_configuration(me5_config, final=False, initdir=self.me_dir)
-                
-            if self.options.has_key('mg5_path'):
-                MG5DIR = self.options['mg5_path']
-                config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-                self.set_configuration(config_file, final=False,initdir=MG5DIR)
-            else:
-                self.options['mg5_path'] = None
-            return self.set_configuration(me5_config, final,initdir=self.me_dir)
-
-        config_file = open(config_path)
-
-        # read the file and extract information
-        logger.info('load configuration from %s ' % config_file.name)
-        for line in config_file:
-            if '#' in line:
-                line = line.split('#',1)[0]
-            line = line.replace('\n','').replace('\r\n','')
-            try:
-                name, value = line.split('=')
-            except ValueError:
-                pass
-            else:
-                name = name.strip()
-                value = value.strip()
-                if name.endswith('_path'):
-                    path = value
-                    if os.path.isdir(path):
-                        self.options[name] = os.path.realpath(path)
-                        continue
-                    if not initdir:
-                        continue
-                    path = pjoin(initdir, value)
-                    if os.path.isdir(path):
-                        self.options[name] = os.path.realpath(path)
-                        continue
-                else:
-                    self.options[name] = value
-                    if value.lower() == "none":
-                        self.options[name] = None
-
+    def set_configuration(self, amcatnlo=False, final=True, **opt):
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
+        
+        super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
+                                                            final=True, **opt)
         if not final:
             return self.options # the return is usefull for unittest
 
-
         # Treat each expected input
         # delphes/pythia/... path
-        for key in self.options:
-            # Final cross check for the path
-            if key.endswith('path'):
-                path = self.options[key]
-                if path is None:
-                    continue
-                if not os.path.isdir(path):
-                    path = pjoin(self.me_dir, self.options[key])
-                if self.options.has_key('mg5_path') and self.options['mg5_path']: 
-                    path = pjoin(self.options['mg5_path'], self.options[key])
-                if os.path.isdir(path):
-                    self.options[key] = None
-                    if key == "pythia-pgs_path":
-                        if not os.path.exists(pjoin(path, 'src','pythia')):
-                            logger.info("No valid pythia-pgs path found")
-                            continue
-                    elif key == "delphes_path":
-                        if not os.path.exists(pjoin(path, 'Delphes')):
-                            logger.info("No valid Delphes path found")
-                            continue
-                    elif key == "madanalysis_path":
-                        if not os.path.exists(pjoin(path, 'plot_events')):
-                            logger.info("No valid MadAnalysis path found")
-                            continue
-                    elif key == "td_path":
-                        if not os.path.exists(pjoin(path, 'td')):
-                            logger.info("No valid td path found")
-                            continue
-                    elif key == "syscalc_path":
-                        if not os.path.exists(pjoin(path, 'sys_calc')):
-                            logger.info("No valid SysCalc path found")
-                            continue
-                    self.options[key] = os.path.realpath(path)
-                    continue
+        # ONLY the ONE LINKED TO Madevent ONLY!!!
+        for key in (k for k in self.options if k.endswith('path')):
+            path = self.options[key]
+            if path is None:
+                continue
+            if not os.path.isdir(path):
+                path = pjoin(self.me_dir, self.options[key])
+            if os.path.isdir(path):
                 self.options[key] = None
-            elif key.startswith('cluster'):
-                if key in ('cluster_nb_retry','cluster_wait_retry'):
-                    self.options[key] = int(self.options[key])
-                if hasattr(self,'cluster'):
-                    del self.cluster
-
-                pass              
-            elif key == 'automatic_html_opening':
-                if self.options[key] in ['False', 'True']:
-                    self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
-                             'complex_mass_scheme', 'gauge', 'group_subprocesses']:
-                # Default: try to set parameter
-                try:
-                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
-                except self.InvalidCmd:
-                    logger.warning("Option %s from config file not understood" \
-                                   % key)
-        # Configure the way to open a file:
-        misc.open_file.configure(self.options)
-          
+                if key == "pythia-pgs_path":
+                    if not os.path.exists(pjoin(path, 'src','pythia')):
+                        logger.info("No valid pythia-pgs path found")
+                        continue
+                elif key == "delphes_path":
+                    if not os.path.exists(pjoin(path, 'Delphes')):
+                        logger.info("No valid Delphes path found")
+                        continue
+                elif key == "madanalysis_path":
+                    if not os.path.exists(pjoin(path, 'plot_events')):
+                        logger.info("No valid MadAnalysis path found")
+                        continue
+                elif key == "td_path":
+                    if not os.path.exists(pjoin(path, 'td')):
+                        logger.info("No valid td path found")
+                        continue
+                elif key == "syscalc_path":
+                    if not os.path.exists(pjoin(path, 'sys_calc')):
+                        logger.info("No valid SysCalc path found")
+                        continue
+                # No else since the next line reinitialize the option to the 
+                #previous value anyway
+                self.options[key] = os.path.realpath(path)
+                continue
+            else:
+                self.options[key] = None
+                
+                          
         return self.options
 
     ############################################################################
