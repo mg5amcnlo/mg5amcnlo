@@ -314,6 +314,13 @@ c check (only available when not doing MC over hels)
          endif
       endif
 
+c If a MadLoop initialisation PS point (and stability is unknown), we
+c better set the virtual to zero to NOT include it in the
+c result. Sometimes this can be an unstable point with a very large
+c weight, screwing up the complete integration afterward.
+      if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
+     $     .and. ret_code/100.eq.1)virt_wgt=0d0
+
       return
  201  write (*,*) 'Cannot do MC over hel:'/
      &     /' "HelFilter.dat" does not exist'/
