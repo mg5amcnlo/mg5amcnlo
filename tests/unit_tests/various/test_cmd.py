@@ -26,7 +26,7 @@ class TestInstall(unittest.TestCase):
     def test_install_update(self):
         """Check that the install update command point to the official link
         and not to the test one."""
-        check1 = "            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')\n"
+        check1 = "            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')\n"
         check2 = "                    filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/patch/build%s.patch' %(i+1))\n" 
         
         has1, has2 = False, False
