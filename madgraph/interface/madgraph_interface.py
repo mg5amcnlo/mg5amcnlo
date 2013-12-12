@@ -17,6 +17,7 @@
 """
 
 import atexit
+import glob
 import logging
 import optparse
 import os
@@ -3220,6 +3221,139 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """ check if the current version of mg5 is up-to-date. 
         and allow user to install the latest version of MG5 """
 
+        def apply_patch(filetext):
+            """function to apply the patch"""
+            text = filetext.read()
+            pattern = re.compile(r'''=== renamed directory \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
+            #=== renamed directory 'Template' => 'Template/LO'
+            for orig, new in pattern.findall(text):
+                shutil.copytree(pjoin(MG5DIR, orig), pjoin(MG5DIR, 'UPDATE_TMP'))
+                full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
+                for i, name in enumerate(full_path):
+                    path = os.path.sep.join(full_path[:i+1])
+                    if path and not os.path.isdir(path):
+                        os.mkdir(path)
+                shutil.copytree(pjoin(MG5DIR, 'UPDATE_TMP'), pjoin(MG5DIR, new))
+                shutil.rmtree(pjoin(MG5DIR, 'UPDATE_TMP'))
+            # track rename since patch fail to apply those correctly.
+            pattern = re.compile(r'''=== renamed file \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
+            #=== renamed file 'Template/SubProcesses/addmothers.f' => 'madgraph/iolibs/template_files/addmothers.f'
+            for orig, new in pattern.findall(text):
+                print 'move %s to %s' % (orig, new)
+                try:
+                    files.cp(pjoin(MG5DIR, orig), pjoin(MG5DIR, new), error=True)
+                except IOError:
+                    full_path = os.path.dirname(pjoin(MG5DIR, new)).split('/')
+                    for i, name in enumerate(full_path):
+                        path = os.path.sep.join(full_path[:i+1])
+                        if path and not os.path.isdir(path):
+                            os.mkdir(path)
+                files.cp(pjoin(MG5DIR, orig), pjoin(MG5DIR, new), error=True)
+            # track remove/re-added file:
+            pattern = re.compile(r'''^=== added file \'(?P<new>[^\']*)\'''',re.M)
+            all_add = pattern.findall(text)
+            #pattern = re.compile(r'''=== removed file \'(?P<new>[^\']*)\'''')
+            #all_rm = pattern.findall(text)
+            pattern=re.compile(r'''=== removed file \'(?P<new>[^\']*)\'(?=.*=== added file \'(?P=new)\')''',re.S)
+            print 'this step can take a few minuts. please be patient'
+            all_rm_add = pattern.findall(text)
+            #=== added file 'tests/input_files/full_sm/interactions.dat'
+            for new in all_add:
+                if new in all_rm_add:
+                    continue
+                if os.path.isfile(pjoin(MG5DIR, new)):
+                    os.remove(pjoin(MG5DIR, new))
+            #pattern = re.compile(r'''=== removed file \'(?P<new>[^\']*)\'''')
+            #=== removed file 'tests/input_files/full_sm/interactions.dat'
+            #for old in pattern.findall(text):
+            #    if not os.path.isfile(pjoin(MG5DIR, old)):
+            #        full_path = os.path.dirname(pjoin(MG5DIR, old)).split('/')
+            #        for i, _ in enumerate(full_path):
+            #            path = os.path.sep.join(full_path[:i+1])
+            #            if path and not os.path.isdir(path):
+            #                os.mkdir(path)
+            #        subprocess.call(['touch', pjoin(MG5DIR, old)])
+
+            p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
+                                                              cwd=MG5DIR)
+            p.communicate(text)
+            
+            # check file which are not move
+            #=== modified file 'Template/LO/Cards/run_card.dat'
+            #--- old/Template/Cards/run_card.dat     2012-12-06 10:01:04 +0000
+            #+++ new/Template/LO/Cards/run_card.dat  2013-12-09 02:35:59 +0000
+            pattern=re.compile('''=== modified file \'(?P<new>[^\']*)\'[^\n]*\n\-\-\- old/(?P<old>\S*)[^\n]*\n\+\+\+ new/(?P=new)''',re.S)
+            for match in pattern.findall(text):
+                new = pjoin(MG5DIR, match[0])
+                old = pjoin(MG5DIR, match[1])
+                if new == old: 
+                    continue
+                elif os.path.exists(old):
+                    if not os.path.exists(os.path.dirname(new)):
+                        split = new.split('/')
+                        for i in range(1,len(split)):
+                            path = '/'.join(split[:i])
+                            if not os.path.exists(path):
+                                print 'mkdir', path
+                                os.mkdir(path)
+                    files.cp(old,new)
+            #=== renamed file 'Template/bin/internal/run_delphes' => 'Template/Common/bin/internal/run_delphes'
+            #--- old/Template/bin/internal/run_delphes       2011-12-09 07:28:10 +0000
+            #+++ new/Template/Common/bin/internal/run_delphes        2012-10-23 02:41:37 +0000
+            #pattern=re.compile('''=== renamed file \'(?P<old>[^\']*)\' => \'(?P<new>[^\']*)\'[^\n]*\n\-\-\- old/(?P=old)[^\n]*\n\+\+\+ new/(?P=new)''',re.S)
+            #for match in pattern.findall(text):
+            #    old = pjoin(MG5DIR, match[0])
+            #    new = pjoin(MG5DIR, match[1])
+            #    if new == old: 
+            #       continue
+            #    elif os.path.exists(old):
+            #        if not os.path.exists(os.path.dirname(new)):
+            #            split = new.split('/')
+            #            for i in range(1,len(split)):
+            #                path = '/'.join(split[:i])
+            #                if not os.path.exists(path):
+            #                    print 'mkdir', path
+            #                    os.mkdir(path)
+            #        files.cp(old,new)
+                    
+            # check that all files in bin directory are executable
+            for path in glob.glob(pjoin(MG5DIR, 'bin','*')):
+                misc.call(['chmod', '+x', path])
+            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','*')):
+                misc.call(['chmod', '+x', path])
+            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','internal','*')):
+                misc.call(['chmod', '+x', path])
+
+            #add empty files/directory
+            pattern=re.compile('''^=== touch (file|directory) \'(?P<new>[^\']*)\'''',re.M)
+            for match in pattern.findall(text):
+                if match[0] == 'file':
+                    new = os.path.dirname(pjoin(MG5DIR, match[1]))
+                else:
+                    new = pjoin(MG5DIR, match[1])
+                if not os.path.exists(new):
+                    split = new.split('/')
+                    for i in range(1,len(split)+1):
+                        path = '/'.join(split[:i])
+                        if path and not os.path.exists(path):
+                            print 'mkdir', path
+                            os.mkdir(path)
+                if match[0] == 'file':
+                    print 'touch ', pjoin(MG5DIR, match[1])
+                    misc.call(['touch', pjoin(MG5DIR, match[1])])
+            # add new symlink
+            pattern=re.compile('''^=== link file \'(?P<new>[^\']*)\' \'(?P<old>[^\']*)\'''', re.M)
+            for new, old in pattern.findall(text):
+                    if not os.path.exists(pjoin(MG5DIR, new)):
+                        files.ln(old, os.path.dirname(new), os.path.basename(new))
+                        
+            # check if it need to download binary:
+            pattern = re.compile("""^Binary files old/(\S*).*and new/(\S*).*$""", re.M)
+            if pattern.search(text):
+                return True
+            else:
+                return False
+
         # load options
         mode = [arg.split('=',1)[1] for arg in args if arg.startswith('--mode=')]
         if mode:
@@ -3235,6 +3369,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 raise self.InvalidCmd('%s: invalid argument for timeout (integer expected)'%timeout[-1])
         else:
             timeout = self.options['timeout']
+        input_path = [arg.split('=',1)[1] for arg in args if arg.startswith('--input=')]
+        
+        if input_path:
+            fsock = open(input_path[0])
+            need_binary = apply_patch(fsock)
+            logger.info('manual patch apply. Please test your version.')
+            if need_binary:
+                logger.warning('Note that some files need to be loaded separately!')
+            sys.exit(0)
         
         options = ['y','n','on_exit']
         if mode == 'mg5_start':
@@ -3304,7 +3447,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         signal.alarm(timeout)
         to_update = 0
         try:
-            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+            filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
             signal.alarm(0)
             web_version = int(filetext.read().strip())            
         except (TimeOutError, ValueError, IOError):
@@ -3353,17 +3496,18 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     print 'fail to load patch to build #%s' % (i+1)
                     fail = i
                     break
-                print 'apply patch %s' % (i+1)
-                text = filetext.read()
-                # track rename since patch fail to apply those correctly.
-                pattern = re.compile(r'''=== renamed file \'(?P<orig>[^\']*)\' => \'(?P<new>[^\']*)\'''')
-                #=== renamed file 'Template/SubProcesses/addmothers.f' => 'madgraph/iolibs/template_files/addmothers.f'
-                for orig, new in pattern.findall(text):
-                    files.cp(pjoin(MG5DIR, orig), pjoin(MG5DIR, new))
-                p= subprocess.Popen(['patch', '-p1'], stdin=subprocess.PIPE, 
-                                                                  cwd=MG5DIR)
-                p.communicate(text)
-            
+                need_binary = apply_patch(filetext)
+                if need_binary:
+                    path = "http://madgraph.phys.ucl.ac.be/binary/binary_file249.tgz"
+                    name = "extra_file"
+                    if sys.platform == "darwin":
+                        misc.call(['curl', path, '-o%s.tgz' % name], cwd=MG5DIR)
+                    else:
+                        misc.call(['wget', path, '--output-document=%s.tgz'% name], cwd=MG5DIR)
+                    # Untar the file
+                    returncode = misc.call(['tar', '-xzpf', '%s.tgz' % name], cwd=MG5DIR, 
+                                     stdout=open(os.devnull, 'w'))
+                    
             fsock = open(os.path.join(MG5DIR,'input','.autoupdate'),'w')
             if not fail:
                 fsock.write("version_nb   %s\n" % web_version)
