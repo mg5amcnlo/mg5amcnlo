@@ -21,7 +21,7 @@ C QQIN IS THE EVENT FILE
       PARAMETER (LHACRTL=.TRUE.)
       LOGICAL ENDOFRUN,IS_ST,IS_BB
       COMMON/CENDOFRUN/ENDOFRUN
-      INTEGER MAXEVV
+      INTEGER MAXEVV,MEDEC
       COMMON/CMAXEVV/MAXEVV
 c
       ENDOFRUN=.FALSE.
@@ -183,6 +183,8 @@ C---CALL HWUSTA TO MAKE ANY PARTICLE STABLE
       READ(*,*)MUM_STABLE
       WRITE(*,*)'Do you want a stable Higgs (.TRUE. or .FALSE)?'
       READ(*,*)H_STABLE
+      WRITE(*,*)'Write the type of matrix element in the decay'
+      READ(*,*)MEDEC
 
       if(PI_STABLE)  CALL HWUSTA('PI0     ')
       if(WP_STABLE)  CALL HWUSTA('W+      ')
@@ -283,7 +285,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
                   ELSE
                      BRR(JJ,II)=BRR(JJ,II)/(1-SUMBR(JJ,II))
                   ENDIF
-                  CALL HWMODK(IMOTH(II),BRR(JJ,II),100,IDAUGHT(II,1),
+                  CALL HWMODK(IMOTH(II),BRR(JJ,II),MEDEC,IDAUGHT(II,1),
      &                    IDAUGHT(II,2),IDAUGHT(II,3),IDAUGHT(II,4),
      &                                                IDAUGHT(II,5))
                ENDIF

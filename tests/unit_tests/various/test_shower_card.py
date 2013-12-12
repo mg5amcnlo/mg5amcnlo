@@ -58,6 +58,7 @@ is_4lep    = F      # true if it is 4 lepton production (only for PY6)
 is_bbar    = F      # true if it is b-b~ production (only for HW6)
 modbos_1   = 5      # decay mode for the first Boson (only for HW6)
 modbos_2   = 5      # decay mode for the second Boson (only for HW6)
+medec      = 100    # 3rd entry of the call to HWMODK (only for HW6)
 ################################################################################
 # DECAY CHANNELS
 # Write down decay channels for the resonances, to be performed by the shower.
@@ -69,6 +70,15 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_1 = 23 > -11 11 @ 0.5d0
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
+# For HERWIG6, decays are produced through a call to the function HWMODK, where
+# the order of decay products IS RELEVANT. For example, for a three-body top
+# decay, one should set DM_1 = 6 > 12 -11 5 @ 1d0. The call is completed by
+# specifying the desired matrix-element type in HWMODK, through the medec
+# parameter above. See the relevant HW6 manual for further information.
+#
+# Other showers are insensitive to ordering, and to the value of medec.
+################################################################################
+
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
@@ -125,6 +135,7 @@ is_4lep    = F      # true if it is 4 lepton production (only for PY6)
 is_bbar    = F      # true if it is b-b~ production (only for HW6)
 modbos_1   = 5      # decay mode for the first Boson (only for HW6)
 modbos_2   = 5      # decay mode for the second Boson (only for HW6)
+medec      = 100    # 3rd entry of the call to HWMODK (only for HW6)
 ################################################################################
 # DECAY CHANNELS
 # Write down decay channels for the resonances, to be performed by the shower.
@@ -136,6 +147,15 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_1 = 23 > -11 11 @ 0.5d0
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
+# For HERWIG6, decays are produced through a call to the function HWMODK, where
+# the order of decay products IS RELEVANT. For example, for a three-body top
+# decay, one should set DM_1 = 6 > 12 -11 5 @ 1d0. The call is completed by
+# specifying the desired matrix-element type in HWMODK, through the medec
+# parameter above. See the relevant HW6 manual for further information.
+#
+# Other showers are insensitive to ordering, and to the value of medec.
+################################################################################
+
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
@@ -314,6 +334,7 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
+MEDEC=100
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -350,6 +371,7 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
+MEDEC=100
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=

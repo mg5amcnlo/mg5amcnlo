@@ -353,6 +353,7 @@ cat <<EOF >> ./$ifile
   $MUP_STABLE_HW                  ! .TRUE. if one wants mu+ stable
   $MUM_STABLE_HW                  ! .TRUE. if one wants mu- stable
   $H_STABLE_HW                    ! .TRUE. if one wants Higgs stable
+  $MEDEC                          ! Matrix-element type for HW6 decays
 EOF
 
 arr=()
