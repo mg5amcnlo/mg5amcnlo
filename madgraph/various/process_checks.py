@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Several different checks for processes (and hence models):
@@ -29,6 +29,7 @@ import os
 import sys
 import re
 import shutil
+import random
 import glob
 import re
 import subprocess
@@ -73,6 +74,8 @@ from aloha.template_files.wavefunctions import \
 ADDED_GLOBAL = []
 
 temp_dir_prefix = "TMP_CHECK"
+
+pjoin = os.path.join
 
 def clean_added_globals(to_clean):
     for value in list(to_clean):
@@ -687,7 +690,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             return {'m2': finite_m2, output:[]}
 
     def fix_MadLoopParamCard(self,dir_name, mp=False, loop_filter=False,
-                                                                  MLOptions={}):
+                                 DoubleCheckHelicityFilter=False, MLOptions={}):
         """ Set parameters in MadLoopParams.dat suited for these checks.MP
             stands for multiple precision and can either be a bool or an integer
             to specify the mode."""
@@ -723,16 +726,16 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             else:
                 logger.error("Key %s is not a valid MadLoop option."%key)
 
-        # Mandatory option specificaitons
+        # Mandatory option specifications
         MLParams = re.sub(r"#CTModeRun\n-?\d+","#CTModeRun\n%d"%mode, MLParams)
         MLParams = re.sub(r"#CTModeInit\n-?\d+","#CTModeInit\n%d"%mode, MLParams)
         MLParams = re.sub(r"#UseLoopFilter\n\S+","#UseLoopFilter\n%s"%(\
-                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)                
+                               '.TRUE.' if loop_filter else '.FALSE.'),MLParams)
         MLParams = re.sub(r"#DoubleCheckHelicityFilter\n\S+",
-                                 "#DoubleCheckHelicityFilter\n.FALSE.",MLParams)
+                            "#DoubleCheckHelicityFilter\n%s"%('.TRUE.' if 
+                             DoubleCheckHelicityFilter else '.FALSE.'),MLParams)
 
-
-        # Write out the modfied MadLoop option card
+        # Write out the modified MadLoop option card
         file = open(os.path.join(dir_name,'MadLoopParams.dat'), 'w')
         file.write(MLParams)
         file.close()
@@ -1160,8 +1163,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         def need_init():
             """ True if init not done yet."""
-            return any([not os.path.exists(os.path.join(run_dir,fname)) for \
-                                                    fname in my_req_files]) or \
+            proc_prefix_file = open(pjoin(run_dir,'proc_prefix.txt'),'r')
+            proc_prefix = proc_prefix_file.read()
+            proc_prefix_file.close()
+            return any([not os.path.exists(os.path.join(run_dir,'MadLoop5_resources',
+                            proc_prefix+fname)) for fname in my_req_files]) or \
                          not os.path.isfile(os.path.join(run_dir,'check')) or \
                          not os.access(os.path.join(run_dir,'check'), os.X_OK)
     
@@ -1389,7 +1395,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # Detect one contributing helicity
         contributing_hel=0
         n_contrib_hel=0
-        helicities = file(os.path.join(dir_name,'HelFilter.dat')).read().split()
+        proc_prefix_file = open(pjoin(dir_name,'proc_prefix.txt'),'r')
+        proc_prefix = proc_prefix_file.read()
+        proc_prefix_file.close()
+        helicities = file(os.path.join(dir_name,'MadLoop5_resources',
+                                  '%sHelFilter.dat'%proc_prefix)).read().split()
         for i, hel in enumerate(helicities):
             if (self.loop_optimized_output and int(hel)>-10000) or hel=='T':
                 if contributing_hel==0:
@@ -1553,8 +1563,15 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             p, w_rambo = self.get_momenta(proc, options)
             if options['events']:
                 return p
-            while not pass_cuts(p):
+            # For 2>1 process, we don't check the cuts of course
+            while (not pass_cuts(p) and  len(p)>3):
                 p, w_rambo = self.get_momenta(proc, options)
+                
+            # For a 2>1 process, it would always be the same PS point,
+            # so here we bring in so boost along the z-axis, just for the sake
+            # of it.
+            if len(p)==3:
+                p = boost_momenta(p,3,random.uniform(0.0,0.99))
             return p
         
         # Start loop on loop libraries        
@@ -1722,9 +1739,18 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 if os.path.isfile(os.path.join(dir_path,'born_matrix.f')):
                     checkerName = 'StabilityCheckDriver.f'
                 else:
-                    checkerName = 'StabilityCheckDriver_loop_induced.f'                
-                cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
-                    checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
+                    checkerName = 'StabilityCheckDriver_loop_induced.f'
+
+                with open(pjoin(self.mg_root,'Template','loop_material','Checks',
+                                                checkerName),'r') as checkerFile:
+                    with open(pjoin(dir_path,'proc_prefix.txt')) as proc_prefix:
+                        checkerToWrite = checkerFile.read()%{'proc_prefix':
+                                                                 proc_prefix.read()}
+                checkerFile = open(pjoin(dir_path,'StabilityCheckDriver.f'),'w')
+                checkerFile.write(checkerToWrite)
+                checkerFile.close()                
+                #cp(os.path.join(self.mg_root,'Template','loop_material','Checks',\
+                #    checkerName),os.path.join(dir_path,'StabilityCheckDriver.f'))
         
             # Make sure to recompile the possibly modified files (time stamps can be
             # off).
@@ -1735,7 +1761,13 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             misc.compile(arg=['StabilityCheckDriver'], cwd=dir_path, \
                                               mode='fortran', job_specs = False)
 
-            
+            # Now for 2>1 processes, because the HelFilter was setup in for always
+            # identical PS points with vec(p_1)=-vec(p_2), it is best not to remove
+            # the helicityFilter double check
+            if len(process['legs'])==3:
+              self.fix_MadLoopParamCard(dir_path, mp=False,
+                              loop_filter=False, DoubleCheckHelicityFilter=True)
+
             StabChecker = subprocess.Popen([os.path.join(dir_path,'StabilityCheckDriver')], 
                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
                                                                    cwd=dir_path)
@@ -2175,6 +2207,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
     else:
         reuse=False
     
+    reuse=options['reuse']
     keep_folder = reuse
     model=process_definition.get('model')
 
@@ -2491,7 +2524,6 @@ def check_process(process, evaluator, quick, options):
 def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
-
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
         logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)
@@ -2533,7 +2565,7 @@ def output_profile(myprocdef, stability, timing, mg_root, reusing=False):
 def output_stability(stability, mg_root, reusing=False):
     """Present the result of a stability check in a nice format.
     The full info is printed out in 'Stability_result_<proc_shell_string>.dat'
-    under the MadGraph root folder (mg_root)"""
+    under the MadGraph5_aMC@NLO root folder (mg_root)"""
     
     def accuracy(eval_list):
         """ Compute the accuracy from different evaluations."""

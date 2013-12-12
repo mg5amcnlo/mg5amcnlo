@@ -123,12 +123,32 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       logical islast,isnum,found
       character*20 temp_val
 
+      logical isBlank
+      integer i
+      character(512) IdentCardPath      
+
+      character(512) ParamCardPath
+      data ParamCardPath/'.'/
+      common/ParamCardPath/ParamCardPath
 
 c     *********************************************************************
 c     Try to find a correspondance in ident_card
 c
+
+      IdentCardPath=''
+      i =1
+      isBlank = .False.
+      do while (i.le.LEN(ParamCardPath) .and. 
+     \            .not. isBlank)
+        if (ParamCardPath(i:i).eq.' ') then
+            isBlank=.True.
+        else
+          i=i+1
+        endif
+      enddo
+      IdentCardPath = ParamCardPath(1:i-1)//'/ident_card.dat'
       ref_file = 20
-      call LHA_open_file(ref_file,'ident_card.dat',fopened)
+      call LHA_open_file(ref_file,IdentCardPath,fopened)
       if(.not. fopened) goto 99 ! If the file does not exist -> no matter, use default!
         
       islast=.false.
@@ -383,7 +403,7 @@ c
       integer lun
       logical fopened
       character*(*) filename
-      character*90  tempname
+      character*512  tempname
       integer fine
       integer dirup,i
 
@@ -393,6 +413,9 @@ c-----
 c
 c     first check that we will end in the main directory
 c
+      ! Somehow it seems important to make sure the flow is
+      ! iunit is closed before opening it.
+      close(lun)
       open(unit=lun,file=filename,status='old',ERR=20)
 c      write(*,*) 'read model file ',filename
       fopened=.true.

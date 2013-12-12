@@ -1,4 +1,4 @@
-      SUBROUTINE LOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE %(proc_prefix)sLOOP_%(nloopline)d%(nwfsargs_header)s(%(pairingargs)s%(wfsargs)s%(margs)s RANK, SQUAREDSOINDEX, LOOPNUM)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
@@ -34,27 +34,28 @@ C GLOBAL VARIABLES
 C
       INCLUDE 'MadLoopParams.inc'
       INTEGER ID,SQSOINDEX,R
-      COMMON/LOOP/ID,SQSOINDEX,R
+      common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
 	  LOGICAL CHECKPHASE, HELDOUBLECHECKED
-      common/INIT/CHECKPHASE, HELDOUBLECHECKED
+      common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
 
 	  INTEGER HELOFFSET
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL,HELOFFSET
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL,HELOFFSET
 
 	  %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-	  common/LOOPRES/LOOPRES,S
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/W/W 
+	  common/%(proc_prefix)sW/W 
 	  %(real_dp_format)s LSCALE 
 	  INTEGER CTMODE
-          common/CT/LSCALE,CTMODE
+          common/%(proc_prefix)sCT/LSCALE,CTMODE
 	  INTEGER LIBINDEX
-	  common/I_LIB/LIBINDEX
+	  common/%(proc_prefix)sI_LIB/LIBINDEX
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -91,13 +92,13 @@ C Determine it uses qp or not
       doing_qp=.FALSE.
       IF(CTMODE.GE.4)doing_qp=.TRUE.
 C Choose the correct loop library
-      CALL CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
       IF(MLReductionLib(I_LIB).EQ.1)THEN
 C USE CUTTOOLS
-	CALL CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
       ELSE
 C USE TIR
-	CALL TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM)) 
+	CALL %(proc_prefix)sTIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM)) 
       ENDIF
 	  ELSE
 	    LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=0.0d0

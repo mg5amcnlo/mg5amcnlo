@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ A test suite to compare the complex-mass scheme with the fixed-width scheme, 
@@ -72,7 +72,7 @@ class GaugeComparator(unittest.TestCase):
         if filename:
             my_comp.output_result(filename=filename)
         
-                # Store output to a pickle file in the input_files directory
+        # Store output to a pickle file in the input_files directory
         if pickle_file:
             me_comparator.PickleRunner.store_comparison(\
                 os.path.join(_pickle_path, pickle_file),
@@ -175,7 +175,7 @@ class GaugeComparator(unittest.TestCase):
     def test_cross_gauge_p2(self):
         """Test the cross section of a short list of sm processes"""
         # Create a list of processes to check automatically        
-        my_proc_list = ['p p > b b~ u d~ s c~']
+        my_proc_list = ['p p > b b~ e- ve~ mu+ vm']
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section(my_proc_list,
                              orders = {'QED':99, 'QCD':99},model = 'sm',

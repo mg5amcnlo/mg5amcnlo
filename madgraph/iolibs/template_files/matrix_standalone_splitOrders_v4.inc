@@ -1,4 +1,4 @@
-      SUBROUTINE SMATRIX(P,ANS_SUMMED)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P,ANS_SUMMED)
 C
 C     Simple routine wrapper to provide the same interface for
 C     backward compatibility for usage without split orders.
@@ -22,12 +22,12 @@ C
 C
 C BEGIN CODE
 C
-	  CALL SMATRIX_SPLITORDERS(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
 	  ANS_SUMMED=ANS(0)
 
 	  END
 
-      SUBROUTINE SMATRIXHEL(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -45,17 +45,17 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/HELUSERCHOICE/USERHEL
+	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL SMATRIX(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX(P,ANS)
 	  USERHEL=-1
 
 	  END
 
-      SUBROUTINE SMATRIX_SPLITORDERS(P,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
 C  
 %(info_lines)s
 C 
@@ -99,8 +99,9 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/HELUSERCHOICE/USERHEL
-	  DATA USERHEL/-1/	  
+	  DATA USERHEL/-1/	  	  
+	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -114,7 +115,7 @@ C ----------
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
            IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
-              CALL MATRIX(P ,NHEL(1,IHEL),JC(1), T)
+              CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO			
                 ANS(I)=ANS(I)+T(I)
@@ -139,7 +140,7 @@ C ----------
 	  ENDIF
       END
 
-      SUBROUTINE SMATRIXHEL_SPLITORDERS(P,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P,HEL,ANS)
       IMPLICIT NONE
 C
 C CONSTANT
@@ -159,17 +160,17 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  COMMON/HELUSERCHOICE/USERHEL
+	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
 C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-	  CALL SMATRIX_SPLITORDERS(P,ANS)
+	  CALL %(proc_prefix)sSMATRIX_SPLITORDERS(P,ANS)
 	  USERHEL=-1
 
 	  END
  
-      SUBROUTINE MATRIX(P,NHEL,IC,RES)
+      SUBROUTINE %(proc_prefix)sMATRIX(P,NHEL,IC,RES)
 C  
 %(info_lines)s
 C
@@ -214,7 +215,7 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEX
+      INTEGER %(proc_prefix)sSQSOINDEX
 C  
 C GLOBAL VARIABLES
 C  
@@ -237,7 +238,7 @@ C ----------
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
 		  DO N = 1, NAMPSO
-            RES(SQSOINDEX(M,N)) = RES(SQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+            RES(%(proc_prefix)sSQSOINDEX(M,N)) = RES(%(proc_prefix)sSQSOINDEX(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
 		  ENDDO
         ENDDO
 	  ENDDO
@@ -248,7 +249,7 @@ C
 C Helper functions to deal with the split orders.
 C
 
-      INTEGER FUNCTION SQSOINDEX(AMPORDERA,AMPORDERB)
+      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX(AMPORDERA,AMPORDERB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -274,17 +275,17 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEX_FROM_ORDERS
+      INTEGER %(proc_prefix)sSQSOINDEX_FROM_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSPLITORDERS
 	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
 	  ENDDO
-	  SQSOINDEX=SQSOINDEX_FROM_ORDERS(SQORDERS)
+	  %(proc_prefix)sSQSOINDEX=%(proc_prefix)sSQSOINDEX_FROM_ORDERS(SQORDERS)
 	  END
 
-      INTEGER FUNCTION SQSOINDEX_FROM_ORDERS(ORDERS)
+      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -310,7 +311,7 @@ C
 	    DO J=1,NSPLITORDERS
 		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		SQSOINDEX_FROM_ORDERS = I
+		%(proc_prefix)sSQSOINDEX_FROM_ORDERS = I
 		RETURN
 1009    CONTINUE
 	  ENDDO
@@ -321,7 +322,7 @@ C
 
 	  END
 
-      SUBROUTINE GET_NSQSO_BORN(NSQSO)
+      SUBROUTINE %(proc_prefix)sGET_NSQSO_BORN(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS

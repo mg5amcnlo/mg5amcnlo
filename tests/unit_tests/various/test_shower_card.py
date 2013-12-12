@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 import os
@@ -69,18 +69,6 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_1 = 23 > -11 11 @ 0.5d0
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
-################################################################################
-################################################################################
-#
-# HERWIG++ PATHS
-# The following lines need to be set only for Herwig++. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-HWPPPATH   = None   # Path to the dir where Herwig++ is installed
-THEPEGPATH = None   # Path to the dir where ThePeg is installed
-HEPMCPATH  = None   # Path to the dir where HepMC is installed
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
@@ -149,18 +137,6 @@ modbos_2   = 5      # decay mode for the second Boson (only for HW6)
 # DM_2 = 23 > -13 13 @ 0.5d0
 # DM_3 = 25 > -15 15 @ 1.0d0
 ################################################################################
-################################################################################
-#
-# HERWIG++ PATHS
-# The following lines need to be set only for Herwig++. Use the absolute paths
-# to the directories where the packages are installed, containing lib/, include/,
-# and share/ subfolders. "None" and an empty value are equivalent
-#
-################################################################################
-HWPPPATH   = None   # Path to the dir where Herwig++ is installed
-THEPEGPATH = None   # Path to the dir where ThePeg is installed
-HEPMCPATH  = None   # Path to the dir where HepMC is installed
-################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
 # The following lines need to be changed if the user does not want to create the
@@ -181,6 +157,71 @@ ANALYSE     =                       # User's analysis and histogramming routines
                                     # (please use .o as extension and use spaces to separate files)
 """
             TestShowerCard.card_analyse = shower_card.ShowerCard(text_analyse, testing = True) 
+
+
+    def test_shower_card_py8(self):
+        """test that the py8 card is correctly written"""
+        goal = \
+"""NEVENTS=-1
+UE_PY8=.FALSE.
+PDFCODE=0
+HADRONIZE_PY8=.TRUE.
+MAXPR_PY8=2
+ERR_FR_PY8=0.100
+B_STABLE_PY8=.FALSE.
+PI_STABLE_PY8=.TRUE.
+WP_STABLE_PY8=.FALSE.
+WM_STABLE_PY8=.FALSE.
+Z_STABLE_PY8=.FALSE.
+H_STABLE_PY8=.FALSE.
+TAUP_STABLE_PY8=.FALSE.
+TAUM_STABLE_PY8=.FALSE.
+MUP_STABLE_PY8=.FALSE.
+MUM_STABLE_PY8=.FALSE.
+RNDEVSEED_PY8=0
+LAMBDAPYTH=-1.000
+B_MASS=-1.000
+EXTRALIBS="stdhep Fmcfio"
+EXTRAPATHS="../lib"
+INCLUDEPATHS=
+PY8UTI=""
+"""
+        text = self.card.write_card('PYTHIA8', '')
+        for a, b in zip(text.split('\n'), goal.split('\n')):
+            self.assertEqual(a,b)
+        self.assertEqual(text, goal)
+
+    def test_shower_card_py8_analyse(self):
+        """test that the py8 card is correctly written"""
+        goal = \
+"""NEVENTS=-1
+UE_PY8=.FALSE.
+PDFCODE=0
+HADRONIZE_PY8=.TRUE.
+MAXPR_PY8=2
+ERR_FR_PY8=0.100
+B_STABLE_PY8=.FALSE.
+PI_STABLE_PY8=.TRUE.
+WP_STABLE_PY8=.FALSE.
+WM_STABLE_PY8=.FALSE.
+Z_STABLE_PY8=.FALSE.
+H_STABLE_PY8=.FALSE.
+TAUP_STABLE_PY8=.FALSE.
+TAUM_STABLE_PY8=.FALSE.
+MUP_STABLE_PY8=.FALSE.
+MUM_STABLE_PY8=.FALSE.
+RNDEVSEED_PY8=0
+LAMBDAPYTH=-1.000
+B_MASS=-1.000
+EXTRALIBS="stdhep Fmcfio"
+EXTRAPATHS="../lib"
+INCLUDEPATHS=
+PY8UTI=""
+"""
+        text = self.card_analyse.write_card('PYTHIA8', '')
+        for a, b in zip(text.split('\n'), goal.split('\n')):
+            self.assertEqual(a,b)
+        self.assertEqual(text, goal)
     
     def test_shower_card_hwpp(self):
         """test that the hwpp card is correctly written"""
@@ -204,9 +245,6 @@ MUM_STABLE_HWPP=.FALSE.
 RNDEVSEED_HWPP=0
 LAMBDAHERW=-1.000
 B_MASS=-1.000
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -240,9 +278,6 @@ MUM_STABLE_HWPP=.FALSE.
 RNDEVSEED_HWPP=0
 LAMBDAHERW=-1.000
 B_MASS=-1.000
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -279,9 +314,6 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -318,9 +350,6 @@ B_MASS=-1.000
 IS_BB_HW=.FALSE.
 MODBOS_1=5
 MODBOS_2=5
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -355,9 +384,6 @@ RNDEVSEED_PY=0
 LAMBDAPYTH=-1.000
 B_MASS=-1.000
 IS_4L_PY=.FALSE.
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=
@@ -392,9 +418,6 @@ RNDEVSEED_PY=0
 LAMBDAPYTH=-1.000
 B_MASS=-1.000
 IS_4L_PY=.FALSE.
-HWPPPATH=
-THEPEGPATH=
-HEPMCPATH=
 EXTRALIBS="stdhep Fmcfio"
 EXTRAPATHS="../lib"
 INCLUDEPATHS=

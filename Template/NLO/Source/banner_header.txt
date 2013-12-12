@@ -1,0 +1,26 @@
+<LesHouchesEvents version="1.0">
+<header>
+<!--
+#*********************************************************************
+#                                                                    *
+#                         MadGraph5_aMC@NLO                          *
+#                                                                    *
+#                   http://madgraph.hep.uiuc.edu                     *
+#                   http://madgraph.phys.ucl.ac.be                   *
+#                   http://amcatnlo.cern.ch                          *
+#                                                                    *
+#                     The MadGraph5_aMC@NLO team                     *
+#                                                                    *
+#....................................................................*
+#                                                                    *
+# This file contains all the information necessary to reproduce      *
+# the events generated                                               *
+#                                                                    *
+# 1. software version                                                *
+# 2. proc_card.dat      : code generation info including model       *
+# 3. param_card.dat     : model primary parameters in the LH format  *
+# 4. run_card.dat       : running parameters (collider and cuts)     *
+#                                                                    *
+#                                                                    *
+#*********************************************************************
+-->

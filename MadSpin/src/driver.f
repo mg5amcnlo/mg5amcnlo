@@ -71,7 +71,7 @@ c Conflicting BW stuff
      & totmassin, totmass,shat, sqrtshat, stot,y, m,
      & nbranch, ns_channel,nt_channel, pos_pz
 
-      integer*8       iseed
+      integer*8       iseed, P_seed
       common /to_seed/iseed
 
 
@@ -88,6 +88,10 @@ c      call ntuple(x,0d0,1d0,1,2)  ! initialize the sequence of random
        open(unit=56,file='seeds.dat',status='old')
        read(56,*) iseed
        close(56)
+       open(unit=56,file='offset.dat',status='old')
+       read(56,*) P_seed
+       close(56)
+       iseed = iseed + P_seed
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   I. read momenta for the production events
@@ -146,7 +150,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       ! set masses 
       call set_parameters(p,Ecollider)
-      call coup()
 
       include 'props_production.inc'
 
@@ -490,6 +493,8 @@ c Masses of particles. Should be filled in setcuts.f
 
       include "../parameters.inc"
       stot=Ecollider**2
+
+      call coup()
 
       include 'pmass.inc'
 

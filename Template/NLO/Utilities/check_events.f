@@ -32,7 +32,7 @@ c negative number of events
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      double precision sum_wgt,err_wgt,toterr,diff
+      double precision sum_wgt,sum_abs_wgt,err_wgt,toterr,diff
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
@@ -49,7 +49,7 @@ c negative number of events
       character*3 ch3,event_norm
       character*10 MonteCarlo
       character*2 ch2,pm
-      character*1 ch1
+      character*9 ch1
       common/cevtnorm/event_norm
 
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
@@ -226,7 +226,7 @@ c
             write(*,*)'Inconsistency in event file',i,' ',buff
             stop
           endif
-          read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                      fksfather_lhe,ipartner_lhe,
      #                      scale1_lhe,scale2_lhe,
      #                      jwgtinfo,mexternal,iwgtnumpartn,
@@ -291,6 +291,7 @@ c
       
 
       sum_wgt=0d0
+      sum_abs_wgt=0d0
       nevS_lhe=0
       npartS_lhe=0
       nevH_lhe=0
@@ -325,6 +326,7 @@ c
 
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
+         sum_abs_wgt=sum_abs_wgt+abs(XWGTUP)
 
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
@@ -359,7 +361,7 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
              write(*,*)'Inconsistency in event file',i,' ',buff
              stop
            endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
      #                       scale1_lhe,scale2_lhe,
      #                       jwgtinfo,mexternal,iwgtnumpartn,
@@ -489,11 +491,12 @@ c Don't check momentum conservation in that case
       enddo
 
       if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
-      err_wgt=sum_wgt/sqrt(dfloat(maxevt))
+      if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
+      err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
-      write (*,*) 'Xsec from the sum of the weights is:',
-     &sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of the weights is    :',sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of the abs weights is:',sum_abs_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
         toterr=sqrt(xinterr**2+err_wgt**2)
@@ -612,7 +615,6 @@ c Error if more that 1sigma away
 
       if(idec.eq.0)call finalizedecays()
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
  300  format(a,2(1x,i2),a,(1x,f16.6))
  301  format(a,6x,i3,a,(1x,f16.6))
  400  format(a,2(1x,i2),a,2(1x,f16.6))

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -551,7 +551,7 @@ class ColorMatrix(dict):
 
         self.col_matrix_fixed_Nc = {}
         self.inverted_col_matrix = {}
-
+        
         self._col_basis1 = col_basis
         if col_basis2:
             self._col_basis2 = col_basis2
@@ -577,7 +577,6 @@ class ColorMatrix(dict):
                     enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
                     enumerate(sorted(self._col_basis2.keys())):
-
                 # Only scan upper right triangle if symmetric
                 if is_symmetric and i2 < i1:
                     continue

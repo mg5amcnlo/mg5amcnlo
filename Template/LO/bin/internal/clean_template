@@ -100,3 +100,9 @@ fi
 if [[ -e ../grid_card.dat  ]]; then
   mv ../grid_card.dat ./Cards/grid_card.dat
 fi
+cd ..
+# Ensure that default card exists
+if [[ ! -e  ./Cards/run_card_default.dat ]]; then
+  cp ./Cards/run_card.dat ./Cards/run_card_default.dat
+fi
+

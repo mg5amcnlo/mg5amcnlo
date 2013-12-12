@@ -77,6 +77,16 @@ C
       double precision ptlepton(nexternal)
       double precision temp
 
+C VARIABLES TO SPECIFY JETS
+      DOUBLE PRECISION PJET(NEXTERNAL,0:3)
+      DOUBLE PRECISION PTMIN
+      DOUBLE PRECISION PT1,PT2
+      INTEGER K,J1,J2
+
+C VARIABLES FOR KT CUT
+      DOUBLE PRECISION PTNOW,COSTH,PABS1,PABS2
+      DOUBLE PRECISION ETA1,ETA2,COSH_DETA,COS_DPHI,KT1SQ,KT2SQ, DPHI
+
       double precision etmin(nincoming+1:nexternal),etamax(nincoming+1:nexternal)
       double precision emin(nincoming+1:nexternal)
       double precision                    r2min(nincoming+1:nexternal,nincoming+1:nexternal)
@@ -130,7 +140,7 @@ c      double precision plab(0:3, nexternal)
 c      double precision rfj,sycut,palg,fastjetdmerge
 c      integer njet_eta
 c     Photon isolation
-      integer nph,nem,k,nin
+      integer nph,nem,nin
       double precision ptg,chi_gamma_iso,iso_getdrv40
       double precision Etsum(0:nexternal)
       real drlist(nexternal)
@@ -497,6 +507,85 @@ c- fill ptjet with the pt's of the jets.
       enddo
       if(debug) write (*,*) 'not yet ordered ',njets,'   ',ptjet
 
+C----------------------------------------------------------------------------
+C     DURHAM_KT CUT
+C----------------------------------------------------------------------------
+      IF(NJETS.GT.0 .AND.KT_DURHAM.GT.0D0) THEN
+C RESET JET MOMENTA
+      njets=0
+      DO I=1,NEXTERNAL
+        DO J=0,3
+          PJET(I,J) = 0E0
+        ENDDO
+      ENDDO
+
+      do i=nincoming+1,nexternal
+         if(is_a_j(i)) then
+           njets=njets+1
+           DO J=0,3
+             PJET(NJETS,J) = P(J,I)
+           ENDDO
+         endif
+      enddo
+
+C DURHAM KT SEPARATION CUT
+
+
+        PTMIN = EBEAM(1) + EBEAM(2)
+
+        DO I=1,NJETS
+
+C         PT WITH RESPECT TO Z AXIS FOR HADRONIC COLLISIONS
+          IF ( (LPP(1).NE.0) .OR. (LPP(2).NE.0)) THEN
+            PT1 = DSQRT(PJET(I,1)**2 + PJET(I,2)**2)
+            PTMIN = MIN( PTMIN, PT1 )
+          ENDIF
+
+          DO J=I+1,NJETS
+C           GET ANGLE BETWEEN JETS
+            PABS1 = DSQRT(PJET(I,1)**2 + PJET(I,2)**2 + PJET(I,3)**2)
+            PABS2 = DSQRT(PJET(J,1)**2 + PJET(J,2)**2 + PJET(J,3)**2)
+C           CHECK IF 3-MOMENTA DO NOT VANISH
+            IF(PABS1*PABS2 .NE. 0D0) THEN
+              COSTH = ( PJET(I,1)*PJET(J,1) + PJET(I,2)*PJET(J,2) + PJET(I,3)*PJET(J,3) )/(PABS1*PABS2)
+            ELSE
+C           IF 3-MOMENTA VANISH, MAKE JET COSTH = 1D0 SO THAT JET MEASURE VANISHES
+              COSTH = 1D0
+            ENDIF
+C           GET PT AND ETA OF JETS
+            PT2 = DSQRT(PJET(J,1)**2 + PJET(J,2)**2)
+            ETA1 = 0.5D0*LOG( (PJET(I,0) + PJET(I,3)) / (PJET(I,0) - PJET(I,3)) )
+            ETA2 = 0.5D0*LOG( (PJET(J,0) + PJET(J,3)) / (PJET(J,0) - PJET(J,3)) )
+C           GET COSH OF DELTA ETA, COS OF DELTA PHI
+            COSH_DETA = DCOSH( ETA1 - ETA2 )
+            COS_DPHI = ( PJET(I,1)*PJET(J,1) + PJET(I,2)*PJET(J,2) ) / (PT1*PT2)
+            DPHI = DACOS( COS_DPHI )
+            IF ( (LPP(1).EQ.0) .AND. (LPP(2).EQ.0)) THEN
+C             KT FOR E+E- COLLISION
+              PTNOW = DSQRT( 2D0*MIN(PJET(I,0)**2,PJET(J,0)**2)*( 1D0-COSTH ) )
+             ELSE
+C             HADRONIC KT, FASTJET DEFINITION
+              PTNOW = DSQRT( MIN(PT1**2,PT2**2)*( (ETA1 - ETA2 )**2 + DPHI**2 )/(D_PARAMETER**2) )
+            ENDIF
+
+            PTMIN = MIN( PTMIN, PTNOW )
+
+          ENDDO ! LOOP OVER NJET
+
+        ENDDO ! LOOP OVER NJET
+
+C CHECK COMPATIBILITY WITH CUT
+        IF( (PTMIN .LT. KT_DURHAM)) THEN
+          PASSCUTS = .FALSE.
+          RETURN
+        ENDIF
+      ENDIF ! IF NJETS.GT. 0 .AND. DO_KT_DURHAM
+
+C----------------------------------------------------------------------------
+C----------------------------------------------------------------------------
+
+
+
 c- check existance of jets if jet cuts are on
       if(njets.lt.1.and.(htjmin.gt.0.or.ptj1min.gt.0).or.
      $     njets.lt.2.and.ptj2min.gt.0.or.
@@ -753,6 +842,8 @@ c                  write (*,*) hardj1,hardj2,ptmax1,ptmax2
                endif
             enddo
             
+            if (hardj2.eq.0) goto 21 ! bypass vbf cut since not enough jets
+
 C-- NOW APPLY THE CUT I            
 
             if (abs(rap(p(0,hardj1))) .lt. xetamin
@@ -902,7 +993,7 @@ c End photon isolation
 
 C...Set couplings if event passed cuts
 
-      if(.not.fixed_ren_scale) then
+ 21   if(.not.fixed_ren_scale) then
          call set_ren_scale(P,scale)
          if(scale.gt.0) G = SQRT(4d0*PI*ALPHAS(scale))
       endif

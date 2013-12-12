@@ -2,9 +2,21 @@
 
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
-  FFLAGS = -O -fno-automatic 
+  FFLAGS = -O -fno-automatic
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
+
+ifeq ($(origin CXXFLAGS),undefined)
+  #CXXFLAGS= -g 
+  CXXFLAGS = -O 
+endif
+
+ifeq ($(origin CFLAGS),undefined)
+  #CFLAGS= -g 
+  CFLAGS = -O 
+endif
+
+  
 
 FFLAGS+= -ffixed-line-length-132
 

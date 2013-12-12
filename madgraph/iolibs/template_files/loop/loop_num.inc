@@ -1,6 +1,6 @@
 C THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS CALLS BUILDING THE LOOP
 
-      SUBROUTINE LOOPNUM(Q,RES)
+      SUBROUTINE %(proc_prefix)sLOOPNUM(Q,RES)
 C  
 C CONSTANTS 
 C 
@@ -33,33 +33,33 @@ C GLOBAL VARIABLES
 C
       INTEGER WE(NEXTERNAL)	  
       INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
 
 	  LOGICAL GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL
 
 	  INTEGER NTRY
 	  LOGICAL CHECKPHASE,HELDOUBLECHECKED
 	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+      common/%(proc_prefix)sINIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
 	  INTEGER CF_D(NLOOPAMPS,%(color_matrix_size)s)
 	  INTEGER CF_N(NLOOPAMPS,%(color_matrix_size)s)
-	  common/CF/CF_D,CF_N
+	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/WFCTS/W  
+	  common/%(proc_prefix)sWFCTS/W  
 
 	  INTEGER HELPICKED
-	  common/HELCHOICE/HELPICKED
+	  common/%(proc_prefix)sHELCHOICE/HELPICKED
 
 	  RES=(0.0d0,0.0d0)
 
   DO H=1,NCOMB
   IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL LOOPNUMHEL(-Q,BUFF,H)
+    CALL %(proc_prefix)sLOOPNUMHEL(-Q,BUFF,H)
 	%(dp_squaring)s
   ENDIF
   ENDDO
@@ -67,7 +67,7 @@ C
 
 	  END
 
-      SUBROUTINE LOOPNUMHEL(Q,RES,H)
+      SUBROUTINE %(proc_prefix)sLOOPNUMHEL(Q,RES,H)
 C  
 C CONSTANTS 
 C  
@@ -103,15 +103,15 @@ C GLOBAL VARIABLES
 C
 	  %(complex_dp_format)s LC(MAXLCOUPLINGS)
 	  %(mass_dp_format)s ML(NEXTERNAL+2)
-      COMMON/DP_LOOP/LC,ML
+      common/%(proc_prefix)sDP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)  
       INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
 
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/WFCTS/W  
+	  common/%(proc_prefix)sWFCTS/W  
 
 C ----------
 C BEGIN CODE
@@ -120,7 +120,7 @@ C ----------
       %(loop_helas_calls)s
       END
 
-      SUBROUTINE MPLOOPNUM(Q,RES)
+      SUBROUTINE %(proc_prefix)sMPLOOPNUM(Q,RES)
 	  
       INCLUDE 'cts_mprec.h'
 	  IMPLICIT NONE	  
@@ -158,38 +158,38 @@ C
 C GLOBAL VARIABLES
 C 
 	  LOGICAL MP_DONE
-	  common/MP_DONE/MP_DONE
+	  common/%(proc_prefix)sMP_DONE/MP_DONE
 
 	  %(real_mp_format)s MP_PS(0:3,NEXTERNAL),MP_P(0:3,NEXTERNAL)
-	  common/MP_PSPOINT/MP_PS,MP_P
+	  common/%(proc_prefix)sMP_PSPOINT/MP_PS,MP_P
 
 	  %(real_dp_format)s LSCALE
 	  INTEGER CTMODE	  
-      common/CT/LSCALE,CTMODE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER WE(NEXTERNAL)  
       INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
 
 	  LOGICAL GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NLOOPAMPS,NCOMB)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL
 
 	  INTEGER NTRY
 	  LOGICAL CHECKPHASE,HELDOUBLECHECKED
 	  %(real_dp_format)s REF
-      common/INIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
+      common/%(proc_prefix)sINIT/NTRY,CHECKPHASE,HELDOUBLECHECKED,REF
 
 	  INTEGER CF_D(NLOOPAMPS,%(color_matrix_size)s)
 	  INTEGER CF_N(NLOOPAMPS,%(color_matrix_size)s)
-	  common/CF/CF_D,CF_N
+	  common/%(proc_prefix)sCF/CF_D,CF_N
 
 	  %(mp_born_amps_decl)s	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/MP_WFS/W	
+	  common/%(proc_prefix)sMP_WFS/W	
 
 	  INTEGER HELPICKED
-	  common/HELCHOICE/HELPICKED
+	  common/%(proc_prefix)sHELCHOICE/HELPICKED
 C ----------
 C BEGIN CODE
 C ----------
@@ -200,13 +200,13 @@ C ----------
 
       IF(.NOT.MP_DONE.AND.CTMODE.EQ.0) THEN
 C       This is just to compute the wfs in quad prec
-	    CALL MP_BORN_AMPS_AND_WFS(MP_P)
+	    CALL %(proc_prefix)sMP_BORN_AMPS_AND_WFS(MP_P)
 	    MP_DONE=.TRUE.
 	  ENDIF
 
   DO H=1,NCOMB
   IF (((HELPICKED.EQ.-1).OR.(HELPICKED.EQ.H)).AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).AND.GOODAMP(AMPLNUM,H)))) THEN
-    CALL MPLOOPNUMHEL(-QPQ,BUFF,H)
+    CALL %(proc_prefix)sMPLOOPNUMHEL(-QPQ,BUFF,H)
 	%(mp_squaring)s
   ENDIF
   ENDDO
@@ -215,7 +215,7 @@ C       This is just to compute the wfs in quad prec
 	  RES=QPRES
       END
 
-      SUBROUTINE MPLOOPNUMHEL(Q,RES,H)
+      SUBROUTINE %(proc_prefix)sMPLOOPNUMHEL(Q,RES,H)
 C  
 C CONSTANTS 
 C  
@@ -251,15 +251,15 @@ C GLOBAL VARIABLES
 C
 	  %(complex_mp_format)s LC(MAXLCOUPLINGS)
 	  %(mass_mp_format)s ML(NEXTERNAL+2)
-      COMMON/MP_LOOP/LC,ML
+      common/%(proc_prefix)sMP_LOOP/LC,ML
 
       INTEGER WE(NEXTERNAL)
       INTEGER ID, SYMFACT,AMPLNUM
-      COMMON/LOOP/WE,ID,SYMFACT,AMPLNUM
+      common/%(proc_prefix)sLOOP/WE,ID,SYMFACT,AMPLNUM
 
 	  %(mp_born_amps_decl)s	  
 	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
-	  common/MP_WFS/W
+	  common/%(proc_prefix)sMP_WFS/W
 C ----------
 C BEGIN CODE
 C ----------
@@ -267,7 +267,7 @@ C ----------
       %(mp_loop_helas_calls)s
       END
 
-      SUBROUTINE MPLOOPNUM_DUMMY(Q,RES)
+      SUBROUTINE %(proc_prefix)sMPLOOPNUM_DUMMY(Q,RES)
 C  
 C ARGUMENTS 
 C  
@@ -287,7 +287,7 @@ C ----------
         DQ(I) = Q(I)
       ENDDO
 
-      CALL LOOPNUM(DQ,DRES)
+      CALL %(proc_prefix)sLOOPNUM(DQ,DRES)
       RES=DRES
 
       END

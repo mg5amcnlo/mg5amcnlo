@@ -1,8 +1,9 @@
-
-__date__ = "02 Aug 2012"
+from __future__ import division
+__date__ = "10 Dec 2012"
 __author__ = 'olivier.mattelaer@uclouvain.be'
 
 from function_library import *
+
 
 class ParamCardWriter(object):
     

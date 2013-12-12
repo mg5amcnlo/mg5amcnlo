@@ -18,7 +18,6 @@ C---Les Houches Event Common Block
       INTEGER ISORH_LHE,IFKS_LHE,JFKS_LHE,FKSFATHER_LHE,IPARTNER_LHE
       DOUBLE PRECISION SCALE1_LHE,SCALE2_LHE
       DOUBLE PRECISION WGTCENTRAL,WGTMUMIN,WGTMUMAX,WGTPDFMIN,WGTPDFMAX
-      DOUBLE PRECISION WGTBPOWER
       INTEGER MQQ
       COMMON/cMQQ/MQQ
       INTEGER IUNIT
@@ -27,7 +26,7 @@ C---Les Houches Event Common Block
       CHARACTER*140 BUFF
       character*12 dummy12
       character*2 dummy2
-      CHARACTER*1 CH1
+      CHARACTER*9 CH1
       INTEGER I,J,II,NPS,NNG,idwgt
       character*140 buff_tlh
       common/cbuff_tlh/buff_tlh
@@ -35,6 +34,10 @@ c evwgt_lh is meant to be passed to stdhep
       DOUBLE PRECISION EVWGT_LH
       COMMON/CEVWGT_LH/EVWGT_LH
       include 'reweight0.inc'
+      integer iww,max_weight
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight)
+      common/cww/ww
 C
       IF (IERROR.NE.0) RETURN
 c
@@ -59,10 +62,12 @@ c Avoids rounding problems for zero-mass particles
           pup(4,i)=sqrt(pup(4,i))
         endif
       enddo
+      iww=1
+      ww(iww)=XWGTUP/MQQ
       read(iunit,'(a)')buff
       if(buff(1:1).eq.'#')then
         buff_tlh=buff
-        read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
@@ -126,10 +131,34 @@ c Avoids rounding problems for zero-mass particles
           do i=1,numscales
              do j=1,numscales
                 call read_rwgt_line(iunit,idwgt,wgtxsecmu(i,j))
+                if (numscales.ne.3) then
+                   write (*,*) 'ERROR #1 in UPEVNT:',numscales
+                   stop
+                endif
+                if(idwgt.eq.1001.and.(i.ne.1.or.j.ne.1).or.
+     &             idwgt.eq.1002.and.(i.ne.1.or.j.ne.2).or.
+     &             idwgt.eq.1003.and.(i.ne.1.or.j.ne.3).or.
+     &             idwgt.eq.1004.and.(i.ne.2.or.j.ne.1).or.
+     &             idwgt.eq.1005.and.(i.ne.2.or.j.ne.2).or.
+     &             idwgt.eq.1006.and.(i.ne.2.or.j.ne.3).or.
+     &             idwgt.eq.1007.and.(i.ne.3.or.j.ne.1).or.
+     &             idwgt.eq.1008.and.(i.ne.3.or.j.ne.2).or.
+     &             idwgt.eq.1009.and.(i.ne.3.or.j.ne.3))then
+                   write(*,*)'incorrect event wgt id',idwgt,i,j
+                   stop
+                endif
+c 1 = central,
+c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
+c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
+c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
+                iww=iww+1
+                ww(iww)=wgtxsecmu(i,j)/MQQ
              enddo
           enddo
           do i=1,2*numPDFpairs
              call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
+             iww=iww+1
+             ww(iww)=wgtxsecPDF(i)/MQQ
           enddo
           if (numscales.eq.0) then
              wgtxsecmu(1,1)=wgtref
@@ -154,7 +183,6 @@ c$$$      IF(ISORH_LHE.EQ.2)THEN
 c$$$c H events
 c$$$        IF(SCALE2_LHE.GT.0.D0)SCALUP=SCALE2_LHE
 c$$$      ENDIF
- 200  format(1a,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
  403  format(6(1x,e14.8))
@@ -198,9 +226,18 @@ c Hard event file (to be entered in Herwig driver)
       double precision xsecup2
       common/cxsecup/xsecup2
       include 'reweight0.inc'
+      integer nwgt,max_weight
+      common/cnwgt/nwgt
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
+      double precision xmuR,xmuF
+      integer iPDF
 C
       numscales=0
       numPDFpairs=0
+      nwgt=1
+      weights_info(nwgt)="central value  "
       IF (IERROR.NE.0) RETURN
 C--SET UP INPUT FILES
       OPEN(UNIT=61,FILE=QQIN,STATUS='UNKNOWN')
@@ -215,8 +252,20 @@ c --> see if we have the new format for the weights
                if (INDEX(STRING,"</weightgroup>").ne.0 .and.
      $              STRING(1:1).ne.'#') exit
                numscales=numscales+1
+               read(string(index(string,"muR")+4:index(string,"muF")-1),*)xmuR
+               read(string(index(string,"muF")+4:index(string,"</w")-1),*)xmuF
+c 1 = central,
+c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
+c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
+c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
+               write(weights_info(numscales+1), 111)"muR=",xmuR,"muF=",xmuF
             ENDDO
+            nwgt=nwgt+numscales
             numscales=nint(sqrt(dble(numscales)))
+            if (numscales.ne.3) then
+               write (*,*) 'ERROR #1 in UPINIT:',numscales
+               stop
+            endif
          ELSEIF( INDEX(STRING,"<weightgroup type='PDF_variation'").ne.0
      $           .and.STRING(1:1).ne.'#') then
             DO WHILE (.TRUE.)
@@ -224,7 +273,11 @@ c --> see if we have the new format for the weights
                if (INDEX(STRING,"</weightgroup>").ne.0 .and.
      $              STRING(1:1).ne.'#') exit
                numPDFpairs=numPDFpairs+1
+               read(string(index(string,"pdf")+7:index(string,"</w")-1),*)iPDF
+               write(weights_info(numscales**2+numPDFpairs+1),112)
+     &              'PDF=',iPDF,'   '
             ENDDO
+            nwgt=nwgt+numPDFpairs
             numPDFpairs=numPDFpairs/2
          ELSEIF ( INDEX(STRING,'</header>').ne.0 .and.
      &        STRING(1:1).ne.'#' ) then
@@ -243,6 +296,8 @@ C--Read up to </init> in the event file
      #            IDWTUP,NPRUP
       read(61,*,err=998)XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
       xsecup2=XSECUP(1)
+ 111  format(a4,f3.1,x,a4,f3.1)
+ 112  format(a4,i8,a3)
       return
  998  CALL HWWARN('UPINIT',500)
  999  END

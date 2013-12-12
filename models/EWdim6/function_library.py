@@ -59,4 +59,13 @@ theta_function = Function(name = 'theta_function',
              arguments = ('x','y','z'),
              expression = 'y if x else z')
 
+# Auxiliary functions for NLO
+
+cond = Function(name = 'cond',
+                arguments = ('condition','ExprTrue','ExprFalse'),
+                expression = '(ExprTrue if condition==0.0 else ExprFalse)')
+
+reglog = Function(name = 'reglog',
+                arguments = ('z'),
+                expression = '(0.0 if z==0.0 else cmath.log(z))')
 

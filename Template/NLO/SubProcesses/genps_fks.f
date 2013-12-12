@@ -1978,6 +1978,9 @@ c For e+e- collisions, set tau to one and y to zero
       double precision cBW_mass(-nexternal:-1,-1:1),
      &     cBW_width(-nexternal:-1,-1:1)
       double precision b(-1:1),x0
+      double precision s_mass(-nexternal:-1),xi,fract
+      parameter (fract=0.1d0)
+      common/to_phase_space_s_channel/s_mass
       pass=.true.
       totalmass=totmass
       do i = -1,-ns_channel,-1
@@ -2078,20 +2081,43 @@ c     normal BW
                xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
             endif
          else
-            if (smin.eq.0d0) then
 c not a Breit Wigner
+            if (smin.eq.0d0 .and. s_mass(i).eq.0d0) then
+c     no lower limit on invariant mass from cuts or final state masses:
+c     use flat distribution
                s(i) = (smax-smin)*x(-i)+smin
                xjac0 = xjac0*(smax-smin)
-            else
-c not a Breit Wigner, use 1/x^nsamp importance sampling
+            elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
+c     A lower limit on smin, which is larger than lower limit from cuts
+c     or masses. Use 1/x^nsamp importance sampling
                ximax0 = smin**(-nsamp)
                ximin0 = smax**(-nsamp)
                tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
                s(i) = tmp**(-1/dble(nsamp))
                xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+            elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
+c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
+c     s_mass(i)
+               if (x(-i).lt.fract) then
+                  xi=x(-i)/fract ! between 0 and 1
+                  xjac0=xjac0/fract
+                  s(i) = (s_mass(i)-smin)*xi+smin
+                  xjac0 = xjac0*(s_mass(i)-smin)
+               else
+                  xi=(x(-i)-fract)/(1d0-fract) ! between 0 and 1
+                  xjac0=xjac0/(1d0-fract)
+                  ximax0 = s_mass(i)**(-nsamp)
+                  ximin0 = smax**(-nsamp)
+                  tmp  = ximin0 +(1d0-xi)*(ximax0-ximin0)
+                  s(i) = tmp**(-1/dble(nsamp))
+                  xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+               endif
+            else
+               write (*,*) "ERROR in genps_fks.f:"/
+     $              /" cannot set s-channel without BW"
+               stop 1
             endif
          endif
-
 c If numerical inaccuracy, quit loop
          if (xjac0 .lt. 0d0) then
             xjac0 = -6
@@ -2279,8 +2305,8 @@ c because of numerical stabilities.
             pass=.false.
             return
          else
-            call boostx(pb(0,itree(1,i)),pb(0,i),pb(0,itree(1,i)))
-            call boostx(pb(0,itree(2,i)),pb(0,i),pb(0,itree(2,i)))
+            call boostm(pb(0,itree(1,i)),pb(0,i),m(i),pb(0,itree(1,i)))
+            call boostm(pb(0,itree(2,i)),pb(0,i),m(i),pb(0,itree(2,i)))
          endif
       enddo
 c

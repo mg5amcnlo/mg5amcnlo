@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Definitions of all basic objects used in the core code: particle, 
@@ -211,8 +211,8 @@ class Particle(PhysicsObject):
         self['spin'] = 1
         self['color'] = 1
         self['charge'] = 1.
-        self['mass'] = 'zero'
-        self['width'] = 'zero'
+        self['mass'] = 'ZERO'
+        self['width'] = 'ZERO'
         self['pdg_code'] = 0
         self['texname'] = 'none'
         self['antitexname'] = 'none'
@@ -470,8 +470,25 @@ class ParticleList(PhysicsObjectList):
         
         part = self.find_name(name)
         if not part:
+            # Then try to look for a particle with that PDG
+            try:
+                pdg = int(name)
+            except ValueError:
+                return None
+
+            for p in self:
+                if p.get_pdg_code()==pdg:
+                    part = copy.copy(p)
+                    part.set('is_part', True)
+                    return part
+                elif p.get_anti_pdg_code()==pdg:
+                    part = copy.copy(p)
+                    part.set('is_part', False)
+                    return part
+
             return None
-        part = copy.copy(part)     
+        part = copy.copy(part)
+        pname = name 
           
         if part.get('name') == name:
             part.set('is_part', True)
@@ -519,7 +536,7 @@ class ParticleList(PhysicsObjectList):
         for particle in self:
             particle_dict[particle.get('pdg_code')] = particle
             if not particle.get('self_antipart'):
-                antipart = copy.copy(particle)
+                antipart = copy.deepcopy(particle)
                 antipart.set('is_part', False)
                 particle_dict[antipart.get_pdg_code()] = antipart
 
@@ -1074,7 +1091,8 @@ class Model(PhysicsObject):
                                     os.path.basename(modeldir).rsplit("-",1)[0])
             if os.path.exists(modeldir):
                 return modeldir 
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')        
+
+            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1105,7 +1123,7 @@ class Model(PhysicsObject):
                 
         return Model.__bases__[0].get(self, name) # call the mother routine
 
-    def set(self, name, value):
+    def set(self, name, value, force = False):
         """Special set for particles and interactions - need to
         regenerate dictionaries."""
 
@@ -1129,11 +1147,13 @@ class Model(PhysicsObject):
             self['order_hierarchy'] = {}
             self['expansion_order'] = None
 
-        Model.__bases__[0].set(self, name, value) # call the mother routine
+        result = Model.__bases__[0].set(self, name, value, force) # call the mother routine
 
         if name == 'particles':
             # Recreate particle_dict
             self.get('particle_dict')
+
+        return result
 
     def actualize_dictionaries(self):
         """This function actualizes the dictionaries"""
@@ -1349,7 +1369,7 @@ class Model(PhysicsObject):
                 '%s particles with pdg code %s is in conflict with MG ' + \
                 'convention name for particle %s.\n Use -modelname in order ' + \
                 'to use the particles name defined in the model and not the ' + \
-                'MadGraph convention'
+                'MadGraph5_aMC@NLO convention'
                 
                 raise MadGraph5Error, error_text % \
                                      (part.get_name(), part.get_pdg_code(), pdg)                
@@ -1563,6 +1583,12 @@ class Model(PhysicsObject):
                 pos = i + 1
         self.get('parameters')[new_param.depend].insert(pos, new_param)
 
+
+    #def __repr__(self):
+    #    """ """
+    #    raise Exception
+    #    return "Model(%s)" % self.get_name()
+    #__str__ = __repr__
 ################################################################################
 # Class for Parameter / Coupling
 ################################################################################
@@ -1809,9 +1835,12 @@ class LegList(PhysicsObjectList):
 
         return res
     
-    def sort(self,pert='QCD'):
+    def sort(self,*args, **opts):
         """Match with FKSLegList"""
-        return super(LegList,self).sort()
+        Opts=copy.copy(opts)
+        if 'pert' in Opts.keys():
+            del Opts['pert']
+        return super(LegList,self).sort(*args, **Opts)
 
 
 #===============================================================================

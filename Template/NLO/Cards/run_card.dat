@@ -1,8 +1,7 @@
 #***********************************************************************
-#                       MadGraph/MadEvent                              *
-#                  http://madgraph.hep.uiuc.edu                        *
+#                        MadGraph5_aMC@NLO                             *
 #                                                                      *
-#                        run_card.dat                                  *
+#                      run_card.dat aMC@NLO                            *
 #                                                                      *
 #  This file is used to set the parameters of the run.                 *
 #                                                                      *
@@ -26,18 +25,21 @@
 # (relative) accuracy on the Xsec.                                     *
 # These values are ignored for fixed order runs                        *
 #***********************************************************************
-  10000 = nevents    ! Number of unweighted events requested 
-     -1 = req_acc    ! Required accuracy (-1=auto determined from nevents)
+ 10000 = nevents ! Number of unweighted events requested 
+    -1 = req_acc ! Required accuracy (-1=auto determined from nevents)
+    -1 = nevt_job! Max number of events per job in event generation. 
+                 !  (-1= no split).
 average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
 # Number of points per itegration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
- 5000   = npoints_FO_grid  ! number of points to set-up int. grids
- 5      = niters_FO_grid   ! number of iterations to set-up int. grids
- 6000   = npoints_FO_virt  ! number of points to compute Xsec (virt)
- 2      = niters_FO_virt   ! number of iter. to compute Xsec (virt)
- 10000  = npoints_FO       ! number of points to compute Xsec (no virt)
- 6      = niters_FO        ! number of iter. to compute Xsec (no virt)
+ 0.01   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
+ 	                   ! number of points and iter. below)
+# These numbers are ignored except if req_acc_FO is equal to -1
+ 5000   = npoints_FO_grid  ! number of points to setup grids
+ 4      = niters_FO_grid   ! number of iter. to setup grids
+ 10000  = npoints_FO       ! number of points to compute Xsec
+ 6      = niters_FO        ! number of iter. to compute Xsec
 #***********************************************************************
 # Random number seed                                                   *
 #***********************************************************************
@@ -56,7 +58,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   21100    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
-# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT)                   *
+# shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   HERWIG6   = parton_shower
@@ -94,7 +96,13 @@ average = event_norm ! Normalize events to sum or average to the X sect.
   21101   = PDF_set_min      ! First of the error PDF sets 
   21140   = PDF_set_max      ! Last of the error PDF sets
 #***********************************************************************
-#                                                                    
+# Merging - WARNING! Applies merging only at the hard-event level.     *
+# After showering an MLM-type merging should be applied as well.       *
+# See http://amcatnlo.cern.ch/FxFx_merging.htm for more details.       *
+#***********************************************************************
+ 0        = ickkw            ! 0 no merging, 3 FxFx merging
+#***********************************************************************
+#
 #***********************************************************************
 # BW cutoff (M+/-bwcutoff*Gamma)                                       *
 #***********************************************************************
@@ -122,6 +130,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 # When ptgmin=0, all the other parameters are ignored                  *
 #***********************************************************************
   20  = ptgmin    ! Min photon transverse momentum
+  -1  = etagamma  ! Max photon abs(pseudo-rap)
  0.4  = R0gamma   ! Radius of isolation code
  1.0  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
  1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442

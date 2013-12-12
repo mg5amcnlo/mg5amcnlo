@@ -219,12 +219,9 @@ until($listpos>$#incard){
 # 
   print PAGE "</tr><tr> \n";
 
-# MZ 
-#  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
-#  print PAGE  "Results and Event Database </a> \n";
-#  print PAGE "<td ALIGN=center> ";
-
-  print PAGE  "<td ALIGN=center>Results and Event Database <td ALIGN=center> \n";
+  print PAGE "<td ALIGN=center><a href=\"crossx.html\"> \n ";
+  print PAGE  "Results and Event Database </a> \n";
+  print PAGE "<td ALIGN=center> ";
 
   $nfound = 0;
   chdir("./HTML");
@@ -234,14 +231,12 @@ until($listpos>$#incard){
     $nfound = $nfound + 1;
   }
   } 
-  print PAGE "HTML monitoring not available yet </td> \n";
-# MZ
-#  if ($nfound == "0") {
-#	  print PAGE "No runs available </td> \n";
-#  }else { 
-#	  print PAGE "$nfound "; 
-#	  print PAGE " runs available </td> \n";
-#  }
+  if ($nfound == "0") {
+	  print PAGE "No runs available </td> \n";
+  }else { 
+	  print PAGE "$nfound "; 
+	  print PAGE " runs available </td> \n";
+  }
   }
   print PAGE "</tr> \n";
   

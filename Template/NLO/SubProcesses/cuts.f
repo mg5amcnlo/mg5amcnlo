@@ -86,7 +86,7 @@ c jet cluster algorithm
       integer nQCD,NJET,JET(nexternal)
       double precision plab(0:3, nexternal)
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
-      double precision rfj,sycut,palg,fastjetdmerge
+      double precision rfj,sycut,palg,amcatnlo_fastjetdmerge
       integer njet_eta
 c Photon isolation
       integer nph,nem,k,nin
@@ -94,6 +94,7 @@ c Photon isolation
       double precision Etsum(0:nexternal)
       real drlist(nexternal)
       double precision pgamma(0:3,nexternal),pem(0:3,nexternal)
+     $     ,pgammalab(0:3)
       logical alliso
 c Sort array of results: ismode>0 for real, isway=0 for ascending order
       integer ismode,isway,izero,isorted(nexternal)
@@ -231,7 +232,6 @@ c From the run_card.dat, maxjetflavor defines if b quark should be
 c considered here (via the logical variable 'is_a_jet').  nQCD becomes
 c the number of (light) QCD partons at the real-emission level (i.e. one
 c more than the Born).
-
          nQCD=0
          do j=nincoming+1,nexternal
             if (is_a_j(j)) then
@@ -244,9 +244,10 @@ c more than the Born).
 
       endif
 
+
 c Uncomment for bypassing jet algo and cuts
 c$$$      goto 122
-      if (ptj.ne.0d0) then
+      if (ptj.gt.0d0.or.nQCD.gt.1) then
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission
@@ -260,6 +261,7 @@ c no possible divergence related to it (e.g. t-channel single top)
             passcuts=.false.
             return
          endif
+
 
 c Define jet clustering parameters (from cuts.inc via the run_card.dat)
          palg=JETALGO           ! jet algorithm: 1.0=kt, 0.0=C/A, -1.0 = anti-kt
@@ -283,7 +285,7 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-         call fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
 c
 c******************************************************************************
 
@@ -361,6 +363,16 @@ c Loop over all photons
           if(ptg.lt.ptgmin)then
             passcuts=.false.
             return
+          endif
+
+          if (etagamma.gt.0d0) then
+c     for rapidity cut, boost this one gamma to the lab frame
+             call boostwdir2(chybst,shybst,chybstmo,xd,
+     &            pgamma(0,j),pgammalab)
+             if (abs(eta(pgammalab)).gt.etagamma) then
+                passcuts=.false.
+                return
+             endif
           endif
 
 c Isolate from hadronic energy

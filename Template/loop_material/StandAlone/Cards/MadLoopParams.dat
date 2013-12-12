@@ -4,7 +4,7 @@
 
 !     
 #MLReductionLib
-1|2|3
+3
 ! Default :: 1|2|3
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
@@ -169,6 +169,14 @@
 .TRUE.
 ! Default :: .TRUE.
 
+!     This decides whether to write out the helicity and loop filters to the files 
+!     HelFilters.dat and LoopFilters.dat to save them for future runs. It usually
+!     preferable but sometimes not desired because of the need of threadlocks in the
+!     context of mpi parallelization. So it can be turned off here in such cases.
+#WriteOutFilters
+.TRUE.
+! Default :: .TRUE.
+
 !     Some loop contributions may be zero for some helicities which are however
 !     contributing. In order to save their computing time, you can chose here to try
 !     to filter them out. The gain is typically minimal, so it is turned off by default.
@@ -176,7 +184,7 @@
 .FALSE.
 ! Default :: .FALSE.
 
-!     This decides wether consecutive consistency for the loop filtering setup is also 
+!     This decides whether consecutive consistency for the loop filtering setup is also 
 !     required.
 #LoopInitStartOver
 .FALSE.

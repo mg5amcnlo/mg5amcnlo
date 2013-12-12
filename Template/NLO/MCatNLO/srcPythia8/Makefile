@@ -1,6 +1,37 @@
 SHELL = /bin/sh
 
 -include $(PYTHIA8LOCATION)/config.mk
+ifeq ($(shell uname),AIX)
+F77=xlf -qextname -qflttrap=overflow:zerodivide:invalid:enable -O3 -qstrict \
+#       -qautodbl=dblpad
+SYSOBJ=
+AUTODBL=-qautodbl=dblpad
+endif
+ifeq ($(shell uname),SunOS)
+F77= f77 -fnonstd
+SYSOBJ=
+endif
+ifeq ($(shell uname),Linux)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CXX= g++
+SYSOBJ=trapfpe.o
+endif
+ifeq ($(shell uname),HP-UX)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+SYSOBJ=
+endif
+ifeq ($(shell uname),OSF1)
+F77= f77 
+CXX= g++
+SYSOBJ=
+endif
+ifeq ($(shell uname),Darwin)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CXX= g++
+endif
+
+DEBUG=
+FF=$(F77) $(DEBUG)
 
 # Location of directories.
 TOPDIR=$(shell \pwd)
@@ -33,11 +64,12 @@ endif
 	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
 
 Pythia8: $(FORFILE) \
-	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libhepmcinterface.a
+	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
+	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8tohepmc.a
 	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) -I$(HEPMCLOCATION)/$(INCDIR) \
         $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
 	-L$(PYTHIA8LOCATION)/$(LIBDIRARCH) -lpythia8 $(LIBLHAPDF) $(LIBGZIP) \
-	-lhepmcinterface -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \
+	-lpythia8tohepmc -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \
 
 .PHONY: clean
 clean:

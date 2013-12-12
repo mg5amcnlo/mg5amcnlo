@@ -2,10 +2,11 @@
 
       implicit none
 
-      CHARACTER*64 fileName, buff, buff2, mode
+      CHARACTER(512) fileName, buff, buff2, mode
       CHARACTER*10 MLReductionLib_str,MLReductionLib_str_save
       CHARACTER*2  MLReductionLib_char
       INTEGER MLRed,i,j,k
+
       include "MadLoopParams.inc"
 
       logical printParam, couldRead, paramPrinted, find
@@ -94,6 +95,9 @@
 
           else if (buff .eq. '#HelInitStartOver') then
              read(666,*,end=999) HelInitStartOver
+
+          else if (buff .eq. '#WriteOutFilters') then
+             read(666,*,end=999) WriteOutFilters
 
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
@@ -186,7 +190,8 @@ C     a non existing or malformed parameter file
       endif
       write(*,*)
      & '==============================================================='
-      write(*,*) ' > MLReductionLib            = ',MLReductionLib
+      write(*,*) ' > MLReductionLib            = '
+     $     //TRIM(MLReductionLib_str_save)
       write(*,*) ' > IREGIMODE                 = ',IREGIMODE
       write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
@@ -205,6 +210,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
       write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
+      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters      
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -220,7 +226,8 @@ C     a non existing or malformed parameter file
       
       include "MadLoopParams.inc"
 
-      MLReductionLib=1
+      MLReductionLib(1)=1
+      MLReductionLib(2:4)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
       CTModeInit=0
@@ -236,6 +243,7 @@ C     a non existing or malformed parameter file
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       HelInitStartOver=.False.
+      WriteOutFilters=.True.
       ZeroThres=1.0d-9
       ImprovePSPoint=2
 

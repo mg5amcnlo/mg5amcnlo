@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """A set of objects to allow for easy comparisons of results for loop processes
@@ -107,8 +107,9 @@ class LoopMG5Runner(me_comparator.MG5Runner):
     name = 'ML5 opt'
     type = 'MLv5_opt'
     compilator ='gfortran'
+    mu_r_value = 0.0
 
-    def setup(self, mg5_path, optimized_output=True, temp_dir=None):
+    def setup(self, mg5_path, optimized_output=True, temp_dir=None,mu_r=0.0):
         """Initialization of the temp directory"""
 
         self.mg5_path = os.path.abspath(mg5_path)
@@ -126,7 +127,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         while os.path.exists(os.path.join(mg5_path,temp_dir)):
             i += 1
             temp_dir = base_dir + '_%d'%i
-
+        self.mu_r_value = mu_r
         self.temp_dir_name = temp_dir
 
     def run(self, proc_list, model, energy=1000, PSpoints=[]):
@@ -185,7 +186,8 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                 if initializations[i]:
                     value = LoopMG5Runner.get_me_value(proc, i, os.path.join(\
                                               self.mg5_path,self.temp_dir_name), 
-                                          ([] if PSpoints==[] else PSpoints[i]))
+                                          ([] if PSpoints==[] else PSpoints[i]),\
+                                          mu_r=self.mu_r_value)
                     self.res_list.append(value)
                 else:
                     self.res_list.append(((0.0, 0.0, 0.0, 0.0, 0), []))
@@ -251,7 +253,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             return True
 
     @staticmethod
-    def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True):
+    def get_me_value(proc, proc_id, working_dir, PSpoint=[], verbose=True,mu_r=0.0):
         """Compile and run ./check, then parse the output and return the result
         for process with id = proc_id and PSpoint if specified."""  
         if verbose:
@@ -272,7 +274,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         if verbose: logging.info("Working on process %s in dir %s"%(str(proc), shell_name))
         
         dir_name = os.path.join(working_dir, 'SubProcesses', shell_name)
-        LoopMG5Runner.fix_PSPoint_in_check(dir_name, PSpoint!=[])
+        LoopMG5Runner.fix_PSPoint_in_check(dir_name, PSpoint!=[],mu_r=mu_r)
         # Make sure the modified source file are recompiled
         if os.path.isfile(os.path.join(dir_name,'check')):
             os.remove(os.path.join(dir_name,'check'))
@@ -352,7 +354,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
             pass
 
     @staticmethod
-    def fix_PSPoint_in_check(check_sa_dir, read_ps = True):
+    def fix_PSPoint_in_check(check_sa_dir, read_ps = True,mu_r=0.0):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name"""
         
         file_path = os.path.join(check_sa_dir,'check_sa.f')
@@ -366,7 +368,14 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file = open(file_path, 'w')
         check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
                                                       else '.FALSE.'), check_sa)
-        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)        
+        check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = 1", check_sa)
+        if mu_r > 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
+                                        (("%.17e"%mu_r).replace('e','d')),\
+                                        check_sa)
+        elif mu_r < 0.0:
+            check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
+                    
         file.write(check_sa)
         file.close()
         
@@ -588,7 +597,7 @@ class LoopMG4Runner(me_comparator.MERunner):
 
         return order_file%replace_dict, proc_name
 
-    def get_me_value(self, proc, proc_id, energy, PSpoint=[],):
+    def get_me_value(self, proc, proc_id, energy, PSpoint=[]):
         """Compile and run ./NLOComp_sa, then parse the output and return the
         result for process with id = proc_id and PSpoint if specified."""
 
@@ -772,7 +781,7 @@ class LoopMG4Runner(me_comparator.MERunner):
         file.close()
 
         file = open(os.path.join(dir_name,'NLOComp_sa.f'), 'w')
-        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))
+        file.write(re.sub("SQRTS=1000d0", "SQRTS=%id0" % int(energy), check_sa))        
         file.close()
 
     def change_finite_single(self,dir_name,mode):
@@ -1384,7 +1393,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                     (len([res for res in self.results[-1] if res[0][0] == 0.0]),
                      len(proc_list)))
 
-    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+    def output_result(self, filename=None, tolerance=1e-04, skip_zero=True):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 

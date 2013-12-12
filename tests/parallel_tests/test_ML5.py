@@ -129,7 +129,7 @@ class ML5Test(unittest.TestCase):
         """ A helper function to compare processes. 
         Note that the chosen_runner is what runner should to create the reference
         pickle if missing"""
-        
+
         # Print out progress if it is a run for an individual process
         if len(my_proc_list)==1:
             print "\n== %s =="%my_proc_list[0][0]
@@ -157,7 +157,7 @@ class ML5Test(unittest.TestCase):
         MLParams = file.read()
         MLred = re.search(r'#MLReductionLib\n',MLParams)
         MLredstr=MLParams[MLred.end():MLred.end()+1]
-        
+
         if MLredstr=="1":
             # Create a MERunner object for MadLoop 5 default
             ML5_default = loop_me_comparator.LoopMG5Runner()

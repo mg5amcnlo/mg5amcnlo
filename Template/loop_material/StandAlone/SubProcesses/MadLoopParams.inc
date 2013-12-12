@@ -12,10 +12,10 @@
       real*8 MLStabThres,CTStabThres,ZeroThres
 
       logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
-	  logical HelInitStartOver,IREGIRECY
+	  logical HelInitStartOver,IREGIRECY,WriteOutFilters
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
      &DoubleCheckHelicityFilter,ZeroThres,HelInitStartOver,
-     &MLReductionLib,IREGIMODE,IREGIRECY
+     &MLReductionLib,IREGIMODE,IREGIRECY,WriteOutFilters

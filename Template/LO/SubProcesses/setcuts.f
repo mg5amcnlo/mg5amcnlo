@@ -84,7 +84,7 @@ C
 c
 c
 c     reading parameters
-      include '../../Source/run_config.inc'
+      include 'run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
@@ -113,6 +113,7 @@ c
             scale=pmass(1)
             fixed_ren_scale=.true.
             fixed_fac_scale=.true.
+            use_syst=.false.
          endif
 c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
@@ -137,6 +138,8 @@ c
             write(*,*) 'Note that this might affect non-radiated jets,'
             write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
           else if(mmjj.gt.xqcut)then
+c           In principle this should never happen since the banner.py
+c           is expected to correct this already.
             mmjj=0d0
             write(*,*) 'Warning! mmjj set to 0 since xqcut > 0 and'
             write(*,*) '         auto_ptj_mjj = F'
@@ -453,7 +456,11 @@ c
 c     Compute Smin (for efficiency
 c
       do i=nincoming+1,nexternal-1
-        smin=0.0d0**2
+      do j=nincoming+1,nexternal-1
+         if(j.lt.i)then
+            s_min(i,j) = s_min(j,i)
+         else
+            smin=0.0d0**2
 
             if(do_cuts(i).and.do_cuts(j)) then
                if(is_a_j(i).and.is_a_j(j)) s_min(j,i)=mmjj*dabs(mmjj)
@@ -472,6 +479,8 @@ c
      &            (idup(i,1,1)*idup(j,1,1).lt.0))
      &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
             endif
+         endif
+      enddo
       enddo
 
 c

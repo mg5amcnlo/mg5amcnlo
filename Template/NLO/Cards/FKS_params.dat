@@ -18,7 +18,9 @@
 ! This threshold sets the limiting value for the comparison of the
 ! relative difference of the IR pole from the OLP and the one computed
 ! internaly by MadFKS.  The value below is used for the first PS
-! points to assess the sanity of the computation.
+! points to assess the sanity of the computation. A value ten times
+! smaller will be used for the systematic check of IR poles at
+! runtime.
 ! Notice that the systematic comparison of IR poles at run time is
 ! only performed when the Monte-Carlo over helicity configurations
 ! method is not used.  Set this value to '-1.0d0' if you want the
@@ -53,6 +55,20 @@
 #NHelForMCoverHels
 4
 ! Default :: 4
+!
+! This parameter sets for which fraction of the events the virtual
+! matrix elements should be included. When using MINT, during the
+! grid-setup phase, this number will be updated automatically after
+! each iteration depending on the relative MC uncertainties.
+#VirtualFraction
+1.0d0
+! Default :: 1.0d0
+!
+! This parameter sets the minimal fraction of the events for which the
+! virtual matrix elements should be included.
+#MinVirtualFraction
+0.005d0
+! Default :: 0.005d0
 !
 ! ==========================================================================
 ! End of FKS_params.dat file
