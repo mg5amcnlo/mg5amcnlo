@@ -126,12 +126,8 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
-      double precision tbefore, tAfter
-      double precision tTot, tOLP, tFastJet, tPDF
-      data tTot/0.0d0/
-      data tOLP/0.0d0/
-      data tFastJet/0.0d0/
-      data tPDF/0.0d0/
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
       common/timings/tTot, tOLP, tFastJet, tPDF
 
 c general MadFKS parameters
@@ -400,18 +396,28 @@ c determine how many events for the virtual and how many for the no-virt
 
          weight=(ans(1)+ans(5))/ncall
 
+         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born') then
+            write (*,*) 'CANNOT GENERATE EVENTS FOR ABRV',abrv
+            stop 1
+         endif
+
          write (*,*) 'imode is ',imode
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
          do j=1,ncall
-            if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
-               abrv='virt'
-               vn=1
+            if (abrv(1:4).eq.'born') then
+               vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               abrv='novi'
-               vn=2
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
+                  abrv='virt'
+                  vn=1
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               else
+                  abrv='novi'
+                  vn=2
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               endif
             endif
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
          enddo
@@ -480,6 +486,19 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
  999  write (*,*) 'nevts file not found'
       stop
       end
+
+
+      block data timing
+c timing statistics
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0/
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
+      end
+
 
       subroutine get_user_params(ncall,itmax,iconfig,
      &     imode,ixi_i,iphi_i,iy_ij,SHsep)

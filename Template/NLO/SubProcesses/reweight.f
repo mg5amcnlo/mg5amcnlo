@@ -1209,9 +1209,9 @@ c Common
      $               s_scale,s_qalps,s_xpdf,s_qpdf,s_rwfact
 c External
       logical ispartonvx,isqcd,isparton,isjetvx,isjet
-      double precision alphas,getissud,pdg2pdf_timed,sudwgt,sudwgt_exp
+      double precision alphas,getissud,pdg2pdf,sudwgt,sudwgt_exp
       external ispartonvx,alphas,isqcd,isparton,isjetvx,getissud
-     $     ,pdg2pdf_timed,isjet,sudwgt,sudwgt_exp
+     $     ,pdg2pdf,isjet,sudwgt,sudwgt_exp
 c FxFx
       integer nFxFx_ren_scales
       double precision FxFx_ren_scales(0:nexternal)
@@ -1528,11 +1528,11 @@ c     vertex or last 2->2
      $                    ' to: ',sqrt(pt2pdf(imocl(n)))
                   else if(pt2pdf(idacl(n,i)).lt.q2now.and.
      $                    n.le.jlast(j))then
-                     pdfj1=pdg2pdf_timed(abs(lpp(IB(j))),
+                     pdfj1=pdg2pdf(abs(lpp(IB(j))),
      $                    ipdgcl(idacl(n,i),
      $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
      $                    xnow(j),sqrt(q2now))
-                     pdfj2=pdg2pdf_timed(abs(lpp(IB(j))),
+                     pdfj2=pdg2pdf(abs(lpp(IB(j))),
      $                    ipdgcl(idacl(n,i),
      $                    igraphs(1),nFKSprocess)*sign(1,lpp(IB(j))),
      $                    xnow(j),sqrt(pt2pdf(idacl(n,i))))
@@ -1651,7 +1651,7 @@ c     Set reweight factor for systematics studies
 c     Need to multiply by: initial PDF, alpha_s^n_qcd to get
 c     factor in front of matrix element
          do i=1,2
-            s_rwfact=s_rwfact*pdg2pdf_timed(abs(lpp(IB(i))),
+            s_rwfact=s_rwfact*pdg2pdf(abs(lpp(IB(i))),
      $           i_pdgpdf(1,i)*sign(1,lpp(IB(i))),
      $           s_xpdf(1,i),s_qpdf(1,i))
          enddo

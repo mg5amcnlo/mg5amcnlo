@@ -174,7 +174,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -382,6 +382,8 @@ class CheckValidForCmd(object):
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
+
+        self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
     
     def check_plot(self, args):
@@ -1296,15 +1298,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-#
-# PUT HERE THE COMBINE SCRIPT FOR ROOT
-#
-#                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-#                                pjoin(self.me_dir, 'Events', self.run_name))
-#                logger.info('The results of this run and the Root file with the plots' + \
-#                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The Root files with the plots are in the SubProcesses/P*/*_G*/' + \
-                        'directories.')
+                misc.call(['./combine_root.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
@@ -1859,17 +1859,19 @@ Integrated cross-section
             tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
             debug_msg += tmpStr
-            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
-                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
-                message += "\n  Suspiciouly large MC error in :"
-            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
-                message += tmpStr
+            # After all it was decided that it is better not to alarm the user unecessarily
+            # with such printout of the statistics.
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+#                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += "\n  Suspiciously large MC error in :"
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += tmpStr
 
             tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_contr_err_max'])
             debug_msg += tmpStr
-            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
-                message += tmpStr
+#            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+#                message += tmpStr
             
 
         except KeyError:
@@ -1901,7 +1903,7 @@ Integrated cross-section
                     stats['timings'][time_stats.group('name')][channel_name]=\
                                                  float(time_stats.group('time'))
         
-        # usefule inline function
+        # useful inline function
         Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
         try:
             totTimeList = [(time, chan) for chan, time in \
@@ -2024,8 +2026,6 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('Prepairing MCatNLO run')
-        self.run_name = os.path.split(\
-                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
@@ -2262,8 +2262,9 @@ Integrated cross-section
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
                        'pythia': ['pythia','pgs','delphes'],
+                       'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[]}

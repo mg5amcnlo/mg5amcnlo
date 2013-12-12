@@ -115,12 +115,8 @@ c statistics for MadLoop
       common/c_avg_virt/average_virtual,virtual_fraction
 
 c timing statistics
-      double precision tbefore, tAfter
-      double precision tTot, tOLP, tFastJet, tPDF
-      data tTot/0.0d0/
-      data tOLP/0.0d0/
-      data tFastJet/0.0d0/
-      data tPDF/0.0d0/
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
       common/timings/tTot, tOLP, tFastJet, tPDF
 
 c general MadFKS parameters
@@ -336,6 +332,18 @@ c to save grids:
         write(*,*)i_momcmp_count,xratmax
       endif
 
+      end
+
+
+      block data timing
+c timing statistics
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0/
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
       end
 
 

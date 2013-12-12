@@ -914,8 +914,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
             replace_dict['set_reference']='\n'.join([
-              'C  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE*(10.0d0**(5*(-2*NEXTERNAL+8)))'])
+              'C For loop-induced, the reference for comparison is set later'+\
+              ' from the total contribution of the previous PS point considered.',
+              'C But you can edit here the value to be used for the first PS point.',
+                'if (NPSPOINTS.eq.0) then','ref=1.0d-50','else',
+                'ref=nextRef/DBLE(NPSPOINTS)','endif'])
             replace_dict['loop_induced_setup'] = '\n'.join([
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
@@ -1412,8 +1415,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
             replace_dict['set_reference']='\n'.join([
-              'C  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE*(10.0d0**(-2*NEXTERNAL+8))'])
+              'C Chose the arbitrary scale of reference to use for comparisons'+\
+              ' for this loop-induced process.','ref=1.0d-50'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\

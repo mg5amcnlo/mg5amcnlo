@@ -74,6 +74,93 @@ class TestBanner(unittest.TestCase):
         self.assertEqual(fct('e+ e- > all all, all > e+ e-'), set([-11,11]))
         self.assertEqual(fct('e+ e- > j w+, j > e+ e-'), set([-11,11,24]))
 
+class TestEvent(unittest.TestCase):
+    """Test class for the reading of the lhe input file"""
+    
+    
+    def test_madspin_event(self):
+        """check the reading/writting of the events inside MadSpin"""
+        
+        inputfile = open(pjoin(MG5DIR, 'tests', 'input_files', 'madspin_event.lhe'))
+        
+        events = madspin.Event(inputfile)
+        
+        # First event
+        event = events.get_next_event()
+        self.assertEqual(event, 1)
+        event = events
+        self.assertEqual(event.string_event_compact(), """21 0.0 0.0 586.83954 586.84002    0.750577236977    
+21 0.0 0.0 -182.0876 182.08914    0.748887294316    
+6 197.60403 48.424858 76.818601 277.88922    173.00000459    
+-6 -212.77359 -34.669345 359.45458 453.44366    172.999981581    
+21 15.169561 -13.755513 -31.521232 37.59628    0.749989476383    
+""")
+        
+        self.assertEqual(event.get_tag(), (((21, 21), (-6, 6, 21)), [[21, 21], [6, -6, 21]]))   
+        event.assign_scale_line("8 3 0.1 125 0.1 0.3")
+        event.change_wgt(factor=0.4)
+        
+        self.assertEqual(event.string_event(), """<event> 
+  8      3 +4.0000000e-02 1.25000000e+02 1.00000000e-01 3.00000000e-01
+       21 -1    0    0  503  502 +0.0000000e+00 +0.0000000e+00 +5.8683954e+02 5.86840020e+02 7.50000000e-01 0.0000e+00 0.0000e+00
+       21 -1    0    0  501  503 +0.0000000e+00 +0.0000000e+00 -1.8208760e+02 1.82089140e+02 7.50000000e-01 0.0000e+00 0.0000e+00
+        6  1    1    2  504    0 +1.9760403e+02 +4.8424858e+01 +7.6818601e+01 2.77889220e+02 1.73000000e+02 0.0000e+00 0.0000e+00
+       -6  1    1    2    0  502 -2.1277359e+02 -3.4669345e+01 +3.5945458e+02 4.53443660e+02 1.73000000e+02 0.0000e+00 0.0000e+00
+       21  1    1    2  501  504 +1.5169561e+01 -1.3755513e+01 -3.1521232e+01 3.75962800e+01 7.50000000e-01 0.0000e+00 0.0000e+00
+#amcatnlo 2  5  3  3  1 0.45933500e+02 0.45933500e+02 9  0  0 0.99999999e+00 0.69338413e+00 0.14872513e+01 0.00000000e+00 0.00000000e+00
+  <rwgt>
+   <wgt id='1001'>  +1.2946800e+02 </wgt>
+   <wgt id='1002'>  +1.1581600e+02 </wgt>
+   <wgt id='1003'>  +1.4560400e+02 </wgt>
+   <wgt id='1004'>  +1.0034800e+02 </wgt>
+   <wgt id='1005'>  +8.9768000e+01 </wgt>
+   <wgt id='1006'>  +1.1285600e+02 </wgt>
+   <wgt id='1007'>  +1.7120800e+02 </wgt>
+   <wgt id='1008'>  +1.5316000e+02 </wgt>
+   <wgt id='1009'>  +1.9254800e+02 </wgt>
+</rwgt>
+</event> 
+""")
+        
+        # Second event
+        event = events.get_next_event()    
+        self.assertEqual(event, 1)
+        event =events
+        self.assertEqual(event.get_tag(), (((21, 21), (-6, 6, 21)), [[21, 21], [6, 21, -6]])) 
+        self.assertEqual(event.string_event(), """<event> 
+  5     66 +3.2366351e+02 4.39615290e+02 7.54677160e-03 1.02860750e-01
+       21 -1    0    0  503  502 +0.0000000e+00 +0.0000000e+00 +1.2058224e+03 1.20582260e+03 7.50000000e-01 0.0000e+00 0.0000e+00
+       21 -1    0    0  501  503 +0.0000000e+00 +0.0000000e+00 -5.4683611e+01 5.46887540e+01 7.50000000e-01 0.0000e+00 0.0000e+00
+        6  1    1    2  501    0 -4.0378655e+01 -1.4192432e+02 +3.6608998e+02 4.30956860e+02 1.73000000e+02 0.0000e+00 0.0000e+00
+       21  1    1    2  504  502 -2.4671645e+01 +3.9837121e+01 +2.4992426e+02 2.54280130e+02 7.50000000e-01 0.0000e+00 0.0000e+00
+       -6  1    1    2    0  504 +6.5050300e+01 +1.0208720e+02 +5.3512451e+02 5.75274350e+02 1.73000000e+02 0.0000e+00 0.0000e+00
+#amcatnlo 2  5  4  4  4 0.40498390e+02 0.40498390e+02 9  0  0 0.99999997e+00 0.68201705e+00 0.15135239e+01 0.00000000e+00 0.00000000e+00
+  <mgrwgt>
+  some information
+  <scale> even more infor
+  </mgrwgt>
+  <clustering>
+  blabla
+  </clustering>
+  <rwgt>
+   <wgt id='1001'> 0.32367e+03 </wgt>
+   <wgt id='1002'> 0.28621e+03 </wgt>
+   <wgt id='1003'> 0.36822e+03 </wgt>
+   <wgt id='1004'> 0.24963e+03 </wgt>
+   <wgt id='1005'> 0.22075e+03 </wgt>
+   <wgt id='1006'> 0.28400e+03 </wgt>
+   <wgt id='1007'> 0.43059e+03 </wgt>
+   <wgt id='1008'> 0.38076e+03 </wgt>
+   <wgt id='1009'> 0.48987e+03 </wgt>
+  </rwgt>
+</event> 
+""")
+        
+        # Third event ! Not existing
+        event = events.get_next_event()
+        self.assertEqual(event, "no_event")
+        
+
 
 
 #class Testtopo(unittest.TestCase):

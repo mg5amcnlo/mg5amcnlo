@@ -115,7 +115,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -3135,18 +3135,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
     
-    def get_available_tag(self):
-        """create automatically a tag"""
-        
-        used_tags = [r['tag'] for r in self.results[self.run_name]]
-        i=0
-        while 1:
-            i+=1
-            if 'tag_%s' %i not in used_tags:
-                return 'tag_%s' % i
-   
-    
-    
+
     ################################################################################
     def do_remove(self, line):
         """Remove one/all run or only part of it"""

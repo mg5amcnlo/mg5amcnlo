@@ -659,7 +659,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         # Evaluate the matrix element for the momenta p        
         finite_m2 = self.get_me_value(process.shell_string_v4(), 0,\
                           export_dir, p, PS_name = PS_name, verbose=False)[0][0]
-
         # Restore the original loop_matrix.f code so that it could be reused
         if gauge_check:
             file = open(file_path,'w')
@@ -2337,7 +2336,6 @@ def check_process(process, evaluator, quick, options):
 def clean_up(mg_root):
     """Clean-up the possible left-over outputs from 'evaluate_matrix element' of
     the LoopMatrixEvaluator (when its argument proliferate is set to true). """
-
     directories = glob.glob(os.path.join(mg_root, '%s*'%temp_dir_prefix))
     if directories != []:
         logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)
@@ -2925,7 +2923,6 @@ def check_gauge_process(process, evaluator, options=None):
 
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp', options=options)
-
     if not isinstance(amplitude,loop_diagram_generation.LoopAmplitude):
         matrix_element = helas_objects.HelasMatrixElement(amplitude,
                                                       gen_color = False)
