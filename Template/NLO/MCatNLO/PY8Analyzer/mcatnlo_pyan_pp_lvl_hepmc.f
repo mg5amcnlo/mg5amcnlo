@@ -39,21 +39,21 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,1
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call mbook(l+1,'total rate  '//weights_info(kk)//cc(i),
+        call mbook(l+1,'total rate '//weights_info(kk)//cc(i),
      &       1.0d0,0.5d0,5.5d0)
-        call mbook(l+2,'e rapidity  '//weights_info(kk)//cc(i),
+        call mbook(l+2,'lep rapidity '//weights_info(kk)//cc(i),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+3,'e pt        '//weights_info(kk)//cc(i),
+        call mbook(l+3,'lep pt '//weights_info(kk)//cc(i),
      &       10d0,0d0,200d0)
-        call mbook(l+4,'et miss     '//weights_info(kk)//cc(i),
+        call mbook(l+4,'et miss '//weights_info(kk)//cc(i),
      &       10d0,0d0,200d0)
         call mbook(l+5,'trans. mass '//weights_info(kk)//cc(i),
      &       5d0,0d0,200d0)
-        call mbook(l+6,'w rapidity  '//weights_info(kk)//cc(i),
+        call mbook(l+6,'w rapidity '//weights_info(kk)//cc(i),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+7,'w pt        '//weights_info(kk)//cc(i),
+        call mbook(l+7,'w pt '//weights_info(kk)//cc(i),
      &       10d00,0d0,200d0)
-        call mbook(l+8,'cphi[e,ve]  '//weights_info(kk)//cc(i),
+        call mbook(l+8,'cphi[l,vl] '//weights_info(kk)//cc(i),
      &       0.05d0,-1d0,1d0)
       enddo
       enddo
@@ -84,14 +84,14 @@ C
       do i=1,1
       do kk=1,nwgt_analysis
          l=(kk-1)*16+(i-1)*8
-         call multitop(NPL+l+1,NPL-1,3,2,'total rate ',' ','LIN')
-         call multitop(NPL+l+2,NPL-1,3,2,'e rapidity ',' ','LIN')
-         call multitop(NPL+l+3,NPL-1,3,2,'e pt       ',' ','LOG')
-         call multitop(NPL+l+4,NPL-1,3,2,'et miss    ',' ','LOG')
-         call multitop(NPL+l+5,NPL-1,3,2,'trans. mass',' ','LOG')
-         call multitop(NPL+l+6,NPL-1,3,2,'w rapidity ',' ','LIN')
-         call multitop(NPL+l+7,NPL-1,3,2,'w pt       ',' ','LOG')
-         call multitop(NPL+l+8,NPL-1,3,2,'cphi[e,ve] ',' ','LOG')
+         call multitop(NPL+l+1,NPL-1,3,2,'total rate   ',' ','LIN')
+         call multitop(NPL+l+2,NPL-1,3,2,'lep rapidity ',' ','LIN')
+         call multitop(NPL+l+3,NPL-1,3,2,'lep pt       ',' ','LOG')
+         call multitop(NPL+l+4,NPL-1,3,2,'et miss      ',' ','LOG')
+         call multitop(NPL+l+5,NPL-1,3,2,'trans. mass  ',' ','LOG')
+         call multitop(NPL+l+6,NPL-1,3,2,'w rapidity   ',' ','LIN')
+         call multitop(NPL+l+7,NPL-1,3,2,'w pt         ',' ','LOG')
+         call multitop(NPL+l+8,NPL-1,3,2,'cphi[l,vl]   ',' ','LOG')
       enddo
       enddo
       CLOSE(99)
