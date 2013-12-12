@@ -104,7 +104,7 @@ c read from events
       endif
 
       write (*,*) 'Enter 0 to study decays'
-      write (*,*) '      1 othewise'
+      write (*,*) '      1 otherwise'
       read (*,*) idec
       if(idec.eq.0)call setdecmat()
 
@@ -496,8 +496,8 @@ c Don't check momentum conservation in that case
       err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
-      write (*,*) 'Sum of the weights is    :',sum_wgt,' +-',err_wgt
-      write (*,*) 'Sum of the abs weights is:',sum_abs_wgt,' +-',err_wgt
+      write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
         toterr=sqrt(xinterr**2+err_wgt**2)
@@ -510,17 +510,24 @@ c Error if more that one sigma away
           write(44,*)'Integral:',xint,' +-',xinterr
           write(44,*)'Weights: ',sum_wgt,' +-',err_wgt
           write(44,*)' '
-          write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/sqrt(xinterr**2+err_wgt**2)
+          write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/
+     #                           sqrt(xinterr**2+err_wgt**2)
         endif
-        write (51,*) 'Xsec     (check_events) = ',sum_wgt,' +-',err_wgt
-        write (51,*) 'Xsec     (res_1.txt)    = ',xint   ,' +-',xinterr
-        write (51,*) ' '
-        write (51,*) 'Xsec ABS (check_events) = ',sum_abs_wgt,' +-',err_wgt
-        write (51,*) 'Xsec ABS (res_1.txt)    = ',xinta,' +-',xintaerr
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (res_1.txt)    = ',
+     #               xint   ,' +-',xinterr
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
+        write (51,*)'Xsec ABS (res_1.txt)    = ',
+     #              xinta,' +-',xintaerr
       elseif(iuseres_1.eq.1)then
-        write (51,*) 'Xsec     (check_events) = ',sum_wgt,' +-',err_wgt
-        write (51,*) ' '
-        write (51,*) 'Xsec ABS (check_events) = ',sum_abs_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
       else
         write(*,*)'No such option for iuseres_1'
         stop
