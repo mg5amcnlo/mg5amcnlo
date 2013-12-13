@@ -1050,6 +1050,9 @@ C ----------
 	    BYPASS_CHECK = .TRUE.
         CALL SLOOPMATRIXHEL(P,HEL,ANS)
 	    BYPASS_CHECK = .FALSE.
+C       Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
 	  ENDIF
 
 C Reset it to default value not to affect next runs
@@ -1132,7 +1135,10 @@ C ----------
 	  IF(ALWAYS_TEST_STABILITY.AND.(H.eq.1.OR.ACCURACY.lt.0.0d0)) THEN
 	    BYPASS_CHECK = .TRUE.	  
         CALL SLOOPMATRIX(P,ANS)
-		BYPASS_CHECK = .FALSE.		
+		BYPASS_CHECK = .FALSE.
+C     Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
 	  ENDIF
 
 C Reset it to default value not to affect next runs
