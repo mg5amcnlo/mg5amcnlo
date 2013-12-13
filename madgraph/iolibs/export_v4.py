@@ -4027,6 +4027,23 @@ class UFO_model_to_mg4(object):
                       for i in range(nb_coup_dep)]))
         fsock.writelines('''\n return \n end\n''')
 
+        fsock.writelines("""subroutine update_as_param2(mu_r2,as2)
+
+                            implicit none
+                            double precision PI
+                            parameter  (PI=3.141592653589793d0)
+                            double precision mu_r2, as2""")
+        fsock.writelines("""include \'input.inc\'
+                            include \'coupl.inc\'""")
+        fsock.writelines("""
+                            MU_R = mu_r2
+                            G = SQRT(4.0d0*PI*AS2) 
+                            AS = as2
+
+                            CALL UPDATE_AS_PARAM()
+                         """)
+        fsock.writelines('''\n return \n end\n''')
+
         if self.opt['mp']:
             fsock.writelines("""subroutine mp_update_as_param()
     
