@@ -2498,7 +2498,8 @@ c           This is dummy particle used in multiparticle vertices
         
         #set maxpup (number of @X in the process card)
             
-        text = open(path).read() % {'param_card_name':card, 'maxpup':nb_proc} 
+        text = open(path).read() % {'param_card_name':card, 'maxpup':nb_proc+1}
+        #the +1 is just a security. This is not needed but I feel(OM) safer with it.
         writer.write(text)
         
         return True
