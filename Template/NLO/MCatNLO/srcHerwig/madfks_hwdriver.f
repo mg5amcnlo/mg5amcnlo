@@ -269,6 +269,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
             ENDDO
          ENDDO
 
+         SYSPIN=.TRUE.
          DO JJ=1,NMOTH
             DO II=1,NUMDM
                DO KK=II+1,NUMDM
@@ -276,7 +277,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
                ENDDO
                IF(NBODIES(II).EQ.3)THREEB=.TRUE.
                IF(NBODIES(II).EQ.4)FOURB=.TRUE.
-               SYSPIN=.TRUE.
+               IF(MEDEC(II).EQ.0)SYSPIN=.FALSE.
                IF(ARRMOTH(JJ).EQ.IMOTH(II))THEN
                   IF(II.EQ.IMAX(JJ).OR.II.EQ.IMIN(JJ))THEN
                      CONTINUE
