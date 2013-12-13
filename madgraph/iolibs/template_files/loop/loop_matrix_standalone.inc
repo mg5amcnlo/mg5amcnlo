@@ -893,7 +893,7 @@ C ----------
 	  
 	  PREC_FOUND=ACCURACY      
 	  RET_CODE=100*H+10*T+U
-	  C Reset it to default value not to affect next runs
+C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 
 	  END
