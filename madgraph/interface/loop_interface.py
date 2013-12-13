@@ -293,7 +293,6 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
               (coupling_type not in self._curr_model['perturbation_couplings']):
-            
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\
@@ -304,6 +303,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
+                logger.info(\
+                  "The current model %s does not allow to generate"%self._curr_model.get('name')+
+                  " loop corrections of type %s."%coupling_type)
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='loop_sm':
@@ -321,12 +323,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                         add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)                   
+                          "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
 
-                    logger.info(\
-                         "The curren model %s does not allow to generate"%self._curr_model.get('name')+
-                         " loop corrections of type %s."%coupling_type+
-                         " MG5_aMC now loads 'loop_%s%s' instead."%(add_on,model_name))
+                    logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
 
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
