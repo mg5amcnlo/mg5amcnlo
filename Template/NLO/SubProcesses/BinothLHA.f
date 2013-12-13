@@ -86,6 +86,11 @@ c Ellis-Sexton scale)
       double  = 0d0
       prec_found = 1.0d0
       if (firsttime) then
+c Make sure that whenever in the initialisation phase, MadLoop calls
+c itself again to perform stability check to make sure no unstable EPS
+c splips unnoticed.
+         CALL FORCE_STABILITY_CHECK(.TRUE.)
+
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
          tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
