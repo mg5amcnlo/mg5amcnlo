@@ -95,6 +95,10 @@ c ie. which is a Born+g real-emission process
       nfail = 0
       npointsChecked = 0
 
+c Make sure that stability checks are always used by MadLoop, even for
+c initialization
+      CALL FORCE_STABILITY_CHECK(.TRUE.)
+
 200   continue
           calculatedborn = .false.
           if (nincoming.eq.1) then
