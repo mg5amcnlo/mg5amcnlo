@@ -5,6 +5,7 @@
 #  Replaces the sumres.f and sumres2.f files
 #  MZ, 2011-10-22
 
+from __future__ import division
 import math
 import sys
 import random

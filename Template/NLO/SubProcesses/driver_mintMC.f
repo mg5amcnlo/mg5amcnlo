@@ -217,6 +217,12 @@ c Plots
       plotEv=.false.
       plotKin=.false.
       call addfil(dum)
+c Always setup_fill_rwgt_NLOplot (when doing scale or pdf
+c uncertainties), because in mint, when getting 2 bad iterations in a
+c row, there is a call to initplot to reset the plots (for fixed order
+c computations). This makes sure that the code doesn't crash in that
+c case.
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 
 c*************************************************************
 c     setting of the grids
