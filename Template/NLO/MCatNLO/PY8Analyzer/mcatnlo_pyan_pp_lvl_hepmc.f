@@ -152,13 +152,13 @@ C EFFECT, SO THROW THE EVENT AWAY
         ID1=IDHEP(IHEP)
         ISL=ABS(ID1).EQ.IDENT
         ISN=ABS(ID1).EQ.IDENT+1
-        IF(IST.EQ.1.AND.NL.EQ.0.AND.ISL)THEN
+        IF(NL.EQ.0.AND.ISL)THEN
             NL=NL+1
             IL=IHEP
             FOUNDL=.TRUE.
             SIGNL=SIGN(1D0,DBLE(ID1))
          ENDIF
-         IF(IST.EQ.1.AND.NN.EQ.0.AND.ISN)THEN
+         IF(NN.EQ.0.AND.ISN)THEN
             NN=NN+1
             IN=IHEP
             FOUNDN=.TRUE.

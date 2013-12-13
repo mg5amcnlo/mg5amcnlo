@@ -5,7 +5,7 @@ C Should be backward compatible with v3.1 and v3.2 (thanks to B. Kersevan)
       INTEGER N,NSTEP,I,JPR0,JPR,NUMDM,II,NBODIES(100),JJ,IMATCH
       INTEGER IMOTH(100),IDAUGHT(100,5),NMOTH,ARRMOTH(100),III,KK
       DOUBLE PRECISION BR(100),BRR(100,100),SUMBR(100,100)
-      INTEGER IMIN(100),IMAX(100)
+      INTEGER IMIN(100),IMAX(100),MEDEC(100)
       CHARACTER *1 TMPCH
 C QQIN IS THE EVENT FILE
       CHARACTER*50 QQIN
@@ -21,7 +21,7 @@ C QQIN IS THE EVENT FILE
       PARAMETER (LHACRTL=.TRUE.)
       LOGICAL ENDOFRUN,IS_ST,IS_BB
       COMMON/CENDOFRUN/ENDOFRUN
-      INTEGER MAXEVV,MEDEC
+      INTEGER MAXEVV
       COMMON/CMAXEVV/MAXEVV
 c
       ENDOFRUN=.FALSE.
@@ -183,8 +183,6 @@ C---CALL HWUSTA TO MAKE ANY PARTICLE STABLE
       READ(*,*)MUM_STABLE
       WRITE(*,*)'Do you want a stable Higgs (.TRUE. or .FALSE)?'
       READ(*,*)H_STABLE
-      WRITE(*,*)'Write the type of matrix element in the decay'
-      READ(*,*)MEDEC
 
       if(PI_STABLE)  CALL HWUSTA('PI0     ')
       if(WP_STABLE)  CALL HWUSTA('W+      ')
@@ -243,10 +241,10 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
             WRITE(*,*)'Enter number of bodies for decay mode ',II
             READ(*,*)NBODIES(II)
             WRITE(*,*)'Enter decay mode A --> B C ... with the syntax'
-            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR'
+            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR @ ME'
             WRITE(*,*)'where 1 <= NUM <= 99'
             READ(*,*)IMOTH(II),TMPCH,(IDAUGHT(II,JJ),JJ=1,NBODIES(II)),
-     &               TMPCH,BR(II)
+     &               TMPCH,BR(II),TMPCH,MEDEC(II)
 
             IMATCH=0
             DO III=1,NMOTH
@@ -285,9 +283,9 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
                   ELSE
                      BRR(JJ,II)=BRR(JJ,II)/(1-SUMBR(JJ,II))
                   ENDIF
-                  CALL HWMODK(IMOTH(II),BRR(JJ,II),MEDEC,IDAUGHT(II,1),
-     &                    IDAUGHT(II,2),IDAUGHT(II,3),IDAUGHT(II,4),
-     &                                                IDAUGHT(II,5))
+                  CALL HWMODK(IMOTH(II),BRR(JJ,II),MEDEC(II),
+     &                    IDAUGHT(II,1),IDAUGHT(II,2),IDAUGHT(II,3),
+     &                    IDAUGHT(II,4),IDAUGHT(II,5))
                ENDIF
             ENDDO
          ENDDO
