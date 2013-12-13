@@ -44,7 +44,7 @@ C ----------
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
-             IF (GOODHEL(IHEL) .OR. NTRY .LT. 200) THEN
+             IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
                  T=MATRIX_PROD(P ,NHEL(1,IHEL),JC(1))            
                ANS=ANS+T
                IF (T .NE. 0D0) THEN
