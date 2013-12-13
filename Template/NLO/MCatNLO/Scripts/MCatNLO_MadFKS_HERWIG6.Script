@@ -376,7 +376,7 @@ do
  let "iDM+=1"
  DM=( $DM )
  num_of_part=$(echo ${#DM[@]})
- let "num_of_part-=4"
+ let "num_of_part-=6"
 cat <<EOF >> ./$ifile
   $num_of_part                    ! Number of bodies for new decay mode $iDM of $numDM
   ${DM[@]}                        ! Decay mode $iDM of $numDM
