@@ -312,7 +312,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -408,7 +408,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -599,7 +599,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
