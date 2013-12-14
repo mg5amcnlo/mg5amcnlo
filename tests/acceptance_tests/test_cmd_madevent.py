@@ -198,7 +198,7 @@ class TestMECmdShell(unittest.TestCase):
         
 
         mg_cmd = MGCmd.MasterCmd()
-        mg_cmd.exec_cmd('set automatic_html_opening False --save')
+        mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
         mg_cmd.exec_cmd(' generate u u > u u')
         mg_cmd.exec_cmd('output %s/'% self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
@@ -222,7 +222,7 @@ class TestMECmdShell(unittest.TestCase):
         err2 = self.cmd_line.results.current['error']        
         
         self.assertTrue(abs(val2 - val1) / (err1 + err2) < 5)
-        target = 1278400
+        target = 1227400.0
         self.assertTrue(abs(val2 - target) / (err2) < 5)
         #check precision
         self.assertTrue(err2 / val2 < 0.005)
@@ -354,10 +354,11 @@ class TestMEfromfile(unittest.TestCase):
             pass
         
         cmd = """import model sm
-                set automatic_html_opening False --no-save
+                 set automatic_html_opening False --no_save
                  generate p p > w+ z
                  output %s -f -nojpeg
                  launch -i 
+                 set automatic_html_opening False --no_save
                  generate_events
                  parton
                  set nevents 100
@@ -378,7 +379,7 @@ class TestMEfromfile(unittest.TestCase):
                          #cwd=self.path,
                         stdout=stdout, stderr=stderr)
 
-        self.check_parton_output(cross=17.21, error=0.19)
+        self.check_parton_output(cross=15.62, error=0.19)
         self.check_pythia_output()
         event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
@@ -428,6 +429,7 @@ class TestMEfromfile(unittest.TestCase):
         #
         command = open(pjoin(self.path, 'cmd'), 'w')
         command.write("""import model sm
+        set automatic_html_opening False --no_save
         generate p p > w+ 
         add process p p > w-
         output %(path)s
@@ -461,10 +463,10 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)     
         
         #a=rwa_input('freeze')
-        self.check_parton_output(cross=1.634e+05, error=7.4e+02,target_event=1000)
-        self.check_parton_output('run_01_decayed_1', cross=7.167e+04, error=3.3e+02,target_event=1000)
+        self.check_parton_output(cross=150770.0, error=7.4e+02,target_event=1000)
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=6.3e+02,target_event=1000)
         print '\nMS info: the number of events in the html file is not (always) correct after MS\n'
-        self.check_parton_output('run_01_decayed_2', cross=1.089e+05, error=5e+02,target_event=1000)
+        self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
         
         #check the first decayed events for energy-momentum conservation.
@@ -535,8 +537,10 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue('lhe' in data[0].parton)
         
         if cross:
-            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3)
-                
+            self.assertTrue(abs(cross - float(data[0]['cross']))/error < 3,
+                            'cross is %s and not %s. NB_SIGMA %s' % (float(data[0]['cross']), cross, float(data[0]['cross'])/error)
+                            )
+                            
     def check_pythia_output(self, run_name='run_01'):
         """ """
         # check that the number of event is fine:

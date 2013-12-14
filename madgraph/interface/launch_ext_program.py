@@ -461,13 +461,10 @@ class MELauncher(ExtLauncher):
             usecmd.pass_in_web_mode()
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
         for line in set_cmd:
             arg = line.split()
-            if arg[1] not in usecmd.options_configuration:
-                continue
-            if arg[1] not in usecmd.options_madgraph:
-                continue
-            if arg[1] not in usecmd.options_madevent:
+            if arg[1] not in all_options:
                 continue
             try:
                 usecmd.do_set(line[3:], log=False)
