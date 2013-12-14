@@ -29,7 +29,9 @@ events with the ready-to-use mcatnlo_hwan_pp_h.f analysis, a typical setup is
 
   ANALYSE = mcatnlo_hwan_pp_h.o mcatnlo_hbook_gfortran8.o myfastjetfortran.o 
 If the user has Fastjet in her/his own PATH, it is not necessary to fill 
-the EXTRAPATHS and INCLUDEPATHS variables.
+the EXTRAPATHS and INCLUDEPATHS variables. The use of FastJet, and of file
+myfastjetfortran.f is required only if in the analysis there is a call to function
+fastjetppgenkt.
 
 4) User's own analyses.
 The user has to assign non-default values to the EXTRALIBS, EXTRAPATHS,
