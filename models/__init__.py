@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """All models for MG5, in particular UFO models (by FeynRules)"""
@@ -29,7 +29,9 @@ def load_model(name, decay=False):
         __import__(model_pos)
         return sys.modules[model_pos]
     elif path_split[-1] in sys.modules:
-        if not sys.modules[path_split[-1]].__file__.startswith(os.sep.join(path_split[:-1])):
+        model_path = os.path.realpath(os.sep.join(path_split))
+        sys_path = os.path.realpath(os.path.dirname(sys.modules[path_split[-1]].__file__))
+        if sys_path != model_path:
             raise Exception, 'name %s already consider as a python library cann\'t be reassigned' % \
                 path_split[-1] 
 
@@ -38,8 +40,12 @@ def load_model(name, decay=False):
     output = sys.modules[path_split[-1]]
     if decay:
         dec_name = '%s.decays' % path_split[-1]
-        __import__(dec_name)
-        output.all_decays = sys.modules[dec_name].all_decays
+        try:
+            __import__(dec_name)
+        except ImportError:
+            pass
+        else:
+            output.all_decays = sys.modules[dec_name].all_decays
     
     sys.path.pop(0)
     

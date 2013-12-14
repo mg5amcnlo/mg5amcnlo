@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from __future__ import division
@@ -22,7 +22,7 @@ logger = logging.getLogger('madevent.stdout') # -> stdout
 pjoin = os.path.join
 try:
     import madgraph.various.cluster as cluster
-except:
+except ImportError:
     import internal.cluster as cluster
 
 class OneResult(object):
@@ -82,6 +82,12 @@ class OneResult(object):
             self.yasec_iter.append(secure_float(asec))
             self.eff_iter.append(secure_float(eff))
             self.maxwgt_iter.append(secure_float(maxwgt))
+        # this is for amcatnlo: the number of events has to be read from another file
+        if self.nevents == 0 and self.nunwgt == 0 and \
+                os.path.exists(pjoin(os.path.split(filepath)[0], 'nevts')): 
+            nevts = int(open(pjoin(os.path.split(filepath)[0], 'nevts')).read())
+            self.nevents = nevts
+            self.nunwgt = nevts
         
         
     def set_mfactor(self, value):
@@ -355,8 +361,8 @@ function check_link(url,alt, id){
 
 
 
-def make_all_html_results(cmd):
-    """ """
+def make_all_html_results(cmd, folder_names = []):
+    """ folder_names has been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
     if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
         os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
@@ -376,13 +382,22 @@ def make_all_html_results(cmd):
         
         for line in open(pjoin(P_path, 'symfact.dat')):
             name, mfactor = line.split()
-            name = 'G' + name
             if float(mfactor) < 0:
                 continue
             if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
                 continue
                                   
-            P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
+            if not folder_names:
+                name = 'G' + name
+                P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
+            else:
+                for folder in folder_names:
+                    if 'G' in folder:
+                        dir = folder.replace('*', name)
+                    else:
+                        dir = folder.replace('*', '_G' + name)
+                    P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+
         P_comb.compute_values()
         P_text += P_comb.get_html(run, unit)
         P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))

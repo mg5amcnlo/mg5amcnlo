@@ -1,0 +1,55 @@
+# ntuBuild
+#Creation Date : Mon Oct 30 07:50:41 1995
+Database glo23 0100
+# 
+include $MCFIO_DIR/mcf_NTuBld.db
+# 
+make line_title "ntuBuild Database, v1.0"
+make line_title " "
+make header "glo23" /
+ "1.00" /
+ "ngl23" /
+ 500 0 10 
+# 
+# 
+make variable "triggerbit1" /
+ "this is a trigger bit field " /
+ 3 "Yes" 1 2 0 0 0 0 
+# 
+make variable "eventnumber" /
+" " /
+ 4 "Yes" 0 0 0 0 0 0 
+# 
+make variable "runnumber" /
+" " /
+ 4 "Yes" 0 0 0 0 0 0 
+# 
+make variable "No_way" /
+" " /
+ 4 "Yes" 0 0 0 0 0 0 
+# 
+make variable "missinget" /
+" " /
+ 5 "Yes" 0 0 0 0 0 0 
+# 
+make variable "something" /
+ "this is junk variable " /
+ 6 "Yes" 0 0 0 0 0 0 
+# 
+make variable "Amtrack" /
+" " /
+ 5 "No" 2 5 8 0 0 0 
+# 
+make variable "v5_new" /
+" " /
+ 5 "No" 2 10 10 0 0 0 
+# 
+make variable "v7_now2" /
+" " /
+ 5 "No" 0 0 0 0 0 0 
+# 
+make variable "missingetnomuon" /
+" " /
+ 5 "No" 0 0 0 0 0 0 
+# 
+end 

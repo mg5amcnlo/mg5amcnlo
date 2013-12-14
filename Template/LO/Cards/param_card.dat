@@ -1,0 +1,63 @@
+#********************************************************************
+#                       MadGraph5_aMC@NLO                           *
+#********************************************************************
+#           Les Houches friendly file for the SM parameters of      *
+#   MadGraph5_aMC@NLO Spectrum and decay widths produced by SMCalc  *
+#********************************************************************
+# Please note the following IMPORTANT issues:                      *
+#                                                                   *
+# 0. REFRAIN from editing this file by hand! Some of the parame-    *
+#    ters are not independent                                       *
+#    (such as G_Fermi, alpha_em, sin(theta_W),MZ,MW) and serious    *
+#    problems might be encountered (such as violation of unitarity  *
+#    or gauge invariance).  Always use a calculator.                *
+#                                                                   *
+# 1. alpha_S(MZ) has been used in the calculation of the parameters *
+#    but, for consistency, it will be reset by MadGraph5_aMC@NLO to *
+#    the value expected IF the pdfs for collisions with hadrons are *
+#    used. This value is KEPT by MadGraph5_aMC@NLO when no pdf are  *
+#    usedlpp(i)=0 .                                                 *
+#                                                                   *
+# 2. Values of the charm and bottom kinematic (pole) masses are     *
+#    those used in the matrix elements and phase space UNLESS they  *
+#    are set to ZERO from the start in the model (particles.dat)    *
+#    This happens, for example,  when using 5-flavor QCD where      *
+#    charm and bottom are treated as partons in the initial state   *
+#    and a zero mass might be hardwired in the model definition.    *
+#                                                                   *
+#********************************************************************
+Block SMINPUTS      # Standard Model inputs
+     1         1.32506980E+02   # alpha_em(MZ)(-1) SM MSbar
+     2         1.16639000E-05   # G_Fermi
+     3         1.18000000E-01   # alpha_s(MZ) SM MSbar
+     4         9.11880000E+01   # Z mass (as input parameter)
+Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
+#    PDG          YMASS
+     5         4.20000000E+00   # mbottom for the Yukawa  y_b
+     4         1.42000000E+00   # mcharm  for the Yukawa  y_c
+     6         1.64500000E+02   # mtop    for the Yukawa  y_t
+    15         1.77700000E+00   # mtau    for the Yukawa  y_ta
+Block MGCKM     # CKM elements for MadGraph5_aMC@NLO
+     1   1     9.75000000E-01   # Vud for Cabibbo matrix
+Block MASS      #  Mass spectrum (kinematic masses)
+#       PDG       Mass
+         5     4.70000000E+00   # bottom   pole mass
+         6     1.74300000E+02   # top      pole mass
+        15     1.77700000E+00   # tau      mass
+        23     9.11880000E+01   # Z        mass
+        24     8.04190000E+01   # W        mass
+        25     1.20000000E+02   # H        mass
+#            PDG       Width
+DECAY         6     1.50833649E+00   # top width
+DECAY        23     2.44140351E+00   # Z   width
+DECAY        24     2.04759951E+00   # W   width
+DECAY        25     5.75308848E-03   # H   width
+#        BR           NDA        ID1       ID2
+     8.27451012E-02    2           4        -4   # BR( H -> c  cbar  )
+     7.17809696E-01    2           5        -5   # BR( H -> b  bbar  )
+     0.00000000E+00    2           6        -6   # BR( H -> t  tbar  )
+     4.31720144E-02    2          15       -15   # BR( H -> tau- tau+)
+     6.90597075E-03    2          23        23   # BR( H -> Z   Z^(*))
+     7.45906395E-02    2          24       -24   # BR( H -> W   W^(*))
+     3.01765558E-02    2          21        21   # BR( H -> g   g    )
+     1.42800773E-03    2          22        22   # BR( H -> A   A    )

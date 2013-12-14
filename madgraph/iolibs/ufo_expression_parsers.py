@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -28,6 +28,8 @@ sys.path.append(os.path.join(root_path, os.path.pardir))
 from madgraph import MadGraph5Error
 import vendor.ply.lex as lex
 import vendor.ply.yacc as yacc
+import models.check_param_card as check_param_card
+
 logger = logging.getLogger('madgraph.ufo_parsers')
 
 # PLY lexer class
@@ -41,25 +43,25 @@ class UFOExpressionParser(object):
     parsed_string = ""
 
     def __init__(self, **kw):
-        """Ininitialize the lex and yacc"""
+        """Initialize the lex and yacc"""
 
         modname = self.__class__.__name__
         self.debugfile = os.path.devnull
         self.tabmodule = os.path.join(root_path, "iolibs",  modname + "_" + "parsetab.py")
         lex.lex(module=self, debug=0)
-        yacc.yacc(module=self, debug=0, debugfile=self.debugfile,
+        self.y=yacc.yacc(module=self, debug=0, debugfile=self.debugfile,
                   tabmodule=self.tabmodule)
         
     def parse(self, buf):
         """Parse the string buf"""
-        yacc.parse(buf)
+        self.y.parse(buf)
         return self.parsed_string
 
     # List of tokens and literals
     tokens = (
         'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
-        'VARIABLE', 'NUMBER'
+        'VARIABLE', 'NUMBER','COND','REGLOG'
         )
     literals = "=+-*/(),"
 
@@ -76,6 +78,12 @@ class UFOExpressionParser(object):
         return t
     def t_ASEC(self, t):
         r'(?<!\w)asec(?=\()'
+        return t
+    def t_REGLOG(self, t):
+        r'(?<!\w)reglog(?=\()'
+        return t
+    def t_COND(self, t):
+        r'(?<!\w)cond(?=\()'
         return t
     def t_SQRT(self, t):
         r'cmath\.sqrt'
@@ -130,6 +138,8 @@ class UFOExpressionParser(object):
         ('left','*','/'),
         ('right','UMINUS'),
         ('left','POWER'),
+        ('right','COND'),
+        ('right','REGLOG'),
         ('right','CSC'),
         ('right','SEC'),
         ('right','ACSC'),
@@ -215,8 +225,12 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p3
             else:
                 p[0] = p[1] + "**" + p[3]
-        except:
+        except Exception:
             p[0] = p[1] + "**" + p[3]
+
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'COND(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
@@ -230,7 +244,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | RE group
                       | IM group
                       | SQRT group
-                      | CONJ group'''
+                      | CONJ group
+                      | REGLOG group'''
         if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -239,10 +254,71 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog(DCMPLX' + p[2] +')'
 
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'pi'
+
+class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
+    """A parser for UFO algebraic expressions, outputting
+    Fortran-style code for quadruple precision computation."""
+
+    mp_prefix = check_param_card.ParamCard.mp_prefix
+
+    # The following parser expressions need to be defined for each
+    # output language/framework
+
+    def p_expression_number(self, p):
+        "expression : NUMBER"
+        p[0] = '%e_16' % float(p[1])
+
+    def p_expression_variable(self, p):
+        "expression : VARIABLE"
+        # All the multiple_precision variables are defined with the prefix _MP_"
+        p[0] = (self.mp_prefix+p[1]).lower()
+
+    def p_expression_power(self, p):
+        'expression : expression POWER expression'
+        try:
+            p3 = float(p[3].replace('_16',''))
+            # Check if exponent is an integer
+            if p3 == int(p3):
+                p3 = str(int(p3))
+                p[0] = p[1] + "**" + p3
+            else:
+                p[0] = p[1] + "**" + p[3]
+        except Exception:
+            p[0] = p[1] + "**" + p[3]
+
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
+                                          ',KIND=16),CMPLX('+p[7]+',KIND=16))'
+
+    def p_expression_func(self, p):
+        '''expression : CSC group
+                      | SEC group
+                      | ACSC group
+                      | ASEC group
+                      | RE group
+                      | IM group
+                      | SQRT group
+                      | CONJ group
+                      | REGLOG group'''
+        if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
+        elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
+        elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
+        elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
+        elif p[1] == 're': p[0] = 'real' + p[2]
+        elif p[1] == 'im': p[0] = 'imag' + p[2]
+        elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
+        elif p[1] == 'complexconjugate': p[0] = 'conjg' + p[2]
+        elif p[1] == 'reglog': p[0] = 'mp_reglog(CMPLX(' + p[2] +',KIND=16))'
+
+    def p_expression_pi(self, p):
+        '''expression : PI'''
+        p[0] = self.mp_prefix+'pi'
 
 class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
@@ -252,15 +328,19 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     # output language/framework
 
     def p_expression_number(self, p):
-        "expression : NUMBER"
+        'expression : NUMBER'
         p[0] = p[1]
         # Check number is an integer, if so add "."
         if float(p[1]) == int(float(p[1])) and float(p[1]) < 1000:
             p[0] = str(int(float(p[1]))) + '.'
 
     def p_expression_variable(self, p):
-        "expression : VARIABLE"
+        'expression : VARIABLE'
         p[0] = p[1]
+
+    def p_expression_cond(self, p):
+        "expression :  COND '(' expression ',' expression ',' expression ')'"
+        p[0] = 'COND('+p[3]+','+p[5]+','+p[7]+')'
 
     def p_expression_power(self, p):
         'expression : expression POWER expression'
@@ -284,7 +364,8 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | RE group
                       | IM group
                       | SQRT group
-                      | CONJ group'''
+                      | CONJ group
+                      | REGLOG group '''
         if p[1] == 'csc': p[0] = '1./cos' + p[2]
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
@@ -293,6 +374,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'im': p[0] = 'imag' + p[2]
         elif p[1] == 'cmath.sqrt' or p[1] == 'sqrt': p[0] = 'sqrt' + p[2]
         elif p[1] == 'complexconjugate': p[0] = 'conj' + p[2]
+        elif p[1] == 'reglog': p[0] = 'reglog' + p[2]
 
     def p_expression_pi(self, p):
         '''expression : PI'''
@@ -302,19 +384,21 @@ class UFOExpressionParserCPP(UFOExpressionParser):
 
 # Main program, allows to interactively test the parser
 if __name__ == '__main__':
-
+    
     if len(sys.argv) == 1:
-        print "Please specify a parser: fortran, pythia8, aloha"
+        print "Please specify a parser: fortran, mpfortran or c++"
         exit()
     if sys.argv[1] == "fortran":
         calc = UFOExpressionParserFortran()
+    elif sys.argv[1] == "mpfortran":
+        calc = UFOExpressionParserMPFortran()
     elif sys.argv[1] == "c++":
         calc = UFOExpressionParserCPP()
     elif sys.argv[1] == "aloha":
-        calc = ALOHAParserCpp()
+        calc = UFOExpressionParserCPP()
     else:
-        print "Please specify a parser: tex, fortran or c++"
-        print "You gave", sys.argv
+        print "Please specify a parser: fortran, mpfortran or c++"
+        print "You gave", sys.argv[1]
         exit()
 
     while 1:

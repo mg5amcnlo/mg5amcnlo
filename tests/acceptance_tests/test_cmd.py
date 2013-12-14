@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 import subprocess
@@ -58,7 +58,7 @@ class TestCmdShell1(unittest.TestCase):
     def test_generate(self):
         """command 'generate' works"""
         
-        self.do('load model %s' % self.join_path(_pickle_path, 'sm.pkl'))
+        self.do('import model sm')
         self.cmd._curr_model.pass_particles_name_in_mg_default()
         self.do('generate e+ e- > e+ e-')
         self.assertTrue(self.cmd._curr_amps)
@@ -66,7 +66,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('define J P g')
         self.do('add process e+ e- > J')
         self.assertEqual(len(self.cmd._curr_amps), 2)
-        self.do('add process mu+ mu- > P, Z>mu+ mu-')
+        self.do('add process mu+ mu- > P, Z > mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps), 3)
         self.do('generate e+ e- > Z > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
@@ -76,7 +76,7 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > V > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
-        self.do('generate e+ e- > z|a > e+ e-')
+        self.do('generate e+ e- > z | a > e+ e-')
         self.assertEqual(len(self.cmd._curr_amps), 1)
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 2)
         self.assertRaises(MadGraph5Error, self.do, 'generate a V > e+ e-')
@@ -125,6 +125,7 @@ class TestCmdShell1(unittest.TestCase):
                     'td_path': './td', 
                     'delphes_path': './Delphes', 
                     'cluster_type': 'condor', 
+                    'cluster_status_update': (600, 30),
                     'madanalysis_path': './MadAnalysis', 
                     'cluster_temp_path': None, 
                     'fortran_compiler': None, 
@@ -133,13 +134,21 @@ class TestCmdShell1(unittest.TestCase):
                     'automatic_html_opening': True, 
                     'pythia8_path': './pythia8',
                     'group_subprocesses': 'Auto',
-                    'ignore_six_quark_processes': False,
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
+                    'lhapdf': 'lhapdf-config',  
+                    'loop_optimized_output': True,
+                    'fastjet': 'fastjet-config',
                     'timeout': 60,
+                    'ignore_six_quark_processes': False,
+                    'OLP': 'MadLoop',
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
-                    'cluster_retry_wait': 300
+                    'cluster_retry_wait': 300,
+                    'syscalc_path':'./SysCalc',
+                    'hepmc_path': './hepmc',
+                    'hwpp_path': './herwigPP',
+                    'thepeg_path': './thepeg'
                     }
 
         self.assertEqual(config, expected)
@@ -314,9 +323,29 @@ class TestCmdShell2(unittest.TestCase,
         self.assertRaises(InvalidCmd,
                           self.do, 'output')
 
+    def test_check_generate_optimize(self):
+        """Test that errors are raised appropriately for output"""
+
+        # Invalid since forbiddent by the optimize option
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate a > e+ e- --optimize')
+
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate b > t w- --optimize')
+
+        # Invalid since optimize is not allowed for cross-section
+        self.assertRaises(InvalidCmd,
+                          self.do, 'generate  p p > e+ e- --optimize') 
+        
+        # check that --optimize filter correctly
+        self.do('generate t > all all --optimize')
+        self.assertEqual(len(self.cmd._curr_amps), 1)
+              
+               
+
     def test_read_madgraph4_proc_card(self):
         """Test reading a madgraph4 proc_card.dat"""
-        os.system('cp -rf %s %s' % (os.path.join(MG4DIR,'Template'),
+        os.system('cp -rf %s %s' % (os.path.join(MG5DIR,'Template','LO'),
                                     self.out_dir))
         os.system('cp -rf %s %s' % (
                             self.join_path(_pickle_path,'simple_v4_proc_card.dat'),
@@ -325,9 +354,12 @@ class TestCmdShell2(unittest.TestCase,
         self.cmd = Cmd.MasterCmd()
         pwd = os.getcwd()
         os.chdir(self.out_dir)
-        self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        try:
+            self.do('import proc_v4 %s' % os.path.join('Cards','proc_card.dat'))
+        except:
+            os.chdir(pwd)
+            raise
         os.chdir(pwd)
-
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                               'SubProcesses', 'P1_ll_vlvl')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -338,6 +370,7 @@ class TestCmdShell2(unittest.TestCase,
                                                     'matrix1.ps')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                     'madevent.tar.gz')))
+        
 
 
     def test_output_standalone_directory(self):
@@ -419,7 +452,7 @@ class TestCmdShell2(unittest.TestCase,
             shutil.rmtree(self.out_dir)
 
         self.do('import model sm')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output standalone %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 
@@ -556,7 +589,7 @@ class TestCmdShell2(unittest.TestCase,
 
         self.do('import model sm')
         self.do('set group_subprocesses False')
-        self.do('generate e+ e->e+ e-')
+        self.do('generate e+ e- > e+ e-')
         self.do('output %s ' % self.out_dir)
         # Check that the needed ALOHA subroutines are generated
         files = ['aloha_file.inc', 

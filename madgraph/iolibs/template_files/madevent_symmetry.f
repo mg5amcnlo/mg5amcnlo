@@ -10,7 +10,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'maxconfigs.inc'
-      include '../../Source/run_config.inc'
+      include 'run_config.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
       
@@ -143,7 +143,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      include '../../Source/run_config.inc'
+      include 'run_config.inc'
       integer    nhel_survey
 c      integer   npoint_tot,         npoint_min
 c      parameter (npoint_tot=50000, npoint_min=1000)
@@ -185,7 +185,8 @@ c***********************************************************************
 c
 c     Constants
 c
-      include '../../Source/run_config.inc'
+      include 'maxparticles.inc'
+      include 'run_config.inc'
 c
 c     Arguments
 c
@@ -237,7 +238,7 @@ c
       include 'genps.inc'
       include 'maxconfigs.inc'
       include 'nexternal.inc'
-      include '../../Source/run_config.inc'
+      include 'run_config.inc'
       include 'maxamps.inc'
       integer    imax,   ibase
       parameter (imax=max_branch-1, ibase=3)
@@ -387,7 +388,7 @@ c
       include 'nexternal.inc'
       double precision zero
       parameter       (zero=0d0)
-c      include '../../Source/run_config.inc'
+c      include 'run_config.inc'
 c
 c     Arguments
 c
@@ -661,7 +662,7 @@ c      write(lun,20) 'echo $i >& run.$script'
       write(lun,20) 'rm -f $k'
       write(lun,20) 'cat ../input_app.txt >& input_app.txt'
       write(lun,20) 'echo $i >> input_app.txt'
-      write(lun,20) 'for try in $(seq 1 10);'
+      write(lun,20) 'for((try=1;try<=10;try+=1)); '
       write(lun,20) 'do'
       write(lun,20) '../madevent > $k <input_app.txt'
       write(lun,20) 'if [ -s $k ]'

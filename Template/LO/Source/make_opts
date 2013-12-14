@@ -1,0 +1,52 @@
+# Environment variables
+
+ifeq ($(origin FFLAGS),undefined)
+  FFLAGS= -O -w -fbounds-check
+  #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
+endif
+FFLAGS+= -ffixed-line-length-132
+
+# Set FC unless it's defined by an environment variable
+ifeq ($(origin FC),default)
+  FC=gfortran
+endif
+
+# Options: dynamic, lhapdf
+
+UNAME := $(shell uname)
+
+# Option dynamic
+
+ifdef dynamic
+  ifeq ($(UNAME), Darwin)
+    libext=dylib
+    FFLAGS+= -fno-common
+    LDFLAGS += -bundle
+    define CREATELIB
+      $(FC) -dynamiclib -undefined dynamic_lookup -o $(1) $(2)
+    endef
+  else
+    libext=so
+    FFLAGS+= -fPIC
+    LDFLAGS += -shared
+    define CREATELIB
+      $(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)
+    endef
+  endif
+else
+  libext=a
+  define CREATELIB
+    $(AR) cru $(1) $(2)
+    ranlib $(1)
+  endef
+endif
+
+# Option lhapdf
+
+ifdef lhapdf
+  alfas_functions=alfas_functions_lhapdf
+  lhapdf=-lLHAPDF -lstdc++
+else
+  alfas_functions=alfas_functions
+  lhapdf=
+endif

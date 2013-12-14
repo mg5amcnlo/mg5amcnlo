@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -226,17 +226,17 @@ class IOExportPythonTest(unittest.TestCase):
     def __init__(self):
         \"\"\"define the object\"\"\"
         self.clean()
-        
+
     def clean(self):
         self.jamp = []
-        
+
     def smatrix(self,p, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
-        #  By the MadGraph Development Team
-        #  Please visit us at https://launchpad.net/madgraph5
+        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+        #  By the MadGraph5_aMC@NLO Development Team
+        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
         # 
-        # MadGraph StandAlone Version
+        # MadGraph5_aMC@NLO StandAlone Version
         # 
         # Returns amplitude squared summed/avg over colors
         # and helicities
@@ -279,18 +279,20 @@ class IOExportPythonTest(unittest.TestCase):
         # BEGIN CODE
         # ----------
         self.amp2 = [0.] * ndiags
+        self.helEvals = []
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
             ans = ans + t
+            self.helEvals.append([hel, t.real / denominator ])
         ans = ans / denominator
         return ans.real
 
     def matrix(self, p, hel, model):
         #  
-        #  MadGraph 5 v. %(version)s, %(date)s
-        #  By the MadGraph Development Team
-        #  Please visit us at https://launchpad.net/madgraph5
+        #  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+        #  By the MadGraph5_aMC@NLO Development Team
+        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
         #
         # Returns amplitude squared summed/avg over colors
         # for the point with external lines W(0:6,NEXTERNAL)
@@ -366,7 +368,6 @@ class IOExportPythonTest(unittest.TestCase):
 
         matrix_methods = exporter.get_python_matrix_methods()["0_uux_uux"].\
                           split('\n')
-
 
         self.assertEqual(matrix_methods, goal_method)
         

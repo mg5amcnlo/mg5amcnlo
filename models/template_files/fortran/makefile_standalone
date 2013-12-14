@@ -9,6 +9,7 @@ ifeq ($(wildcard ../make_opts), ../make_opts)
   include ../make_opts
 else
   FFLAGS+= -ffixed-line-length-132
+  FC=gfortran
 endif
 
 include makeinc.inc

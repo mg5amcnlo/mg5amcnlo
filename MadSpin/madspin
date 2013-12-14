@@ -1,0 +1,172 @@
+#! /usr/bin/env python
+
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+"""This is the main executable, a simple frontend to set up the PYTHONPATH
+and call immediately the command line interface scripts"""
+
+import sys
+if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+    sys.exit('MadSpin works only with python 2.6 or later (but not python 3.X).\n\
+               Please upgrate your version of python.')
+
+import os
+import optparse
+
+# Get the parent directory (mg root) of the script real path (bin)
+# and add it to the current PYTHONPATH
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.insert(0, root_path)
+
+
+# Write out nice usage message if called with -h or --help
+usage = "usage: %prog [options] [FILE] "
+parser = optparse.OptionParser(usage=usage)
+parser.add_option("-l", "--logging", default='INFO',
+                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+parser.add_option("-f", "--file", default='',
+                    help="Use script file FILE")
+parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
+                  help="Use MG_ME directory MGME_DIR")
+parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                 help='force to be in secure mode')
+parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                 help='force to launch debug mode')
+(options, args) = parser.parse_args()
+if len(args) == 0:
+    args = ''
+
+import subprocess
+
+# Check if optimize mode is (and should be) activated
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
+        subprocess.call([sys.executable] + ['-O'] + sys.argv)
+        sys.exit()
+
+import logging
+import logging.config
+import madgraph.interface.coloring_logging
+
+try: 
+    import readline
+except ImportError:
+    try:
+        import pyreadline as readline
+    except:
+        print "For tab completion and history, install module readline."
+else:
+    import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
+    
+    elif hasattr(readline, '__doc__'):
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+        else:
+            readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.__doc__ = 'GNU'
+        readline.parse_and_bind("tab: complete")
+        
+    # charge history file
+    try:
+        history_file = os.path.join(os.environ['HOME'], '.mg5', 'decayhistory')
+        readline.read_history_file(history_file)
+    except:
+        pass
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print 'Running MG5 in debug mode'
+
+
+# Set logging level according to the logging level given by options
+#logging.basicConfig(level=vars(logging)[options.logging])
+try:
+    if __debug__ and options.logging == 'INFO':
+        options.logging = 'DEBUG'    
+    logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madevent').setLevel(eval('logging.' + options.logging))
+except:
+    pass
+import MadSpin.interface_madspin as interface
+
+try:
+    cmd_line = interface.MadSpinInterface()
+    cmd_line.use_rawinput = True
+    cmd_line.cmdloop()
+except:
+    pass
+try:
+    cmd_line.exec_cmd('quit all', printcmd=False)
+    readline.set_history_length(100)
+    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
+        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+    readline.write_history_file(history_file)
+except Exception, error:
+    pass
+
+sys.exit(0)
+
+# Call the cmd interface main loop
+try:
+    if options.file or args:
+        # They are an input file 
+        if args:
+            input_file = os.path.realpath(args[0])
+        else:
+            input_file = os.path.realpath(options.file)
+        if 0 :#options.web:
+            cmd_line = interface.MasterCmdWeb()
+            cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
+            cmd_line.use_rawinput = False
+            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
+        else:
+            cmd_line = interface.MadSpinInterface()
+            cmd_line.use_rawinput = False
+            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
+    else:
+        # Interactive mode
+        if options.web:
+            if not os.environ.has_key('MADGRAPH_DATA'):
+                os.environ['MADGRAPH_DATA'] = root_path
+                os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
+                os.environ['REMOTE_USER'] = 'webmode'
+            cmd_line = interface.MasterCmdWeb()
+            cmd_line.cmdloop()
+        else:
+            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
+            cmd_line.cmdloop()
+except KeyboardInterrupt:
+    print 'writting history and quit on KeyboardInterrupt' 
+    pass
+
+
+
+
+    

@@ -1,0 +1,120 @@
+#!/bin/bash
+#
+################################################################################
+#                                                                             ##
+#                    MadGraph/MadEvent                                        ##
+#                                                                             ##
+# FILE : compile                                                              ##
+# VERSION : 1.0                                                               ##
+# DATE : 23 Septembre 2007                                                    ##
+# AUTHOR : MH - MadGraph5_aMC@NLO team                                                 ##
+#                                                                             ##
+# DESCRIPTION : script to compile madevent                                    ##
+# USAGE : ./make_package                                                      ##
+################################################################################
+
+# set nonomatch
+
+if [[ ! -d ./bin ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+        echo "Error: it must be executed from the main, or bin directory"
+        exit
+    fi
+fi
+
+
+#
+# If argument is equal to 'd' use dynamic libraries
+#
+echo $PWD
+if [[ "$1" == "dynamic" ]]; then
+    echo "Using dynamic libraries (might not work under MacOsX)"
+    export dynamic=true
+else
+    echo "Using static libraries"
+    unset dynamic
+fi
+
+# Check for LHAPDF
+c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" ]]; then
+    echo Using LHAPDF interface!
+    export lhapdf=true
+else
+    unset lhapdf
+fi
+
+# Clean the previous compilation
+cd Source
+make clean
+cd ..
+cd SubProcesses
+for i in `cat subproc.mg` ; do
+    cd $i
+    make clean
+    cd ..
+done
+cd ..
+
+#
+#  Now let shell know where to find important executables
+#
+
+if [[ -d Source ]]; then
+    cd Source
+    for i in ../bin/internal/gen_ximprove all ../bin/internal/combine_events; do
+    make $i -j 1 > /dev/null
+    if [[ $? -ne 0 ]];then
+        # Make didn't exit successfully
+        echo Error make $i in Source not successful > ../error
+        cat ../error
+        exit 1
+    fi
+    done
+    cd ..
+else
+    echo 'Error Source directory not found' > error
+    cat error
+    exit 2
+fi
+
+
+
+
+if [[ -e error ]];then
+   exit
+fi
+
+if [[ -d SubProcesses ]]; then
+    cd SubProcesses
+    for i in `cat subproc.mg` ; do
+	cd $i
+	echo $i
+	rm -f ajob* >& /dev/null
+	rm -f wait.ajob* >& /dev/null
+	rm -f run.ajob* >& /dev/null
+	rm -f done.ajob* >& /dev/null
+        make madevent -j 1 > /dev/null
+	if [[ $? -ne 0 ]];then
+	    # Make didn't exit successfully
+	    echo Error make madevent not successful > error
+	    cat error
+	    exit
+        fi
+	cd ..
+     done
+    cd ..
+else
+    echo "Error could not find SubProcesses"
+    exit
+fi
+
+if [[ -d ../DECAY ]]; then
+    echo "DECAY directory found, compiling..."
+    cd ../DECAY
+    make
+fi
+
+echo ""
+

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from __future__ import division
@@ -36,7 +36,7 @@ import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
 try:
     import madgraph.iolibs.files as files
-except:
+except Exception:
     import aloha.files as files
     
 aloha_path = os.path.dirname(os.path.realpath(__file__))
@@ -45,6 +45,7 @@ logger = logging.getLogger('ALOHA')
 _conjugate_gap = 50
 _spin2_mult = 1000
 
+pjoin = os.path.join
 
 ALOHAERROR = aloha.ALOHAERROR
 
@@ -97,6 +98,20 @@ class AbstractRoutine(object):
             self.tag.append('MP')
             text += self.write(output_dir, language, mode, **opt)
         return text
+    
+    def get_info(self, info):
+        """return some information on the routine
+        """
+        if info == "rank":
+            assert isinstance(self.expr, aloha_lib.SplitCoefficient)
+            rank= 1
+            for coeff in self.expr:
+                if max(sum(coeff), rank):
+                    rank = sum(coeff)
+            return rank -1 # due to the coefficient associate to the wavefunctions
+        else:
+            raise ALOHAERROR, '%s is not a valid information that can be computed' % info
+
 
 class AbstractRoutineBuilder(object):
     """ Launch the creation of the Helicity Routine"""
@@ -115,7 +130,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = lorentz.spins
+        self.spins = [abs(s) for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -129,13 +144,21 @@ class AbstractRoutineBuilder(object):
         self.model = model
         self.denominator = None
 #        assert model
+
+        self.lastprint = 0 # to avoid that ALOHA makes too many printout
         
-        
-    
+        if hasattr(lorentz, 'formfactors') and lorentz.formfactors:
+            for formf in lorentz.formfactors:
+                pat = re.compile(r'\b%s\b' % formf.name)
+                self.lorentz_expr = pat.sub('(%s)' % formf.value, self.lorentz_expr)
+            
     def compute_routine(self, mode, tag=[], factorize=True):
         """compute the expression and return it"""
         self.outgoing = mode
         self.tag = tag
+        if __debug__:
+            if mode == 0:
+                assert not any(t.startswith('L') for t in tag)
         self.expr = self.compute_aloha_high_kernel(mode, factorize)
         return self.define_simple_output()
     
@@ -199,7 +222,8 @@ in presence of majorana particle/flow violation"""
     def define_simple_output(self):
         """ define a simple output for this AbstractRoutine """
     
-        infostr = str(self.lorentz_expr)        
+        infostr = str(self.lorentz_expr)
+
         output = AbstractRoutine(self.expr, self.outgoing, self.spins, self.name, \
                                                     infostr, self.denominator)
         output.contracted = dict([(name, aloha_lib.KERNEL.reduced_expr2[name])
@@ -242,12 +266,17 @@ in presence of majorana particle/flow violation"""
         
         if not self.routine_kernel:
             AbstractRoutineBuilder.counter += 1
-            logger.info('aloha creates %s routines' % self.name)
+            if self.tag == []:
+                logger.info('aloha creates %s routines' % self.name)
+            elif AbstractALOHAModel.lastprint < time.time() - 1:
+                AbstractALOHAModel.lastprint = time.time()
+                logger.info('aloha creates %s set of routines with options: %s' \
+                            % (self.name, ','.join(self.tag)) )
             try:
                 lorentz = self.parse_expression()  
                 self.routine_kernel = lorentz
                 lorentz = eval(lorentz)
-            except NameError, error:
+            except NameError as error:
                 logger.error('unknow type in Lorentz Evaluation:%s'%str(error))
                 raise ALOHAERROR, 'unknow type in Lorentz Evaluation: %s ' % str(error) 
             else:
@@ -258,7 +287,6 @@ in presence of majorana particle/flow violation"""
         else:
             lorentz = copy.copy(self.routine_kernel)
             aloha_lib.KERNEL.use_tag = set(self.kernel_tag) 
-        
         for (i, spin ) in enumerate(self.spins):   
             id = i + 1
             #Check if this is the outgoing particle
@@ -431,13 +459,14 @@ in presence of majorana particle/flow violation"""
         
                     
         l_in = [int(tag[1:]) for tag in self.tag][0]
+        assert l_in != outgoing, 'incoming Open Loop can not be the outcoming one'
         
         # modify the expression for the momenta
         # P_i -> P_i + P_L and P_o -> -P_o - P_L
         Pdep = [aloha_lib.KERNEL.get(P) for P in lorentz.get_all_var_names()
                                                       if P.startswith('_P')]
 
-        Pdep = [P for P in Pdep if P.particle in [outgoing, l_in]]
+        Pdep = set([P for P in Pdep if P.particle in [outgoing, l_in]])
         for P in Pdep:
             if P.particle == l_in:
                 sign = 1
@@ -449,7 +478,7 @@ in presence of majorana particle/flow violation"""
             P_obj = aloha_object.P(lorentz_ind, P.particle)
             new_expr = sign*(P_Lid + P_obj)
             lorentz = lorentz.replace(id, new_expr)
-            
+
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
         spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
@@ -459,13 +488,14 @@ in presence of majorana particle/flow violation"""
         veto_ids = aloha_lib.KERNEL.get_ids(var_veto)
         
         lorentz = lorentz.expand(veto = veto_ids)
+        lorentz = lorentz.simplify()
         coeff_expr = lorentz.split(veto_ids)
         
         for key, expr in coeff_expr.items():
             expr = expr.simplify()
             coeff_expr[key] = expr.factorize()
         coeff_expr.tag = set(aloha_lib.KERNEL.use_tag)
-        
+
         return coeff_expr
                         
     def define_lorentz_expr(self, lorentz_expr):
@@ -512,14 +542,14 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
     """A special builder for combine routine if needed to write those
         explicitely.
     """
-    def __init__(self, l_lorentz):
+    def __init__(self, l_lorentz, model=None):
         """ initialize the run
         l_lorentz: list  of lorentz information analyzed (UFO format)
         language: define in which language we write the output
         modes: 0 for  all incoming particles 
               >0 defines the outgoing part (start to count at 1)
         """
-
+        AbstractRoutineBuilder.__init__(self,l_lorentz[0], model)
         lorentz = l_lorentz[0]
         self.spins = lorentz.spins
         l_name = [l.name for l in l_lorentz]
@@ -538,6 +568,7 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
 class AbstractALOHAModel(dict):
     """ A class to build and store the full set of Abstract ALOHA Routine"""
 
+    lastprint = 0
 
     def __init__(self, model_name, write_dir=None, format='Fortran', 
                  explicit_combine=False):
@@ -561,7 +592,7 @@ class AbstractALOHAModel(dict):
         try:
             python_pos = model_name 
             __import__(python_pos)
-        except:
+        except Exception:
             python_pos = 'models.%s' % model_name 
             __import__(python_pos)
         self.model = sys.modules[python_pos]
@@ -636,10 +667,65 @@ class AbstractALOHAModel(dict):
         
         try:
             return self[(lorentzname, outgoing)]
-        except:
+        except Exception:
             logger.warning('(%s, %s) is not a valid key' % 
                                                        (lorentzname, outgoing) )
             return None
+        
+    def get_info(self, info, lorentzname, outgoing, tag, cached=False):
+        """return some information about the aloha routine
+        - "rank": return the rank of the loop function
+        If the cached option is set to true, then the result is stored and
+        recycled if possible.
+        """
+
+        if not aloha.loop_mode and any(t.startswith('L') for t in tag):
+            aloha.loop_mode = True
+
+
+        returned_dict = {}        
+        # Make sure the input argument is a list
+        if isinstance(info, str):
+            infos = [info]
+        else:
+            infos = info
+        
+        # First deal with the caching of infos
+        if hasattr(self, 'cached_interaction_infos'):
+            # Now try to recover it
+            for info_key in infos:
+                try:
+                    returned_dict[info] = self.cached_interaction_infos[\
+                                         (lorentzname,outgoing,tuple(tag),info)]
+                except KeyError:
+                    # Some information has never been computed before, so they
+                    # will be computed later.
+                    pass             
+        elif cached:
+            self.cached_interaction_infos = {}
+
+        init = False
+        for info_key in infos:
+            if info_key in returned_dict:
+                continue
+            elif not init:
+                # need to create the aloha object
+                lorentz = eval('self.model.lorentz.%s' % lorentzname)
+                abstract = AbstractRoutineBuilder(lorentz)
+                routine = abstract.compute_routine(outgoing, tag, factorize=False)                
+                init = True
+
+            assert 'routine' in locals()
+            returned_dict[info_key] = routine.get_info(info_key)
+            if cached:
+                # Cache the information computed
+                self.cached_interaction_infos[\
+             (lorentzname,outgoing,tuple(tag),info_key)]=returned_dict[info_key]
+
+        if isinstance(info, str):
+            return returned_dict[info]
+        else:
+            return returned_dict
     
     def set(self, lorentzname, outgoing, abstract_routine):
         """ add in the dictionary """
@@ -694,7 +780,7 @@ class AbstractALOHAModel(dict):
                     for outgoing in range(len(lorentz.spins)+1):
                         try:
                             self[(lorentz.name, outgoing)].add_combine(m)
-                        except:
+                        except Exception:
                             pass # this routine is a symmetric one, so it 
                                  # already has the combination.
                     
@@ -731,7 +817,7 @@ class AbstractALOHAModel(dict):
         data should be a list of tuple (lorentz, tag, outgoing)
         tag should be the list of special tag (like conjugation on pair)
         to apply on the object """
-        
+
         # Search identical particles in the vertices in order to avoid
         #to compute identical contribution
         self.look_for_symmetries()
@@ -752,14 +838,14 @@ class AbstractALOHAModel(dict):
             if loop:
                 aloha.loop_mode = True
                 self.explicit_combine = True
-                      
+
             for l_name in list_l_name:
                 try:
                     request[l_name][conjugate].append((outgoing,tag))
-                except:
+                except Exception:
                     try:
                         request[l_name][conjugate] = [(outgoing,tag)]
-                    except:
+                    except Exception:
                         request[l_name] = {conjugate: [(outgoing,tag)]}
                         
         # Loop on the structure to build exactly what is request
@@ -834,12 +920,7 @@ class AbstractALOHAModel(dict):
                         conjg_builder = builder.define_conjugate_builder(conjg)
                         # Compute routines
                         self.compute_aloha(conjg_builder, symmetry=lorentz.name,
-                                        routines=routines)
-
-                
-                      
-  
-                
+                                        routines=routines)             
                         
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
@@ -861,6 +942,9 @@ class AbstractALOHAModel(dict):
         for outgoing, tag in routines:
             symmetric = self.has_symmetries(symmetry, outgoing, valid_output=routines)
             realname = name + ''.join(tag)
+            if (realname, outgoing) in self:
+                continue # already computed
+            
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:
@@ -894,6 +978,25 @@ class AbstractALOHAModel(dict):
         
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
+
+        if aloha_lib.KERNEL.unknow_fct:
+            if  language == 'Fortran':
+                logger.warning('''Some function present in the lorentz structure are not
+            recognized. A Template file has been created:
+            %s
+            Please edit this file to include the associated definition.''' % \
+               pjoin(output_dir, 'additional_aloha_function.f') )
+            else:
+                logger.warning('''Some function present in the lorentz structure are 
+                not recognized. Please edit the code to add the defnition of such function.''')
+                logger.info('list of missing fct: %s .' % \
+                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
+        
+        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
+            if language == 'Fortran':
+                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
+        
+
         
         #self.write_aloha_file_inc(output_dir)
     
@@ -965,13 +1068,16 @@ class AbstractALOHAModel(dict):
             
             # assign each order/color to a set of lorentz routine
             combine = {}
-            for (id_col, id_lor), coup in vertex.couplings.items():
-                order = orders[coup.name]
-                key = (id_col, order)
-                if key in combine:
-                    combine[key].append(id_lor)
-                else:
-                    combine[key] = [id_lor]
+            for (id_col, id_lor), coups in vertex.couplings.items():
+                if not isinstance(coups, list):
+                    coups = [coups]
+                for coup in coups:
+                    order = orders[coup.name]
+                    key = (id_col, order)
+                    if key in combine:
+                        combine[key].append(id_lor)
+                    else:
+                        combine[key] = [id_lor]
                     
             # Check if more than one routine are associated
             for list_lor in combine.values():
@@ -994,7 +1100,7 @@ class AbstractALOHAModel(dict):
 
         try:
             equiv = self.symmetries[l_name][outgoing]
-        except:
+        except Exception:
             return out
         else:
             if not valid_output or equiv in valid_output:
@@ -1046,7 +1152,7 @@ class AbstractALOHAModel(dict):
                 for lorentz in vertex.lorentz:
                     try:
                         conjugate_request[lorentz.name].add(i//2+1)
-                    except:
+                    except Exception:
                         conjugate_request[lorentz.name] = set([i//2+1])
         
         for elem in conjugate_request:
@@ -1069,9 +1175,14 @@ def write_aloha_file_inc(aloha_dir,file_ext, comp_ext):
             if alohafile_pattern.search(filename):
                 aloha_files.append(filename.replace(file_ext, comp_ext))
 
+    if os.path.exists(pjoin(aloha_dir, 'additional_aloha_function.f')):
+        aloha_files.append('additional_aloha_function.o')
+    
     text="ALOHARoutine = "
     text += ' '.join(aloha_files)
     text +='\n'
+    
+
     file(os.path.join(aloha_dir, 'aloha_file.inc'), 'w').write(text) 
 
 

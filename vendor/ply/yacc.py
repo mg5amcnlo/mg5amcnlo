@@ -89,6 +89,7 @@ resultlimit = 40               # Size limit of results when running in debug mod
 pickle_protocol = 0            # Protocol to use when writing pickle files
 
 import re, types, sys, os.path
+from cStringIO import StringIO
 
 # Compatibility function for python 2.6/3.0
 if sys.version_info[0] < 3:
@@ -2801,24 +2802,19 @@ class ParserReflect(object):
 
     # Compute a signature over the grammar
     def signature(self):
-        try:
-            from hashlib import md5
-        except ImportError:
-            from md5 import md5
-        try:
-            sig = md5()
-            if self.start:
-                sig.update(self.start.encode('latin-1'))
-            if self.prec:
-                sig.update("".join(["".join(p) for p in self.prec]).encode('latin-1'))
-            if self.tokens:
-                sig.update(" ".join(self.tokens).encode('latin-1'))
-            for f in self.pfuncs:
-                if f[3]:
-                    sig.update(f[3].encode('latin-1'))
-        except (TypeError,ValueError):
-            pass
-        return sig.digest()
+        import madgraph.various.misc as md5
+        text = StringIO()
+        if self.start:
+            text.write(self.start.encode('latin-1'))
+        if self.prec:
+            text.write("".join(["".join(p) for p in self.prec]).encode('latin-1'))
+        if self.tokens:
+            text.write(" ".join(self.tokens).encode('latin-1'))
+        for f in self.pfuncs:
+            if f[3]:
+                text.write(f[3].encode('latin-1'))        
+        return md5.digest(text.getvalue())
+
 
     # -----------------------------------------------------------------------------
     # validate_file()

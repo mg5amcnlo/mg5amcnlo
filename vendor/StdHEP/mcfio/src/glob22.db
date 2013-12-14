@@ -1,0 +1,69 @@
+# ntuBuild
+#Creation Date : Sat Oct 28 13:47:22 1995
+Database glob 0100
+# 
+make line_title "ntuBuild Database, v1.0"
+make line_title " "
+make header "glob" /
+ "1.10" /
+ "nglob" /
+ 12 1 14 
+# 
+# 
+make variable "eventnumber" /
+" " /
+ 0 "Yes" 1 8 0 0 0 0 
+# 
+make variable "triggerbit1" /
+ "this is a trigger bit field " /
+ 3 "Yes" 0 0 0 0 0 0 
+# 
+make variable "runnumber" /
+" " /
+ 4 "Yes" 0 0 0 0 0 0 
+# 
+make variable "No_way" /
+" " /
+ 4 "Yes" 0 0 0 0 0 0 
+# 
+make variable "missinget" /
+" " /
+ 5 "Yes" 0 0 0 0 0 0 
+# 
+make variable "something" /
+ "this is junk variable " /
+ 6 "Yes" 0 0 0 0 0 0 
+# 
+make variable "v5_pad" /
+" " /
+ 0 "No" 1 2 0 0 0 0 
+# 
+make variable "missingetphi" /
+" " /
+ 1 "No" 1 30 0 0 0 0 
+# 
+make variable "V6_new" /
+" " /
+ 2 "No" 1 80 0 0 0 0 
+# 
+make variable "v5_new" /
+" " /
+ 5 "No" 2 5 6 0 0 0 
+# 
+make variable "v7_now2" /
+" " /
+ 5 "No" 0 0 0 0 0 0 
+# 
+make variable "missingetnomuon" /
+" " /
+ 5 "No" 0 0 0 0 0 0 
+# 
+make variable "v7_now" /
+" " /
+ 6 "No" 0 0 0 0 0 0 
+# 
+make variable "v7_now_last" /
+" " /
+ 6 "No" 0 0 0 0 0 0 
+# 
+end 

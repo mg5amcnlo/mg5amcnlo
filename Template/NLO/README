@@ -1,0 +1,64 @@
+MadGraph5_aMC@NLO
+
+http://madgraph.phys.ucl.ac.be/
+http://amcatnlo.cern.ch/
+
+Information on the process to be generated is found in the file
+index.html in this directory, which should be viewed using your web
+browser.
+
+The executables you need to run are contained in the bin/ directory
+
+The bin/aMCatNLO executable open an interactive shell, from which you
+can exec different commands (some of which are also covered by the
+other executables)
+
+Shower settings
+---------------
+During the shower phase some parameters are not arbitrary as they have
+to be identical to those we have assumed in the Monte Carlo subtraction
+terms.
+In particular, the following settings MUST NOT BE CHANGED:
+
+HERWIG6:   SOFTME = .FALSE., HARDME = .FALSE., PTMIN = 0.5D0
+HERWIGPP:  ReconstructionOption=General, InitialInitialBoostOption=LongTransBoost
+PYTHIA6Q:  MSTJ(43) = 3, MSTJ(47) = 0, MSTJ(48) = 0, MSTJ(50) = 2,
+           MSTP(67) = 2, MSTP(68) = 0, PARP(67) = 1D0, PARP(71) = 1D0.
+PYTHIA6PT: MSTP(67) = 2, MSTP(68) = 0, PARP(67) = 1D0.
+
+
+generate_events
+-------------------
+
+Run event generation at NLO, using the MC@NLO prescription for the
+generation of unweighted events that can be passed to a parton-shower.
+Event genration is done in three steps: in the first step, the grid
+for the integration is set. In the second step, while computing the
+cross-section, the envelope for the unweighting is computed.  Finally,
+in the third step, events are generated.  If no extra options are
+given, the (parton-level) .lhe file is passed to the parton-shower
+MonteCarlo, generating a file either in StdHEP (for Herwig6 and
+Pythia6) or in HEPMC format (for Herwig++).  The parton shower
+MonteCarlo and the desired number of events have to be specified in
+the run_card.dat (You will be prompted to edit it just after typing
+the command). Note that, because of the way MC@NLO generates events,
+any event sample can be showered only with the parton shower it has
+been generated for. Otherwise you will obtain unphisical/wrong
+results. For the same reason, also plots obtained using the
+parton-level events in the .lhe file (without showering them) are
+unphysical.
+If you want to first generate a smaller sample of events, and then a
+larger one with the same cuts/parameters, you can skip the
+grid-setting/ integration phases in the second run (which may be time
+consuming).  To do this, when running for the second time, just use
+the -o/--only-generation option (possibly also -n/--nocompile)
+
+shower RUN
+Generate showered events in StdHEP/HEPMC format (see above), for the
+parton-level .lhe event file contained corresponding to run RUN (the
+event file is Events/RUN/events.lhe.gz).  All informations
+(parton-shower to be used, number of events contained in the file,
+etc...) are directly read from the file header. 
+
+calculate_crossx
+Calculate the cross section and distributions at fixed order.

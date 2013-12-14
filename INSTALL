@@ -1,6 +1,6 @@
 ************************************************************
 *                                                          *
-*           W E L C O M E  to  M A D G R A P H  5          *
+*   W E L C O M E  to  M A D G R A P H 5 _ a M C @ N L O   *
 *                                                          *
 *                                                          *
 *                 *                       *                *
@@ -9,8 +9,10 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                            and                           *
+*                  http://amcatnlo.cern.ch                 *
 *                                                          *
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
@@ -20,16 +22,30 @@
 Dependencies :
 ===============
 
+ * MadGraph5_aMC@NLO *
+
 - Python 2.6 (or higher, but not compatible with 3.X)
 
-If you want to provide output for MadEvent, you also need:
+ * MadEvent *
+Package for the LO cross-section computation and generation of events 
+
 - bash
 - perl 5.8 (or higher)
 - a Fortran 77 compiler (such as g77 or gfortran)
+
+ * aMC@NLO *
+Package for the NLO cross-section computation (matched to shower) and
+generation of events 
+
+- bash
+- gfortran4.6 (or higher)
 
 On Windows:
 ===========
 
 In order to run MG5 you need to
 1) add the Python directory to the PATH
-2) run $> python ./bin/mg5
+2) run $> python ./bin/mg5_aMC
+
+Note that most of the output (including madevent/aMCatNLO)
+are not compatible with Windows even with cygwin.

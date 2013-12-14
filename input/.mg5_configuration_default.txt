@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 #
@@ -19,13 +19,12 @@
 # Line starting with # should be uncommented if you want to modify the default
 #    value.
 # Current value for all options can seen by typing "display options"
-#    after either ./bin/mg5 or ./bin/madevent 
+#    after either ./bin/mg5_aMC or ./bin/madevent 
 #
 # You can place this files in ~/.mg5/mg5_configuration.txt if you have more than
-#    one version of MG5 
+#    one version of MG5. 
 #
 ################################################################################
-
 #! Prefered Fortran Compiler
 #! If None: try to find g77 or gfortran on the system
 #!
@@ -42,17 +41,28 @@
 # web_browser = None
 
 #! Prefered PS viewer
-#! If None: try to find one available on the system
+#!  If None: try to find one available on the system
 # eps_viewer = None
 
 #! Time allowed to answer question (if no answer takes default value)
-#! 0: No time limit
+#!  0: No time limit
 # timeout = 60
 
-#! Pythia8 Path.
-#! Define the path to the pythia8 directory.
-#! relative path start from mg5 directory
+#! Pythia8 path.
+#!  Defines the path to the pythia8 directory.
+#!  This is the directory that contains the subdirectory examples;
+#!  in particular, it is crucial that the file
+#   pythia8_path/examples/config.sh be present.
+#!  If using a relative path, that starts from the mg5 directory
 # pythia8_path = ./pythia8
+
+#! Herwig++ paths
+#!  specify here the paths also to HepMC ant ThePEG
+#!  define the path to the herwig++, thepeg and hepmc directories.
+#!  paths can be absolute or relative from mg5 directory
+# hwpp_path = 
+# thepeg_path = 
+# hepmc_path = 
 
 #! Control when MG5 checks if he is up-to-date.
 #! Enter the number of day between two check (0 means never)
@@ -60,62 +70,85 @@
 # auto_update = 7
 
 ################################################################################
-#  INFO FOR MADEVENT 
+#  INFO FOR MADEVENT / aMC@NLO 
 ################################################################################
 # If this file is in a MADEVENT Template. 'main directory' is the directory
-# containing the SubProcesses directory. Otherwise this is the madgraph5 main
+# containing the SubProcesses directory. Otherwise this is the MadGraph5_aMC@NLO main
 # directory (containing the directories madgraph and Template)
 
 #! Allow/Forbid the automatic opening of the web browser  (on the status page)
-#!when launching MadEvent [True/False]
+#!  when launching MadEvent [True/False]
 # automatic_html_opening = True
 
 #! Default Running mode 
-#! 0: single machine/ 1: cluster / 2: multicore
+#!  0: single machine/ 1: cluster / 2: multicore
 # run_mode = 2
 
 #! Cluster Type [pbs|sge|condor|lsf|ge|slurm] Use for cluster run only
-#! And cluster queue
-#cluster_type = condor
+#!  And cluster queue
+# cluster_type = condor
 # cluster_queue = madgraph
 
 #! Path to a node directory to avoid direct writting on the central disk
-#!Note that condor cluster avoid direct writting by default (therefore this
-#!options didn't modify condor cluster)
+#!  Note that condor cluster avoid direct writting by default (therefore this
+#!  options didn't modify condor cluster)
 # cluster_temp_path = None
 
+#! Cluster waiting time for status update 
+#!  First number is when the number of waiting job is higher than the number 
+#!  of running one (time in second). The second number is in the second case.
+# cluster_status_update = 600 30
+
 #! How to deal with failed submission (can occurs on cluster mode)
-#! 0: crash, -1: print error, hangs the program up to manual instructions, N(>0) retry up to N times.
+#!  0: crash, -1: print error, hangs the program up to manual instructions, N(>0) retry up to N times.
 # cluster_nb_retry = 1
+
 #! How much time to wait for the output file before resubmission/crash (filesystem can be very slow)
 # cluster_retry_wait = 300
 
 #! Nb_core to use (None = all) This is use only for multicore run
-#! This correspond also to the number core used for code compilation for cluster mode
+#!  This correspond also to the number core used for code compilation for cluster mode
 # nb_core = None
 
 #! Pythia-PGS Package
-#! relative path start from main directory
+#!  relative path start from main directory
 # pythia-pgs_path = ./pythia-pgs
 
 #! Delphes Package
-#! relative path start from main directory
+#!  relative path start from main directory
 # delphes_path = ./Delphes
 
 #! MadAnalysis Package [For Drawing output]
-#! relative path start from main directory
+#!  relative path start from main directory
 # madanalysis_path = ./MadAnalysis
 
 #! ExRootAnalysis Package
-#! relative path start from main directory
+#!  relative path start from main directory
 # exrootanalysis_path = ./ExRootAnalysis
 
 #! TOPDRAWER PATH
-#! Path to the directory containing td executables
-#! relative path start from main directory
+#!  Path to the directory containing td executables
+#!  relative path start from main directory
 # td_path = ./td
 
+#! lhapdf-config
+#!  If None: try to find one available on the system
+# lhapdf = lhapdf-config
 
+#! fastjet-config
+#!  If None: try to find one available on the system
+# fastjet = fastjet-config
 
+#! MCatNLO-utilities 
+#!  relative path starting from main directory
+# MCatNLO-utilities_path = ./MCatNLO-utilities
+
+#! Set what OLP to use for the loop ME generation
+# OLP = MadLoop
+
+#! SysCalc PATH
+#! Path to the directory containing syscalc executables
+#! relative path start from main directory
+# syscalc_path = ./SysCalc
 
 

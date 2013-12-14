@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -21,9 +21,11 @@ import copy
 import fractions
 import operator
 import re
+import array
 
 import madgraph.core.color_algebra as color_algebra
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.base_objects as base_objects
 
 #===============================================================================
 # ColorBasis
@@ -42,6 +44,7 @@ class ColorBasis(dict):
 
     # Dictionary store the raw colorize information
     _list_color_dict = []
+
 
     class ColorBasisError(Exception):
         """Exception raised if an error occurs in the definition
@@ -68,8 +71,10 @@ class ColorBasis(dict):
         if all([cs == color_algebra.ColorString() \
                         for cs in res_dict.values()]):
             res_dict = {}
-
+                    
         return res_dict
+
+    
 
     def add_vertex(self, vertex, diagram, model,
                    repl_dict, res_dict, min_index, id0_rep=[]):
@@ -83,7 +88,7 @@ class ColorBasis(dict):
 
         color_num_pairs = []
         pdg_codes = []
-
+                
         for index, leg in enumerate(vertex.get('legs')):
             curr_num = leg.get('number')
             curr_part = model.get('particle_dict')[leg.get('id')]
@@ -105,8 +110,14 @@ class ColorBasis(dict):
                 curr_color = curr_part.get_anti_color()
                 curr_pdg = curr_part.get_anti_pdg_code()
                 if not id0_rep:
-                    repl_dict[curr_num] = min_index
-                    min_index = min_index - 1
+                    if not ( diagram.get('vertices')[-1].get('id')==-1 and \
+                    vertex == diagram.get('vertices')[-2]):
+                        repl_dict[curr_num] = min_index
+                        min_index = min_index - 1
+                    else:                  
+                        repl_dict[curr_num] = \
+                          max(l.get('number') for l in \
+                                        diagram.get('vertices')[-1].get('legs'))
 
             # Take into account previous replacements
             try:
@@ -126,11 +137,16 @@ class ColorBasis(dict):
             pdg_codes.insert(0, last_pdg)
 
         # Order the legs according to the interaction particles
-        interaction_pdgs = [p.get_pdg_code() for p in \
-                            model.get_interaction(vertex.get('id')).\
-                            get('particles')]
+        if vertex.get('id')!=-1:
+            interaction_pdgs = [p.get_pdg_code() for p in \
+                                model.get_interaction(vertex.get('id')).\
+                                get('particles')]
+        else:
+            interaction_pdgs = [l.get('id') for l in vertex.get('legs')]
 
         sorted_color_num_pairs = []
+        #print "interactions_pdg=",interaction_pdgs
+        #print "pdg_codes=",pdg_codes        
         for i, pdg in enumerate(interaction_pdgs):
             index = pdg_codes.index(pdg)
             pdg_codes.pop(index)
@@ -147,11 +163,14 @@ class ColorBasis(dict):
         # ... and the associated dictionary for replacement
         match_dict = dict(enumerate(list_numbers))
 
+        if vertex['id'] == -1:
+            return (min_index, res_dict)
+
         # Update the result dict using the current vertex ColorString object
         # If more than one, create different entries
         inter_color = model.get_interaction(vertex['id'])['color']
         inter_indices = [i for (i,j) in \
-                         model.get_interaction(vertex['id'])['couplings'].keys()]
+                        model.get_interaction(vertex['id'])['couplings'].keys()]
         
         # For colorless vertices, return a copy of res_dict
         # Where one 0 has been added to each color index chain key
@@ -174,6 +193,7 @@ class ColorBasis(dict):
                 continue
             
             # Build the new element
+            assert type(col_str) == color_algebra.ColorString 
             mod_col_str = col_str.create_copy()
 
             # Replace summed (negative) internal indices
@@ -240,7 +260,6 @@ class ColorBasis(dict):
                 for cs in canonical_col_fact:
                     cs.coeff = cs.coeff / col_str.coeff
                 self._canonical_dict[canonical_rep] = canonical_col_fact
-
             else:
                 # If this representation has already been considered,
                 # adapt the result
@@ -295,7 +314,6 @@ class ColorBasis(dict):
 
         if amplitude:
             self.create_color_dict_list(amplitude)
-
         for index, color_dict in enumerate(self._list_color_dict):
             self.update_color_basis(color_dict, index)
 
@@ -551,6 +569,7 @@ class ColorMatrix(dict):
         to be symmetric."""
 
         canonical_dict = {}
+        
         for i1, struct1 in \
                     enumerate(sorted(self._col_basis1.keys())):
             for i2, struct2 in \
@@ -699,7 +718,7 @@ class ColorMatrix(dict):
             for index in elem[1]:
                 try:
                     fix_elem[1].append(repl_dict[index])
-                except:
+                except Exception:
                     fix_elem[1].append(index)
             return_list.append((elem[0], tuple(fix_elem[1])))
 

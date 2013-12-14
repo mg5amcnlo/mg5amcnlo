@@ -1,0 +1,28 @@
+c************************************************************************
+c**                                                                    **
+c**           MadGraph/MadEvent Interface to FeynRules                 **
+c**                                                                    **
+c**          C. Duhr (Louvain U.) - M. Herquet (NIKHEF)                **
+c**                                                                    **
+c************************************************************************
+
+
+This is the template directory for MadGraph/MadEvent v4
+models created with the FeynRules Mathematica package.
+
+To use it, follow FeynRules instructions to create a
+MG output of your model (set of various text files), move these
+files in this directory and type 
+
+make testprog
+./testprog
+
+in order to verify that your model compiles properly.
+
+Once it is done, move this directory to the "Models" directory
+of your MadGraph/MadEvent installation. You can then use it by
+modifying the model parameter in your proc_card.dat.
+
+The "make helas_couplings" compilation mode produces an indepedent
+piece of code (./helas_couplings) generating a text file (helas_couplings.txt)
+with all the coupling values required by external packages like BRIDGE.

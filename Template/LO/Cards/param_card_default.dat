@@ -1,0 +1,66 @@
+#********************************************************************
+#                       MadGraph5_aMC@NLO                           *
+#********************************************************************
+#           Les Houches friendly file for the SM parameters of      *
+#   MadGraph5_aMC@NLO Spectrum and decay widths produced by SMCalc  *
+#********************************************************************
+# Please note the following IMPORTANT issues:                      *
+#                                                                   *
+# 0. REFRAIN from editing this file by hand! Some of the parame-    *
+#    ters are not independent                                       *
+#    (such as G_Fermi, alpha_em, sin(theta_W),MZ,MW) and serious    *
+#    problems might be encountered (such as violation of unitarity  *
+#    or gauge invariance).  Always use a calculator.                *
+#                                                                   *
+# 1. alpha_S(MZ) has been used in the calculation of the parameters *
+#    but, for consistency, it will be reset by MadGraph5_aMC@NLO to *
+#    the value expected IF the pdfs for collisions with hadrons are *
+#    used. This value is KEPT by MadGraph5_aMC@NLO when no pdf are  *
+#    usedlpp(i)=0 .                                                 *
+#                                                                   *
+# 2. Values of the charm and bottom kinematic (pole) masses are     *
+#    those used in the matrix elements and phase space UNLESS they  *
+#    are set to ZERO from the start in the model (particles.dat)    *
+#    This happens, for example,  when using 5-flavor QCD where      *
+#    charm and bottom are treated as partons in the initial state   *
+#    and a zero mass might be hardwired in the model definition.    *
+#                                                                   *
+#********************************************************************
+Block SMINPUTS      # Standard Model inputs
+     1         1.27900000E+02   # alpha_em(MZ)(-1) SM MSbar
+     2         1.16600000E-05   # G_Fermi
+     3         1.18000000E-01   # alpha_s(MZ) SM MSbar
+     4         9.15445065E+01   # Z mass (as input parameter)
+Block MGSMPARAM      # Standard Model parameters for MadGraph5_aMC@NLO
+     1         2.31200000E-01   # sin(theta_W)^2
+     2         8.02673592E+01   # W mass (as input parameter)
+Block MGYUKAWA     # Yukawa masses m/v=y/sqrt(2)
+#    PDG          YMASS
+     5         4.20000000E+00   # mbottom for the Yukawa  y_b
+     4         1.25000000E+00   # mcharm  for the Yukawa  y_c
+     6         1.74300000E+02   # mtop    for the Yukawa  y_t
+    15         1.77700000E+00   # mtau    for the Yukawa  y_ta
+Block MGCKM     # CKM elements for MadGraph5_aMC@NLO
+     1   1     9.75000000E-01   # Vud for Cabibbo matrix
+Block MASS      #  Mass spectrum (kinematic masses)
+#       PDG       Mass
+         4     1.40000000E+00   # charm    pole mass
+         5     4.20000000E+00   # bottom   pole mass
+         6     1.74300000E+02   # top      pole mass
+        15     1.77700000E+00   # tau      mass
+        23     9.15445065E+01   # Z        mass
+        24     8.02673592E+01   # W        mass
+        25     1.00000000E+02   # H        mass
+#            PDG       Width
+DECAY         6     1.51013490E+00   # top width
+DECAY        23     2.44639985E+00   # Z   width
+DECAY        24     2.03535570E+00   # W   width
+DECAY        25     4.27608700E-03   # H   width
+#        BR           NDA        ID1       ID2
+     7.18385415E-02    2           4        -4   # BR( H -> c  cbar  )
+     8.03404251E-01    2           5        -5   # BR( H -> b  bbar  )
+     0.00000000E+00    2           6        -6   # BR( H -> t  tbar  )
+     4.83591503E-02    2          15       -15   # BR( H -> tau- tau+)
+     2.69892403E-05    2          23        23   # BR( H -> Z   Z^(*))
+     3.67605190E-03    2          24       -24   # BR( H -> W   W^(*))
+     2.43358656E-02    2          21        21   # BR( H -> g   g    )

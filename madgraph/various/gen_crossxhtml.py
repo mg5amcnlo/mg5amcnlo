@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Create gen_crossxhtml """
@@ -20,10 +20,11 @@ import math
 import re
 import pickle
 import re
+import glob
 try:
     import internal.files as files
     import internal.save_load_object as save_load_object
-except:
+except ImportError:
     import madgraph.iolibs.files as files
     import madgraph.iolibs.save_load_object as save_load_object
 
@@ -92,7 +93,7 @@ function check_link(url,alt, id){
 """
 
 status_template = """
-<H2 ALIGN=CENTER> Currently Running </H2>
+<H2 ALIGN=CENTER> Currently Running %(run_mode_string)s</H2>
 <TABLE BORDER=2 ALIGN=CENTER>
     <TR ALIGN=CENTER>
         <TH nowrap ROWSPAN=2 font color="#0000FF"> Run Name </TH>
@@ -115,6 +116,8 @@ status_template = """
                     %(pythia_card)s
                     %(pgs_card)s
                     %(delphes_card)s
+                    %(shower_card)s
+                    %(fo_analyse_card)s
         </TD>
         <TD nowrap ROWSPAN=2> %(results)s </TD> 
         %(status)s
@@ -161,7 +164,10 @@ class AllResults(dict):
             if not tag:
                 self.current = self[run][-1]
             else:
-                self.current = self[run][tag]
+                assert tag in self[run].tags
+                index = self[run].tags.index(tag)
+                self.current = self[run][index]
+                
         else:
             self.current = None
     
@@ -193,7 +199,7 @@ class AllResults(dict):
         if web is True:
             try:
                 web = os.environ['SERVER_NAME']
-            except:
+            except Exception:
                 web = 'my_computer'
         self['web'] = web
         self.web = web
@@ -295,7 +301,7 @@ class AllResults(dict):
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
         assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia']
+                        'nb_event_pythia','error_pythia', 'run_mode']
 
         if not run and not self.current:
             return
@@ -311,6 +317,8 @@ class AllResults(dict):
             run[name] = int(value)
         elif name == 'nb_event_pythia':
             run[name] = int(value)
+        elif name == 'run_mode':
+            run[name] = value
         else:    
             run[name] = float(value)    
     
@@ -321,8 +329,17 @@ class AllResults(dict):
         if self.status and self.current:
             if isinstance(self.status, str):
                 status = '<td ROWSPAN=2 colspan=4>%s</td>' %  self.status
-            else:
-                s = self.status
+            else:                
+                s = list(self.status)
+                if s[0] == '$events':
+                    if self.current['nb_event']:
+                        nevent = self.current['nb_event']
+                    else:
+                        nevent = self[self.current['run_name']][0]['nb_event']
+                    if nevent:
+                        s[0] = nevent - int(s[1]) -int(s[2])
+                    else:
+                        s[0] = ''
                 status ='''<td> %s </td> <td> %s </td> <td> %s </td>
                 </tr><tr><td colspan=3><center> %s </center></td>''' % (s[0],s[1], s[2], s[3])
                 
@@ -333,6 +350,19 @@ class AllResults(dict):
                             'run_name': self.current['run_name'],
                             'tag_name': self.current['tag'],
                             'unit': self[self.current['run_name']].info['unit']}
+            # add the run_mode_string for amcatnlo_run
+            if 'run_mode' in self.current.keys():
+                run_mode_string = {'aMC@NLO': '(aMC@NLO)',
+                                   'aMC@LO': '(aMC@LO)',
+                                   'noshower': '(aMC@NLO)',
+                                   'noshowerLO': '(aMC@LO)',
+                                   'NLO': '(NLO f.o.)',
+                                   'LO': '(LO f.o.)',
+                                   'madevent':''}
+                status_dict['run_mode_string'] = run_mode_string[self.current['run_mode']]
+            else:
+                status_dict['run_mode_string'] = ''
+
 
             if exists(pjoin(self.path, 'HTML',self.current['run_name'], 
                         'results.html')):
@@ -355,7 +385,15 @@ class AllResults(dict):
                 status_dict['delphes_card'] = """ <a href="./Cards/delphes_card.dat">delphes_card</a><BR>"""
             else:
                 status_dict['delphes_card'] = ""
-                
+            if exists(pjoin(self.path, 'Cards', 'shower_card.dat')):
+                status_dict['shower_card'] = """ <a href="./Cards/shower_card.dat">shower_card</a><BR>"""
+            else:
+                status_dict['shower_card'] = ""
+            if exists(pjoin(self.path, 'Cards', 'FO_analyse_card.dat')):
+                status_dict['fo_analyse_card'] = """ <a href="./Cards/FO_analyse_card.dat">FO_analyse_card</a><BR>"""
+            else:
+                status_dict['fo_analyse_card'] = ""                
+
             if self.web:
                 status_dict['stop_form'] = """
                  <TR ALIGN=CENTER><TD COLSPAN=7 text-align=center>
@@ -397,6 +435,10 @@ class AllResults(dict):
         text = crossxhtml_template % text_dict
         open(pjoin(self.path,'crossx.html'),'w').write(text)
         
+
+class AllResultsNLO(AllResults):
+    """Store the results for a NLO run of a given directory"""
+    pass
        
 
 class RunResults(list):
@@ -435,11 +477,10 @@ class RunResults(list):
     
     def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
-
         try:
             self.web = opt['web']
             self.info['web'] = self.web
-        except:
+        except Exception:
             self.web = False
 
         # check if more than one parton output
@@ -464,8 +505,8 @@ class RunResults(list):
             
             text = text % self.info
 
-
         return text
+
     
     def return_tag(self, name):
         
@@ -567,19 +608,22 @@ class OneTagResults(dict):
         self['cross_pythia'] = ''
         self['nb_event_pythia'] = 0
         self['error'] = 0
-        self.parton = [] 
+        self['run_mode'] = 'madevent'
+        self.parton = []
+        self.reweight = [] 
         self.pythia = []
         self.pgs = []
         self.delphes = []
+        self.shower = []
         # data 
         self.status = ''
-        
-    
+
     
     
     def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
 
+        import misc as misc
         exists = os.path.exists
         run = self['run_name']
         tag =self['tag']
@@ -592,12 +636,19 @@ class OneTagResults(dict):
             if 'gridpack' not in self.parton and \
                     exists(pjoin(path,os.pardir ,os.pardir,"%s_gridpack.tar.gz" % run)):
                 self.parton.append('gridpack')
+        # Check if the output of the last status exists
+        if level in ['reweight','all']:
+            if 'plot' not in self.reweight and \
+                         exists(pjoin(html_path,"plots_%s.html" % tag)):
+                self.reweight.append('plot')
         
         if level in ['parton','all'] and 'parton' not in nolevel:
             
             if 'lhe' not in self.parton and \
                         (exists(pjoin(path,"unweighted_events.lhe.gz")) or
-                         exists(pjoin(path,"unweighted_events.lhe"))):
+                         exists(pjoin(path,"unweighted_events.lhe")) or
+                         exists(pjoin(path,"events.lhe.gz")) or
+                         exists(pjoin(path,"events.lhe"))):
                 self.parton.append('lhe')
         
             if 'root' not in self.parton and \
@@ -611,6 +662,33 @@ class OneTagResults(dict):
             if 'param_card' not in self.parton and \
                                     exists(pjoin(path, "param_card.dat")):
                 self.parton.append('param_card')
+            
+            if 'syst' not in self.parton and \
+                                    exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
+                self.parton.append('syst')
+
+            if glob.glob(pjoin(path,"*.top")):
+                if self['run_mode'] in ['LO', 'NLO']:
+                    self.parton.append('top')
+
+        if level in ['shower','all'] and 'shower' not in nolevel \
+          and self['run_mode'] != 'madevent':
+            # this is for hep/top files from amcatnlo
+            if glob.glob(pjoin(path,"*.hep")) + \
+               glob.glob(pjoin(path,"*.hep.gz")):
+                self.shower.append('hep')
+
+            if glob.glob(pjoin(path,"*.hepmc")) + \
+               glob.glob(pjoin(path,"*.hepmc.gz")):
+                self.shower.append('hepmc')
+
+            if glob.glob(pjoin(path,"*.top")):
+                if self['run_mode'] in ['LO', 'NLO']:
+                    self.parton.append('top')
+                else:
+                    self.shower.append('top')
+
+
                 
         if level in ['pythia', 'all']:
             
@@ -628,6 +706,11 @@ class OneTagResults(dict):
                             (exists(pjoin(path,"%s_pythia_events.hep.gz" % tag)) or
                              exists(pjoin(path,"%s_pythia_events.hep" % tag))):
                 self.pythia.append('hep')
+            
+            if 'rwt' not in self.pythia and \
+                            (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_syscalc.dat" % tag))):
+                self.pythia.append('rwt')
             
             if 'root' not in self.pythia and \
                               exists(pjoin(path,"%s_pythia_events.root" % tag)):
@@ -698,10 +781,14 @@ class OneTagResults(dict):
         if level == 'parton':
             if 'gridpack' in self.parton:
                 out += self.special_link("./%(run_name)s_gridpack.tar",
-                                                         'gridpack', 'gridpack')
-            
+                                                    'gridpack', 'gridpack')
             if 'lhe' in self.parton:
-                link = './Events/%(run_name)s/unweighted_events.lhe'
+                if exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe')) or\
+                  exists(pjoin(self.me_dir, 'Events', self['run_name'], 'unweighted_events.lhe.gz')):
+                    link = './Events/%(run_name)s/unweighted_events.lhe'
+                elif exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe')) or\
+                  exists(pjoin(self.me_dir, 'Events', self['run_name'], 'events.lhe.gz')):
+                    link = './Events/%(run_name)s/events.lhe'
                 level = 'parton'
                 name = 'LHE'
                 out += self.special_link(link, level, name) 
@@ -711,9 +798,21 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_parton.html">plots</a>'
             if 'param_card' in self.parton:
                 out += ' <a href="./Events/%(run_name)s/param_card.dat">param_card</a>'
+            if 'top' in self.parton:
+            # fixed order plots
+                for f in \
+                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.top')):
+                    out += " <a href=\"%s\">%s</a> " % (f, 'TOP')
+            #if 'rwt' in self.parton:
+            #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 
             return out % self
         
+        if level == 'reweight':
+            if 'plot' in self.reweight:
+                out += ' <a href="./HTML/%(run_name)s/plots_%(tag)s.html">plots</a>'           
+            return out % self
+
         if level == 'pythia':          
             if 'log' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia.log">LOG</a>"""
@@ -731,10 +830,14 @@ class OneTagResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_events.root">rootfile (LHE)</a>"""
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
+            if 'rwt' in self.pythia:
+                link = './Events/%(run_name)s/%(tag)s_systematics.dat'
+                level = 'pythia'
+                name = 'systematics'
+                out += self.special_link(link, level, name)                 
             if 'plot' in self.pythia:
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             return out % self
-
 
         if level == 'pgs':
             if 'log' in self.pgs:
@@ -751,7 +854,6 @@ class OneTagResults(dict):
             return out % self
         
         if level == 'delphes':
-            
             if 'log' in self.delphes:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_delphes.log">LOG</a>"""
             if 'lhco' in self.delphes:
@@ -764,12 +866,23 @@ class OneTagResults(dict):
             if 'plot' in self.delphes:
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             return out % self
+
+        if level == 'shower':
+        # this is to add the link to the results after shower for amcatnlo
+            for kind in ['hep', 'hepmc', 'top']:
+                if kind in self.shower:
+                    for f in \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
+                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
+                        out += " <a href=\"%s\">%s</a> " % (f, kind.upper())
+            
+            return out % self
                 
     
     def get_nb_line(self):
         
         nb_line = 0
-        for i in [self.parton, self.pythia, self.pgs, self.delphes]:
+        for i in [self.parton, self.reweight, self.pythia, self.pgs, self.delphes, self.shower]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -789,17 +902,30 @@ class OneTagResults(dict):
         # Compute the text for eachsubpart
         
         sub_part_template_parton = """
-        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g </a></center></td>
+        <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g</a> %(syst)s </center></td>
         <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
         </tr>"""
+        
+        sub_part_template_reweight = """
+        <td rowspan=%(cross_span)s><center> %(cross).4g </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""        
         
         sub_part_template_pgs = """
         <td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td> 
         </tr>"""        
+
+        sub_part_template_shower = """
+        <td> %(type)s %(run_mode)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
         
         # Compute the HTMl output for subpart
         nb_line = self.get_nb_line()
@@ -809,10 +935,11 @@ class OneTagResults(dict):
                 self['nb_event'] = runresults[-2]['nb_event']
                 self['cross'] = runresults[-2]['cross']
                 self['error'] = runresults[-2]['error']
-            except:
+            except Exception:
                 pass
                 
-        elif (self.pgs or self.delphes) and not self['nb_event']:
+        elif (self.pgs or self.delphes) and not self['nb_event'] and \
+             len(runresults) > 1:
             if runresults[-2]['cross_pythia'] and runresults[-2]['cross']:
                 self['cross'] = runresults[-2]['cross_pythia']
                 self['error'] = runresults[-2]['error_pythia']
@@ -825,21 +952,30 @@ class OneTagResults(dict):
         
         first = None
         subresults_html = ''
-        for type in ['parton', 'pythia', 'pgs', 'delphes']:
-            data = getattr(self, type)
+        for ttype in ['parton', 'pythia', 'pgs', 'delphes','reweight','shower']:
+            data = getattr(self, ttype)
             if not data:
                 continue
             
-            local_dico = {'type': type, 'run': self['run_name']}
-
+            local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
+            if 'run_mode' in self.keys():
+                local_dico['run_mode'] = self['run_mode']
+            else:
+                local_dico['run_mode'] = ""
             if not first:
-                template = sub_part_template_parton
-                first = type
-                if type=='parton' and self['cross_pythia']:
+                if ttype == 'reweight':
+                    template = sub_part_template_reweight
+                else:
+                    template = sub_part_template_parton
+                first = ttype
+                if ttype=='parton' and self['cross_pythia']:
                     local_dico['cross_span'] = 1
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 elif self['cross_pythia']:
                     if self.parton:
                         local_dico['cross_span'] = nb_line -1
@@ -851,13 +987,20 @@ class OneTagResults(dict):
                         local_dico['nb_event'] = 0
                     local_dico['cross'] = self['cross_pythia']
                     local_dico['err'] = self['error_pythia']
+                    if 'rwt' in self.pythia:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
+                    local_dico['type'] += ' %s' % self['run_mode']
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
+                    if 'syst' in self.parton:
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                     
-            elif type == 'pythia' and self['cross_pythia']:
+            elif ttype == 'pythia' and self['cross_pythia']:
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
@@ -868,16 +1011,26 @@ class OneTagResults(dict):
                 else:
                     local_dico['cross_span'] = nb_line
                     local_dico['nb_event'] = self['nb_event']
+                if 'rwt' in self.pythia:
+                    local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
+                                             % {'run_name':self['run_name'], 'tag': self['tag']}
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
+
+            elif ttype == 'shower':
+                template = sub_part_template_shower
+                if self.parton:           
+                    local_dico['cross_span'] = nb_line - 1
+                else:
+                    local_dico['cross_span'] = nb_line
             else:
-               template = sub_part_template_pgs             
+                template = sub_part_template_pgs             
             
             # Fill the links
-            local_dico['links'] = self.get_links(type)
+            local_dico['links'] = self.get_links(ttype)
 
             # Fill the actions
-            if type == 'parton':
+            if ttype == 'parton':
                 if runresults.web:
                     local_dico['action'] = """
 <FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
@@ -898,8 +1051,40 @@ class OneTagResults(dict):
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
                                                                        % (self['run_name'], self['tag']))
-                    local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
-            elif type == 'pythia':
+                    # this the detector simulation and pythia should be available only for madevent
+                    if self['run_mode'] == 'madevent':
+                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    else: 
+                        pass
+
+            elif ttype == 'shower':
+                if runresults.web:
+                    local_dico['action'] = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+</FORM>"""
+                else:
+                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                    # this the detector simulation and pythia should be available only for madevent
+                    if self['run_mode'] == 'madevent':
+                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                    else: 
+                        pass
+
+            elif ttype == 'pythia':
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
                         local_dico['action'] = """
@@ -939,11 +1124,11 @@ class OneTagResults(dict):
 <INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
 <INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
 <INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove """ + str(type) + """\">
+<INPUT TYPE=SUBMIT VALUE="Remove """ + str(ttype) + """\">
 </FORM>"""
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
-                                                              (self['run_name'], type, self['tag']))
+                                                              (self['run_name'], ttype, self['tag']))
 
             # create the text
             subresults_html += template % local_dico
@@ -982,7 +1167,9 @@ class OneTagResults(dict):
                            'err': self['error'],
                            'nb_event': self['nb_event'] and self['nb_event'] or 'No events yet',
                            'links': 'banner only',
-                           'action': action
+                           'action': action,
+                           'run_mode': '',
+                           'syst':''
                            }                                
                                   
         if self.debug is KeyboardInterrupt:
@@ -1016,6 +1203,8 @@ class OneTagResults(dict):
         
         if command.startswith('pythia'):
             button = 'launch pythia'
+        if command.startswith('shower'):
+            button = 'shower events'
         elif command.startswith('remove banner'):
             button = 'remove banner'
         elif command.startswith('remove'):
@@ -1024,8 +1213,11 @@ class OneTagResults(dict):
             button = 're-run from the banner'
         else:
             button = 'launch detector simulation'
-        
-        header = 'Launch ./bin/madevent in a shell, and run the following command: '
+        if self['run_mode'] == 'madevent':
+            header = 'Launch ./bin/madevent in a shell, and run the following command: '
+        else:
+            header = 'Launch ./bin/aMCatNLO in a shell, and run the following command: '
+
         return "<INPUT TYPE=SUBMIT VALUE='%s' onClick=\"alert('%s')\">" % (button, header + command)
 
 

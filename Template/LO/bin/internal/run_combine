@@ -1,0 +1,15 @@
+#!/bin/bash
+
+rm fail_combine.log &> /dev/null
+for((try=1;try<=16;try+=1)); 
+do
+    ../bin/internal/combine_events 2> fail_combine.log
+    if grep -F "combine_events: No such file or directory" fail_combine.log
+    then
+        sleep 1
+    else
+     	rm fail_combine.log &> /dev/null
+        break
+    fi
+done
+rm -f scratch

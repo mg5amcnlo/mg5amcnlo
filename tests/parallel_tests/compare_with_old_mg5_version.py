@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ A test suite to compare the current version of MG5 with a version of 
@@ -387,7 +387,7 @@ class OLDMG5Comparator(unittest.TestCase):
         values = {'number_of_P0': '1', 
          'number_of_P1': '1', 
          'cross_P0_qq_wpg': '0.27889E+04', 
-         'cross_P1_gg_wpqq': '0.48043E+03'}      
+         'cross_P1_gg_wpqq': '0.45254E+03'}      
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm2.log")

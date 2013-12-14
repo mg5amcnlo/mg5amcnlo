@@ -1,0 +1,34 @@
+th a:link{
+    color:black;
+}
+
+table {
+             border-width: 1px;
+             border-spacing: 0px;
+             border-style: outset;
+             border-color: black;
+             border-collapse: collapse;
+             background-color: white;
+}
+table th {
+             border-width: 2px;
+             padding: 1px;
+             border-style: solid;
+             border-color: black;
+             background-color: white;
+}
+
+table td {
+             border-width: 2px;
+             padding: 1px;
+             border-style: solid;
+             border-color: black;
+}
+
+input {
+            display: inline;
+}
+
+form {
+            display: inline;
+}

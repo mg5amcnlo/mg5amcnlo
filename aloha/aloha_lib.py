@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 ##   Diagram of Class
@@ -47,13 +47,13 @@ from array import array
 import collections
 from fractions import Fraction
 import numbers
+import re
 import aloha # define mode of writting
 
 class defaultdict(collections.defaultdict):
 
     def __call__(self, *args):
         return defaultdict(int)
-
 
 class Computation(dict):
     """ a class to encapsulate all computation. Limit side effect """
@@ -66,6 +66,8 @@ class Computation(dict):
         self.fct_expr = {}
         self.reduced_expr2 = {}
         self.inverted_fct = {}
+        self.has_pi = False # logical to check if pi is used in at least one fct
+        self.unknow_fct = []
         dict.__init__(self)
 
     def clean(self):
@@ -93,7 +95,8 @@ class Computation(dict):
             try:
                 id = self[var]
             except KeyError:
-                id = DVariable(var).get_id()
+                assert var not in ['M','W']
+                id = Variable(var).get_id()
             out.append(id)
         return out
         
@@ -117,12 +120,18 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
+        self.unknow_fct = []
         #return expression
         return new
     
+    known_fct = ['/', 'log', 'pow', 'sin', 'cos', 'asin', 'acos', 'tan', 'cot', 'acot',
+                 'theta_function', 'exp']
     def add_function_expression(self, fct_tag, *args):
 
-        tag = 'FCT%s' % len(self.fct_expr)
+        if not (fct_tag.startswith('cmath.') or fct_tag in self.known_fct or
+                                       (fct_tag, len(args)) in self.unknow_fct):
+            self.unknow_fct.append( (fct_tag, len(args)) )
+        
         argument = []
         for expression in args:
             if isinstance(expression, (MultLorentz, AddVariable, LorentzObject)):
@@ -140,14 +149,24 @@ class Computation(dict):
                 argument.append(new)
             else:
                 argument.append(expression)
+        for arg in argument:
+            val = re.findall(r'''\bFCT(\d*)\b''', str(arg))
+            for v in val:
+                self.add_tag(('FCT%s' % v,))
+            
         if str(fct_tag)+str(argument) in self.inverted_fct:
-            return self.inverted_fct[str(fct_tag)+str(argument)]
-        else: 
+            tag = self.inverted_fct[str(fct_tag)+str(argument)]
+            v = tag.split('(')[1][:-1]
+            self.add_tag(('FCT%s' % v,))
+            return tag
+        else:
+            id = len(self.fct_expr)
+            tag = 'FCT%s' % id
+            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % id
             self.fct_expr[tag] = (fct_tag, argument) 
             self.reduced_expr2[tag] = (fct_tag, argument)
             self.add_tag((tag,))
-            self.inverted_fct[str(fct_tag)+str(argument)] = 'FCT(%s)' % (len(self.fct_expr) -1)
-            return 'FCT(%s)' % (len(self.fct_expr) -1)
+            return 'FCT(%s)' % id
         
 KERNEL = Computation()
 
@@ -170,7 +189,7 @@ class AddVariable(list):
         
     def simplify(self):
         """ apply rule of simplification """
-        
+
         # deal with one length object
         if len(self) == 1:
             return self.prefactor * self[0].simplify()
@@ -180,6 +199,10 @@ class AddVariable(list):
         for term in self[:]:
             pos += 1 # current position in the real self
             if not hasattr(term, 'vartype'):
+                if isinstance(term, dict):
+                    # allow term of type{(0,):x}
+                    assert term.values() == [0]
+                    term = term[(0,)]
                 constant += term
                 del self[pos]
                 pos -= 1
@@ -249,7 +272,7 @@ class AddVariable(list):
         """return a dict with the key being the power associated to each variables
            and the value being the object remaining after the suppression of all
            the variable"""
-        
+
         out = defaultdict(int)
         for obj in self:
             for key, value in obj.split(variables_id).items():
@@ -278,7 +301,6 @@ class AddVariable(list):
            Note that this should be canonical form (this should contains ONLY
            MULTVARIABLE) --so this should be called before a factorize.
         """
-
         new = self.__class__()
         
         for obj in self:
@@ -301,7 +323,11 @@ class AddVariable(list):
         
         for item in self[1:]:
             if self.prefactor == 1:
-                new += item.expand(veto)
+                try:
+                    new += item.expand(veto)
+                except AttributeError:
+                    new = new + item
+                
             else:
                 new += (self.prefactor) * item.expand(veto)
         return new
@@ -406,6 +432,7 @@ class AddVariable(list):
     __radd__ = __add__
     __rmul__ = __mul__ 
 
+
     def __div__(self, obj):
         return self.__mul__(1/obj)
     
@@ -453,7 +480,6 @@ class AddVariable(list):
         max_wgt, maxvar = 0, None
         for var in possibility:
             wgt = sum(w**2 for w in correlation[var].values())/len(correlation[var])
-            #print KERNEL.objs[var], maxnb, wgt,sum(w**2 for w in correlation[var].values())/len(correlation[var])
             if wgt > max_wgt:
                 maxvar = var
                 max_wgt = wgt
@@ -481,7 +507,7 @@ class AddVariable(list):
             for term in self:
                 try:
                     term.remove(maxvar)
-                except:
+                except Exception:
                     constant.append(term)
                 else:
                     if len(term):
@@ -735,6 +761,19 @@ class MultVariable(array):
 #===============================================================================
 # FactoryVar
 #===============================================================================
+class C_Variable(str):
+    vartype=0
+    type = 'complex'
+    
+class R_Variable(str):
+    vartype=0
+    type = 'double'
+
+class ExtVariable(str):
+    vartype=0
+    type = 'parameter'
+
+
 class FactoryVar(object):
     """This is the standard object for all the variable linked to expression.
     """
@@ -753,8 +792,8 @@ class FactoryVar(object):
 
 class Variable(FactoryVar):
     
-    def __new__(self, name):
-        return FactoryVar(name, C_Variable)
+    def __new__(self, name, type=C_Variable):
+        return FactoryVar(name, type)
 
 class DVariable(FactoryVar):
     
@@ -765,19 +804,11 @@ class DVariable(FactoryVar):
             if name[0] in ['M','W'] or name.startswith('OM'):
                 return FactoryVar(name, C_Variable)
         if aloha.loop_mode and name.startswith('P'):
-            return FactoryVar(name, C_Variable)
-        
+            return FactoryVar(name, C_Variable)        
         #Normal case:
         return FactoryVar(name, R_Variable)
 
 
-class C_Variable(str):
-    vartype=0
-    type = 'complex'
-    
-class R_Variable(str):
-    vartype=0
-    type = 'double'
 
 
 #===============================================================================
@@ -808,7 +839,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.lorentz_ind.index(fact.lorentz_ind[j])
-                    except:
+                    except Exception:
                         pass
                     else:
                         out[(i, j)] = (k, l)
@@ -830,7 +861,7 @@ class MultLorentz(MultVariable):
                     fact2 = self[k]
                     try:
                         l = fact2.spin_ind.index(fact.spin_ind[j])
-                    except:                
+                    except Exception:                
                         pass
                     else:
                         out[(i, j)] = (k, l)  
@@ -870,7 +901,7 @@ class MultLorentz(MultVariable):
                 try: 
                     # look in priority in basic_end_point (P/S/fermion/...)
                     current = basic_end_point.pop()
-                except:
+                except Exception:
                     #take one of the remaining
                     current = self.unused.pop()
                 else:
@@ -947,7 +978,7 @@ class LorentzObject(object):
 
         try:
             return self.representation
-        except:
+        except Exception:
             self.create_representation()
         return self.representation
     
@@ -1009,6 +1040,13 @@ class LorentzObjectRepresentation(dict):
         #store the representation
         if self.lorentz_ind or self.spin_ind:
             dict.__init__(self, representation) 
+        elif isinstance(representation,dict):
+            if len(representation) == 0:
+                self[(0,)] = 0
+            elif len(representation) == 1 and (0,) in representation:
+                self[(0,)] = representation[(0,)]
+            else:
+                raise self.LorentzObjectRepresentationError("There is no key of (0,) in representation.")                    
         else:
             self[(0,)] = representation
 
@@ -1209,7 +1247,7 @@ class LorentzObjectRepresentation(dict):
                     #compute the prefactor due to the lorentz contraction
                     try:
                         factor.prefactor *= (-1) ** (len(l_value) - l_value.count(0))
-                    except:
+                    except Exception:
                         factor *= (-1) ** (len(l_value) - l_value.count(0))
                     out += factor                        
         return out
@@ -1393,6 +1431,7 @@ class SplitCoefficient(dict):
         
     def get_max_rank(self):
         """return the highest rank of the coefficient"""
+        
         return max([max(arg[:4]) for arg in self])
 
       

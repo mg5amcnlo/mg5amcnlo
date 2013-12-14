@@ -9,9 +9,11 @@ logger = logging.getLogger('madgraph.models') # -> stdout
 
 try:
     import madgraph.iolibs.file_writers as file_writers
+    import madgraph.various.misc as misc    
 except:
     import internal.file_writers as file_writers
-
+    import internal.misc as misc
+    
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
     pass
@@ -73,6 +75,7 @@ class Parameter (object):
             if self.lhablock == 'modsel':
                 self.format = 'int'
                 self.value = int(self.value)
+
     def load_decay(self, text):
         """ initialize the decay information from a str"""
 
@@ -85,7 +88,10 @@ class Parameter (object):
         data = data.split()
         if not len(data):
             return
-        self.lhacode = tuple([int(d) for d in data[1:]])
+        self.lhacode = [int(d) for d in data[2:]]
+        self.lhacode.sort()
+        self.lhacode = tuple([len(self.lhacode)] + self.lhacode)
+        
         self.value = float(data[0]) 
         self.format = 'decay_table'
 
@@ -104,10 +110,13 @@ class Parameter (object):
         elif self.format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif self.format == 'str':
+            if self.lhablock == 'decay':
+                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
-        
+        elif self.format == 'int':
+            return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         else:
             if self.lhablock == 'decay':
                 return 'DECAY %s %d # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
@@ -137,7 +146,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise
+                raise KeyError, 'id %s is not in %s' % (tuple(lhacode), self.name)
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
@@ -147,13 +156,27 @@ class Block(list):
         list.remove(self, self.get(lhacode))
         # update the dictionary of key
         return self.param_dict.pop(tuple(lhacode))
+    
+    def __eq__(self, other, prec=1e-4):
+        """ """
+        if len(self) != len(other):
+            return False
+        return not any(abs(param.value-other.param_dict[key].value)> prec
+                        for key, param in self.param_dict.items())
+        
+    def __ne__(self, other, prec=1e-4):
+        return not self.__eq__(other, prec)
         
     def append(self, obj):
         
         assert isinstance(obj, Parameter)
         assert not obj.lhablock or obj.lhablock == self.name
 
-        
+        #The following line seems/is stupid but allow to pickle/unpickle this object
+        #this is important for madspin (in gridpack mode)
+        if not hasattr(self, 'param_dict'):
+            self.param_dict = {}
+            
         if tuple(obj.lhacode) in self.param_dict:
             if self.param_dict[tuple(obj.lhacode)].value != obj.value:
                 raise InvalidParamCard, '%s %s is already define to %s impossible to assign %s' % \
@@ -232,6 +255,7 @@ class Block(list):
 
 class ParamCard(dict):
     """ a param Card: list of Block """
+    mp_prefix = 'MP__'
 
     header = \
     """######################################################################\n""" + \
@@ -252,7 +276,7 @@ class ParamCard(dict):
         if isinstance(input_path, str):
             input = open(input_path)
         else:
-            input = input_path # helpfull for the test
+            input = input_path #Use for banner loading and test
 
 
         cur_block = None
@@ -294,7 +318,10 @@ class ParamCard(dict):
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
-                cur_block.append(param)
+                try:
+                    cur_block.append(param)
+                except InvalidParamCard:
+                    pass
             else:
                 param = Parameter()
                 param.set_block(cur_block.name)
@@ -311,11 +338,31 @@ class ParamCard(dict):
         text = self.header
         text += ''.join([str(block) for block in blocks])
 
-        if isinstance(outpath, str):
+        if not outpath:
+            return text
+        elif isinstance(outpath, str):
             file(outpath,'w').write(text)
         else:
             outpath.write(text) # for test purpose
-            
+    
+    def create_diff(self, new_card):
+        """return a text file allowing to pass from this card to the new one
+           via the set command"""
+        
+        diff = ''
+        for blockname, block in self.items():
+            for param in block:
+                lhacode = param.lhacode
+                value = param.value
+                new_value = new_card[blockname].get(lhacode).value
+                if not misc.equal(value, new_value, 6, zero_limit=False):
+                    lhacode = ' '.join([str(i) for i in lhacode])
+                    diff += 'set param_card %s %s %s # orig: %s\n' % \
+                                       (blockname, lhacode , new_value, value)
+        return diff 
+                
+        
+    
             
     def write_inc_file(self, outpath, identpath, default):
         """ write a fortran file which hardcode the param value"""
@@ -345,17 +392,15 @@ class ParamCard(dict):
                                    (block, lhaid, value))
             value = str(value).lower()
             fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
-            
-        
         
                 
-    def append(self, object):
+    def append(self, obj):
         """add an object to this"""
         
-        assert isinstance(object, Block)
-        self[object.name] = object
-        if not object.name.startswith('decay_table'): 
-            self.order.append(object)
+        assert isinstance(obj, Block)
+        self[obj.name] = obj
+        if not obj.name.startswith('decay_table'): 
+            self.order.append(obj)
         
         
         
@@ -476,6 +521,37 @@ class ParamCard(dict):
                 error_msg += 'Parameter %s %s should be %s' % (block, lhacode, value)
                 raise InvalidParamCard, error_msg   
             self.remove_param(block, lhacode)
+
+
+class ParamCardMP(ParamCard):
+    """ a param Card: list of Block with also MP definition of variables"""
+            
+    def write_inc_file(self, outpath, identpath, default):
+        """ write a fortran file which hardcode the param value"""
+        
+        fout = file_writers.FortranWriter(outpath)
+        defaultcard = ParamCard(default)
+        for line in open(identpath):
+            if line.startswith('c  ') or line.startswith('ccccc'):
+                continue
+            split = line.split()
+            if len(split) < 3:
+                continue
+            block = split[0]
+            lhaid = [int(i) for i in split[1:-1]]
+            variable = split[-1]
+            if block in self:
+                try:
+                    value = self[block].get(tuple(lhaid)).value
+                except KeyError:
+                    value =defaultcard[block].get(tuple(lhaid)).value
+            else:
+                value =defaultcard[block].get(tuple(lhaid)).value
+            #value = str(value).lower()
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
+            fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
+                variable, ('%e' % value)))
+
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of
@@ -778,7 +854,10 @@ def convert_to_slha1(path, outputpath=None ):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
-
+    if not 'usqmix' in card:
+        #already slha1
+        card.write(outputpath)
+        return
         
     # Mass 
     #card.reorder_mass() # needed?
@@ -948,6 +1027,10 @@ def convert_to_mg5card(path, outputpath=None, writting=True):
     if not outputpath:
         outputpath = path
     card = ParamCard(path)
+    if 'usqmix' in card:
+        #already mg5(slha2) format
+        card.write(outputpath)
+        return
 
         
     # SMINPUTS

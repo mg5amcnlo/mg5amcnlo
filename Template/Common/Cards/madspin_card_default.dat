@@ -1,0 +1,25 @@
+#************************************************************
+#*                        MadSpin                           *
+#*                                                          *
+#*    P. Artoisenet, R. Frederix, R. Rietkerk, O. Mattelaer * 
+#*                                                          *
+#*    Part of the MadGraph5_aMC@NLO Framework:              *
+#*    The MadGraph5_aMC@NLO Development Team - Find us at   *
+#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+#*                                                          *
+#************************************************************
+#Some options (uncomment to apply)
+#
+# set seed 1
+# set Nevents_for_max_weigth 75 # number of events for the estimate of the max. weight
+# set BW_cut 15                # cut on how far the particle can be off-shell
+ set max_weight_ps_point 400  # number of PS to estimate the maximum for each event
+# 
+# specify the decay for the final state particles
+decay t > w+ b, w+ > all all
+decay t~ > w- b~, w- > all all
+decay w+ > all all
+decay w- > all all
+decay z > all all
+# running the actual code
+launch

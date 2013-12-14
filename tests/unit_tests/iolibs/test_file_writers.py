@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -34,9 +34,26 @@ class CheckFileCreate():
 
     def assertFileContains(self, filename, solution):
         """ Check the content of a file """
-
+        
         current_value = open(self.give_pos(filename)).read()
-        self.assertEqual(current_value.split('\n'), solution.split('\n'))
+        list_cur=current_value.split('\n')
+        list_sol=solution.split('\n')
+        while 1:
+            if '' in list_sol:
+                list_sol.remove('')
+            else:
+                break
+        while 1:
+            if '' in list_cur:
+                list_cur.remove('')
+            else:
+                break            
+        for a, b in zip(list_sol, list_cur):
+            self.assertEqual(a,b)
+        #for a, b in zip(current_value.split('\n'), solution.split('\n')):
+        #    self.assertEqual(a,b)
+        #self.assertEqual(current_value.split('\n'), solution.split('\n'))
+        self.assertEqual(len(list_sol), len(list_cur))
 
     def give_pos(self, filename):
         """ take a name and a change it in order to have a valid path in the output directory """
