@@ -322,6 +322,14 @@ class TestMECmdShell(unittest.TestCase):
 class TestMEfromfile(unittest.TestCase):
     """test that we can launch everything from a single file"""
 
+    def setUp(self):
+        
+        self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
+        self.run_dir = pjoin(self.path, 'MGPROC') 
+    
+    def tearDown(self):
+
+        shutil.rmtree(self.path)
 
     def test_add_time_of_flight(self):
         """checking time of flight is working fine"""
@@ -348,25 +356,31 @@ class TestMEfromfile(unittest.TestCase):
         cmd = """import model sm
                 set automatic_html_opening False --no-save
                  generate p p > w+ z
-                 output /tmp/MGPROCESS -f -nojpeg
+                 output %s -f -nojpeg
                  launch -i 
                  generate_events
                  parton
                  set nevents 100
                  add_time_of_flight --threshold=3e-26
                  pythia
-                 """
-        open('/tmp/mg5_cmd','w').write(cmd)
+                 """ %self.run_dir
+        open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
         
-        devnull =open(os.devnull,'w')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
-                         '/tmp/mg5_cmd'],
-                         cwd=pjoin(_file_path, os.path.pardir),
-                        stdout=devnull, stderr=devnull)
+                         pjoin(self.path, 'mg5_cmd')],
+                         #cwd=self.path,
+                        stdout=stdout, stderr=stderr)
 
         self.check_parton_output(cross=17.21, error=0.19)
         self.check_pythia_output()
-        event = '/tmp/MGPROCESS/Events/run_01/unweighted_events.lhe'
+        event = '%s/Events/run_01/unweighted_events.lhe' % self.run_dir
         if not os.path.exists(event):
             os.system('gunzip %s.gz' % event)
         
@@ -384,9 +398,82 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue(has_non_zero)
         
         
+
+    def test_w_production_with_ms_decay(self):
+        """A run to test madspin (inline and offline) on p p > w+ and p p > w-"""
         
+        cwd = os.getcwd()
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
 
-
+        if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs')):
+            p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
+                             stdin=subprocess.PIPE,
+                             stdout=stdout,stderr=stderr)
+            out = p.communicate('install pythia-pgs')
+        misc.compile(cwd=pjoin(MG5DIR,'pythia-pgs'))
+        if logging.getLogger('madgraph').level > 20:
+            stdout = devnull
+        else:
+            stdout= None
+            
+        #
+        #  START REAL CODE
+        #
+        command = open(pjoin(self.path, 'cmd'), 'w')
+        command.write("""import model sm
+        generate p p > w+ 
+        add process p p > w-
+        output %(path)s
+        launch
+        madspin=ON
+        pythia=ON
+        %(path)s/../madspin_card.dat
+        set nevents 1000
+        launch -i
+        decay_events run_01 
+        %(path)s/../madspin_card2.dat
+        """ % {'path':self.run_dir})
+        command.close()
+        
+        fsock = open(pjoin(self.path, 'madspin_card.dat'), 'w')
+        fsock.write("""decay w+ > j j
+        decay w- > e- ve~
+        launch
+        """)
+        fsock.close()
+        fsock = open(pjoin(self.path, 'madspin_card2.dat'), 'w')
+        fsock.write("""decay w+ > j j
+        decay w- > j j
+        launch
+        """)
+        fsock.close()
+                
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
+                         pjoin(self.path, 'cmd')],
+                         cwd=pjoin(_file_path, os.path.pardir),
+                        stdout=stdout,stderr=stdout)     
+        
+        #a=rwa_input('freeze')
+        self.check_parton_output(cross=1.634e+05, error=7.4e+02,target_event=1000)
+        self.check_parton_output('run_01_decayed_1', cross=7.167e+04, error=3.3e+02,target_event=1000)
+        print '\nMS info: the number of events in the html file is not (always) correct after MS\n'
+        self.check_parton_output('run_01_decayed_2', cross=1.089e+05, error=5e+02,target_event=1000)
+        self.check_pythia_output(run_name='run_01_decayed_1')
+        
+        #check the first decayed events for energy-momentum conservation.
+        
+        
+        self.assertEqual(cwd, os.getcwd())
+        
+        
+        
     def test_generation_from_file_1(self):
         """ """
         cwd = os.getcwd()
@@ -414,9 +501,14 @@ class TestMEfromfile(unittest.TestCase):
         else:
             stdout= None
 
+        fsock = open(pjoin(self.path, 'test_mssm_generation'),'w')
+        fsock.write(open(pjoin(_file_path, 'input_files','test_mssm_generation')).read() %
+                    {'dir_name': self.run_dir, 'mg5_path':pjoin(_file_path, os.path.pardir)})
+        fsock.close()
+
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
-                         pjoin(_file_path, 'input_files','test_mssm_generation')],
-                         cwd=pjoin(_file_path, os.path.pardir),
+                         pjoin(self.path, 'test_mssm_generation')],
+                         #cwd=pjoin(self.path),
                         stdout=stdout,stderr=stdout)
         
         self.check_parton_output(cross=4.541638, error=0.035)
@@ -430,7 +522,7 @@ class TestMEfromfile(unittest.TestCase):
         import madgraph.iolibs.save_load_object as save_load_object
         import madgraph.various.gen_crossxhtml as gen_crossxhtml
         
-        result = save_load_object.load_from_file('/tmp/MGPROCESS/HTML/results.pkl')
+        result = save_load_object.load_from_file(pjoin(self.run_dir,'HTML/results.pkl'))
         return result[run_name]
 
     def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
@@ -438,7 +530,8 @@ class TestMEfromfile(unittest.TestCase):
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertEqual(int(data[0]['nb_event']), target_event)
+        if target_event > 0:
+            self.assertEqual(int(data[0]['nb_event']), target_event)
         self.assertTrue('lhe' in data[0].parton)
         
         if cross:
@@ -467,7 +560,7 @@ class TestMEfromfile(unittest.TestCase):
         cmd.run_cmd('set automatic_html_opening False --no_save')
         cmd.run_cmd('generate w+ > all all')
         self.assertEqual(cmd.cmd.__name__, 'MadGraphCmd')
-        cmd.run_cmd('output  /tmp/MGPROCESS -f')
+        cmd.run_cmd('output  %s -f' % self.run_dir)
         cmd.run_cmd('launch -f')
         data = self.load_result('run_01')
         self.assertNotEqual(data[0]['cross'], 0)

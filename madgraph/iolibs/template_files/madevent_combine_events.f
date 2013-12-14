@@ -39,7 +39,7 @@ c
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
       double precision xdum,rxsec
       integer i4,r8,record_length
-      integer iseed
+      integer jseed,iseed
       real xran1
       double precision wgt,maxwgt
       double precision p(0:4,maxexternal)
@@ -63,7 +63,7 @@ c
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
       data s_buff/7*''/
-      data iseed/-1/
+      data jseed/-1/
       data buffclus/max_particles*' '/
 c-----
 c  Begin Code
@@ -147,7 +147,7 @@ c     Get Random order for events
 c
       do i=1,kevent
          iarray(i)=i
-         xarray(i)=xran1(iseed)
+         xarray(i)=xran1(jseed)
       enddo
       call sortO3(xarray,iarray,kevent)
 c
@@ -205,7 +205,7 @@ c
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &        buff
-            if (dabs(wgt) .gt. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
                nunwgt=nunwgt+1
                if (dabs(wgt) .gt. goal_wgt) then
@@ -586,7 +586,7 @@ c
       real xwgt(max_read),xtot
       integer i,j,k,m, ic(7,maxexternal),n
       double precision sscale,aqcd,aqed,tmpsum
-      integer ievent,iseed
+      integer ievent,jseed
       logical done,found
       character*300 buff
       logical u_syst
@@ -614,7 +614,7 @@ c
 c
 c     data
 c
-      data iseed/-1/
+      data jseed/-1/
 c-----
 c  Begin Code
 c-----     
@@ -648,7 +648,7 @@ c
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
             if (dabs(wgt) .gt. maxwgt) maxwgt=dabs(wgt)
-            if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .ge. goal_wgt*xran1(jseed)) then
                kevent=kevent+1
                if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
                write(sfnum,rec=kevent) wgt,n,

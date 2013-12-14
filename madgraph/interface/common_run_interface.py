@@ -621,7 +621,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'param_card.dat'
         elif 'herwig++' in text:
             return 'shower_card.dat'
-        elif 'decay' in text and 'launch' in text and 'madspin' in text:
+        elif 'decay' in text and 'launch' in text:
             return 'madspin_card.dat'
         elif 'launch' in text and 'set' in text:
             return 'reweight_card.dat'
