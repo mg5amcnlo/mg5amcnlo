@@ -131,13 +131,15 @@ def format_path(path):
     else:
         return os.path.sep + os.path.join(*path.split('/'))
     
-def cp(path1, path2, log=True):
+def cp(path1, path2, log=True, error=False):
     """ simple cp taking linux or mix entry"""
     path1 = format_path(path1)
     path2 = format_path(path2)
     try:
         shutil.copy(path1, path2)
     except IOError, why:
+        if error:
+            raise
         if log:
             logger.warning(why)
     except shutil.Error:

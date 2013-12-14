@@ -1,5 +1,7 @@
 Update notes for MadGraph 5 (in reverse time order)
 
+1.5.15 (11/12/13) OM: Fix the auto-update function in order to allow to pass to 2.0.0
+
 1.5.14 (27/11/13) OM: Add warning about the fact that newprocess_mg5 is going to be remove in MG5_aMC_V2.0.0
                   OM: Improved cluster submision/re-submition control. 
 
