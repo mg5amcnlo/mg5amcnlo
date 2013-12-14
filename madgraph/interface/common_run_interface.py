@@ -596,7 +596,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin|set)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -623,9 +623,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'decay' in text and 'launch' in text and 'madspin' in text:
             return 'madspin_card.dat'
+        elif 'launch' in text and 'set' in text:
+            return 'reweight_card.dat'
         else:
             return 'unknown'
 
+
+    ############################################################################
+    def get_available_tag(self):
+        """create automatically a tag"""
+        
+        used_tags = [r['tag'] for r in self.results[self.run_name]]
+        i=0
+        while 1:
+            i+=1
+            if 'tag_%s' %i not in used_tags:
+                return 'tag_%s' % i
+   
+    
     ############################################################################
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot""" 
@@ -1307,7 +1322,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
             self.set_configuration(config_path=me5_config, final=False, initdir=self.me_dir)
                 
-            if self.options.has_key('mg5_path'):
+            if self.options.has_key('mg5_path') and self.options['mg5_path']:
                 MG5DIR = self.options['mg5_path']
                 config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
                 self.set_configuration(config_path=config_file, final=False,initdir=MG5DIR)
@@ -1372,6 +1387,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         continue
                 self.options[key] = None
             elif key.startswith('cluster') and key != 'cluster_status_update':
+                if key in ('cluster_nb_retry','cluster_wait_retry'):
+                    self.options[key] = int(self.options[key])
+                if hasattr(self,'cluster'):
+                    del self.cluster
                 pass              
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:

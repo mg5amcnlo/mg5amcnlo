@@ -666,11 +666,11 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
             raise
         
     # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, final=False):
         
         """Force to use the web configuration file only"""
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return Switcher.set_configuration(self, config_path=config_path)
+        return Switcher.set_configuration(self, config_path=config_path, final=final)
     
     def do_save(self, line, check=True, **opt):
         """Save information to file"""

@@ -1,0 +1,139 @@
+C----------------------------------------------------------------------
+      SUBROUTINE RCLOS()
+C     DUMMY IF HBOOK IS USED
+C----------------------------------------------------------------------
+      END
+
+
+C----------------------------------------------------------------------
+      SUBROUTINE HWABEG
+C     USER'S ROUTINE FOR INITIALIZATION
+C----------------------------------------------------------------------
+      INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
+      integer i,kk,l
+      character*5 cc(2)
+      data cc/'     ','     '/
+      integer nwgt,max_weight,nwgt_analysis
+      common/cnwgt/nwgt
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      character*15 weights_info(max_weight)
+      common/cwgtsinfo/weights_info
+c
+      call inihist
+      nwgt_analysis=nwgt
+      do i=1,1
+      do kk=1,nwgt_analysis
+      l=(kk-1)*2+(i-1)*1
+      call mbook(l+ 1,'total rate '//weights_info(kk)//cc(i)
+     &     ,1.d0,0.d0,1.d0)
+      enddo
+      enddo
+ 999  END
+C----------------------------------------------------------------------
+      SUBROUTINE HWAEND
+C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C----------------------------------------------------------------------
+      INCLUDE 'HERWIG65.INC'
+      REAL*8 XNORM
+      INTEGER I,KK,l,nwgt_analysis
+      integer NPL
+      parameter(NPL=15000)
+      common/c_analysis/nwgt_analysis
+      OPEN(UNIT=99,FILE='HERWIG.TOP',STATUS='UNKNOWN')
+C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
+C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
+      XNORM=1.D3/DFLOAT(NEVHEP)
+      DO I=1,NPL              
+ 	CALL MFINAL3(I)             
+        CALL MCOPY(I,I+NPL)
+        CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
+ 	CALL MFINAL3(I+NPL)             
+      ENDDO                          
+C
+      do i=1,1
+      do kk=1,nwgt_analysis
+      l=(kk-1)*2+(i-1)*1
+      call multitop(NPL+l+ 1,NPL-1,3,2,'total rate ',' ','LIN')
+      enddo
+      enddo
+      CLOSE(99)
+      END
+
+C----------------------------------------------------------------------
+      SUBROUTINE HWANAL
+C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C----------------------------------------------------------------------
+      INCLUDE 'HERWIG65.INC'
+      include 'reweight0.inc'
+      INTEGER KK,i,l
+      real*8 tot
+      data tot/0.5d0/
+      integer nwgt_analysis,max_weight
+      common/c_analysis/nwgt_analysis
+      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      double precision ww(max_weight),www(max_weight)
+      common/cww/ww
+c
+      IF (IERROR.NE.0) RETURN
+      IF (WW(1).EQ.0D0) THEN
+         WRITE(*,*)'WW(1) = 0. Stopping'
+         STOP
+      ENDIF
+c
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C EFFECT, SO THROW THE EVENT AWAY
+      IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
+        CALL HWWARN('HWANAL',111)
+        GOTO 999
+      ENDIF
+      DO I=1,nwgt_analysis
+         WWW(I)=EVWGT*ww(i)/ww(1)
+      ENDDO
+C
+      do i=1,1
+         do kk=1,nwgt_analysis
+            l=(kk-1)*2+(i-1)*1
+            call mfill(l+1,tot,WWW(kk))
+         enddo
+      enddo
+C
+ 999  END
+
+
+      function getrapidity(en,pl)
+      implicit none
+      real*8 getrapidity,en,pl,tiny,xplus,xminus,y
+      parameter (tiny=1.d-5)
+c
+      xplus=en+pl
+      xminus=en-pl
+      if(xplus.gt.tiny.and.xminus.gt.tiny)then
+        if( (xplus/xminus).gt.tiny )then
+          y=0.5d0*log( xplus/xminus )
+        else
+          y=sign(1.d0,pl)*1.d8
+        endif
+      else
+        y=sign(1.d0,pl)*1.d8
+      endif
+      getrapidity=y
+      return
+      end
+
+      function getpseudorap(en,ptx,pty,pl)
+      implicit none
+      real*8 getpseudorap,en,ptx,pty,pl,tiny,pt,eta,th
+      parameter (tiny=1.d-5)
+c
+      pt=sqrt(ptx**2+pty**2)
+      if(pt.lt.tiny.and.abs(pl).lt.tiny)then
+        eta=sign(1.d0,pl)*1.d8
+      else
+        th=atan2(pt,pl)
+        eta=-log(tan(th/2.d0))
+      endif
+      getpseudorap=eta
+      return
+      end

@@ -155,6 +155,10 @@ Parameters              alpha_s
       DOUBLE PRECISION WGT
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      REAL*4 TBEFORE, TAFTER
+      REAL*4 TTOT, TOLP, TFASTJET, TPDF
+      COMMON/TIMINGS/TTOT, TOLP, TFASTJET, TPDF
+      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -175,11 +179,13 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
         STOP
       ENDIF
-
+      CALL CPU_TIME(TAFTER)
+      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 
 """
+
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_real_me_wrapper(\
             writers.FortranWriter(self.give_pos('test')),

@@ -594,7 +594,7 @@ do
  let "iDM+=1"
  DM=( $DM )
  num_of_part=$(echo ${#DM[@]})
- let "num_of_part-=4"
+ let "num_of_part-=6"
 
  if [ $num_of_part = 2 ]
  then

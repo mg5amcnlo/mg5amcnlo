@@ -48,9 +48,12 @@
 #!  0: No time limit
 # timeout = 60
 
-#! Pythia8 Path.
-#!  Define the path to the pythia8 directory.
-#!  relative path start from mg5 directory
+#! Pythia8 path.
+#!  Defines the path to the pythia8 directory.
+#!  This is the directory that contains the subdirectory examples;
+#!  in particular, it is crucial that the file
+#   pythia8_path/examples/config.sh be present.
+#!  If using a relative path, that starts from the mg5 directory
 # pythia8_path = ./pythia8
 
 #! Herwig++ paths

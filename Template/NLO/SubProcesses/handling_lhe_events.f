@@ -105,7 +105,10 @@ c Replace the random number seed with the one used...
             write(buffer,'(i11,a)')iseed,' =  iseed'
 c Update the number of events
          elseif (index(buffer_lc,'nevents').ne.0 .and.
-     &           buffer(1:1).ne.'#') then
+     &           buffer(1:1).ne.'#' .and.
+     &           ( index(buffer_lc,'!').eq.0 .or.
+     &             index(buffer_lc,'!').gt.index(buffer_lc,'nevents')
+     &           )) then
             write(buffer,'(i11,a)')nevents,' = nevents'
          elseif (index(buffer_lc,'reweight_pdf').ne.0 .and.
      $           index(buffer_lc,'.true.').ne.0 .and.

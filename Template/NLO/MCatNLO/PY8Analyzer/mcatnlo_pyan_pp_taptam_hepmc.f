@@ -132,12 +132,12 @@ C EFFECT, SO THROW THE EVENT AWAY
         ID1=IDHEP(IHEP)
          ISLP=ID1.EQ.IDENT
          ISLM=ID1.EQ.-IDENT
-         IF(IST.EQ.1.AND.NLM.EQ.0.AND.ISLM)THEN
+         IF(NLM.EQ.0.AND.ISLM)THEN
             NLM=NLM+1
             ILL=IHEP
             FOUNDM=.TRUE.
          ENDIF
-         IF(IST.EQ.1.AND.NLP.EQ.0.AND.ISLP)THEN
+         IF(NLP.EQ.0.AND.ISLP)THEN
             NLP=NLP+1
             ILLB=IHEP
             FOUNDP=.TRUE.

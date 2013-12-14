@@ -513,6 +513,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                 if has_cms.search(line):
                     complex_mass = True
+            elif line.startswith('define'):
+                try:
+                    self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except Exception:
+                    pass 
                           
         info = self.banner.get('proc_card', 'full_model_line')
         if '-modelname' in info:

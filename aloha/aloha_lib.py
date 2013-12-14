@@ -67,6 +67,7 @@ class Computation(dict):
         self.reduced_expr2 = {}
         self.inverted_fct = {}
         self.has_pi = False # logical to check if pi is used in at least one fct
+        self.unknow_fct = []
         dict.__init__(self)
 
     def clean(self):
