@@ -559,7 +559,6 @@ c
 c
 c     Write events to lun
 c
-      write(*,*) 'Writing event'
       if(q2fact(1).gt.0.and.q2fact(2).gt.0)then
          sscale = sqrt(max(q2fact(1),q2fact(2)))
       else if(q2fact(1).gt.0)then
