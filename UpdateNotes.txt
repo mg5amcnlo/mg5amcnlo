@@ -6,7 +6,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       OM: Change the Higgs mass to 125 GeV for most of the model (but the susy/v4 one).
                       OM: Change the default energy of collision to 13 TeV.
                       RF: Default renormalisation and factorisation scales are now set to H_T/2. (for aMC only)
-                   
+
                    MadEvent Update:
                    ----------------
                       OM+SF+RF: Add Frixione Photon isolation (also for aMC)
@@ -51,6 +51,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                      
                   aMC Update:
                   -----------
+                       PT: MC@NLO matching to PYTHIA8 available.
                        RF: Added FxFx merging
                        RF: Use MC over helicities for the MadLoop virtual corrections.
                        RF: Using "virtual tricks" to reduce the number of PS points for which to include
