@@ -1,15 +1,15 @@
 ##############################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Basic test of the command interface """
@@ -17,14 +17,19 @@
 import unittest
 import madgraph
 import madgraph.interface.master_interface as cmd
+import MadSpin.interface_madspin as ms_cmd
 import madgraph.interface.extended_cmd as ext_cmd
+import madgraph.various.misc as misc
 import os
+import logging
 
-
+import tests.unit_tests.various.test_aloha as test_aloha
 class TestValidCmd(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     
-    cmd = cmd.MasterCmd()
+    def setUp(self):
+        if not hasattr(self, 'cmd'):
+            TestValidCmd.cmd = cmd.MasterCmd()
     
     def wrong(self,*opt):
         self.assertRaises(madgraph.MadGraph5Error, *opt)
@@ -67,8 +72,8 @@ class TestValidCmd(unittest.TestCase):
         display particles
         generate p p > go go"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history
-        self.cmd.clean_history(remove_bef_last='generate', keep_switch=True,
+        self.cmd.history[:] = history
+        self.cmd.history.clean(remove_bef_last='generate', keep_switch=True,
                      allow_for_removal= ['generate', 'add process', 'output'])
 
         goal = """set cluster_queue 2
@@ -93,9 +98,9 @@ class TestValidCmd(unittest.TestCase):
         generate p p > go go
         import heft"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history        
+        self.cmd.history[:] = history        
         
-        self.cmd.clean_history(remove_bef_last='import', keep_switch=True,
+        self.cmd.history.clean(remove_bef_last='import', keep_switch=True,
                         allow_for_removal=['generate', 'add process', 'output'])
 
         # Test the call present in do_import model
@@ -121,9 +126,9 @@ class TestValidCmd(unittest.TestCase):
         launch
         output"""
         history = [l.strip() for l in  history.split('\n')]
-        self.cmd.history = history         
+        self.cmd.history[:] = history         
         
-        self.cmd.clean_history(allow_for_removal = ['output'], keep_switch=True,
+        self.cmd.history.clean(allow_for_removal = ['output'], keep_switch=True,
                            remove_bef_last='output')
 
         goal="""set cluster_queue 2
@@ -136,9 +141,31 @@ class TestValidCmd(unittest.TestCase):
         goal = [l.strip() for l in  goal.split('\n')]
         self.assertEqual(self.cmd.history, goal)
     
-    
-    
-    
+    def test_InvalidCmd(self):
+        """test that the Invalid Command are dealt with correctly"""
+        
+        master = cmd.MasterCmd()
+        self.assertRaises(master.InvalidCmd, master.do_generate,('aa'))
+        try:
+            master.run_cmd('aa')
+        except Exception, error:
+            print error
+            self.assertTrue(False, 'error are not treated correctly')
+        
+        # Madspin
+        master = ms_cmd.MadSpinInterface()
+        self.assertRaises(Exception, master.do_define,('aa'))
+        
+        with misc.MuteLogger(['fatalerror'], [40],['/tmp/fatalerror.log'], keep=False):
+            try:
+                master.run_cmd('define aa')
+            except Exception, error:
+                self.assertTrue(False, 'error are not treated correctly: %s' % error)
+            text = open('/tmp/fatalerror.log').read()
+            self.assertTrue('{' not in text)
+            self.assertTrue('MS_debug' in text)
+
+
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of
@@ -161,14 +188,14 @@ class TestValidCmd(unittest.TestCase):
                         categories_nb[cat] += 1
                     else:
                         categories_nb[cat] = 1
-                
-        target = set(['Not in help'])
+
+        target = set(['Not in help', 'Main commands', 'Documented commands'])
         self.assertEqual(target, category)
-        self.assertEqual(categories_nb['Not in help'], 2)
+        self.assertEqual(categories_nb['Not in help'], 25)
     
     
     
-    
+    @test_aloha.set_global()
     def test_check_generate(self):
         """check if generate format are correctly supported"""
     
@@ -193,6 +220,7 @@ class TestValidCmd(unittest.TestCase):
         self.wrong(cmd.check_process_format, 'e+ > ')
         self.wrong(cmd.check_process_format, 'e+ >')
         
+    @test_aloha.set_global()
     def test_output_default(self):
         """check that if a export_dir is define before an output
            a new one is propose"""
@@ -237,6 +265,47 @@ class TestExtendedCmd(unittest.TestCase):
         self.assertEqual(main.child, None)
         #ret = main.do_quit('')
         #self.assertEqual(ret, True)        
-         
-    
 
+class TestMadSpinFCT_in_interface(unittest.TestCase):
+    """ check if the ValidCmd works correctly """
+    
+    def setUp(self):
+        if not hasattr(self, 'cmd'):
+            TestMadSpinFCT_in_interface.cmd = cmd.MasterCmd()
+            TestMadSpinFCT_in_interface.cmd.exec_cmd('import model sm')
+            
+            
+    def test_get_final_part(self):
+        """ """
+        
+        output = self.cmd.get_final_part(' p p > e+ e-')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > e+ e- QED=2')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e-')
+        self.assertEqual(output, set([-11, 11]))        
+          
+        output = self.cmd.get_final_part(' p p > z > e+ e- / a')
+        self.assertEqual(output, set([-11, 11]))
+
+        output = self.cmd.get_final_part(' p p > z > e+ e- [QCD]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > e+ e- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11]))
+        
+        output = self.cmd.get_final_part(' p p > z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13]))
+        
+        output = self.cmd.get_final_part(' p p > z j, z > l+ l- [ all = QCD ]')
+        self.assertEqual(output, set([-11, 11, -13, 13, 1, 2, 3, 4, 21, -1, -2,-3,-4]))
+        
+        output = self.cmd.get_final_part(' p p > t t~ [ all = QCD ] , (t > b z, z > l+ l-) ')
+        self.assertEqual(output, set([-11, 11, -13, 13, -6, 5]))        
+        
+        

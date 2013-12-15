@@ -1,0 +1,144 @@
+MadGraph/MadEvent 5
+By Fabio Maltoni, Tim Stelzer and the CP3 development team
+
+http://madgraph.phys.ucl.ac.be/
+http://madgraph.hep.uiuc.edu/
+http://madgraph.roma2.infn.it/
+
+Technical Details for Setting Up and Running Gridpacks:
+(see http://cp3wks05.fynu.ucl.ac.be/twiki/bin/view/Library/GridDevelopment)
+
+Using the option
+   .true.  = gridpack
+in the run_card.dat will generate a gridpack.tar.gz. Online, the
+results page will have a link to this package.
+
+The gridpackage is meant to be sent over to the cluster or grid
+nodes. It's completely frozen, meaning that you cannot change any
+parameters or run options, apart from the # of event and the rnd
+number.
+
+When you unpack it you get:
+run.sh
+madevent/
+The first is a script which accepts two numbers (the number of events
+and the rnd number).
+
+There are two optional packages that can be added to the gridpack:
+
+DECAY is a optional directory that contains a program that decays
+final state particles, keeping track of spin correlations at much as
+possible. It is of particular use for decays of top quarks.
+
+REPLACE is also an optional directory for lepton replacement. This is
+usefull for instance in the case where the generation time of the
+diagrams is critical (like for example in the case of (z/gamma>e, mu,
+tau)+4 jets including b's).
+See below for more details
+
+Basic Use of Gridpacks:
+
+Before you use the gridpack locally or over the grid, you need to
+compile the package on a machine compatible with your cluster:
+cd madevent
+./bin/compile
+and after that it is ready to go. There is also an option to compile
+madevent with dynamic libraries. Use
+./bin/compile dynamic
+to compile with dynamic libraries for the MadGraph5_aMC@NLO source files. This
+will replace all makefiles with makefile_dynamic and compile using
+these new makefiles. Using dynamic libraries is greatly encouraged,
+because it can make the compiled gridpack significantly smaller.
+
+After a succesful compilation you can run the
+./bin/clean4grid
+script to remove all source files and reduce the size of the
+package. Now you can just repackage and send it to some cpu in india
+or run locallly (after chmod +x run.sh)
+./run.sh 10000 37
+
+DECAY:
+
+The DECAY directory contains a program to decay final state
+particles. It has been designed to keep track of spin correlations as
+much as possible and is particularly useful for the decay of (anti)
+top quarks E.g. for the decay of top quarks up to 95% of the
+correlations are preserved. 
+Note that DECAY also needs the HELAS directory to compile.
+The DECAY package can be found in the MadGraph5_aMC@NLO developer's kit that
+can be downloaded from the MadGraph5_aMC@NLO /MadEvent Downloads webpage or
+from Launchpad. To add the package to the gridpack, simply untar the
+gridpack to get the ./madevent/ directory and the ./run.sh
+script. Move the DECAY and the HELAS directories from the MG 5 developer's kit to the
+directory in which you untarred the gridpack, to get here the three
+directories and the one script file:
+./madevent/                 ./DECAY/         ./HELAS         ./run.sh
+The DECAY package is compiled automatically when
+./bin/compile
+is executed from the ./madevent directory. As input to specify the
+decays, files with the names
+decay_x.in
+should be put in the ./DECAY directory. (Where x is a number between 1
+and 20.) These files are read automatically, and one file should be
+put for each decaying particle. (E.g. for ttbar events 2 files are
+necessary: one for the decay of the top and one for the anti-top.) The
+first three lines of these files should be
+1
+../events_in.lhe
+../events.lhe
+while the fourth line specifies the particle that needs decay, e.g. put
+t
+for the decay of a top quark. The fifth line is an integer that
+specifies the decay mode. This depends on the particle that is going
+to be decayed. For top quarks it is:
+1 = ' t -> b  w+ '
+2 = ' t -> b  ve e+'
+3 = ' t -> b  vm mu+'
+4 = ' t -> b  vt ta+'
+5 = ' t -> b  vl l+    (e+mu)'
+6 = ' t -> b  vl l+    (e+mu+ta)'
+7 = ' t -> b  j   j    (ud+cs)'
+8 = ' t -> b  anything (e+mu+ta+ud+cs)'
+and similar for the anti-top.
+Hence this file decays all top quarks (ignoring anti-tops!) in the
+event file leptonically.
+
+REPLACE
+
+REPLACE is a package that lets the user replace particles in event
+files. This is particulary useful to save precious time in the
+generation of the diagrams. For example, the generation of Z+4jets, in
+which the Z is decay leptonically, will take (at least) three times
+longer when the three generations of leptons are specified in the
+process. Because we know that, if we assume that all of them are
+massless, the decay of Z bosons is unfavored to any specific lepton
+flavor, we could as well have generated events with only muons and
+then randomly replacing the muons in the event file by electrons or
+tau's with 33% probability for each. This is exactly what the REPLACE
+script has been designed to do. Note that for MadGraph5_aMC@NLO, this is less
+of a problem, and in general the full process should be run
+(preferentially using sm-no_masses to get as few run directories as
+possible).
+
+To add this functionality to the gridpack you'll have to create a
+directory 'REPLACE" after you have untarred a gridpack to get the
+following:
+./madevent/                 ./REPLACE/                 ./run.sh
+The replace.pl script from the ./madevent/bin/ directory as well as
+the replace_card1.dat from the ./madevent/Cards needs to be copied to
+the REPLACE directory by typing:
+cp  ./madevent/bin/replace.pl  ./madevent/Cards/replace_card1.dat  ./REPLACE/
+(Note the in the latest version of replace, the '1' add the end of the
+filename is necessary, and can be any number between 1 and 20, to have
+the possibility of more than one replace.) In the replace_card1.dat
+the particles that needs to be replaced and the particles in which it
+needs to be replaced have to be specified by their corresponding PDG
+codes. E.g. adding the lines:
+11 : 11 13 15
+-11 : -11 -13 -15
+will replace all electrons from the event file by electrons (i.e. do
+nothing), muons or taus with equal probabilities, and simultaneously
+positrons with positrons, anti-muons and anti-taus. The replace card
+that can be used in the example above in which only diagrams where the
+Z decays in muons were generated and need to be replaced by electrons
+and taus can be found here: replace_card1.dat

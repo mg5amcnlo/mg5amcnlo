@@ -1,15 +1,15 @@
 ##############################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from cmd import Cmd
@@ -34,44 +34,14 @@ class TestMadEventCmd(unittest.TestCase):
     def test_card_type_recognition(self):
         """Check that the different card are recognize correctly"""
 
-        card_dir= pjoin(root_path,'..','Template', 'Cards')
-
         detect = mecmd.MadEventCmd.detect_card_type
 
-        # Delphes
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_ATLAS.dat')),
-                         'delphes_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_CMS.dat')),
-                         'delphes_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_default.dat')),
-                         'delphes_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_ATLAS.dat')),
-                         'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_CMS.dat')),
-                         'delphes_trigger.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'delphes_trigger_default.dat')),
-                         'delphes_trigger.dat')
         # run_card
+        card_dir= pjoin(root_path,'..','Template/LO', 'Cards')
         self.assertEqual(detect(pjoin(card_dir, 'run_card.dat')),
                          'run_card.dat')
         self.assertEqual(detect(pjoin(root_path, 'input_files','run_card_matching.dat')),
                          'run_card.dat')
-
-        # PGS
-        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_ATLAS.dat')),
-                         'pgs_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_CMS.dat')),
-                         'pgs_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_LHC.dat')),
-                         'pgs_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_TEV.dat')),
-                         'pgs_card.dat')
-        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_default.dat')),
-                         'pgs_card.dat')
-        
-        # PLOT_CARD
-        self.assertEqual(detect(pjoin(card_dir, 'plot_card.dat')),
-                         'plot_card.dat')
 
         # PYTHIA_CARD
         self.assertEqual(detect(pjoin(card_dir, 'pythia_card_default.dat')),
@@ -84,6 +54,30 @@ class TestMadEventCmd(unittest.TestCase):
                          'param_card.dat')
         self.assertEqual(detect(pjoin(root_path, 'input_files','restrict_sm.dat')),
                          'param_card.dat')
+
+        card_dir= pjoin(root_path,'..','Template/Common', 'Cards')
+
+        # PLOT_CARD
+        self.assertEqual(detect(pjoin(card_dir, 'plot_card.dat')),
+                         'plot_card.dat')
+
+        # Delphes
+        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_CMS.dat')),
+                         'delphes_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'delphes_card_default.dat')),
+                         'delphes_card.dat')
+        # PGS
+        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_ATLAS.dat')),
+                         'pgs_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_CMS.dat')),
+                         'pgs_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_LHC.dat')),
+                         'pgs_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_TEV.dat')),
+                         'pgs_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'pgs_card_default.dat')),
+                         'pgs_card.dat')
+        
         
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
@@ -99,5 +93,5 @@ class TestMadEventCmd(unittest.TestCase):
             if obj.__doc__ and ':' in obj.__doc__:
                 category.add(obj.__doc__.split(':',1)[0])
                 
-        target = set(['Main commands','Advanced commands', 'Require MG5 directory', 'Not in help'])
+        target = set(['Main Commands','Advanced commands', 'Require MG5 directory', 'Not in help'])
         self.assertEqual(target, category)

@@ -1,10 +1,13 @@
 try:
     import madgraph.iolibs.file_writers as writers 
-except:
+    import madgraph.various.q_polynomial as q_polynomial
+except Exception:
     import aloha.file_writers as writers
+    import aloha.q_polynomial as q_polynomial
 
 import aloha
 import aloha.aloha_lib as aloha_lib
+import cmath
 import os
 import re 
 from numbers import Number
@@ -16,6 +19,8 @@ from cStringIO import StringIO
 # For knowing how to deal with long strings efficiently.
 import itertools
 
+KERNEL = aloha_lib.KERNEL
+pjoin = os.path.join
 
 class WriteALOHA: 
     """ Generic writing functions """ 
@@ -33,6 +38,8 @@ class WriteALOHA:
             self.momentum_size = 4
         else:
             self.momentum_size = 2
+            
+        self.has_model_parameter = False
         
         name = get_routine_name(abstract = abstract_routine)
 
@@ -175,6 +182,7 @@ class WriteALOHA:
 
         conjugate = [2*(int(c[1:])-1) for c in self.tag if c[0] == 'C']
         
+
         for index,spin in enumerate(self.particles):
             if self.offshell == index + 1:
                 continue
@@ -224,7 +232,6 @@ class WriteALOHA:
         core_text = self.define_expression()    
         self.define_argument_list()
         out = StringIO()
-        
         out.write(self.get_header_txt(mode=self.mode))
         out.write(self.get_declaration_txt())
         out.write(self.get_momenta_txt())
@@ -259,9 +266,9 @@ class WriteALOHA:
         
         try:
             vartype = obj.vartype
-        except:
+        except Exception:
             return self.change_number_format(obj)
-
+        
         # The order is from the most current one to the les probable one
         if vartype == 1 : # AddVariable
             return self.write_obj_Add(obj, prefactor)
@@ -345,7 +352,8 @@ class WriteALOHA:
                 file_str.write(')')
         if number:
             total = sum(number)
-            file_str.write('+ %s' % self.change_number_format(total))                
+            file_str.write('+ %s' % self.change_number_format(total))
+
         file_str.write(')')
         return file_str.getvalue()
                 
@@ -390,7 +398,8 @@ class WriteALOHA:
                 call_arg.append('%s%d' % (spin2, index2 +1)) 
             else:
                 call_arg.append('%s%d' % (spin, index +1)) 
-                
+        
+        
         return call_arg
 
     
@@ -488,14 +497,24 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         out = StringIO()
         out.write('implicit none\n')
+        # Check if we are in formfactor mode
+        if self.has_model_parameter:
+            out.write(' include "../MODEL/input.inc"\n')
+            out.write(' include "../MODEL/coupl.inc"\n')
         argument_var = [name for type,name in self.call_arg]
         # define the complex number CI = 0+1j
         if 'MP' in self.tag:
             out.write(' complex*32 CI\n')
+            if KERNEL.has_pi:
+                out.write(' double*16 PI\n')
         else:
             out.write(' complex*16 CI\n')
+            if KERNEL.has_pi:
+                out.write(' double precision PI\n')
         out.write(' parameter (CI=(%s,%s))\n' % 
                     (self.change_number_format(0),self.change_number_format(1)))
+        if KERNEL.has_pi:
+            out.write(' parameter (PI=%s)\n' % self.change_number_format(cmath.pi))
         for type, name in self.declaration:
             if type.startswith('list'):
                 type = type[5:]
@@ -632,10 +651,15 @@ class ALOHAWriterForFortran(WriteALOHA):
     def change_var_format(self, name): 
         """Formatting the variable name to Fortran format"""
         
+        if isinstance(name, aloha_lib.ExtVariable):
+            # external parameter nothing to do
+            self.has_model_parameter = True
+            return name
+        
         if '_' in name:
-            type = name.type
+            vtype = name.type
             decla = name.split('_',1)[0]
-            self.declaration.add(('list_%s' % type, decla))
+            self.declaration.add(('list_%s' % vtype, decla))
         else:
             self.declaration.add((name.type, name))
         name = re.sub('(?P<var>\w*)_(?P<num>\d+)$', self.shift_indices , name)
@@ -876,7 +900,6 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
     """routines for writing out Fortran"""
 
     def __init__(self, abstract_routine, dirpath):
-
         
         ALOHAWriterForFortran.__init__(self, abstract_routine, dirpath)
         # position of the outgoing in particle list        
@@ -897,27 +920,39 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
                 out.write(' %s = %s\n' % (name, self.write_obj(obj)))
                 self.declaration.add(('complex', name))
 
-
-        OffShellParticle = '%s%d' % (self.particles[self.offshell-1],\
-                                                              self.offshell)
         if not 'Coup(1)' in self.routine.infostr:
             coup = True
         else:
-            coup = False      
-        
-        for key,expr in self.routine.expr.items():
-            arg = self.get_loop_argument(key)
-            for ind in expr.listindices():
-                data = expr.get_rep(ind)
-                
-                if data and coup:
-                    out.write('    COEFF(%s,%s)= coup*%s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
-                                    self.write_obj(data)))
-                else:
-                    out.write('    COEFF(%s,%s)= %s\n' % ( 
-                                    self.pass_to_HELAS(ind)+1, ','.join(arg), 
-                                    self.write_obj(data)))                    
+            coup = False
+
+        rank = self.routine.expr.get_max_rank()
+        poly_object = q_polynomial.Polynomial(rank)
+        nb_coeff = q_polynomial.get_number_of_coefs_for_rank(rank)
+        size = self.type_to_size[self.particles[self.l_id-1]] - 2
+        for K in range(size):
+            for J in range(nb_coeff):
+                data = poly_object.get_coef_at_position(J)
+                arg = [data.count(i) for i in range(4)] # momentum
+                arg += [0] * (K) + [1] + [0] * (size-1-K) 
+                try:
+                    expr = self.routine.expr[tuple(arg)]
+                except KeyError:
+                    expr = None
+                for ind in self.routine.expr.values()[0].listindices():
+                    if expr:
+                        data = expr.get_rep(ind)
+                    else:
+                        data = 0
+                    if data and coup:
+                        out.write('    COEFF(%s,%s,%s)= coup*%s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K+1, self.write_obj(data)))
+                    else:
+                        out.write('    COEFF(%s,%s,%s)= %s\n' % ( 
+                                    self.pass_to_HELAS(ind)+1-self.momentum_size,
+                                    J, K+1, self.write_obj(data)))
+
+
         return out.getvalue()
     
     def get_declaration_txt(self):
@@ -987,13 +1022,14 @@ class ALOHAWriterForFortranLoop(ALOHAWriterForFortran):
             
             if index in conjugate:
                 index2, spin2 = index+1, self.particles[index+1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
                 #call_arg.append('%s%d' % (spin, index +1)) 
             elif index-1 in conjugate:
                 index2, spin2 = index-1, self.particles[index-1]
-                call_arg.append(('complex','%s%d' % (spin2, index2 +1))) 
+                call_arg.append(('complex','%s%d' % (spin2, index2 +1)))
             else:
                 call_arg.append(('complex','%s%d' % (spin, index +1)))
+            self.declaration.add(('list_complex', call_arg[-1][-1])) 
         
         # couplings
         if couplings is None:
@@ -1135,7 +1171,7 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     
     if outgoing is None:
         outgoing = abstract.outgoing
-    
+
     return '%s_%s' % (name, outgoing)
 
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
@@ -1143,7 +1179,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[RFSVT]+)(?P<id>\d+)')
+    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1151,7 +1187,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
         for s in other_names:
             try:
                 base2,id2 = p.search(s).groups()
-            except:
+            except Exception:
                 routine = ''
                 break # one matching not good -> other scheme
             if base != base2:
@@ -1163,7 +1199,7 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     if routine:
         if tag is not None:
             routine += ''.join(tag)
-        if unknown_propa:
+        if unknown_propa and outgoing:
             routine += '%(propa)s'
         if outgoing is not None:
             return routine +'_%s' % outgoing
@@ -1178,15 +1214,17 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
             short_name, addon = name.split('C',1)
             try:
                 addon = 'C' + str(int(addon))
-            except:
+            except Exception:
                 addon = ''
             else:
                 name = short_name
     if unknown_propa:
         addon += '%(propa)s'
 
-    return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
- 
+    if outgoing is not None:
+        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+    else:
+        return '_'.join((name,) + tuple(other_names)) + addon
 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""
@@ -1944,8 +1982,8 @@ class ALOHAWriterForPython(WriteALOHA):
                     nb2 -= 1
             else:
                 operator =''
-                nb = energy_pos + j
-                nb2 = energy_pos + j
+                nb = j
+                nb2 = j
             data.append(template % {'j':j,'type': type, 'i': i, 
                         'nb': nb, 'nb2': nb2, 'operator':operator,
                         'sign': self.get_P_sign(i)}) 
@@ -2079,6 +2117,35 @@ class WriterFactory(object):
             raise Exception, 'Unknown output format'
 
 
+    
+unknow_fct_template = """
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+       double complex %(fct_name)s(%(args)s)
+       implicit none
+c      Include Model parameter / coupling
+       include \"../MODEL/input.inc\"
+       include \"../MODEL/coupl.inc\"
+c      Defintion of the arguments       
+%(definitions)s
+       
+c      enter HERE the code corresponding to your function.
+c      The output value should be put to the %(fct_name)s variable.
 
 
+       return
+       end
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+"""
+        
+def write_template_fct(fct_name, nb_args, output_dir):
+        """create a template for function not recognized by ALOHA"""
+
+        dico = {'fct_name' : fct_name,
+                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
+                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
+
+        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
+        ff.write(unknow_fct_template % dico)
+        ff.close()
 

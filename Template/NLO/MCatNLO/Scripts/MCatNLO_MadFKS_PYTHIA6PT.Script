@@ -1,0 +1,469 @@
+#!/bin/bash
+# finds out architecture name, defines system files, and construct
+# the relevant directory for run, if not present. If the architecture
+# cannot be figured out, defines ./Run as working directory, and use 
+# sun as system file -- it should work in most of the cases
+function architecture {
+PATH=".:""$PATH"
+thisdir=`pwd`
+homedir=$HOME
+case `uname` in
+Linux*) ARCHNAME=LinuxPY ; DBGFLAG='DEBUG=-ggdb' ; EXTRA='EXTRAOBJ=linux.o' ;
+        EXMAKE=make ; CPOPT=pu ;;
+OSF*)  ARCHNAME=AlphaPY ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=alpha.o' ;
+       EXMAKE=gmake ; CPOPT=p ;;
+Sun*) ARCHNAME=SunPY ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+      EXMAKE=gmake ; CPOPT=p ;;
+Darwin*) ARCHNAME=DarwinPY ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;
+         EXMAKE=make ; CPOPT=p ;;
+*) ARCHNAME=RunPY ; DBGFLAG='DEBUG=-g' ; EXTRA='EXTRAOBJ=sun.o' ;;
+esac
+#
+}
+
+# $? is the value of last executed command. A call to this function
+# after a failure will cause the program to quit the script
+function teststatus {
+rc=$?
+if [ 0 = $rc ]
+then
+:
+else
+echo $* did not succeed, exit status=$rc 
+exit $rc
+fi
+}
+
+# returns a string which identifies the target
+# for the Makefile
+function getSTRmake {
+stringmake=MadFKS
+}
+
+# utility function for dothelinks
+function stripextension {
+echo $1 | sed "s/\..*\$//"
+}
+
+# utility function for dothelinks
+function capitalize {
+echo $1 | sed "y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/"
+}
+
+# creates logical links for the PDF grid files. By P. Nason
+function dothelinks {
+if [ -d $PDFPATH ]
+then
+for i in ${PDFPATH}/*.dat ${PDFPATH}/*.tbl
+do
+if [ -f $i ]
+then
+name=`basename $i`
+name=`stripextension $name`
+case $name in
+mrst200*) ;;
+*mrs*|grpol|grvdm|lac1|pion[1-3]) name=`capitalize $name`;;
+esac
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
+then
+ln -sf $i $thisdir/$name
+fi
+fi
+done
+for i in ${PDFPATH}/a02.*
+do
+if [ -f $i ]
+then
+name=`basename $i`
+if [ ! -L $thisdir/$name ] || [ ! $thisdir/$name -ef $i ]
+then
+ln -sf $i $thisdir/$name
+fi
+fi
+done
+fi
+}
+
+# creates logical links for LHAPDF, and replaced PDF group name (unused
+# by LHAPDF) with a LHAPDF-specific string
+function linklhapdf {
+case $LHAOFL in
+FREEZE|freeze) PDFGROUP=LHAPDF ;;
+EXTRAPOLATE|extrapolate) PDFGROUP=LHAEXT ;;
+*) echo "no such option; failure in linklhapdf" ; exit 1 ;;
+esac
+source ../Source/fj_lhapdf_opts
+}    
+
+# creates the executable for NLO and MC; the entry of the function
+# is either NLO or MC, depending on which executable one wants to obtain;
+# PDFLIB or private PDF library is linked, depending on the value of
+# the parameter UsedPdfLib, which is set by the function whichpdflib.
+# Extra libraries are listed in the shell variable EXTRALIBS; do NOT
+# remove the double quotes in the call to nameextralib, otherwise only
+# the first library of the list is taken
+function compile {
+architecture
+
+EVTDIR=`pwd`"/../Events"
+# stops if event file is not in the /Events folder
+EVT_NAMEF="$EVPREFIX"
+if [ ! -f $EVTDIR/$EVT_NAMEF ]
+then
+  echo "Event file" $EVTDIR/$EVT_NAMEF "not found: quitting"
+  exit 1
+fi
+
+
+if [ "$PDFCODE" -ne 0 ]
+then
+  PYTPDF='EXTPDF'
+  PDFLIBRARY='LHAPDF'
+  UsedPdfLib='LHAPDF'
+  cp -f $LHAPDFPATH"/lib/libLHAPDF.a" `pwd`"/lib"
+  LHALIBPATH=`pwd`
+  LHALINK=DYNAMIC
+  if [ "$PDFCODE" -gt 0 ]; then LHAOFL=FREEZE; fi
+  if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
+  if [ "$PDFCODE" -lt 0 ]; then LHAOFL=EXTRAPOLATE; fi
+  if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
+  linklhapdf
+elif [ "$PDFCODE" -eq 0 ]
+then
+  PYTPDF='DEFAULT'
+  PDFLIBRARY='THISLIB'
+  UsedPdfLib='THISLIB'
+# the following is dummy
+  LHALINK=DYNAMIC
+  LHAOFL=FREEZE
+else
+  echo 'Invalid PDFCODE' $PDFCODE
+  exit 1
+fi
+
+whichpdflib $PDFLIBRARY
+whichlhapdf $LHALINK
+nameextralib "$EXTRALIBS"
+pathextralib "$EXTRAPATHS"
+pathextralibdyn "$EXTRAPATHS"
+pathextraincl "$INCLUDEPATHS"
+EXEC_NAME=
+EXEC_NAMEF=
+EXEC_NAMEFF=
+read -a PYUTIA <<< "$PYUTI"
+PYUTI=
+for i in "${PYUTIA[@]}"; do PYUTI+=`pwd`"/objects/$i "; done
+PYUTIMAKE="PYUTI="$PYUTI
+PYTHAMAKE="PYTHIAVER="$PYTHIAVER
+LIBSMAKE="EXTRALIBS="$ExtraLibs
+LIBSMAKEP="EXTRAPATHS="$ExtraPaths
+INCLMAKE="INCLOPTION="$ExtraIncl
+INCDIRMK="INCDIR="`pwd`"/include"
+COMSRCMK="COMSRC="`pwd`"/srcCommon"
+ANASRCMK="ANADIR="`pwd`"/PYAnalyzer"
+OBJDIRMK="OBJDIR="`pwd`"/objects"
+PYSSRCMK="PYSDIR=""$PYPATH"
+EVTDIR=`pwd`"/../Events"
+
+if [ "$LD_LIBRARY_PATH" = "" ]
+then
+  LD_LIBRARY_PATH="$ExtraPathsDyn"
+else
+  if [ "$ExtraPathsDyn" != "" ]
+  then
+    LD_LIBRARY_PATH="$ExtraPathsDyn"":""$LD_LIBRARY_PATH"
+  fi
+fi
+LIBSLHA="LHALIB="
+case $1 in
+NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
+MC) if [ $UsedPdfLib = "PDFLIB" ]
+     then
+       EXEC_NAMEF="PY_EXE_PDFLIB"
+     elif [ $UsedPdfLib = "THISLIB" ]
+     then
+       EXEC_NAMEF="PY_EXE_DEFAULT"
+     elif [ $UsedPdfLib = "LHAPDF" ]
+     then
+       EXEC_NAMEF="PY_EXE_LHAPDF"
+       if [ $UsedLhaPdf = "lhasta" ]
+       then
+         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
+       else
+         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
+         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
+         if [ "$LD_LIBRARY_PATH" = "" ]
+         then
+           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
+         else
+           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
+         fi
+       fi
+     else
+       echo "fatal error in compile"; exit 1
+     fi ;;
+*) echo "do not know what to do in function compile" ; exit 1 ;;
+esac
+export LD_LIBRARY_PATH
+if [ $1 = "NLO" ]
+then
+  getSTRmake
+  EXEC_NAME=$stringmake$EXEC_NAMEF
+elif [ $1 = "MC" ]
+then
+  EXEC_NAME="$EXEC_NAMEF"
+fi
+EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
+rm -f $thisdir/$EXEC_NAMEFF
+
+# creates a temporary directory to produce the executable, eventually moved
+# back to running directory
+CURRDATE=`date`
+TMPDIRNAME=`echo $CURRDATE | cut -d" " -f1`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f2`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f3`
+TMPDIRNAME=$TMPDIRNAME`echo $CURRDATE | cut -d" " -f4`
+TMPDIRNAME=$EXEPREFIX$TMPDIRNAME
+mkdir "$thisdir/$TMPDIRNAME"
+(cd $thisdir/$TMPDIRNAME ;\
+ $EXMAKE -f $thisdir/Makefile_MadFKS $EXTRA "$PYUTIMAKE" "$PYTHAMAKE" \
+ "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
+ "$INCDIRMK" "$COMSRCMK" "$ANASRCMK" "$PYSSRCMK" \
+ "$OBJDIRMK" $EXEC_NAME
+ VPATH=$thisdir/:$thisdir/objects/:$PYPATH:$LHALIBPATH/lib/ ;\
+ if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
+ then
+   \mv $EXEC_NAME $EXEC_NAMEFF
+ fi ;\
+ if [ -f $thisdir/$EXEC_NAMEFF ]
+ then
+   echo "Executable already present: quitting"
+   exit 1
+ else
+   \mv $EXEC_NAMEFF $thisdir/$EXEC_NAMEFF
+   chmod 744 $thisdir/$EXEC_NAMEFF
+   find . -name "*".o -exec \cp -"$CPOPT" {} $thisdir/ \;
+   cd $thisdir
+   \rm -r $thisdir/$TMPDIRNAME
+ fi)
+teststatus Compilation
+}
+
+# foolproof utility function, to be called by the user
+function compileMC {
+compile MC
+}
+
+# wrapper for the functions which run and compile MC codes
+function runMC {
+compile MC
+
+#put MCMODE to upper case
+MCMODE=`echo $MCMODE | tr '[a-z]' '[A-Z]' `
+# Check correspondence between MCMODE and what written in the event file
+if [ $MCMODE != "PYTHIA6PT" ]
+then
+  echo "Error! PYTHIA6PT Script called with MCMODE not equal to PYTHIA6PT"
+  exit 1
+fi
+# ishower=1 means PT-ordered
+ishower=1
+
+
+UMASSPY=$UMASS
+DMASSPY=$DMASS
+SMASSPY=$SMASS
+CMASSPY=$CMASS
+if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSPY=$BMASS; fi
+if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSPY=$B_MASS; fi
+GMASSPY=$GMASS
+
+if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
+elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
+elif [ $BEAM1 == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
+exit 1; fi
+if [ $BEAM2 == 1 ]; then PART2="P"; elif [ $BEAM2 == -1 ]; then PART2="PBAR";
+elif [ $BEAM2 == 0 ]; then PART2="E-"; elif [ $BEAM2 == 2 ]; then PART2="N";
+elif [ $BEAM2 == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
+exit 1; fi
+# Check the previous!
+
+whichpytpdf $PYTPDF
+if [ $pdftype = 1 ]
+then
+  whichpdflib $PDFLIBRARY
+  if [ $UsedPdfLib = "THISLIB" ]
+  then
+    dothelinks
+  elif [ $UsedPdfLib = "LHAPDF" ]
+  then
+    linklhapdf
+  fi
+fi
+echo " "
+echo "*****   All parameters read from event file $EVT_NAMEF"
+echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
+echo " "
+runMCMadFKS
+teststatus runMC
+}
+
+# compiles and runs the MC
+function runMCMadFKS {
+ifile="$FPREFIX"MCinput
+if [ -f ./$ifile ]
+then
+\rm ./$ifile 
+fi
+
+cat <<EOF > ./$ifile 
+ '$SCRTCH$EVPREFIX'               ! event file
+  $NEVENTS                        ! number of events
+  $pdftype                        ! 0->Pythia PDFs, 1 otherwise
+ '$PART1'  '$PART2'               ! hadron types
+  $beammom1 $beammom2               ! beam momenta
+  $ishower                        ! 0->virtuality-, 1->pT-ordered
+  $ALPHAEW                        ! 1/Alpha_EW
+  $PI_STABLE_PY                   ! .TRUE. if one wants Pi0 stable
+  $WP_STABLE_PY                   ! .TRUE. if one wants W+ stable
+  $WM_STABLE_PY                   ! .TRUE. if one wants W- stable
+  $Z_STABLE_PY                    ! .TRUE. if one wants Z0 stable
+  $TAUP_STABLE_PY                 ! .TRUE. if one wants tau+ stable
+  $TAUM_STABLE_PY                 ! .TRUE. if one wants tau- stable
+  $MUP_STABLE_PY                  ! .TRUE. if one wants mu+ stable
+  $MUM_STABLE_PY                  ! .TRUE. if one wants mu- stable
+  $H_STABLE_PY                    ! .TRUE. if one wants Higgs stable
+  $MAXPR_PY                       ! Number of events to be printed out
+  $ERR_FR_PY                      ! Tolerated fraction of errors
+  $B_STABLE_PY                    ! .TRUE. if it is single-top production
+  $MSTP_81                        ! Underlying event on (1) or off (0)
+  $MSTP_111                       ! Hadronization on (1) or off (0)
+EOF
+if [ $pdftype = 1 ]
+then
+cat <<EOF >> ./$ifile
+ '$PDFGROUP'                      ! PDF group (1)
+  $PDFSET                         ! PDF id number (1)
+ '$PDFGROUP'                      ! PDF group (2)
+  $PDFSET                         ! PDF id number (2)
+EOF
+fi
+cat <<EOF >> ./$ifile 
+  $LAMBDAPYTH                     ! Lambda_5, < 0 for default
+  $ZMASS $ZWIDTH                  ! M_Z, Gamma_Z
+  $WMASS $WWIDTH                  ! M_W, Gamma_W
+  $TMASS $TWIDTH                  ! M_top, Gamma_top
+  $HGGMASS $HGGWIDTH              ! M_H, Ga_H
+  $UMASSPY $DMASSPY $SMASSPY $CMASSPY $BMASSPY $GMASSPY ! quark and gluon masses
+  $RNDEVSEED_PY                   ! Random seed (0 for default)
+  $IS_4L_PY                       ! .TRUE. if it is four-lepton production
+EOF
+
+arr=()
+numDM=0
+iDM=0
+for i in {1..99}
+do
+ eval arr_elem='$'DM_$i
+ if [ "$arr_elem" != "" ]
+ then
+  arr=("${arr[@]}" "$arr_elem")
+ fi
+done
+
+numDM=${#arr[@]}
+cat <<EOF >> ./$ifile
+  $numDM                          ! Number of decay modes set by user
+EOF
+for DM in "${arr[@]}"
+do
+ let "iDM+=1"
+ DM=( $DM )
+ num_of_part=$(echo ${#DM[@]})
+ let "num_of_part-=6"
+cat <<EOF >> ./$ifile
+  $num_of_part                    ! Number of bodies for new decay mode $iDM of $numDM
+  ${DM[@]}                        ! Decay mode $iDM of $numDM
+EOF
+done
+
+cat <<EOF >> ./$ifile
+  $EVENT_NORM     ! Event weights are normalized to sun or average to the cross section
+EOF
+
+
+mv $EXEC_NAMEFF MCATNLO_$MCMODE'_EXE'
+mv $ifile MCATNLO_$MCMODE'_input'
+}
+
+# this function set the parameter pdftype according to the value 
+# of PYTPDF (the entry of this function) given in input
+function whichpytpdf {
+case $1 in
+DEFAULT|default) pdftype=0 ;;
+EXTPDF|extpdf) pdftype=1 ;;
+*) echo "error in whichpytpdf: no such option" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to PDFLIBRAY in input is meaningful
+function whichpdflib {
+case $1 in
+THISLIB|thislib) UsedPdfLib=THISLIB ;;
+PDFLIB|pdflib) UsedPdfLib=PDFLIB ;;
+LHAPDF|lhapdf) UsedPdfLib=LHAPDF ;;
+*) echo "no such library for PDFS; failure in whichpdflib" ; exit 1 ;;
+esac
+}
+
+# checks that the value given to LHALINK in input is meaningful
+function whichlhapdf {
+case $1 in
+STATIC|static) UsedLhaPdf=lhasta ;;
+DYNAMIC|dynamic) UsedLhaPdf=lhadyn ;;
+*) echo "no such option for LHAPDF; failure in whichlhapdf" ; exit 1 ;;
+esac
+}
+
+# prepends -l to library names
+function nameextralib {
+ExtraLibs="$1"
+ilen1=${#ExtraLibs}
+if [ $ilen1 -ne 0 ]
+then
+  ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
+  ExtraLibs="-l""$ExtraLibs"
+fi
+}
+
+# prepends -L to library paths
+function pathextralib {
+ExtraPaths="$1"
+ilen2=${#ExtraPaths}
+if [ $ilen2 -ne 0 ]
+then
+  ExtraPaths=`echo $ExtraPaths | sed "s/ / -L/g"`
+  ExtraPaths="-L""$ExtraPaths"
+fi
+}
+
+# separate library names with columns
+function pathextralibdyn {
+ExtraPathsDyn="$1"
+ilen3=${#ExtraPathsDyn}
+if [ $ilen3 -ne 0 ]
+then
+  ExtraPathsDyn=`echo $ExtraPathsDyn | sed "s/ /:/g"`
+fi
+}
+
+# prepends -I to include paths
+function pathextraincl {
+ExtraIncl="$1"
+ilen4=${#ExtraIncl}
+if [ $ilen4 -ne 0 ]
+then
+  ExtraIncl=`echo $ExtraIncl | sed "s/ / -I/g"`
+  ExtraIncl="-I""$ExtraIncl"
+fi
+}

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -322,9 +322,9 @@ int id4Mass() const {return 4;}""")
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_Sigma_sm_qqx_qqx_H
@@ -404,7 +404,7 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
 
 }; 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 
 #endif  // Pythia8_Sigma_sm_qqx_qqx_H
 """ % misc.get_pkg_info()
@@ -421,9 +421,9 @@ class Sigma_sm_qqx_qqx : public Sigma2Process
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "Sigma_sm_qqx_qqx.h"
@@ -715,7 +715,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 }
 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         exporter = export_cpp.ProcessExporterPythia8(self.mymatrixelement,
@@ -755,9 +755,9 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "Sigma_sm_qq_six.h"
@@ -1016,7 +1016,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
 }
 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
         exporter.write_process_cc_file(\
@@ -1277,9 +1277,9 @@ double Sigma_sm_qq_six::matrix_uu_six()
 
         goal_string = """//==========================================================================
 // This file has been automatically generated for Pythia 8
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_Sigma_sm_gd_ddxd_H
@@ -1402,7 +1402,7 @@ class Sigma_sm_gd_ddxd : public Sigma3Process
 
 }; 
 
-}  // end namespace Pythia
+}  // end namespace Pythia8
 
 #endif  // Pythia8_Sigma_sm_gd_ddxd_H
 """ % misc.get_pkg_info()
@@ -2442,9 +2442,9 @@ return matrix;
         goal_string = \
 """//==========================================================================
 // This file has been automatically generated for C++ Standalone by
-// MadGraph 5 v. %(version)s, %(date)s
-// By the MadGraph Development Team
-// Please visit us at https://launchpad.net/madgraph5
+// MadGraph5_aMC@NLO v. %(version)s, %(date)s
+// By the MadGraph5_aMC@NLO Development Team
+// Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include "CPPProcess.h"
@@ -2734,9 +2734,9 @@ class ExportUFOModelPythia8Test(unittest.TestCase,
         goal_file_h = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8
-#  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team
-#  Please visit us at https://launchpad.net/madgraph5
+#  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+#  By the MadGraph5_aMC@NLO Development Team
+#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #ifndef Pythia8_parameters_sm_H
@@ -2799,9 +2799,9 @@ static Parameters_sm* instance;
         goal_file_cc = \
 """//==========================================================================
 // This file has been automatically generated for Pythia 8 by
-#  MadGraph 5 v. %(version)s, %(date)s
-#  By the MadGraph Development Team
-#  Please visit us at https://launchpad.net/madgraph5
+#  MadGraph5_aMC@NLO v. %(version)s, %(date)s
+#  By the MadGraph5_aMC@NLO Development Team
+#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 //==========================================================================
 
 #include <iostream>

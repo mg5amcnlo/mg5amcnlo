@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -81,7 +81,7 @@ class ProcessExporterPython(object):
         self.helas_call_writer = python_helas_call_writer
 
         if not isinstance(self.helas_call_writer, helas_call_writers.PythonUFOHelasCallWriter):
-            raise ProcessExporterPythonError, \
+            raise Exception, \
                 "helas_call_writer not PythonUFOHelasCallWriter"
 
         self.matrix_methods = {}
@@ -324,15 +324,15 @@ class ProcessExporterPython(object):
         info = misc.get_pkg_info()
         info_lines = ""
         if info and info.has_key('version') and  info.has_key('date'):
-            info_lines = "#  MadGraph 5 v. %s, %s\n" % \
+            info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
-                         "        #  By the MadGraph Development Team\n" + \
-                         "        #  Please visit us at https://launchpad.net/madgraph5"
+                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
+                         "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
         else:
-            info_lines = "        #  by MadGraph 5\n" + \
-                         "        #  By the MadGraph Development Team\n" + \
-                         "        #  Please visit us at https://launchpad.net/madgraph5"        
+            info_lines = "        #  by MadGraph5_aMC@NLO\n" + \
+                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
+                         "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
 
         return info_lines
 

@@ -1,0 +1,75 @@
+! ==========================================================================
+! This file sets the different technical parameters intrinsic to the
+! FKS program and which controls the behaviour of the code at run
+! time.  The common user should not edit this file and only experts
+! should venture editing these parameters.
+! ==========================================================================
+!
+! ==========================================================================
+! Arbitrary numerical parameters used in the FKS formalism
+! ==========================================================================
+!
+! To be implemented by the FKS authors
+!
+! ==========================================================================
+! Parameters controlling the tests based on the IR poles comparison
+! ==========================================================================
+!
+! This threshold sets the limiting value for the comparison of the
+! relative difference of the IR pole from the OLP and the one computed
+! internaly by MadFKS.  The value below is used for the first PS
+! points to assess the sanity of the computation. A value ten times
+! smaller will be used for the systematic check of IR poles at
+! runtime.
+! Notice that the systematic comparison of IR poles at run time is
+! only performed when the Monte-Carlo over helicity configurations
+! method is not used.  Set this value to '-1.0d0' if you want the
+! check to always pass.
+#IRPoleCheckThreshold
+1.0d-5
+! Default :: 1.0d-5
+!
+! ==========================================================================
+! OLP (virtuals) behavior at run time
+! ==========================================================================
+!
+!
+! Set the precision required from the OLP code. The IR poles check
+! will be performed at run time with a threshold ten times loser than
+! the value below. When equal to '-1d0' the default value of the OLP
+! is used, and the poles check is disabled at run time
+!
+#PrecisionVirtualAtRunTime
+1.0d-3
+! Default :: 1.0d-3
+!
+! ==========================================================================
+! Parameters defining the techniques used for the MC integration
+! ==========================================================================
+!
+! This integer sets what is the minimum number of contributing
+! helicities (in a given subrpocess) which is necessary for MadFKS to
+! switch to the Monte-Carlo over helicity configurations method. Set
+! this to '-1' if you want to forbid the use of this method
+! altogether.
+#NHelForMCoverHels
+4
+! Default :: 4
+!
+! This parameter sets for which fraction of the events the virtual
+! matrix elements should be included. When using MINT, during the
+! grid-setup phase, this number will be updated automatically after
+! each iteration depending on the relative MC uncertainties.
+#VirtualFraction
+1.0d0
+! Default :: 1.0d0
+!
+! This parameter sets the minimal fraction of the events for which the
+! virtual matrix elements should be included.
+#MinVirtualFraction
+0.005d0
+! Default :: 0.005d0
+!
+! ==========================================================================
+! End of FKS_params.dat file
+! ==========================================================================

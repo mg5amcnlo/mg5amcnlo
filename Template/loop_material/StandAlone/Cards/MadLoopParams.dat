@@ -1,0 +1,161 @@
+! This file is for the user to set the different parameters of MadLoop.
+! The name of the variable to define must start with the '#' sign and then
+! the value should be put immediately on the next line.
+
+!     =================================================================================
+!     The parameters below set the stability checks of MadLoop at run time
+!     =================================================================================
+
+!     Decide in which mode to set CutTools at runtime.
+!     The possible modes are:
+!
+!     imode:|  actions performed by ctsxcut:                                     
+!           |                                                                    
+!      	0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->
+!	        | (mp_dir,mp_inv)-> mp_Atest -> stable                                
+!       1   | (dp_dir)       -> dp_Ntest -> stable                               
+!       2   | (dp_inv)       -> dp_Ntest -> stable                               
+!       3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               
+!       4   | (mp_dir)       -> mp_Ntest -> stable                                 
+!       5   | (mp_inv)       -> mp_Ntest -> stable                                
+!       6   | (mp_dir,mp_inv)-> mp_Atest -> stable
+!      -1   | Special mode, see below for the negative ones.
+!     
+!     Due to the architecture of the program, you are better off
+!     rerunning the full PS point in quadruple precision than just a single loop 
+!     because the two things would almost take the same time. So '-1' is always
+!     very recommended.
+#CTModeRun
+-1
+! Default :: -1
+!     In the negative mode -1, MadLoop first evaluates each PS points in modes 1 and 2,
+!     yielding results Res1 and Res2, and then check if:
+!                    (Res1-Res2)/(2*(Res1+Res2)< MLStabThres
+!     If it is not the case, MadLoop evaluates again the PS point in modes 4 and 5,
+!     yielding results Res4 and Res5, and then check if:
+!                    (Res4-Res5)/(2*(Res4+Res5)< MLStabThres
+!     If it is the case then the unstable phase-space point could be cured. If it is
+!     not the case, MadLoop outputs a warning. 
+!     Notice that MLStabThres is used only when CTModeRun is negative.
+#MLStabThres
+1.0d-3
+! Default :: 1.0d-3
+!     You can add other evaluation method to check for the stability in DP and QP.
+!     Below you can chose if you want to use zero, one or two rotations of the PS point 
+!     in QP.
+#NRotations_DP
+1
+! Default :: 1
+#NRotations_QP
+0
+! Default :: 0
+
+!     By default, MadLoop is allowed to slightly deform the Phase-Space point in input
+!     so to insure perfect onshellness of the external particles and perfect energy-momentum
+!     conservation. The deformation is minimal and such that it leaves the input PS point 
+!     unchanged if it already satisfies the physical condiditions mentioned above.
+!     This integer values select what is the method to be employed preferably to restore this
+!     precision. It can take the following values:
+!
+!     -1 :: No method is used for double precision computations, and method 2 will be used
+!           preferentially when quadruple precision (for which this precision improvement
+!           is mandatory, otherwise quadruple precision is pointless)
+!      1 :: This methods imitates what is done in PSMC, namely 
+!           a) Set the space-like momentum of the last external particle to be the
+!              opposite of the sum of the others (with a minus sign for the initial states).
+!           b) Rescale all final state space-like momenta by a fixed value x computed such
+!              that energy is conserved when particles are put exactly onshell. This value 
+!              is determined numericaly via Ralph-Newton's method.
+!           c) Set all energies to have particles exactly onshell.           
+!      2  :: This method applies a shift to the energy and the x and y components of the first 
+!            initial state momentum in order to restore exact energy momentum conservation after
+!            particles have been put exactly onshell via a shift of the z component of their 
+!            momenta.
+#ImprovePSPoint
+2
+! Default :: 2
+!     =================================================================================
+!     The parameters below set two CutTools internal parameters accessible to the user. 
+!     =================================================================================
+
+!     Choose here what library to chose for CutTools to compute the scalar loops of the
+!     master integral basis. The choices are as follows:
+!     2 | AVH
+!     3 | QCDLoop
+#CTLoopLibrary
+2
+! Default :: 2
+
+!     Choose here the stability threshold used within CutTools to decide when to go to
+!     higher precision.
+#CTStabThres
+1.0d-2
+! Default :: 1.0d-2
+
+!     =================================================================================
+!     The parameters below set the general behavior of MadLoop for the initialization
+!     =================================================================================
+
+!     Decide in which mode to set CutTools when performing MadLoop's initialization of
+!     the helicity (and possibly loop) filter. The possible modes are:
+!
+!     imode:|  actions performed by ctsxcut:                                     
+!           |                                                                    
+!      	0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->
+!	        | (mp_dir,mp_inv)-> mp_Atest -> stable                                
+!       1   | (dp_dir)       -> dp_Ntest -> stable                               
+!       2   | (dp_inv)       -> dp_Ntest -> stable                               
+!       3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               
+!       4   | (mp_dir)       -> mp_Ntest -> stable                                 
+!       5   | (mp_inv)       -> mp_Ntest -> stable                                
+!       6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               
+!
+#CTModeInit
+1
+! Default :: 0
+
+!     CheckCycle sets on how many PS points trials the initialization filters must be 
+!     obtained. As long as MadLoop does not find that many consecutive PS points for 
+!     which the filters are the same, it will start over but only a maximum of
+!     MaxAttempts times.
+#CheckCycle
+3
+! Default :: 3
+#MaxAttempts
+10
+! Default :: 10
+
+!     Setting the threshold for deciding wether a numerical contribution is analytically 
+!     zero or not.
+#ZeroThres
+1.0d-9
+! Default :: 1.0d-9
+
+!     The setting below is recommended to be on as it allows to systematically used the 
+!     first PS point thrown at ML5 to be used for making sure that the helicity filter
+!     read from HelFilter.dat is consistent as it might be no longer up to date with
+!     certain changes of the paramaters by the user.
+#DoubleCheckHelicityFilter
+.TRUE.
+! Default :: .TRUE.
+
+!     Some loop contributions may be zero for some helicities which are however
+!     contributing. In order to save their computing time, you can chose here to try
+!     to filter them out. The gain is typically minimal, so it is turned off by default.
+#UseLoopFilter
+.FALSE.
+! Default :: .FALSE.
+
+!     This decides wether consecutive consistency for the loop filtering setup is also 
+!     required.
+#LoopInitStartOver
+.FALSE.
+! Default :: .FALSE.
+
+!     This decides wether consecutive consistency for the helicity filtering setup is also 
+!     required. Better to set it to false as it can cause problems for unstable processes.
+#HelInitStartOver
+.FALSE.
+! Default :: .FALSE.
+
+/* End of param file */

@@ -71,7 +71,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
       if(len_trim(string).le.0) return
       
-      do while(string(1:1) .eq. ' ') 
+      do while(string(1:1) .eq. ' ' .or. string(1:1) .eq. CHAR(9)) 
         string=string(2:len(string))
       end do
       if (index(string,' ').gt.1) then
@@ -305,16 +305,14 @@ c
       enddo
       if (.not.found) then
          write (*,*) "Warning: parameter ",name," not found"
-         write (*,*) "         setting it to default value ",def_value_num
+         write (*,*) "         setting it to default value ",
+     &def_value_num
          var=def_value_num
       endif
       return
 
       end
 c
-
-
-
 
       subroutine LHA_open_file(lun,filename,fopened)
 c***********************************************************************

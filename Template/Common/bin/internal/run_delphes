@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+#  This runs pgs on the pythia_events.hep
+#
+#  Usage: run_pgs [pgsdir [para/serial [run_name]]]
+#  where pgsdir is the path to the pgs executable
+
+delphesdir=$1
+run=$2
+tag=$3
+cross=$4 
+
+main=`pwd`
+
+if [ ! -e ../Cards/delphes_card.dat ]; then
+  echo "No delphes_card.dat found. Quitting..."
+  exit
+fi
+
+if [ ! -e $delphesdir/Delphes ]; then
+  echo "No Delphes executable found. Quitting..."
+  exit
+fi
+
+echo $$ >> ../myprocid
+
+
+echo pythia_events.hep > inputfiles.list
+
+# Set delphes path in delphes_card.dat
+
+sed -e "s:DELPHESDIR:$delphesdir:g" ../Cards/delphes_card.dat > ../Cards/tmp_card.dat
+
+
+$delphesdir/Delphes inputfiles.list delphes.root ../Cards/tmp_card.dat ../Cards/delphes_trigger.dat
+$delphesdir/LHCO_Only delphes.root
+
+
+if [ -e delphes_events.lhco ]; then
+# write the delphes banner
+    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
+    if [ ${cross} != "0" ];then
+	echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+    fi
+    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
+    rm -f delphes_events.lhco
+fi

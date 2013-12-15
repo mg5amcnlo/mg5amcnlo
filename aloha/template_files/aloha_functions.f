@@ -2,7 +2,7 @@ C###############################################################################
 C
 C Copyright (c) 2010 The ALOHA Development team and Contributors
 C
-C This file is a part of the MadGraph 5 project, an application which
+C This file is a part of the MadGraph5_aMC@NLO project, an application which
 C automatically generates Feynman diagrams and matrix elements for arbitrary
 C high-energy processes in the Standard Model and beyond.
 C
@@ -146,6 +146,130 @@ c
       end
 
 
+      subroutine ixxxso(p, fmass, nhel, nsf ,fi)
+c Identical to ixxxxx, except that fi returns only the spinor (without the momentum)
+      implicit none
+      double complex fi(4),chi(2)
+      double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
+     &     pp,pp3,sqp0p3,sqm(0:1)
+      integer nhel,nsf,ip,im,nh
+
+      double precision rZero, rHalf, rTwo
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
+c
+c#ifdef HELAS_CHECK
+c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+c      if ( abs(p(0))+pp.eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      p2 = (p(0)-pp)*(p(0)+pp)
+c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in ixxxxx has inappropriate mass'
+c         write(stdo,*)
+c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
+c      endif
+c      if (abs(nhel).ne.1) then
+c         write(stdo,*) ' helas-error : nhel in ixxxxx is not -1,1'
+c         write(stdo,*) '             : nhel = ',nhel
+c      endif
+c      if (abs(nsf).ne.1) then
+c         write(stdo,*) ' helas-error : nsf in ixxxxx is not -1,1'
+c         write(stdo,*) '             : nsf = ',nsf
+c      endif
+c#endif
+
+c$$$      fi(1) = dcmplx(p(0),p(3))*nsf*-1
+c$$$      fi(2) = dcmplx(p(1),p(2))*nsf*-1
+
+      nh = nhel*nsf
+
+      if ( fmass.ne.rZero ) then
+
+         pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+
+         if ( pp.eq.rZero ) then
+
+            sqm(0) = dsqrt(abs(fmass)) ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            ip = (1+nh)/2
+            im = (1-nh)/2
+
+            fi(1) = ip     * sqm(ip)
+            fi(2) = im*nsf * sqm(ip)
+            fi(3) = ip*nsf * sqm(im)
+            fi(4) = im     * sqm(im)
+
+         else
+
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = dsqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+            pp3 = max(pp+p(3),rZero)
+            chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
+            if ( pp3.eq.rZero ) then
+               chi(2) = dcmplx(-nh )
+            else
+               chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
+            endif
+
+            fi(1) = sfomeg(1)*chi(im)
+            fi(2) = sfomeg(1)*chi(ip)
+            fi(3) = sfomeg(2)*chi(im)
+            fi(4) = sfomeg(2)*chi(ip)
+
+         endif
+
+      else
+
+         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+            sqp0p3 = 0d0
+         else
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+         end if
+         chi(1) = dcmplx( sqp0p3 )
+         if ( sqp0p3.eq.rZero ) then
+            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
+         else
+            chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fi(1) = dcmplx( rZero )
+            fi(2) = dcmplx( rZero )
+            fi(3) = chi(1)
+            fi(4) = chi(2)
+         else
+            fi(1) = chi(2)
+            fi(2) = chi(1)
+            fi(3) = dcmplx( rZero )
+            fi(4) = dcmplx( rZero )
+         endif
+      endif
+c
+      return
+      end
+
+
       subroutine oxxxxx(p,fmass,nhel,nsf , fo)
 c
 c This subroutine computes a fermion wavefunction with the flowing-OUT
@@ -274,6 +398,131 @@ c#endif
             fo(4) = dcmplx( rZero )
             fo(5) = chi(2)
             fo(6) = chi(1)
+         endif
+
+      endif
+c
+      return
+      end
+
+      subroutine oxxxso(p,fmass,nhel,nsf , fo)
+c Identical to oxxxxx, except that fo returns only the spinor (without the momentum)
+      implicit none
+      double complex fo(4),chi(2)
+      double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
+     &     pp,pp3,sqp0p3,sqm(0:1)
+      integer nhel,nsf,nh,ip,im
+
+      double precision rZero, rHalf, rTwo
+      parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
+
+c#ifdef HELAS_CHECK
+c      double precision p2
+c      double precision epsi
+c      parameter( epsi = 2.0d-5 )
+c      integer stdo
+c      parameter( stdo = 6 )
+c#endif
+c
+c#ifdef HELAS_CHECK
+c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
+c      if ( abs(p(0))+pp.eq.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx is zero momentum'
+c      endif
+c      if ( p(0).le.rZero ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx has non-positive energy'
+c         write(stdo,*)
+c     &        '         : p(0) = ',p(0)
+c      endif
+c      p2 = (p(0)-pp)*(p(0)+pp)
+c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in oxxxxx has inappropriate mass'
+c         write(stdo,*)
+c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
+c      endif
+c      if ( abs(nhel).ne.1 ) then
+c         write(stdo,*) ' helas-error : nhel in oxxxxx is not -1,1'
+c         write(stdo,*) '             : nhel = ',nhel
+c      endif
+c      if ( abs(nsf).ne.1 ) then
+c         write(stdo,*) ' helas-error : nsf in oxxxxx is not -1,1'
+c         write(stdo,*) '             : nsf = ',nsf
+c      endif
+c#endif
+
+c$$$      fo(1) = dcmplx(p(0),p(3))*nsf
+c$$$      fo(2) = dcmplx(p(1),p(2))*nsf
+
+      nh = nhel*nsf
+
+      if ( fmass.ne.rZero ) then
+
+         pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+
+         if ( pp.eq.rZero ) then
+
+            sqm(0) = dsqrt(abs(fmass)) ! possibility of negative fermion masses
+            sqm(1) = sign(sqm(0),fmass) ! possibility of negative fermion masses
+            ip = -((1+nh)/2)
+            im =  (1-nh)/2
+
+            fo(1) = im     * sqm(im)
+            fo(2) = ip*nsf * sqm(im)
+            fo(3) = im*nsf * sqm(-ip)
+            fo(4) = ip     * sqm(-ip)
+
+         else
+
+            pp = min(p(0),dsqrt(p(1)**2+p(2)**2+p(3)**2))
+            sf(1) = dble(1+nsf+(1-nsf)*nh)*rHalf
+            sf(2) = dble(1+nsf-(1-nsf)*nh)*rHalf
+            omega(1) = dsqrt(p(0)+pp)
+            omega(2) = fmass/omega(1)
+            ip = (3+nh)/2
+            im = (3-nh)/2
+            sfomeg(1) = sf(1)*omega(ip)
+            sfomeg(2) = sf(2)*omega(im)
+            pp3 = max(pp+p(3),rZero)
+            chi(1) = dcmplx( dsqrt(pp3*rHalf/pp) )
+            if ( pp3.eq.rZero ) then
+               chi(2) = dcmplx(-nh )
+            else
+               chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
+            endif
+
+            fo(1) = sfomeg(2)*chi(im)
+            fo(2) = sfomeg(2)*chi(ip)
+            fo(3) = sfomeg(1)*chi(im)
+            fo(4) = sfomeg(1)*chi(ip)
+
+         endif
+
+      else
+
+         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+            sqp0p3 = 0d0
+         else
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
+         end if
+         chi(1) = dcmplx( sqp0p3 )
+         if ( sqp0p3.eq.rZero ) then
+            chi(2) = dcmplx(-nhel )*dsqrt(rTwo*p(0))
+         else
+            chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
+         endif
+         if ( nh.eq.1 ) then
+            fo(1) = chi(1)
+            fo(2) = chi(2)
+            fo(3) = dcmplx( rZero )
+            fo(4) = dcmplx( rZero )
+         else
+            fo(1) = dcmplx( rZero )
+            fo(2) = dcmplx( rZero )
+            fo(3) = chi(2)
+            fo(4) = chi(1)
          endif
 
       endif
@@ -1771,3 +2020,20 @@ c spin-3/2 fermion wavefunction
 
       return
       end
+
+
+      complex*16 function THETA_FUNCTION(cond, out_true, out_false)
+
+      double precision cond
+      complex*16 out_true, out_false
+
+      if (cond.ge.0d0) then
+        THETA_FUNCTION = out_true
+      else
+        THETA_FUNCTION = out_false
+      endif
+
+      return
+      end
+
+

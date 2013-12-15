@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """A set of objects to allow for easy comparisons of results from various ME
@@ -103,9 +103,9 @@ class MadEventComparator(me_comparator.MEComparator):
                 return 'str'
 
 
-        prop_col_size = 17
+        proc_col_size = 17
         for proc in self.results[0]:
-            if len(proc) + 1 > prop_col_size:
+            if len(proc) + 1 > proc_col_size:
                 proc_col_size = len(proc) + 1
         
         col_size = 17
@@ -115,7 +115,7 @@ class MadEventComparator(me_comparator.MEComparator):
 
         failed_prop_list = []
 
-        res_str = "\n" + self._fixed_string_length("Checked", prop_col_size) + \
+        res_str = "\n" + self._fixed_string_length("Checked", proc_col_size) + \
                 ''.join([self._fixed_string_length(runner.name, col_size) for \
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
@@ -130,7 +130,7 @@ class MadEventComparator(me_comparator.MEComparator):
                     succeed = False
                 else:
                     loc_results.append(self.results[i][prop])
-            res_str += '\n' + self._fixed_string_length(proc, prop_col_size)+ \
+            res_str += '\n' + self._fixed_string_length(proc, proc_col_size)+ \
                        ''.join([self._fixed_string_length(str(res),
                                                col_size) for res in loc_results])
             if not succeed:
@@ -475,7 +475,10 @@ class MG5Runner(MadEventRunner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        if model != 'mssm':
+            v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s\n" % model
         v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -518,8 +521,8 @@ class MG5Runner(MadEventRunner):
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
             for line in file(filepath):
                 splitline=line.split()
-                if len(splitline)==8:
-                     output['cross_'+name]=splitline[0]
+                #if len(splitline)==8:
+                output['cross_'+name]=splitline[0]
         return output
 
 class MG5OldRunner(MG5Runner):

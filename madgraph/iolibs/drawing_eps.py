@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -43,6 +43,7 @@ import os
 import math
 import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_objects
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 
@@ -154,23 +155,56 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         """ADD the EPS code for this fermion line."""
 
         #add the code in the correct format
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Ffermion')
 
+    def draw_curved_dashed(self, line, cercle):
+        """ADD the EPS code for this fermion line."""
+
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+        
+        #add the code in the correct format
+        x1, y1 = self.rescale(line.begin.pos_x, line.begin.pos_y)
+        self.text += ' %s  %s moveto \n' % (x1, y1)
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '%s Fhiggsl' %\
+                         curvature)
+
+    def draw_curved_straight(self, line, cercle):
+        """ADD the EPS code for this fermion line."""
+
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+        
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '%s Ffermionl' %\
+                         curvature)
 
     def draw_dashed(self, line):
         """ADD the EPS code for this Higgs line."""
 
         #add the code in the correct format
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Fhiggs')
 
 
-    def draw_wavy(self, line, opt=0, type='d'):
+    def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""
 
         #add the code in the correct format
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, '%d Fphoton%s' % (opt,type))
 
 
@@ -180,16 +214,40 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         # Due to the asymmetry in the way to draw the gluon (everything is draw
         #upper or below the line joining the points). We have to put conditions
         #in order to have nice diagram.
-        if (line.start.pos_x < line.end.pos_x) or \
-                                (line.start.pos_x == line.end.pos_x and \
-                                line.start.pos_y > line.end.pos_y):
-            self.text += self.line_format(line.start.pos_x,
-                        line.start.pos_y, line.end.pos_x,
+        if (line.begin.pos_x < line.end.pos_x) or \
+                                (line.begin.pos_x == line.end.pos_x and \
+                                line.begin.pos_y > line.end.pos_y):
+            self.text += self.line_format(line.begin.pos_x,
+                        line.begin.pos_y, line.end.pos_x,
                         line.end.pos_y, '0 Fgluon%s' % type)
         else:
             self.text += self.line_format(line.end.pos_x,
-                        line.end.pos_y, line.start.pos_x,
-                        line.start.pos_y, '0 Fgluon%s' % type)
+                        line.end.pos_y, line.begin.pos_x,
+                        line.begin.pos_y, '0 Fgluon%s' % type)
+            
+    def draw_curved_curly(self, line, cercle, type=''):
+        """ADD the EPS code for this gluon line."""
+
+        dist = math.sqrt((line.begin.pos_x-line.end.pos_x)**2 + \
+                                           (line.begin.pos_y-line.end.pos_y)**2)
+        if not cercle or dist > 0.3:
+            curvature = 0.4
+        else:
+            curvature = 1
+
+
+        # Due to the asymmetry in the way to draw the gluon (everything is draw
+        #upper or below the line joining the points). We have to put conditions
+        #in order to have nice diagram.
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+
+        self.text += self.line_format(line.end.pos_x,
+                        line.end.pos_y, line.begin.pos_x,
+                        line.begin.pos_y, '0 %s Fgluonl%s' % (-1*curvature, type))
+        
+                    
     
     def draw_scurly(self, line):
         """ADD the EPS code for this gluino line."""
@@ -201,29 +259,23 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         """ADD the EPS code for this neutralino line."""
         self.draw_wavy(line, type='r')
         self.draw_straight(line)  
-        
-    def draw_dotted(self, line):
-        """ADD the EPS code for this ghost line."""
-        #add the code in the correct format
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
-                         line.end.pos_x, line.end.pos_y, 'Fghost')
              
     def draw_double(self, line, type='r'):
-        """ADD the EPS code for this neutralino line."""   
+        """ADD the EPS code for this neutralino line."""
         
         
-        length = math.sqrt((line.end.pos_y - line.start.pos_y)**2 + (line.end.pos_x - line.start.pos_x) **2)
-        c1 = (line.end.pos_x - line.start.pos_x)/length
-        c2 = (line.end.pos_y - line.start.pos_y)/length
+        length = math.sqrt((line.end.pos_y - line.begin.pos_y)**2 + (line.end.pos_x - line.begin.pos_x) **2)
+        c1 = (line.end.pos_x - line.begin.pos_x)/length
+        c2 = (line.end.pos_y - line.begin.pos_y)/length
         
         gap = 0.013
-        start2_x = line.start.pos_x + gap * c1  
-        start2_y = line.start.pos_y + gap * c2
+        start2_x = line.begin.pos_x + gap * c1  
+        start2_y = line.begin.pos_y + gap * c2
         stop1_x = line.end.pos_x - gap * c1
         stop1_y = line.end.pos_y - gap * c2
         
         
-        self.text += self.line_format(line.start.pos_x, line.start.pos_y,
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          stop1_x, stop1_y, '0 Fphoton%s' % (type))
         #add the code in the correct format
         self.text += self.line_format(start2_x, start2_y,
@@ -240,10 +292,16 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x, y = self.rescale(x, y)
         #write the text
         self.text += ' %s  %s moveto \n' % (x, y)
-        self.text += '( diagram %s )   show\n' % (number + 1) # +1 python
+        
+        if hasattr(self, 'diagram_type'):
+            self.text += '(%s diagram %s )   show\n' % (self.diagram_type, number + 1) # +1 python
                                                             #starts to count at
                                                             #zero.
-
+        else:
+            self.text += '(diagram %s )   show\n' % (number + 1) # +1 python
+                                                            #starts to count at
+                                                            #zero.
+            
         mystr = " (%s)" % ", ".join(["%s=%d" % (key, self.diagram.diagram['orders'][key]) \
                       for key in sorted(self.diagram.diagram['orders'].keys()) \
                       if key != 'WEIGHTED'])
@@ -258,12 +316,12 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
 
     def associate_number(self, line, number):
-        """Write in the EPS figure the MadGraph number associate to the line.
+        """Write in the EPS figure the MadGraph5_aMC@NLO number associate to the line.
         Note that this routine is called only for external particle."""
 
         # find the external vertex associate to the line
-        if line.start.is_external():
-            vertex = line.start
+        if line.begin.is_external():
+            vertex = line.begin
         else:
             vertex = line.end
 
@@ -284,19 +342,19 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += ' %s  %s moveto \n' % (x, y)
         self.text += '(%s)   show\n' % (number)
 
-    def associate_name(self, line, name):
+    def associate_name(self, line, name, loop=False, reverse=False):
         """ADD the EPS code associate to the name of the particle. Place it near
         to the center of the line.
         """
 
         # Put alias for vertex positions
-        x1, y1 = line.start.pos_x, line.start.pos_y
+        x1, y1 = line.begin.pos_x, line.begin.pos_y
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
         if d == 0:
             raise self.DrawDiagramError('Line can not have 0 length')
-
+        
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:
@@ -311,7 +369,21 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         else:
             dx = 0.01 #0.05
             dy = 0.02 #d * 0.12 
+        if loop:
+            dx, dy = 1.5* dx, dy
+            if x1 == x2:
+                if y1 < y2:
+                    dx, dy = -dx, -dy
+            elif y1 == y2:
+                if x1 >x2:
+                    dx, dy = -dx, -dy
+            elif x1 < x2:
+                dx, dy = -dx, -dy
+        if reverse:
+            dx, dy = -dx, -dy
+
             
+                
         # Assign position
         x_pos = (x1 + x2) / 2 + dx
         y_pos = (y1 + y2) / 2 + dy
@@ -364,7 +436,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
                    'blob_size':0.9}
     
     def __init__(self, diagramlist=None, filename='diagram.eps', \
-                  model=None, amplitude=None, legend=''):
+                  model=None, amplitude=None, legend='',diagram_type=''):
         """Define basic variable and store some global information
         all argument are optional
         diagramlist : are the list of object to draw. item should inherit 
@@ -386,21 +458,26 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.block_in_page = 0 #ckeep track of the block in a page
         #compute the number of pages
         self.npage = 1
-        
+        self.diagram_type = diagram_type
+
+        diagramlist = [d for d in diagramlist if not (isinstance(d, loop_objects.LoopUVCTDiagram) or \
+                (isinstance(d, loop_objects.LoopDiagram) and d.get('type') < 0))]
+        diagramlist = base_objects.DiagramList(diagramlist)
+
         limit = self.lower_scale * self.nb_col * self.nb_line
         if len(diagramlist) < limit:
-            self.npage += len(diagramlist) // (self.nb_col * self.nb_line)
+            self.npage += (len(diagramlist)-1) // (self.nb_col * self.nb_line)
         else:
-            add = (len(diagramlist) - self.lower_scale) // \
+            add = (len(diagramlist) - limit -1) // \
                      (self.second_scale['nb_col'] * self.second_scale['nb_line'])
-            self.npage += self.lower_scale + add -2
+            self.npage += self.lower_scale + add
+            
         if diagramlist:
             # diagramlist Argument should be a DiagramList object
             assert(isinstance(diagramlist, base_objects.DiagramList))
             self.diagramlist = diagramlist
         else:
-            self.diagramlist = None
-            
+            self.diagramlist = None            
             
     def rescale(self, x, y):
         """All coordinates belongs to [0,1]. So that in order to have a visible
@@ -458,11 +535,13 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         self.text += ' 260         50  moveto\n'
-        self.text += ' (Diagrams made by MadGraph5) show\n'       
+        self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'       
         # Loop on all diagram
-        for diagram in diagramlist:
+        for i,diagram in enumerate(diagramlist):
             # Check if they need to be convert in correct format
             diagram = self.convert_diagram(diagram, self.model, self.amplitude, opt)
+            if diagram==None:
+                continue
             # Write the code associate to this diagram
             self.draw_diagram(diagram)
 
@@ -485,7 +564,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         
         
         self.text += 'showpage\n'
-        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page, self.curr_page)
+        self.text += '%%' + 'Page: %s %s \n' % (self.curr_page+1, self.curr_page+1)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
         self.text += ' 50         770  moveto\n'

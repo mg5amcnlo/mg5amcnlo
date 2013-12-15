@@ -1,0 +1,130 @@
+include ../../Source/make_opts
+include ../analyse_opts
+
+LIBDIR = ../../lib/
+ANADIR = ../../FixedOrderAnalysis/
+
+#check if fastjet-config is set
+ifeq ($(fastjet_config),None) 
+    fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o
+    FJLIBS += -lstdc++
+else
+    FASTJET_CONFIG = $(fastjet_config)
+    CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
+    FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
+    fastjetfortran_madfks=fastjetfortran_madfks_full.o fastjet_wrapper.o
+endif
+
+NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
+# Uncomment the line below to compile with MadLoop without setting the environnement 
+# variables 'by hand'
+# NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
+LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(lhapdf)
+LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
+$(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
+
+# Files for all executables
+FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
+	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
+	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
+	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
+	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
+	 $(fastjetfortran_madfks) fks_singular.o			\
+	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
+	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
+	 reweight.o get_color.o FKSParamReader.o			\
+	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
+
+# Files needed for vegas, mint & mintMC
+RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
+	madfks_plot.o fill_MC_mshell.o born_hel.o open_output_files.o
+
+# Files for vegas
+VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
+
+# Files for vegas
+MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
+
+# Files for mintMC
+MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
+	handling_lhe_events.o iproc_map.o
+
+# Files for Born reweighting
+BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
+	write_event.o
+
+# Files for check_poles
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o born_hel.o
+
+# Files for tests
+TEST= $(FILES) BinothLHADummy.o cuts.o
+
+# Files for gensym
+SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
+
+# Files for event reweighting to get e.g. scale and PDF uncertainties
+RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
+	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
+	cuts.o $(fastjetfortran_madfks) boostwdir2.o 			\
+	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
+	reweight.o get_color.o iproc_map.o fks_inc_chooser.o 		\
+	leshouche_inc_chooser.o
+
+%.o: %.f
+	$(FC) $(FFLAGS) -c -I. $<
+%.o: $(ANADIR)/%.f
+	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
+%.o: %.for
+	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $<
+%.o: $(ANADIR)/%.for
+	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
+%.o: %.c
+	$(CXX) $(CFLAGS) -c -I. $^
+%.o: $(ANADIR)/%.c
+	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c -I. $^
+%.o: $(ANADIR)/%.cc
+	$(CXX) $(CXXFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+
+gensym: $(SYM)
+	$(FC) $(LDFLAGS) -o gensym $(SYM) $(LINKLIBS) $(FJLIBS)
+	rm fks_singular.o
+
+test_Sij: symmetry_fks_test_Sij.o $(TEST)
+	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(LINKLIBS) $(FJLIBS)
+
+test_ME: symmetry_fks_test_ME.o $(TEST)
+	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	rm symmetry_fks_test_ME.o
+
+test_MC: symmetry_fks_test_MC.o $(TEST) 
+	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(LINKLIBS) $(FJLIBS)
+	rm symmetry_fks_test_MC.o
+
+check_poles: $(POLES) $(libmadloop)
+	$(FC) $(LDFLAGS) -o check_poles $(POLES) $(NLOLIBS) $(LINKLIBS) $(FJLIBS)
+
+madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+
+madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+
+madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+
+madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o madevent_reweight $(BORN_REWEIGHT) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS)
+
+reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
+	$(FC) $(LDFLAGS) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS)
+
+libMadLoop.a:
+	for dir in `ls -d V*`; do cd $$dir; make; cd ../; done
+
+clean:
+	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
+	    test_M* gensym
+	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
+

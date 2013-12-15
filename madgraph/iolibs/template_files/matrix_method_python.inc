@@ -3,15 +3,15 @@ class Matrix_%(process_string)s(object):
     def __init__(self):
         """define the object"""
         self.clean()
-        
+
     def clean(self):
         self.jamp = []
-        
+
     def smatrix(self,p, model):
         #  
         %(info_lines)s
         # 
-        # MadGraph StandAlone Version
+        # MadGraph5_aMC@NLO StandAlone Version
         # 
         # Returns amplitude squared summed/avg over colors
         # and helicities
@@ -37,10 +37,12 @@ class Matrix_%(process_string)s(object):
         # BEGIN CODE
         # ----------
         self.amp2 = [0.] * ndiags
+        self.helEvals = []
         ans = 0.
         for hel in helicities:
             t = self.matrix(p, hel, model)
             ans = ans + t
+            self.helEvals.append([hel, t.real / denominator ])
         ans = ans / denominator
         return ans.real
 

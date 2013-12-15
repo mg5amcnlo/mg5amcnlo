@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """A set of objects to allow for easy comparisons of results from various ME
@@ -39,7 +39,6 @@ import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.interface.master_interface as cmd_interface
-
 import madgraph.various.misc as misc
 
 
@@ -425,7 +424,10 @@ class MG5_UFO_Runner(MG5Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        if model != 'mssm':
+            v5_string = "import model %s \n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s \n" %  model
         v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 
@@ -609,7 +611,8 @@ class PickleRunner(MERunner):
     orders = {}
     energy = 1000
 
-    def run(self, proc_list, model, orders, energy):
+#    def run(self, proc_list, model, orders, energy):
+    def run(self, *arg, **opt):
         """Simulate a run by simply returning res_list
         """
 
@@ -896,7 +899,7 @@ class MEComparatorGauge(MEComparator):
             res_str += self._fixed_string_length("%1.10e" % diff_fixw, col_size)
             res_str += self._fixed_string_length("%1.10e" % diff_feyn, col_size)
                         
-            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-4 and \
+            if diff_feyn < 1e-2 and diff_cms < 1e-6 and diff_fixw < 1e-3 and \
                diff_unit < 1e-2:
                 pass_proc += 1
                 res_str += "Pass"
@@ -941,8 +944,8 @@ class MEComparatorGauge(MEComparator):
             diff_fixw = abs(list_res[2] - list_res[3]) / \
                        (list_res[2] + list_res[3] + 1e-99)
                        
-            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-4 or \
-               diff_unit > 1e-2:                
+            if diff_feyn > 1e-2 or diff_cms > 1e-6 or diff_fixw > 1e-3 or \
+               diff_unit > 1e-2:          
                 fail_str += proc+" "
 
         test_object.assertEqual(fail_str, "")    
@@ -1029,15 +1032,4 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-
-
-
-
-
-
-
-
-
-
-
 

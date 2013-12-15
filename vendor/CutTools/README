@@ -1,0 +1,486 @@
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+ 
+              CutTools V1.9.0 (Apr 25 2013)
+
+              contact author: pittau@ugr.es
+
+ - Authors: Giovanni Ossola, Costas G. Papadopoulos, Roberto Pittau
+
+ - When using this code, please quote the following 4 papers:
+
+   \bibitem{CutTools} 
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``CutTools: a program implementing the OPP reduction method
+     %to compute one-loop amplitudes,''   
+     arXiv:0711.3596 [hep-ph].
+     %%CITATION = ARXIV:0711.3596;%%
+
+   \bibitem{Ossola:2006us}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``Reducing full one-loop amplitudes to scalar integrals at the integrand
+     %level,''
+     Nucl.\ Phys.\  B {\bf 763} (2007) 147 [arXiv:hep-ph/0609007].
+     %%CITATION = NUPHA,B763,147;%%
+
+   \bibitem{Ossola:2008xq}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``On the Rational Terms of the one-loop amplitudes,''
+     JHEP {\bf 0805} (2008) 004
+     [arXiv:0802.1876 [hep-ph]].
+     %%CITATION = JHEPA,0805,004;%%
+
+   \bibitem{Ossola:2007bb}
+     G.~Ossola, C.~G.~Papadopoulos and R.~Pittau,
+     %``Numerical Evaluation of Six-Photon Amplitudes,''
+     JHEP {\bf 0707} (2007) 085
+     [arXiv:0704.1271 [hep-ph]].
+     %%CITATION = JHEPA,0707,085;%%
+
+ - When using this code, together with the routines in 
+   avh_olo_s4.f, please quote also the 2 papers:
+
+    A. van Hameren,                                                   
+      Comput.Phys.Commun. 182 (2011) 2427-2438, arXiv:1007.4716       
+    A. van Hameren, C.G. Papadopoulos and R. Pittau,                  
+      JHEP 0909:106,2009, arXiv:0903.4665  
+
+ - When using this code, together with the routines in 
+   qcdloop, please quote also the paper:
+
+   \bibitem{Ellis:2007qk}
+     R.~K.~Ellis and G.~Zanderighi,
+     %``Scalar one-loop integrals for QCD,''
+     JHEP {\bf 0802} (2008) 002
+     [arXiv:0712.1851 [hep-ph]].
+     %%CITATION = ARXIV:0712.1851;%%
+
+ - !!Do not forget that the rational part R2 should be provided externally!!
+   (see, for example,  arXiv:1111.4965 [hep-ph]
+                       arXiv:0910.3130 [hep-ph]
+                       arXiv:0903.0356 [hep-ph])
+
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+
+To compile and to test the program: 
+----------------------------------
+edit the first line of the makefile and set the option for the multiprecision 
+computation between PRECISION= MP (internal multiprecision routines) and
+PRECISION= QP (quadruple precision compiler, if supported by your system)
+
+Then type:
+
+  > make
+
+This will produce the directory "includects", containing the *.h files, the
+*.mod files and the library "libcts.a". The whole directory "includects" 
+and the library "libcts.a", should be present (on linked with a soft link)
+in your working directory (called "examples" in the following).
+
+To check your installation: 
+--------------------------
+go to the working directory "examples" and type
+
+  > make
+
+Then, check the implementation of the multiprecision routines by typing
+
+  > make mpcheck
+
+To compare with reference outputs contained in "examples/testdir", type
+
+  > make test  
+
+In directory "examples" will then appear the file "testoutput", containing the
+differences between the generates outputs (out*_ccc) and the reference
+ones (out*_ref) contained in "examples/testdir.
+
+How to use the program:
+-----------------------
+Your own numerator function to be "CutToolized" should be written in the file
+"numerators.f", that is also included in the directory "examples".
+When provided, a multi-precision version of it should be put in  
+"mpnumerators.f90".  
+If you want to work in another directory, the whole directory "includects" 
+and the library "libcts.a", should be present (on linked with a soft link)
+in that directory.
+
+To perform the computation, three subroutines should be called
+
+       call ctsinit       (to initialize cuttools)  
+       call ctsxcut       (to get the amplitude amp and R1)
+       call ctsstatistics (to get statistical information on the run)  
+
+In particular:
+
+                 ctsinit:
+
+!---------------------------------------------------------------------
+! To initialize CutTools call ctsinit(limitvalue,scaloop)
+!
+! INPUT:
+!
+!         real*8  limitvalue -> limit of precision below which
+!                               the PS point is considered stable
+!                               by tha A=A test (see below)      
+!
+!         integer scaloop    -> library used to compute the scalar 
+!                               1-loop functions:  
+!                               scaloop= 1 -> looptools (not implemented) 
+!                               scaloop= 2 -> avh (complex masses)   
+!                               scaloop= 3 -> qcdloop.  
+! OUTPUT: none
+!---------------------------------------------------------------------
+
+                 ctsxcut: 
+
+!---------------------------------------------------------------------
+! To compute the 1-loop amplitude
+!
+!      call ctsxcut(imode,rootsvalue,muscale,number_propagators,test,
+!     & mpfortest,rnk,pp,m2,amp,ampcc,ampr1,stable)
+!
+!
+! INPUT: integer imode              -> the running mode of CutTools according
+!                                      to the following scheme:  
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!                                                                            !
+!! imode:|  actions performed by ctsxcut:                                     !
+!!       |                                                                    !
+!!   0   | (dp_dir,dp_inv)-> dp_Atest -> stable -> (only if stable=.false.) ->!
+!!       | (mp_dir,mp_inv)-> mp_Atest -> stable                               ! 
+!!   1   | (dp_dir)       -> dp_Ntest -> stable                               !
+!!   2   | (dp_inv)       -> dp_Ntest -> stable                               !
+!!   3   | (dp_dir,dp_inv)-> dp_Atest -> stable                               !
+!!   4   | (mp_dir)       -> mp_Ntest -> stable                               ! 
+!!   5   | (mp_inv)       -> mp_Ntest -> stable                               ! 
+!!   6   | (mp_dir,mp_inv)-> mp_Atest -> stable                               !
+!!                                                                            !
+!! Legenda:                                                                   !
+!!                                                                            !
+!! dp_dir    = compute amp in double precision with normal   propagator order !
+!! dp_inv    = compute amp in double precision with reversed propagator order !
+!! mp_dir    = compute amp in multi  precision with normal   propagator order !
+!! mp_inv    = compute amp in multi  precision with reversed propagator order !
+!! dp_Atest  = perform the A=A test in double precision                       !
+!! mp_Atest  = perform the A=A test in multi  precision                       !
+!! dp_Ntest  = perform the N=N test in double precision                       !
+!! mp_Ntest  = perform the N=N test in multi  precision                       !
+!! -> stable = set stable=.true. or stable=.false.                            !
+!!             according to the outcome of the test                           !
+!!                                                                            !
+!! Tests:                                                                     !
+!!                                                                            !
+!! -The N=N test is a test on the reconstructed OPP integrand performed       !
+!!  by comparing original and reconstacted integrands at an arbirtary value   !
+!!  of the integration momentum.                                              !
+!!                                                                            ! 
+!! -The A=A test checks the 2 amplitudes obtained with dir and inv orders     !
+!!               of the propagators given in the input                        !
+!! Notes:                                                                     !
+!!                                                                            ! 
+!! a) imode= 0 is recommended, unless you really know what you are doing.     !
+!!                                                                            !
+!! b) When two determinations of amp are available, that one with more        !
+!!    accurate recounstructed numerator (coming from the N=N test) is used.   !
+!!                                                                            !
+!! c) When running in multi precision with scaloop= 3 (qcdloop), the loop     !
+!!    functions are computed in double precision only. A full multi           !
+!!    precision result can only be obtained with scaloop= 2 (OneLoop).        !
+!!                                                                            ! 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!
+!        real*8  rootsvalue         -> the arbitrary OPP scale 
+!                                      set event by event.
+!
+!        real*8  muscale            -> the scale for the 1-loop integrals
+!                                      set event by event.
+!                                      It has dimension of an energy. 
+!
+!        integer number_propagators -> number of propagators.
+!
+!        external test              -> name of the subroutine
+!                                      computing N(q). 
+!
+!        external mpfortest         -> name of the subroutine
+!                                      computing N(q) in  
+!                                      multi-precision (if absent
+!                                      put dummy).
+!
+!        integer rnk                -> the maximum rank of N(q) (if 
+!                                      unknown put number_propagators).
+!
+!        real*8 pp(0:3,0:number_propagators-1)           
+!                                   -> momenta flowing in the internal 
+!                                      propagators.
+!
+!        complex*16 m2(0:number_propagators-1)           
+!                                   -> masses squared of the internal 
+!                                      propagators. When scaloop supports it,
+!                                      they can be complex. When scaloop does
+!                                      not support complex masses, only 
+!                                      the real part of m2 is used.  
+!   
+!               
+! OUTPUT:  complex*16 amp(0:2)      -> Amplitude (without r2):     
+!                                      amp(0) is the total finite part
+!                                      (INCLUDING R1!!!)   
+!                                      amp(1) is the coeff. of 1/eps   pole
+!                                      amp(2) is the coeff. of 1/eps^2 pole.
+!
+!          complex*16 ampcc         -> the Cut Constructible contribution
+!          complex*16 ampr1         -> the R1 contribution
+!                                      (NOTE that ampcc+ampr1 = amp(0))
+!
+!          logical stable           -> .false. if CutTools detects
+!                                      numerical instabilities.         
+!---------------------------------------------------------------------
+
+                 ctsstatistics:
+
+!---------------------------------------------------------------------
+! To know the statistics of the run call ctsstatistics(discarded)
+!
+! INPUT :  none
+!
+! OUTPUT:  logical discarded  -> .true. if there are discarded PS points
+!
+! Print out of the statistics of the run:
+!
+!          n_mp   ->  n.of points evaluated in multi-precision.
+!          n_disc ->  n.of discarded points.               
+!          n_tot  ->  n.of calls to ctsxcut               
+!---------------------------------------------------------------------
+
+An explicit example is presented in the file "examples/example0.f".
+The file "examples/ooutput0" contains the output you should obtain when
+compiling and running example0.f in the directory "examples"
+(to copile it, just go to that directory and type 
+
+  > make)  
+
+---------------------------------------------------------------------------
+---------------------------------------------------------------------------
+
+ Some history of the current version:
+
+   25 Jan 2007:
+
+- Towards a version with m-denominators
+
+   09 Apr 2008:
+
+- in dp_cutting4: 
+  if (real(cb3).le.0.d0) then changed to
+  if (real(cb3).lt.0.d0) then
+- in mp_cutting4: 
+  if (mpreal(cb3).le.0.d0) then changed to
+  if (mpreal(cb3).lt.0.d0) 
+- corrected test_rat in multiprecision (d_6 was not properly allocated 
+  when printing out its value)
+
+   24 Jun 2008:
+
+- in dp_cutting4 and mp_cutting4: corrected the roots of the quadratic 
+  equations to always get precise results
+- corrected l3 and l4 computation to always get precise results
+- The N=N test changed using now the m momenta appearing in the m denominators 
+- program restructured to interface with Formcalc/Feyncalc 
+  (call dcut,ccut etc...)
+
+   28 July 2008:
+
+- The N=N test now also contains a small component with a generic q
+
+  02 September 2008:
+
+- new algorithm implemented for calculating Rational Terms with inf=.true.  
+
+  04 September 2008:
+
+- dp_getd amd mp_getd modified to call the num function only 2 times.
+
+  24 September 2008:
+
+- Corrected error in  subroutine getdloop (cts_loopfunctions.f90)
+
+  wrong ->  k2 = den(bn4(np,3,i))%p-den(bn4(np,2,1))%p 
+  right ->  k2 = den(bn4(np,3,i))%p-den(bn4(np,2,i))%p 
+
+  October 30 2008:
+
+- interface with general avh routines 
+- corrected wrong scaless b11 function in cts_loopfunctions.f90: it was not 0.
+
+  November  04 2008:
+
+- interface with qcdloop (still to be activated at the compilation level)
+- changed the basis for the 1-point functions
+
+  December  01 2008:
+
+- changed the basis for the 2-point functions
+
+  January 23 2009:
+
+- interface with qcdloop activated 
+- loptools library disactivated (because of conflicts with qcdloop)
+
+  July 2 2009:
+ 
+- try to make of it the official version V1.1 
+
+- August 20 2009:
+
+- makefile simplified, eliminated configure, eliminated LoopTools  
+- qcdloop version 1.9 replaces qcdloop version 1.8 
+  (problem fixed in qlbox15.f)
+- makefile modified to run on DOS/Windows Platforms as well
+
+- November 19 2009:
+
+- m^2 (and not m!) as an input in acut,...,xcut
+- thrs added as an input in ctsinit
+- new bases in the 3,2 and 1 point sectors
+- N(q) is called the minimum amount of times
+- N = N test only performed with q = -momenta in the denominators
+- flag inf1 added to choose amomg 2 different ways to compute R_1 
+  in the 4 point sector in the qt2 -> limit
+- version of avh_olo with complex masses 
+
+- June 1 2010:
+
+- new test for the numerical accuracy based on a re-fitting
+  the re-constructed numerator at different values of qt2.
+  The test is now trustable.
+  The computation time is larger for simple Numerator functions because
+  the fitted ones takes more time. In real life, when N(q) is complicated
+  that should be OK. 
+- The 4-point part of R_1 is obtained with a new algorithm.
+- Most of the times, computing N(q) in double precision and
+  all the fitting procedure in mprec ADJUSTS the bad points.
+  See mpnumerators.f90 and example1.f to see how to achieve that.
+- Routines acut, bcut, ccut, dcut ... eliminated from
+  cts_cutroutines.f90
+- example2.f eliminated  
+- R_1 separated from the rest of the amplitude (HELAC-NLO convention) 
+
+- February 4 2011:
+
+- eliminated any use of dynamical memory 
+- loose N=N test added to avoid large unstable weights
+
+- February 10 2011:
+
+- computing R_1 by colling Num (not Numrec). This gives more numerical 
+  stability  
+- updated version of mprec implemented
+
+- March  1 2011:
+
+- computing R_1 and amp1 by calling Num (not Numrec) ONLY in multiprecision
+  to comprimize between speed and accuracy
+- declarations of real, complex, mp_real and mp_complex 
+  variables put in include files
+- put parameter maxden in cts_combinatorics.f90 and inserted protection
+  when number_propagators > maxden
+- inserted rootsvalue and muscalein in the input of ctsxcut  
+- introduced 2 new files cts_combinatorics.f90 and cts_combinatorics.f90, to
+  organize better the code
+
+- March 18 2011:
+
+- double-double precision routines implemented (significantly faster)
+- mptest program added in diectory examples to test the implementation
+  of the multiprecision routines
+
+- May 9 2011:
+
+- double-double precision routines my be buggy: old multiprecision 
+  re-implemented
+- maxden= 6 in this version (to be re-fixed soon)
+- option dmr= -1 implemented when 1 denominator is present in the numerator
+  function
+
+- June 5 2011:
+
+- generic choice of maxden reinserted in /src/cts/cts_combinatorics.f90
+- an automatic test of the cuttools implementation on the user's platform
+  is now available  
+- forcemp flag added to force the code to switch in multiprecision
+
+- October 19 2011:
+
+- new test for numerical precision introduced, based on reversing the order 
+  of the denominators at the input level  
+- the threshold for testmp has been put to 10^-11 (rnk= 4) in this version, 
+  because the loop functions are computed in double precision only
+
+- November 24 2011:
+
+- inclusion of new fortran95 version of OneLOop in this version
+- December 16 2011:
+- mp_OneLOop implemented in this version
+- the threshold for testmp has been re-put to 10^-21 and rnk= 6
+- input/output of ctsxcut, ctsinit and ctsstatistics restructured
+- imode options intruduced in ctsxcut
+- mp/qp option introduced in the makefile
+- DOS/Windows Platforms optiond eliminated from the makefile
+
+- Jan 17 2012:
+
+- Bug corrected in OneLOop-2.2:In "subroutine box16"
+  sm1 = cmplx(abs(rmu)) -> cmplx(abs(rmu),kind=kindc2)
+
+- Nov 30 2012: 
+
+- Dimensionality of the arrays reduced
+- attribute "private" in all modules
+- mpmodule not used when compiling with external multiprecision
+  (but multirecision routines are still compiled)
+- n_disc -> n_unst in subroutine ctsstatistics
+- mp_tiny= tiny(1.d0) in cts_constants.f90
+- OneLoop-3.2, implemented (same as MadLoop, some error lines commented)
+- option dmr= -1 working for any number of denominators 
+  Ment to compute processes with the Hgg vertex where 
+  1 denominator is always reconstructed in the numerator function
+- The external numerator is always called when computing R1
+
+- Dec 05 2012:
+
+- logical flag "ext_num_for_r1" added in ctsinit to use the external 
+  numerator (ext_num_for_r1=.true.) or the reconstructed one 
+  (ext_num_for_r1=.false.) when computing R1 
+
+- Dec 07 2012:
+
+- Minimal fixi of dynamical allocation of local variables
+- maxden= 8 
+
+- Dec 10 2012:
+
+- Fixed 2 bound-check errors due to 1) OneLOop and 2) to the dynamical 
+  allocation of local variables in CutTools
+
+- Dec 15 2012:
+
+- Minimal fix dmns_a,b,c,d -> dmns_1,2,3,4 in computeamp 
+
+- Feb 12 2013:
+
+- fix in cut3%cc to avoid underflow 
+
+- April 23 2013:
+
+- more precise computation of bet in dp_bild_l and mp_build_l, to avoid 1/0
+
+- April 25 2013:
+
+- more precise computation of del12 in dp_bild_l and mp_build_l and 
+  protection added against 1/0
+
+---------------------------------------------------------------------------
+Last modification of this document: Apr 25 2013
+---------------------------------------------------------------------------

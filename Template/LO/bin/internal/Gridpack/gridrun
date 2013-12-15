@@ -1,0 +1,96 @@
+#! /usr/bin/env python
+
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+#
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+
+"""This is the main executable, a simple frontend to set up the PYTHONPATH
+and call immediately the command line interface scripts"""
+
+import sys
+if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+    sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n\
+               Please upgrate your version of python.')
+
+import os
+import optparse
+
+# Get the directory of the script real path (bin)
+# and add it to the current PYTHONPATH
+
+root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+sys.path.insert(0, root_path)
+
+
+# Write out nice usage message if called with -h or --help
+usage = "usage: %prog [options] [FILE] "
+parser = optparse.OptionParser(usage=usage)
+parser.add_option("-l", "--logging", default='INFO',
+                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                 help='force to launch debug mode')
+(options, args) = parser.parse_args()
+if len(args) == 0:
+    args = ''
+
+import subprocess
+
+# Check if optimize mode is (and should be) activated
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py'))):
+        subprocess.call([sys.executable] + ['-O'] + sys.argv)
+        sys.exit()
+
+import logging
+import logging.config
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print 'Running MG5 in debug mode'
+
+
+# Set logging level according to the logging level given by options
+#logging.basicConfig(level=vars(logging)[options.logging])
+try:
+    if __debug__ and options.logging == 'INFO':
+        options.logging = 'DEBUG'    
+    logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+except:
+    pass
+
+import internal.madevent_interface as cmd_interface
+
+# Call the cmd interface main loop
+
+try:
+    cmd_line = cmd_interface.GridPackCmd(me_dir=root_path, nb_event=args[0], seed=args[1])            
+except KeyboardInterrupt:
+    print 'Quit on KeyboardInterrupt' 
+
+print 'DONE'
+
+try:
+    # Remove lock file
+    os.remove(os.path.join(root_path, 'RunWeb'))
+    if cmd_line.history[-1] not in ['EOF','quit','exit']:
+        cmd_line.results.store_result()
+except:
+    pass

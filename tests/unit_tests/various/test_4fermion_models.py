@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Unit tests for four-fermion models."""
@@ -67,7 +67,7 @@ class Models4FermionTest(unittest.TestCase):
                                            'model':base_model})
 
             evaluator = process_checks.MatrixElementEvaluator(base_model,
-                                                              reuse = False)
+                                                                  reuse = False)
             evaluator.full_model = full_model
             
             if not p:
@@ -179,7 +179,7 @@ class TestSchannelModels(Models4FermionTest):
                   group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
-                                                subproc_group)
+                                                                  subproc_group)
 
         self.assertEqual(len([s for s in symmetry if s > 0]), 1)
 

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """A File for splitting"""
@@ -22,12 +22,18 @@ pjoin = os.path.join
 
 try:
     import madgraph.various.misc as misc
+    import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as FO_analyse_card
     import madgraph.iolibs.file_writers as file_writers
+    import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
     MADEVENT = False
-except:
+except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
+    import internal.check_param_card as param_card_reader
+    import internal.shower_card as shower_card
+    import internal.FO_analyse_card as FO_analyse_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -45,7 +51,10 @@ class Banner(dict):
     
     def __init__(self, banner_path=None):
         """ """
-        dict.__init__(self)
+        if isinstance(banner_path, Banner):
+            return dict.__init__(self, banner_path)     
+        else:
+            dict.__init__(self)
         
         #Look at the version
         if MADEVENT:
@@ -53,6 +62,8 @@ class Banner(dict):
         else:
             info = misc.get_pkg_info()
             self['mgversion'] = info['version']+'\n'
+        
+
             
         if banner_path:
             self.read_banner(banner_path)
@@ -71,14 +82,22 @@ class Banner(dict):
       'mgdelphestrigger':'delphes_trigger.dat',
       'mg5proccard':'proc_card_mg5.dat',
       'mgproccard': 'proc_card.dat',
+      'init': '',
+      'mggenerationinfo':'',
+      'montecarlomasses':'',
+      'initrwgt':'',
+      'madspin':'madspin_card.dat' 
       }
     
     def read_banner(self, input_path):
         """read a banner"""
 
+        if isinstance(input_path, str):
+            input_path = open(input_path)
+
         text = ''
         store = False
-        for line in open(input_path):
+        for line in input_path:
             if self.pat_begin.search(line):
                 tag = self.pat_begin.search(line).group('name').lower()
                 if tag in self.tag_to_file:
@@ -90,8 +109,16 @@ class Banner(dict):
                     text = ''
                     store = False
             if store:
-                text += line
-
+                if line.endswith('\n'):
+                    text += line
+                else:
+                    text += '%s%s' % (line, '\n')
+                
+            #reaching end of the banner in a event file avoid to read full file 
+            if "</init>" in line:
+                break
+            elif "<event>" in line:
+                break
                 
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -134,50 +161,69 @@ class Banner(dict):
                 continue
             if not proc_card and tag in ['mg5proccard','mgproccard']:
                 continue
+            if not self.tag_to_file[tag]:
+                continue
             ff = open(pjoin(me_dir, 'Cards', self.tag_to_file[tag]), 'w')
             ff.write(text)
             ff.close()
 
-    ############################################################################
-    #  SPLIT BANNER
-    ############################################################################
-    def charge_card(self, tag):
-        """Build the python object associated to the card"""
-        
-        if tag == 'param_card':
-            tag = 'slha'
-        elif tag == 'run_card':
-            tag = 'mgruncard' 
-        elif tag == 'proc_card':
-            tag = 'mg5proccard' 
-        
-        assert tag in ['mgruncard'], 'invalid card %s' % tag
-        
-        if tag == 'mgruncard':
-            run_card = self[tag].split('\n') 
-            self.run_card = RunCard(run_card)
-            return self.run_card
 
     ############################################################################
     #  WRITE BANNER
     ############################################################################
-    def write(self, output_path):
+    def check_pid(self, pid2label):
+        """special routine removing width/mass of particles not present in the model
+        This is usefull in case of loop model card, when we want to use the non
+        loop model."""
+        
+        if not hasattr(self, 'param_card'):
+            self.charge_card('slha')
+            
+        for tag in ['mass', 'decay']:
+            block = self.param_card.get(tag)
+            for data in block:
+                pid = data.lhacode[0]
+                if pid not in pid2label.keys(): 
+                    block.remove((pid,))
+
+    ############################################################################
+    #  WRITE BANNER
+    ############################################################################
+    def write(self, output_path, close_tag=True):
         """write the banner"""
         
-        ff = open(output_path, 'w')
-        if MADEVENT:
-            ff.write(open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read())
+        if isinstance(output_path, str):
+            ff = open(output_path, 'w')
         else:
-            ff.write(open(pjoin(MG5DIR,'Template', 'Source', 'banner_header.txt')).read())
+            ff = output_path
+            
+        if MADEVENT:
+            header = open(pjoin(MEDIR, 'Source', 'banner_header.txt')).read()
+        else:
+            header = open(pjoin(MG5DIR,'Template', 'LO', 'Source', 'banner_header.txt')).read()
+        
+        ff.write(header)
+
+
         for tag in [t for t in self.ordered_items if t in self.keys()]:
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':self[tag].strip()})
         for tag in [t for t in self.keys() if t not in self.ordered_items]:
+            if tag in ['init']:
+                continue
             ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
                      {'tag':tag, 'text':self[tag].strip()})
+
         ff.write('</header>\n')    
-        ff.write('</LesHouchesEvents>\n')
-            
+
+        if 'init' in self:
+            text = self['init']
+            ff.write('<%(tag)s>\n%(text)s\n</%(tag)s>\n' % \
+                     {'tag':'init', 'text':text.strip()})  
+        if close_tag:          
+            ff.write('</LesHouchesEvents>\n')
+        
+        
     ############################################################################
     # BANNER
     ############################################################################
@@ -204,15 +250,111 @@ class Banner(dict):
                 tag = 'MGProcCard'
             elif 'procdef_mg5' in card_name:
                 tag = 'MGProcCard'
+            elif 'shower_card' in card_name:
+                tag = 'MGShowerCard'
+            elif 'madspin_card' in card_name:
+                tag = 'madspin'
+            elif 'FO_analyse_card' in card_name:
+                tag = 'foanalyse'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
-            self[tag.lower()] = open(path).read()
+            self.add_text(tag.lower(), open(path).read())
 
+    def add_text(self, tag, text):
+        """Add the content of the file to the banner"""
+        
+        self[tag.lower()] = text
+    
+    
+    def charge_card(self, tag):
+        """Build the python object associated to the card"""
+        
+        if tag == 'param_card':
+            tag = 'slha'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+        elif tag == 'FO_analyse_card':
+            tag = 'foanalyse'
 
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse'], 'invalid card %s' % tag
+        
+        if tag == 'slha':
+            param_card = self[tag].split('\n')
+            self.param_card = param_card_reader.ParamCard(param_card)
+            return self.param_card
+        elif tag == 'mgruncard':
+            run_card = self[tag].split('\n') 
+            if 'parton_shower' in self[tag]:
+                self.run_card = RunCardNLO(run_card)
+            else:
+                self.run_card = RunCard(run_card)
+            return self.run_card
+        elif tag == 'mg5proccard':
+            proc_card = self[tag].split('\n')
+            self.proc_card = ProcCard(proc_card)
+            return self.proc_card
+        elif tag =='mgshowercard':
+            shower_content = self[tag] 
+            self.shower_card = shower_card.ShowerCard(shower_content, True)
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.shower_card.testing = False
+            return self.shower_card
+        elif tag =='foanalyse':
+            analyse_content = self[tag] 
+            # set testing to false (testing = true allow to init using 
+            #  the card content instead of the card path"
+            self.FOanalyse_card = FO_analyse_card.FOAnalyseCard(analyse_content, True)
+            self.FOanalyse_card.testing = False
+            return self.FOanalyse_card
+        
 
-
-
+    def get_detail(self, tag, *arg):
+        """return a specific """
+                
+        if tag == 'param_card':
+            tag = 'slha'
+            attr_tag = 'param_card'
+        elif tag == 'run_card':
+            tag = 'mgruncard' 
+            attr_tag = 'run_card'
+        elif tag == 'proc_card':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+        elif tag == 'model':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('model',)
+        elif tag == 'generate':
+            tag = 'mg5proccard' 
+            attr_tag = 'proc_card'
+            arg = ('generate',)
+        elif tag == 'shower_card':
+            tag = 'mgshowercard'
+            attr_tag = 'shower_card'
+        assert tag in ['slha', 'mgruncard', 'mg5proccard', 'shower_card'], 'not recognized'
+        
+        if not hasattr(self, attr_tag):
+            self.charge_card(attr_tag) 
+            
+        card = getattr(self, attr_tag)
+        if len(arg) == 1:
+            if tag == 'mg5proccard':
+                return card.info[arg[0]]
+            return card[arg[0]]
+        elif len(arg) == 2 and tag == 'slha':
+            return card[arg[0]].get(arg[1:])
+        else:
+            raise Exception, "Unknow command"
+    
+    #convenient alias
+    get = get_detail
+        
 def split_banner(banner_path, me_dir, proc_card=True):
     """a simple way to split a banner"""
     
@@ -259,15 +401,15 @@ class RunCard(dict):
 
     #list of paramater which are allowed BUT not present in the _default file.
     hidden_param = ['lhaid', 'gridrun', 'fixed_couplings']
+    true = ['true', 'True','.true.','T', True, 1,'TRUE']
 
     def __init__(self, run_card):
         """ """
-
+        
         if isinstance(run_card, str):
             run_card = file(run_card,'r')
         else:
             pass # use in banner loading
-
 
         for line in run_card:
             line = line.split('#')[0]
@@ -313,9 +455,12 @@ class RunCard(dict):
     
 
         
-    def write(self, output_file, template):
+    def write(self, output_file, template=None):
         """Write the run_card in output_file according to template 
            (a path to a valid run_card)"""
+        
+        if not template:
+            template = output_file
         
         text = ""
         for line in file(template,'r'):                  
@@ -347,6 +492,20 @@ class RunCard(dict):
 ################################################################################
 #      Writing the lines corresponding to the cuts
 ################################################################################
+        # Frixione photon isolation
+        self.add_line('ptgmin', 'float', 0.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
+        # Cut that need to be deactivated in presence of isolation
+        if 'ptgmin' in self and float(self['ptgmin'])>0:
+            if float(self['pta']) > 0:
+                logger.warning('pta cut discarded since photon isolation is used')
+                self['pta'] = '0'
+            if float(self['draj']) > 0:
+                logger.warning('draj cut discarded since photon isolation is used')
+                self['draj'] = '0' 
     
         self.add_line('maxjetflavor', 'int', 4)
         self.add_line('auto_ptj_mjj', 'bool', True)
@@ -390,7 +549,7 @@ class RunCard(dict):
         self.add_line('drbb', 'float', 0.4)     
         self.add_line('drll', 'float', 0.4)     
         self.add_line('draa', 'float', 0.4)     
-        self.add_line('drbj', 'float', 0.4)     
+        self.add_line('drbj', 'float', 0.4)  
         self.add_line('draj', 'float', 0.4)     
         self.add_line('drjl', 'float', 0.4)     
         self.add_line('drab', 'float', 0.4)     
@@ -467,6 +626,10 @@ class RunCard(dict):
         self.add_line("htjmax", 'float', -1)        
         self.add_line("ihtmin", 'float', 0.0)
         self.add_line("ihtmax", 'float', -1)
+        # kt_ durham
+        self.add_line('ktdurham', 'float', -1, fortran_name='kt_durham')
+        self.add_line('dparameter', 'float', 0.4, fortran_name='d_parameter')
+
 
 ################################################################################
 #      Writing the lines corresponding to anything but cuts
@@ -479,24 +642,65 @@ class RunCard(dict):
             self.add_line('gseed', 'int', 0, fortran_name='iseed')
         else:
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
+        #number of events
+        self.add_line('nevents', 'int', 10000)
+        self.add_line('gevents', 'int', 2000, log=10)
+            
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)
         self.add_line('fixed_fac_scale', 'bool', True)
         self.add_line('scale', 'float', 'float', 91.188)
         self.add_line('dsqrt_q2fact1','float', 91.188, fortran_name='sf1')
         self.add_line('dsqrt_q2fact2', 'float', 91.188, fortran_name='sf2')
+        
+        self.add_line('use_syst', 'bool', False)
+        #if use_syst is True, some parameter are automatically fixed.
+        if self['use_syst'] in self.true:
+            value = self.format('float',self.get_default('scalefact', 1.0, 30))
+            if value != self.format('float', 1.0):
+                logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
+                self['scalefact'] = 1.0
         self.add_line('scalefact', 'float', 1.0)
+        
         self.add_line('fixed_couplings', 'bool', True, log=10)
         self.add_line('ickkw', 'int', 0)
         self.add_line('chcluster', 'bool', False)
         self.add_line('ktscheme', 'int', 1)
         self.add_line('asrwgtflavor', 'int', 5)
+        
+        #CKKW TREATMENT!
         if int(self['ickkw'])>0:
+            #if use_syst is True, some parameter are automatically fixed.
+            if self['use_syst'] in self.true:
+                value = self.format('float',self.get_default('alpsfact', 1.0, 30))
+                if value != self.format('float', 1.0):
+                    logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
+                    self['alpsfact'] = 1.0
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
+            self.add_line('clusinfo', 'bool', False)
+            # check that DRJJ and DRJL are set to 0 and MMJJ
+            if self.format('float', self['drjj']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
+            if self.format('float', self['drjl']) != self.format('float', 0.):
+                logger.warning('Since icckw>0, We change the value of \'drjl\' to 0')
+            if self.format('bool', self['auto_ptj_mjj']) == '.false.':
+                #ensure formatting
+                mmjj = self['mmjj']
+                if isinstance(mmjj,str):
+                    mmjj = float(mmjj.replace('d','e'))
+                xqcut = self['xqcut']
+                if isinstance(xqcut,str):
+                    xqcut = float(xqcut.replace('d','e'))
+                 
+                if mmjj > xqcut:
+                    logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
+                    self.add_line('mmjj','float',0)
+                    
         if int(self['ickkw'])==2:
             self.add_line('highestmult','int', 0, fortran_name='nhmult')
             self.add_line('issgridfile','str','issudgrid.dat')
+        
         # Collider energy and type
         self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
         self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
@@ -528,8 +732,234 @@ class RunCard(dict):
         self.fsock.writelines(' %s = %s \n' % (fortran_name, self.format(type, value)))
 
 
+class RunCardNLO(RunCard):
+    """A class object for the run_card for a (aMC@)NLO pocess"""
 
+        
+    def write_include_file(self, output_path):
+        """writing the run_card.inc file""" 
+        
+        self.fsock = file_writers.FortranWriter(output_path)    
+################################################################################
+#      Writing the lines corresponding to the cuts
+################################################################################
+    
+        self.add_line('maxjetflavor', 'int', 5)
+        # minimum pt
+        self.add_line('ptj', 'float', 20)
+        self.add_line('etaj', 'float', -1.0)
+        self.add_line('ptl', 'float', 20)
+        self.add_line('etal', 'float', -1.0)
+        # minimum delta_r
+        self.add_line('drll', 'float', 0.4)     
+        # minimum invariant mass for pairs
+        self.add_line('mll', 'float', 0.0)
+        #inclusive cuts
+        # Jet measure cuts 
+        self.add_line("jetradius", 'float', 0.7, log=10)
 
+################################################################################
+#      Writing the lines corresponding to anything but cuts
+################################################################################
+        # seed
+        self.add_line('iseed', 'int', 0)
+        self.add_line('parton_shower', 'str', 'HERWIG6', fortran_name='shower_mc')
+        self.add_line('nevents', 'int', 10000)
+        self.add_line('event_norm', 'str', 'average', fortran_name='event_norm')
+        # Renormalizrion and factorization scales
+        self.add_line('fixed_ren_scale', 'bool', True)
+        self.add_line('fixed_fac_scale', 'bool', True)
+        self.add_line('fixed_QES_scale', 'bool', True)
+        self.add_line('muR_ref_fixed', 'float', 91.188)
+        self.add_line('muF1_ref_fixed','float', 91.188)
+        self.add_line('muF2_ref_fixed', 'float', 91.188)
+        self.add_line('QES_ref_fixed', 'float', 91.188)
+        self.add_line('muR_over_ref', 'float', 1.0)
+        self.add_line('muF1_over_ref', 'float', 1.0)
+        self.add_line('muF2_over_ref', 'float', 1.0)
+        self.add_line('QES_over_ref', 'float', 1.0)
+        #reweight block
+        self.add_line('reweight_scale', 'bool', True, fortran_name='do_rwgt_scale')
+        self.add_line('rw_Rscale_up', 'float', 2.0)
+        self.add_line('rw_Rscale_down', 'float', 0.5)
+        self.add_line('rw_Fscale_up', 'float', 2.0)
+        self.add_line('rw_Fscale_down', 'float', 0.5)
+        self.add_line('reweight_PDF', 'bool', True, fortran_name='do_rwgt_pdf')
+        self.add_line('PDF_set_min', 'int', 21101)
+        self.add_line('PDF_set_max', 'int', 21140)
+        # FxFx merging stuff
+        self.add_line('ickkw', 'int', 0)
+        # self.add_line('fixed_couplings', 'bool', True, log=10)
+        self.add_line('jetalgo', 'float', 1.0)
+        # Collider energy and type
+        self.add_line('lpp1', 'int', 1, fortran_name='lpp(1)')
+        self.add_line('lpp2', 'int', 1, fortran_name='lpp(2)')
+        self.add_line('ebeam1', 'float', 4000, fortran_name='ebeam(1)')
+        self.add_line('ebeam2', 'float', 4000, fortran_name='ebeam(2)')
+        # BW cutoff (M+/-bwcutoff*Gamma)
+        self.add_line('bwcutoff', 'float', 15.0)
+        # Photon isolation
+        self.add_line('ptgmin', 'float', 10.0)
+        self.add_line('etagamma', 'float', -1.0)
+        self.add_line('R0gamma', 'float', 0.4)
+        self.add_line('xn', 'float', 1.0)
+        self.add_line('epsgamma', 'float', 1.0)
+        self.add_line('isoEM', 'bool', True)
+        #  Collider pdf
+        self.add_line('pdlabel','str','cteq6_m')
+        if self['pdlabel'] == 'lhapdf':
+            self.add_line('lhaid', 'int', 21100)
+        else:
+            self.add_line('lhaid', 'int', 21100, log=10)
+        
+        self.fsock.close()
 
- 
+class ProcCard(list):
+    """Basic Proccard object"""
+    
+    def __init__(self, init=None):
+        """ initialize a basic proc_card"""
+        self.info = {'model': 'sm', 'generate':None,
+                     'full_model_line':'import model sm'}
+        list.__init__(self)
+        if init:
+            self.read(init)
 
+            
+    def read(self, init):
+        """read the proc_card and save the information"""
+        
+        if isinstance(init, str): #path to file
+            init = file(init, 'r')
+        
+        for line in init:
+            self.append(line)
+            
+    def move_to_last(self, cmd):
+        """move an element to the last history."""
+        for line in self[:]:
+            if line.startswith(cmd):
+                self.remove(line)
+                list.append(self, line)
+    
+    def append(self, line):
+        """"add a line in the proc_card perform automatically cleaning"""
+        
+        line = line.strip()
+        cmds = line.split()
+        if len(cmds) == 0:
+            return
+        
+        list.append(self, line)
+        
+        # command type:
+        cmd = cmds[0]
+        
+        if cmd == 'output':
+            # Remove previous outputs from history
+            self.clean(allow_for_removal = ['output'], keep_switch=True,
+                           remove_bef_last='output')
+        elif cmd == 'generate':
+            # Remove previous generations from history
+            self.clean(remove_bef_last='generate', keep_switch=True,
+                     allow_for_removal= ['generate', 'add process', 'output'])
+            self.info['generate'] = ' '.join(cmds[1:])
+        elif cmd == 'import':
+            if len(cmds) < 2:
+                return
+            if cmds[1].startswith('model'):
+                self.info['full_model_line'] = line
+                self.clean(remove_bef_last='import', keep_switch=True,
+                        allow_for_removal=['generate', 'add process', 'output'])
+                if cmds[1] == 'model':
+                    self.info['model'] = cmds[2]
+                else:
+                    self.info['model'] = None # not UFO model
+            elif cmds[1] == 'proc_v4':
+                #full cleaning
+                self[:] = []
+                
+
+    def clean(self, to_keep=['set','add','load'],
+                            remove_bef_last=None,
+                            to_remove=['open','display','launch', 'check','history'],
+                            allow_for_removal=None,
+                            keep_switch=False):
+        """Remove command in arguments from history.
+        All command before the last occurrence of  'remove_bef_last'
+        (including it) will be removed (but if another options tells the opposite).                
+        'to_keep' is a set of line to always keep.
+        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
+        status but keep_switch acts.).
+        if 'allow_for_removal' is define only the command in that list can be 
+        remove of the history for older command that remove_bef_lb1. all parameter
+        present in to_remove are always remove even if they are not part of this 
+        list.
+        keep_switch force to keep the statement remove_bef_??? which changes starts
+        the removal mode.
+        """
+        
+        #check consistency
+        if __debug__ and allow_for_removal:
+            for arg in to_keep:
+                assert arg not in allow_for_removal
+            
+    
+        nline = -1
+        removal = False
+        #looping backward
+        while nline > -len(self):
+            switch  = False # set in True when removal pass in True
+
+            #check if we need to pass in removal mode
+            if not removal and remove_bef_last:
+                    if self[nline].startswith(remove_bef_last):
+                        removal = True
+                        switch = True  
+
+            # if this is the switch and is protected pass to the next element
+            if switch and keep_switch:
+                nline -= 1
+                continue
+
+            # remove command in to_remove (whatever the status of removal)
+            if any([self[nline].startswith(arg) for arg in to_remove]):
+                self.pop(nline)
+                continue
+            
+            # Only if removal mode is active!
+            if removal:
+                if allow_for_removal:
+                    # Only a subset of command can be removed
+                    if any([self[nline].startswith(arg) 
+                                                 for arg in allow_for_removal]):
+                        self.pop(nline)
+                        continue
+                elif not any([self[nline].startswith(arg) for arg in to_keep]):
+                    # All command have to be remove but protected
+                    self.pop(nline)
+                    continue
+            
+            # update the counter to pass to the next element
+            nline -= 1
+        
+        def __getattr__(self, tag):
+            if isinstance(tag, int):
+                list.__getattr__(self, tag)
+            else:
+                return self.info[tag]
+            
+                
+            
+        
+    
+            
+            
+        
+        
+        
+        
+        
+        
+        
+    

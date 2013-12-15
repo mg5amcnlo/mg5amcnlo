@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Unit test Library for the objects in decay module."""
@@ -33,12 +33,13 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 class TestModelReader(unittest.TestCase):
     """Test class for the ModelReader object"""
 
-    sm_path = import_ufo.find_ufo_path('sm')
-    base_model = import_ufo.import_model(sm_path)
+
 
     def setUp(self):
         """Set up decay model"""
         #Read the full SM
+        sm_path = import_ufo.find_ufo_path('sm')
+        self.base_model = import_ufo.import_model(sm_path)
         self.model_reader = model_reader.ModelReader(self.base_model)
 
     def test_set_parameters_and_couplings(self):

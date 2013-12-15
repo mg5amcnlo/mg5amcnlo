@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """  A file containing different extension of the cmd basic python library"""
@@ -39,10 +39,11 @@ try:
     import madgraph.various.misc as misc
     from madgraph import MG5DIR
     MADEVENT = False
-except Exception, error:
-    if __debug__:
-       logger.info('extended_cmd:'+str(error))
-    import internal.misc as misc
+except ImportError, error:
+    try:
+        import internal.misc as misc
+    except:
+        raise error
     MADEVENT = True
 
 pjoin = os.path.join
@@ -161,7 +162,7 @@ class BasicCmd(cmd.Cmd):
                 import fcntl, termios, struct
                 cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
                                                      '1234'))
-            except:
+            except Exception:
                 return None
             return cr
         cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
@@ -170,12 +171,12 @@ class BasicCmd(cmd.Cmd):
                 fd = os.open(os.ctermid(), os.O_RDONLY)
                 cr = ioctl_GWINSZ(fd)
                 os.close(fd)
-            except:
+            except Exception:
                 pass
         if not cr:
             try:
                 cr = (os.environ['LINES'], os.environ['COLUMNS'])
-            except:
+            except Exception:
                 cr = (25, 80)
         return int(cr[1])
     
@@ -184,7 +185,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-                
+
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -236,15 +237,15 @@ class BasicCmd(cmd.Cmd):
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
-        #print self.completion_matches
 
-        self.completion_matches = [ (l[-1] in [' ','@','=',os.path.sep] 
-                      and l or (l+' ')) for l in self.completion_matches if l]
+        self.completion_matches = [ l if l[-1] in [' ','@','=',os.path.sep]
+                                    else ((l + ' ') if not l.endswith('\\$') else l[:-2])
+                                  for l in self.completion_matches if l] 
         
         try:
             return self.completion_matches[state]
         except IndexError, error:
-            #if __debug__:
+            # if __debug__:
             #    logger.error('\n Completion ERROR:')
             #    logger.error( error)
             return None    
@@ -373,31 +374,32 @@ class HelpCmd(object):
     """Extension of the cmd object for only the help command"""
 
     def help_quit(self):
-        logger.info("syntax: quit")
-        logger.info("-- terminates the application")
+        logger.info("-- terminates the application",'$MG:color:BLUE')
+        logger.info("syntax: quit",'$MG:color:BLACK')
     
     help_EOF = help_quit
 
     def help_history(self):
-        logger.info("syntax: history [FILEPATH|clean|.] ")
-        logger.info("   If FILEPATH is \'.\' and \'output\' is done,")
+        logger.info("-- interact with the command history.",'$MG:color:BLUE')
+        logger.info("syntax: history [FILEPATH|clean|.] ",'$MG:color:BLACK')
+        logger.info(" > If FILEPATH is \'.\' and \'output\' is done,")
         logger.info("   Cards/proc_card_mg5.dat will be used.")
-        logger.info("   If FILEPATH is omitted, the history will be output to stdout.")
+        logger.info(" > If FILEPATH is omitted, the history will be output to stdout.")
         logger.info("   \"clean\" will remove all entries from the history.")
         
     def help_help(self):
-        logger.info("syntax: help")
-        logger.info("-- access to the in-line help" )
+        logger.info("-- access to the in-line help",'$MG:color:BLUE')
+        logger.info("syntax: help",'$MG:color:BLACK')
 
     def help_save(self):
         """help text for save"""
-        logger.info("syntax: save [options]  [FILEPATH]") 
-        logger.info("-- save options configuration to filepath.")
+        logger.info("-- save options configuration to filepath.",'$MG:color:BLUE')
+        logger.info("syntax: save [options]  [FILEPATH]",'$MG:color:BLACK') 
         
     def help_display(self):
         """help for display command"""
-        logger.info("syntax: display " + "|".join(self._display_opts))
-        logger.info("-- display a the status of various internal state variables")          
+        logger.info("-- display a the status of various internal state variables",'$MG:color:BLUE')          
+        logger.info("syntax: display " + "|".join(self._display_opts),'$MG:color:BLACK')
         
 class CompleteCmd(object):
     """Extension of the cmd object for only the complete command"""
@@ -452,7 +454,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
-    helporder = ['Documented commands']
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -462,7 +463,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     debug_output = 'debug'
     error_debug = """Please report this bug to developers\n
-           More information is found in '%s'.\n
+           More information is found in '%(debug)s'.\n
            Please attach this file to your report."""
     config_debug = error_debug
            
@@ -484,7 +485,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.haspiping = not sys.stdin.isatty() # check if mg5 is piped 
         self.stored_line = '' # for be able to treat answer to question in input file 
                               # answer which are not required.
-
+        if not hasattr(self, 'helporder'):
+            self.helporder = ['Documented commands']
         
         
     def precmd(self, line):
@@ -496,18 +498,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return line
         line = line.lstrip()
 
-        # Update the history of this suite of command,
-        # except for useless commands (empty history and help calls)
-        if ';' in line: 
-            lines = line.split(';')
-        else:
-            lines = [line]
-        for l in lines:
-            l = l.strip()
-            if not (l.startswith("history") or l.startswith('help') or \
-                                                            l.startswith('#*')):
-                self.history.append(l)
-
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
@@ -517,19 +507,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if line.endswith('\\'):
             self.save_line = line[:-1]
             return '' # do nothing   
-        
+                
         # Remove comment
         if '#' in line:
             line = line.split('#')[0]
 
         # Deal with line splitting
-        if ';' in line and not (line.startswith('!') or line.startswith('shell')):
-            for subline in line.split(';'):
+        if ';' in line: 
+            lines = line.split(';')
+            for subline in lines:
+                if not (subline.startswith("history") or subline.startswith('help') \
+                        or subline.startswith('#*')): 
+                    self.history.append(subline)           
                 stop = self.onecmd(subline)
                 stop = self.postcmd(stop, subline)
             return ''
-        
+            
         # execute the line command
+        self.history.append(line) 
         return line
 
     def postcmd(self,stop, line):
@@ -569,7 +564,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None):
+            timeout = True, fct_timeout=None, ask_class=None, alias={},**opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -581,7 +576,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if timeout:
             try:
                 timeout = self.options['timeout']
-            except:
+            except Exception:
                 pass
                     
         # add choice info to the question
@@ -597,6 +592,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(choices) > 9:
                 question += '... , ' 
             question = question[:-2]+']'
+        else:
+            question += "[\033[%dm%s\033[0m] " % (4, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
@@ -604,17 +601,31 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             obj = SmartQuestion
 
-        question_instance = obj(allow_arg=choices, default=default, 
-                                                          mother_interface=self)
-        question_instance.question = question
+        if alias:
+            choices += alias.keys()
+        
+        question_instance = obj(question, allow_arg=choices, default=default, 
+                                                   mother_interface=self, **opt)
 
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
         if answer is not None:
+            if answer in alias:
+                answer = alias[answer]
+            if ask_class:
+                answer = question_instance.default(answer)
             return answer
         
+        question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
+        
+        try:
+            if value in alias:
+                value = alias[value]
+        except TypeError:
+            pass
+        if value == default and ask_class:
+            value = question_instance.default(default)
         return value
  
     
@@ -704,7 +715,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
            logger.error(error)
-            
+
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         # Create a nice error output
@@ -717,8 +728,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = ''
         error_text += '%s : %s\n' % (error.__class__.__name__, 
                                             str(error).replace('\n','\n\t'))
-        error_text += self.error_debug % {'debug': self.debug_output}
+        error_text += self.error_debug % {'debug':self.debug_output}
         logger_stderr.critical(error_text)
+        
                 
         # Add options status to the debug file
         try:
@@ -726,11 +738,21 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
         
-
+        #add the cards:
+        for card in ['proc_card_mg5.dat','param_card.dat', 'run_card.dat']:
+            try:
+                ff = open(pjoin(self.me_dir, 'Cards', card))
+                debug_file.write(ff.read())
+                ff.close()
+            except Exception:
+                pass
+            
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
         return False
+
+
 
     def nice_user_error(self, error, line):
         if self.child:
@@ -844,7 +866,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
-        if printcmd:
+        if printcmd and not line.startswith('#'):
             logger.info(line)
         if self.child:
             current_interface = self.child
@@ -877,7 +899,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Faulty command
         logger.warning("Command \"%s\" not recognized, please try again" % \
                                                                 line.split()[0])
-        self.history.pop()
+        if line.strip() in ['q', '.q', 'stop']:
+            logger.info("If you want to quit mg5 please type \"exit\".")
+
+        if self.history and self.history[-1] == line:        
+            self.history.pop()
         
 
 
@@ -942,79 +968,19 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 new_history.append(cur_line)
             
         new_history.reverse()
-        self.history = new_history
+        self.history[:] = new_history
         
-        
-    def clean_history(self, to_keep=['set','add','load'],
-                            remove_bef_last=None,
-                            to_remove=['open','display','launch', 'check'],
-                            allow_for_removal=None,
-                            keep_switch=False):
-        """Remove command in arguments from history.
-        All command before the last occurrence of  'remove_bef_last'
-        (including it) will be removed (but if another options tells the opposite).                
-        'to_keep' is a set of line to always keep.
-        'to_remove' is a set of line to always remove (don't care about remove_bef_ 
-        status but keep_switch acts.).
-        if 'allow_for_removal' is define only the command in that list can be 
-        remove of the history for older command that remove_bef_lb1. all parameter
-        present in to_remove are always remove even if they are not part of this 
-        list.
-        keep_switch force to keep the statement remove_bef_??? which changes starts
-        the removal mode.
-        """
-        
-        #check consistency
-        if __debug__ and allow_for_removal:
-            for arg in to_keep:
-                assert arg not in allow_for_removal
-            
-    
-        nline = -1
-        removal = False
-        #looping backward
-        while nline > -len(self.history):
-            switch  = False # set in True when removal pass in True
-
-            #check if we need to pass in removal mode
-            if not removal and remove_bef_last:
-                    if self.history[nline].startswith(remove_bef_last):
-                        removal = True
-                        switch = True  
-
-            # if this is the switch and is protected pass to the next element
-            if switch and keep_switch:
-                nline -= 1
-                continue
-
-            # remove command in to_remove (whatever the status of removal)
-            if any([self.history[nline].startswith(arg) for arg in to_remove]):
-                self.history.pop(nline)
-                continue
-            
-            # Only if removal mode is active!
-            if removal:
-                if allow_for_removal:
-                    # Only a subset of command can be removed
-                    if any([self.history[nline].startswith(arg) 
-                                                 for arg in allow_for_removal]):
-                        self.history.pop(nline)
-                        continue
-                elif not any([self.history[nline].startswith(arg) for arg in to_keep]):
-                    # All command have to be remove but protected
-                    self.history.pop(nline)
-                    continue
-            
-            # update the counter to pass to the next element
-            nline -= 1
-                
+                        
     def import_command_file(self, filepath):
         # remove this call from history
         if self.history:
             self.history.pop()
         
         # Read the lines of the file and execute them
-        commandline = open(filepath).readlines()
+        if isinstance(filepath, str):
+            commandline = open(filepath).readlines()
+        else:
+            commandline = filepath
         oldinputfile = self.inputfile
         oldraw = self.use_rawinput
         self.inputfile = (l for l in commandline) # make a generator
@@ -1101,7 +1067,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
     # Quit
     def do_quit(self, line):
-        """ exit the mainloop() """
+        """Not in help: exit the mainloop() """
         
         if self.child:
             self.child.exec_cmd('quit ' + line, printcmd=False)
@@ -1114,7 +1080,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 level = int(line) - 1
                 if level:
                     self.mother.lastcmd = 'quit %s' % level
-
+        logger.info(' ')
         return True
 
     # Aliases
@@ -1142,7 +1108,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 cmdname=name[3:]
                 try:
                     doc = getattr(self.cmd, name).__doc__
-                except:
+                except Exception:
                     doc = None
                 if not doc:
                     doc = getattr(self, name).__doc__
@@ -1155,11 +1121,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if tag in cmds:
                     cmds[tag].append(cmdname)
                 else:
-                    cmds[tag] = [cmdname]
-                
-
+                    cmds[tag] = [cmdname] 
+                    
         self.stdout.write("%s\n"%str(self.doc_leader))
         for tag in self.helporder:
+            if tag not in cmds:
+                continue
             header = "%s (type help <topic>):" % tag
             self.print_topics(header, cmds[tag],   15,80)
         for name, item in cmds.items():
@@ -1198,7 +1165,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             options = self.next_possibility[last_action_2]
         elif last_action in authorize:
             options = self.next_possibility[last_action]
-        
+        else:
+            return
         text = 'The following command(s) may be useful in order to continue.\n'
         for option in options:
             text+='\t %s \n' % option      
@@ -1224,7 +1192,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             outstr = "Value of Internal Variable:\n"
             try:
                 var = eval(args[1])
-            except:
+            except Exception:
                 outstr += 'GLOBAL:\nVariable %s is not a global variable\n' % args[1]
             else:
                 outstr += 'GLOBAL:\n' 
@@ -1232,7 +1200,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                
             try:
                 var = eval('self.%s' % args[1])
-            except:
+            except Exception:
                 outstr += 'LOCAL:\nVariable %s is not a local variable\n' % args[1]
             else:
                 outstr += 'LOCAL:\n'
@@ -1291,7 +1259,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             
         if len(args) == 0:
             args.append(base)
-        self.write_configuration(args[0], base, basedir)
+        self.write_configuration(args[0], base, basedir, self.options)
         
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
@@ -1318,7 +1286,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value, comment = value.split('#',1)
             else:
                 comment = ''    
-            
             if key in to_keep:
                 value = str(to_keep[key])
             else:
@@ -1326,7 +1293,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             try:
                 to_write.remove(key)
-            except:
+            except Exception:
                 pass
             if '_path' in key:       
                 # special case need to update path
@@ -1379,9 +1346,8 @@ class CmdShell(Cmd):
 
     def help_shell(self):
         """help for the shell"""
-        
-        logger.info("syntax: shell CMD (or ! CMD)")
-        logger.info("-- run the shell command CMD and catch output")
+        logger.info("-- run the shell command CMD and catch output",'$MG:color:BLUE')        
+        logger.info("syntax: shell CMD (or ! CMD)",'$MG:color:BLACK')
 
 
 
@@ -1399,8 +1365,9 @@ class SmartQuestion(BasicCmd):
         BasicCmd.preloop(self)
         
 
-    def __init__(self,  allow_arg=[], default=None, mother_interface=None, 
-                                                                   *arg, **opt):
+    def __init__(self, question, allow_arg=[], default=None, 
+                                            mother_interface=None, *arg, **opt):
+        self.question = question
         self.wrong_answer = 0 # forbids infinite loop
         self.allow_arg = [str(a) for a in allow_arg]
         self.history_header = ''
@@ -1426,9 +1393,14 @@ class SmartQuestion(BasicCmd):
             self.stdout.write(line)
             self.stdout.flush()
         try:
-            return Cmd.list_completion(text, self.allow_arg)
+            out = {}
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
+            out[' Recognized command'] = BasicCmd.completenames(self, text)
+            
+            return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+            
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1461,6 +1433,7 @@ class SmartQuestion(BasicCmd):
         if self.default_value is not None:
             self.value = self.default_value
 
+
     def postcmd(self, stop, line):
         
         try:    
@@ -1471,14 +1444,18 @@ class SmartQuestion(BasicCmd):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 return self.reask()
+            elif self.value == 'repeat':
+                return self.reask()
+            elif len(self.allow_arg)==0:
+                return True
             else: 
                 raise Exception
-        except Exception:
+        except Exception,error:
             if self.wrong_answer < 100:
                 self.wrong_answer += 1
-                print """%s not valid argument. Valid argument are in (%s).""" \
-                          % (self.value,','.join(self.allow_arg))
-                print 'please retry'
+                logger.warning("""%s not valid argument. Valid argument are in (%s).""" \
+                          % (self.value,','.join(self.allow_arg)))
+                logger.warning('please retry')
                 return False
             else:
                 self.value = self.default_value
@@ -1500,6 +1477,7 @@ def smart_input(input_text, allow_arg=[], default=None):
 class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
     
+    completion_prefix=''
 
     def completenames(self, text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -1510,14 +1488,20 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.flush()
         try:
             out = {}
-            out[' Options'] = SmartQuestion.completenames(self, text, line)
+            out[' Options'] = Cmd.list_completion(text, self.allow_arg)
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text)
             
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
-
+            
+    def precmd(self, *args):
+        """ """
+        
+        signal.alarm(0)
+        return SmartQuestion.precmd(self, *args)
+        
     def completedefault(self,text, line, begidx, endidx):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
@@ -1550,7 +1534,9 @@ class OneLinePathCompletion(SmartQuestion):
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
                 # go to retry
-                reprint_opt = True          
+                reprint_opt = True 
+            elif self.value == 'repeat':
+                reprint_opt = True         
             else:
                 raise Exception
         except Exception, error:            

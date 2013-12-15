@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Module to allow reading a param_card and setting all parameters and
@@ -27,6 +27,7 @@ import os
 import re
 
 import madgraph.core.base_objects as base_objects
+import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
 
@@ -42,7 +43,7 @@ logger = logging.getLogger('models.model_reader')
 # ModelReader: Used to read a param_card and calculate parameters and
 #              couplings of the model.
 #===============================================================================
-class ModelReader(base_objects.Model):
+class ModelReader(loop_base_objects.LoopModel):
     """Object to read all parameters and couplings of a model
     """
 
@@ -83,9 +84,14 @@ class ModelReader(base_objects.Model):
            
             
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
-                                            and not k.startswith('decay_table')]
+                                            and not k.startswith('decay_table')
+                                            and 'info' not in k]
+            param_key = [k for k in parameter_dict.keys() if 'info' not in k]
             
             if set(key) != set(parameter_dict.keys()):
+                # the two card are different. check if this critical
+                
+
                 fail = True    
                 msg = '''Invalid restriction card (not same block)
     %s != %s.
@@ -93,17 +99,21 @@ class ModelReader(base_objects.Model):
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              ','.join(set(parameter_dict.keys()).difference(set(key))),
                              ','.join(set(key).difference(set(parameter_dict.keys()))))
-                # FOR MSSM allow for automatic conversion to correct format 
-                try:
-                    param_card = param_card.input_path
-                    param_card = card_reader.convert_to_mg5card(param_card,
-                                                                 writting=False)
-                    key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
-                                            and not k.startswith('decay_table')]
+                if self['name'].startswith('mssm-') or self['name'] == 'mssm':
                     if not set(parameter_dict.keys()).difference(set(key)):
                         fail = False
-                except Exception:
-                    raise MadGraph5Error, msg
+                    else:
+                        # FOR MSSM allow for automatic conversion to correct format 
+                        try:
+                            param_card = param_card.input_path
+                            param_card = card_reader.convert_to_mg5card(param_card,
+                                                                         writting=False)
+                            key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
+                                                    and not k.startswith('decay_table')]
+                            if not set(parameter_dict.keys()).difference(set(key)):
+                                fail = False
+                        except Exception:
+                            raise MadGraph5Error, msg
                 
                 if fail:
                     raise MadGraph5Error, msg
@@ -174,6 +184,7 @@ class ModelReader(base_objects.Model):
         couplings = sum(self['couplings'].values(), [])
         # Now calculate all couplings
         for coup in couplings:
+#            print "I execute %s = %s"%(coup.name, coup.expr)
             exec("locals()[\'%s\'] = %s" % (coup.name, coup.expr))
             coup.value = complex(eval(coup.name))
             if not eval(coup.name) and eval(coup.name) != 0:
@@ -219,7 +230,6 @@ class Alphas_Runner(object):
         assert cmass > 0
         assert bmass > 0
         assert nloop > -1
-    
         t = 2 * math.log(bmass/zmass)
         self.amb = self.newton1(t, asmz, 5)
         t = 2 * math.log(cmass/bmass)
@@ -258,7 +268,6 @@ class Alphas_Runner(object):
         input scale and output scale t.
         Evolution is performed using Newton's method,
         with a precision given by tol."""        
-        
         nloop = self.nloop
         tol = 5e-4
         arg = nf-3
