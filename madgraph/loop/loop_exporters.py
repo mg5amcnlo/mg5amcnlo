@@ -1428,6 +1428,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
+
         # TIR stuff
         for tir in self.all_tir:
             if self.tir_available_dict[tir]:

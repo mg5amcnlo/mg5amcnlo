@@ -118,6 +118,24 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
 
+        #if self.all_tir and link_tir_libs:
+        link_tir_libs=[]
+        tir_libs=[]
+        pjdir=""
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile_loop'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                         link_tir_libs,tir_libs,pjdir)
+        # Return to original PWD
+        os.chdir(cwd)
+        
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
             try:
@@ -167,6 +185,25 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Copy the different python files in the Template
         self.copy_python_files()
 
+    # I put it here not in optimized one, because I want to use the same makefile.inc
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+        """ Create the file makefile which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.mgme_dir,'Template','NLO',
+                                 'SubProcesses','makefile_loop.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['pjdir']='PJDIR='+PJDIR
+        if not PJDIR.endswith('/') and PJDIR!="":
+            replace_dict['pjdir']=replace_dict['pjdir']+"/"
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
 
     #===========================================================================
     # copy_python_files 
@@ -2700,6 +2737,46 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # We must link the CutTools to the Library folder of the active Template
         self.link_CutTools(os.path.join(dir_path, 'lib'))
+        # We must link the TIR to the Library folder of the active Template
+        link_tir_libs=[]
+        tir_libs=[]
+        # special for PJFry++
+        link_pjfry_lib=""
+        pjfry_lib=""
+        pjdir=""
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            libpath=getattr(self,tir_dir)
+            libname="lib%s.a"%tir
+            tir_name=tir
+            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                              libpath,libname,tir_name=tir_name)
+            if goodlink==True:
+                if tir!="pjfry":
+                    link_tir_libs.extend(['-l%s'%tir])
+                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+                else:
+                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
+                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
+                    pjdir=libpath
+        if link_pjfry_lib!="":
+            link_tir_libs.extend([link_pjfry_lib])
+            tir_libs.extend([pjfry_lib])
+            
+        #if self.all_tir and link_tir_libs:
+        os.remove(os.path.join(self.dir_path,'SubProcesses','makefile_loop'))
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile_loop'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                         link_tir_libs,tir_libs,pjdir)
+        # Return to original PWD
+        os.chdir(cwd)
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')
@@ -2736,7 +2813,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # Return to original PWD
         os.chdir(cwd)
-
+        
     def generate_virt_directory(self, loop_matrix_element, fortran_model, dir_name):
         """writes the V**** directory inside the P**** directories specified in
         dir_name"""
