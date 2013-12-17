@@ -1335,15 +1335,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                               online = False, compiler='gfortran'):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
-	# HSS,13/11/2012
-	mg5_configuration=pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
+	    # HSS,13/11/2012
+        mg5_configuration=pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
         lines = open(mg5_configuration).read().split('\n')
         FC_re = re.compile('^\s*fortran_compiler\s*=\s*(.+)\s*$')
         for iline, line in enumerate(lines):
             FC_result = FC_re.match(line)
             if FC_result:
 		compiler=FC_result.group(1)
-	# HSS
+	    # HSS
         self.compiler_choice(compiler)
         self.make()
 

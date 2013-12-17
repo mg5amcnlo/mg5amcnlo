@@ -1438,7 +1438,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
                     +"C       CONVERT TO MADLOOP CONVENTION\n"\
                     +"        CALL %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)"\
-                    )%self.general_replace_dict['proc_prefix']
+                    )%self.general_replace_dict
                 elif tir=="iregi":
                     self.general_replace_dict['iregi_calling']=\
                     "        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\

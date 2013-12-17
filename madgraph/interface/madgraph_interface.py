@@ -5550,7 +5550,6 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
-        
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO']:
             # For v4 models, copy the model/HELAS information.
@@ -5569,6 +5568,7 @@ This implies that with decay chains:
                 self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
+                
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -5606,6 +5606,7 @@ This implies that with decay chains:
                                            not nojpeg,
                                            online,
                                            self.options['fortran_compiler'])
+            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
