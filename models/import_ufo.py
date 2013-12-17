@@ -232,12 +232,12 @@ class UFOMG5Converter(object):
         # which indicate a loop model or if this model is only meant for 
         # tree-level computations
         self.perturbation_couplings = {}
-        for order in model.all_orders:
-            try:
+        try:
+            for order in model.all_orders:
                 if(order.perturbative_expansion>0):
                     self.perturbation_couplings[order.name]=order.perturbative_expansion
-            except AttributeError:
-                    pass
+        except AttributeError:
+            pass
 
         if self.perturbation_couplings!={}:
             self.model = loop_base_objects.LoopModel({'perturbation_couplings':\
@@ -302,8 +302,14 @@ class UFOMG5Converter(object):
         # If we deal with a Loop model here, the order hierarchy MUST be 
         # defined in the file coupling_orders.py and we import it from 
         # there.
-
-        all_orders = self.ufomodel.all_orders
+        all_orders = []
+        try:
+            all_orders = self.ufomodel.all_orders
+        except AttributeError:
+            if self.perturbation_couplings:
+                raise MadGraph5Error, "The loop model MG5 attemps to import does not specify the attribute 'all_order'." 
+            else:
+                pass            
 
         hierarchy={}
         try:
@@ -319,9 +325,12 @@ class UFOMG5Converter(object):
         
         # Also set expansion_order, i.e., maximum coupling order per process
         expansion_order={}
+        # And finally the UVCT coupling order counterterms        
+        coupling_order_counterterms={}        
         try:
             for order in all_orders:
                 expansion_order[order.name]=order.expansion_order
+                coupling_order_counterterms[order.name]=order.expansion_order                
         except AttributeError:
             if self.perturbation_couplings:
                 raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an expansion_order for all coupling orders.' 
@@ -329,19 +338,7 @@ class UFOMG5Converter(object):
                 pass
         else:
             self.model.set('expansion_order', expansion_order)
-        
-        # And finally the UVCT coupling order counterterms
-        coupling_order_counterterms={}
-        try:
-            for order in all_orders:
-                coupling_order_counterterms[order.name]=order.expansion_order
-        except AttributeError:
-            if self.perturbation_couplings:
-                raise MadGraph5Error, 'The loop model MG5 attemps to import does not specify an expansion_order for all coupling orders.' 
-            else:
-                pass
-        else:
-            self.model.set('expansion_order', expansion_order)
+            self.model.set('expansion_order', expansion_order)            
 
         #clean memory
         del self.checked_lor
@@ -841,7 +838,7 @@ class UFOMG5Converter(object):
         return output
       
 class OrganizeModelExpression:
-    """Organize the couplings/parameters of a model"""
+    """Organize the cou plings/parameters of a model"""
     
     track_dependant = ['aS','aEWM1','MU_R'] # list of variable from which we track 
                                    #dependencies those variables should be define
@@ -861,12 +858,12 @@ class OrganizeModelExpression:
     
         self.model = model  # UFOMODEL
         self.perturbation_couplings = {}
-        for order in model.all_orders: # Check if it is a loop model or not
-            try:
+        try:
+            for order in model.all_orders: # Check if it is a loop model or not
                 if(order.perturbative_expansion>0):
                     self.perturbation_couplings[order.name]=order.perturbative_expansion
-            except AttributeError:
-                    pass
+        except AttributeError:
+            pass
         self.params = {}     # depend on -> ModelVariable
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
