@@ -567,14 +567,14 @@ class TestMECmdShell(unittest.TestCase):
         for i,line in enumerate(data):
             if 'Summary:' in line:
                 break
-        #      Run at p-p collider (4000 + 4000 GeV)
-        self.assertTrue('Run at p-p collider (4000 + 4000 GeV)' in data[i+2])
+        #      Run at p-p collider (6500 + 6500 GeV)
+        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
-            self.assertAlmostEqual(4151.0, cross_section,delta=50)
+            self.assertAlmostEqual(6699.0, cross_section,delta=50)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 

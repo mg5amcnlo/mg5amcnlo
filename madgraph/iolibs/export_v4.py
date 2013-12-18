@@ -1666,9 +1666,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         
         # The next file are model dependant (due to SLAH convention)
         self.model_name = modelname
-        # Add the combine_events.f 
-        filename = pjoin(self.dir_path,'Source','combine_events.f')
-        self.write_combine_events(writers.FortranWriter(filename)) # already formatted
         # Add the symmetry.f 
         filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -2005,7 +2002,14 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             check_param_card.convert_to_mg5card(param_card, mg5_param)
             check_param_card.check_valid_param_card(mg5_param)
 
-
+        # Add the combine_events.f modify param_card path/number of @X
+        filename = pjoin(self.dir_path,'Source','combine_events.f')
+        try:
+            nb_proc =[p.get('id') for me in matrix_elements for m in me.get('matrix_elements') for p in m.get('processes')]
+        except AttributeError:
+            nb_proc =[p.get('id') for m in matrix_elements.get('matrix_elements') for p in m.get('processes')]
+        nb_proc = len(set(nb_proc))
+        self.write_combine_events(writers.FortranWriter(filename), nb_proc) # already formatted
         # Write maxconfigs.inc based on max of ME's/subprocess groups
         filename = pjoin(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
@@ -2660,7 +2664,7 @@ c           This is dummy particle used in multiparticle vertices
     #===========================================================================
     # write_combine_events
     #===========================================================================
-    def write_combine_events(self, writer):
+    def write_combine_events(self, writer, nb_proc=100):
         """Write the SubProcess/driver.f file for MG4"""
 
         path = pjoin(_file_path,'iolibs','template_files','madevent_combine_events.f')
@@ -2669,7 +2673,11 @@ c           This is dummy particle used in multiparticle vertices
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat' 
-        text = open(path).read() % {'param_card_name':card} 
+        
+        #set maxpup (number of @X in the process card)
+            
+        text = open(path).read() % {'param_card_name':card, 'maxpup':nb_proc+1}
+        #the +1 is just a security. This is not needed but I feel(OM) safer with it.
         writer.write(text)
         
         return True

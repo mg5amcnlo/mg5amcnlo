@@ -912,6 +912,8 @@ c      write(*,*) nbranch
           pass=.false.
           return
       endif
+       shat=s(-nbranch)
+       sqrtshat=dsqrt(s(-nbranch))
        xjac=xjac*bwdelf/bwfunc(s(-nbranch),xm02,qwidth(-nbranch+1))
        m(-nbranch) = dsqrt(s(-nbranch))
        BWshift=abs(m(-nbranch)-qmass(-nbranch+1))/qwidth(-nbranch+1)

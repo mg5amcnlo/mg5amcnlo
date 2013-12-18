@@ -49,8 +49,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
     1   = lpp1    ! beam 1 type (0 = no PDF)
     1   = lpp2    ! beam 2 type (0 = no PDF)
- 4000   = ebeam1  ! beam 1 energy in GeV
- 4000   = ebeam2  ! beam 2 energy in GeV
+ 6500   = ebeam1  ! beam 1 energy in GeV
+ 6500   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************

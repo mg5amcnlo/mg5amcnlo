@@ -22,7 +22,7 @@ following actions:
 1. bzr branch the present directory to a new directory
    MadGraph5_vVERSION
 
-4. Create the automatic documentation in the apidoc directory
+4. Create the automatic documentation in the apidoc directory -> Now tar.gz
 
 5. Remove the .bzr directory
 
@@ -214,6 +214,16 @@ if status1:
     logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
     sys.exit()
+# tarring the apidoc directory
+status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+
+if status2:
+    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+                 status)
+    sys.exit()
+else:
+    # remove the apidoc file.
+    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 3. tar the MadGraph5_vVERSION directory.
 

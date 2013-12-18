@@ -6,10 +6,12 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE HWABEG
+      SUBROUTINE PYABEG
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
-      INCLUDE 'HERWIG65.INC'
+      implicit double precision(a-h, o-z)
+      implicit integer(i-n)
+      common/pydat2/kchg(500,4),pmas(500,4),parf(2000),vckm(4,4)
       include 'reweight0.inc'
       integer i,kk,l
       character*5 cc(2)
@@ -32,19 +34,18 @@ c
       enddo
  999  END
 C----------------------------------------------------------------------
-      SUBROUTINE HWAEND
+      SUBROUTINE PYAEND(IEVT)
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
-      INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
       INTEGER I,KK,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
-      OPEN(UNIT=99,FILE='HERWIG.TOP',STATUS='UNKNOWN')
+      OPEN(UNIT=99,FILE='PYTHIA.TOP',STATUS='UNKNOWN')
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
-      XNORM=1.D3/DFLOAT(NEVHEP)
+      XNORM=1.D0/IEVT
       DO I=1,NPL              
  	CALL MFINAL3(I)             
         CALL MCOPY(I,I+NPL)
@@ -62,10 +63,11 @@ C
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE HWANAL
+      SUBROUTINE PYANAL
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
-      INCLUDE 'HERWIG65.INC'
+      implicit double precision(a-h, o-z)
+      implicit integer(i-n)
       include 'reweight0.inc'
       INTEGER KK,i,l
       real*8 tot
@@ -75,8 +77,13 @@ C----------------------------------------------------------------------
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
+      common/pyjets/n,npad,k(4000,5),p(4000,5),v(4000,5)
+      DOUBLE PRECISION EVWEIGHT
+      COMMON/CEVWEIGHT/EVWEIGHT
+      INTEGER IFAIL
+      COMMON/CIFAIL/IFAIL
 c
-      IF (IERROR.NE.0) RETURN
+      IF(IFAIL.EQ.1)RETURN
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
@@ -84,12 +91,12 @@ c
 c
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
-      IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
-        CALL HWWARN('HWANAL',111)
-        GOTO 999
+      IF(SIGN(1.D0,P(3,3)).EQ.SIGN(1.D0,P(4,3)))THEN
+         WRITE(*,*)'WARNING 502 IN PYANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
-         WWW(I)=EVWGT*ww(i)/ww(1)
+         WWW(I)=EVWEIGHT*ww(i)/ww(1)
       ENDDO
 C
       do i=1,1
