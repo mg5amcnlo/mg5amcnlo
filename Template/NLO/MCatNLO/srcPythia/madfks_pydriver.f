@@ -5,7 +5,7 @@ C DRIVER, TO BE MODIFIED BY THE USER (KEEPING THE READ STATEMENTS).
       INTEGER NSTEP,I,JPR0,JPR,NUMDM,II,NBODIES(100),JJ,IMATCH
       INTEGER IMOTH(100),IDAUGHT(100,5),NMOTH,ARRMOTH(100),III,KK
       DOUBLE PRECISION BR(100),BRR(100,100),SUMBR(100,100)
-      INTEGER IMIN(100),IMAX(100)
+      INTEGER IMIN(100),IMAX(100),MEDEC(100)
       CHARACTER *1 TMPCH
       CHARACTER *5 CIDAUGHT(100,5),CIMOTH(100)
       CHARACTER *8 CBR(100)
@@ -289,10 +289,10 @@ c$$$******************************************
             WRITE(*,*)'Enter number of bodies for decay mode ',II
             READ(*,*)NBODIES(II)
             WRITE(*,*)'Enter decay mode A --> B C ... with the syntax'
-            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR'
+            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR @ ME'
             WRITE(*,*)'where 1 <= NUM <= 99'
             READ(*,*)IMOTH(II),TMPCH,(IDAUGHT(II,JJ),JJ=1,NBODIES(II)),
-     &               TMPCH,BR(II)
+     &               TMPCH,BR(II),TMPCH,MEDEC(II)
             WRITE(CIMOTH(II),'(i4)')IMOTH(II)
             WRITE(CBR(II),'(f7.5)')BR(II)
  

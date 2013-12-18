@@ -70,9 +70,11 @@ c     Check if result can be reused since any of last two calls
       enddo
 
 c     Reuse previous result, if possible
-      if (ireuse.gt.0.and.pdflast(iporg,ireuse).ne.-99d9) then
-         pdg2pdf=pdflast(iporg,ireuse)
-         return 
+      if (ireuse.gt.0) then
+         if (pdflast(iporg,ireuse).ne.-99d9) then
+            pdg2pdf=pdflast(iporg,ireuse)
+            return 
+         endif
       endif
 
 c     Bjorken x and/or facrorization scale and/or PDF set are not

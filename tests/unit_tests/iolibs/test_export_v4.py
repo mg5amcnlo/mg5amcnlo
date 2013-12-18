@@ -2147,6 +2147,7 @@ C     ----------
 
 C     Make sure cuts are evaluated for first subprocess
       CUTSDONE=.FALSE.
+      CUTSPASSED=.FALSE.
 
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact

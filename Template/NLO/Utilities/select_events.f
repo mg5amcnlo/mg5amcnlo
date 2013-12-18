@@ -127,7 +127,7 @@ c written in all the events)
             i=i+1
          enddo
       elseif(itype.eq.3)then
-         ievts_ok=min(maxevt,nevmax)-nevmin
+         ievts_ok=min(maxevt,nevmax)-nevmin+1
       endif
       close(34)
       if(ievts_ok.eq.0)then

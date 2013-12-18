@@ -263,7 +263,7 @@ c     Put momenta in the common block to zero to start
          RETURN
       ENDIF
       CUTSDONE=.TRUE.
-      CUTSPASSED=.FALSE.
+c      CUTSPASSED=.FALSE.
 
 c
 c     Make sure have reasonable 4-momenta
@@ -480,13 +480,13 @@ c     B.W. phase space cuts
 c     
       pass_bw=cut_bw(p)
 c     JA 4/8/11 always check pass_bw
-      if ( pass_bw ) then
+      if ( pass_bw.and..not.CUTSPASSED) then
          passcuts=.false.
          if(debug) write (*,*) ' pass_bw -> fails'
          return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
-
+        CUTSPASSED=.FALSE.
 C     
 C     maximal and minimal pt of the jets sorted by pt
 c     

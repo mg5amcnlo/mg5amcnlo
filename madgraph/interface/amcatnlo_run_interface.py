@@ -34,6 +34,7 @@ import time
 import signal
 import tarfile
 import copy
+import datetime
 
 try:
     import readline
@@ -173,7 +174,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -381,6 +382,8 @@ class CheckValidForCmd(object):
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
+
+        self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
     
     def check_plot(self, args):
@@ -1031,7 +1034,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################
     def set_configuration(self, amcatnlo=True, **opt):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
@@ -1295,15 +1299,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-#
-# PUT HERE THE COMBINE SCRIPT FOR ROOT
-#
-#                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-#                                pjoin(self.me_dir, 'Events', self.run_name))
-#                logger.info('The results of this run and the Root file with the plots' + \
-#                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The Root files with the plots are in the SubProcesses/P*/*_G*/' + \
-                        'directories.')
+                misc.call(['./combine_root.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
@@ -1561,8 +1563,13 @@ Integrated cross-section
 
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
-        debug_msg = self.compile_advanced_stats(log_GV_files, all_log_files)
-        
+        # Make sure it never stops a run
+        try:
+            message, debug_msg = \
+               self.compile_advanced_stats(log_GV_files, all_log_files, message)
+        except Exception as e:
+            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+
         logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
         
@@ -1597,7 +1604,7 @@ Integrated cross-section
         misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
         shutil.rmtree(pjoin(evt_path,'RunMaterial'))
 
-    def compile_advanced_stats(self,log_GV_files,all_log_files):
+    def compile_advanced_stats(self,log_GV_files,all_log_files,message):
         """ This functions goes through the log files given in arguments and 
         compiles statistics about MadLoop stability, virtual integration 
         optimization and detection of potential error messages into a nice
@@ -1605,8 +1612,9 @@ Integrated cross-section
         
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
-        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}}
-    
+        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
+        mint_search = re.compile(r"MINT(?P<ID>\d*).txt")
+
         # ==================================     
         # == MadLoop stability statistics ==
         # ==================================
@@ -1668,21 +1676,25 @@ Integrated cross-section
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
+
+            tmpStr = ""
+            tmpStr += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+            tmpStr += '\n    Stability unknown:                   %d'%nTotsun
+            tmpStr += '\n    Stable PS point:                     %d'%nTotsps
+            tmpStr += '\n    Unstable PS point (and rescued):     %d'%nTotups
+            tmpStr += '\n    Unstable PS point (and not rescued): %d'%nToteps
+            tmpStr += '\n    Only double precision used:          %d'%nTotddp
+            tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
+            tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            if nTot100 != 0:
+                debug_msg += '\n  Unknown return code (100):             %d'%nTot100
+            if nTot10 != 0:
+                debug_msg += '\n  Unknown return code (10):              %d'%nTot10
+            if nTot1 != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+
             if maxUPS[1]>0.001:
-                message += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                message += '\n    Stability unknown:                   %d'%nTotsun
-                message += '\n    Stable PS point:                     %d'%nTotsps
-                message += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                message += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                message += '\n    Only double precision used:          %d'%nTotddp
-                message += '\n    Quadruple precision used:            %d'%nTotqdp
-                message += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    message += '\n    Unknown return code (100):           %d'%nTot100
-                if nTot10 != 0:
-                    message += '\n    Unknown return code (10):            %d'%nTot10
-                if nTot1 != 0:
-                    message += '\n    Unknown return code (1):             %d'%nTot1
+                message += tmpStr
                 message += '\n  Total number of unstable PS point detected:'+\
                                  ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
                 message += '\n    Maximum fraction of UPS points in '+\
@@ -1692,20 +1704,8 @@ Integrated cross-section
                 message += '\n    %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                debug_msg += '\n    Stability unknown:                   %d'%nTotsun
-                debug_msg += '\n    Stable PS point:                     %d'%nTotsps
-                debug_msg += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                debug_msg += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                debug_msg += '\n    Only double precision used:          %d'%nTotddp
-                debug_msg += '\n    Quadruple precision used:            %d'%nTotqdp
-                debug_msg += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    debug_msg += '\n  Unknown return code (100):             %d'%nTot100
-                if nTot10 != 0:
-                    debug_msg += '\n  Unknown return code (10):              %d'%nTot10
-                if nTot1 != 0:
-                    debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+                debug_msg += tmpStr
+
     
         # ====================================================
         # == aMC@NLO virtual integration optimization stats ==
@@ -1857,13 +1857,98 @@ Integrated cross-section
                                     %tuple(stats['virt_stats']['v_average_max'])          
             debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
                                      %tuple(stats['virt_stats']['v_ratio_max'])
-            debug_msg += '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
+            tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
-            debug_msg += '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
+            debug_msg += tmpStr
+            # After all it was decided that it is better not to alarm the user unecessarily
+            # with such printout of the statistics.
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+#                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += "\n  Suspiciously large MC error in :"
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += tmpStr
+
+            tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_contr_err_max'])
+            debug_msg += tmpStr
+#            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+#                message += tmpStr
+            
+
         except KeyError:
             debug_msg += '\n  Could not find statistics on the integration optimization. '
     
+        # =======================================
+        # == aMC@NLO timing profile statistics ==
+        # =======================================
+    
+        timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
+                     "(?P<time>[\d\+-Eed\.]*)\s*")
+
+        for logf in all_log_files:
+            logfile=open(logf,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(logf.split('/')[-3:-1])
+            mint = re.search(mint_search,logf)
+            if not mint is None:
+               channel_name =   channel_name+' [step %s]'%mint.group('ID')
+
+            for time_stats in re.finditer(timing_stat_finder, log):
+                try:
+                    stats['timings'][time_stats.group('name')][channel_name]+=\
+                                                 float(time_stats.group('time'))
+                except KeyError:
+                    if time_stats.group('name') not in stats['timings'].keys():
+                        stats['timings'][time_stats.group('name')] = {}
+                    stats['timings'][time_stats.group('name')][channel_name]=\
+                                                 float(time_stats.group('time'))
+        
+        # useful inline function
+        Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
+        try:
+            totTimeList = [(time, chan) for chan, time in \
+                                              stats['timings']['Total'].items()]
+        except KeyError:
+            totTimeList = []
+
+        totTimeList.sort()
+        if len(totTimeList)>0:
+            debug_msg += '\n\n  Inclusive timing profile :'
+            debug_msg += '\n    Overall slowest channel          %s (%s)'%\
+                                     (Tstr(totTimeList[-1][0]),totTimeList[-1][1])
+            debug_msg += '\n    Average channel running time     %s'%\
+                       Tstr(sum([el[0] for el in totTimeList])/len(totTimeList))
+            debug_msg += '\n    Aggregated total running time    %s'%\
+                                        Tstr(sum([el[0] for el in totTimeList]))       
+        else:            
+            debug_msg += '\n\n  Inclusive timing profile non available.'
+        
+        for name in stats['timings'].keys():
+            if name=='Total':
+                continue
+            if sum(stats['timings'][name].values())<=0.0:
+                debug_msg += '\n  Zero time record for %s.'%name
+                continue
+            try:
+                TimeList = [((100.0*time/stats['timings']['Total'][chan]), 
+                     chan) for chan, time in stats['timings'][name].items()]
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n\n  Timing profile for %s unavailable.'%name
+                continue
+            TimeList.sort()
+            debug_msg += '\n  Timing profile for %s :'%name
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
+            try:
+                debug_msg += '\n    Overall fraction of time         %.3f %%'%\
+                       float((100.0*(sum(stats['timings'][name].values())/
+                                      sum(stats['timings']['Total'].values()))))
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n    Overall fraction of time unavailable.'
+
         # =============================     
         # == log file eror detection ==
         # =============================
@@ -1899,7 +1984,7 @@ Integrated cross-section
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
                            
-        return debug_msg
+        return message, debug_msg
 
 
     def reweight_and_collect_events(self, options, mode, nevents, event_norm):
@@ -1942,8 +2027,6 @@ Integrated cross-section
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
         logger.info('Prepairing MCatNLO run')
-        self.run_name = os.path.split(\
-                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
@@ -2180,8 +2263,9 @@ Integrated cross-section
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
                        'pythia': ['pythia','pgs','delphes'],
+                       'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[]}
@@ -3226,6 +3310,8 @@ Integrated cross-section
 
 
         modify_switch(mode, self.last_mode, switch)
+        if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+            assign_switch('madspin', 'ON')
         
         if not self.force:
             answer = ''

@@ -125,6 +125,11 @@ c statistics for MadLoop
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
+c timing statistics
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+
 c general MadFKS parameters
       include "FKSParams.inc"
 
@@ -132,6 +137,10 @@ C-----
 C  BEGIN CODE
 C-----  
 c
+c     Setup the timing variable
+c
+      call cpu_time(tBefore)
+
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
@@ -208,6 +217,12 @@ c Plots
       plotEv=.false.
       plotKin=.false.
       call addfil(dum)
+c Always setup_fill_rwgt_NLOplot (when doing scale or pdf
+c uncertainties), because in mint, when getting 2 bad iterations in a
+c row, there is a call to initplot to reset the plots (for fixed order
+c computations). This makes sure that the code doesn't crash in that
+c case.
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 
 c*************************************************************
 c     setting of the grids
@@ -387,18 +402,28 @@ c determine how many events for the virtual and how many for the no-virt
 
          weight=(ans(1)+ans(5))/ncall
 
+         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born') then
+            write (*,*) 'CANNOT GENERATE EVENTS FOR ABRV',abrv
+            stop 1
+         endif
+
          write (*,*) 'imode is ',imode
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
          do j=1,ncall
-            if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
-               abrv='virt'
-               vn=1
+            if (abrv(1:4).eq.'born') then
+               vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               abrv='novi'
-               vn=2
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
+                  abrv='virt'
+                  vn=1
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               else
+                  abrv='novi'
+                  vn=2
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               endif
             endif
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
          enddo
@@ -455,10 +480,31 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write(*,*)
      &        "  Unknown return code (1):                         ",n1
       endif
+
+      call cpu_time(tAfter)
+      tTot = tTot +(tAfter-tBefore)
+      write(*,*) 'Time spent in OLP : ',tOLP
+      write(*,*) 'Time spent in PDF_engine : ',tPDF
+      write(*,*) 'Time spent in clustering : ',tFastJet
+      write(*,*) 'Time spent in Total : ',tTot
+
       return
  999  write (*,*) 'nevts file not found'
       stop
       end
+
+
+      block data timing
+c timing statistics
+      real*4 tbefore, tAfter
+      real*4 tTot, tOLP, tFastJet, tPDF
+      common/timings/tTot, tOLP, tFastJet, tPDF
+      data tTot/0.0/
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
+      end
+
 
       subroutine get_user_params(ncall,itmax,iconfig,
      &     imode,ixi_i,iphi_i,iy_ij,SHsep)

@@ -1,3 +1,26 @@
+      double precision function pdg2pdf_timed(ih,ipdg,x,xmu)
+c        function
+         double precision pdg2pdf
+         external pdg2pdf
+
+c        argument
+
+         integer ih, ipdg
+         DOUBLE  PRECISION x,xmu
+
+c timing statistics
+         real*4 tbefore, tAfter
+         real*4 tTot, tOLP, tFastJet, tPDF
+         common/timings/tTot, tOLP, tFastJet, tPDF
+
+         call cpu_time(tbefore)
+         pdg2pdf_timed = pdg2pdf(ih,ipdg,x,xmu)
+         call cpu_time(tAfter)
+         tPDF = tPDF + (tAfter-tBefore)
+         return
+
+      end
+
       double precision function pdg2pdf(ih,ipdg,x,xmu)
 c***************************************************************************
 c     Based on pdf.f, wrapper for calling the pdf of MCFM

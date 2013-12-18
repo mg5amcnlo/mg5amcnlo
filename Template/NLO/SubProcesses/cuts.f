@@ -285,7 +285,8 @@ c     the jet for a given particle 'i':        jet(i),   note that this is
 c     the particle in pQCD, which doesn't necessarily correspond to the particle
 c     label in the process
 c
-         call amcatnlo_fastjetppgenkt(pQCD,nQCD,rfj,sycut,palg,pjet,njet,jet)
+         call amcatnlo_fastjetppgenkt_timed(pQCD,nQCD,rfj,sycut,palg,
+     &pjet,njet,jet)
 c
 c******************************************************************************
 

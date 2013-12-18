@@ -285,6 +285,9 @@ class Event:
                     continue
                 self.shat=self.particle[1]["momentum"].dot(self.particle[2]["momentum"])
                 return 1
+            elif line_type == 'rwgt' and 'wgt' in line:
+                # force to continue to be in rwgt line up to </rwgt>
+                line_type = 'rwgt'
             elif '<' in line:
                 line_type = 'other_block'
             
@@ -1985,7 +1988,12 @@ class decay_all_events(object):
                 MC_masses[pid]=value
                 if pid in pid_heavyquarks:
                     value_ME=self.banner.get('param_card','mass', pid).value
-                    if value_ME>1E-10: MC_masses[pid]=value_ME
+                    if value_ME>1E-10:
+                        if pid==5:
+                            logger.warning('set the mass of the b-quark to its value in the param_card.dat: %s GeV ' % value_ME)
+                        if pid==4:
+                            logger.warning('set the mass of the c-quark to its value in the param_card.dat: %s GeV ' % value_ME)
+                        MC_masses[pid]=value_ME
             
         return MC_masses 
 
