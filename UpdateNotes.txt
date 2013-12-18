@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.0.1(XX/XX/XX) RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
+		    In rare cases this error stopped the code, while this was not needed.
+		RF: When using non-optimized loop output, the code now also works fine.
+
 2.0.0(14/12/13)    CHANGE IN DEFAULT:
                    ------------------
                       OM: Change the Higgs mass to 125 GeV for most of the model (but the susy/v4 one).
