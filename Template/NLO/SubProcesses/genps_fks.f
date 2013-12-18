@@ -1369,8 +1369,11 @@ c
          xiimin=0d0
       endif
       if (xiimax.lt.xiimin) then
-         write (*,*) 'Error #10 in genps_fks.f',icountevts,xiimax,xiimin
-         stop
+         write (*,*) 'WARNING #10 in genps_fks.f',icountevts,xiimax
+     $        ,xiimin
+         xjac=-342d0
+         pass=.false.
+         return
       endif
 
       xinorm=xiimax-xiimin
