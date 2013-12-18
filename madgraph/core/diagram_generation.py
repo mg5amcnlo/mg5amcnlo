@@ -558,7 +558,7 @@ class Amplitude(base_objects.PhysicsObject):
                 part = model.get('particle_dict')[leg.get('id')]
                 try:
                     value = part.get(charge)
-                except AttributeError, PhysicsObjectError:
+                except (AttributeError, base_objects.PhysicsObject.PhysicsObjectError):
                     value = 0
                     
                 if (leg.get('id') != part['pdg_code']) != leg['state']:

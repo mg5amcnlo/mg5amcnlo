@@ -140,7 +140,7 @@ def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
-
+    print model_path, find_ufo_path(model_path)
     assert model_path == find_ufo_path(model_path)
             
     # Check the validity of the model
@@ -215,12 +215,9 @@ def import_full_model(model_path, decay=False):
     #    model.restrict_model(restrict_file)
 
     return model
-    
 
 class UFOMG5Converter(object):
     """Convert a UFO model to the MG5 format"""
-
-
 
     def __init__(self, model, auto=False):
         """ initialize empty list for particles/interactions """
@@ -397,7 +394,7 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
-                elif key == 'propagator':
+                elif key == 'propagator' and value:
                     if aloha.unitary_gauge:
                         particle.set(key, str(value[0]))
                     else: 
@@ -1511,6 +1508,9 @@ class RestrictModel(model_reader.ModelReader):
             data.remove(param_info[param]['obj'])
 
                 
+
+
+
                 
         
         

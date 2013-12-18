@@ -1,0 +1,603 @@
+################################################################################
+#
+# Copyright (c) 2011 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+""" Set of Tool in order to modify a given UFO model.
+    (mainly by adding-suppressing interactions and allow to modify by text the 
+    different part of the model. Check of consistency of the model are performed.
+    This produce a new valid UFO model in output.
+"""
+
+import os
+import re
+import sys
+
+import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
+import models as ufomodels
+import models.import_ufo as import_ufo
+import logging
+
+pjoin =os.path.join
+logger = logging.getLogger('madgraph.model')
+
+class USRMODERROR(Exception): pass
+
+class UFOModel(object):
+    """ The class storing the current status of the model """
+    
+    def __init__(self, modelpath, addon='__1'):
+        """load the model from a valid UFO directory (otherwise keep everything
+        as empty."""
+        
+        #self.undefined = [] # list of tuples (type, name)
+        
+        self.modelpath = modelpath
+        model = ufomodels.load_model(modelpath)
+        self.particles = model.all_particles
+        self.vertices = model.all_vertices
+        self.couplings = model.all_couplings
+        self.lorentz = model.all_lorentz
+        self.parameters = model.all_parameters
+        self.Parameter = self.parameters[0].__class__
+        self.orders = model.all_orders
+        self.functions = model.all_functions
+        if hasattr(model, 'all_propagators'):
+            self.propagators = model.all_propagators
+        else:
+            self.propagators = [] 
+        
+        #translate for how to write the python file
+        if 'self.expr = expression' in open(pjoin(self.modelpath, 'object_library.py')).read():
+            self.translate = {'expr': 'expression'}
+        else:
+            self.translate = {}
+        
+        #translate for the expression of the UFO model
+        self.old_new = {}
+        self.addon = addon
+        
+        # particle id -> object
+        self.particle_dict = {}
+        for particle in self.particles:
+            self.particle_dict[particle.pdg_code] = particle
+
+    def write(self, outputdir):
+        """ """
+        if not os.path.exists(outputdir):
+            os.mkdir(outputdir)
+        files.cp(os.path.join(self.modelpath, '__init__.py'), outputdir)
+        files.cp(os.path.join(self.modelpath, 'object_library.py'), outputdir)
+        files.cp(os.path.join(self.modelpath, 'write_param_card.py'), outputdir)
+
+        self.write_particles(outputdir)
+        self.write_vertices(outputdir)
+        self.write_couplings(outputdir)
+        self.write_lorentz(outputdir)
+        self.write_parameters(outputdir)
+        self.write_orders(outputdir)
+        self.write_functions(outputdir)
+        self.write_propagators(outputdir)
+
+    def format_param(self, param):
+        """convert param to string in order to have it written correctly for the 
+        UFO file"""
+
+        if isinstance(param, basestring): 
+            return "'%s'" % param
+        elif isinstance(param, int) or isinstance(param, float) or \
+                                                       isinstance(param, complex):
+            return "%s" % param
+        elif isinstance(param, list):
+            return '[%s]' % ', '.join(self.format_param(p) for p in param)
+        elif isinstance(param, tuple):
+            if len(param) == 1:
+                return '(%s,)' % self.format_param(param[0]) 
+            else:
+                return '(%s)' % ','.join([self.format_param(p) for p in param])
+        elif isinstance(param, dict):
+            return '{%s}' % ','.join(['%s: %s' % (self.format_param(key), self.format_param(value)) for key, value in param.items()])
+        elif param.__class__.__name__ == 'Parameter':
+            return 'Param.%s' % param.__repr__()
+        elif param.__class__.__name__ == 'Coupling':
+            return 'C.%s' % param.__repr__()
+        elif param.__class__.__name__ == 'Lorentz':
+            return 'L.%s' % param.__repr__()
+        elif param.__class__.__name__ == 'Particle':
+            return 'P.%s' % param.__repr__()
+        elif param is None:
+            return 'None'
+        else:
+            raise Exception, '%s unknow type for writting UFO' % param.__class__.__name__
+
+
+
+    def create_data_text(self, obj):
+        """ create the data associate to the object"""
+        # Most of the object comes from the UFOBASECLASS 
+        # BUT NOT ALL (some object) need to deal with both
+        
+        nb_space = 0    
+        if hasattr(obj, 'require_args_all'):
+            args = obj.require_args_all
+        elif hasattr(obj, 'require_args'):
+            args = obj.require_args
+        else:
+            args = []
+        if args:
+            text = """%s = %s(""" % (obj.__repr__(), obj.__class__.__name__)
+        else:
+            text = """%s = %s(""" % (obj.name, obj.__class__.__name__)
+            
+            
+        for data in args:
+            if data in self.translate:
+                data = self.translate[data]
+            if not nb_space:
+                add_space = len(text)
+            else:
+                add_space = 0
+            
+            try:
+                expr = getattr(obj, data)
+            except:
+                if data in ['counterterm', 'propagator', 'loop_particles']:
+                    expr = None
+                    setattr(obj, data, None)
+                else:
+                    raise
+            name =str(data)
+            if name in self.translate:
+                name = self.translate[name]            
+            #if data == 'lhablock':
+            #    print data, type(self.format_param(getattr(obj, data)))
+            text += '%s%s = %s,\n' % (' ' * nb_space,name, self.format_param(getattr(obj, data)))
+            nb_space += add_space
+
+        if hasattr(obj, 'get_all'):
+            other_attr = [name for name in obj.get_all().keys() 
+                                                  if name not in args]
+        else:
+            other_attr = obj.__dict__.keys()
+            
+        for data in other_attr:
+            name =str(data)
+            if name == 'partial_widths':
+                continue
+            if name in self.translate:
+                name = self.translate[name] 
+            if not nb_space:
+                add_space = len(text)
+            else:
+                add_space = 0
+            text += '%s%s = %s,\n' % (' ' * nb_space, name, self.format_param(getattr(obj, data)))
+            nb_space += add_space
+            
+        text = text[:-2] + ')\n\n'
+
+        return text
+             
+    def create_file_content(self, datalist):
+        """ """
+        return '\n'.join([self.create_data_text(obj) for obj in datalist])
+
+            
+    def write_particles(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from __future__ import division
+from object_library import all_particles, Particle
+import parameters as Param
+
+"""
+        text += self.create_file_content(self.particles)
+        ff = open(os.path.join(outputdir, 'particles.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_vertices(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_vertices, Vertex
+import particles as P
+import couplings as C
+import lorentz as L
+
+"""
+        text += self.create_file_content(self.vertices)
+        ff = open(os.path.join(outputdir, 'vertices.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+
+    def write_couplings(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_couplings, Coupling
+"""
+        text += self.create_file_content(self.couplings)
+        ff = open(os.path.join(outputdir, 'couplings.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_lorentz(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_lorentz, Lorentz
+"""
+
+        text += self.create_file_content(self.lorentz)
+        ff = open(os.path.join(outputdir, 'lorentz.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_parameters(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_parameters, Parameter
+"""
+
+        text += self.create_file_content(self.parameters)
+        ff = open(os.path.join(outputdir, 'parameters.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_orders(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_orders, CouplingOrder
+"""
+
+        text += self.create_file_content(self.orders)
+        ff = open(os.path.join(outputdir, 'coupling_orders.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_functions(self, outputdir):
+        """ """
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+import cmath
+from object_library import all_functions, Function
+
+"""
+
+        text += self.create_file_content(self.functions)
+        ff = open(os.path.join(outputdir, 'function_library.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_propagators(self, outputdir):
+        """ """
+        
+        if self.propagators:
+            raise Exception, 'This type of UFOMODEL is not yet supported'
+
+    def get_particle(self, name):
+        """ """
+        for part in self.particles:
+            if part.name == name:
+                return part
+        
+        raise USRMODERROR, 'no particle %s in the model' % name
+
+    def add_parameter(self, parameter):
+        """wrapper to call the correct function"""
+        
+        if parameter.nature == 'internal':
+            self.add_internal_parameter(parameter)
+        else:
+            self.add_external_parameter(parameter)
+
+    def add_particle(self, particle):
+        """Add a particle in a consistent way"""
+        
+        name = particle.name
+        old_part = next((p for p in self.particles if p.name==name), None)
+        if old_part:
+            #Check if the two particles have the same pdgcode
+            if old_part.pdg_code == particle.pdg_code:
+                particle.replace = old_part
+                return self.check_mass_width_of_particle(old_part, particle)
+            else:
+                logger.warning('The particle name \'%s\' is present in both model with different pdg code')
+                logger.warning('The particle coming from the plug-in model will be rename to \'%s%s\'' % (name, self.addon))
+                particle.name = '%s%s' % (name, self.addon)
+                self.particles.append(particle)
+                return
+        
+        pdg = particle.pdg_code
+        if pdg in self.particle_dict:
+            particle.replace = self.particle_dict[pdg]
+            return self.check_mass_width_of_particle(self.particle_dict[pdg], particle)
+        else:
+            self.particles.append(particle)
+        
+                
+    def check_mass_width_of_particle(self, p_base, p_plugin):
+        
+        # Check the mass
+        if p_base.mass.name != p_plugin.mass.name:
+            #different name but actually  the same
+            if p_plugin.mass.name in self.old_new:
+                if self.old_new[p_plugin.mass.name] != p_base.mass.name:
+                    raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'
+            elif  p_base.mass.name.lower() == 'zero':
+                p_base.mass = p_plugin.mass
+            elif  p_plugin.mass.name.lower() == 'zero':
+                pass
+            else:
+                raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'
+        
+        # Check the width
+        if p_base.width.name != p_plugin.width.name:
+            #different name but actually  the same
+            if p_plugin.width.name in self.old_new:
+                if self.old_new[p_plugin.width.name] != p_base.width.name:
+                    raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'
+            elif  p_base.width.name.lower() == 'zero':
+                p_base.width = p_plugin.width
+            elif  p_plugin.width.name.lower() == 'zero':
+                pass
+            else:
+                raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'        
+        
+        return
+
+    def add_external_parameter(self, parameter):
+        """adding a param_card parameter inside the current model.
+           if the parameter block/lhcode already exists then just do nothing
+           (but if the name are different then keep the info for future translation)
+           If the name already exists in the model. raise an exception.
+        """
+        
+        name = parameter.name
+        # check if a parameter already has this name
+        old_param = next((p for p in self.parameters if p.name==name), None)
+        if old_param:
+            if old_param.lhablock == parameter.lhablock and \
+                old_param.lhacode == parameter.lhacode:
+                return #Nothing to do!
+            else:
+                logger.info('The two model defines the parameter \'%s\'' % parameter.name)
+                logger.info('We will rename the one from the plugin to %s%s' % (parameter.name, self.addon))
+                if old_param.nature == 'internal':
+                    logger.warning('''The parameter %s is actually an internal parameter of the base model.
+    his value is given by %s.
+    If those two parameters are expected to be identical, you need to provide the value in the param_card according to this formula.
+    ''')
+                #add the parameter with a new name. 
+                self.old_new[parameter.name] = '%s%s' % (parameter.name, self.addon)
+                parameter.name = '%s%s' % (parameter.name, self.addon)
+                self.parameters.append(parameter)
+                return
+        
+        #check if a parameter already has this lhablock/code information
+        old_param = next((p for p in self.parameters if p.lhacode==parameter.lhacode \
+                          and p.lhablock==parameter.lhablock), None)
+        if old_param:
+            logger.info('The two model defines the block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\''\
+                      %  (old_param.lhablock, old_param.lhacode, parameter.name, old_param.name))
+            logger.info('We will merge those two parameters in a single one')
+            self.old_new[parameter.name] = old_param.name
+            #            self.add_internal_parameter(iden_param)
+        
+        else:
+            #Just add the new parameter to the current list
+            self.parameters.append(parameter)
+    
+    def add_internal_parameter(self, parameter):
+        """ add a parameter of type internal """
+        
+        name = parameter.name
+        # check if a parameter already has this name
+        old_param = next((p for p in self.parameters if p.name==name), None)
+        if old_param:
+            if old_param.value == parameter.value:
+                return #Nothing to do!
+            else:
+                if self.old_new:
+                    pattern = re.compile(r'\b(%s)\b' % '|'.join(self.old_new.keys()))
+                    def replace(matchobj):
+                        return self.old_new[matchobj.group(0)]
+                    parameter.value = pattern.sub(replace, parameter.value)
+                    self.old_new[parameter.name] = '%s%s' % (parameter.name, self.addon)
+                
+                parameter.name = '%s%s' % (parameter.name, self.addon)
+                self.parameters.append(parameter)
+                return
+        
+        # No name conflict:
+        if self.old_new:
+            pattern = re.compile(r'\b(%s)\b' % '|'.join(self.old_new.keys()))
+            def replace(matchobj):
+                return self.old_new[matchobj.group(0)]
+            parameter.value = pattern.sub(replace, parameter.value)
+
+        self.parameters.append(parameter)
+
+
+
+    def add_coupling(self, coupling):
+        """add one coupling"""
+        
+        # avoid name duplication
+        name = coupling.name
+        same_name = next((p for p in self.couplings if p.name==name), None)
+        if same_name:
+            coupling.name = '%s%s' % (coupling.name, self.addon)
+        
+        if self.old_new:  
+            pattern = re.compile(r'\b(%s)\b' % '|'.join(self.old_new.keys()))
+            def replace(matchobj):
+                return self.old_new[matchobj.group(0)]
+            coupling.value = pattern.sub(replace, coupling.value)
+        
+        old_coupling = next((p for p in self.couplings if p.value==coupling.value), None)
+        
+        if old_coupling:
+            coupling.replace = old_coupling #tag for replacement
+        else:
+            self.couplings.append(coupling)
+    
+    def add_coupling_order(self, coupling_order):
+        """adding a new coupling order inside the model"""
+        
+        name = coupling_order.name
+        same_name = next((p for p in self.orders if p.name==name), None)
+        if same_name:
+            if coupling_order.hierarchy != same_name.hierarchy:
+                logger.warning('%s has different hierarchy use the minimal value' % name)
+                same_name.hierarchy = min(same_name.hierarchy, coupling_order.hierarchy)
+            if coupling_order.expansion_order != same_name.expansion_order:
+                logger.warning('%s has different expansion_order use the minimal value')
+                same_name.expansion_order = min(same_name.expansion_order, coupling_order.expansion_order)
+        else:
+            self.orders.append(coupling_order)
+    
+    def add_lorentz(self, lorentz):
+        """add one coupling"""
+        
+        # avoid name duplication
+        name = lorentz.name
+        same_name = next((p for p in self.lorentz if p.name==name), None)
+        if same_name:
+            lorentz.name = '%s%s' % (lorentz.name, self.addon)
+        
+        if self.old_new:     
+            pattern = re.compile(r'\b(%s)\b' % '|'.join(self.old_new.keys()))
+            def replace(matchobj):
+                return self.old_new[matchobj.group(0)]
+            lorentz.structure = pattern.sub(replace, lorentz.structure)
+        
+        old_lor = next((p for p in self.lorentz if p.structure==lorentz.structure), None)
+        
+        if old_lor:
+            lorentz.replace = old_lor #tag for replacement
+        else:
+            self.lorentz.append(lorentz)    
+        
+    def add_interaction(self, interaction):
+        """Add one interaction to the model. This is UNCONDITIONAL!
+        if the same interaction is in the model this means that the interaction
+        will appear twice."""
+        
+        #0. check name:
+        name = interaction.name
+        same_name = next((p for p in self.vertices if p.name==name), None)
+        if same_name:
+            interaction.name = '%s%s' % (interaction.name, self.addon)
+        
+        #1. check particles translation
+        particles = [p.replace if hasattr(p, 'replace') else p for p in interaction.particles]
+        interaction.particles = particles
+        
+        #2. check the lorentz structure
+        lorentz = [l.replace if hasattr(l, 'replace') else l for l in interaction.lorentz]
+        interaction.lorentz = lorentz
+
+        #3. check the couplings
+        couplings = [(key, c.replace) if hasattr(c, 'replace') else (key, c)
+                     for key, c in interaction.couplings.items()]
+        interaction.couplings = dict(couplings)
+        
+        self.vertices.append(interaction)
+
+    def add_model(self, model=None, path=None):
+        """add another model in the current one"""
+        
+        if path:
+            model = ufomodels.load_model(path) 
+        
+        if not model:
+            raise USRMODERROR, 'Need a valid Model'
+        
+        for order in model.all_orders:
+            self.add_coupling_order(order)
+        for parameter in model.all_parameters:
+            self.add_parameter(parameter)
+        for coupling in model.all_couplings:
+            self.add_coupling(coupling)
+        for lorentz in model.all_lorentz:
+            self.add_lorentz(lorentz)
+        for particle in model.all_particles:
+            self.add_particle(particle)
+        for vertex in model.all_vertices:
+            self.add_interaction(vertex)
+        
+        return
+
+#    def add_particle_from_model(self, model, name):
+#        """add the particles NAME from model model (either path or object)
+#        names can be either the name of one particle or a list of particle name
+#        """
+#
+#        if isinstance(model, basestring):
+#            model = UFOModel(self.modelpath)
+#
+#        
+#        if isinstance(name, list):
+#            [self.add_particles(self.modelpath, name) for name in names]
+#            return 
+#        
+#        # Check Validity
+#        part = self.get_particle(name)
+#        if self.particles_dict.has_key(part.pdg_code):
+#            raise USRMODERROR, 'The model contains already a particle with pdg_code %s.' % part.pdg_code
+#        
+#        # Add the particles to model
+#        self.particles.append(part)
+#        self.particles_dict[part.pdg_code] = part
+#
+#        # Loop over the interactions of the other model and add (if possible) the interactions 
+#        #associated to the new particles
+#        possibility = [v for v in vertex if part in v.particles]
+#
+#        for vertex in possibility:
+#            # Check that all particles are define in the model
+#            for particles in vertex.particles:
+#                if particles.pdg_code not in self.particles_dict:
+#                    continue
+#            # Add the interactions/lorentz structure/coupling
+#            self.vertices.append(vertex)
+#            # NEED WORK!!!!!
+            
+    
+
+
+
+if __name__ == '__main__':
+    print 'pass'
+
+    UFOModel('/Users/omatt/Documents/Eclipse2/usrmodv5/models/sm')
+    
