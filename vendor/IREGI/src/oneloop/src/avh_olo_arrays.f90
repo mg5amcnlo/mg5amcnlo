@@ -1,20 +1,20 @@
 !!
-!! Copyright (C) 2012 Andreas van Hameren. 
+!! Copyright (C) 2013 Andreas van Hameren. 
 !!
-!! This file is part of OneLOop-3.3.1.
+!! This file is part of OneLOop-3.3.2.
 !!
-!! OneLOop-3.3.1 is free software: you can redistribute it and/or modify
+!! OneLOop-3.3.2 is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! OneLOop-3.3.1 is distributed in the hope that it will be useful,
+!! OneLOop-3.3.2 is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
-!! along with OneLOop-3.3.1.  If not, see <http://www.gnu.org/licenses/>.
+!! along with OneLOop-3.3.2.  If not, see <http://www.gnu.org/licenses/>.
 !!
 
 
@@ -244,6 +244,11 @@ contains
   endif
   lb=lbound(xx) ;ub=ubound(xx)
   if (lb(1).le.l1.and.u1.le.ub(1)) return
+  if (lb(1).gt.ub(1)) then
+    deallocate( xx )
+    allocate( xx(min(l1,lb(1)):max(u1,ub(1))) )
+    return
+  endif
   allocate(tt(lb(1):ub(1)))
   tt = xx
   deallocate(xx)
@@ -266,6 +271,12 @@ contains
   lb=lbound(xx) ;ub=ubound(xx)
   if (lb(1).le.l1.and.u1.le.ub(1).and. &
       lb(2).le.l2.and.u2.le.ub(2)      ) return
+  if (lb(1).gt.ub(1).or.lb(2).gt.ub(2)) then
+    deallocate( xx )
+    allocate( xx(min(l1,lb(1)):max(u1,ub(1))  &
+                ,min(l2,lb(2)):max(u2,ub(2))) )
+    return
+  endif
   allocate(tt(lb(1):ub(1),lb(2):ub(2)))
   tt = xx
   deallocate(xx)

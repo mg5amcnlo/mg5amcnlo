@@ -1,20 +1,20 @@
 !!
-!! Copyright (C) 2012 Andreas van Hameren. 
+!! Copyright (C) 2013 Andreas van Hameren. 
 !!
-!! This file is part of OneLOop-3.3.1.
+!! This file is part of OneLOop-3.3.2.
 !!
-!! OneLOop-3.3.1 is free software: you can redistribute it and/or modify
+!! OneLOop-3.3.2 is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! OneLOop-3.3.1 is distributed in the hope that it will be useful,
+!! OneLOop-3.3.2 is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
-!! along with OneLOop-3.3.1.  If not, see <http://www.gnu.org/licenses/>.
+!! along with OneLOop-3.3.2.  If not, see <http://www.gnu.org/licenses/>.
 !!
 
 
@@ -63,19 +63,18 @@ contains
       elseif (ndecim(ii).lt.ndec) then            
         i0 = ii                                   
       else                                        
-        i1 = ii                                   
         exit                                      
       endif                                       
     enddo                                         
-    if (ndecim(i0).eq.ndec) i0=i1                 
-    prcpar = i1                                   
-    newprc = (ndecim(prcpar).ne.ndec)             
-    if (newprc) then                              
+    newprc = (ndecim(ii).ne.ndec)
+    if (newprc) then
+      prcpar = i0+1                              
       call shift1( ndecim ,prcpar )               
       call shift1( epsilo ,prcpar )               
       call shift1( neglig ,prcpar )               
       call set_epsn          
-    else                                          
+    else           
+      prcpar = ii
       EPSN = epsilo(prcpar)                       
     endif                                         
   else                                            

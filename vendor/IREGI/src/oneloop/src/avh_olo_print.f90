@@ -1,20 +1,20 @@
 !!
-!! Copyright (C) 2012 Andreas van Hameren. 
+!! Copyright (C) 2013 Andreas van Hameren. 
 !!
-!! This file is part of OneLOop-3.3.1.
+!! This file is part of OneLOop-3.3.2.
 !!
-!! OneLOop-3.3.1 is free software: you can redistribute it and/or modify
+!! OneLOop-3.3.2 is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! OneLOop-3.3.1 is distributed in the hope that it will be useful,
+!! OneLOop-3.3.2 is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
-!! along with OneLOop-3.3.1.  If not, see <http://www.gnu.org/licenses/>.
+!! along with OneLOop-3.3.2.  If not, see <http://www.gnu.org/licenses/>.
 !!
 
 
@@ -66,12 +66,12 @@ contains
   if (present(ndec_in)) then ;ndec=ndec_in
                         else ;ndec=ndecim(prcpar)+nxtr
   endif
-  write(aa,'(i10)') ndec+novh+1 ;aa=adjustl(aa)
-  write(bb,'(i10)') ndec        ;bb=adjustl(bb)
+  write(aa,'(i10)') min(len(cc),ndec+novh+1) ;aa=adjustl(aa)
+  write(bb,'(i10)') min(len(cc),ndec       ) ;bb=adjustl(bb)
   aa = '(e'//trim(aa)//'.'//trim(bb)//')'
   write(cc,aa) xx  ;cc=adjustl(cc)
-  if (cc(1:2).eq.'-0') then ;rslt = '-'//cc(3:ndec*2)
-  else                      ;rslt = ' '//cc(2:ndec*2)
+  if (cc(1:2).eq.'-0') then ;rslt = '-'//cc(3:len(cc))
+  else                      ;rslt = ' '//cc(2:len(cc))
   endif
   end function
 

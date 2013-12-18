@@ -1,20 +1,20 @@
 !!
-!! Copyright (C) 2012 Andreas van Hameren. 
+!! Copyright (C) 2013 Andreas van Hameren. 
 !!
-!! This file is part of OneLOop-3.3.1.
+!! This file is part of OneLOop-3.3.2.
 !!
-!! OneLOop-3.3.1 is free software: you can redistribute it and/or modify
+!! OneLOop-3.3.2 is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! OneLOop-3.3.1 is distributed in the hope that it will be useful,
+!! OneLOop-3.3.2 is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
-!! along with OneLOop-3.3.1.  If not, see <http://www.gnu.org/licenses/>.
+!! along with OneLOop-3.3.2.  If not, see <http://www.gnu.org/licenses/>.
 !!
 
 
@@ -328,6 +328,7 @@ contains
                      ,aa,bb,cc,dd,x1,x2,r23,r24,r34
    include 'avh_olo_real.h90'
      :: mhh
+   logical :: r24Not0,r34Not0
 ![CALLINGME  write(*,*) 'MESSAGE from OneLOop trif1: you are calling me'
 !
 !   p1 = nul
@@ -346,11 +347,12 @@ contains
    sm3 = mhh
    sm2 = sm3
 !
-   r24 = 0
-   r34 = 0
-                  r23 = (   -p2 -p2 *IEPS )/(sm2*sm3)
-   if (m4.ne.p23) r24 = ( m4-p23-p23*IEPS )/(sm2*sm4)
-   if (m4.ne.p3 ) r34 = ( m4-p3 -p3 *IEPS )/(sm3*sm4)     
+   r23 = (   -p2 -p2 *IEPS )/(sm2*sm3)
+   r24 = ( m4-p23-p23*IEPS )/(sm2*sm4)
+   r34 = ( m4-p3 -p3 *IEPS )/(sm3*sm4)
+!
+   r24Not0 = (abs(areal(r24))+abs(aimag(r24)).ge.neglig(prcpar))
+   r34Not0 = (abs(areal(r34))+abs(aimag(r34)).ge.neglig(prcpar))
 !
    aa = r34*r24 - r23
 !
@@ -381,12 +383,12 @@ contains
    rslt(0) = -logc2( qx1/qx2 )*logc( qx1*qx2/(qm4*qm4) )/(x2*2) &
              -li2c2( qx1*qm4 ,qx2*qm4 )*sm4
 !
-   if (r34.ne.CZRO) then
+   if (r34Not0) then
      qss = q34*mhh
      rslt(0) = rslt(0) + li2c2( qx1*qss ,qx2*qss )*r34*sm3
    endif
 !
-   if (r24.ne.CZRO) then
+   if (r24Not0) then
      qss = q24*mhh
      rslt(0) = rslt(0) + li2c2( qx1*qss ,qx2*qss )*r24*sm2
    endif
@@ -412,6 +414,7 @@ contains
    include 'avh_olo_complex.h90'
      :: p2,p3,p23,m2,m4,sm2,sm3,sm4,aa,bb,cc,dd,x1,x2 &
                      ,r23,k24,r34,r24,d24
+   logical :: r23Not0,r34Not0
 ![CALLINGME  write(*,*) 'MESSAGE from OneLOop trif2: you are calling me'
 !
 !   p1 = nul
@@ -430,12 +433,12 @@ contains
    sm3 = abs(sm2) !mysqrt(m3)
    sm4 = mysqrt(m4)
 !
-   r23 = 0
-   k24 = 0
-   r34 = 0
-   if (m2   .ne.p2 ) r23 = (    m2-p2 -p2 *IEPS )/(sm2*sm3) ! p2
-   if (m2+m4.ne.p23) k24 = ( m2+m4-p23-p23*IEPS )/(sm2*sm4) ! p2+p3
-   if (m4   .ne.p3 ) r34 = (    m4-p3 -p3 *IEPS )/(sm3*sm4) ! p3
+   r23 = (    m2-p2 -p2 *IEPS )/(sm2*sm3) ! p2
+   k24 = ( m2+m4-p23-p23*IEPS )/(sm2*sm4) ! p2+p3
+   r34 = (    m4-p3 -p3 *IEPS )/(sm3*sm4) ! p3
+!
+   r23Not0 = (abs(areal(r23))+abs(aimag(r23)).ge.neglig(prcpar))
+   r34Not0 = (abs(areal(r34))+abs(aimag(r34)).ge.neglig(prcpar))
 !
    call rfun( r24,d24 ,k24 )
 !
@@ -479,12 +482,12 @@ contains
 !
    rslt(0) = rslt(0) - li2c2( qx1*qm4 ,qx2*qm4 )*sm4
 !
-   if (r23.ne.CZRO) then
+   if (r23Not0) then
      qss = q23*qm3/q24
      rslt(0) = rslt(0) - li2c2( qx1*qss ,qx2*qss )*r23*sm3/r24
    endif
 !
-   if (r34.ne.CZRO) then
+   if (r34Not0) then
      qss = q34*qm3
      rslt(0) = rslt(0) + li2c2( qx1*qss ,qx2*qss )*r34*sm3
    endif

@@ -41,26 +41,16 @@
       complex(kind(1d0)) :: p1,p2,p3,p4,p12,p23,m1,m2,m3,m4
       complex(kind(1d0)) :: zolo(0:2),zLT,D0C
 !
-!      read(5,*) p1
-!      read(5,*) p2
-!      read(5,*) p3
-!      read(5,*) p4
-!      read(5,*) p12
-!      read(5,*) p23
-!      read(5,*) m1
-!      read(5,*) m2
-!      read(5,*) m3
-!      read(5,*) m4
-      m1=0d0
-      m2=0d0
-      m3=8315.25d0
-      m4=30380.5d0
-      p1=0d0
-      p2=0d0
-      p3=30380.5d0
-      p4=314429d0
-      p12=1d6
-      p23=-368812d0
+      read(5,*) p1
+      read(5,*) p2
+      read(5,*) p3
+      read(5,*) p4
+      read(5,*) p12
+      read(5,*) p23
+      read(5,*) m1
+      read(5,*) m2
+      read(5,*) m3
+      read(5,*) m4
       write(6,101) 'p1 : (',real(p1),',',aimag(p1),')'
       write(6,101) 'p2 : (',real(p2),',',aimag(p2),')'
       write(6,101) 'p3 : (',real(p3),',',aimag(p3),')'

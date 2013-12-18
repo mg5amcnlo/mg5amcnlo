@@ -1,6 +1,6 @@
 #FC = f95
 #FC = lf95
-#FC = gfortran
+#FC = g77
 FC = gfortran
 
 CDFUN = yes

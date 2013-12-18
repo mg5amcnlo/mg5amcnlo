@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import re,string,os,sys,subprocess
-srcdir = '/Users/erdissshaw/Works/OneLOop-3.3.1/src'
+srcdir = '/home/others/hameren/loopcal/OneLOop/OneLOop-3.3.2/src'
 sys.path.append(srcdir)
 import avh_pc,avh_pc_olo
 

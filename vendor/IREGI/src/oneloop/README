@@ -24,7 +24,7 @@ To create a dynamic library "libavh_olo.so" with gfortran,
 set the Fortran compiler in the file "Config" to gfortran, and execute
 
 ./configure.py
-./create dynamic
+./create.py dynamic
 
 Put the library "libavh_olo.so" where the linker can find it,
 or add its position to the path, eg. in bash:
