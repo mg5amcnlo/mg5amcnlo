@@ -18,6 +18,7 @@
     This produce a new valid UFO model in output.
 """
 
+import glob
 import os
 import re
 import sys
@@ -40,10 +41,18 @@ class UFOModel(object):
         """load the model from a valid UFO directory (otherwise keep everything
         as empty."""
         
-        #self.undefined = [] # list of tuples (type, name)
-        
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
+        
+        # Check the validity of the model. Too old UFO (before UFO 1.0)
+        if not hasattr(model, 'all_orders'):
+            raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
+                               'MG5 is able to load such model but NOT to the add model feature.'
+        if isinstance(model.all_particles[0].mass, basestring):
+            raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
+                               'MG5 is able to load such model but NOT to the add model feature.' 
+                                 
+        
         self.particles = model.all_particles
         self.vertices = model.all_vertices
         self.couplings = model.all_couplings
@@ -52,10 +61,17 @@ class UFOModel(object):
         self.Parameter = self.parameters[0].__class__
         self.orders = model.all_orders
         self.functions = model.all_functions
+        # UFO optional file
         if hasattr(model, 'all_propagators'):
             self.propagators = model.all_propagators
         else:
             self.propagators = [] 
+            
+        # UFO NLO extension
+        if hasattr(model, 'all_CTvertices'):
+            self.CTvertices = model.all_CTvertices
+        else:
+            self.CTvertices = []
         
         #translate for how to write the python file
         if 'self.expr = expression' in open(pjoin(self.modelpath, 'object_library.py')).read():
@@ -71,6 +87,9 @@ class UFOModel(object):
         self.particle_dict = {}
         for particle in self.particles:
             self.particle_dict[particle.pdg_code] = particle
+            
+        # path to all model that should be used for the Fortran file.
+        self.all_path = [self.modelpath]
 
     def write(self, outputdir):
         """ """
@@ -88,13 +107,18 @@ class UFOModel(object):
         self.write_orders(outputdir)
         self.write_functions(outputdir)
         self.write_propagators(outputdir)
+        self.write_ctvertices(outputdir)
+        
+        self.write_external_files(outputdir)
+        
+        
 
     def format_param(self, param):
         """convert param to string in order to have it written correctly for the 
         UFO file"""
 
         if isinstance(param, basestring): 
-            return "'%s'" % param
+            return "'%s'" % param.replace('\'', '\\\'').replace('\"', '\\\"')
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
             return "%s" % param
@@ -172,7 +196,7 @@ class UFOModel(object):
             
         for data in other_attr:
             name =str(data)
-            if name == 'partial_widths':
+            if name in ['partial_widths', 'loop_particles']:
                 continue
             if name in self.translate:
                 name = self.translate[name] 
@@ -221,6 +245,27 @@ import lorentz as L
 """
         text += self.create_file_content(self.vertices)
         ff = open(os.path.join(outputdir, 'vertices.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_ctvertices(self, outputdir):
+        """ """
+        
+        if not self.CTvertices:
+            return
+        
+        text = """
+# This file was automatically created by The UFO_usermod        
+
+from object_library import all_vertices, all_CTvertices, Vertex, CTVertex
+import particles as P
+import couplings as C
+import lorentz as L
+
+"""
+        text += self.create_file_content(self.CTvertices)
+        ff = open(os.path.join(outputdir, 'CT_vertices.py'), 'w')
         ff.writelines(text)
         ff.close()
         return
@@ -300,9 +345,66 @@ from object_library import all_functions, Function
     def write_propagators(self, outputdir):
         """ """
         
-        if self.propagators:
-            raise Exception, 'This type of UFOMODEL is not yet supported'
+        text = """
+# This file was automatically created by The UFO_usermod   
+from object_library import all_propagators, Propagator
+"""
 
+        text += self.create_file_content(self.propagators)
+        ff = open(os.path.join(outputdir, 'propagators.py'), 'w')
+        ff.writelines(text)
+        ff.close()
+        return
+
+    def write_external_files(self, outputdir):
+        """Copy/merge the routines written in Fortran/C++/pyhton"""
+        
+        #1. Special case for the formfactor written in Fortran
+        re_fct = re.compile('''^\s{7,70}[\w\s]*function (\w*)\(''',re.M+re.I)
+        present_fct = set()
+        for dirpath in self.all_path:
+            if os.path.exists(pjoin(dirpath, 'Fortran', 'functions.f')):
+                text = open(pjoin(dirpath, 'Fortran', 'functions.f')).read()
+                new_fct = re_fct.findall(text)
+                nb_old = len(present_fct)
+                nb_added = len(new_fct)
+                new_fct = set([f.lower() for f in new_fct])
+                present_fct.update(new_fct)
+                if len(present_fct) < nb_old + nb_added:
+                    logger.critical('''Some Functions in functions.f are define in more than one model.
+                    This require AT LEAST manual modification of the resulting file. But more likely the 
+                    model need to be consider as un-physical! Use it very carefully.''')
+                
+                if not os.path.exists(pjoin(outputdir, 'Fortran')):
+                    os.mkdir(pjoin(outputdir, 'Fortran'))
+                fsock = open(pjoin(outputdir, 'Fortran'),'a')
+                fsock.write(text)
+                fsock.close()
+                
+        #2. Ohter files present in Fortran/Cpp/Python directory
+        #   ASk user to handle it if any!
+        for dirpath in self.all_path:
+            for subdir in ['Fortran', 'CPP', 'Python']:
+                if os.path.exists(pjoin(dirpath, subdir)):
+                    for filepath in os.listdir(pjoin(dirpath, subdir)):
+                        if filepath == 'functions.f':
+                            continue
+                        if '.' not in filepath:
+                            continue
+                        logger.warning('Manual HELAS routine associated to the model. Those are not modified automaticaly!! So you need to manually checked them')
+                        nb = 0
+                        name, extension = filepath.rsplit('.', 1) 
+
+                        while 1:
+                            filename = '%s%s%s' %(name, '.moved' * nb, extension)
+                            if os.path.exists(pjoin(outputdir, subdir, filename)):
+                                nb+=1
+                            else:
+                                break
+                        if not os.path.exists(pjoin(outputdir, subdir)):
+                            os.mkdir(pjoin(outputdir, subdir))
+                        files.cp(pjoin(dirpath, subdir, filepath), pjoin(outputdir, subdir, filename))
+                        
     def get_particle(self, name):
         """ """
         for part in self.particles:
@@ -330,7 +432,7 @@ from object_library import all_functions, Function
                 particle.replace = old_part
                 return self.check_mass_width_of_particle(old_part, particle)
             else:
-                logger.warning('The particle name \'%s\' is present in both model with different pdg code')
+                logger.warning('The particle name \'%s\' is present in both model with different pdg code' % name)
                 logger.warning('The particle coming from the plug-in model will be rename to \'%s%s\'' % (name, self.addon))
                 particle.name = '%s%s' % (name, self.addon)
                 self.particles.append(particle)
@@ -345,20 +447,22 @@ from object_library import all_functions, Function
         
                 
     def check_mass_width_of_particle(self, p_base, p_plugin):
-        
+              
         # Check the mass
         if p_base.mass.name != p_plugin.mass.name:
             #different name but actually  the same
             if p_plugin.mass.name in self.old_new:
                 if self.old_new[p_plugin.mass.name] != p_base.mass.name:
-                    raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'
+                    raise USRMODERROR, 'Some inconsistency in the mass assignment in the model: equivalent of %s is %s != %s ' % ( p_plugin.mass.name, self.old_new[p_plugin.mass.name], p_base.mass.name)
             elif  p_base.mass.name.lower() == 'zero':
                 p_base.mass = p_plugin.mass
             elif  p_plugin.mass.name.lower() == 'zero':
                 pass
             else:
-                raise USRMODERROR, 'Some inconsistency in the mass assignment in the model'
-        
+                raise USRMODERROR, 'Some inconsistency in the mass assignment in the model\n' + \
+             '     Mass: %s and %s\n' %(p_base.mass.name, p_plugin.mass.name) + \
+             '     conflict name %s\n' % self.old_new + \
+             '     pdg_code: %s %s' % (p_base.pdg_code, p_plugin.pdg_code)
         # Check the width
         if p_base.width.name != p_plugin.width.name:
             #different name but actually  the same
@@ -380,6 +484,9 @@ from object_library import all_functions, Function
            (but if the name are different then keep the info for future translation)
            If the name already exists in the model. raise an exception.
         """
+
+
+ 
         
         name = parameter.name
         # check if a parameter already has this name
@@ -389,8 +496,10 @@ from object_library import all_functions, Function
                 old_param.lhacode == parameter.lhacode:
                 return #Nothing to do!
             else:
-                logger.info('The two model defines the parameter \'%s\'' % parameter.name)
-                logger.info('We will rename the one from the plugin to %s%s' % (parameter.name, self.addon))
+                logger.info('The two model defines the parameter \'%s\'\n' % parameter.name +
+                  '      the original model for %s :%s\n' %(old_param.lhablock, old_param.lhacode)+
+                  '      the plugin for %s :%s\n' %(parameter.lhablock,parameter.lhacode)+
+                  '      We will rename the one from the plugin to %s%s' % (parameter.name, self.addon))
                 if old_param.nature == 'internal':
                     logger.warning('''The parameter %s is actually an internal parameter of the base model.
     his value is given by %s.
@@ -399,22 +508,28 @@ from object_library import all_functions, Function
                 #add the parameter with a new name. 
                 self.old_new[parameter.name] = '%s%s' % (parameter.name, self.addon)
                 parameter.name = '%s%s' % (parameter.name, self.addon)
-                self.parameters.append(parameter)
-                return
+                #
+                #self.parameters.append(parameter)
+                #return
         
         #check if a parameter already has this lhablock/code information
         old_param = next((p for p in self.parameters if p.lhacode==parameter.lhacode \
                           and p.lhablock==parameter.lhablock), None)
         if old_param:
-            logger.info('The two model defines the block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\''\
-                      %  (old_param.lhablock, old_param.lhacode, parameter.name, old_param.name))
-            logger.info('We will merge those two parameters in a single one')
-            self.old_new[parameter.name] = old_param.name
+            logger.info('The two model defines the block \'%s\' with id \'%s\' with different parameter name \'%s\', \'%s\'\n'\
+                      %  (old_param.lhablock, old_param.lhacode, parameter.name, old_param.name) + \
+            '     We will merge those two parameters in a single one')
+            if parameter.name in self.old_new.values():
+                key = [k for k in self.old_new if self.old_new[k] == parameter.name][0]
+                self.old_new[key] = old_param.name
+                self.old_new[parameter.name] = old_param.name
+            else:
+                self.old_new[parameter.name] = old_param.name
             #            self.add_internal_parameter(iden_param)
         
         else:
             #Just add the new parameter to the current list
-            self.parameters.append(parameter)
+            self.parameters.append(parameter) 
     
     def add_internal_parameter(self, parameter):
         """ add a parameter of type internal """
@@ -477,10 +592,14 @@ from object_library import all_functions, Function
         same_name = next((p for p in self.orders if p.name==name), None)
         if same_name:
             if coupling_order.hierarchy != same_name.hierarchy:
-                logger.warning('%s has different hierarchy use the minimal value' % name)
+                logger.warning('%s has different hierarchy use the minimal value (%s, %s) => %s' \
+                               % (name, same_name.hierarchy, coupling_order.hierarchy,
+                                  min(same_name.hierarchy, coupling_order.hierarchy)))
                 same_name.hierarchy = min(same_name.hierarchy, coupling_order.hierarchy)
             if coupling_order.expansion_order != same_name.expansion_order:
-                logger.warning('%s has different expansion_order use the minimal value')
+                logger.warning('%s has different expansion_order use the minimal value (%s, %s) => %s' \
+                               % (name, coupling_order.expansion_order, same_name.expansion_order, 
+                                  min(same_name.expansion_order, coupling_order.expansion_order)))
                 same_name.expansion_order = min(same_name.expansion_order, coupling_order.expansion_order)
         else:
             self.orders.append(coupling_order)
@@ -533,6 +652,38 @@ from object_library import all_functions, Function
         
         self.vertices.append(interaction)
 
+    def add_CTinteraction(self, interaction):
+        """Add one interaction to the model. This is UNCONDITIONAL!
+        if the same interaction is in the model this means that the interaction
+        will appear twice."""
+        
+        #0. check name:
+        name = interaction.name
+        same_name = next((p for p in self.vertices if p.name==name), None)
+        if same_name:
+            interaction.name = '%s%s' % (interaction.name, self.addon)
+        
+        #1. check particles translation
+        particles = [p.replace if hasattr(p, 'replace') else p for p in interaction.particles]
+        interaction.particles = particles
+        
+        #2. check the lorentz structure
+        lorentz = [l.replace if hasattr(l, 'replace') else l for l in interaction.lorentz]
+        interaction.lorentz = lorentz
+
+        #3. check the couplings
+        couplings = [(key, c.replace) if hasattr(c, 'replace') else (key, c)
+                     for key, c in interaction.couplings.items()]
+        interaction.couplings = dict(couplings)
+        
+
+        #4. check the loop_particles
+        loop_particles=[ [p.replace if hasattr(p, 'replace') else p for p in plist]
+                         for plist in interaction.loop_particles]
+        interaction.loop_particles = loop_particles
+        self.CTvertices.append(interaction)
+        
+
     def add_model(self, model=None, path=None):
         """add another model in the current one"""
         
@@ -542,6 +693,14 @@ from object_library import all_functions, Function
         if not model:
             raise USRMODERROR, 'Need a valid Model'
         
+        # Check the validity of the model. Too old UFO (before UFO 1.0)
+        if not hasattr(model, 'all_orders'):
+            raise USRMODERROR, 'Plugin Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
+                               'MG5 is able to load such model but NOT to the add model feature.'
+        if isinstance(model.all_particles[0].mass, basestring):
+            raise USRMODERROR, 'Plugin Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
+                               'MG5 is able to load such model but NOT to the add model feature.' 
+                                        
         for order in model.all_orders:
             self.add_coupling_order(order)
         for parameter in model.all_parameters:
@@ -554,6 +713,8 @@ from object_library import all_functions, Function
             self.add_particle(particle)
         for vertex in model.all_vertices:
             self.add_interaction(vertex)
+        
+        self.all_path.append(path)
         
         return
 
@@ -596,8 +757,4 @@ from object_library import all_functions, Function
 
 
 
-if __name__ == '__main__':
-    print 'pass'
-
-    UFOModel('/Users/omatt/Documents/Eclipse2/usrmodv5/models/sm')
     

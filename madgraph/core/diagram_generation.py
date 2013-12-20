@@ -559,8 +559,11 @@ class Amplitude(base_objects.PhysicsObject):
                 try:
                     value = part.get(charge)
                 except (AttributeError, base_objects.PhysicsObject.PhysicsObjectError):
-                    value = 0
-                    
+                    try:
+                        value = getattr(part, charge)
+                    except AttributeError:
+                        value = 0
+                        
                 if (leg.get('id') != part['pdg_code']) != leg['state']:
                     total -= value
                 else:

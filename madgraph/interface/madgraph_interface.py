@@ -1802,7 +1802,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         elif args[1] == 'model':
             completion_categories = self.complete_import(text, line, begidx, endidx, 
                                                          allow_restrict=False, treat_completion=False)
-            completion_categories['options'] = ['--modelname=','--recreate']
+            completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
             return self.deal_multiple_categories(completion_categories) 
             
     def complete_customize_model(self, text, line, begidx, endidx):
@@ -2594,19 +2594,41 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def add_model(self, args):
         """merge two model"""
         
+        model_path = args[0]
+        recreate = ('--recreate' in args)
+        output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
+        if output_dir:
+            output_dir = output_dir[0]
+            recreate = True
+        else:
+            output_dir = pjoin(MG5DIR, 'models', '%s__%s' % (self._curr_model.get('name'),
+                                                  os.path.basename(model_path)))
+        
+        if os.path.exists(output_dir):
+            if recreate:
+                shutil.rmtree(output_dir)
+            else:
+                oldmodel = self._curr_model.get('modelpath')
+                try:
+                    self.exec_cmd('import model %s' % output_dir, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)
+                except Exception, error:
+                    logger.debug('fail to load model %s with error:\n %s' % (output_dir, error))
+                    logger.warning('Fail to load the model. Restore previous model')
+                    self.exec_cmd('import model %s' % oldmodel, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)                    
+                    raise Exception('Invalid Model! Please retry with the option \'--recreate\'.')
+                else:
+                    return
+        
+        #Need to do the work!!!        
         import models.usermod as usermod
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
-        base_model.add_model(path=args[0])
-        try:
-            shutil.rmtree(pjoin('/tmp/test_plugin'))
-        except:
-            pass
-        os.mkdir(pjoin('/tmp/test_plugin'))
-        base_model.write(pjoin('/tmp/test_plugin'))
+        base_model.add_model(path=model_path)
+        base_model.write(output_dir)
+        self.exec_cmd('import model %s' % output_dir, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)         
         
-        
-        
-        raise Exception, 'Not all options implemented'
         
     # Define a multiparticle label
     def do_define(self, line, log=True):

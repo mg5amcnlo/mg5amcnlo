@@ -140,7 +140,6 @@ def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
-    print model_path, find_ufo_path(model_path)
     assert model_path == find_ufo_path(model_path)
             
     # Check the validity of the model
@@ -508,9 +507,8 @@ class UFOMG5Converter(object):
                     newCoupling=copy.copy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                    newCoupling.value=coupling.pole(poleOrder)
-                    new_couplings[key[2]][poleOrder][(key[0],key[1])]=\
-                      newCoupling
+                        newCoupling.value=coupling.pole(poleOrder)
+                        new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling
         
         # Now we can add an interaction for each.         
         for i, all_couplings in enumerate(new_couplings):
