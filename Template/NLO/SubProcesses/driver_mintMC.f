@@ -126,9 +126,8 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
+      real*4 tOther, tTot
 
 c general MadFKS parameters
       include "FKSParams.inc"
@@ -136,9 +135,7 @@ c general MadFKS parameters
 C-----
 C  BEGIN CODE
 C-----  
-c
-c     Setup the timing variable
-c
+
       call cpu_time(tBefore)
 
 c     Read general MadFKS parameters
@@ -483,9 +480,14 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       call cpu_time(tAfter)
       tTot = tTot +(tAfter-tBefore)
-      write(*,*) 'Time spent in OLP : ',tOLP
-      write(*,*) 'Time spent in PDF_engine : ',tPDF
-      write(*,*) 'Time spent in clustering : ',tFastJet
+      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
+      write(*,*) 'Time spent in clustering : ',tFastJet      
+      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
+      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
+      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP
+      write(*,*) 'Time spent in PS_Generation : ',tGenPS      
+      write(*,*) 'Time spent in other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       return
@@ -496,13 +498,14 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       block data timing
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
-      data tTot/0.0/
+      include "timing_variables.inc"
       data tOLP/0.0/
       data tFastJet/0.0/
       data tPDF/0.0/
+      data tDSigI/0.0/
+      data tDSigR/0.0/
+      data tGenPS/0.0/
+
       end
 
 

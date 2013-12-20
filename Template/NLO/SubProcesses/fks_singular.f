@@ -240,6 +240,10 @@ c      include "fks.inc"
       include 'reweight.inc'
       include 'reweightNLO.inc'
 
+c     timing statistics
+      include 'timing_variables.inc'
+      real tAfterAfter,deltaTPDF,deltaTFJ
+
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
       double precision fks_Sij,f_damp,dot,dlum
@@ -501,6 +505,10 @@ c points)
       endif
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 540
+
+      call cpu_time(tBefore)
+      deltaTPDF=tPDF
+      deltaTFJ=tFastJet
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -536,6 +544,11 @@ c       Compute the scales and sudakov-reweighting for the FxFx merging
            endif
         endif
       endif
+      call cpu_time(tAfter)
+      tDSigR=tDSigR+(tAfter-tBefore)-(tPDF-deltaTPDF)
+     &-(tFastJet-deltaTFJ)
+      deltaTPDF=tPDF
+      deltaTFJ=tFastJet
 c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
@@ -729,6 +742,11 @@ c Soft-Collinear subtraction term:
       endif
  547  continue
 
+      call cpu_time(tAfterAfter)
+      tDSigI=tDSigI+(tAfterAfter-tAfter)-(tPDF-deltaTPDF)-
+     & (tFastJet-deltaTFJ)
+      deltaTPDF=tPDF
+      deltaTFJ=tFastJet
 c
 c Enhance the one channel for multi-channel integration
 c
@@ -962,6 +980,11 @@ c      include "fks.inc"
       include 'q_es.inc'
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
+
+c     timing statistics
+      include 'timing_variables.inc'
+      real deltaTOLP,tAfterAfter,deltaTPDF,deltaTFJ
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
@@ -1187,6 +1210,11 @@ c points)
       iminmax=-1
  44   continue
       iminmax=iminmax+1
+
+      deltaTOLP = tOLP
+      deltaTPDF = tPDF
+      deltaTFJ=tFastJet
+      call cpu_time(tBefore)
 
       emsca=0.d0
       scalemax=0.d0
@@ -1806,6 +1834,12 @@ c Soft-Collinear subtraction term:
 
  547  continue
 
+      call cpu_time(tAfter)
+      tDSigI = tDSigI + (tAfter-tBefore) - (tOLP-deltaTOLP) - 
+     &(tPDF -deltaTPDF) - (tFastJet - deltaTFJ)
+      deltaTPDF=tPDF
+      deltaTFJ=tFastJet
+
 c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
@@ -1940,6 +1974,12 @@ c
             endif
          endif
       endif
+
+      call cpu_time(tAfterAfter)
+      tDSigR = tDSigR + (tAfterAfter-tAfter)-(tPDF-deltaTPDF)-
+     & (tFastJet-deltaTFJ)
+      deltaTPDF=tPDF
+      deltaTFJ=tFastJet
 
       cnt_wgt = cnt_wgt_c + cnt_wgt_s + cnt_wgt_sc
       cnt_swgt = cnt_swgt_s + cnt_swgt_sc
@@ -4241,9 +4281,7 @@ c For tests of virtuals
       common/c_vob/virtual_over_born
 
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
 
 c For the MINT folding
       integer fold

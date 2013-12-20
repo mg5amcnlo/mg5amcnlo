@@ -27,6 +27,7 @@ import madgraph.iolibs.import_v4 as import_v4
 import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
+import madgraph.various.misc as misc
 
 # Set logging level to error
 logging.basicConfig(level=vars(logging)['INFO'],
@@ -37,9 +38,12 @@ class Compile_MG5:
     
     def __init__(self):
         """ launch all the compilation """
+
         self.make_UFO_pkl()
         self.make_v4_pkl()
-        
+        self.make_stdHep()
+        self.make_CutTools()
+
         #important for UCL cluster
         files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
                  pjoin(MG5DIR,'input','mg5_configuration.txt'))
@@ -104,8 +108,59 @@ class Compile_MG5:
             output_dir = os.path.join(model_path, 'Fortran')
             create_aloha.AbstractALOHAModel(ufo_name, write_dir=output_dir, format='Fortran')
             print 'done in %2fs' % (time.time() - start)
-            
-            
-            
+           
+    @staticmethod
+    def make_stdHep():
+        print "Compiling StdHEP in %s."%str(os.path.join(MG5DIR, 'vendor', 'StdHEP'))
+        # this is for 64-bit systems
+        if sys.maxsize > 2**32:
+            path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+            text = open(path).read()
+            text = text.replace('MBITS=32','MBITS=64')
+            open(path, 'w').writelines(text)
+        # Set the correct fortran compiler
+        if 'FC' not in os.environ or not os.environ['FC']:
+            if misc.which('gfortran'):
+                compiler = 'FC=gfortran'
+            elif misc.which('g77'):
+                compiler = 'FC=g77'
+            else:
+                raise self.InvalidCmd('Require g77 or Gfortran compiler')
+        else:
+            compiler = '#FC=gfortran'
+
+        base_compiler= ['FC=g77','FC=gfortran','#FC=g77','#FC=gfortran']
+        path = None            
+        path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
+        text = open(path).read()
+        for base in base_compiler:
+            text = text.replace(base,compiler)
+        open(path, 'w').writelines(text)
+
+        misc.compile(cwd = os.path.join(MG5DIR, 'vendor', 'StdHEP'))
+
+    @staticmethod
+    def make_CutTools():
+        print "Compiling CutTools in %s."%str(os.path.join(MG5DIR, 'vendor', 'CutTools'))
+        # Set the correct fortran compiler
+        if 'FC' not in os.environ or not os.environ['FC']:
+            if misc.which('gfortran'):
+                compiler = 'FC=gfortran'
+            else:
+                raise self.InvalidCmd('Require gfortran compiler')
+        else:
+            compiler = '#FC=gfortran'
+        
+        base_compiler= ['FC=gfortran','#FC=gfortran']            
+        path = None            
+        path = os.path.join(MG5DIR, 'vendor', 'CutTools', 'makefile')
+        text = open(path).read()
+        for base in base_compiler:
+            text = text.replace(base,compiler)
+        open(path, 'w').writelines(text)
+
+        misc.compile(cwd = os.path.join(MG5DIR, 'vendor', 'CutTools'))
+
+
 if __name__ == '__main__':
     Compile_MG5()
