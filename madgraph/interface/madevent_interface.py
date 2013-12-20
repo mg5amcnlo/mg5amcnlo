@@ -1798,7 +1798,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         logger.info("No valid pythia-pgs path found")
                         continue
                 elif key == "delphes_path":
-                    if not os.path.exists(pjoin(path, 'Delphes')):
+                    if not os.path.exists(pjoin(path, 'Delphes')) and not\
+                                     os.path.exists(pjoin(path, 'DelphesSTDHEP')):
+                        misc.sprint(pjoin(path, 'Delphes'))
                         logger.info("No valid Delphes path found")
                         continue
                 elif key == "madanalysis_path":
