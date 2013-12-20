@@ -1471,7 +1471,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 # Global helper function run_multiprocs
 #===============================================================================
 
-    def check_matrix_element_stability(self, matrix_element, options=None,
+    def check_matrix_element_stability(self, matrix_element,options=None,
                           infos_IN = None, param_card = None, keep_folder = False,
                           MLOptions = {}):
         """ Output the matrix_element in argument, run in for nPoints and return
@@ -1633,7 +1633,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             MLoptions["MLReductionLib"]=tool
             clean=(tool==tools[0])
             if infos_IN==None or (tool_name not in infos_IN):
-                infos=None
+                infos=infos_IN
             else:
                 infos=infos_IN[tool_name]
             if not infos:
@@ -2180,7 +2180,6 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
 
     # The timing info is made of the merged two dictionaries
     timing = dict(timing1.items()+timing2.items())
-
     stability = myProfiler.check_matrix_element_stability(matrix_element,                                            
                             options=options, infos_IN=timing,param_card=param_card,
                                                       keep_folder = keep_folder,
