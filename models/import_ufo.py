@@ -179,14 +179,15 @@ def import_full_model(model_path, decay=False):
 
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
-    ufo2mg5_converter = UFOMG5Converter(ufo_model)
+    ufo2mg5_converter = UFOMG5Converter(ufo_model)    
     model = ufo2mg5_converter.load_model()
-    
     if model_path[-1] == '/': model_path = model_path[:-1] #avoid empty name
     model.set('name', os.path.split(model_path)[-1])
-
-    # Load the Parameter/Coupling in a convinient format.
-    parameters, couplings = OrganizeModelExpression(ufo_model).main()
+    
+    # Load the Parameter/Coupling in a convenient format.
+    parameters, couplings = OrganizeModelExpression(ufo_model).main(\
+             additional_couplings = ufo2mg5_converter.wavefunction_CT_couplings)
+    
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
@@ -224,6 +225,7 @@ class UFOMG5Converter(object):
        
         self.particles = base_objects.ParticleList()
         self.interactions = base_objects.InteractionList()
+        self.wavefunction_CT_couplings = []
                         
         # Check here if we can extract the couplings perturbed in this model
         # which indicate a loop model or if this model is only meant for 
@@ -457,6 +459,7 @@ class UFOMG5Converter(object):
                     name = newCouplingName,
                     value = counterterm,
                     order = {newParticleCountertermKey[0]:2})
+                self.wavefunction_CT_couplings.append(self.ufomodel.all_couplings.pop())
 
         particle.set('counterterm',particle_counterterms)
         self.particles.append(particle)
@@ -868,12 +871,13 @@ class OrganizeModelExpression:
         self.couplings = {}  # depend on -> ModelVariable
         self.all_expr = {} # variable_name -> ModelVariable
     
-    def main(self):
+    def main(self, additional_couplings = []):
         """Launch the actual computation and return the associate 
-        params/couplings."""
+        params/couplings. Possibly consider additional_couplings in addition
+        to those defined in the UFO model attribute all_couplings """
         
         self.analyze_parameters()
-        self.analyze_couplings()
+        self.analyze_couplings(additional_couplings = additional_couplings)
         return self.params, self.couplings
 
 
@@ -925,27 +929,27 @@ class OrganizeModelExpression:
         
                 
 
-    def analyze_couplings(self):
+    def analyze_couplings(self,additional_couplings=[]):
         """creates the shortcut for all special function/parameter
         separate the couplings dependent of track variables of the others"""
         
         # First expand the couplings on all their non-zero contribution to the 
         # three laurent orders 0, -1 and -2.
         if self.perturbation_couplings:
-            new_couplings_list=[]
-            for coupling in self.model.all_couplings:
+            couplings_list=[]
+            for coupling in self.model.all_couplings + additional_couplings:
                 for poleOrder in range(0,3):
                     newCoupling=copy.deepcopy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
                     if newCoupling.pole(poleOrder)!='ZERO':                    
                         newCoupling.value=newCoupling.pole(poleOrder)
-                        new_couplings_list.append(newCoupling)
-            self.model.all_couplings=new_couplings_list
-                        
+                        couplings_list.append(newCoupling)
+        else:
+            couplings_list = self.model.all_couplings + additional_couplings                        
                                         
         
-        for coupling in self.model.all_couplings:
+        for coupling in couplings_list:
             # shorten expression, find dependencies, create short object
             expr = self.shorten_expr(coupling.value)
             depend_on = self.find_dependencies(expr)
