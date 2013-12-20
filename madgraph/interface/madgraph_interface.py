@@ -1515,11 +1515,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction, 'import requires at least one option'
         
         if args[0] not in self._import_formats:
-            args[:] = ['command', './Cards/proc_card_mg5.dat']
+            args[:] = ['command', './proc_card_mg5.dat']
         elif args[0] == 'proc_v4':
-            args[:] = [args[0], './Cards/proc_card.dat']
+            args[:] = [args[0], './proc_card.dat']
         elif args[0] == 'command':
-            args[:] = [args[0], './Cards/proc_card_mg5.dat']
+            args[:] = [args[0], './proc_card_mg5.dat']
 
         CheckValidForCmd.check_import(self, args)
         
