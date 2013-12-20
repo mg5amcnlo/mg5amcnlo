@@ -362,8 +362,10 @@ from object_library import all_propagators, Propagator
         #1. Special case for the formfactor written in Fortran
         re_fct = re.compile('''^\s{7,70}[\w\s]*function (\w*)\(''',re.M+re.I)
         present_fct = set()
+        misc.sprint( self.all_path)
         for dirpath in self.all_path:
             if os.path.exists(pjoin(dirpath, 'Fortran', 'functions.f')):
+                misc.sprint('find it ', dirpath)
                 text = open(pjoin(dirpath, 'Fortran', 'functions.f')).read()
                 new_fct = re_fct.findall(text)
                 nb_old = len(present_fct)
@@ -377,7 +379,7 @@ from object_library import all_propagators, Propagator
                 
                 if not os.path.exists(pjoin(outputdir, 'Fortran')):
                     os.mkdir(pjoin(outputdir, 'Fortran'))
-                fsock = open(pjoin(outputdir, 'Fortran'),'a')
+                fsock = open(pjoin(outputdir, 'Fortran','functions.f'),'a')
                 fsock.write(text)
                 fsock.close()
                 
@@ -714,7 +716,7 @@ from object_library import all_propagators, Propagator
         for vertex in model.all_vertices:
             self.add_interaction(vertex)
         
-        self.all_path.append(path)
+        self.all_path.append(os.path.dirname(model.__file__))
         
         return
 

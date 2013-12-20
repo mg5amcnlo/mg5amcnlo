@@ -3975,7 +3975,7 @@ class UFO_model_to_mg4(object):
         model_path = self.model.get('modelpath')
         if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
             fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
-            input = pjoin(self.model_path,'Fortran','functions.f')
+            input = pjoin(model_path,'Fortran','functions.f')
             fsock.writelines(open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
 

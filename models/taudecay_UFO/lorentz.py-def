@@ -14,5 +14,5 @@ FFS1 = Lorentz(name = 'FFS1',
 
 FFSS1 = Lorentz(name = 'FFSS1',
                 spins = [ 2, 2, 1, 1 ],
-                structure = 'FF2((P(-1,3)+P(-1,4))*(P(-1,3)+P(-1,4))) *(P(-1,3)*Gamma(-1,2,-2)*ProjM(-2,1) - P(-1,4)*Gamma(-1,2,-2)*ProjM(-2,1))')
+                structure = 'P(-1,3)*Gamma(-1,2,-2)*ProjM(-2,1) - P(-1,4)*Gamma(-1,2,-2)*ProjM(-2,1)')
 
