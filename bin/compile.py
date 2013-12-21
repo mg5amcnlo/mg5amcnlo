@@ -24,6 +24,7 @@ sys.path.append(root_path)
 
 from madgraph import MG5DIR
 import madgraph.iolibs.import_v4 as import_v4
+import madgraph.interface.master_interface as interface
 import models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
@@ -47,7 +48,9 @@ class Compile_MG5:
         #important for UCL cluster
         files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
                  pjoin(MG5DIR,'input','mg5_configuration.txt'))
-        
+        self.cmd = interface.MasterCmd()        
+        self.install_package()
+
     @staticmethod
     def make_v4_pkl():
         """create the model.pkl for each directory"""
@@ -161,6 +164,13 @@ class Compile_MG5:
 
         misc.compile(cwd = os.path.join(MG5DIR, 'vendor', 'CutTools'))
 
+    def install_package(self):
+        print "installing external package"
+        self.cmd.exec_cmd('install pythia-pgs')
+        self.cmd.exec_cmd('install Delphes')
+        self.cmd.exec_cmd('install ExRootAnalysis')
+        self.cmd.exec_cmd('install MadAnalysis')
+        self.cmd.exec_cmd('install SysCalc')
 
 if __name__ == '__main__':
     Compile_MG5()
