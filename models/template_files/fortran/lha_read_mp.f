@@ -354,6 +354,7 @@ c
       character*20 param(maxpara),value(maxpara)
       character*(*)  name
       real*16 var,def_value_num
+      real*8 buff
       character*20 c_param,c_name,ctemp
       character*19 def_value
 c
@@ -375,14 +376,16 @@ c
          call LHA_case_trap(c_param)
          found = (c_param .eq. c_name)
          if (found) then
-             read(value(i),*) var
+             read(value(i),*) buff
+             var=buff
          end if
          i=i+1
       enddo
       if (.not.found) then
+         buff = def_value_num
          write (*,*) "Warning: parameter ",name," not found"
          write (*,*) "         setting it to default value ",
-     &def_value_num
+     &buff
          var=def_value_num
       endif
       return

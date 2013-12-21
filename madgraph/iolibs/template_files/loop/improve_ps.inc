@@ -162,6 +162,7 @@ C LOCAL VARIABLES
 C
       INTEGER I,J
 	  %(real_format)s REF,REF2
+	  DOUBLE PRECISION BUFFDP
 
 C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
      %(proc_prefix)s%(mp_prefix)sIS_CLOSE = .TRUE.
@@ -177,7 +178,8 @@ C NOW MAKE SURE THE SHIFTED POINT IS NOT TOO FAR FROM THE ORIGINAL ONE
 	  IF ((REF/REF2).GT.THRS_CLOSE) THEN
 	    %(proc_prefix)s%(mp_prefix)sIS_CLOSE = .FALSE.
 	    IF (WARNED.LT.20) THEN
-	      WRITE(*,*) 'WARNING:: The improved PS point is too far from the original one',(REF/REF2)
+		  BUFFDP = (REF/REF2)
+	      WRITE(*,*) 'WARNING:: The improved PS point is too far from the original one',BUFFDP
 		  WARNED=WARNED+1
 		ENDIF
 	  ENDIF
@@ -217,6 +219,7 @@ C
       INTEGER I,J
 	  %(real_format)s BUFF,REF
 	  %(real_format)s MASSES(NEXTERNAL)
+	  double precision BUFFDPA,BUFFDPB
 C  
 C GLOBAL VARIABLES
 C 
@@ -246,7 +249,8 @@ C FOR THAT WE NEED A REFERENCE SCALE
 		ENDDO
 		IF ((BUFF/REF).GT.THRES_FOURMOM) THEN
 		  IF (WARNED.LT.20) THEN
-		    WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',(BUFF/REF)
+		    BUFFDPA = (BUFF/REF)
+		    WRITE(*,*) 'ERROR:: Four-momentum conservation is not accurate enough, ',BUFFDPA
 		    CALL %(proc_prefix)s%(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF
@@ -257,8 +261,10 @@ C FOR THAT WE NEED A REFERENCE SCALE
 	  DO I=1,NEXTERNAL
 	    REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
 		IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF).GT.THRES_ONSHELL) THEN
-		  IF (WARNED.LT.20) THEN		  
-		    WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',MASSES(I),' is not accurate enough, ', (SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		  IF (WARNED.LT.20) THEN
+		    BUFFDPA=MASSES(I)
+			BUFFDPB=(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)**2))/REF)
+		    WRITE(*,*) 'ERROR:: Onshellness of the momentum of particle ',I,' of mass ',BUFFDPA,' is not accurate enough, ',BUFFDPB
 		    CALL %(proc_prefix)s%(mp_prefix)sWRITE_MOM(P)
 			WARNED=WARNED+1
 		  ENDIF		  

@@ -666,13 +666,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if matrix_element.get('processes')[0].get('has_born'):
             self.general_replace_dict['dp_born_amps_decl_in_mp'] = \
                   self.general_replace_dict['complex_dp_format']+" DPAMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/AMPS/DPAMP"
+                  "\n common/%sAMPS/DPAMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/AMPS/AMP"
+                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS,NCOMB)"+\
-                  "\n common/MP_AMPS/AMP"
+                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['copy_mp_to_dp_born_amps'] = \
                    '\n'.join(['DO I=1,NBORNAMPS','DPAMP(I,H)=AMP(I,H)','ENDDO'])
         
@@ -1303,10 +1303,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if matrix_element.get('processes')[0].get('has_born'):
             self.general_replace_dict['dp_born_amps_decl'] = \
                   self.general_replace_dict['complex_dp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/AMPS/AMP"
+                  "\n common/%sAMPS/AMP"%self.general_replace_dict['proc_prefix']
             self.general_replace_dict['mp_born_amps_decl'] = \
                   self.general_replace_dict['complex_mp_format']+" AMP(NBORNAMPS)"+\
-                  "\n common/MP_AMPS/AMP"
+                  "\n common/%sMP_AMPS/AMP"%self.general_replace_dict['proc_prefix']
 
         if writer:
             raise MadGraph5Error, 'Matrix output mode no longer supported.'
