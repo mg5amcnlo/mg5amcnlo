@@ -89,7 +89,16 @@ class TestCmdShell1(unittest.TestCase):
         
         self.do('generate e+ ve > V2 > e+ ve mu+ mu-')
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 8)
+       
+    def test_import_model(self):
+        """check that old UFO model are loaded correctly"""
         
+        self.do('''import model DY_SM''')
+        self.do('''import model TopEffTh''')
+        self.do('''import model uutt_tch_scalar''')
+        self.do('''import model uutt_sch_4fermion''')
+        self.do('''import model 2HDM''')
+                
     def test_draw(self):
         """ command 'draw' works """
 

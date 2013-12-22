@@ -9,9 +9,7 @@ c     arguments
       integer NN,JET(nexternal),njet
 
 c     timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
 
       call cpu_time(tBefore)
       call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,

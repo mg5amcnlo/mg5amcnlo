@@ -1570,8 +1570,8 @@ Integrated cross-section
         except Exception as e:
             debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
 
-        logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
+        logger.info(message+'\n')
         
         # Now copy relevant information in the Events/Run_<xxx> directory
         evt_path = pjoin(self.me_dir, 'Events', self.run_name)
@@ -1924,7 +1924,9 @@ Integrated cross-section
         else:            
             debug_msg += '\n\n  Inclusive timing profile non available.'
         
-        for name in stats['timings'].keys():
+        sorted_keys = sorted(stats['timings'].keys(), key= lambda stat: \
+                              sum(stats['timings'][stat].values()), reverse=True)
+        for name in sorted_keys:
             if name=='Total':
                 continue
             if sum(stats['timings'][name].values())<=0.0:
@@ -1937,17 +1939,17 @@ Integrated cross-section
                 debug_msg += '\n\n  Timing profile for %s unavailable.'%name
                 continue
             TimeList.sort()
-            debug_msg += '\n  Timing profile for %s :'%name
-            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
-                                             (TimeList[-1][0],TimeList[-1][1])
-            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
-                                             (TimeList[0][0],TimeList[0][1])
+            debug_msg += '\n  Timing profile for <%s> :'%name
             try:
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
                        float((100.0*(sum(stats['timings'][name].values())/
                                       sum(stats['timings']['Total'].values()))))
             except KeyError, ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
 
         # =============================     
         # == log file eror detection ==

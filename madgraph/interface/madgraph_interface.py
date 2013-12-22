@@ -3009,6 +3009,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
+        # If the test has to write out on disk, it should do so at the location
+        # specified below where the user must be sure to have writing access.
+        output_path = os.getcwd()
+
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -3075,14 +3079,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
-                                                  cmd = self,
-                                                  )        
+                                                  output_path = output_path,
+                                                  cmd = self)        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
+                                                  output_path = output_path,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -3092,6 +3097,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
+                                                  output_path = output_path,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -3119,6 +3125,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 options=options,
                                                 cuttools=CT_dir,
                                                 reuse = options['reuse'],
+                                                output_path = output_path,
                                                 cmd = self)
             
             # restore previous settings
@@ -3133,6 +3140,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             cuttools=CT_dir,
                                             reuse = options['reuse'],
                                             cmd = self,
+                                            output_path = output_path,
                                             options=options)
             nb_processes += len(comparisons[0])
 
@@ -3143,6 +3151,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
+                                          output_path = output_path,
                                           options=options)
             nb_processes += len(lorentz_result)
         
@@ -3152,6 +3161,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
+                                          output_path = output_path,
                                           options=options)
             nb_processes += len(gauge_result)     
             
@@ -3180,14 +3190,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if stability:
             text += 'Stability result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
-            text += process_checks.output_stability(stability,
-                                    mg_root=self._mgme_dir)
+            text += process_checks.output_stability(stability,output_path)
         
         if profile_time and profile_stab:
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
+                             profile_time, output_path, options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'

@@ -270,6 +270,10 @@ class CompareMG4WithUFOModel(unittest.TestCase):
                             mg5_color[i] = simp[0]
                             continue
                 self.assertEqual(str(mg4_color), str(mg5_color))
+
+
+        
+    
         
 class TestModelCreation(unittest.TestCase, CheckFileCreate):
 

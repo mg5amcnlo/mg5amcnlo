@@ -155,10 +155,6 @@ Parameters              alpha_s
       DOUBLE PRECISION WGT
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      REAL*4 TBEFORE, TAFTER
-      REAL*4 TTOT, TOLP, TFASTJET, TPDF
-      COMMON/TIMINGS/TTOT, TOLP, TFASTJET, TPDF
-      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -179,8 +175,6 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
         STOP
       ENDIF
-      CALL CPU_TIME(TAFTER)
-      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 
@@ -201,8 +195,10 @@ Parameters              alpha_s
         goal = \
 """      DOUBLE PRECISION FUNCTION DLUM()
       IMPLICIT NONE
+      INCLUDE 'timing_variables.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -223,7 +219,8 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in dlum :', NFKSPROCESS
         STOP
       ENDIF
-
+      CALL CPU_TIME(TAFTER)
+      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 

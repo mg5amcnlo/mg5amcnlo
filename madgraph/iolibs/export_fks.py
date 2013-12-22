@@ -147,7 +147,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                        
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
-                            writers.FortranWriter('cts_mpc.h'),)
+                                           writers.FortranWriter('cts_mpc.h'))
 
         # Return to original PWD
         os.chdir(cwd)
@@ -514,7 +514,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'cluster.f',
                      'reweight.f',
                      'sudakov.inc',
-                     'maxconfigs.inc']
+                     'maxconfigs.inc',
+                     'timing_variables.inc']
 
         for file in linkfiles:
             ln('../' + file , '.')
@@ -850,8 +851,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         file = \
 """double precision function dlum()
 implicit none
+include 'timing_variables.inc'
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
+call cpu_time(tbefore)
 """
         for n, info in enumerate(matrix_element.get_fks_info_list()):
             file += \
@@ -863,7 +866,8 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
-
+call cpu_time(tAfter)
+tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
@@ -883,10 +887,6 @@ double precision p(0:3, nexternal)
 double precision wgt
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-real*4 tbefore, tAfter
-real*4 tTot, tOLP, tFastJet, tPDF
-common/timings/tTot, tOLP, tFastJet, tPDF
-call cpu_time(tbefore)
 """
         for n, info in enumerate(matrix_element.get_fks_info_list()):
             file += \
@@ -898,8 +898,6 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
 stop
 endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
