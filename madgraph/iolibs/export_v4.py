@@ -2107,7 +2107,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             replace_dict['passcuts_begin'] = "IF (PASSCUTS(PP)) THEN"
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = ""
-            replace_dict['cutsdone'] = "      cutsdone=.false."
+            replace_dict['cutsdone'] = "      cutsdone=.false.\n       cutspassed=.false."
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
@@ -3402,6 +3402,10 @@ class UFO_model_to_mg4(object):
         #    self.params_indep.insert(0, self.params_dep.pop(index))
         # No need to add it if not defined   
             
+        if 'aS' not in self.params_ext:
+            logger.critical('aS not define as external parameter adding it!')
+            #self.model['parameters']['aS'] = base_objects.ParamCardVariable('aS', 0.138,'DUMMY',(1,))
+            self.params_indep.append( base_objects. ModelVariable('aS', '0.138','real'))
             
     def build(self, wanted_couplings = [], full=True):
         """modify the couplings to fit with MG4 convention and creates all the 
@@ -3699,16 +3703,15 @@ class UFO_model_to_mg4(object):
                             self.params_indep if param.type == 'complex' and
                             is_valid(param.name)]
 
-        fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
-        fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
-        if self.opt['mp']:
-            mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
+        if complex_parameters:
+            fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
+            fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
+            if self.opt['mp']:
+                mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                             self.mp_prefix+p for p in complex_parameters])+'\n')
-            mp_fsock.writelines('common/MP_params_C/ '+','.join([\
+                mp_fsock.writelines('common/MP_params_C/ '+','.join([\
                           self.mp_prefix+p for p in complex_parameters])+'\n\n')                
     
-    
-
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters
@@ -3999,8 +4002,8 @@ class UFO_model_to_mg4(object):
         model_path = self.model.get('modelpath')
         if os.path.exists(pjoin(model_path,'Fortran','functions.f')):
             fsock.write_comment_line(' USER DEFINE FUNCTIONS ')
-            input = pjoin(self.model_path,'Fortran','functions.f')
-            fsock.writelines(open(input).read())
+            input = pjoin(model_path,'Fortran','functions.f')
+            file.writelines(fsock, open(input).read())
             fsock.write_comment_line(' END USER DEFINE FUNCTIONS ')
 
     def create_makeinc(self):

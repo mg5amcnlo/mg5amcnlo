@@ -601,7 +601,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.debug_link_to_command()      
         
 
-class MasterCmdWeb(MGcmd.MadGraphCmdWeb, LoopCmd.LoopInterfaceWeb, Switcher):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
    
     def __init__(self, *arg, **opt):
     
