@@ -135,7 +135,6 @@ c general MadFKS parameters
 C-----
 C  BEGIN CODE
 C-----  
-
       call cpu_time(tBefore)
 
 c     Read general MadFKS parameters
@@ -479,7 +478,7 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
       endif
 
       call cpu_time(tAfter)
-      tTot = tTot +(tAfter-tBefore)
+      tTot = tAfter - tBefore
       tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
       write(*,*) 'Time spent in clustering : ',tFastJet      
       write(*,*) 'Time spent in PDF_Engine : ',tPDF

@@ -31,11 +31,9 @@ c      integer mapconfig(0:lmaxconfigs)
       common/ciconfig0/iconfig0
       include 'coupl.inc'
       include 'born_props.inc'
-
 c     
-
       call cpu_time(tBefore)
-
+c
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -60,8 +58,6 @@ c the updated wgt (i.e. the jacobian for the event)
 c
       call cpu_time(tAfter)      
       tGenPS = tGenPS + (tAfter-tBefore)
-
-
       return
       end 
       

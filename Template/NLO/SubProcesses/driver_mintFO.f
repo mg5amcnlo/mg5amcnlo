@@ -320,7 +320,7 @@ c to save grids:
       endif
 
       call cpu_time(tAfter)
-      tTot = tTot +(tAfter-tBefore)
+      tTot = tAfter-tBefore
       tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
       write(*,*) 'Time spent in clustering : ',tFastJet      
       write(*,*) 'Time spent in PDF_Engine : ',tPDF
