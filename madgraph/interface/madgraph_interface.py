@@ -2351,6 +2351,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
+                       'pjfry':None,
                        'lhapdf':'lhapdf-config',
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
@@ -2423,10 +2424,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._export_format = 'madevent'
         self._mgme_dir = MG4DIR
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
         self._comparisons = None
         self._nlo_modes_for_completion = ['all','virt','real']
 
-        # Load the configuration file
+        # Load the configuration file,i.e.mg5_configuration.txt
         self.set_configuration()
 
     def setup(self):
@@ -3036,7 +3039,8 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-
+            
+        MLoptions={}
         i=-1
         while args[i].startswith('--'):
             option = args[i].split('=')
@@ -3044,6 +3048,8 @@ This implies that with decay chains:
                 options['energy']=float(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
+            elif option[0]=='--reduction':
+                MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
             i=i-1
         args = args[:i+1]
         
@@ -3110,21 +3116,44 @@ This implies that with decay chains:
             CT_dir = self._cuttools_dir
         else:
             CT_dir =""
+            if "MLReductionLib" in MLoptions:
+                if 1 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(1)
+        # directories for TIR
+        TIR_dir={}
+        if "_iregi_dir" in dir(self):
+            TIR_dir['iregi_dir']=self._iregi_dir
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 3 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(3)
+        if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
+            TIR_dir['pjfry_dir']=self.options['pjfry']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 2 in MLoptions["MLReductionLib"]:
+                    MLoptions["MLReductionLib"].remove(2)
+        #if "_pjfry_dir" in dir(self):
+        #    TIR_dir['pjfry_dir']=self._pjfry_dir
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
                                                   cmd = self,
+                                                  MLOptions = MLoptions
                                                   )        
 
         if args[0] in ['stability']:
-            stability = process_checks.check_stability(myprocdef,
+            stability=process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
-                                                  cmd = self)
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
 
         if args[0] in ['profile']:
             # In this case timing and stability will be checked one after the
@@ -3132,8 +3161,10 @@ This implies that with decay chains:
             profile_time, profile_stab = process_checks.check_profile(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
+                                                  tir=TIR_dir,
                                                   options = options,
-                                                  cmd = self)
+                                                  cmd = self,
+                                                  MLOptions = MLoptions)
 
 
     #if args[0] in  ['permutation', 'full']:
@@ -3182,6 +3213,7 @@ This implies that with decay chains:
                                                 param_card = param_card,
                                                 options=options,
                                                 cuttools=CT_dir,
+                                                tir=TIR_dir,
                                                 reuse = options['reuse'],
                                                 cmd = self)
             
@@ -3199,6 +3231,7 @@ This implies that with decay chains:
                                             param_card = param_card,
                                             quick = True,
                                             cuttools=CT_dir,
+                                            tir=TIR_dir,
                                             reuse = options['reuse'],
                                             cmd = self,
                                             options=options)
@@ -3209,6 +3242,7 @@ This implies that with decay chains:
             lorentz_result = process_checks.check_lorentz(myprocdeff,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           options=options)
@@ -3218,6 +3252,7 @@ This implies that with decay chains:
             gauge_result = process_checks.check_gauge(myprocdef,
                                           param_card = param_card,
                                           cuttools=CT_dir,
+                                          tir=TIR_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
                                           options=options)
@@ -4713,7 +4748,7 @@ This implies that with decay chains:
                     self.options[name] = value
                 if value.lower() == "none":
                     self.options[name] = None
-
+                    
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest
@@ -4752,6 +4787,14 @@ This implies that with decay chains:
                     else:
                         continue
 
+            elif key == 'pjfry':
+                if self.options['pjfry'] == None:
+                    # try to find it automatically on the system                                                                                                                                            
+                    program = misc.which_lib('libpjfry.a')
+                    if program != None:
+                        fpath, fname = os.path.split(program)
+                        self.options['pjfry']=fpath
+
             elif key.endswith('path'):
                 pass
             elif key in ['run_mode', 'auto_update']:
@@ -4768,8 +4811,8 @@ This implies that with decay chains:
                                    % key)
                 else:
                     if key in self.options_madgraph:
-                        self.history.append('set %s %s' % (key, self.options[key]))             
-        
+                        self.history.append('set %s %s' % (key, self.options[key]))
+                             
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
           
@@ -5233,6 +5276,18 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
+        elif args[0] == "pjfry":
+            program = misc.which_lib(os.path.join(args[1],"libpjfry.a"))
+            if program!=None:
+                res = 0
+                logger.info('set pjfry to %s' % args[1])
+            else:
+                res = 1
+
+            if res != 0 :
+                logger.warning('%s does not seem to correspond to a valid pjfry lib ' % args[1] + \
+                        '. Please enter the full PATH/TO/pjfry/lib .\n' + \
+                        'You will NOT be able to run PJFry++ otherwise.\n')
         elif args[0] == 'lhapdf':
             try:
                 res = misc.call([args[1], '--version'], stdout=subprocess.PIPE,
@@ -5643,7 +5698,6 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
-        
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO']:
             # For v4 models, copy the model/HELAS information.
@@ -5662,6 +5716,7 @@ This implies that with decay chains:
                 self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
+                
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -5699,6 +5754,7 @@ This implies that with decay chains:
                                            not nojpeg,
                                            online,
                                            self.options['fortran_compiler'])
+            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']

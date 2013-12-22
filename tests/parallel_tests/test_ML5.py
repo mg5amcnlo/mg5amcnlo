@@ -5,6 +5,7 @@ import os
 import loop_me_comparator
 import me_comparator
 import unittest
+import re
 
 
 from madgraph import MG5DIR
@@ -128,7 +129,7 @@ class ML5Test(unittest.TestCase):
         """ A helper function to compare processes. 
         Note that the chosen_runner is what runner should to create the reference
         pickle if missing"""
-        
+
         # Print out progress if it is a run for an individual process
         if len(my_proc_list)==1:
             print "\n== %s =="%my_proc_list[0][0]
@@ -149,20 +150,36 @@ class ML5Test(unittest.TestCase):
         # Create a MERunner object for MadLoop 5 optimized
         ML5_opt = loop_me_comparator.LoopMG5Runner()
         ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename)
-    
-        # Create a MERunner object for MadLoop 5 default
-        ML5_default = loop_me_comparator.LoopMG5Runner()
-        ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename) 
+        
+        file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
+                                 'Cards','MadLoopParams.dat'), 'r')
+
+        MLParams = file.read()
+        MLred = re.search(r'#MLReductionLib\n',MLParams)
+        MLredstr=MLParams[MLred.end():MLred.end()+1]
+
+        if MLredstr=="1":
+            # Create a MERunner object for MadLoop 5 default
+            ML5_default = loop_me_comparator.LoopMG5Runner()
+            ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename) 
 
         # Create and setup a comparator
         my_comp = loop_me_comparator.LoopMEComparator()
         
         # Always put the saved run first if you use it, so that the corresponding PS
         # points will be used.
-        if pickle_file != "":
-            my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
+        if MLredstr=="1":
+            # CutTools
+            if pickle_file != "":
+                my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
+            else:
+                my_comp.set_me_runners(ML5_opt,ML5_default)
         else:
-            my_comp.set_me_runners(ML5_opt,ML5_default)
+            # TIR
+            if pickle_file != "":
+                my_comp.set_me_runners(stored_runner,ML5_opt)
+            else:
+                raise MadGraph5Error,"CANNOT find the stored result with TIR"
         
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,

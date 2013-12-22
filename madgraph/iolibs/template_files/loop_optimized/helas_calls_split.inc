@@ -61,6 +61,8 @@ C
 
 	  integer I_SO
 	  common/%(proc_prefix)sI_SO/I_SO
+	  integer I_LIB
+	  common/%(proc_prefix)sI_LIB/I_LIB
 
       %(dp_born_amps_decl)s
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)

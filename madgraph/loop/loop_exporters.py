@@ -89,8 +89,9 @@ class LoopExporterFortran(object):
         self.cuttools_dir = self.opt['cuttools_dir']
         self.fortran_compiler = self.opt['fortran_compiler']
 
-        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)
-        
+        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
+
+
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
@@ -102,7 +103,7 @@ class LoopExporterFortran(object):
         except os.error:
             logger.error('Could not cd to directory %s' % targetPath)
             return 0
-
+        
         if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
             logger.info('Compiling CutTools. This has to be done only once and'+\
                               ' can take a couple of minutes.','$MG:color:BLACK')
@@ -123,7 +124,7 @@ class LoopExporterFortran(object):
 
         # Return to original PWD
         os.chdir(cwd)
-    
+            
     def get_aloha_model(self, model):
         """ Caches the aloha model created here as an attribute of the loop 
         exporter so that it can later be used in the LoopHelasMatrixElement
@@ -171,11 +172,28 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                     os.path.join(self.dir_path, 'lib'))
         
         # We must change some files to their version for NLO computations
-        cpfiles= ["Source/makefile","SubProcesses/makefile",\
+        cpfiles= ["Source/makefile",\
                   "SubProcesses/MadLoopCommons.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParamReader.f",
                   "SubProcesses/MadLoopParams.inc"]
+        # first write SubProcesses/makefile from SubProcesses/makefile.inc
+        # dummy variables
+        link_tir_libs=[]
+        tir_libs=[]
+        pjdir=""
+        cwd = os.getcwd()
+        dirpath = os.path.join(self.dir_path, 'SubProcesses')
+        try:
+            os.chdir(dirpath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % dirpath)
+            return 0
+        filename = 'makefile'
+        calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                          link_tir_libs,tir_libs,pjdir)
+        # Return to original PWD
+        os.chdir(cwd)
         
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
@@ -214,7 +232,26 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Return to original PWD
         os.chdir(cwd)
-
+    # I put it here not in optimized one, because I want to use the same makefile.inc
+    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+        """ Create the file makefile which links to the TIR libraries."""
+            
+        file = open(os.path.join(self.loop_dir,'StandAlone',
+                                 'SubProcesses','makefile.inc')).read()  
+        replace_dict={}
+        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+        replace_dict['tir_libs']=' '.join(tir_libs)
+        replace_dict['dotf']='%.f'
+        replace_dict['doto']='%.o'
+        replace_dict['pjdir']='PJDIR='+PJDIR
+        if not PJDIR.endswith('/') and PJDIR!="":
+            replace_dict['pjdir']=replace_dict['pjdir']+"/"
+        file=file%replace_dict
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+        
     def convert_model_to_mg4(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
         """ Caches the aloha model created here when writing out the aloha 
@@ -817,7 +854,7 @@ PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])
 
     def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
-        the loop HELAS-like calls along with the general interfacing subroutine. """
+         the loop HELAS-like calls along with the general interfacing subroutine. """
 
         files=[]
 
@@ -1233,8 +1270,76 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
-    # CutTools call the loops with same denominator structure
+    # CutTools/TIR call the loops with same denominator structure
     group_loops=True
+    # TIR things
+    all_tir=['pjfry','iregi']
+    tir_available_dict={'pjfry':True,'iregi':True}
+    
+    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+        """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
+        information on where to find all the loop-related source files, 
+        like CutTools and TIR"""
+
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
+                                                                   dir_path, opt)
+
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            if tir_dir in self.opt:
+                setattr(self,tir_dir,self.opt[tir_dir])
+            else:
+                setattr(self,tir_dir,'')
+
+    def copy_v4template(self, modelname):
+        """Additional actions needed for setup of Template
+        """
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(modelname)
+        # We must link the TIR to the Library folder of the active Template
+        link_tir_libs=[]
+        tir_libs=[]
+        # special for PJFry++
+        link_pjfry_lib=""
+        pjfry_lib=""
+        pjdir=""
+        for tir in self.all_tir:
+            tir_dir="%s_dir"%tir
+            libpath=getattr(self,tir_dir)
+            libname="lib%s.a"%tir
+            tir_name=tir
+            goodlink=self.link_TIR(os.path.join(self.dir_path, 'lib'),
+                              libpath,libname,tir_name=tir_name)
+            if goodlink==True:
+                if tir!="pjfry":
+                    link_tir_libs.extend(['-l%s'%tir])
+                    tir_libs.extend(['$(LIBDIR)lib%s.$(libext)'%tir])
+                else:
+                    link_pjfry_lib='-L$(PJDIR) -lpjfry'
+                    pjfry_lib='$(PJDIR)libpjfry.$(libext)'
+                    pjdir=libpath
+        if link_pjfry_lib!="":
+            link_tir_libs.extend([link_pjfry_lib])
+            tir_libs.extend([pjfry_lib])
+            #if tir=="iregi":
+            #    link_tir_libs.extend(['-lff','-lqcdloop','-lavh_olo'])
+            #    tir_libs.extend(['$(LIBDIR)libff.$(libext)',
+            #                     '$(LIBDIR)libqcdloop.$(libext)',
+            #                     '$(LIBDIR)libavh_olo.$(libext)'])
+        if self.all_tir and link_tir_libs:
+            os.remove(os.path.join(self.dir_path,'SubProcesses','makefile'))
+            cwd = os.getcwd()
+            dirpath = os.path.join(self.dir_path, 'SubProcesses')
+            try:
+                os.chdir(dirpath)
+            except os.error:
+                logger.error('Could not cd to directory %s' % dirpath)
+                return 0
+            filename = 'makefile'
+            calls = self.write_makefile_TIR(writers.MakefileWriter(filename),
+                                          link_tir_libs,tir_libs,pjdir)
+            # Return to original PWD
+            os.chdir(cwd)
+                     
 
     def link_files_from_Subprocesses(self,proc_name=""):
         """ Does the same as the mother routine except that it also links
@@ -1247,9 +1352,63 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         ln(os.path.join(self.dir_path, 'SubProcesses', "P%s" % proc_name,
                  'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
 
+
+    def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
+        """Link the TIR source directory inside the target path given
+        in argument"""
+
+        cwd = os.getcwd()
+        try:
+            os.chdir(targetPath)
+        except os.error:
+            logger.error('Could not cd to directory %s' % targetPath)
+            return 0
+        if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
+            logger.warning("The %s tensor integration library could not be found"%tir_name\
+             +" in your environment variable LD_LIBRARY_PATH or mg5_configuration.txt."\
+             +" It will not be available.")
+            self.tir_available_dict[tir_name]=False
+            # return to original pwd, which is important
+            os.chdir(cwd)
+            return False
+        if not os.path.exists(os.path.join(libpath,libname)):
+            if libname=="libpjfry.a":
+                logger.warning('Loop library for TIR %s is compiled well.'%tir_name+\
+                           'It will be negelected below.')
+                self.tir_available_dict[tir_name]=False
+                # return to original pwd, which is important
+                os.chdir(cwd)
+                return False    
+            logger.info(('Compiling %s. This has to be done only once and'%tir_name)+\
+                        ' can take a couple of minutes.','$MG:color:BLACK')
+            current = misc.detect_current_compiler(os.path.join(\
+                                                                libpath,'makefile'))
+            new = 'gfortran' if self.fortran_compiler is None else \
+                                                        self.fortran_compiler
+            if current != new:
+                misc.mod_compilator(libpath, new,current)
+            misc.compile(cwd=libpath, job_specs = False)
+            
+        if os.path.exists(os.path.join(libpath,libname)):            
+            linkfiles = [libname]
+            #if libname=="libiregi.a":
+            #    linkfiles.extend(["qcdloop/libff.a","qcdloop/libqcdloop.a",\
+            #                      "oneloop/libavh_olo.a"])
+            for file in linkfiles:
+                # don't link the pjfry lib
+                if file!="libpjfry.a":
+                    ln(libpath+'/%s' % file)
+        else:
+            raise MadGraph5Error,"%s could not be correctly compiled."%tir_name
+
+        # Return to original PWD
+        os.chdir(cwd)
+        self.tir_available_dict[tir_name]=True
+        return True
+        
     def write_matrix_element_v4(self, writer, matrix_element, fortran_model,
                                 proc_id = "", config_map = []):
-        """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
+        """ Writes loop_matrix.f, CT_interface.f,TIR_interface.f and loop_num.f only but with
         the optimized FortranModel"""
         # Create the necessary files for the loop matrix element subroutine
         
@@ -1272,9 +1431,60 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # many files generated here.
         self.general_replace_dict=LoopProcessExporterFortranSA.\
                               generate_general_replace_dict(self,matrix_element)
-            
+
+        # TIR stuff
+        for tir in self.all_tir:
+            if self.tir_available_dict[tir]:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    ("        CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,"\
+                    +"PJCOEFS(0:NLOOPCOEFS-1,1:3),STABLE)\n"\
+                    +"C       CONVERT TO MADLOOP CONVENTION\n"\
+                    +"        CALL %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)"\
+                    )%self.general_replace_dict
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    "        CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,"\
+                    +"RANK,PDEN,M2L,MU_R,TIRCOEFS,STABLE)"
+                    self.general_replace_dict['iregi_free_ps']=\
+                    "IF(IREGIRECY.AND.MLReductionLib(I_LIB).EQ.3)CALL IREGI_FREE_PS"
+                    self.general_replace_dict['initiregi']=\
+                    "      CALL INITIREGI(IREGIRECY,LOOPLIB,1d-6)"
+                else:
+                    raise MadGraph5Error,"%s was not a well-defined TIR."%tir_name
+            else:
+                if tir=="pjfry":
+                    self.general_replace_dict['pjfry_calling']=\
+                    "        WRITE(*,*)'PJFRY is not installed correctly !'\n"\
+                    +"        STOP"
+                elif tir=="iregi":
+                    self.general_replace_dict['iregi_calling']=\
+                    "        WRITE(*,*)'IREGI is not installed correctly !'\n"\
+                    +"        STOP"
+                    self.general_replace_dict['initiregi']=''
+                    self.general_replace_dict['iregi_free_ps']=''
+        # the first entry is the CutTools, we make sure it is available
+        looplibs_av=['.TRUE.']
+        # one should be care about the order in the following
+        if "pjfry" in self.all_tir:
+            if self.tir_available_dict["pjfry"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        if "iregi" in self.all_tir:
+            if self.tir_available_dict["iregi"]:             
+                looplibs_av.extend(['.TRUE.'])
+            else:
+                looplibs_av.extend(['.FALSE.'])
+        else:
+            looplibs_av.extend(['.FALSE.'])
+        self.general_replace_dict['data_looplibs_av']="DATA LOOPLIBS_AVAILABLE /"\
+        +','.join(looplibs_av)+"/"
         # Now some features specific to the optimized output        
         max_loop_rank=matrix_element.get_max_loop_rank()
+        self.general_replace_dict['maxrank']=max_loop_rank
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
@@ -1337,6 +1547,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             filename = 'CT_interface.f'
             self.write_CT_interface(writers.FortranWriter(filename),\
                                     matrix_element)
+            
+            filename = 'TIR_interface.f'
+            self.write_TIR_interface(writers.FortranWriter(filename),
+                                    matrix_element)
 
             filename = 'loop_num.f'
             self.write_loop_num(writers.FortranWriter(filename),\
@@ -1362,6 +1576,52 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ We can re-use the mother one for the loop optimized output."""
         LoopProcessExporterFortranSA.write_CT_interface(\
                             self, writer, matrix_element,optimized_output=True)
+        
+    def write_TIR_interface(self, writer, matrix_element):
+        """ Create the file TIR_interface.f which does NOT contain the subroutine
+         defining the loop HELAS-like calls along with the general interfacing 
+         subroutine. """
+
+        # First write TIR_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(self.general_replace_dict)
+        
+        # We finalize TIR result differently wether we used the built-in 
+        # squaring against the born.
+        if matrix_element.get('processes')[0].get('has_born'):
+            replace_dict['finalize_TIR']='\n'.join([\
+         'RES(%d)=NORMALIZATION*2.0d0*DBLE(RES(%d))'%(i,i) for i in range(1,4)])
+        else:
+            replace_dict['finalize_TIR']='\n'.join([\
+                     'RES(%d)=NORMALIZATION*RES(%d)'%(i,i) for i in range(1,4)])
+            
+        file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
+
+        file = file % replace_dict
+        
+        if writer:
+            writer.writelines(file)
+        else:
+            return file
+        
+#    def write_makefile_TIR(self, writer, link_tir_libs,tir_libs,PJDIR=""):
+#        """ Create the file makefile which links to the TIR libraries."""
+#            
+#        file = open(os.path.join(self.loop_dir,'StandAlone',
+#                                 'SubProcesses','makefile_TIR.inc')).read()  
+#        replace_dict={}
+#        replace_dict['link_tir_libs']=' '.join(link_tir_libs)
+#        replace_dict['tir_libs']=' '.join(tir_libs)
+#        replace_dict['dotf']='%.f'
+#        replace_dict['doto']='%.o'
+#        replace_dict['pjdir']='PJDIR='+PJDIR
+#        if not PJDIR.endswith('/'):
+#            replace_dict['pjdir']=replace_dict['pjdir']+"/"
+#        file=file%replace_dict
+#        
+#        if writer:
+#            writer.writelines(file)
+#        else:
+#            return file
 
     def write_polynomial_subroutines(self,writer,matrix_element):
         """ Subroutine to create all the subroutines relevant for handling
@@ -1863,7 +2123,8 @@ ENDDO""")
             replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
-        
+        replace_dict['iregi_free_ps']=self.general_replace_dict['iregi_free_ps']
+        replace_dict['data_looplibs_av']=self.general_replace_dict['data_looplibs_av']
         file = file % replace_dict
         number_of_calls = len(filter(lambda call: call.find('CALL LOOP') != 0, \
                                                                  loop_CT_calls))   

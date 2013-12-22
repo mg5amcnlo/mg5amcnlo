@@ -27,10 +27,12 @@ C
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(mass_dp_format)s M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
-      INTEGER I, J, K, TEMP
+      INTEGER I, J, K, TEMP,I_LIB
+      LOGICAL complex_mass,doing_qp
 C
 C GLOBAL VARIABLES
 C
+      INCLUDE 'MadLoopParams.inc'
       INTEGER ID,SQSOINDEX,R
       common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
@@ -47,7 +49,12 @@ C
 	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/%(proc_prefix)sW/W  
+	  common/%(proc_prefix)sW/W 
+	  %(real_dp_format)s LSCALE 
+	  INTEGER CTMODE
+          common/%(proc_prefix)sCT/LSCALE,CTMODE
+	  INTEGER LIBINDEX
+	  common/%(proc_prefix)sI_LIB/LIBINDEX
 
 C ----------
 C BEGIN CODE
@@ -70,7 +77,29 @@ C ----------
           TEMP=TEMP+PAIRING(J)
         ENDDO
       ENDDO
-      CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+C Determine whether the integral is with complex masses or not
+C since some reduction libraries, e.g.PJFry++ and IREGI, are still
+C not able to deal with complex masses
+      complex_mass=.FALSE.
+      DO I=1,NLOOPLINE
+      	 IF(DIMAG(M2L(I)).EQ.0d0)CYCLE
+      	 IF(ABS(DIMAG(M2L(I)))/MAX(ABS(M2L(I)),1D-2).GT.1d-15)THEN
+	   complex_mass=.TRUE.
+	   EXIT
+	 ENDIF
+      ENDDO
+C Determine it uses qp or not
+      doing_qp=.FALSE.
+      IF(CTMODE.GE.4)doing_qp=.TRUE.
+C Choose the correct loop library
+      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+      IF(MLReductionLib(I_LIB).EQ.1)THEN
+C USE CUTTOOLS
+	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+      ELSE
+C USE TIR
+	CALL %(proc_prefix)sTIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM)) 
+      ENDIF
 	  ELSE
 	    LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=0.0d0
 	    LOOPRES(2,SQUAREDSOINDEX,LOOPNUM)=0.0d0

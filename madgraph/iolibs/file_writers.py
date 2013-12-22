@@ -804,3 +804,15 @@ class PythonWriter(FileWriter):
     def write_comments(self, text):
         text = '#%s\n' % text.replace('\n','\n#')
         file.write(self, text)
+        
+class MakefileWriter(FileWriter):
+    
+    def write_comments(self, text):
+        text = '#%s\n' % text.replace('\n','\n#')
+        file.write(self, text)
+        
+    def writelines(self, lines):
+        """Extends the regular file.writeline() function to write out
+        nicely formatted code"""
+        
+        self.write(lines)

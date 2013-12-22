@@ -1,0 +1,165 @@
+
+  subroutine qcFROMi(zz,ii)
+  intent(out) :: zz
+  intent(in ) :: ii
+  include 'avh_olo_complex.h90'
+    :: zz
+  integer :: ii
+  include 'avh_olo_real.h90'
+    :: rr
+  rr = ii
+  zz = rr
+  end subroutine
+
+
+  function prduct_qc_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz*hh
+  end function
+
+  function prduct_qr_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz*hh
+  end function
+
+
+  function prduct_i_qc(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz*hh
+  end function
+
+  function prduct_i_qr(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz*hh
+  end function
+
+
+  function ratio_qc_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz/hh
+  end function
+
+  function ratio_qr_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz/hh
+  end function
+
+
+  function ratio_i_qc(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = hh/zz
+  end function
+
+  function ratio_i_qr(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = hh/zz
+  end function
+
+
+  function plus_qc_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz+hh
+  end function
+
+  function plus_qr_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz+hh
+  end function
+
+
+  function plus_i_qc(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz+hh
+  end function
+
+  function plus_i_qr(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz+hh
+  end function
+
+
+  function minus_qc_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz-hh
+  end function
+
+  function minus_qr_i(zz,ii) result(rslt)
+  intent(in) :: zz,ii
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = zz-hh
+  end function
+
+
+  function minus_i_qc(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_complex.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = hh-zz
+  end function
+ 
+  function minus_i_qr(ii,zz) result(rslt)
+  intent(in) :: ii,zz
+  include 'avh_olo_real.h90'
+    :: zz,rslt,hh
+  integer :: ii
+  hh = ii
+  rslt = hh-zz
+  end function
+ 

@@ -382,6 +382,20 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        # Set where to look for IREGI installation
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        if not os.path.isdir(self._iregi_dir):
+            logger.warning(('Warning: Directory %s is not a valid IREGI directory.'+\
+                            'Using default IREGI instead.')%\
+                           self._iregi_dir)
+            self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        # Set where to look for PJFry++ installation
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
+        #if not os.path.isdir(self._pjfry_dir):
+        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
+        #                    'Using default PJFry++ instead.')%\
+        #                   self._pjfry_dir)
+        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
