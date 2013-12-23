@@ -1556,12 +1556,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
 
-        
         # first pass to the default
         CheckValidForCmd.check_output(self, args)
+        args[:] = ['.', '-f']        
         
-        args[:] = [self._export_format, '.', '-f']
-
+        self._export_dir = os.path.realpath(os.getcwd())
         # Check that we output madevent
         if 'madevent' != self._export_format:
                 raise self.WebRestriction, 'only available output format is madevent (at current stage)'
@@ -5271,10 +5270,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         options = config[self._export_format]
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
-            if not line.strip()[0] == '.':
-                raise self.InvalidCmd, 'Wrong path directory to create in local directory use \'.\''
+            if not args[0] in ['.', '-f']:
+                raise self.InvalidCmd, 'Wrong path directory to create in local directory use \'.\''                
         elif not noclean and os.path.isdir(self._export_dir) and options['check']:
-            print line, args
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)

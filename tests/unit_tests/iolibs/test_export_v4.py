@@ -1055,6 +1055,7 @@ C     BEGIN CODE
 C     ----------
       DSIG=0D0
       CUTSDONE=.FALSE.
+      CUTSPASSED=.FALSE.
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()

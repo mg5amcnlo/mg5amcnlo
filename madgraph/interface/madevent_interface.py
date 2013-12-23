@@ -1760,7 +1760,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.web = True
         self.results.def_web_mode(True)
         self.force = True
-
+        if os.environ['MADGRAPH_BASE']:
+            self.options['mg5_path'] = pjoin(os.environ['MADGRAPH_BASE'],'MG5')
 
     ############################################################################            
     def check_output_type(self, path):
