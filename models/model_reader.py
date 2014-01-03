@@ -30,6 +30,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import models.check_param_card as card_reader
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc
 
 ZERO = 0
 
@@ -99,7 +100,9 @@ class ModelReader(loop_base_objects.LoopModel):
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              ','.join(set(parameter_dict.keys()).difference(set(key))),
                              ','.join(set(key).difference(set(parameter_dict.keys()))))
-                if self['name'].startswith('mssm-') or self['name'] == 'mssm':
+
+                if msg =="Invalid restriction card (not same block)\n    set(['yu', 'umix', 'ae', 'ad', 'decay', 'nmix', 'ye', 'sbotmix', 'msoft', 'yd', 'vmix', 'au', 'mass', 'alpha', 'modsel', 'sminputs', 'staumix', 'stopmix', 'hmix']) != set(['umix', 'msoft', 'msu2', 'fralpha', 'msd2', 'msl2', 'decay', 'tu', 'selmix', 'td', 'te', 'usqmix', 'dsqmix', 'ye', 'yd', 'sminputs', 'yu', 'mse2', 'nmix', 'vmix', 'msq2', 'mass', 'hmix']).\n    Missing block: te,msl2,dsqmix,tu,selmix,msu2,msq2,usqmix,td,fralpha,mse2,msd2\n    Unknown block : ae,ad,sbotmix,au,alpha,modsel,staumix,stopmix" \
+                or self['name'].startswith('mssm-') or self['name'] == 'mssm':
                     if not set(parameter_dict.keys()).difference(set(key)):
                         fail = False
                     else:
