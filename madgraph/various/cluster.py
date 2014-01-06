@@ -1006,12 +1006,13 @@ class PBSCluster(Cluster):
             if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
-                status = line.split()[4]
+                jobstatus = line.split()[4]
+                
         if status.returncode != 0:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
-        if status in self.idle_tag:
+        if jobstatus in self.idle_tag:
             return 'I' 
-        elif status in self.running_tag:                
+        elif jobstatus in self.running_tag:                
             return 'R' 
         return 'F'
         
