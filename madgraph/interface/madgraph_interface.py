@@ -4165,10 +4165,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            
         if not status:
             logger.info('Compilation succeeded')
         else:
-            logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
+            # For pythia-pgs check when removing the "-fno-second-underscore" flag
+            if name == 'pythia-pgs':
+                to_comment = ['libraries/PGS4/src/stdhep-dir/mcfio/arch_mcfio',
+                              'libraries/PGS4/src/stdhep-dir/src/stdhep_Arch']
+                for f in to_comment:
+                    f = pjoin(MG5DIR, name, *f.split('/'))
+                    text = "".join(l for l in open(f) if 'fno-second-underscore' not in l)
+                    fsock = open(f,'w').write(text)
+                try:
+                    misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+                except Exception:
+                    pass
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if not status:
+                logger.info('Compilation succeeded')
+            else:
+                logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
         # Special treatment for TD/Ghostscript program (require by MadAnalysis)
