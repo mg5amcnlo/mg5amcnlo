@@ -598,7 +598,7 @@ c      local
 
       if(c_point(curr_perm,mgid,varnb,2).eq.0d0) then
             out=c_point(curr_perm,mgid,varnb,1)
-      elseif(c_point(curr_perm,mgid,varnb,2).gt.0d0) then
+      elseif(c_point(curr_perm,mgid,varnb,2).gt.0d0.or.c_point(curr_perm,mgid,varnb,2).lt.0d0) then
             local_var = var2random(3*mgid-varnb-3,config_pos)
             call get_component(c_point(curr_perm,mgid,varnb,1),
      &                         c_point(curr_perm,mgid,varnb,2),
