@@ -134,6 +134,9 @@ c
       double precision pmass(nexternal)
       common/to_mass/  pmass
 
+      double precision SMIN
+      common/to_smin/ smin
+
       integer           Minvar(maxdim,lmaxconfigs)
       common /to_invar/ Minvar
       double precision   prb(maxconfigs,maxpoints,maxplace)
@@ -298,7 +301,7 @@ c-------
          endif
 
          call sample_get_x(sjac,x(ndim),ndim,mincfig,0d0,1d0)
-         CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1),0d0,SJAC)
+         CALL GENCMS(STOT,Xbk(1),Xbk(2),X(ndim-1), SMIN,SJAC)
          x(ndim-1) = xtau                   !Fix for 2->1 process
 c        Set CM rapidity for use in the rap() function
          cm_rap=.5d0*dlog(xbk(1)*ebeam(1)/(xbk(2)*ebeam(2)))
@@ -614,7 +617,6 @@ c
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
          ns_channel=ns_channel-1
       endif
-c      write(*,*) 'Number of t_channels',nt_channel,ns_channel,nbranch
 
 c
 c     Determine masses for all intermediate states.  Starting
@@ -709,10 +711,11 @@ c
          totmass=totmass+m(itree(2,ibranch))
       enddo
       m(-ns_channel-1) = dsqrt(S(-nbranch))
-      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass 
+      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
+
          if (smin .gt. smax) then
             jac=-3d0
             return
@@ -722,7 +725,6 @@ c
      &        smin/stot,smax/stot)
 
          m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
-
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
 
          if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
@@ -853,8 +855,8 @@ c         write(*,*) 'using costh,phi',ix,ix+1
          pswgt = pswgt*.5D0*PI*SQRT(MAX(LAMBDA(ONE,XA2,XB2),0d0))/(4.D0*PI)
          call mom2cx(m(i),m(itree(1,i)),m(itree(2,i)),costh,phi,
      &        p(0,itree(1,i)),p(0,itree(2,i)))
-         call boostx(p(0,itree(1,i)),p(0,i),p(0,itree(1,i)))
-         call boostx(p(0,itree(2,i)),p(0,i),p(0,itree(2,i)))
+         call boostm(p(0,itree(1,i)),p(0,i),m(i),p(0,itree(1,i)))
+         call boostm(p(0,itree(2,i)),p(0,i),m(i),p(0,itree(2,i)))
       enddo
       jac = jac*wgt
       if (.not. pass) jac = -99
@@ -962,7 +964,7 @@ c
          if (pp .gt. 0) then
             PP=SQRT(pp)*0.5d0
          else
-            write(*,*) 'Error creating momentum in gentcms',pp
+            write(*,*) 'Error gentcms',pp, M1,m2,MD2, ESUM
             jac=-1
             return
          endif

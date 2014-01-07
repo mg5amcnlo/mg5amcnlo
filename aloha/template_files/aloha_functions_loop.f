@@ -2,7 +2,7 @@ C###############################################################################
 C
 C Copyright (c) 2010 The ALOHA Development team and Contributors
 C
-C This file is a part of the MadGraph 5 project, an application which
+C This file is a part of the MadGraph5_aMC@NLO project, an application which
 C automatically generates Feynman diagrams and matrix elements for arbitrary
 C high-energy processes in the Standard Model and beyond.
 C
@@ -1642,6 +1642,92 @@ c#endif
       if ( qq.ne.rZero ) then
          pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
          m = sqrt(q(0)**2-qq)
+         lf = ((q(0)-m)*pq/qq+p(0))/m
+         pboost(0) = (p(0)*q(0)+pq)/m
+         pboost(1) =  p(1)+q(1)*lf
+         pboost(2) =  p(2)+q(2)*lf
+         pboost(3) =  p(3)+q(3)*lf
+      else
+         pboost(0) = p(0)
+         pboost(1) = p(1)
+         pboost(2) = p(2)
+         pboost(3) = p(3)
+      endif
+c
+      return
+      end
+
+      subroutine boostm(p,q,m, pboost)
+c
+c This subroutine performs the Lorentz boost of a four-momentum.  The
+c momentum p is assumed to be given in the rest frame of q.  pboost is
+c the momentum p boosted to the frame in which q is given.  q must be a
+c timelike momentum.
+c
+c input:
+c       real    p(0:3)         : four-momentum p in the q rest  frame
+c       real    q(0:3)         : four-momentum q in the boosted frame
+c       real    m        : mass of q (for numerical stability)
+c
+c output:
+c       real    pboost(0:3)    : four-momentum p in the boosted frame
+c
+      implicit none
+      double precision p(0:3),q(0:3),pboost(0:3),pq,qq,m,lf
+
+      double precision rZero
+      parameter( rZero = 0.0d0 )
+
+c#ifdef HELAS_CHECK
+c      integer stdo
+c      parameter( stdo = 6 )
+c      double precision pp
+c#endif
+c
+      qq = q(1)**2+q(2)**2+q(3)**2
+
+c#ifdef HELAS_CHECK
+c      if (abs(p(0))+abs(p(1))+abs(p(2))+abs(p(3)).eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : p(0:3) in boostx is zero momentum'
+c      endif
+c      if (abs(q(0))+qq.eq.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is zero momentum'
+c      endif
+c      if (p(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : p(0) = ',p(0)
+c      endif
+c      if (q(0).le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx has not positive energy'
+c         write(stdo,*)
+c     &        '             : q(0) = ',q(0)
+c      endif
+c      pp=p(0)**2-p(1)**2-p(2)**2-p(3)**2
+c      if (pp.lt.rZero) then
+c         write(stdo,*)
+c     &        ' helas-warn  : p(0:3) in boostx is spacelike'
+c         write(stdo,*)
+c     &        '             : p**2 = ',pp
+c      endif
+c      if (q(0)**2-qq.le.rZero) then
+c         write(stdo,*)
+c     &        ' helas-error : q(0:3) in boostx is not timelike'
+c         write(stdo,*)
+c     &        '             : q**2 = ',q(0)**2-qq
+c      endif
+c      if (qq.eq.rZero) then
+c         write(stdo,*)
+c     &   ' helas-warn  : q(0:3) in boostx has zero spacial components'
+c      endif
+c#endif
+
+      if ( qq.ne.rZero ) then
+         pq = p(1)*q(1)+p(2)*q(2)+p(3)*q(3)
          lf = ((q(0)-m)*pq/qq+p(0))/m
          pboost(0) = (p(0)*q(0)+pq)/m
          pboost(1) =  p(1)+q(1)*lf

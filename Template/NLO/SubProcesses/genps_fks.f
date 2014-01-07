@@ -2,6 +2,8 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+c     Timing profile statistics
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -29,7 +31,9 @@ c      integer mapconfig(0:lmaxconfigs)
       common/ciconfig0/iconfig0
       include 'coupl.inc'
       include 'born_props.inc'
-c      
+c     
+      call cpu_time(tBefore)
+c
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -52,6 +56,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)      
+      tGenPS = tGenPS + (tAfter-tBefore)
       return
       end 
       
@@ -1369,8 +1375,11 @@ c
          xiimin=0d0
       endif
       if (xiimax.lt.xiimin) then
-         write (*,*) 'Error #10 in genps_fks.f',icountevts,xiimax,xiimin
-         stop
+         write (*,*) 'WARNING #10 in genps_fks.f',icountevts,xiimax
+     $        ,xiimin
+         xjac=-342d0
+         pass=.false.
+         return
       endif
 
       xinorm=xiimax-xiimin
@@ -1906,7 +1915,7 @@ c Use 1/x^(nsamp) importance sampling above soft cut-off
          ximax0 = roHs**(-nsamp)
          ximin0 = 1.d0
          tmp  = ximin0 +(1d0-(x-fract)/(1d0-fract))*(ximax0-ximin0)
-         tau = tmp**(-1/dfloat(nsamp))
+         tau = tmp**(-1/dble(nsamp))
          jac= jac/nsamp*tau**(nsamp+1)*
      &        (ximax0-ximin0)/(1d0-fract)
       endif
@@ -1967,9 +1976,10 @@ c For e+e- collisions, set tau to one and y to zero
       double precision s(-max_branch:max_particles)
       double precision sqrtshat_born,totmass,xjac0
       integer itree(2,-max_branch:-1)
-      integer i,j
+      integer i,j,nsamp
+      parameter (nsamp=1)
       double precision smin,smax,xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn,bwdelf
-     &     ,totalmass
+     &     ,totalmass,tmp,ximin0,ximax0
       double precision xbwmass3,bwfunc
       external xbwmass3,bwfunc
       logical pass
@@ -1977,6 +1987,9 @@ c For e+e- collisions, set tau to one and y to zero
       double precision cBW_mass(-nexternal:-1,-1:1),
      &     cBW_width(-nexternal:-1,-1:1)
       double precision b(-1:1),x0
+      double precision s_mass(-nexternal:-1),xi,fract
+      parameter (fract=0.1d0)
+      common/to_phase_space_s_channel/s_mass
       pass=.true.
       totalmass=totmass
       do i = -1,-ns_channel,-1
@@ -2078,10 +2091,42 @@ c     normal BW
             endif
          else
 c not a Breit Wigner
-            s(i) = (smax-smin)*x(-i)+smin
-            xjac0 = xjac0*(smax-smin)
+            if (smin.eq.0d0 .and. s_mass(i).eq.0d0) then
+c     no lower limit on invariant mass from cuts or final state masses:
+c     use flat distribution
+               s(i) = (smax-smin)*x(-i)+smin
+               xjac0 = xjac0*(smax-smin)
+            elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
+c     A lower limit on smin, which is larger than lower limit from cuts
+c     or masses. Use 1/x^nsamp importance sampling
+               ximax0 = smin**(-nsamp)
+               ximin0 = smax**(-nsamp)
+               tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
+               s(i) = tmp**(-1/dble(nsamp))
+               xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+            elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
+c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
+c     s_mass(i)
+               if (x(-i).lt.fract) then
+                  xi=x(-i)/fract ! between 0 and 1
+                  xjac0=xjac0/fract
+                  s(i) = (s_mass(i)-smin)*xi+smin
+                  xjac0 = xjac0*(s_mass(i)-smin)
+               else
+                  xi=(x(-i)-fract)/(1d0-fract) ! between 0 and 1
+                  xjac0=xjac0/(1d0-fract)
+                  ximax0 = s_mass(i)**(-nsamp)
+                  ximin0 = smax**(-nsamp)
+                  tmp  = ximin0 +(1d0-xi)*(ximax0-ximin0)
+                  s(i) = tmp**(-1/dble(nsamp))
+                  xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
+               endif
+            else
+               write (*,*) "ERROR in genps_fks.f:"/
+     $              /" cannot set s-channel without BW"
+               stop 1
+            endif
          endif
-
 c If numerical inaccuracy, quit loop
          if (xjac0 .lt. 0d0) then
             xjac0 = -6
@@ -2269,8 +2314,8 @@ c because of numerical stabilities.
             pass=.false.
             return
          else
-            call boostx(pb(0,itree(1,i)),pb(0,i),pb(0,itree(1,i)))
-            call boostx(pb(0,itree(2,i)),pb(0,i),pb(0,itree(2,i)))
+            call boostm(pb(0,itree(1,i)),pb(0,i),m(i),pb(0,itree(1,i)))
+            call boostm(pb(0,itree(2,i)),pb(0,i),m(i),pb(0,itree(2,i)))
          endif
       enddo
 c

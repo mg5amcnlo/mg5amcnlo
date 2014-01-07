@@ -11,7 +11,7 @@ c----------------------------------------------------------------------
 c
 c     INCLUDE and COMMON
 c
-c      include 'genps.inc'
+      include 'genps.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
 

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Classes for diagram generation. Amplitude performs the diagram
@@ -25,7 +25,7 @@ import itertools
 import logging
 
 import madgraph.core.base_objects as base_objects
-
+import madgraph.various.misc as misc
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.diagram_generation')
 
@@ -47,8 +47,8 @@ class DiagramTag(object):
            (((1,2,id12),(3,4,id34)),id1234),
            5,id91086712345)
     where idN is the id of the corresponding interaction. The ordering within
-    chains is based on chain length (depth; here, 1234 has depth 2, 910867 has
-    depth 3, 5 has depht 0), and if equal on the ordering of the chain elements.
+    chains is based on chain length (depth; here, 1234 has depth 3, 910867 has
+    depth 4, 5 has depht 0), and if equal on the ordering of the chain elements.
     The determination of central vertex is based on minimizing the chain length
     for the longest subchain. 
     This gives a unique tag which can be used to identify diagrams
@@ -98,13 +98,15 @@ class DiagramTag(object):
             new_link = DiagramTagChainLink(self.tag.links[1:],
                                            self.flip_vertex(\
                                                self.tag.vertex_id,
-                                               longest_chain.vertex_id))
+                                               longest_chain.vertex_id,
+                                               self.tag.links[1:]))
             # Create a new final vertex in the direction of the longest link
-            other_link = DiagramTagChainLink(list(longest_chain.links) + \
-                                             [new_link],
+            other_links = list(longest_chain.links) + [new_link]
+            other_link = DiagramTagChainLink(other_links,
                                              self.flip_vertex(\
                                                  longest_chain.vertex_id,
-                                                 self.tag.vertex_id))
+                                                 self.tag.vertex_id,
+                                                 other_links))
             
             if other_link.links[0] < self.tag.links[0]:
                 # Switch to new tag, continue search
@@ -117,6 +119,111 @@ class DiagramTag(object):
         """Get the order of external particles in this tag"""
 
         return self.tag.get_external_numbers()
+
+    def diagram_from_tag(self, model):
+        """Output a diagram from a DiagramTag. Note that each daughter
+        class must implement the static functions id_from_vertex_id
+        (if the vertex id is something else than an integer) and
+        leg_from_link (to pass the correct info from an end link to a
+        leg)."""
+
+        # Create the vertices, starting from the final vertex
+        diagram = base_objects.Diagram({'vertices': \
+                                        self.vertices_from_link(self.tag,
+                                                                model,
+                                                                True)})
+        diagram.calculate_orders(model)
+        return diagram
+
+    @classmethod
+    def vertices_from_link(cls, link, model, first_vertex = False):
+        """Recursively return the leg corresponding to this link and
+        the list of all vertices from all previous links"""
+
+        if link.end_link:
+            # This is an end link and doesn't correspond to a vertex
+            return cls.leg_from_link(link), []
+
+        # First recursively find all daughter legs and vertices
+        leg_vertices = [cls.vertices_from_link(l, model) for l in link.links]
+
+        # The daughter legs are in the first entry
+        legs = base_objects.LegList(sorted([l for l,v in leg_vertices],
+                                           lambda l1,l2: l2.get('number') - \
+                                           l1.get('number')))
+        # The daughter vertices are in the second entry
+        vertices = base_objects.VertexList(sum([v for l, v in leg_vertices],
+                                               []))
+        
+        if not first_vertex:
+            # This corresponds to a wavefunction with a resulting leg
+            # Need to create the resulting leg from legs and vertex id
+            last_leg = cls.leg_from_legs(legs,
+                                         cls.id_from_vertex_id(link.vertex_id),
+                                         model)
+            legs.append(last_leg)
+            
+        # Now create and append this vertex
+        vertices.append(cls.vertex_from_link(legs,
+                                        link.vertex_id,
+                                        model))
+
+        if first_vertex:
+            # Return list of vertices
+            return vertices
+        else:
+            # Return leg and list of vertices
+            return last_leg, vertices
+
+    @staticmethod
+    def leg_from_legs(legs, vertex_id, model):
+        """Return a leg from a leg list and the model info"""
+
+        pdgs = [part.get_pdg_code() for part in \
+                model.get_interaction(vertex_id).get('particles')]
+        # Extract the resulting pdg code from the interaction pdgs
+        for pdg in [leg.get('id') for leg in legs]:
+            pdgs.remove(pdg)
+
+        assert len(pdgs) == 1
+        # Prepare the new leg properties
+        pdg = model.get_particle(pdgs[0]).get_anti_pdg_code()
+        number = min([l.get('number') for l in legs])
+        # State is False for t-channel, True for s-channel
+        state = (len([l for l in legs if l.get('state') == False]) != 1)
+        # Note that this needs to be done before combining decay chains
+        onshell= False
+
+        return base_objects.Leg({'id': pdg,
+                                 'number': number,
+                                 'state': state,
+                                 'onshell': onshell})
+
+    @classmethod
+    def vertex_from_link(cls, legs, vertex_id, model):
+        """Return a vertex given a leg list and a vertex id"""
+
+        return base_objects.Vertex({'legs': legs,
+                                    'id': cls.id_from_vertex_id(vertex_id)})
+        
+    @staticmethod
+    def leg_from_link(link):
+        """Return a leg from a link"""
+
+        if link.end_link:
+            # This is an external leg, info in links
+            return base_objects.Leg({'number':link.links[0][1],
+                                     'id':link.links[0][0][0],
+                                     'state':(link.links[0][0][1] == 0),
+                                     'onshell':False})
+
+        # This shouldn't happen
+        assert False
+
+    @staticmethod
+    def id_from_vertex_id(vertex_id):
+        """Return the numerical vertex id from a link.vertex_id"""
+        return vertex_id[0]
 
     @staticmethod
     def reorder_permutation(perm, start_perm):
@@ -142,11 +249,15 @@ class DiagramTag(object):
 
     @staticmethod
     def vertex_id_from_vertex(vertex, last_vertex, model, ninitial):
-        """Returns the default vertex id: just the interaction id"""
-        return vertex.get('id')
+        """Returns the default vertex id: just the interaction id
+           Note that in the vertex id, like the leg, only the first entry is
+           taken into account in the tag comparison, while the second is for 
+           storing information that is not to be used in comparisons."""
+
+        return (vertex.get('id'),)
 
     @staticmethod
-    def flip_vertex(new_vertex, old_vertex):
+    def flip_vertex(new_vertex, old_vertex, links):
         """Returns the default vertex flip: just the new_vertex"""
         return new_vertex
 
@@ -183,7 +294,7 @@ class DiagramTagChainLink(object):
         if vertex_id == None:
             # This is an end link, corresponding to an external leg
             self.links = tuple(objects)
-            self.vertex_id = 0
+            self.vertex_id = (0,)
             self.depth = 0
             self.end_link = True
             return
@@ -218,8 +329,8 @@ class DiagramTagChainLink(object):
         if len(self.links) != len(other.links):
             return len(self.links) < len(other.links)
 
-        if self.vertex_id != other.vertex_id:
-            return self.vertex_id < other.vertex_id
+        if self.vertex_id[0] != other.vertex_id[0]:
+            return self.vertex_id[0] < other.vertex_id[0]
 
         for i, link in enumerate(self.links):
             if i > len(other.links) - 1:
@@ -235,11 +346,13 @@ class DiagramTagChainLink(object):
         consider equal if self.links[0][0] == other.links[0][0],
         i.e., ignore the leg number (in links[0][1])."""
 
-        if self.end_link and other.end_link and  \
-               self.depth == other.depth and self.vertex_id == other.vertex_id:
+        if self.end_link and other.end_link and self.depth == other.depth \
+           and self.vertex_id == other.vertex_id:
             return self.links[0][0] == other.links[0][0]
         
-        return self.__dict__ == other.__dict__
+        return self.end_link == other.end_link and self.depth == other.depth \
+            and self.vertex_id[0] == other.vertex_id[0] \
+            and self.links == other.links 
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -1103,8 +1216,7 @@ class DecayChainAmplitude(Amplitude):
             for amp in self['amplitudes']:
                 amp.trim_diagrams(decay_ids)                    
 
-            # Finally, check that all decay ids are present in at
-            # least some process
+            # Check that all decay ids are present in at least some process
             for amp in self['amplitudes']:
                 for l in amp.get('process').get('legs'):
                     if l.get('id') in decay_ids:
@@ -1130,6 +1242,25 @@ class DecayChainAmplitude(Amplitude):
                     if not dc.get('amplitudes'):
                         # If no amplitudes left, remove the decay chain
                         self['decay_chains'].remove(dc)
+                    
+            # Finally, write a fat warning if any decay process has
+            # the decaying particle (or its antiparticle) in the final state
+            bad_procs = []
+            for dc in self['decay_chains']:
+                for amp in dc.get('amplitudes'):
+                    legs = amp.get('process').get('legs')
+                    fs_parts = [abs(l.get('id')) for l in legs if 
+                                l.get('state')]
+                    is_part = [l.get('id') for l in legs if not 
+                               l.get('state')][0]
+                    if abs(is_part) in fs_parts:
+                        bad_procs.append(amp.get('process'))
+
+            if bad_procs:
+                logger.warning(
+                    "$RED Decay(s) with particle decaying to itself:\n" + \
+                     '\n'.join([p.nice_string() for p in bad_procs]) + \
+                 "\nPlease check your process definition carefully. \n")
                     
 
         elif argument != None:
@@ -1261,11 +1392,15 @@ class MultiProcess(base_objects.PhysicsObject):
         # List of quark flavors where we ignore processes with at
         # least 6 quarks (three quark lines)
         self['ignore_six_quark_processes'] = []
-
+        # Allow to use the model parameter numerical value for optimization.
+        #This is currently use for 1->N generation(check mass).
+        self['use_numerical'] = False
+        
     def __init__(self, argument=None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = []):
+                 ignore_six_quark_processes = [], optimize=False):
         """Allow initialization with ProcessDefinition or
-        ProcessDefinitionList"""
+        ProcessDefinitionList
+        optimize allows to use param_card information. (usefull for 1-.N)"""
 
         if isinstance(argument, base_objects.ProcessDefinition):
             super(MultiProcess, self).__init__()
@@ -1282,6 +1417,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
         self['collect_mirror_procs'] = collect_mirror_procs
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
+        self['use_numerical'] = optimize
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1330,7 +1466,8 @@ class MultiProcess(base_objects.PhysicsObject):
                     self['amplitudes'].extend(\
                        self.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
-                                       self.get('ignore_six_quark_processes')))
+                                       self.get('ignore_six_quark_processes'),
+                                       self['use_numerical']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1342,7 +1479,8 @@ class MultiProcess(base_objects.PhysicsObject):
     @classmethod
     def generate_multi_amplitudes(cls,process_definition,
                                   collect_mirror_procs = False,
-                                  ignore_six_quark_processes = []):
+                                  ignore_six_quark_processes = [],
+                                  use_numerical=False):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1379,10 +1517,9 @@ class MultiProcess(base_objects.PhysicsObject):
                  if leg['state'] == False]
         fsids = [leg['ids'] for leg in process_definition['legs'] \
                  if leg['state'] == True]
-
         # Generate all combinations for the initial state
         
-        for prod in apply(itertools.product, isids):
+        for prod in itertools.product(*isids):
             islegs = [\
                     base_objects.Leg({'id':id, 'state': False}) \
                     for id in prod]
@@ -1392,7 +1529,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
             red_fsidlist = []
 
-            for prod in apply(itertools.product, fsids):
+            for prod in itertools.product(*fsids):
 
                 # Remove double counting between final states
                 if tuple(sorted(prod)) in red_fsidlist:
@@ -1425,6 +1562,18 @@ class MultiProcess(base_objects.PhysicsObject):
                 # in that case don't check process
                 if sorted_legs in failed_procs:
                     continue
+
+                # If allowed check mass validity [assume 1->N]
+                if use_numerical:
+                    # check that final state has lower mass than initial state
+                    initial_mass = abs(model['parameter_dict'][model.get_particle(legs[0].get('id')).get('mass')])
+                    if initial_mass == 0:
+                         continue
+                    for leg in legs[1:]:
+                        m = model['parameter_dict'][model.get_particle(leg.get('id')).get('mass')]
+                        initial_mass -= abs(m)
+                    if initial_mass.real <= 0:
+                        continue
 
                 # Setup process
                 process = base_objects.Process({\
@@ -1661,7 +1810,7 @@ class MultiProcess(base_objects.PhysicsObject):
                     # Set summed coupling order according to max_order_now
                     # subtracting the removed gluons
                     coupling_orders_now = {coupling: max_order_now - \
-                                           nglue}
+                                           nglue * model['order_hierarchy']['QCD']}
 
                     # Setup process
                     process = base_objects.Process({\

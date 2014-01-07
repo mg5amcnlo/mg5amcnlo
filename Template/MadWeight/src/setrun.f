@@ -11,6 +11,7 @@ c
 c     include
 c
 c      include 'genps.inc'
+      include 'maxparticles.inc'
       include 'run_config.inc'
       include 'PDF/pdf.inc'
       include 'run.inc'

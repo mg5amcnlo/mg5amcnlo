@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph features.
+"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -32,6 +32,9 @@ import sys
 import traceback
 import time
 import signal
+import tarfile
+import copy
+import datetime
 
 try:
     import readline
@@ -59,9 +62,11 @@ try:
     import madgraph.various.cluster as cluster
     import madgraph.various.misc as misc
     import madgraph.various.gen_crossxhtml as gen_crossxhtml
+    import madgraph.various.sum_html as sum_html
     import madgraph.various.shower_card as shower_card
+    import madgraph.various.FO_analyse_card as analyse_card
 
-    from madgraph import InvalidCmd, aMCatNLOError
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
     aMCatNLO = False
 except ImportError, error:
     logger.debug(error)
@@ -75,67 +80,58 @@ except ImportError, error:
     import internal.cluster as cluster
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.sum_html as sum_html
     import internal.shower_card as shower_card
+    import internal.FO_analyse_card as analyse_card
     aMCatNLO = True
-
-
-
-
 
 class aMCatNLOError(Exception):
     pass
 
-def init_worker():
-    """this is to catch ctrl+c with Pool""" 
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 def compile_dir(arguments):
     """compile the direcory p_dir
     arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
-    this function needs not to be a class method in order to use pool to do
+    this function needs not to be a class method in order to do
     the compilation on multicore"""
 
     (me_dir, p_dir, mode, options, tests, exe, run_mode) = arguments
     logger.info(' Compiling %s...' % p_dir)
 
-    gensym_log = pjoin(me_dir, 'gensym.log')
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
-    #compile everything
 
-    # compile and run tests
-    for test in tests:
-        misc.compile([test], cwd = this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, test)):
-            raise aMCatNLOError('%s compilation failed' % test)
-        input = pjoin(me_dir, '%s_input.txt' % test)
-        #this can be improved/better written to handle the output
-        misc.call(['./%s' % (test)], cwd=this_dir, 
-                stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
-        
-    if not options['reweightonly']:
-        misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'gensym')):
-            raise aMCatNLOError('gensym compilation failed')
+    try:
+        #compile everything
+        # compile and run tests
+        for test in tests:
+            misc.compile([test], cwd = this_dir, job_specs = False)
+            input = pjoin(me_dir, '%s_input.txt' % test)
+            #this can be improved/better written to handle the output
+            misc.call(['./%s' % (test)], cwd=this_dir, 
+                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+            
+        if not options['reweightonly']:
+            misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
+            misc.call(['./gensym'],cwd= this_dir,
+                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
+            #compile madevent_mintMC/mintFO
+            misc.compile([exe], cwd=this_dir, job_specs = False)
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
-        open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
-        p = misc.Popen(['./gensym'], stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                 stdout=open(gensym_log, 'w'),cwd= this_dir) 
-        #compile madevent_mintMC/vegas
-        misc.compile([exe], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, exe)):
-            raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
-        misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-            raise aMCatNLOError('reweight_xsec_events compilation failed')
-    logger.info('    %s done.' % p_dir) 
+        logger.info('    %s done.' % p_dir) 
+        return 0
+    except MadGraph5Error, msg:
+        return msg
 
 
 def check_compiler(options, block=False):
     """check that the current fortran compiler is gfortran 4.6 or later.
     If block, stops the execution, otherwise just print a warning"""
 
-    msg = 'In order to be able to run MadGraph @NLO, you need to have ' + \
+    msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
             'gfortran 4.6 or later installed.\n%s has been detected'
     #first check that gfortran is installed
     if options['fortran_compiler']:
@@ -178,7 +174,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -211,7 +207,7 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                    MadGraph/aMC@NLO 5                    *\n' + \
+        '#*                    MadGraph5_aMC@NLO                     *\n' + \
         '#*                                                          *\n' + \
         "#*                *                       *                 *\n" + \
         "#*                  *        * *        *                   *\n" + \
@@ -222,14 +218,16 @@ class CmdExtended(common_run.CommonRunCmd):
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "#*                           and                            *\n" + \
+        "#*                http://amcatnlo.cern.ch                   *\n" + \
         '#*                                                          *\n' + \
         '#************************************************************\n' + \
         '#*                                                          *\n' + \
         '#*               Command File for aMCatNLO                  *\n' + \
         '#*                                                          *\n' + \
-        '#*     run as ./bin/madevent.py filename                    *\n' + \
+        '#*     run as ./bin/aMCatNLO.py filename                    *\n' + \
         '#*                                                          *\n' + \
         '#************************************************************\n'
         
@@ -239,7 +237,7 @@ class CmdExtended(common_run.CommonRunCmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 5           *\n" + \
         "*                       a M C @ N L O                      *\n" + \
         "*                                                          *\n" + \
         "*                 *                       *                *\n" + \
@@ -250,7 +248,7 @@ class CmdExtended(common_run.CommonRunCmd):
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph Development Team - Please visit us at    *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
         "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
@@ -266,9 +264,12 @@ class CmdExtended(common_run.CommonRunCmd):
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""
         try:
+            if hasattr(self, 'cluster'):
+                logger.info('rm jobs on queue')
+                self.cluster.remove()
             if hasattr(self, 'results'):
-                self.update_status('Stop by the user', level=None, makehtml=False, error=True)
-                self.add_error_log_in_html()
+                self.update_status('Stop by the user', level=None, makehtml=True, error=True)
+                self.add_error_log_in_html(KeyboardInterrupt)
         except:
             pass
     
@@ -381,6 +382,8 @@ class CheckValidForCmd(object):
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
+
+        self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
     
     def check_plot(self, args):
@@ -786,7 +789,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     # survey options, dict from name to type, default value, and help text
     # Variables to store object information
     web = False
-    prompt = 'aMC@NLO_run>'
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
@@ -808,19 +810,20 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         CmdExtended.__init__(self, me_dir, options, *completekey, **stdin)
         #common_run.CommonRunCmd.__init__(self, me_dir, options)
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
         self.mode = 'aMCatNLO'
         self.nb_core = 0
+        self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
 
         # load the current status of the directory
         if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
             self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
             self.results.resetall(self.me_dir)
+            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
+            self.last_mode = ''
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -840,8 +843,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
-        if self.check_mcatnlo_dir():
-            self.run_mcatnlo(evt_file)
+        self.run_mcatnlo(evt_file)
+
+        self.update_status('', level='all', update_results=True)
 
     ################################################################################
     def do_plot(self, line):
@@ -952,7 +956,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """Main commands: calculates LO/NLO cross-section, using madevent_vegas """
+        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO """
         
         self.start_time = time.time()
         argss = self.split_arg(line)
@@ -967,16 +971,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         
         mode = argss[0]
         self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         self.run(mode, options)
+        self.update_status('', level='all', update_results=True)
 
         
     ############################################################################      
@@ -996,20 +1005,27 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options_madevent['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options_madevent['automatic_html_opening'] = False
-
         mode = 'aMC@' + argss[0]
         if options['parton'] and mode == 'aMC@NLO':
             mode = 'noshower'
         elif options['parton'] and mode == 'aMC@LO':
             mode = 'noshowerLO'
         self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
-        if self.check_mcatnlo_dir() and not options['parton']:
+        if not options['parton']:
             self.run_mcatnlo(evt_file)
+
+        self.update_status('', level='all', update_results=True)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1018,7 +1034,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################
     def set_configuration(self, amcatnlo=True, **opt):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
@@ -1037,20 +1054,25 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
 
-#        if self.options['automatic_html_opening']:
-#            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-#            self.options['automatic_html_opening'] = False
-
         mode = argss[0]
         if mode in ['LO', 'NLO']:
             options['parton'] = True
         mode = self.ask_run_configuration(mode, options)
+
+        self.results.add_detail('run_mode', mode) 
+
+        self.update_status('Starting run', level=None, update_results=True)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
         if '+' in mode:
             mode = mode.split('+')[0]
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         
-        if int(self.run_card['nevents']) == 0:
+        if int(self.run_card['nevents']) == 0 and not mode in ['LO', 'NLO']:
             logger.info('No event file generated: grids have been set-up with a '\
                             'relative precision of %s' % self.run_card['req_acc'])
             return
@@ -1060,12 +1082,21 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
-        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] and self.check_mcatnlo_dir() \
+        if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file)
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
+
+
+        self.update_status('', level='all', update_results=True)
+        if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
+            logger.warning("""You are running with FxFx merging enabled.
+To be able to merge samples of various multiplicities without double counting,
+you have to remove some events after showering 'by hand'.
+Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+
 
 
     ############################################################################      
@@ -1083,30 +1114,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
         self.ask_run_configuration(mode, options)
         self.compile(mode, options) 
 
-    def check_mcatnlo_dir(self):
-        """Check that the MCatNLO dir (with files to run the parton-shower has 
-        been copied inside the exported direcotry"""
-        if os.path.isdir(pjoin(self.me_dir, 'MCatNLO')):
-            #the folder has been exported after installation of MCatNLO-utilities
-            return True
-        elif self.options['MCatNLO-utilities_path']:
-            # if the option is not none, the path should already exist
-            # the folder has been exported before installation of MCatNLO-utilities
-            # and they have been installed
-            files.cp(pjoin(self.options['MCatNLO-utilities_path'], 'MCatNLO'), self.me_dir)
-            return True
 
-        else:
-            logger.warning('MCatNLO is needed to shower the generated event samples.\n' + \
-                'You can install it by typing "install MCatNLO-utilities" in the MadGraph' + \
-                ' shell')
-            return False
+        self.update_status('', level='all', update_results=True)
 
-    def update_status(self, status, level, makehtml=False, force=True, 
-                      error=False, starttime = None, update_results=False):
-        
-        common_run.CommonRunCmd.update_status(self, status, level, makehtml, 
-                                        force, error, starttime, update_results)
 
 
     def update_random_seed(self):
@@ -1143,14 +1153,11 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
-        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics.dat'))
 
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](self.options['cluster_queue'],
-                                              self.options['cluster_temp_path'])
+            self.cluster = cluster.from_name[cluster_name](**self.options)
         if self.cluster_mode == 2:
             try:
                 import multiprocessing
@@ -1166,12 +1173,11 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         'Use set nb_core X in order to set this number and be able to'+
                         'run in multicore.')
 
-            self.cluster = cluster.MultiCore(self.nb_core, 
-                                     temp_dir=self.options['cluster_temp_path'])
+            self.cluster = cluster.MultiCore(**self.options)
         self.update_random_seed()
         #find and keep track of all the jobs
-        folder_names = {'LO': ['born_G*'], 'NLO': ['viSB_G*', 'novB_G*'],
-                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GV*', 'GF*']}
+        folder_names = {'LO': ['born_G*'], 'NLO': ['all_G*'],
+                    'aMC@LO': ['GB*'], 'aMC@NLO': ['GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         job_dict = {}
@@ -1185,14 +1191,26 @@ Please, shower the Les Houches events before using them for physics analyses."""
             job_dict[dir] = [file for file in \
                                  os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                                  if file.startswith('ajob')] 
-            if not options['only_generation'] and not options['reweightonly']:
-                for obj in folder_names[mode]:
-                    to_rm = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith(obj[:-1]) and \
-                                (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                                 os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                    files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_rm])
+            #find old folders to be removed
+            for obj in folder_names[mode]:
+                to_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
+                to_always_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and
+                             '_' in file and not '_G' in file and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
+
+                if not options['only_generation'] and not options['reweightonly']:
+                    to_always_rm.extend(to_rm)
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
@@ -1206,77 +1224,97 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode in ['LO', 'NLO']:
             logger.info('Doing fixed order %s' % mode)
             if mode == 'LO':
-                if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 1, npoints, niters) 
+                req_acc = self.run_card['req_acc_FO']
+                if not options['only_generation'] and req_acc != '-1':
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
                     self.update_status('Setting up grids', level=None)
                     self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                p = misc.Popen(['./combine_results_FO.sh', 'born_G*'], \
+                elif not options['only_generation']:
+                    npoints = self.run_card['npoints_FO_grid']
+                    niters = self.run_card['niters_FO_grid']
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters) 
+                    self.update_status('Setting up grids', level=None)
+                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
                                    stdout=subprocess.PIPE, \
                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    
                 output = p.communicate()
                 self.cross_sect_dict = self.read_results(output, mode)
                 self.print_summary(options, 0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['born*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 3, npoints, niters) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0']], 'Computing cross-section')
+                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
             elif mode == 'NLO':
-                if not options['only_generation']:
+                req_acc = self.run_card['req_acc_FO']
+                if not options['only_generation'] and req_acc != '-1':
                     self.update_status('Setting up grid', level=None)
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
+                elif not options['only_generation']:
                     npoints = self.run_card['npoints_FO_grid']
                     niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'grid', 1, npoints, niters) 
-                    self.run_all(job_dict, [['0', 'grid', '0']], 'Setting up grid using Born')
-                p = misc.Popen(['./combine_results_FO.sh', 'grid_G*'], \
-                                    stdout=subprocess.PIPE, 
-                                    cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
-                if not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                    self.update_status('Improving grid using NLO', level=None)
-                    self.run_all(job_dict, [['0', 'novB', '0', 'grid']], \
-                                     'Improving grids using NLO')
-                p = misc.Popen(['./combine_results_FO.sh', 'novB_G*'], \
-                                   stdout=subprocess.PIPE, cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-
+                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters) 
+                    self.update_status('Setting up grids', level=None)
+                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
                 npoints = self.run_card['npoints_FO']
                 niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', 3, npoints, niters) 
-                npoints = self.run_card['npoints_FO_virt']
-                niters = self.run_card['niters_FO_virt']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', 3, npoints, niters) 
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
+                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
+                                   stdout=subprocess.PIPE, \
+                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+
+                output = p.communicate()
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(options, 0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['all*'])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
                 self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'viSB', '0', 'grid'], ['0', 'novB', '0', 'novB']], \
+                self.run_all(job_dict, [['0', 'all', '0', 'all']], \
                         'Computing cross-section')
 
-            p = misc.Popen(['./combine_results_FO.sh'] + folder_names[mode], \
+            p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
             self.print_summary(options, 1, mode)
-            misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
-                                stdout=devnull, 
-                                cwd=pjoin(self.me_dir, 'SubProcesses'))
 
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
-            logger.info('The results of this run and the TopDrawer file with the plots' + \
+            
+            if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
+                misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            elif self.analyse_card['fo_analysis_format'].lower() == 'root':
+                misc.call(['./combine_root.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            else:
+                logger.info('The results of this run' + \
+                            ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+                
+            cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
+            self.update_status('Run complete', level='parton', update_results=True)
+
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
@@ -1292,8 +1330,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current value is %s' % req_acc)
 
-            #shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
-            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT']
+            shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
             if not shower in shower_list:
                 raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
@@ -1313,6 +1350,20 @@ Please, shower the Les Houches events before using them for physics analyses."""
             
 
             for i, status in enumerate(mcatnlo_status):
+                #check if need to split jobs 
+                # at least one channel must have enough events
+                try:
+                    nevents_unweighted = open(pjoin(self.me_dir, 
+                                                'SubProcesses', 
+                                                'nevents_unweighted')).read().split('\n')
+                except IOError:
+                    nevents_unweighted = []
+
+                split = i == 2 and \
+                        int(self.run_card['nevt_job']) > 0 and \
+                        any([int(l.split()[1]) > int(self.run_card['nevt_job']) \
+                            for l in nevents_unweighted if l])
+
                 if i == 2 or not options['only_generation']:
                     # if the number of events requested is zero,
                     # skip mint step 2
@@ -1320,28 +1371,47 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         self.print_summary(options, 2,mode)
                         return
 
+                    if split:
+                        # split the event generation
+                        misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
+                                   [self.run_card['nevt_job']],
+                                   stdout = devnull,
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
+                        assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
+                            'nevents_unweighted_splitted'))
+
                     self.update_status(status, level='parton')
                     if mode in ['aMC@NLO', 'noshower']:
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'novB', i) 
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'viSB', i) 
-                        self.run_all(job_dict, [['2', 'V', '%d' % i], ['2', 'F', '%d' % i]], status)
+                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'all', i) 
+                        self.run_all(job_dict, [['2', 'F', '%d' % i]], status, split_jobs = split)
                         
                     elif mode in ['aMC@LO', 'noshowerLO']:
                         self.write_madinMMC_file(
                             pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, [['2', 'B', '%d' % i]], '%s at LO' % status)
+                        self.run_all(job_dict, 
+                                     [['2', 'B', '%d' % i]], 
+                                     '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
-                    p = misc.Popen(['./combine_results.sh'] + [ '%d' % i,'%d' % nevents, '%s' % req_acc ] + folder_names[mode],
-                            stdout=subprocess.PIPE, cwd = pjoin(self.me_dir, 'SubProcesses'))
+                    p = misc.Popen(['./combine_results.sh'] + \
+                                   ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
+                                   folder_names[mode],
+                                   stdout=subprocess.PIPE, 
+                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
                     output = p.communicate()
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_abs.txt' % i), \
-                             pjoin(self.me_dir, 'Events', self.run_name))
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d_tot.txt' % i), \
+                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d.txt' % i), \
                              pjoin(self.me_dir, 'Events', self.run_name))
 
                     self.cross_sect_dict = self.read_results(output, mode)
                     self.print_summary(options, i, mode)
+
+                    cross, error = sum_html.make_all_html_results(self, folder_names[mode])
+                    self.results.add_detail('cross', cross)
+                    self.results.add_detail('error', error) 
+
+                #check that split jobs are all correctly terminated
+                if split:
+                    self.check_event_files()
 
         if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
@@ -1349,6 +1419,10 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
             time.sleep(10)
+        if split:
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
+                     pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+
 
         event_norm=self.run_card['event_norm']
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
@@ -1360,8 +1434,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
             random seed found in 'randinit' is 33
             Integrated abs(cross-section)
             7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
-            Found 4 correctly terminated jobs 
-            Integrated cross-section
+             Integrated cross-section
             6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
         for aMC@NLO/aMC@LO, and as
 
@@ -1374,7 +1447,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
 random seed found in 'randinit' is (\d+)
 Integrated abs\(cross-section\)
 \s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-Found (\d+) correctly terminated jobs 
 Integrated cross-section
 \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
         else:
@@ -1387,15 +1459,16 @@ Integrated cross-section
         if not match or output[1]:
             logger.info('Return code of the event collection: '+str(output[1]))
             logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results')
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+            'Please check the .log files inside the directories which failed.')
 #        if int(match.groups()[0]) != self.njobs:
 #            raise aMCatNLOError('Not all jobs terminated successfully')
         if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
             return {'randinit' : int(match.groups()[1]),
                     'xseca' : float(match.groups()[2]),
                     'erra' : float(match.groups()[3]),
-                    'xsect' : float(match.groups()[6]),
-                    'errt' : float(match.groups()[7])}
+                    'xsect' : float(match.groups()[5]),
+                    'errt' : float(match.groups()[6])}
         else:
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
@@ -1412,88 +1485,26 @@ Integrated cross-section
                 process = line.replace('generate ', '')
         lpp = {'0':'l', '1':'p', '-1':'pbar'}
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp1']], 
+        (process, lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
         
         # Gather some basic statistics for the run and extracted from the log files.
-        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
-        # > Errors is a list of tuples with this format (log_file,nErrors)
-        stats = {'UPS':{}, 'Errors':[]}
-        if mode in ['aMC@NLO', 'noshower']: 
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','GV*','log_MINT*.txt'))
-            all_log_files = sum([glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*',\
-                                    'G%s*'%foldname,'log*.txt')) for foldname in ['V','F']],[])
-        elif mode in ['aMC@LO', 'noshowerLO']: 
-            log_GV_files = ''
+                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
             all_log_files = glob.glob(pjoin(self.me_dir, \
-                                          'SubProcesses', 'P*','GB*','log*.txt'))
+                                          'SubProcesses', 'P*','G*','log*.txt'))
         elif mode == 'NLO':
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','viSB_G*','log*.txt'))
+                                    'SubProcesses', 'P*','all_G*','log*.txt'))
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','novB_',\
-                                                                   'viSB_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['all_']],[])
         elif mode == 'LO':
             log_GV_files = ''
             all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['grid_','born_']],[])
+              '%sG*'%foldName,'log*.txt')) for foldName in ['born_']],[])
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
-        # Recuperate the fraction of unstable PS points found in the runs for the
-        # virtuals
-        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<ntot>\d+).*"+\
-             r".*Stability unknown\:\s+(?P<nsun>\d+).*"+\
-             r".*Stable PS point\:\s+(?P<nsps>\d+).*"+\
-             r".*Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
-             r".*Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
-             r".*Double precision used\:\s+(?P<nddp>\d+).*"+\
-             r".*Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
-             r".*Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
-             r".*Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r".*Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r".*Unknown return code \(1\)\:\s+(?P<n1>\d+).*",re.DOTALL)
-#        UPS_stat_finder = re.compile(r".*Total points tried\:\s+(?P<nPS>\d+).*"+\
-#                      r"Unstable points \(check UPS\.log for the first 10\:\)"+\
-#                                                r"\s+(?P<nUPS>\d+).*",re.DOTALL)
-        for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')             
-            UPS_stats = re.search(UPS_stat_finder,logfile.read())
-            logfile.close()
-            if not UPS_stats is None:
-                channel_name = '/'.join(gv_log.split('/')[-5:-1])
-                try:
-                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
-                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
-                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
-                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
-                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
-                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
-                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
-                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
-                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
-                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
-                except KeyError:
-                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
-                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
-                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
-                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
-                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
-        # Find the number of potential errors found in all log files
-        # This re is a simple match on a case-insensitve 'error' but there is 
-        # also some veto added for excluding the sentence 
-        #  "See Section 6 of paper for error calculation."
-        # which appear in the header of lhapdf in the logs.
-        err_finder = re.compile(\
-             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
-        for log in all_log_files:
-            logfile=open(log,'r')
-            nErrors = len(re.findall(err_finder, logfile.read()))
-            logfile.close()
-            if nErrors != 0:
-                stats['Errors'].append((str(log),nErrors))
             
         
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
@@ -1532,7 +1543,6 @@ Integrated cross-section
                          self.run_card['parton_shower'],
                          neg_frac, 
                          misc.format_timer(time.time()-self.start_time))
-                   
 
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup (cross-section is non-physical):',
@@ -1551,7 +1561,105 @@ Integrated cross-section
             logger.info(message+'\n')
             return
 
-        # Now display the general statistics
+        # Some advanced general statistics are shown in the debug message at the
+        # end of the run
+        # Make sure it never stops a run
+        try:
+            message, debug_msg = \
+               self.compile_advanced_stats(log_GV_files, all_log_files, message)
+        except Exception as e:
+            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+
+        logger.debug(debug_msg+'\n')
+        logger.info(message+'\n')
+        
+        # Now copy relevant information in the Events/Run_<xxx> directory
+        evt_path = pjoin(self.me_dir, 'Events', self.run_name)
+        open(pjoin(evt_path, 'summary.txt'),'w').write(message+'\n')
+        open(pjoin(evt_path, '.full_summary.txt'), 
+                                       'w').write(message+'\n\n'+debug_msg+'\n')
+                                       
+        self.archive_files(evt_path,mode)
+
+    def archive_files(self, evt_path, mode):
+        """ Copies in the Events/Run_<xxx> directory relevant files characterizing
+        the run."""
+
+        files_to_arxiv = [pjoin('Cards','param_card.dat'),
+                          pjoin('Cards','MadLoopParams.dat'),
+                          pjoin('Cards','FKS_params.dat'),
+                          pjoin('Cards','run_card.dat'),                          
+                          pjoin('Subprocesses','setscales.f'),
+                          pjoin('Subprocesses','cuts.f')]
+
+        if mode in ['NLO', 'LO']:
+            files_to_arxiv.append(pjoin('Cards','FO_analyse_card.dat'))
+
+        if not os.path.exists(pjoin(evt_path,'RunMaterial')):
+            os.mkdir(pjoin(evt_path,'RunMaterial'))
+
+        for path in files_to_arxiv:
+            if os.path.isfile(pjoin(self.me_dir,path)):
+                files.cp(pjoin(self.me_dir,path),pjoin(evt_path,'RunMaterial'))
+        misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
+        shutil.rmtree(pjoin(evt_path,'RunMaterial'))
+
+    def compile_advanced_stats(self,log_GV_files,all_log_files,message):
+        """ This functions goes through the log files given in arguments and 
+        compiles statistics about MadLoop stability, virtual integration 
+        optimization and detection of potential error messages into a nice
+        debug message to printed at the end of the run """
+        
+        # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
+        # > Errors is a list of tuples with this format (log_file,nErrors)
+        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
+        mint_search = re.compile(r"MINT(?P<ID>\d*).txt")
+
+        # ==================================     
+        # == MadLoop stability statistics ==
+        # ==================================
+    
+        # Recuperate the fraction of unstable PS points found in the runs for
+        # the virtuals
+        UPS_stat_finder = re.compile(
+             r"Satistics from MadLoop:.*"+\
+             r"Total points tried\:\s+(?P<ntot>\d+).*"+\
+             r"Stability unknown\:\s+(?P<nsun>\d+).*"+\
+             r"Stable PS point\:\s+(?P<nsps>\d+).*"+\
+             r"Unstable PS point \(and rescued\)\:\s+(?P<nups>\d+).*"+\
+             r"Exceptional PS point \(unstable and not rescued\)\:\s+(?P<neps>\d+).*"+\
+             r"Double precision used\:\s+(?P<nddp>\d+).*"+\
+             r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
+             r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
+             r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
+             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
+    
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')            
+            UPS_stats = re.search(UPS_stat_finder,logfile.read())
+            logfile.close()
+            if not UPS_stats is None:
+                channel_name = '/'.join(gv_log.split('/')[-5:-1])
+                try:
+                    stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
+                    stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
+                    stats['UPS'][channel_name][2] += int(UPS_stats.group('nsps'))
+                    stats['UPS'][channel_name][3] += int(UPS_stats.group('nups'))
+                    stats['UPS'][channel_name][4] += int(UPS_stats.group('neps'))
+                    stats['UPS'][channel_name][5] += int(UPS_stats.group('nddp'))
+                    stats['UPS'][channel_name][6] += int(UPS_stats.group('nqdp'))
+                    stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
+                    stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
+                    stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
+                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
+                except KeyError:
+                    stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
+                      int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
+                      int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
+                      int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
+                      int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
+                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -1568,46 +1676,299 @@ Integrated cross-section
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
+
+            tmpStr = ""
+            tmpStr += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+            tmpStr += '\n    Stability unknown:                   %d'%nTotsun
+            tmpStr += '\n    Stable PS point:                     %d'%nTotsps
+            tmpStr += '\n    Unstable PS point (and rescued):     %d'%nTotups
+            tmpStr += '\n    Unstable PS point (and not rescued): %d'%nToteps
+            tmpStr += '\n    Only double precision used:          %d'%nTotddp
+            tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
+            tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            if nTot100 != 0:
+                debug_msg += '\n  Unknown return code (100):             %d'%nTot100
+            if nTot10 != 0:
+                debug_msg += '\n  Unknown return code (10):              %d'%nTot10
+            if nTot1 != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+
             if maxUPS[1]>0.001:
-                message += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                message += '\n          Stability unknown:                   %d'%nTotsun
-                message += '\n          Stable PS point:                     %d'%nTotsps
-                message += '\n          Unstable PS point (and rescued):     %d'%nTotups
-                message += '\n          Unstable PS point (and not rescued): %d'%nToteps
-                message += '\n          Only double precision used:          %d'%nTotddp
-                message += '\n          Quadruple precision used:            %d'%nTotqdp
-                message += '\n          Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    message += '\n          Unknown return code (100):           %d'%nTot100
-                if nTot10 != 0:
-                    message += '\n          Unknown return code (10):            %d'%nTot10
-                if nTot1 != 0:
-                    message += '\n          Unknown return code (1):             %d'%nTot1
-                message += '\n      Total number of unstable PS point detected:'+\
+                message += tmpStr
+                message += '\n  Total number of unstable PS point detected:'+\
                                  ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
-                message += '\n      Maximum fraction of UPS points in '+\
+                message += '\n    Maximum fraction of UPS points in '+\
                           'channel %s (%4.2f%%)'%maxUPS
-                message += '\n      Please report this to the authors while '+\
+                message += '\n    Please report this to the authors while '+\
                                                                 'providing the file'
-                message += '\n      %s'%str(pjoin(os.path.dirname(self.me_dir),
+                message += '\n    %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n      Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                debug_msg += '\n          Stability unknown:                   %d'%nTotsun
-                debug_msg += '\n          Stable PS point:                     %d'%nTotsps
-                debug_msg += '\n          Unstable PS point (and rescued):     %d'%nTotups
-                debug_msg += '\n          Unstable PS point (and not rescued): %d'%nToteps
-                debug_msg += '\n          Only double precision used:          %d'%nTotddp
-                debug_msg += '\n          Quadruple precision used:            %d'%nTotqdp
-                debug_msg += '\n          Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    debug_msg += '\n          Unknown return code (100):           %d'%nTot100
-                if nTot10 != 0:
-                    debug_msg += '\n          Unknown return code (10):            %d'%nTot10
-                if nTot1 != 0:
-                    debug_msg += '\n          Unknown return code (1):             %d'%nTot1
-        logger.info(message+'\n')
-                 
+                debug_msg += tmpStr
+
+    
+        # ====================================================
+        # == aMC@NLO virtual integration optimization stats ==
+        # ====================================================
+    
+        virt_tricks_finder = re.compile(
+          r"accumulated results Virtual ratio\s*=\s*-?(?P<v_ratio>[\d\+-Eed\.]*)"+\
+            r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_ratio_err>[\d\+-Eed\.]*)\s*\%\)\s*\n"+\
+          r"accumulated results ABS virtual\s*=\s*-?(?P<v_abs_contr>[\d\+-Eed\.]*)"+\
+            r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_abs_contr_err>[\d\+-Eed\.]*)\s*\%\)")
+    
+        virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
+                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*-?(?P<v_average>[\d\+-Eed\.]*)")
+        
+        channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
+        
+        channel_contr_list = {}
+        for gv_log in log_GV_files:
+            logfile=open(gv_log,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-3:-1])
+            vf_stats = None
+            for vf_stats in re.finditer(virt_frac_finder, log):
+                pass
+            if not vf_stats is None:
+                v_frac = float(vf_stats.group('v_frac'))
+                v_average = float(vf_stats.group('v_average'))
+                try:
+                    if v_frac < stats['virt_stats']['v_frac_min'][0]:
+                        stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
+                    if v_frac > stats['virt_stats']['v_frac_max'][0]:
+                        stats['virt_stats']['v_frac_max']=(v_frac,channel_name)
+                    stats['virt_stats']['v_frac_avg'][0] += v_frac
+                    stats['virt_stats']['v_frac_avg'][1] += 1
+                except KeyError:
+                    stats['virt_stats']['v_frac_min']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_max']=[v_frac,channel_name]
+                    stats['virt_stats']['v_frac_avg']=[v_frac,1]
+
+
+            ccontr_stats = None
+            for ccontr_stats in re.finditer(channel_contr_finder, log):
+                pass
+            if not ccontr_stats is None:
+                contrib = float(ccontr_stats.group('v_contr'))
+                try:
+                    if contrib>channel_contr_list[channel_name]:
+                        channel_contr_list[channel_name]=contrib
+                except KeyError:
+                    channel_contr_list[channel_name]=contrib
+                
+                
+        # Now build the list of relevant virt log files to look for the maxima
+        # of virt fractions and such.
+        average_contrib = 0.0
+        for value in channel_contr_list.values():
+            average_contrib += value
+        if len(channel_contr_list.values()) !=0:
+            average_contrib = average_contrib / len(channel_contr_list.values())
+        
+        relevant_log_GV_files = []
+        excluded_channels = set([])
+        all_channels = set([])
+        for log_file in log_GV_files:
+            channel_name = '/'.join(log_file.split('/')[-3:-1])
+            all_channels.add(channel_name)
+            try:
+                if channel_contr_list[channel_name] > (0.1*average_contrib):
+                    relevant_log_GV_files.append(log_file)
+                else:
+                    excluded_channels.add(channel_name)
+            except KeyError:
+                    relevant_log_GV_files.append(log_file)
+        
+        # Now we want to use the latest occurence of accumulated result in the log file
+        for gv_log in relevant_log_GV_files:
+            logfile=open(gv_log,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-3:-1])
+            
+            vt_stats = None
+            for vt_stats in re.finditer(virt_tricks_finder, log):
+                pass
+            if not vt_stats is None:
+                vt_stats_group = vt_stats.groupdict()
+                v_ratio = float(vt_stats.group('v_ratio'))
+                v_ratio_err = float(vt_stats.group('v_ratio_err'))
+                v_contr = float(vt_stats.group('v_abs_contr'))
+                v_contr_err = float(vt_stats.group('v_abs_contr_err'))
+                try:
+                    if v_ratio < stats['virt_stats']['v_ratio_min'][0]:
+                        stats['virt_stats']['v_ratio_min']=(v_ratio,channel_name)
+                    if v_ratio > stats['virt_stats']['v_ratio_max'][0]:
+                        stats['virt_stats']['v_ratio_max']=(v_ratio,channel_name)
+                    if v_ratio < stats['virt_stats']['v_ratio_err_min'][0]:
+                        stats['virt_stats']['v_ratio_err_min']=(v_ratio_err,channel_name)
+                    if v_ratio > stats['virt_stats']['v_ratio_err_max'][0]:
+                        stats['virt_stats']['v_ratio_err_max']=(v_ratio_err,channel_name)
+                    if v_contr < stats['virt_stats']['v_contr_min'][0]:
+                        stats['virt_stats']['v_contr_min']=(v_contr,channel_name)
+                    if v_contr > stats['virt_stats']['v_contr_max'][0]:
+                        stats['virt_stats']['v_contr_max']=(v_contr,channel_name)
+                    if v_contr_err < stats['virt_stats']['v_contr_err_min'][0]:
+                        stats['virt_stats']['v_contr_err_min']=(v_contr_err,channel_name)
+                    if v_contr_err > stats['virt_stats']['v_contr_err_max'][0]:
+                        stats['virt_stats']['v_contr_err_max']=(v_contr_err,channel_name)
+                except KeyError:
+                    stats['virt_stats']['v_ratio_min']=[v_ratio,channel_name]
+                    stats['virt_stats']['v_ratio_max']=[v_ratio,channel_name]
+                    stats['virt_stats']['v_ratio_err_min']=[v_ratio_err,channel_name]
+                    stats['virt_stats']['v_ratio_err_max']=[v_ratio_err,channel_name]
+                    stats['virt_stats']['v_contr_min']=[v_contr,channel_name]
+                    stats['virt_stats']['v_contr_max']=[v_contr,channel_name]
+                    stats['virt_stats']['v_contr_err_min']=[v_contr_err,channel_name]
+                    stats['virt_stats']['v_contr_err_max']=[v_contr_err,channel_name]
+        
+            vf_stats = None
+            for vf_stats in re.finditer(virt_frac_finder, log):
+                pass
+            if not vf_stats is None:
+                v_frac = float(vf_stats.group('v_frac'))
+                v_average = float(vf_stats.group('v_average'))
+                try:
+                    if v_average < stats['virt_stats']['v_average_min'][0]:
+                        stats['virt_stats']['v_average_min']=(v_average,channel_name)
+                    if v_average > stats['virt_stats']['v_average_max'][0]:
+                        stats['virt_stats']['v_average_max']=(v_average,channel_name)
+                    stats['virt_stats']['v_average_avg'][0] += v_average
+                    stats['virt_stats']['v_average_avg'][1] += 1
+                except KeyError:
+                    stats['virt_stats']['v_average_min']=[v_average,channel_name]
+                    stats['virt_stats']['v_average_max']=[v_average,channel_name]
+                    stats['virt_stats']['v_average_avg']=[v_average,1]
+        
+        try:
+            debug_msg += '\n\n  Statistics on virtual integration optimization : '
+            
+            debug_msg += '\n    Maximum virt fraction computed         %.3f (%s)'\
+                                       %tuple(stats['virt_stats']['v_frac_max'])
+            debug_msg += '\n    Minimum virt fraction computed         %.3f (%s)'\
+                                       %tuple(stats['virt_stats']['v_frac_min'])
+            debug_msg += '\n    Average virt fraction computed         %.3f'\
+              %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
+            debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
+                 (len(excluded_channels),len(all_channels))
+            debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
+                                    %tuple(stats['virt_stats']['v_average_max'])          
+            debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
+                                     %tuple(stats['virt_stats']['v_ratio_max'])
+            tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
+                                  %tuple(stats['virt_stats']['v_ratio_err_max'])
+            debug_msg += tmpStr
+            # After all it was decided that it is better not to alarm the user unecessarily
+            # with such printout of the statistics.
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+#                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += "\n  Suspiciously large MC error in :"
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += tmpStr
+
+            tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
+                                  %tuple(stats['virt_stats']['v_contr_err_max'])
+            debug_msg += tmpStr
+#            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+#                message += tmpStr
+            
+
+        except KeyError:
+            debug_msg += '\n  Could not find statistics on the integration optimization. '
+    
+        # =======================================
+        # == aMC@NLO timing profile statistics ==
+        # =======================================
+    
+        timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
+                     "(?P<time>[\d\+-Eed\.]*)\s*")
+
+        for logf in all_log_files:
+            logfile=open(logf,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(logf.split('/')[-3:-1])
+            mint = re.search(mint_search,logf)
+            if not mint is None:
+               channel_name =   channel_name+' [step %s]'%mint.group('ID')
+
+            for time_stats in re.finditer(timing_stat_finder, log):
+                try:
+                    stats['timings'][time_stats.group('name')][channel_name]+=\
+                                                 float(time_stats.group('time'))
+                except KeyError:
+                    if time_stats.group('name') not in stats['timings'].keys():
+                        stats['timings'][time_stats.group('name')] = {}
+                    stats['timings'][time_stats.group('name')][channel_name]=\
+                                                 float(time_stats.group('time'))
+        
+        # useful inline function
+        Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
+        try:
+            totTimeList = [(time, chan) for chan, time in \
+                                              stats['timings']['Total'].items()]
+        except KeyError:
+            totTimeList = []
+
+        totTimeList.sort()
+        if len(totTimeList)>0:
+            debug_msg += '\n\n  Inclusive timing profile :'
+            debug_msg += '\n    Overall slowest channel          %s (%s)'%\
+                                     (Tstr(totTimeList[-1][0]),totTimeList[-1][1])
+            debug_msg += '\n    Average channel running time     %s'%\
+                       Tstr(sum([el[0] for el in totTimeList])/len(totTimeList))
+            debug_msg += '\n    Aggregated total running time    %s'%\
+                                        Tstr(sum([el[0] for el in totTimeList]))       
+        else:            
+            debug_msg += '\n\n  Inclusive timing profile non available.'
+        
+        sorted_keys = sorted(stats['timings'].keys(), key= lambda stat: \
+                              sum(stats['timings'][stat].values()), reverse=True)
+        for name in sorted_keys:
+            if name=='Total':
+                continue
+            if sum(stats['timings'][name].values())<=0.0:
+                debug_msg += '\n  Zero time record for %s.'%name
+                continue
+            try:
+                TimeList = [((100.0*time/stats['timings']['Total'][chan]), 
+                     chan) for chan, time in stats['timings'][name].items()]
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n\n  Timing profile for %s unavailable.'%name
+                continue
+            TimeList.sort()
+            debug_msg += '\n  Timing profile for <%s> :'%name
+            try:
+                debug_msg += '\n    Overall fraction of time         %.3f %%'%\
+                       float((100.0*(sum(stats['timings'][name].values())/
+                                      sum(stats['timings']['Total'].values()))))
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n    Overall fraction of time unavailable.'
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
+
+        # =============================     
+        # == log file eror detection ==
+        # =============================
+        
+        # Find the number of potential errors found in all log files
+        # This re is a simple match on a case-insensitve 'error' but there is 
+        # also some veto added for excluding the sentence 
+        #  "See Section 6 of paper for error calculation."
+        # which appear in the header of lhapdf in the logs.
+        err_finder = re.compile(\
+             r"(?<!of\spaper\sfor\s)\bERROR\b(?!\scalculation\.)",re.IGNORECASE)
+        for log in all_log_files:
+            logfile=open(log,'r')
+            nErrors = len(re.findall(err_finder, logfile.read()))
+            logfile.close()
+            if nErrors != 0:
+                stats['Errors'].append((str(log),nErrors))
+         
         nErrors = sum([err[1] for err in stats['Errors']],0)
         if nErrors != 0:
             debug_msg += '\n      WARNING:: A total of %d error%s ha%s been '\
@@ -1624,9 +1985,8 @@ Integrated cross-section
                 debug_msg += '\n      And another %d error%s in %d other log file%s'%\
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
-        logger.debug(debug_msg)
-
-
+                           
+        return message, debug_msg
 
 
     def reweight_and_collect_events(self, options, mode, nevents, event_norm):
@@ -1637,7 +1997,7 @@ Integrated cross-section
         if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
-        self.update_status('Collecting events', level='parton')
+        self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'))
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
@@ -1661,14 +2021,14 @@ Integrated cross-section
             self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
                 % (evt_file))
+        self.results.add_detail('nb_event', nevents)
+        self.update_status('Events generated', level='parton', update_results=True)
         return evt_file
 
 
     def run_mcatnlo(self, evt_file):
         """runs mcatnlo on the generated event file, to produce showered-events"""
-        logger.info('   Prepairing MCatNLO run')
-        self.run_name = os.path.split(\
-                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
+        logger.info('Prepairing MCatNLO run')
 
         try:
             misc.call(['gunzip %s.gz' % evt_file], shell=True)
@@ -1678,7 +2038,51 @@ Integrated cross-section
         self.banner = banner_mod.Banner(evt_file)
         shower = self.banner.get_detail('run_card', 'parton_shower').upper()
         self.banner_to_mcatnlo(evt_file)
-        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
+
+        # if fastjet has to be linked (in extralibs) then
+        # add lib /include dirs for fastjet if fastjet-config is present on the
+        # system, otherwise add fjcore to the files to combine
+        if 'fastjet' in self.shower_card['extralibs']:
+            #first, check that stdc++ is also linked
+            if not 'stdc++' in self.shower_card['extralibs']:
+                logger.warning('Linking FastJet: adding stdc++ to EXTRALIBS')
+                self.shower_card['extralibs'] += ' stdc++'
+            # then check if options[fastjet] corresponds to a valid fj installation
+            try:
+                #this is for a complete fj installation
+                p = subprocess.Popen([self.options['fastjet'], '--prefix'], \
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                output, error = p.communicate()
+                #remove the line break from output (last character)
+                output = output[:-1]
+                # add lib/include paths
+                if not pjoin(output, 'lib') in self.shower_card['extrapaths']:
+                    logger.warning('Linking FastJet: updating EXTRAPATHS')
+                    self.shower_card['extrapaths'] += ' ' + pjoin(output, 'lib')
+                if not pjoin(output, 'include') in self.shower_card['includepaths']:
+                    logger.warning('Linking FastJet: updating INCLUDEPATHS')
+                    self.shower_card['includepaths'] += ' ' + pjoin(output, 'include')
+                # to be changed in the fortran wrapper
+                include_line = '#include "fastjet/ClusterSequence.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fastjet;//NAMESPACE_FJ'
+            except Exception:
+                logger.warning('Linking FastJet: using fjcore')
+                # this is for FJcore, so no FJ library has to be linked
+                self.shower_card['extralibs'].replace('fasjtet', '')
+                if not 'fjcore.o' in self.shower_card['analyse']:
+                    self.shower_card['analyse'] += ' fjcore.o'
+                # to be changed in the fortran wrapper
+                include_line = '#include "fjcore.hh"//INCLUDE_FJ' 
+                namespace_line = 'namespace fj = fjcore;//NAMESPACE_FJ'
+            # change the fortran wrapper with the correct namespaces/include
+            fjwrapper_lines = open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc')).read().split('\n')
+            for line in fjwrapper_lines:
+                if '//INCLUDE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = include_line
+                if '//NAMESPACE_FJ' in line:
+                    fjwrapper_lines[fjwrapper_lines.index(line)] = namespace_line
+            open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
+                    '\n'.join(fjwrapper_lines) + '\n')
 
         if 'LD_LIBRARY_PATH' in os.environ.keys():
             ldlibrarypath = os.environ['LD_LIBRARY_PATH']
@@ -1687,18 +2091,20 @@ Integrated cross-section
         for path in self.shower_card['extrapaths'].split():
             ldlibrarypath += ':%s' % path
         if shower == 'HERWIGPP':
-            ldlibrarypath += ':%s' % pjoin(self.shower_card['hepmcpath'], 'lib')
+            ldlibrarypath += ':%s' % pjoin(self.options['hepmc_path'], 'lib')
         os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
 
+        shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
 
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
-        self.update_status('   Compiling MCatNLO for %s...' % shower, level='parton') 
+        self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
         exe = 'MCATNLO_%s_EXE' % shower
-        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)):
+        if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
+            not os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe')):
             print open(mcatnlo_log).read()
             raise aMCatNLOError('Compilation failed, check %s for details' % mcatnlo_log)
         logger.info('                     ... done')
@@ -1712,17 +2118,22 @@ Integrated cross-section
         os.mkdir(rundir)
         files.cp(shower_card_path, rundir)
 
-        self.update_status('Running MCatNLO in %s (this may take some time)...' % rundir,
-                level='parton')
-        files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
-        files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        self.update_status('Showering events...', level='shower')
+        logger.info('(Running in %s)' % rundir)
+        if shower != 'PYTHIA8':
+            files.mv(pjoin(self.me_dir, 'MCatNLO', exe), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'MCATNLO_%s_input' % shower), rundir)
+        # special treatment for pythia8
+        else:
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
+            files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
                 misc.call(['ln -s %s %s' % \
-                (pjoin(self.shower_card['hwpppath'], 'bin', 'Herwig++'), rundir)], shell=True)
+                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
             except Exception:
-                raise aMCatNLOError('The Herwig++ path set in the shower_card is not valid.')
+                raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
             if os.path.exists(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so')):
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
@@ -1730,8 +2141,18 @@ Integrated cross-section
         evt_name = os.path.basename(evt_file)
         misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
             pjoin(rundir,self.run_name))], shell=True)
-
-        misc.call(['./%s' % exe], cwd = rundir, 
+        # special treatment for pythia8
+        if shower=='PYTHIA8':
+            open(pjoin(rundir, exe), 'w').write(\
+                 '#!/bin/bash\nsource %s\n./Pythia8.exe Pythia8.cmd\n'\
+                % pjoin(self.options['pythia8_path'], 'examples', 'config.sh'))
+            os.system('chmod  +x %s' % pjoin(rundir,exe))
+            misc.call(['./%s' % exe], cwd = rundir, 
+                stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
+                shell=True)
+        else:
+            misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
@@ -1768,9 +2189,38 @@ Integrated cross-section
                             ' and hadronized events in the HEPMC format obtained' + \
                             ' showering the parton-level event file %s.gz with %s') % \
                             (hep_file, evt_file, shower))
+            #this is for pythia8
+            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
+                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
+                count = 0
+                while os.path.exists(hep_file + '.gz'):
+                    count +=1
+                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
+
+                misc.call(['mv %s %s' % \
+                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
+                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip %s' % hep_file], shell=True)
+                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
+                            ' and hadronized events in the HEPMC format obtained' + \
+                            ' showering the parton-level event file %s.gz with %s') % \
+                            (hep_file, evt_file, shower))
 
             else:
-                raise aMCatNLOError('No file has been generated, an error occurred. More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                raise aMCatNLOError('No file has been generated, an error occurred.'+\
+             ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
+                
+            # Now arxiv the shower card used if RunMaterial is present
+            run_dir_path = pjoin(rundir,self.run_name)
+            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
+                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                              %(shower, count)))
+                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                               cwd=run_dir_path)
+                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+            
         else:
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
@@ -1807,6 +2257,7 @@ Integrated cross-section
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
                         evt_file, shower))
 
+        self.update_status('Run complete', level='shower', update_results=True)
 
 
     ############################################################################
@@ -1814,8 +2265,9 @@ Integrated cross-section
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
                        'pythia': ['pythia','pgs','delphes'],
+                       'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[]}
@@ -1854,7 +2306,7 @@ Integrated cross-section
 
         new_tag = False
         # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level)
+        self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -1864,7 +2316,7 @@ Integrated cross-section
             #This is only for case when you want to trick the interface
             logger.warning('Trying to run data on unknown run.')
             self.results.add_run(name, self.run_card)
-            self.results.update('add run %s' % name, 'all', makehtml=False)
+            self.results.update('add run %s' % name, 'all', makehtml=True)
         else:
             for tag in upgrade_tag[level]:
                 
@@ -1898,7 +2350,68 @@ Integrated cross-section
                 tagRun = self.results[self.run_name][i]
                 if tagRun.pythia:
                     return tagRun['tag']
+
+
+    def store_result(self):
+        """ tar the pythia results. This is done when we are quite sure that 
+        the pythia output will not be use anymore """
+
+        if not self.run_name:
+            return
+
+        self.results.save()
+
+        if not self.to_store:
+            return 
+        
+        tag = self.run_card['run_tag']
+#        if 'pythia' in self.to_store:
+#            self.update_status('Storing Pythia files of Previous run', level='pythia', error=True)
+#            os.system('mv -f %(path)s/pythia_events.hep %(path)s/%(name)s/%(tag)s_pythia_events.hep' % 
+#                  {'name': self.run_name, 'path' : pjoin(self.me_dir,'Events'),
+#                   'tag':tag})
+#            os.system('gzip -f %s/%s_pythia_events.hep' % ( 
+#                                pjoin(self.me_dir,'Events',self.run_name), tag))
+#            self.to_store.remove('pythia')
+#            self.update_status('Done', level='pythia',makehtml=False,error=True)
+        
+        self.to_store = []
+
+
+    def get_init_dict(self, evt_file):
+        """reads the info in the init block and returns them in a dictionary"""
+        ev_file = open(evt_file)
+        init = ""
+        found = False
+        while True:
+            line = ev_file.readline()
+            if "<init>" in line:
+                found = True
+            elif found and not line.startswith('#'):
+                init += line
+            if "</init>" in line or "<event>" in line:
+                break
+        ev_file.close()
+
+#       IDBMUP(1),IDBMUP(2),EBMUP(1),EBMUP(2), PDFGUP(1),PDFGUP(2),
+#       PDFSUP(1),PDFSUP(2),IDWTUP,NPRUP
+# these are not included (so far) in the init_dict
+#       XSECUP(1),XERRUP(1),XMAXUP(1),LPRUP(1)
             
+        init_dict = {}
+        init_dict['idbmup1'] = int(init.split()[0])
+        init_dict['idbmup2'] = int(init.split()[1])
+        init_dict['ebmup1'] = float(init.split()[2])
+        init_dict['ebmup2'] = float(init.split()[3])
+        init_dict['pdfgup1'] = int(init.split()[4])
+        init_dict['pdfgup2'] = int(init.split()[5])
+        init_dict['pdfsup1'] = int(init.split()[6])
+        init_dict['pdfsup2'] = int(init.split()[7])
+        init_dict['idwtup'] = int(init.split()[8])
+        init_dict['nprup'] = int(init.split()[9])
+
+        return init_dict
+
 
     def banner_to_mcatnlo(self, evt_file):
         """creates the mcatnlo input script using the values set in the header of the event_file.
@@ -1907,6 +2420,7 @@ Integrated cross-section
         pdlabel = self.banner.get('run_card', 'pdlabel')
         itry = 0
         nevents = self.shower_card['nevents']
+        init_dict = self.get_init_dict(evt_file)
 
         if nevents < 0 or nevents > self.banner.get_detail('run_card', 'nevents'):
             nevents = self.banner.get_detail('run_card', 'nevents')
@@ -1916,16 +2430,13 @@ Integrated cross-section
             mass = float(line.split()[1])
             mcmass_dict[pdg] = mass
 
-        # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
-            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
-        content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
+        #content += 'PDFSET=%s\n' % self.banner.get_detail('run_card', 'lhaid')
+        content += 'PDFSET=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
         content += 'TMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 6).value
         content += 'TWIDTH=%s\n' % self.banner.get_detail('param_card', 'decay', 6).value
         content += 'ZMASS=%s\n' % self.banner.get_detail('param_card', 'mass', 23).value
@@ -1949,6 +2460,27 @@ Integrated cross-section
         content += 'BMASS=%s\n' % mcmass_dict[5]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
+        # check if need to link lhapdf
+        if pdlabel =='\'lhapdf\'':
+            self.link_lhapdf(pjoin(self.me_dir, 'lib'))
+            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            content += 'LHAPDFPATH=%s\n' % lhapdfpath
+        else:
+            #overwrite the PDFCODE variable in order to use internal pdf
+            content += 'LHAPDFPATH=\n' 
+            content += 'PDFCODE=0\n'
+
+        # add the pythia8/hwpp path(s)
+        if self.options['pythia8_path']:
+            content+='PY8PATH=%s\n' % self.options['pythia8_path']
+        if self.options['hwpp_path']:
+            content+='HWPPPATH=%s\n' % self.options['hwpp_path']
+        if self.options['thepeg_path']:
+            content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
+        if self.options['hepmc_path']:
+            content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
+
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
         output.write(content)
@@ -2097,27 +2629,95 @@ Integrated cross-section
         starttime = time.time()
         #logger.info('     Waiting for submitted jobs to complete')
         update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
-                      starttime=starttime, level='parton', update_results=False)
+                      starttime=starttime, level='parton', update_results=True)
         try:
             self.cluster.wait(self.me_dir, update_status)
         except:
             self.cluster.remove()
             raise
 
-    def run_all(self, job_dict, arg_list, run_type='monitor'):
+    def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
         self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
+        njob_split = 0
         self.ijob = 0
         if self.cluster_mode == 0:
             self.update_status((self.njobs - 1, 1, 0, run_type), level='parton')
+
+        #  this is to keep track, if splitting evt generation, of the various 
+        # folders/args in order to resubmit the jobs if some of them fail
+        self.split_folders = {}
+
         for args in arg_list:
             for Pdir, jobs in job_dict.items():
                 for job in jobs:
-                    self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    if not split_jobs:
+                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                    else:
+                        for n in self.find_jobs_to_split(Pdir, job, args[1]):
+                            self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
+                            njob_split += 1
                     # print some statistics if running serially
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
+        if njob_split > 0:
+            self.njobs = njob_split
+        
         self.wait_for_complete(run_type)
+
+
+
+    def check_event_files(self):
+        """check the integrity of the event files after splitting, and resubmit 
+        those which are not nicely terminated"""
+        to_resubmit = []
+        for dir in self.split_folders.keys():
+            last_line = ''
+            try:
+                last_line = subprocess.Popen('tail -n1 %s ' % \
+                    pjoin(dir, 'events.lhe'), \
+                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            except IOError:
+                pass
+
+            if last_line != "</LesHouchesEvents>":
+                to_resubmit.append(dir)
+
+        self.njobs = 0
+        if to_resubmit:
+            run_type = 'Resubmitting broken jobs'
+            logger.info('Some event files are broken, corresponding jobs will be resubmitted.')
+            logger.debug('Resubmitting\n' + '\n'.join(to_resubmit) + '\n')
+            for dir in to_resubmit:
+                files.rm([dir])
+                job = self.split_folders[dir][0]
+                args = self.split_folders[dir][1:]
+                run_type = 'monitor'
+                cwd = os.path.split(dir)[0]
+                self.run_exe(job, args, run_type, cwd=cwd )
+                self.njobs +=1
+
+            self.wait_for_complete(run_type)
+
+
+    def find_jobs_to_split(self, pdir, job, arg):
+        """looks into the nevents_unweighed_splitted file to check how many
+        split jobs are needed for this (pdir, job). arg is F, B or V"""
+        # find the number of the integration channel
+        splittings = []
+        ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
+        pattern = re.compile('for i in (\d+) ; do')
+        match = re.search(pattern, ajob)
+        channel = match.groups()[0]
+        # then open the nevents_unweighted_splitted file and look for the 
+        # number of splittings to be done
+        nevents_file = open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted')).read()
+        pattern = re.compile(r"%s_(\d+)/events.lhe" % \
+                          pjoin(pdir, 'G%s%s' % (arg,channel)))
+        matches = re.findall(pattern, nevents_file)
+        for m in matches:
+            splittings.append(m)
+        return splittings
 
 
     def run_exe(self, exe, args, run_type, cwd=None):
@@ -2157,12 +2757,19 @@ Integrated cross-section
                 return self.cluster.submit2(exe, args, cwd=cwd, 
                                  input_files=input_files, output_files=output_files) 
 
-            #this is for the cluster/multicore run
+        #this is for the cluster/multicore run
         elif 'ajob' in exe:
-            input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
-            #submitting
-            self.cluster.submit2(exe, args, cwd=cwd, 
-                         input_files=input_files, output_files=output_files)
+            # check if args is a list of string 
+            if type(args[0]) == str:
+                input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
+                #submitting
+                self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files)
+
+                # keep track of folders and arguments for splitted evt gen
+                if len(args) == 4 and '_' in output_files[-1]:
+                    self.split_folders[pjoin(cwd,output_files[-1])] = [exe] + args
+
         else:
             return self.cluster.submit(exe, args, cwd=cwd)
 
@@ -2176,7 +2783,14 @@ Integrated cross-section
                      pjoin(self.me_dir, 'SubProcesses', 'randinit'),
                      pjoin(cwd, 'symfact.dat'),
                      pjoin(cwd, 'iproc.dat'),
+                     pjoin(cwd, 'param_card.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
+
+        if os.path.exists(pjoin(cwd,'nevents.tar')):
+            input_files.append(pjoin(cwd,'nevents.tar'))
+        
+        if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
+            input_files.append(pjoin(cwd, 'OLE_order.olc'))
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2200,8 +2814,8 @@ Integrated cross-section
         subdir = ' '.join(data).split()
                
         if args[0] == '0':
-            # MADEVENT VEGAS MODE
-            input_files.append(pjoin(cwd, 'madevent_vegas'))
+            # MADEVENT MINT FO MODE
+            input_files.append(pjoin(cwd, 'madevent_mintFO'))
             input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
             #j=$2\_G$i
             for i in subdir:
@@ -2210,12 +2824,11 @@ Integrated cross-section
                     input_files.append(pjoin(cwd, current))
                 output_files.append(current)
                 if len(args) == 4:
+                    args[2] = '-1'
                     # use a grid train on another part
                     base = '%s_G%s' % (args[3],i)
                     if args[0] == '0':
-                        to_move = [n for n in os.listdir(pjoin(cwd, base)) 
-                                                      if n.endswith('.sv1')]
-                        to_move.append('grid.MC_integer')
+                        to_move = ['grid.MC_integer','mint_grids']
                     elif args[0] == '1':
                         to_move = ['mint_grids', 'grid.MC_integer']
                     else: 
@@ -2249,7 +2862,8 @@ Integrated cross-section
                                           starting_dir=pjoin(cwd,current))
                 elif len(args) ==4:
                     keep_fourth_arg = True
-               
+                    # this is for the split event generation
+                    output_files.append('G%s%s_%s' % (args[1], i, args[3]))
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -2282,7 +2896,7 @@ Integrated cross-section
 
         content = \
 """-1 12      ! points, iterations
-0.05       ! desired fractional accuracy
+0.03       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
@@ -2297,7 +2911,7 @@ Integrated cross-section
         file.write(content)
         file.close()
 
-    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters):
+    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters, accuracy='0'):
         """writes the madin.run_mode file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
@@ -2308,7 +2922,7 @@ Integrated cross-section
 
         content = \
 """%s %s  ! points, iterations
-0 ! accuracy
+%s ! accuracy
 2 ! 0 fixed grid 2 adjust
 1 ! 1 suppress amp, 0 doesnt
 1 ! 0 for exact hel sum
@@ -2318,7 +2932,7 @@ Integrated cross-section
 %s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
 %s        ! all, born, real, virt
 """ \
-                    % (npoints,niters,vegas_mode,run_mode)
+                    % (npoints,niters,accuracy,vegas_mode,run_mode)
         file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
         file.write(content)
         file.close()
@@ -2327,11 +2941,20 @@ Integrated cross-section
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
 
+        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+
+        self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
+                          '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
+
+
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
         madloop_log = pjoin(self.me_dir, 'compile_madloop.log')
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         test_log = pjoin(self.me_dir, 'test.log')
+
+        self.update_status('Compiling the code', level=None, update_results=True)
+
 
         libdir = pjoin(self.me_dir, 'lib')
         sourcedir = pjoin(self.me_dir, 'Source')
@@ -2345,11 +2968,14 @@ Integrated cross-section
         if '+' in mode:
             mode = mode.split('+')[0]
         if mode in ['NLO', 'LO']:
-            exe = 'madevent_vegas'
+            exe = 'madevent_mintFO'
             tests = ['test_ME']
+            self.analyse_card.write_card(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'))
         elif mode in ['aMC@NLO', 'aMC@LO','noshower','noshowerLO']:
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
+            # write an analyse_opts with a dummy analysis so that compilation goes through
+            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o\n')
 
         #directory where to compile exe
         p_dirs = [file for file in os.listdir(pjoin(self.me_dir, 'SubProcesses')) 
@@ -2373,12 +2999,18 @@ Integrated cross-section
         if self.run_card['pdlabel'] == 'lhapdf':
             self.link_lhapdf(libdir)
         else:
-            logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+                logger.info('Using built-in libraries for PDFs')
             try:
                 del os.environ['lhapdf']
             except KeyError:
                 pass
 
+        try: 
+            os.environ['fastjet_config'] = self.options['fastjet']
+        except (TypeError, KeyError):
+            os.environ['fastjet_config'] = 'None'
+        
         # make Source
         self.update_status('Compiling source...', level=None)
         misc.compile(['clean4pdf'], cwd = sourcedir)
@@ -2393,12 +3025,15 @@ Integrated cross-section
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
-        if not '[real=QCD]' in proc_card:
-            hasvirt = True
-            os.putenv('madloop', 'true')
-            tests.append('check_poles')
+        if not '[real=QCD]' in proc_card and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+            os.environ['madloop'] = 'true'
+            if mode in ['NLO', 'aMC@NLO', 'noshower']:
+                tests.append('check_poles')
+                hasvirt = True
         else:
             os.unsetenv('madloop')
+            hasvirt = False
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)
@@ -2413,18 +3048,25 @@ Integrated cross-section
                     self.nb_core = int(self.options['nb_core'])
                 except TypeError:
                     self.nb_core = multiprocessing.cpu_count()
-
-            mypool = multiprocessing.Pool(self.nb_core, init_worker) 
-            logger.info('Compiling on %d cores' % self.nb_core)
-            mypool.map(compile_dir,
-                    ((self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode']) for p_dir in p_dirs))
         except ImportError: 
             self.nb_core = 1
-            logger.info('Multiprocessing module not found. Compiling on 1 core')
-            for p_dir in p_dirs:
-                compile_dir(self.me_dir, p_dir, mode, options, 
-                        tests, exe, self.options['run_mode'])
+
+        compile_options = copy.copy(self.options)
+        compile_options['nb_core'] = self.nb_core
+        compile_cluster = cluster.MultiCore(**compile_options)
+        logger.info('Compiling on %d cores' % self.nb_core)
+
+        update_status = lambda i, r, f: self.donothing(i,r,f)
+        for p_dir in p_dirs:
+            compile_cluster.submit(prog = compile_dir, 
+                               argument = [self.me_dir, p_dir, mode, options, 
+                    tests, exe, self.options['run_mode']])
+        try:
+            compile_cluster.wait(self.me_dir, update_status)
+
+        except:
+            compile_cluster.remove()
+            self.quit()
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
@@ -2439,6 +3081,8 @@ Integrated cross-section
         os.unsetenv('madloop')
 
 
+    def donothing(*args):
+        pass
 
 
     def check_tests(self, test, dir):
@@ -2500,6 +3144,7 @@ Integrated cross-section
         if not os.path.exists(pjoin(libdir, 'PDFsets')):
             os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
         os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def write_test_input(self, test):
@@ -2559,66 +3204,173 @@ Integrated cross-section
         if 'reweightonly' not in options:
             options['reweightonly'] = False
         
+        
+        void = 'NOT INSTALLED'
+        switch_order = ['order', 'fixed_order', 'shower','madspin']
+        switch = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
+                  'madspin': void}
+        default_switch = ['ON', 'OFF']
+        allowed_switch_value = {'order': ['LO', 'NLO'],
+                                'fixed_order': default_switch,
+                                'shower': default_switch,
+                                'madspin': default_switch}
+        
+        description = {'order':  'Perturbative order of the calculation:',
+                       'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
+                       'shower': 'Shower the generated events:',
+                       'madspin': 'Decay particles with the MadSpin module:' }
+
+        force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
+                       ('madspin', 'ON'): {'fixed_order':'OFF'},
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF'}
+                       }
+        special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
+
+        assign_switch = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
+        
+
         if mode == 'auto': 
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
-            mode = 'noshower' 
-                
-        available_mode = ['0', '1', '2', '3', '4', '5', '6']
-        name = {'0': 'auto', '1': 'NLO', '2':'aMC@NLO', '3':'noshower', '4': 'LO', '5':'aMC@LO', '6':'noshowerLO'}
-        answers = []
-        for opt in available_mode:
-            value = int(opt)
-            tag = name[opt]
-            answers += [opt, tag]
-            if value > 1:
-                answers.append(10+value)
-                answers.append('%s+madspin' % tag)
-            
-        question = """Which programs do you want to run?
-  0 / auto       : NLO event generation and -if cards exist- shower and madspin.
-  1 / NLO        : Fixed order NLO calculation (no event generation).
-  2 / aMC@NLO    : NLO event generation (include running the shower).
-  3 / noshower   : NLO event generation (without running the shower).
-  4 / LO         : Fixed order LO calculation (no event generation).
-  5 / aMC@LO     : LO event generation (include running the shower).
-  6 / noshowerLO : LO event generation (without running the shower).
-+10 / +madspin   : Add decays with MadSpin (before the shower).\n"""
-
-        if not self.force:
-            if not mode:
-                mode = self.ask(question, '0', answers)
-        elif not mode:
-            mode = 'auto'
-            
-        if mode.isdigit():
-            value =  int(mode)
-            if value > 10:
-                # Running MadSpin
-                mode = str(value-10)
-                mode = name[mode] + '+madspin'
-            else:
-                mode = name[mode]
+            mode = 'noshower'         
         
-        auto = False
-        if mode == 'auto':
-            auto = True
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-                mode = 'aMC@NLO'
+        # Init the switch value according to the current status
+        available_mode = ['0', '1', '2']
+        available_mode.append('3')
+        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+            switch['shower'] = 'ON'
+        else:
+            switch['shower'] = 'OFF'
+                
+        if not aMCatNLO or self.options['mg5_path']:
+            available_mode.append('4')
+            if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+                switch['madspin'] = 'ON'
             else:
-                mode = 'noshower'
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madspin_card.dat')):
-                mode += '+madspin'         
-        logger.info('Will run in mode %s' % mode)
+                switch['madspin'] = 'OFF'
+            
+        answers = list(available_mode) + ['auto', 'done']
+        alias = {}
+        for id, key in enumerate(switch_order):
+            if switch[key] != void:
+                answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
+                #allow lower case for on/off
+                alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
+                                   for s in allowed_switch_value[key]))
+        answers += special_values
+        
+        def create_question(switch):
+            switch_format = " %i %-60s %12s=%s\n"
+            question = "The following switches determine which operations are executed:\n"
+            for id, key in enumerate(switch_order):
+                question += switch_format % (id+1, description[key], key, switch[key])
+            question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
+            question += '  or set any switch explicitly (e.g. type \'order=LO\' at the prompt)\n'
+            question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
+            return question
+
+
+        def modify_switch(mode, answer, switch):
+            if '=' in answer:
+                key, status = answer.split('=')
+                switch[key] = status
+                if (key, status) in force_switch:
+                    for key2, status2 in force_switch[(key, status)].items():
+                        if switch[key2] not in  [status2, void]:
+                            logger.info('For coherence \'%s\' is set to \'%s\''
+                                        % (key2, status2), '$MG:color:BLACK')
+                            switch[key2] = status2
+            elif answer in ['0', 'auto', 'done']:
+                return 
+            elif answer in special_values:
+                logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                if answer == 'LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'ON'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@NLO':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'aMC@LO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'ON')
+                    assign_switch('madspin', 'OFF')
+                elif answer == 'noshower':
+                    switch['order'] = 'NLO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')                                                    
+                elif answer == 'noshowerLO':
+                    switch['order'] = 'LO'
+                    switch['fixed_order'] = 'OFF'
+                    assign_switch('shower', 'OFF')
+                    assign_switch('madspin', 'OFF')
+                if mode:
+                    return
+            return switch
+
+
+        modify_switch(mode, self.last_mode, switch)
+        if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+            assign_switch('madspin', 'ON')
+        
+        if not self.force:
+            answer = ''
+            while answer not in ['0', 'done', 'auto', 'onlyshower']:
+                question = create_question(switch)
+                if mode:
+                    answer = mode
+                else:
+                    answer = self.ask(question, '0', answers, alias=alias)
+                if answer.isdigit() and answer != '0':
+                    key = switch_order[int(answer) - 1]
+                    opt1 = allowed_switch_value[key][0]
+                    opt2 = allowed_switch_value[key][1]
+                    answer = '%s=%s' % (key, opt1 if switch[key] == opt2 else opt2)
+
+                if not modify_switch(mode, answer, switch):
+                    break
+
+        #assign the mode depending of the switch
+        if not mode or mode == 'auto':
+            if switch['order'] == 'LO':
+                if switch['shower'] == 'ON':
+                    mode = 'aMC@LO'
+                elif switch['fixed_order'] == 'ON':
+                    mode = 'LO'
+                else:
+                    mode =  'noshowerLO'
+            elif switch['order'] == 'NLO':
+                if switch['shower'] == 'ON':
+                    mode = 'aMC@NLO'
+                elif switch['fixed_order'] == 'ON':
+                    mode = 'NLO'
+                else:
+                    mode =  'noshower'  
+        logger.info('will run in mode: %s' % mode)                
+
         if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
-Please, shower the Les Houches events before using them for physics analyses.""")
+Please, shower the Les Houches events before using them for physics analyses.""")            
+            
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
+        ignore = []
         if mode in ['LO', 'NLO']:
             options['parton'] = True
-        elif 'madspin' in mode:
+            ignore = ['shower_card.dat', 'madspin_card.dat']
+            cards.append('FO_analyse_card.dat')
+        elif switch['madspin'] == 'ON':
             cards.append('madspin_card.dat')
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
@@ -2627,68 +3379,61 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if options['reweightonly']:
             cards = ['run_card.dat']
 
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore)
         
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
-        if not options['force'] and not  self.force:
-            self.ask_edit_cards(cards)
-            
+        if not options['force'] and not self.force:
+            self.ask_edit_cards(cards, plot=False)
 
+        self.banner = banner_mod.Banner()
 
-        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-        self.run_card = banner_mod.RunCardNLO(run_card)
-        self.run_tag = self.run_card['run_tag']
-        self.run_name = self.find_available_run_name(self.me_dir)
-        #add a tag in the run_name for distinguish run_type
-        if self.run_name.startswith('run_'):
-            if mode in ['LO','aMC@LO','noshowerLO']:
-                self.run_name += '_LO' 
-        self.set_run_name(self.run_name, self.run_tag, 'parton')
+        # store the cards in the banner
+        for card in cards:
+            self.banner.add(pjoin(self.me_dir, 'Cards', card))
+        # and the run settings
+        run_settings = '\n'.join(['%s = %s' % (k, v) for (k, v) in switch.items()])
+        self.banner.add_text('run_settings', run_settings)
+
+        if not mode =='onlyshower':
+            self.run_card = self.banner.charge_card('run_card')
+            self.run_tag = self.run_card['run_tag']
+            self.run_name = self.find_available_run_name(self.me_dir)
+            #add a tag in the run_name for distinguish run_type
+            if self.run_name.startswith('run_'):
+                if mode in ['LO','aMC@LO','noshowerLO']:
+                    self.run_name += '_LO' 
+            self.set_run_name(self.run_name, self.run_tag, 'parton')
+            if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+                logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
+                raise self.InvalidCmd(error)
+            elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+                logger.warning("""You are running with FxFx merging enabled.  To be able to merge
+    samples of various multiplicities without double counting, you
+    have to remove some events after showering 'by hand'.  Please
+    read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
+                if self.run_card['parton_shower'].upper() == 'PYTHIA6Q':
+                    logger.error("""FxFx merging does not work with Q-squared ordered showers.""")
+                    raise self.InvalidCmd(error)
+                elif self.run_card['parton_shower'].upper() != 'HERWIG6':
+                    question="FxFx merging not tested for %s shower. Do you want to continue?\n"  % self.run_card['parton_shower'] + \
+                        "Type \'n\' to stop or \'y\' to continue"
+                    answers = ['n','y']
+                    answer = self.ask(question, 'n', answers, alias=alias)
+                    if answer == 'n':
+                        error = '''Stop opertation'''
+                        self.ask_run_configuration(mode, options)
+    #                    raise aMCatNLOError(error)
         if 'aMC@' in mode or mode == 'onlyshower':
-            shower_card_path = pjoin(self.me_dir, 'Cards','shower_card.dat')
-            self.shower_card = shower_card.ShowerCard(shower_card_path)
-        
-        # check if we need to install the shower
-        if 'aMC@' in mode and not self.options['MCatNLO-utilities_path']:
-            error = '''MCatNLO-utilities needs to be installed in order to run the shower.
-    You can install this program by typing "install MCatNLO-utilities" in the MG5 interface.
-            '''
-            raise self.InvalidCmd(error)
-        
+            self.shower_card = self.banner.charge_card('shower_card')
+            
+        elif mode in ['LO', 'NLO']:
+            analyse_card_path = pjoin(self.me_dir, 'Cards','FO_analyse_card.dat')
+            self.analyse_card = self.banner.charge_card('FO_analyse_card')
+
         
         return mode
-
-    def do_quit(self, line):
-        """ """
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
-#        try:
-#            self.store_result()
-#        except:
-#            # If nothing runs they they are no result to update
-#            pass
-#        try:
-#            self.update_status('', level=None)
-#        except Exception, error:         
-#            pass
-        devnull = os.open(os.devnull, os.O_RDWR) 
-        try:
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-
-        return super(aMCatNLOCmd, self).do_quit(line)
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-
-
 
 
 #===============================================================================

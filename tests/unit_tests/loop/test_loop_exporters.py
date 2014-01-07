@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -63,51 +63,6 @@ _cuttools_file_path = os.path.join(_mgme_file_path, 'vendor','CutTools')
 _proc_file_path = os.path.join(_mgme_file_path, 'UNITTEST_proc')
 
 #===============================================================================
-# Tests that the ad-hoc solution for aloha open loop routine in unitary gauge
-# is still present and must be changed to something more elegant one day.
-#===============================================================================
-class CheckAdHocFixInAloha(unittest.TestCase):
-    """ Check if the adhoc fix is still present. """
-    
-    def setUp(self):
-        """ Initialize the model and aloha model. """
-        
-        self.model = import_ufo.import_model('loop_sm')
-        self.aloha_model = aloha.create_aloha.AbstractALOHAModel(\
-                                                         self.model.get('name'))
-        self.aloha_model.add_Lorentz_object(self.model.get('lorentz'))
-
-    def test_adHoc_aloha_fix(self):
-        """ Test if the adHoc aloha fix is still present, and if yes raise an 
-        error warning that for now it is fine like this, but it will have to be 
-        fixed more elegantly later."""
-        
-        old_aloha_gauge = aloha.unitary_gauge
-        aloha.unitary_gauge = True
-        LorentzToCheck = [(('FFV1',), ('L1',), 3)]
-        write_dir = os.path.join('/tmp/')
-        self.aloha_model.compute_subset(LorentzToCheck)
-        self.aloha_model.write(write_dir, 'Fortran')
-        aloha.unitary_gauge = old_aloha_gauge
-        file_path = os.path.join(write_dir,'FFV1L1_3.f')
-        assert os.path.isfile(file_path)
-        res = open(file_path).read()
-        os.remove(file_path)
-        if 'OM3' not in res and 'COEFF(1,1,1)' not in res:
-            print("\nThere is still the ad-hoc quick fix in aloha for having "+\
-            "open loops work in unitary gauge. It must be eventually replaced "+\
-            "by a cleaner solution! Read the (only) modifications brought by "+\
-            "this quick fix at the beginning of 'compute_subset(data)' in "+\
-            "create_aloha.py. This failing test is basically a reminder of "+\
-                                       "this and can be disregarded for now.\n")
-            self.assertTrue(False, "Reminder-Test for aloha quick fix. "+\
-                                                  "Can be disregarded for now.")
-        else:
-            print("\nApparently the quick fix for having open loops work"+\
-              " in unitary gauge has been replaced by a cleaner solution."+\
-                       " This test 'test_adHoc_aloha_fix' can now be removed\n")
-
-#===============================================================================
 # IOExportMadLoopUTest
 #===============================================================================
 class IOExportMadLoopUnitTest(IOTests.IOTestManager):
@@ -156,11 +111,17 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
         # Several exporters given in a dictionary
         else:
             test_list = [('%s_%s'%(testFolder,exp),exporters[exp]) for exp in \
-                                                               exporters.keys()]         
+                                                               exporters.keys()]
+               
         for (folderName, exporter) in test_list:
-            if self.need(folderName,testName): 
+            # Make sure to set optimized_output to true in the LoopHelasMatrixElement
+            # constructor if necessary
+            isOptimized = isinstance(exporter, \
+                           loop_exporters.LoopProcessOptimizedExporterFortranSA)
+            if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
-                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(myloopamp),
+                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
+                                        myloopamp,optimized_output=isOptimized),
                   exporter=exporter,
                   helasModel=fortran_model,
                   testedFiles=files_to_check,

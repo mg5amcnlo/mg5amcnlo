@@ -29,6 +29,7 @@ c general MadFKS parameters
       parameter (zero=0d0)
       double precision p(0:3,nexternal-1)
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
+     $     ,virt_wgts_hel(3),born_wgt_recomputed,born_wgt_recomp_direct
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -54,12 +55,17 @@ c general MadFKS parameters
       double precision tolerance,prec_found
       integer i,j
       integer nbad, nbadmax
+      double precision target,ran2,accum
+      external ran2
+      double precision wgt_hel(max_bhel)
+      common/c_born_hel/wgt_hel
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      character*1 include_hel(max_bhel)
       integer goodhel(max_bhel),hel(0:max_bhel)
       save hel,goodhel
       logical fillh
@@ -81,16 +87,21 @@ c Ellis-Sexton scale)
       double  = 0d0
       prec_found = 1.0d0
       if (firsttime) then
+c Make sure that whenever in the initialisation phase, MadLoop calls
+c itself again to perform stability check to make sure no unstable EPS
+c splips unnoticed.
+         CALL FORCE_STABILITY_CHECK(.TRUE.)
+
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
-         tolerance=IRPoleCheckThreshold
+         tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
          call sloopmatrix_thres(p, virt_wgts, tolerance, prec_found,
      $        ret_code)
          virt_wgt= virt_wgts(1)/dble(ngluons)
          single  = virt_wgts(2)/dble(ngluons)
          double  = virt_wgts(3)/dble(ngluons)
       else
-         tolerance=IRPoleCheckThreshold/10.0d0 ! for the poles check below
+         tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
@@ -99,22 +110,45 @@ c once the initial pole check is performed.
             virt_wgt= virt_wgts(1)/dble(ngluons)
             single  = virt_wgts(2)/dble(ngluons)
             double  = virt_wgts(3)/dble(ngluons)
-         else
-c Get random integer from importance sampling (the return value is
-c filled in driver_mintMC.f; we cannot do it here, because we need to
-c include the phase-space jacobians and all that)
-            call get_MC_integer(2,hel(0),ihel,volh)
-            fillh=.true.
-            do i=ihel,ihel+(mc_hel-1) ! sum over i successive helicities
-               call sloopmatrixhel_thres(p,hel(i),virt_wgts,tolerance
-     $              ,prec_found,ret_code)
-               virt_wgt= virt_wgt +
-     &              virt_wgts(1)*dble(goodhel(i))/(volh*dble(mc_hel))
-               single  = single   +
-     &              virt_wgts(2)*dble(goodhel(i))/(volh*dble(mc_hel))
-               double  = double   +
-     &              virt_wgts(3)*dble(goodhel(i))/(volh*dble(mc_hel))
+         elseif (mc_hel.eq.1) then
+c Use the Born helicity amplitudes to sample the helicities of the
+c virtual as flat as possible
+            call sborn_hel(p,born_wgt_recomp_direct)
+            born_wgt_recomputed=0d0
+            do ihel=1,hel(0)
+               born_wgt_recomputed=born_wgt_recomputed
+     $              +wgt_hel(hel(ihel))*dble(goodhel(ihel))
             enddo
+            if (abs(1d0-born_wgt/born_wgt_recomputed).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA',born_wgt
+     $              ,born_wgt_recomputed
+               stop
+            endif
+            if (abs(1d0-born_wgt/born_wgt_recomp_direct).gt.1d-9) then
+               write (*,*) 'Borns not consistent in BinothLHA direct'
+     $              ,born_wgt,born_wgt_recomp_direct
+               stop
+            endif
+            target=ran2()*born_wgt_recomputed
+            ihel=1
+            accum=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            do while (accum.lt.target) 
+               ihel=ihel+1
+               accum=accum+wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            enddo
+            volh=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+     $           /born_wgt_recomputed
+c$$$            call get_MC_integer(2,hel(0),ihel,volh)
+c$$$            fillh=.true.
+            fillh=.false.
+            call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
+     $           ,tolerance,prec_found,ret_code)
+            virt_wgt = virt_wgt + virt_wgts_hel(1)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            single   = single   + virt_wgts_hel(2)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
+            double   = double   + virt_wgts_hel(3)*dble(goodhel(ihel))
+     $           /volh/4d0/dble(ngluons)
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then
@@ -122,12 +156,12 @@ c account)
      &              'Cannot do MC over helicities for 1->N processes'
                stop
             endif
-            virt_wgt= virt_wgt/4d0/dble(ngluons)
-            single  = single/4d0/dble(ngluons)
-            double  = double/4d0/dble(ngluons)
+         else
+            write (*,*) 'Can only do sum over helicities,'/
+     $           /' or pure MC over helicities',mc_hel
+            stop
          endif
       endif
-      
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -153,9 +187,9 @@ c MadLoop initialization PS points.
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
             cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance)
+     $           tolerance*10d0)
          else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance)
+            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
          endif
          if (tolerance.lt.0.0d0) then
             cpol = .false.
@@ -169,18 +203,36 @@ c exists, which should be the case when firsttime is false.
                open (unit=67,file='HelFilter.dat',status='old',err=201)
                hel(0)=0
                j=0
+c optimized loop output
                do i=1,max_bhel
-                  read(67,*,err=201) goodhel(i)
+                  read(67,*,err=202) goodhel(i)
                   if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
                      goodhel(j)=goodhel(i)
                      hel(0)=hel(0)+1
                      hel(j)=i
+                 endif
+               enddo
+               goto 203
+c non optimized loop output
+ 202           rewind(67)
+               read(67,*,err=201) (include_hel(i),i=1,max_bhel)
+               do i=1,max_bhel
+                  if (include_hel(i).eq.'T') then
+                     j=j+1
+                     goodhel(j)=1
+                     hel(0)=hel(0)+1
+                     hel(j)=i
                   endif
                enddo
+ 203           continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
-               if (hel(0).lt.NHelForMCoverHels) then
+               if (NHelForMCoverHels.eq.-1) then
+                  write (*,*) 'Not doing MC over helicities: '/
+     $                 /'HelForMCoverHels=-1'
+                  mc_hel=0
+               elseif (hel(0).lt.NHelForMCoverHels) then
                   write (*,'(a,i3,a)') 'Only ',hel(0)
      $                 ,' independent helicities:'/
      $                 /' switching to explicitly summing over them'
@@ -190,7 +242,7 @@ c or more non-zero (independent) helicities
             endif
          elseif(cpol .and. firsttime) then
             write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     &           tolerance
+     &           tolerance*10d0
             write(*,*) " COEFFICIENT DOUBLE POLE:"
             write(*,*) "       MadFKS: ", madfks_double,
      &           "          OLP: ", double
@@ -281,6 +333,13 @@ c check (only available when not doing MC over hels)
             virt_wgt=0d0
          endif
       endif
+
+c If a MadLoop initialisation PS point (and stability is unknown), we
+c better set the virtual to zero to NOT include it in the
+c result. Sometimes this can be an unstable point with a very large
+c weight, screwing up the complete integration afterward.
+      if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
+     $     .and. ret_code/100.eq.1)virt_wgt=0d0
 
       return
  201  write (*,*) 'Cannot do MC over hel:'/

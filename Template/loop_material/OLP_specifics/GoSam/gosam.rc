@@ -1,0 +1,48 @@
+# Copy this file to setup.in in order to set
+# some common options for all examples.
+
+###################
+# physics options #
+###################
+
+model=smdiag_mad
+# Just to specify the EW scheme used by GoSam model
+model.options=GF: 0.0000116639, mZ: 91.1876, alpha_m1: 137.0
+
+zero=me,mmu,mU,mD,mC,mS,mB,mBMS,wT,wB
+
+symmetries=family,generation
+
+qgraf.options=onshell,notadpole,nosnail
+qgraf.verbatim=true=iprop[T,0,0];
+
+#filter.lo=lambda d: (not d.vertices(QUARKS,QUARKS,H) > 0)
+#filter.nlo=lambda d: ( (not d.vertices(QUARKS,QUARKS,H) > 0) and (d.chord(g) > 0) )
+
+diagsum=True
+
+PSP_check=True
+PSP_verbosity=2
+PSP_chk_threshold1=4
+PSP_chk_threshold2=3
+
+###################
+# program options #
+###################
+
+abbrev.level=diagram
+abbrev.limit=700
+
+extensions=samurai, golem95, numpolvec, derive
+
+form.bin=tform
+form.threads=6
+form.tempdir=/tmp
+fc.bin=gfortran -O2
+
+samurai.version=2.1.1
+
+# golem95.fcflags=
+# golem95.ldflags=
+# samurai.ldflags=
+# samurai.fcflags=

@@ -10,7 +10,7 @@ c----------------------------------------------------------------------
 c
 c     include
 c
-c      include 'genps.inc'
+      include 'genps.inc'
       include 'run_config.inc'
       include 'PDF/pdf.inc'
       include 'run.inc'
@@ -108,6 +108,20 @@ c order of alfas running = 2
           write(*,*) 'The default order of alpha_s running is fixed to ',nloop
       endif
 c !!! end of modification !!!
+
+C     If use_syst, ensure that all variational parameters are 1
+c           In principle this should be always the case since the
+c           banner.py is expected to correct such wrong run_card.
+      if(use_syst)then
+         if(scalefact.ne.1)then
+            write(*,*) 'Warning: use_syst=T, setting scalefact to 1'
+            scalefact=1
+         endif
+         if(alpsfact.ne.1)then
+            write(*,*) 'Warning: use_syst=T, setting alpsfact to 1'
+            alpsfact=1
+         endif
+      endif
 
 C       Fill common block for Les Houches init info
       do i=1,2

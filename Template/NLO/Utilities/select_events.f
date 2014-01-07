@@ -4,7 +4,7 @@ c Compile with
 c gfortran -ffixed-line-length-132 -fno-automatic -I../SubProcesses/P0_<anydir> -o
 c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       implicit none
-      integer maxevt,ifile,ofile,i,npart,nevmin,nevmax
+      integer maxevt,ifile,ofile,i,npart,nevmin,nevmax,nevmin0,nevmax0
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       INTEGER MAXNUP
@@ -21,14 +21,17 @@ c select_events select_events.f handling_lhe_events.f fill_MC_mshell.f
       character*80 event_file,fname2
       character*140 buff
       character*10 MonteCarlo,string
-      character*1 ch1
-      logical AddInfoLHE,condition
-      integer numev,number,ioffset,jj,loc
+      character*12 str1,str2
+      character*9 ch1
+      logical extra
+      integer numev,number,ioffset,jj,loc,loc1,loc2,init1,init2
 
       include "nexternal.inc"
       include "genps.inc"
-      integer j,k,itype,istep,ievts_ok
+      integer j,k,itype,istep,ievts_ok,nBorn
       real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      integer numscales,numPDFpairs,isc,ipdf
+      common/cwgxsec1/numscales,numPDFpairs
 c
       write(*,*)'Enter event file name'
       read(*,*)event_file
@@ -36,6 +39,12 @@ c
       write(*,*)'     2 to keep H events'
       write(*,*)'     3 to keep a subset of events'
       read(*,*)itype
+      if(itype.lt.3)then
+         write(*,*)'Type the Born multiplicity.'
+         write(*,*)'If the line after each event starts'
+         write(*,*)'with a hash, ''#'', this is not used'
+         read(*,*)nBorn
+      endif
 
       loc=index(event_file,' ')
       if(itype.eq.1)then
@@ -43,9 +52,32 @@ c
       elseif(itype.eq.2)then
          fname2=event_file(1:loc-1)//'.H'
       elseif(itype.eq.3)then
-         fname2=event_file(1:loc-1)//'.RED'
          write(*,*)'Enter first and last event to keep'
-         read(*,*)nevmin,nevmax
+         read(*,*)nevmin0,nevmax0
+         if(nevmin0.lt.0.or.nevmax0.lt.0)then
+            write(*,*)'Only positive values allowed'
+            write(*,*)nevmin0,nevmax0
+            stop
+         endif
+         nevmin=min(nevmin0,nevmax0)
+         nevmax=max(nevmin0,nevmax0)
+         write(str1,'(i10.10)')nevmin
+         write(str2,'(i10.10)')nevmax
+         loc1=index(str1,' ')
+         loc2=index(str2,' ')
+         do i=1,len(str1)
+            if(str1(i:i).ne.'0')then
+               init1=i
+               exit
+            endif
+         enddo
+         do i=1,len(str2)
+            if(str2(i:i).ne.'0')then
+               init2=i
+               exit
+            endif
+         enddo
+         fname2=event_file(1:loc-1)//'.'//str1(init1:loc1-1)//'_to_'//str2(init2:loc2-1)
       else
          write(*,*)'Invalid itype',itype
          stop
@@ -53,9 +85,12 @@ c
 
 c first round to establish ievts_ok
       ifile=34
+      extra=.false.
       open(unit=ifile,file=event_file,status='unknown')
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
-      if(itype.eq.3.and.min(nevmin,nevmax).gt.maxevt)then
+      call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numscales=int(sqrt(dble(isc)))
+      numPDFpairs=ipdf/2
+      if(itype.eq.3.and.nevmin.gt.maxevt)then
          write(*,*)'Invalid inputs',nevmin,nevmax,maxevt
          stop
       endif
@@ -64,37 +99,49 @@ c first round to establish ievts_ok
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
       i=1
       ievts_ok=0
-      if(itype.le.2)numev=maxevt
-      if(itype.eq.3)numev=min(maxevt,max(nevmin,nevmax))
-      do while(i.le.numev)
-         call read_lhef_event(ifile,
-     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
-         if(AddInfoLHE)then
-            if(buff(1:1).ne.'#')then
-               write(*,*)'Inconsistency in event file',i,' ',buff
-               stop
+      extra=.false.
+      if(itype.le.2)then
+         do while(i.le.maxevt)
+            call read_lhef_event(ifile,
+     &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+            extra=buff(1:1).eq.'#'
+            if(extra)then
+               read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+     &           fksfather_lhe,ipartner_lhe,
+     &           scale1_lhe,scale2_lhe,
+     &           jwgtinfo,mexternal,iwgtnumpartn,
+     &           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+               if(itype.eq.iSorH_lhe)ievts_ok=ievts_ok+1
+            else
+               if(itype.eq.1+nup-nBorn)ievts_ok=ievts_ok+1
+c Comment the following if-statement if the file has more than two
+c multiplicities (for example when intermediate resonances are not
+c written in all the events)
+               if(nup-nBorn.ne.0.and.nup-nBorn.ne.1)then
+                  write(*,*)'The Born multiplicity seems incorrect:'
+                  write(*,*)'cannot extract S/H events from this file'
+                  stop
+               endif
             endif
-            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                        fksfather_lhe,ipartner_lhe,
-     #                        scale1_lhe,scale2_lhe,
-     #                        jwgtinfo,mexternal,iwgtnumpartn,
-     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-         endif
-         if(itype.le.2)condition=itype.eq.iSorH_lhe
-         if(itype.eq.3)condition=i.ge.min(nevmin,nevmax)
-         if(condition)ievts_ok=ievts_ok+1
-         i=i+1
-      enddo
+            i=i+1
+         enddo
+      elseif(itype.eq.3)then
+         ievts_ok=min(maxevt,nevmax)-nevmin+1
+      endif
       close(34)
+      if(ievts_ok.eq.0)then
+         write(*,*)' '
+         write(*,*)'No events of desired type found in file !'
+         write(*,*)' '
+         stop
+      endif
 
 c second round to write file
       ifile=34
       ofile=35
       open(unit=ifile,file=event_file,status='old')
       open(unit=ofile,file=fname2,status='unknown')
-      AddInfoLHE=.false.
 
       call copy_header(ifile,ofile,ievts_ok)
       call read_lhef_init(ifile,
@@ -107,23 +154,18 @@ c second round to write file
       ievts_ok=0
       sum_wgt=0d0
       if(itype.le.2)numev=maxevt
-      if(itype.eq.3)numev=min(maxevt,max(nevmin,nevmax))
+      if(itype.eq.3)numev=min(maxevt,nevmax)
       do while(i.le.numev)
          call read_lhef_event(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          sum_wgt=sum_wgt+XWGTUP
-         if(i.eq.1.and.buff(1:1).eq.'#')AddInfoLHE=.true.
-         if(AddInfoLHE)then
-            if(buff(1:1).ne.'#')then
-               write(*,*)'Inconsistency in event file',i,' ',buff
-               stop
-            endif
-            read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                        fksfather_lhe,ipartner_lhe,
-     #                        scale1_lhe,scale2_lhe,
-     #                        jwgtinfo,mexternal,iwgtnumpartn,
-     #             wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
+         if(extra)then
+            read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+     &         fksfather_lhe,ipartner_lhe,
+     &         scale1_lhe,scale2_lhe,
+     &         jwgtinfo,mexternal,iwgtnumpartn,
+     &         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
          endif
          npart=0
          do k=1,nup
@@ -136,10 +178,10 @@ c second round to write file
             endif
          enddo
          call phspncheck_nocms2(i,npart,xmass,xmom)
-         if(itype.le.2)condition=itype.eq.iSorH_lhe
-         if(itype.eq.3)condition=i.ge.min(nevmin,nevmax)
-         if(condition)then
-            ievts_ok=ievts_ok+1
+         if( (itype.le.2.and.extra.and.itype.eq.iSorH_lhe).or.
+     &       (itype.eq.1.and..not.extra.and.nup.eq.nBorn).or.
+     &       (itype.eq.2.and..not.extra.and.nup.eq.nBorn+1).or.
+     &       (itype.eq.3.and.i.ge.nevmin) )then
             call write_lhef_event(ofile,
      &           NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &           IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
@@ -148,8 +190,8 @@ c second round to write file
             ioffset=0
             number=maxevt
          elseif(itype.eq.3)then
-            ioffset=min(nevmin,nevmax)
-            number=abs(min(max(nevmin,nevmax),maxevt)-ioffset)
+            ioffset=nevmin
+            number=abs(min(nevmax,maxevt)-ioffset)
          endif
          istep=number/10
          if(istep.eq.0)istep=1
@@ -159,19 +201,8 @@ c second round to write file
      &        write(*,*)'Read',int(percentage),'% of event file'
          i=i+1
       enddo
-
       write(ofile,*)'</LesHouchesEvents>'
-
-      if(ievts_ok.eq.0)then
-         write(*,*)' '
-         write(*,*)'No events of desired type found in file !'
-         write(*,*)' '
-         stop
-      endif
-
       if(itype.eq.3)write(*,*)'The sum of the weights is:',sum_wgt
-
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
 
       close(34)
       close(35)

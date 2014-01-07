@@ -1,16 +1,16 @@
 #! /usr/bin/env python
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ This is the main script in order to generate events in MadEvent """
@@ -23,14 +23,67 @@ import shutil
 import subprocess
 import sys
 import time
+
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 pjoin = os.path.join
-sys.path.append(pjoin(root_path,'bin','internal'))
-import madevent_interface as ME        
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
     sys.exit('MadEvent works with python 2.6 or higher (but not python 3.X).\n\
                Please upgrade your version of python.')
+
+# Check if optimize mode is (and should be) activated
+if __debug__ and (not os.path.exists(pjoin(root_path,'../..', 'bin','create_release.py'))):
+    print 'launch in debug mode'
+    subprocess.call([sys.executable] + ['-O'] + sys.argv)
+    sys.exit()
+
+
+sys.path.append(pjoin(root_path,'bin','internal'))
+import madevent_interface as ME        
+
+
+import logging
+import logging.config
+
+try: 
+    import readline
+except ImportError:
+    try:
+        import pyreadline as readline
+    except:
+        print "For tab completion and history, install module readline."
+else:
+    import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
+    
+    elif hasattr(readline, '__doc__'):
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+        else:
+            readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.__doc__ = 'GNU'
+        readline.parse_and_bind("tab: complete")
+        
+    # charge history file
+    try:
+        history_file = os.path.join(os.environ['HOME'], '.mg5', 'me5history')
+        readline.read_history_file(history_file)
+    except:
+        pass
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print 'Running MG5 in debug mode'
+
 
 
 def set_configuration():
@@ -87,7 +140,8 @@ def treat_old_argument(argument):
 
 ################################################################################  
 ##   EXECUTABLE
-################################################################################                                
+################################################################################
+
 if '__main__' == __name__:
     # Check that python version is valid
 
@@ -109,7 +163,7 @@ if '__main__' == __name__:
             launch.run_cmd('quit')
         except:
             pass
-    except ME.MadEventAlreadyRunning, error:
+    except Exception, error:
         logging.error(str(error))
         sys.exit()
                           

@@ -5,6 +5,7 @@
 #  Replaces the sumres.f and sumres2.f files
 #  MZ, 2011-10-22
 
+from __future__ import division
 import math
 import sys
 import random
@@ -30,6 +31,8 @@ lines = content.split("\n")
 processes=[]
 tot=0
 err=0
+totABS=0
+errABS=0
 
 # open the file containing the list of directories
 file=open("dirs.txt")
@@ -37,31 +40,35 @@ dirs = file.read().split("\n")
 file.close()
 dirs.remove('')
 
-
-for line in lines:
-    list = line.split()
+# The syntax of lines should be first the ABS cross section for the
+# channel and the line after that the cross section for the same
+# channel.
+for line in range(0,len(lines),2):
+    list = lines[line].split()
     if list:
         proc={}
         proc['folder'] = list[0].split('/')[0]
         proc['subproc'] = proc['folder'][0:proc['folder'].rfind('_')]
         proc['channel'] = list[0].split('/')[1]
         dirs.remove(os.path.join(proc['folder'], proc['channel']))
-        if list[3] != '[ABS]:':
+        proc['resultABS'] = float(list[4])
+        proc['errorABS'] = float(list[6])
+        proc['err_percABS'] = proc['errorABS']/proc['resultABS']*100.
+        processes.append(proc)
+        totABS+= proc['resultABS']
+        errABS+= math.pow(proc['errorABS'],2)
+        list = lines[line+1].split()
+        if list:
             proc['result'] = float(list[3])
             proc['error'] = float(list[5])
-        else:
-            proc['result'] = float(list[4])
-            proc['error'] = float(list[6])
-        proc['err_perc'] = proc['error']/proc['result']*100.
-        processes.append(proc)
-        tot+= proc['result']
-        err+= math.pow(proc['error'],2)
-
+            proc['err_perc'] = proc['error']/proc['result']*100.
+            tot+= proc['result']
+            err+= math.pow(proc['error'],2)
 if dirs:
     print "%d jobs did not terminate correctly " % len(dirs)
     print '\n'.join(dirs)
 
-processes.sort(key = lambda proc: -proc['error'])
+processes.sort(key = lambda proc: -proc['errorABS'])
 
 correct = len(processes) == nexpected
 print "Found %d correctly terminated jobs " %len(processes) 
@@ -76,6 +83,10 @@ subprocs_string=set(subprocs_string)
 content+='\n\nCross-section per integration channel:\n'
 for proc in processes:
     content+='%(folder)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  proc
+
+content+='\n\nABS cross-section per integration channel:\n'
+for proc in processes:
+    content+='%(folder)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  \n' %  proc
 
 content+='\n\nCross-section per subprocess:\n'
 #for subpr in sorted(set(subprocs)):
@@ -115,8 +126,8 @@ for subpr in subprocesses:
     content+=  '%(subproc)20s    %(xsect)10.8e   %(err)6.4e\n' % subpr
  
 
-content+='\nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
-        (tot, math.sqrt(err), math.sqrt(err)/tot *100.)
+content+='\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
+        (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.)
 
 if not correct:
     sys.exit('ERROR: not all jobs terminated correctly\n')
@@ -143,12 +154,12 @@ if nevents>=0:
         proc['lhefile'] = os.path.join(proc['folder'], proc['channel'], 'events.lhe')
         proc['nevents'] = 0
     while totevts :
-        target = random.random() * tot
+        target = random.random() * totABS
         crosssum = 0.
         i = 0
         while i<len(processes) and crosssum < target:
             proc = processes[i]
-            crosssum += proc['result']
+            crosssum += proc['resultABS']
             i += 1            
         totevts -= 1
         i -= 1
@@ -162,7 +173,7 @@ if nevents>=0:
 
     content_evts = ''
     for proc in processes:
-        content_evts+= ' '+proc['lhefile']+'              %(nevents)10d            %(result)10.8e \n' %  proc
+        content_evts+= ' '+proc['lhefile']+'              %(nevents)10d            %(resultABS)10.8e        1.0 \n' %  proc
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()
@@ -179,7 +190,7 @@ if nevents>=0:
         for line in fileinputs:
             i += 1
             if i == 2:
-                accuracy=min(math.sqrt(tot/(req_acc2_inv*proc['result'])),0.2)
+                accuracy=min(math.sqrt(totABS/(req_acc2_inv*proc['resultABS'])),0.2)
                 fileinputschannel.write('%10.8e\n' % accuracy)
             elif i == 8:
                 fileinputschannel.write('1        ! MINT mode\n')
@@ -191,3 +202,39 @@ if nevents>=0:
     evts_file = open('nevents_unweighted', 'w')
     evts_file.write(content_evts)
     evts_file.close()
+
+# if nevents = -1 and req_acc >= 0, we need to determine the required
+# accuracy in each of the channels: this is for fixed order running!
+elif req_acc>=0 and nevents==-1:
+    req_accABS=req_acc*abs(tot)/totABS
+    content_evts = ''
+    for proc in processes:
+        if proc['channel'][0:3] == 'all':
+            fileinputs = open("madin.all")
+        elif proc['channel'][0:4] == 'novB':
+            fileinputs = open("madin.novB")
+        elif proc['channel'][0:4] == 'born':
+            fileinputs = open("madin.born")
+        elif proc['channel'][0:4] == 'grid':
+            fileinputs = open("madin.grid")
+        elif proc['channel'][0:4] == 'viSB':
+            fileinputs = open("madin.viSB")
+        elif proc['channel'][0:4] == 'virt':
+            fileinputs = open("madin.virt")
+        elif proc['channel'][0:4] == 'novi':
+            fileinputs = open("madin.novi")
+        else:
+            sys.exit("ERROR, DONT KNOW WHICH INPUTS TO USE")
+        fileinputschannel = open(os.path.join(proc['folder'], proc['channel'], 'madinM1'),'w')
+        i=0
+        for line in fileinputs:
+            i += 1
+            if i == 2:
+                accuracy=req_accABS*math.sqrt(totABS*proc['resultABS'])
+                fileinputschannel.write('%10.8e\n' % accuracy)
+            elif i == 9:
+                fileinputschannel.write('-1        ! restart from existing grids\n')
+            else:
+                fileinputschannel.write(line)
+        fileinputschannel.close()
+        fileinputs.close()

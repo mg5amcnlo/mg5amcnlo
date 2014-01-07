@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Unit test Library for importing and restricting model"""
@@ -112,7 +112,7 @@ class TestRestrictModel(unittest.TestCase):
     def test_detect_identical_parameters(self):
         """ check that we detect correctly identical parameter """
         
-        expected=set([('MZ','MH'), ('WZ','WH')])
+        expected=set([('MZ','MH')])
         result = self.model.detect_identical_parameters()
         result = [tuple([obj[0].name for obj in obj_list]) for obj_list in result]
         
@@ -123,7 +123,6 @@ class TestRestrictModel(unittest.TestCase):
         
         parameters = self.model.detect_identical_parameters()
         self.model.merge_iden_parameters(parameters[0])
-        self.model.merge_iden_parameters(parameters[1])
         
         
         #check that both MZ and MH are not anymore in the external_parameter
@@ -144,7 +143,7 @@ class TestRestrictModel(unittest.TestCase):
         # checked that the mass (and the width) of those particles identical
         self.assertEqual(self.model['particle_dict'][23]['mass'],
                          self.model['particle_dict'][25]['mass'])
-        self.assertEqual(self.model['particle_dict'][23]['width'],
+        self.assertNotEqual(self.model['particle_dict'][23]['width'],
                          self.model['particle_dict'][25]['width'])
         
 

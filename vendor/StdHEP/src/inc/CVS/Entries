@@ -1,0 +1,31 @@
+/hepeup.h/1.2/Wed Jun  4 20:21:12 2003//Tv5_06_01
+/hepeup.inc/1.1/Thu May  8 21:56:17 2003//Tv5_06_01
+/hepev4.h/1.3/Tue Apr  9 14:50:12 2002//Tv5_06_01
+/hepev4.inc/1.3/Tue Apr  9 14:50:12 2002//Tv5_06_01
+/heprup.h/1.2/Wed May 14 21:24:29 2003//Tv5_06_01
+/heprup.inc/1.1/Thu May  8 21:56:17 2003//Tv5_06_01
+/pdgtbl.inc/1.3/Wed Nov 21 01:12:05 2007//Tv5_06_01
+/stdcm1.h/1.4/Thu May 15 17:14:17 2003//Tv5_06_01
+/stdcm1.inc/1.3/Thu May 15 17:14:17 2003//Tv5_06_01
+/stdcnt.h/1.2/Wed May 14 22:29:47 2003//Tv5_06_01
+/stdcnt.inc/1.3/Wed May 14 22:37:46 2003//Tv5_06_01
+/stdcsv.inc/1.2/Wed Nov 21 01:12:05 2007//Tv5_06_01
+/stdevent.h/1.1/Wed Mar 29 20:17:15 2000//Tv5_06_01
+/stdhd.h/1.1/Wed May 31 21:12:43 2006//Tv5_06_01
+/stdhd.inc/1.1/Wed May 31 21:12:43 2006//Tv5_06_01
+/stdhep.h/1.6/Tue May 15 17:22:03 2001//Tv5_06_01
+/stdhep.inc/1.4/Mon Jan 18 21:52:37 1999//Tv5_06_01
+/stdhep_mcfio.h/1.4/Wed May 31 21:12:43 2006//Tv5_06_01
+/stdhep_old.inc/1.1.1.1/Wed Oct 29 20:43:14 1997//Tv5_06_01
+/stdlun.h/1.4/Wed Jun  4 16:54:29 2003//Tv5_06_01
+/stdlun.inc/1.4/Wed Jun  4 16:54:29 2003//Tv5_06_01
+/stdtbl.inc/1.4/Wed Nov 21 01:12:05 2007//Tv5_06_01
+/stdtmp.h/1.4/Tue Apr  9 14:50:12 2002//Tv5_06_01
+/stdtmp.inc/1.4/Tue Apr  9 14:50:12 2002//Tv5_06_01
+/stdver.h/1.1.1.1/Wed Oct 29 20:43:15 1997//Tv5_06_01
+/stdver.inc/1.1.1.1/Wed Oct 29 20:43:15 1997//Tv5_06_01
+D/dpm////
+D/herwig////
+D/isajet////
+D/pythia////
+D/qq////

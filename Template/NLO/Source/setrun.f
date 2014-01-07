@@ -252,13 +252,6 @@ c check that the event normalization input is reasoble
          stop 1
       endif
 
-
-c info for reweight
-
-      ickkw=0
-      chcluster=.false.
-      ktscheme=1
-
 c !!! Default behavior changed (MH, Aug. 07) !!!
 c If no pdf, read the param_card and use the value from there and
 c order of alfas running = 2
@@ -368,11 +361,16 @@ C-------------------------------------------------
       enddo
 
       if(mpdf.eq.-1) then
-        write(*,*)'pdf ',pdfin,' not implemented in get_pdfup.'
+        write(*,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
         write(*,*)'known pdfs are'
         write(*,*) pdflabs
-        write(*,*)'using ',pdflabs(12)
-        mpdf=numspdf(12)
+        open(unit=26,file='../../error',status='unknown')
+        write(26,*)'ERROR: pdf ',pdfin,' not implemented in get_pdfup.'
+        write(26,*)'known pdfs are'
+        write(26,*) pdflabs
+        stop 1
+c$$$        write(*,*)'using ',pdflabs(12)
+c$$$        mpdf=numspdf(12)
       endif
 
       do i=1,2

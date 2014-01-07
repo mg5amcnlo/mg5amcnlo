@@ -5,11 +5,14 @@
 !
 !====================================================================
 
-	  character*64 paramFileName
+      character*64 paramFileName
       parameter ( paramFileName='FKS_params.dat')
 
-      real*8 IRPoleCheckThreshold
+      real*8 IRPoleCheckThreshold,Virt_fraction,
+     &	     PrecisionVirtualAtRunTime,Min_virt_fraction
 
-	  integer NHelForMCoverHels
+      integer NHelForMCoverHels
 
-      common /FKSPARAMS/NHelForMCoverHels,IRPoleCheckThreshold
+      common /FKSPARAMS/IRPoleCheckThreshold,virt_fraction,
+     &       PrecisionVirtualAtRunTime,min_virt_fraction,
+     &       NHelForMCoverHels

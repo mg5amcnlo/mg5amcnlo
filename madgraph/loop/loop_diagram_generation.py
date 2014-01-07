@@ -1,15 +1,15 @@
 #
 ################################################################################
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Classes for diagram generation with loop features.
@@ -25,6 +25,7 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 
 from madgraph import MadGraph5Error
+from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.loop_diagram_generation')
 
 def ldg_debug_info(msg,val):
@@ -212,7 +213,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     # If there is no born diag, then we cannot say anything.
                     self['process']['orders'][order]=bornminorder+2*(-value-1)
 
-    def guess_loop_orders_from_squared_weighted(self):
+    def guess_loop_orders(self, user_orders):
         """Guess the upper bound for the orders for loop diagram generation 
         based on either no squared orders or simply 'Weighted'"""
         
@@ -222,7 +223,24 @@ class LoopAmplitude(diagram_generation.Amplitude):
         max_pert_wgt = max([hierarchy[order] for order in \
                                  self['process']['perturbation_couplings']])            
 
-        min_born_wgt=self['born_diagrams'].get_min_order('WEIGHTED')
+        # In order to be sure to catch the corrections to all born diagrams that
+        # the user explicitely asked for with the amplitude orders, we take here
+        # the minimum weighted order as being the maximum between the min weighted
+        # order detected in the Born diagrams and the weight computed from the 
+        # user input amplitude orders.
+        user_min_wgt = 0
+        
+        # One can chose between the two behaviors below. It is debatable which
+        # one is best. The first one tries to only consider the loop which are
+        # dominant, even when the user selects the amplitude orders and the 
+        # second chosen here makes sure that the user gets a correction of the
+        # desired type for all the born diagrams generated with its amplitude
+        # order specification.
+#        min_born_wgt=self['born_diagrams'].get_min_order('WEIGHTED')
+        min_born_wgt=max(self['born_diagrams'].get_min_order('WEIGHTED'),
+              sum([hierarchy[order]*val for order, val in user_orders.items() \
+                                                         if order!='WEIGHTED']))
+
         if 'WEIGHTED' not in [key.upper() for key in \
                                       self['process']['squared_orders'].keys()]:
             # Then we guess it from the born
@@ -238,7 +256,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         trgt_wgt=self['process']['squared_orders']['WEIGHTED']-min_born_wgt
         # We also need the minimum number of vertices in the born.
         min_nvert=min([len([1 for vert in diag['vertices'] if vert['id']!=0]) \
-                           for diag in self['born_diagrams']])
+                                             for diag in self['born_diagrams']])
         # And the minimum weight for the ordered declared as perturbed
         min_pert=min([hierarchy[order] for order in \
                                      self['process']['perturbation_couplings']])
@@ -304,7 +322,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
-                       "make sure that the loop diagrams have been tgged first."
+                       "make sure that the loop diagrams have been tagged first."
             valid_diag = True
             
             # Ex. 1: Chose the topology, i.e. number of loop line.
@@ -325,9 +343,27 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        In this example, only massive parts. are allowed in the loop.
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
-            if 21 in diag.get_loop_lines_pdgs() or 82 in diag.get_loop_lines_pdgs():
-                valid_diag=False
-            
+#                valid_diag=False
+          
+            # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
+            #        of two vertices being the four gluon vertex and the effective
+            #        glu-glu-Higgs vertex.
+#            if len(diag.get_loop_lines_pdgs())==2:
+#                bubble_lines_pdgs=[abs(diag.get('canonical_tag')[0][0]),
+#                                   abs(diag.get('canonical_tag')[0][0])]
+#                first_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[0][1]]
+#                second_vertex_pdgs=bubble_lines_pdgs+\
+#                   [abs(structs.get_struct(struct_ID).get('binding_leg').get('id')) \
+#                    for struct_ID in diag.get('canonical_tag')[1][1]]
+#                first_vertex_pdgs.sort()
+#                second_vertex_pdgs.sort()
+#                bubble_vertices=[first_vertex_pdgs,second_vertex_pdgs]
+#                bubble_vertices.sort()
+#                if bubble_vertices==[[21,21,21,21],[21,21,25]]:
+#                    valid_diag=False
+                
             # If you need any more advanced function for your filter and cannot
             # figure out how to implement them. Just contact the authors.
 
@@ -385,21 +421,38 @@ class LoopAmplitude(diagram_generation.Amplitude):
 #        self['loop_diagrams'] = base_objects.DiagramList(
 #        [diag for diag in self['loop_diagrams'] if diag not in newloopselection])
 
-    def check_factorization(self):
+    def check_factorization(self,user_orders):
         """ Makes sure that all non perturbed orders factorize the born diagrams
         """
+        warning_msg = "All Born diagrams do not factorize the same sum of power(s) "+\
+          "of the the perturbed order(s) %s.\nThis is potentially dangerous"+\
+          " as the real-emission diagrams from aMC@NLO will not be consistent"+\
+          " with these virtual contributions."
+        if self['process']['has_born']:
+            trgt_summed_order = sum([self['born_diagrams'][0].get_order(order)
+                        for order in self['process']['perturbation_couplings']])
+            for diag in self['born_diagrams'][1:]:
+                if sum([diag.get_order(order) for order in self['process']
+                                ['perturbation_couplings']])!=trgt_summed_order:
+                        logger.warning(warning_msg%' '.join(self['process']
+                                                    ['perturbation_couplings']))
+                        break
+            
         warning_msg = "All born diagrams do not factorize the same power of "+\
-          "the order %s which is not perturbed.\nThis is potentially dangerous"+\
+          "the order %s which is not perturbed and for which you have not"+\
+          "specified any amplitude order. \nThis is potentially dangerous"+\
           " as the real-emission diagrams from aMC@NLO will not be consistent"+\
           " with these virtual contributions."
         if self['process']['has_born']:
             for order in self['process']['model']['coupling_orders']:
-                if order not in self['process']['perturbation_couplings']:
+                if order not in self['process']['perturbation_couplings'] and \
+                                                order not in user_orders.keys():
                     order_power=self['born_diagrams'][0].get_order(order)
                     for diag in self['born_diagrams'][1:]:
                         if diag.get_order(order)!=order_power:
                             logger.warning(warning_msg%order)
                             break
+
     # Helper function
     def get_non_pert_order_config(self, diagram):
         """ Return a dictionary of all the coupling orders of this diagram which
@@ -440,13 +493,18 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # times the largest weight in the hierarchy among the order for which we
         # consider loop perturbation, in this case 2*2 wich gives us a 
         # target_weighted_order of 8. based on this we will now keep all born 
-        # contributions and exclude the NLO contributions (QED=6) and (QED=4,QCD=2)
+        # contributions and exclude the NLO contributions (QED=6) and (QED=4,QCD=2)        
 
         logger.debug("Generating %s "\
                    %self['process'].nice_string().replace('Process', 'process'))
 
         # Hierarchy access point.
         hierarchy = self['process']['model']['order_hierarchy']
+
+        # Later, we will specify the orders for the loop amplitude.
+        # It is a temporary change that will be reverted after loop diagram 
+        # generation. We then back up here its value prior modification.
+        user_orders=copy.copy(self['process']['orders'])
 
         # First generate the born diagram if the user asked for it
         if self['process']['has_born']:
@@ -457,6 +515,15 @@ class LoopAmplitude(diagram_generation.Amplitude):
             self['born_diagrams'] = base_objects.DiagramList()
             bornsuccessful = True
             logger.debug("# born diagrams generation skipped by user request.")        
+
+        # Make sure that all orders specified belong to the model:
+        for order in self['process']['orders'].keys()+\
+                                       self['process']['squared_orders'].keys():
+            if not order in self['process']['model']['coupling_orders'] and \
+                                                            order != 'WEIGHTED':
+                raise InvalidCmd("Coupling order %s not found"%order +\
+                    " in any interaction of the current model %s."\
+                                              %self['process']['model']['name'])
 
         # The decision of wether the virtual must be squared against the born or the
         # virtual is made based on whether there are borns or not unless the user
@@ -470,12 +537,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                               self['process']['squared_orders'])
         ldg_debug_info("User input perturbation",\
                                       self['process']['perturbation_couplings'])
-
-        # Now, we can further specify the orders for the loop amplitude. 
-        # Those specified by the user of course remain the same, increased by 
-        # two if they are perturbed. It is a temporary change that will be 
-        # reverted after loop diagram generation.
-        user_orders=copy.copy(self['process']['orders'])
         
         # If the user did not specify any order, we can expect him not to be an
         # expert. So we must make sure the born all factorize the same powers of
@@ -495,14 +556,18 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                    chosen_order_config,discarded_configurations)
         
         # Before proceeding with the loop contributions, we must make sure that
-        # the born diagram generated factorize the same power of all coupling
-        # orders which are not perturbed. If this is not true, then it is very
+        # the born diagram generated factorize the same sum of power of the
+        # perturbed couplings. If this is not true, then it is very
         # cumbersome to get the real radiation contribution correct and consistent
         # with the computations of the virtuals (for now).
-        self.check_factorization()
+        # Also, when MadLoop5 guesses the a loop amplitude order on its own, it
+        # might decide not to include some subleading loop which might be not
+        # be consistently neglected for now in the MadFKS5 so that its best to
+        # warn the user that he should enforce that target born amplitude order
+        # to any value of his choice.
+        self.check_factorization(user_orders)
 
-        # Now if the user specified some squared order, we can use them as an 
-        # upper bound for the loop diagram generation.
+        # Now find an upper bound for the loop diagram generation.
         self.guess_loop_orders_from_squared()
         
         # If the user had not specified any fixed squared order other than 
@@ -514,7 +579,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # in the squared orders no matter the user input. Leave it like this.
         if [k.upper() for k in self['process']['squared_orders'].keys()] in \
                               [[],['WEIGHTED']] and self['process']['has_born']:
-            self.guess_loop_orders_from_squared_weighted()
+            self.guess_loop_orders(user_orders)
 
         # Finally we enforce the use of the orders specified for the born 
         # (augmented by two if perturbed) by the user, no matter what was 
@@ -537,6 +602,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         "be discarded because they are not pure (%s)-perturbation.\nMake sure"+\
         " there are none or that you did not want to include them.")%(\
                             ','.join(self['process']['perturbation_couplings']))
+        
         if self['process']['has_born']:
             for order in self['process']['model']['coupling_orders']:
                 if order not in self['process']['perturbation_couplings']:
@@ -767,7 +833,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         other contributions like the UV mass renormalization are added in the
         function setLoopCTVertices"""
 
-#        return True
+        # return True
         #  ============================================
         #     Including the UVtree contributions
         #  ============================================

@@ -4,14 +4,14 @@
 #
 # Copyright (c) 2011 The ALOHA Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -22,7 +22,7 @@ following actions:
 1. bzr branch the present directory to a new directory
    ALOHA_vVERSION
 
-3. Copy all Madgraph5 files needed by ALOHA to the present directory
+3. Copy all MadGraph5_aMC@NLO files needed by ALOHA to the present directory
 
 4. Create the automatic documentation in the apidoc directory
 
@@ -34,7 +34,7 @@ following actions:
 import sys
 
 if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
-    sys.exit('MadGraph 5 works only with python 2.6 or later (but not python 3.X).\n\
+    sys.exit('MadGraph5_aMC@NLO works only with python 2.6 or later (but not python 3.X).\n\
                Please upgrate your version of python.')
 
 import glob

@@ -7,21 +7,22 @@ c LH files created by Herwig, assuming they are identified by a
 c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
-     # iuseres_1,iwhmass,ilepmass,idec
-      double precision chtot,xint,xinterr,qtiny
+     # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
+     # isavePDF,itemp
+      double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
       double precision remcmass(-5:21)
       common/cremcmass/remcmass
       integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
-     # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
+     # itoterr,numproc,numconn,idup_eff(22),icolup_eff(2,22)
       logical wrong
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -31,7 +32,7 @@ c negative number of events
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      double precision sum_wgt,err_wgt,toterr,diff
+      double precision sum_wgt,sum_abs_wgt,err_wgt,toterr,diff
       integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
       double precision scale1_lhe,scale2_lhe
       double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
@@ -48,7 +49,7 @@ c negative number of events
       character*3 ch3,event_norm
       character*10 MonteCarlo
       character*2 ch2,pm
-      character*1 ch1
+      character*9 ch1
       common/cevtnorm/event_norm
 
       logical AddInfoLHE,rwgtinfo,unweighted,keepevent,shower
@@ -60,8 +61,11 @@ c negative number of events
       include 'reweight0.inc'
       integer kr,kf,kpdf
       double precision sum_wgt_resc_scale(maxscales,maxscales),
-     # sum_wgt_resc_pdf(0:maxPDFs)
-
+     # sum_wgt_resc_pdf(0:maxPDFs),
+     # xmax_wgt_resc_scale(maxscales,maxscales),
+     # xmax_wgt_resc_pdf(0:maxPDFs),
+     # xmin_wgt_resc_scale(maxscales,maxscales),
+     # xmin_wgt_resc_pdf(0:maxPDFs)
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -80,9 +84,9 @@ c negative number of events
       enddo
 
       write (*,*) 'Enter event file name'
-      read (*,*) event_file
+      read (*,'(a)') event_file
 
-      write (*,*) 'Enter 0 to get integrals from res_1_tot.txt'
+      write (*,*) 'Enter 0 to get integrals from res_1.txt'
       write (*,*) '      1 otherwise'
       read (*,*) iuseres_1
 
@@ -100,26 +104,27 @@ c read from events
       endif
 
       write (*,*) 'Enter 0 to study decays'
-      write (*,*) '      1 othewise'
+      write (*,*) '      1 otherwise'
       read (*,*) idec
       if(idec.eq.0)call setdecmat()
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
+      open (unit=51,file='res_wgt',status='unknown')
       if(iuseres_1.eq.0)then
         jfile=50
-        open (unit=jfile,file='res_1_tot.txt',status='old')
+        open (unit=jfile,file='res_1.txt',status='old')
         do while(buff(1:6).ne.'Total:')
            read(jfile,*)buff
         enddo
+        read(jfile,*)xinta,pm,xintaerr
         read(jfile,*)xint,pm,xinterr
         if(pm.ne.'+-')then
-           write(*,*)'File res_1_tot.txt has unexpected format'
+           write(*,*)'File res_1.txt has unexpected format'
            stop
         endif
       elseif(iuseres_1.eq.1)then
-        jfile=50
-        open (unit=jfile,file='res_wgt',status='unknown')
+         continue
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -136,7 +141,32 @@ c read from events
       keepevent=.true.
       shower=.false.
 
-      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
+     #                           MonteCarlo)
+      isavesc=itempsc
+      isavePDF=itempPDF
+      if(itempsc.ne.0)then
+        numscales=int(sqrt(dble(itempsc)))
+        if(numscales**2.ne.itempsc)then
+          write(*,*)'Different number of muR and muF choices?',itempsc
+          stop
+        endif
+      else
+        write(*,*)'Enter numscales, <0 to ignore'
+        read(*,*)itemp
+        if(itemp.gt.0)numscales=itemp
+      endif
+      if(itempPDF.ne.0)then
+        numPDFpairs=itempPDF/2
+        if(2*numPDFpairs.ne.itempPDF)then
+          write(*,*)'Number of PDF sets not even',itempPDF
+          stop
+        endif
+      else
+        write(*,*)'Enter numPDFpairs, <0 to ignore'
+        read(*,*)itemp
+        if(itemp.gt.0)numPDFpairs=itemp
+      endif
 c Showered LH files have maxevt<0; in that case, it is not the number of
 c events, but its upper bound
       if(maxevt.lt.0)then
@@ -197,18 +227,19 @@ c
             write(*,*)'Inconsistency in event file',i,' ',buff
             stop
           endif
-          read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                      fksfather_lhe,ipartner_lhe,
      #                      scale1_lhe,scale2_lhe,
      #                      jwgtinfo,mexternal,iwgtnumpartn,
      #           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           if(i.eq.1)then
             if( (jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #          jwgtinfo.eq.8 )rwgtinfo=.true.
+     #          jwgtinfo.eq.8.or.jwgtinfo.eq.9 )rwgtinfo=.true.
             saved_weight=abs(XWGTUP)
           else
             if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #           jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+     #           jwgtinfo.eq.8.or.jwgtinfo.eq.9) .and. 
+     #          (.not.rwgtinfo) )then
               write(*,*)'Inconsistency #2 in event file',i,' ',buff
               stop
             endif
@@ -248,7 +279,12 @@ c
 
       open (unit=ifile,file=event_file,status='old')
 
-      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
+     #                           MonteCarlo)
+      if(itempsc.ne.isavesc.or.itempPDF.ne.isavePDF)then
+        write(*,*)'Error in check_events'
+        write(*,*)itempsc,isavesc,itempPDF,isavePDF
+      endif
       maxevt=abs(maxevt)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
@@ -256,20 +292,25 @@ c
       
 
       sum_wgt=0d0
+      sum_abs_wgt=0d0
       nevS_lhe=0
       npartS_lhe=0
       nevH_lhe=0
       npartH_lhe=0
       itoterr=0
       mtoterr=0
-      if(jwgtinfo.eq.8)then
+      if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
         do kr=1,maxscales
           do kf=1,maxscales
             sum_wgt_resc_scale(kr,kf)=0.d0
+            xmax_wgt_resc_scale(kr,kf)=-1.d100
+            xmin_wgt_resc_scale(kr,kf)=1.d100
           enddo
         enddo
         do kpdf=0,maxPDFs
           sum_wgt_resc_pdf(kpdf)=0.d0
+          xmax_wgt_resc_pdf(kpdf)=-1.d100
+          xmin_wgt_resc_pdf(kpdf)=1.d100
         enddo
       endif
 
@@ -286,20 +327,33 @@ c
 
          i=i+1
          sum_wgt=sum_wgt+XWGTUP
+         sum_abs_wgt=sum_abs_wgt+abs(XWGTUP)
 
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
 c XWGTUP*wgtxsecmu(kr,kf)/wgtref
-         if(jwgtinfo.eq.8)then
+         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
            do kr=1,numscales
              do kf=1,numscales
                sum_wgt_resc_scale(kr,kf)=sum_wgt_resc_scale(kr,kf)+
      #                                   wgtxsecmu(kr,kf)
+               xmax_wgt_resc_scale(kr,kf)=
+     #           max(xmax_wgt_resc_scale(kr,kf),
+     #               wgtxsecmu(kr,kf))
+               xmin_wgt_resc_scale(kr,kf)=
+     #           min(xmin_wgt_resc_scale(kr,kf),
+     #               wgtxsecmu(kr,kf))
              enddo
            enddo
            do kpdf=1,2*numPDFpairs
              sum_wgt_resc_pdf(kpdf)=sum_wgt_resc_pdf(kpdf)+
      #                              wgtxsecPDF(kpdf)
+             xmax_wgt_resc_pdf(kpdf)=
+     #         max(xmax_wgt_resc_pdf(kpdf),
+     #             wgtxsecPDF(kpdf))
+             xmin_wgt_resc_pdf(kpdf)=
+     #         min(xmin_wgt_resc_pdf(kpdf),
+     #             wgtxsecPDF(kpdf))
            enddo
          endif
 
@@ -308,13 +362,14 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
              write(*,*)'Inconsistency in event file',i,' ',buff
              stop
            endif
-           read(buff,200)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+           read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                       fksfather_lhe,ipartner_lhe,
      #                       scale1_lhe,scale2_lhe,
      #                       jwgtinfo,mexternal,iwgtnumpartn,
      #            wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #         jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+     #         jwgtinfo.eq.8.or.jwgtinfo.eq.9) .and. 
+     #        (.not.rwgtinfo) )then
              write(*,*)'Inconsistency #2 in event file',i,' ',buff
              stop
            endif
@@ -437,29 +492,42 @@ c Don't check momentum conservation in that case
       enddo
 
       if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
-      err_wgt=sum_wgt/sqrt(dfloat(maxevt))
+      if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
+      err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
-      write (*,*) 'Xsec from the sum of the weights is:',
-     &sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
         toterr=sqrt(xinterr**2+err_wgt**2)
         diff=sum_wgt-xint
         if( (diff.le.0.d0.and.diff+toterr.lt.0.d0) .or.
      #      (diff.gt.0.d0.and.diff-toterr.gt.0.d0) )then
-c Error if more that 1sigma away
+c Error if more that one sigma away
           itoterr=itoterr+1
           write(44,*)'WEIGHTS'
           write(44,*)'Integral:',xint,' +-',xinterr
           write(44,*)'Weights: ',sum_wgt,' +-',err_wgt
           write(44,*)' '
           write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/
-     &sqrt(xinterr**2+err_wgt**2)
+     #                           sqrt(xinterr**2+err_wgt**2)
         endif
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (res_1.txt)    = ',
+     #               xint   ,' +-',xinterr
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
+        write (51,*)'Xsec ABS (res_1.txt)    = ',
+     #              xinta,' +-',xintaerr
       elseif(iuseres_1.eq.1)then
-        write (50,*) 'Xsec from the sum of the weights is:',
-     &sum_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -489,29 +557,59 @@ c Error if more that 1sigma away
         write(64,*)'PDF lower:',wgt4a,' +-',wgt4s
         write(64,*)'PDF upper:',wgt5a,' +-',wgt5s
 
-        if(jwgtinfo.eq.8)then
+        if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Sums of rescaled weights'
           do kr=1,numscales
             do kf=1,numscales
               if(event_norm.eq.'ave')then
-                write(64,*)'scales',kr,kf,' ->',
+                write(64,300)'scales',kr,kf,' ->',
      #                     sum_wgt_resc_scale(kr,kf)/maxevt
               else
-                write(64,*)'scales',kr,kf,' ->',
+                write(64,300)'scales',kr,kf,' ->',
      #                     sum_wgt_resc_scale(kr,kf)
               endif
             enddo
           enddo
           if(event_norm.eq.'ave')then
             do kpdf=1,2*numPDFpairs
-              write(64,*)'PDF',kpdf,' ->',
+              write(64,301)'PDF',kpdf,' ->',
      #                   sum_wgt_resc_pdf(kpdf)/maxevt
             enddo
           else
             do kpdf=1,2*numPDFpairs
-              write(64,*)'PDF',kpdf,' ->',
+              write(64,301)'PDF',kpdf,' ->',
      #                   sum_wgt_resc_pdf(kpdf)
+            enddo
+          endif
+        endif
+        if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
+          write(64,*)'  '
+          write(64,*)'Max and min of rescaled weights'
+          do kr=1,numscales
+            do kf=1,numscales
+              if(event_norm.eq.'ave')then
+                write(64,400)'scales',kr,kf,' ->',
+     #                     xmax_wgt_resc_scale(kr,kf),
+     #                     xmin_wgt_resc_scale(kr,kf)
+              else
+                write(64,400)'scales',kr,kf,' ->',
+     #                     xmax_wgt_resc_scale(kr,kf),
+     #                     xmin_wgt_resc_scale(kr,kf)
+              endif
+            enddo
+          enddo
+          if(event_norm.eq.'ave')then
+            do kpdf=1,2*numPDFpairs
+              write(64,401)'PDF',kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf),
+     #                   xmin_wgt_resc_pdf(kpdf)
+            enddo
+          else
+            do kpdf=1,2*numPDFpairs
+              write(64,401)'PDF',kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf),
+     #                   xmin_wgt_resc_pdf(kpdf)
             enddo
           endif
         endif
@@ -525,12 +623,16 @@ c Error if more that 1sigma away
       close(34)
       close(44)
       close(50)
+      close(51)
       close(54)
       if(rwgtinfo)close(64)
 
       if(idec.eq.0)call finalizedecays()
 
- 200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+ 300  format(a,2(1x,i2),a,(1x,f16.6))
+ 301  format(a,6x,i3,a,(1x,f16.6))
+ 400  format(a,2(1x,i2),a,2(1x,f16.6))
+ 401  format(a,6x,i3,a,2(1x,f16.6))
 
       end
 
@@ -587,17 +689,17 @@ c
 c Fills common block /cprocesses/ and return numproc, the number of the current
 c process in the list of processes idups_proc
       implicit none
-      integer npart,numproc,idup_eff(10)
+      integer npart,numproc,idup_eff(22)
       integer i,j
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
 c mxlproc=current maximum number of different processes
 c idups_proc(n,-1)=number of identical processes identified by n
 c idups_proc(n,0)=number of particles in process n
 c idups_proc(n,i)=ID of particle #i in process n; 1<=i<=idups_proc(n,0)
 c
-      if(npart.gt.10)then
+      if(npart.gt.22)then
         write(*,*)'Array idup_eff too small',npart
         stop
       endif
@@ -643,10 +745,10 @@ c
       integer iunit
       integer maxevt,iprocsum,iHW6procsum,nevS,nevH,i,id1,id2,ihpro
       logical isalquark,isagluon
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
 c Derived from conventions used by HW6 
 C  401    q qbar -> X
@@ -774,12 +876,12 @@ c Fills common block /ccolconn/ and return numconn, the number of the current
 c colour connection in the list of connections icolups_proc.
 c This routine works at fixed process number numproc
       implicit none
-      integer npart,numproc,numconn,icolup_eff(2,10)
-      integer i,j,ic,newline,jline(501:510),jcolup(2,10)
+      integer npart,numproc,numconn,icolup_eff(2,22)
+      integer i,j,ic,newline,jline(501:510),jcolup(2,22)
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c icolups_proc(numproc,0,1,1)=total number of colour connections
 c icolups_proc(numproc,n,0,1)=number of identical connections identified by n
@@ -859,9 +961,9 @@ c
       integer iev,numproc,numconn
       logical wrong
       integer npart,i,j,icol,iacl,iid,ncol1,ncol2,nacl1,nacl2,nneg
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c
       npart=idups_proc(numproc,0)

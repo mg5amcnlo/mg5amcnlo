@@ -65,7 +65,8 @@ c      include 'leshouche.inc'
       common /c_leshouche_inc/idup,mothup,icolup
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
 c
 c     reading parameters
@@ -109,6 +110,7 @@ c specified in coupl.inc
          is_a_j(i)=.false.
          is_a_lp(i)=.false.
          is_a_lm(i)=.false.
+         is_a_ph(i)=.false.
 
 c-light-jets
          if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
@@ -123,6 +125,9 @@ c-charged-leptons
          if (idup(i,1).eq.-11) is_a_lp(i)=.true. !  e-
          if (idup(i,1).eq.-13) is_a_lp(i)=.true. !  mu-
          if (idup(i,1).eq.-15) is_a_lp(i)=.true. !  ta-
+
+c-photons
+         if (idup(i,1).eq.22)  is_a_ph(i)=.true. !  photon
       enddo
 
       RETURN
@@ -144,7 +149,8 @@ c variable ptj
       include 'nFKSconfigs.inc'
       include "fks_info.inc"
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
-      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
 c
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
@@ -178,6 +184,10 @@ c BW stuff
      &     cBW_width(-nexternal:-1,-1:1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
+      double precision s_mass(-nexternal:-1)
+     $     ,s_mass_FKS(fks_configs,-nexternal:nexternal)
+      save s_mass_FKS
+      common/to_phase_space_s_channel/s_mass
 c
       real*8         emass(nexternal)
       common/to_mass/emass
@@ -233,6 +243,19 @@ c Add the minimal jet pTs to tau
                      stop
                   endif
                   xm(i)=emass(i)+ptj
+c Add the minimal photon pTs to tau
+               elseif(IS_A_PH(i))then
+                  if (abs(emass(i)).gt.vtiny) then
+                     write (*,*) 'Error in set_tau_min in setcuts.f:'
+                     write (*,*) 'mass of a photon should be zero',i
+     &                    ,emass(i)
+                     stop
+                  endif
+                  if  (j_fks.gt.nincoming)
+     &                 taumin(iFKS)=taumin(iFKS)+ptgmin
+                  taumin_s(iFKS)=taumin_s(iFKS)+ptgmin
+                  taumin_j(iFKS)=taumin_j(iFKS)+ptgmin
+                  xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
 c Add the postively charged lepton pTs to tau
                   taumin(iFKS)=taumin(iFKS)+emass(i)
@@ -335,6 +358,17 @@ c the previous iteration of the loop
             enddo
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c Determine the "minimal" s-channel invariant masses
+            do i=nincoming+1,nexternal-1
+               s_mass_FKS(iFKS,i)=xm(i)**2
+            enddo
+            do i=-1,-(nexternal-3),-1 ! All propagators
+               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
+               s_mass_FKS(iFKS,i)=(sqrt(s_mass_FKS(iFKS,itree(1,i)))
+     $              +sqrt(s_mass_FKS(iFKS,itree(2,i))))**2
+            enddo
+
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
             do i=nincoming+1,nexternal-1
@@ -376,22 +410,23 @@ c     set the daughters also as conflicting (recursively)
                   do j=i,-1
                      if (cBW_FKS(iFKS,j).ne.0) then
                         do k=1,2 ! loop over the 2 daughters
-                           if(cBW_FKS(iFKS,itree(k,j)).ne.2 .and.
-     &                          itree(k,j).lt.0) then
-                              cBW_FKS(iFKS,itree(k,j))=1
-                              cBW_FKS_level(iFKS,itree(k,j))=
-     &                             cBW_FKS_level(iFKS,j)+1
-                              cBW_FKS_level_max(iFKS)=
-     $                             max(cBW_FKS_level_max(iFKS)
-     $                             ,cBW_FKS_level(iFKS,itree(k,j)))
+                           if (itree(k,j).lt.0) then
+                              if(cBW_FKS(iFKS,itree(k,j)).ne.2) then
+                                 cBW_FKS(iFKS,itree(k,j))=1
+                                 cBW_FKS_level(iFKS,itree(k,j))=
+     &                                cBW_FKS_level(iFKS,j)+1
+                                 cBW_FKS_level_max(iFKS)=
+     $                                max(cBW_FKS_level_max(iFKS)
+     $                                ,cBW_FKS_level(iFKS,itree(k,j)))
 c     Set here the mass (and width) of the alternative mass; it's the
 c     difference between the mother and the sister masses. (3rd argument
 c     is '-1', because this alternative mass is SMALLER than the
 c     resonance mass).
-                              cBW_FKS_mass(iFKS,itree(k,j),-1)=
-     &                             pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
-                              cBW_FKS_width(iFKS,itree(k,j),-1)=
-     &                             pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
+                                 cBW_FKS_mass(iFKS,itree(k,j),-1)=
+     &                                pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
+                                 cBW_FKS_width(iFKS,itree(k,j),-1)=
+     &                                pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
+                              endif
                            endif
                         enddo
                      endif
@@ -436,6 +471,7 @@ c
             cBW_mass(i,j)=cBW_FKS_mass(nFKSprocess,i,j)
             cBW_width(i,j)=cBW_FKS_width(nFKSprocess,i,j)
          enddo
+         s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess)
          

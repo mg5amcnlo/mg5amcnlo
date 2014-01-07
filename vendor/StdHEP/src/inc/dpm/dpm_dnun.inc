@@ -1,0 +1,2 @@
+*KEEP,DNUN.
+      COMMON /DNUN/   NN,NP,NT

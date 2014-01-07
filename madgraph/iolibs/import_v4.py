@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from madgraph.core import base_objects
@@ -36,19 +36,23 @@ logger = logging.getLogger('madgraph.import_v4')
 #===============================================================================
 # import_v4model
 #===============================================================================
-def import_model(model_path, mgme_dir = MG4DIR):
+def import_model(model_path, mgme_dir = MG4DIR, absolute=True):
     """create a model from a MG4 model directory."""
 
     # Check for a valid directory
-    model_path = find_model_path(model_path, mgme_dir)
+    model_path_old = model_path
+    model_path = find_model_path(model_path, mgme_dir, absolute)
 
     files_list = [os.path.join(model_path, 'particles.dat'),\
                   os.path.join(model_path, 'interactions.dat')]
     
     for filepath in files_list:
         if not os.path.isfile(filepath):
-            raise InvalidCmd,  "%s directory is not a valid v4 model" % \
+            if not absolute:
+                raise InvalidCmd,  "%s directory is not a valid v4 model" % \
                                                                     (model_path)
+            else:
+                return import_model(model_path_old, mgme_dir, False)
                                                                 
     # use pickle files if defined
     if files.is_uptodate(os.path.join(model_path, 'model.pkl'), files_list):
@@ -75,11 +79,11 @@ def import_model(model_path, mgme_dir = MG4DIR):
     return model, model_path  
 
     
-def find_model_path(model_path, mgme_dir):
+def find_model_path(model_path, mgme_dir, absolute=True):
     """Find the path to the model, starting with path model_path."""
 
     # treat simple case (model_path is a valid path/ mgme_dir doesn't exist)
-    if os.path.isdir(model_path):
+    if os.path.isdir(model_path) and absolute:
         return model_path
     elif mgme_dir and os.path.isdir(os.path.join(mgme_dir, 'models',
                                                  model_path + "_v4")):
@@ -295,6 +299,16 @@ def read_interactions_v4(fsock, ref_part_list):
                                                    color.f(0, 3, -1)])
                     #cs3.coeff = fractions.Fraction(-1)
                     myinter.set('color', [cs1, cs2, cs3])
+#   The following line are expected to be correct but not physical validations
+#    have been performed. So we keep it commented for the moment.                    
+#                elif colors == [3, 3, 3]:
+#                    my_color_string = color.ColorString(\
+#                        [color.Epsilon(ind[0], ind[1], ind[2])])
+#                    myinter.set('color', [my_color_string])                    
+#                elif colors == [-3, -3, -3]:
+#                    my_color_string = color.ColorString(\
+#                        [color.EpsilonBar(ind[0], ind[1], ind[2])])
+#                    myinter.set('color', [my_color_string])
                 else:
                     logger.warning(\
                         "Color combination %s not yet implemented." % \

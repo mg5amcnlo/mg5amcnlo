@@ -39,6 +39,9 @@ c--masses and poles
       COMMON/to_qmass/qmass
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
+
+      double precision Smin
+      common/to_smin/ Smin
 c--cuts
       double precision etmin(nincoming+1:nexternal)
       double precision etamax(nincoming+1:nexternal)
@@ -81,7 +84,7 @@ C
 c
 c
 c     reading parameters
-      include '../../Source/run_config.inc'
+      include 'run_config.inc'
       character*20 param(maxpara),value(maxpara)
       integer npara
 c
@@ -110,6 +113,7 @@ c
             scale=pmass(1)
             fixed_ren_scale=.true.
             fixed_fac_scale=.true.
+            use_syst=.false.
          endif
 c
 c     set ptj and s_min if xqcut and ktscheme = 1, to improve
@@ -134,6 +138,8 @@ c
             write(*,*) 'Note that this might affect non-radiated jets,'
             write(*,*) 'e.g. from decays. Use cut_decays=F in run_card.'
           else if(mmjj.gt.xqcut)then
+c           In principle this should never happen since the banner.py
+c           is expected to correct this already.
             mmjj=0d0
             write(*,*) 'Warning! mmjj set to 0 since xqcut > 0 and'
             write(*,*) '         auto_ptj_mjj = F'
@@ -250,7 +256,7 @@ c
 c     et and eta cuts
 c
       do i=nincoming+1,nexternal
-
+         Smin = 0d0
          etmin(i)  = 0d0
          etmax(i)  = -1
 
@@ -262,40 +268,55 @@ c
 
          if(do_cuts(i)) then
 
-            if(is_a_j(i)) etmin(i)=ptj
-            if(is_a_l(i)) etmin(i)=ptl
-            if(is_a_b(i)) etmin(i)=ptb
-            if(is_a_a(i)) etmin(i)=pta
-            if(is_a_onium(i)) etmin(i)=ptonium
-
-            if(is_a_j(i)) etmax(i)=ptjmax
-            if(is_a_l(i)) etmax(i)=ptlmax
-            if(is_a_b(i)) etmax(i)=ptbmax
-            if(is_a_a(i)) etmax(i)=ptamax
-
-c
-            if(is_a_j(i)) emin(i)=ej
-            if(is_a_l(i)) emin(i)=el
-            if(is_a_b(i)) emin(i)=eb
-            if(is_a_a(i)) emin(i)=ea
-
-            if(is_a_j(i)) emax(i)=ejmax
-            if(is_a_l(i)) emax(i)=elmax
-            if(is_a_b(i)) emax(i)=ebmax
-            if(is_a_a(i)) emax(i)=eamax
-
-            if(is_a_j(i)) etamax(i)=etaj
-            if(is_a_l(i)) etamax(i)=etal
-            if(is_a_b(i)) etamax(i)=etab
-            if(is_a_a(i)) etamax(i)=etaa
-            if(is_a_onium(i)) etamax(i)=etaonium
-
-            if(is_a_j(i)) etamin(i)=etajmin
-            if(is_a_l(i)) etamin(i)=etalmin
-            if(is_a_b(i)) etamin(i)=etabmin
-            if(is_a_a(i)) etamin(i)=etaamin
+c        JET
+            if(is_a_j(i))then
+                 etmin(i)=ptj
+                 SMIN = SMIN + ptj
+                 etmax(i)=ptjmax
+                 emin(i)=ej
+                 emax(i)=ejmax
+                 etamax(i)=etaj
+                 etamin(i)=etajmin
+            endif
+c        LEPTON
+            if(is_a_l(i))then
+                 etmin(i)=ptl
+                 SMIN = SMIN + ptl
+                 etmax(i)=ptlmax
+                 emin(i)=el
+                 emax(i)=elmax
+                 etamax(i)=etal
+                 etamin(i)=etalmin
+            endif
+c        BJET
+            if(is_a_b(i))then
+                 etmin(i)=ptb
+                 SMIN = SMIN + ptb
+                 etmax(i)=ptbmax
+                 emin(i)=eb
+                 emax(i)=ebmax
+                 etamax(i)=etab
+                 etamin(i)=etabmin
+            endif
+c        PHOTON
+            if(is_a_a(i))then
+                 etmin(i) = max(pta, ptgmin)
+                 SMIN = SMIN + etmin(i)
+                 etmax(i)=ptamax
+                 emin(i)=ea
+                 emax(i)=eamax
+                 etamax(i)=etaa
+                 etamin(i)=etaamin
+            endif
+c        QUARKONIUM
+            if(is_a_onium(i))then
+                 etmin(i)=ptonium
+                 SMIN = SMIN + ptonium
+                 etamax(i)=etaonium
+            endif
          endif
       enddo
+      SMIN = SMIN **2
 c
 c     delta r cut
 c
@@ -429,6 +450,38 @@ c
       ptlmax4(2)=ptl2max
       ptlmax4(3)=ptl3max
       ptlmax4(4)=ptl4max
+
+
+c
+c     Compute Smin (for efficiency
+c
+      do i=nincoming+1,nexternal-1
+      do j=nincoming+1,nexternal-1
+         if(j.lt.i)then
+            s_min(i,j) = s_min(j,i)
+         else
+            smin=0.0d0**2
+
+            if(do_cuts(i).and.do_cuts(j)) then
+               if(is_a_j(i).and.is_a_j(j)) s_min(j,i)=mmjj*dabs(mmjj)
+               if(is_a_a(i).and.is_a_a(j)) s_min(j,i)=mmaa*dabs(mmaa)
+               if( is_a_b(i).and.is_a_b(j) ) s_min(j,i)=mmbb*dabs(mmbb)
+               if((is_a_l(i).and.is_a_l(j)).and.
+     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
+     &            (idup(i,1,1)*idup(j,1,1).lt.0))
+     &            s_min(j,i)=mmll*dabs(mmll)  !only on l+l- pairs (same flavour)
+
+               if(is_a_j(i).and.is_a_j(j)) s_max(j,i)=mmjjmax*dabs(mmjjmax)
+               if(is_a_a(i).and.is_a_a(j)) s_max(j,i)=mmaamax*dabs(mmaamax)
+               if( is_a_b(i).and.is_a_b(j) ) s_max(j,i)=mmbbmax*dabs(mmbbmax)
+               if((is_a_l(i).and.is_a_l(j)).and.
+     &            (abs(idup(i,1,1)).eq.abs(idup(j,1,1))).and.
+     &            (idup(i,1,1)*idup(j,1,1).lt.0))
+     &            s_max(j,i)=mmllmax*dabs(mmllmax)  !only on l+l- pairs (same flavour)
+            endif
+         endif
+      enddo
+      enddo
 
 c
 c    ERROR TRAPS 

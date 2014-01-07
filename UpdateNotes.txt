@@ -1,49 +1,249 @@
-Update notes for MadGraph 5 (in reverse time order)
+Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.0.0.beta4 (29.04.13) VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
+2.0.1(23/12/13) RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
+                    In rare cases this error stopped the code, while this was not needed.
+                RF: When using non-optimized loop output, the code now also works fine.
+                OM: Modification of the code to allow the code to run on our servers
+                OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
+                    the bug fix in 2.0.0
+                VH: Improve the timing routine of the NLO code (displayed in debug mode)
+                VH: FIX the import of old UFO model (those without the all_orders attribute).
+
+
+2.0.0(14/12/13)    CHANGE IN DEFAULT:
+                   ------------------
+                      OM: Change the Higgs mass to 125 GeV for most of the model (but the susy/v4 one).
+                      OM: Change the default energy of collision to 13 TeV.
+                      RF: Default renormalisation and factorisation scales are now set to H_T/2. (for aMC only)
+
+                   MadEvent Update:
+                   ----------------
+                      OM+SF+RF: Add Frixione Photon isolation (also for aMC)
+                      OM: Implementation of the reweight module for Leading Order matrix-element
+                      JA+OM+AK: Store parameters needed for systematics studies.
+                          This can be turned on with the use_syst parameter in
+                          run_card.dat.
+                          This output can be used to generate event weights for
+                          a variety of variational parameters, including scalefact,
+                          alpsfact, PDF choice, and matching scale. Note that this require
+                          pythia-pgs v2.2 for matching scale.
+                      OM+JA+Chia: Implement MadWidth (automatic/smart computation of the widths)
+                      OM: Support for Form-Factor defined in the UFO model. and support for model
+                          parameter presence inside the Lorentz expression.
+                      OM: Support for a arbitrary functions.f file present inside the UFO model. 
+                      JA: Included <clustering> tag in matched .lhe output, to be 
+                          used together with Pythia 8 CKKW-L matching. This can be 
+                          turned off with the clusinfo flag in run_card.dat.
+                      JA: New treatment of matching for diagrams that have no
+                          corresponding lower-multiplicity diagrams. Jets that
+                          are not classified as shower-type emission jets are
+                          flagged in the cluster scale info at the end of the event,
+                          which is recognized by the Pythia interface in Pythia-PGS
+                          package v. 2.2. For such jets, xqcut does not apply. This
+                          allows for consistent matching e.g. of p p > w+ b b~ in 
+                          the 4-flavor scheme. Note that auto_ptj_mjj must be set to
+                          .false. for this to work properly.
+                      OM: Change model restriction behavior: two widths with identical are not merged anymore.
+                      S.Prestel(via OM): implement KT Durham cut. (thanks to Z. Marshall)
+                      OM: Improved check for unresponsive of PBS cluster (thanks J. Mc Fayden)
+                      OM: Implement a maximum number (2500) of jobs which can be submitted at the same time
+                          by the PBS cluster. This number is currently not editable via configuration file.
+                     
+                   MadEvent Bug Fixing:
+                   --------------------
+                      OM: Fix a bug for h > l+ l- l+ l- (introduce in 1.5.9) where the phase-space parametrization 
+                          fails to cover the full phase-space. This bugs occurs only if two identical particles decays
+                          in identical particles and if both of those particles can't be on-shell simultaneously. 
+                      OM: Fix a bug for multi_run sample in presence of negative weights (possible if NLO pdf)
+                          The negative weights were not propagated to the merged sample. 
+                          (thanks to Sebastien Brochet for the fix)
+	         
+                   aMC@NLO Update:       ! FIRST OFFICIAL RELEASE WITH NLO CAPABILITIES !
+                   ---------------
+                       PT: MC@NLO matching to PYTHIA8 available.
+                       RF: Added FxFx merging
+                       RF: Use MC over helicities for the MadLoop virtual corrections.
+                       RF: Using "virtual tricks" to reduce the number of PS points for which to include
+                           the virtual corrections, leading to a speed up of the code.
+                       OM+SF+RF: Add Frixione Photon isolation (also in MadEvent)
+                       PA+OM: Fast version of MadSpin implemented (PS generation in Fortran).
+		       OM: Allow to have MadSpin in "gridpack mode" (same cards/same decay). 
+                           Add in the madspin_card "set ms_dir PATH". If the path didn't exist MS will
+                           create the gridpack on that path, otherwise it will reuse the information 
+                           (diagram generated, maximum weight of each channel, branching ratio,...)
+                           This allow to bypass all the initialization steps BUT is valid only for the 
+                           exact same event generation.
+                       VH: Fixed set_run.f which incorrectly sets a default value for ptl, drll and
                            etal making the code insensitive to the values set in the run_card.dat 
                        VH: Fixed a bug in MadLoop that doubled the computing time for quad precision
-		       RF: Possibility to use MC over helicities (for the MadLoop virtual corrections
-                           only). Turned off by default.
-		       VH+RF: Added MadLoop stability information to the log files (and run summary
+                       VH+RF: Added MadLoop stability information to the log files (and run summary
                            in DEBUG mode).
+                       RF: Fixed a stability problem in the reweighting to get PDF and scale uncertainties.
+                       VH+RF: Improved the Binoth LHA interface
+                       RF: Improved the multi-channeling for processes with more amplitudes than diagrams.
+                       RF: Added a new parameter in the run_card to set the required accuracy for fixed 
+                           order runs.
+                       SF+RF: Improved handling of fixed order analysis
 
-2.0.0.beta3(13/02/13) OM: Merge with 1.5.7+1.5.8 (See information below)
-                      OM: Allow the customize_model to be scriptable in a 
-                          friendly way.
-                      RF: Event normalization is now Les Houches compliant (the weights
-		          of the events should average to the total rate). The old normalization
-			  can still be chosen by setting the flag 'sum = event_norm' in the run_card.
-		      RF: Fixes a bug related to the mass of the tau that was not consistently 
- 		          taking into account in the phase-space set-up.
-		      VH: Fixed the incorrect implementation of the four gluons R2 in the loop_sm UFO.
-		      VH: Fixed the UV renormalization for the SM with massive c quarks.
-			  RF: The PDF uncertainty for NNPDF is now also correctly given in the run summary
-		      RF: Some improvements in the test_MC and test_ME when matrix elements are
-                          numerically very large
-		      OM+RF: Added the running at LO to the 'launch questions'
-                      OM: Allow "check" command to use a event file.
-                          This will use the related param_card and the first
-                          event compatible with the requested process.
-		      RF: Improved the phase-space generation in the case of competing resonances
+                    From beta3 (13/02/13):
+                       OM: Merge with 1.5.7+1.5.8 (See information below)
+                       OM: Allow the customize_model to be scriptable in a 
+                           friendly way.
+                       RF: Event normalization is now Les Houches compliant (the weights
+		           of the events should average to the total rate). The old normalization
+                           can still be chosen by setting the flag 'sum = event_norm' in the run_card.
+		       RF: Fixes a bug related to the mass of the tau that was not consistently 
+ 		           taking into account in the phase-space set-up.
+		       VH: Fixed the incorrect implementation of the four gluons R2 in the loop_sm UFO.
+		       VH: Fixed the UV renormalization for the SM with massive c quarks.
+                       RF: The PDF uncertainty for NNPDF is now also correctly given in the run summary
+                       RF: Some improvements in the test_MC and test_ME when matrix elements are
+                           numerically very large
+                       OM+RF: Added the running at LO to the 'launch questions'
+                       OM: Allow "check" command to use a event file.
+                           This will use the related param_card and the first
+                           event compatible with the requested process.
+                       RF: Improved the phase-space generation in the case of competing resonances
 
-2.0.0.beta2(23/12/12) MG5 Team: Include 1.5.4+1.5.5+1.5.6 modifications
-                      MadSpin Team: Include MadSpin
-                      VH: Fix computation in the Feynman gauge for the loops
-                      RF: automatic computation of the NLO uncertainties
-                      OM: NLO can now be runned with no central disk
-                      MZ: change the format of number (using e and not d)
-                      MZ: compilation and tests are possible in multicore
-                      RF: allow to precise either uncertainty or number of events
-                          for aMC@NLO/NLO
-                      OM: ./bin/mg5 cmd.cmd is now working for NLO process
+                    From beta2 (23/12/12):
+                       MG5 Team: Include 1.5.4+1.5.5+1.5.6 modifications
+                       MadSpin Team: Include MadSpin
+                       VH: Fix computation in the Feynman gauge for the loops
+                       RF: automatic computation of the NLO uncertainties
+                       OM: NLO can now be runned with no central disk
+                       MZ: change the format of number (using e and not d)
+                       MZ: compilation and tests are possible in multicore
+                       RF: allow to precise either uncertainty or number of events
+                           for aMC@NLO/NLO
+                       OM: ./bin/mg5 cmd.cmd is now working for NLO process
 
-2.0.0.beta1(31/10/12) aMCatNLO Team: First public (beta) version of aMCatNLO.
-                        In order to learn aMCatNLO, please do "tutorial aMCatNLO"
-                        Please also visit: http://amcatnlo.cern.ch/list.htm for more
-                        information.
+                    From beta1 (31/10/12):
+                       aMCatNLO Team: First public (beta) version of aMCatNLO.
+                         In order to learn aMCatNLO, please do "tutorial aMCatNLO"
+                         Please also visit: http://amcatnlo.cern.ch/list.htm for more
+                         information.
 
-1.5.8 (26/02/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
+1.5.15 (11/12/13) OM: Fix the auto-update function in order to allow to pass to 2.0.0
+
+1.5.14 (27/11/13) OM: Add warning about the fact that newprocess_mg5 is going to be remove in MG5_aMC_V2.0.0
+                  OM: Improved cluster submision/re-submition control. 
+
+1.5.13 (04/11/13) OM: Implement a function which check if jobs submitted to cluster are correctly runned.
+                      In case of failure, you can re-submitted the failing jobs automatically. The maximal 
+                      number of re-submission for a job can be parametrize (default 1) and how long you have to
+                      wait before this resubmission [to avoid slow filesystem problem, i.e. condor](default 300s)
+                      Supported cluster for this function: condor, lsf, pbs
+                  OM: Fix a problem when more than 10k diagrams are present for a given subprocesses.
+                      (tt~+4jets).
+                  BF: Change nmssm model (The couplings orders were not correctly assigned for some triple 
+                      Higgs interactions) 
+                  OM: use evince by default to open eps file instead of gv.
+		  OM: Fix a problem with the set command for the card edition for the mssm model.
+                  OM: Update EWdim6 paper according to the snowmass paper. (3 more operator)
+                      The default model is restricted in order to exclude those operators. In order
+                      to have those you have to use import model EWdim6-full
+                  OM: Fix bug #1243189, impossible to load v4 model if a local directory has the name of
+                      the models (which is present in the models directory)
+                  OM: Fix a bug in the complex mass scheme in the reading of the param_card (it was clearly stated)
+                  OM: Improve numerical stability of the phase-space point generation. (thanks Z. Surujon)
+
+1.5.12 (21/08/13) OM: Improve phase-space integration for processes with strong MMJJ cut. Cases where
+                      the cross-section were slightly (~4%) under-evaluated due to such strong cut.
+                  OM: Add a command print_results in the madevent interface. This command print the 
+                      cross-section/number of events/... 
+                  OM: change the way prompt color is handle (no systematic reset). Which provides better
+                      result when the log is printed to a file. (thanks Bae Taegil) 
+                  OM: Fix Bug #1199514: Wrong assignment of mass in the lhe events file if the initial 
+                      state has one massive and one massless particles. (Thanks Wojciech Kotlarski)
+                  OM: Fix a compilation problem for SLC6 for the installation of pythia-pgs
+                  OM: Fix a crash linked to bug #1209113.
+                  OM: Fix a crash if python is not a valid executation (Bug #1211777)
+		  OM: Fix a bug in the edition of the run_card if some parameters were missing in the cards
+                      (Bug #1183334)
+
+1.5.11 (21/06/13) OM: Fix CRITICAL bug (returning wrong cross-section) for processes with more than
+                      one W decaying leptonically. For such processes the lepton cuts were also used
+                      on the neutrino particle reducing the cross-section. This bug was present only
+                      for group_subprocesses=True (the default)
+                  OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                      LINUX computer only)
+                  OM: The compilation of madevent is now performed by the number of core specify
+                      in the configuration file. Same for pythia, ...
+                  OM: Improve support for Read-Only system
+                  OM: Fix a bug with the detection of the compiler when user specifiy a specific
+                      compiler.
+                  OM: Fix a problem that MG5 fails to compute the cross-section/width after that 
+                      a first computation fails to integrate due to a wrong mass spectrum. 
+                  OM: Fix a wrong output (impossible to compile) for pythia in presence of photon/gluon
+                      propagator (introduce in 1.5.8)
+                  OM: Allow to have UFO model with "goldstone" attribute instead of "GoldstoneBoson", since
+                      FR change convention in order to match the UFO paper.
+
+1.5.10 (16/05/13) OM: Fix Bug #1170417: fix crash for conjugate routine in presence of 
+                      massless propagator. (introduce in 1.5.9)
+                  OM: Fix question #226810: checking that patch program exists before
+                      trying to update MG5 code.
+                  OM: Fix Bug #1171049: an error in the order of wavefunctions 
+                      making the code to crash (introduce in 1.5.7)
+		  OM: Allow to use an additional syntax for the set command.
+                      set gauge = Feynman is now valid. (Was not valid before due to the '=')
+                  OM: Fix By Arian Abrahantes. Fix SGE cluster which was not working when
+                      running full simulation (PGS/Delphes).
+                  OM: adding txxxxx.cc (Thanks to Aurelijus Rinkevicius for having 
+                      written the routine) 
+                  OM: Fix Bug #1177442. This crash occurs only for very large model. 
+                      None of the model shipped with MG5 are impacted.
+                  OM: Fix Question #228315. On some filesystem, some of the executable 
+                      loose the permission to be executable. Recover those errors 
+                      automatically.
+                  OM: Modify the diagram enhancement technique. When more diagram have 
+                      the same propagator structure we still combine them but we now include
+                      the interference term in the enhancement technique for those diagrams.
+                      This fix a crash for some multi-jet process in presence of non diagonal
+                      ckm matrices.
+
+1.5.9 (01/04/13)  JA: Fix bug in identification of symmetric diagrams, which could
+                      give the wrong propagators included in event files for certain
+                      processes (such as p p > z z j, z > l+ l-). Apart from the 
+                      propagators (with status 2) in the event file, this bug didn't
+                      affect any other results (such as distributions).
+                  JA: Fix problem in gensym which made some decay chain processes
+                      slower than they should be. Thanks Eric Mintun for reporting.
+                  JA: Fix problem in event clustering (introduced in v. 1.5.8)
+                      which made events from some processes fail Pythia running.
+                  JA: Fixed bug #1156474, Pythia 8 C++ matrix element output for 
+                      decay chain processes such as p p > z j, z > j j.
+                      (Bug #1156474)
+                  JA + OM: Automatically remove libpdf and libgeneric before survey,
+                      so everything works automatically when switching between
+                      built-in PDFs and LHAPDF.
+                  JA: Allow syntax / to remove particles in the define command.
+                      Example: define q = p / g
+                  JA: Added fat warning if any decay process in a decay chain
+                      includes a particle decaying to itself (as is the case
+                      if you do w+ > all all, since you include w+ > w+ a).
+                  JA: Forbid running newprocess_mg5 from a process directory
+                      that has already been generated, to avoid confusion.
+                  OM: Fix lxplus server issue (Bug #1159929)
+                  OM: Fix an issue when MG5 directory is on a read only disk 
+                      (Bug #1160629)
+                  OM: Fix a bug which prevent to have the pythia matching plot/cross-section
+                      in some particular case.
+                  OM: Support of new UFO convention allowing to define custom propagator.
+                      (Both in MG5 and ALOHA)
+                  OM: Change ALOHA default propagator to have a specific expression for the
+                      massless case allowing to speed up matrix element computation with 
+                      photon/gluon.
+                  OM: Correct the default spin 3/2 propagator (wrong incoming/outcoming 
+                      definition)
+                  ML (by OM): Adding support of the SLURM cluster. Thanks to 
+                      Matthew Low for the implementation.
+                  OM: Fixing the standalone_cpp output for the mssm model. (only model impacted)
+                      Thanks to Silvan S Kuttimalai for reporting. 
+                  OM: Fix Bug #1162512: Wrong line splitting in cpp when some name were very long.
+                      (shorten the name + fix the splitting)
+
+1.5.8 (05/03/13)  OM: Fix critical bug introduce in 1.5.0. ALOHA was wrongly written
                       HELAS routine for expression containing expression square. 
                       (like P(-1,1)**2). None of the default model of MG5 (like sm/mssm)
                       have such type of expression. More information in bug report #1132996

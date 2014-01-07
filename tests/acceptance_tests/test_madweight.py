@@ -217,10 +217,17 @@ class TestMadWeight(unittest.TestCase):
         open('/tmp/mg5_cmd','w').write(cmd)
         
         devnull =open(os.devnull,'w')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
-                        stdout=devnull, stderr=devnull)
+                        stdout=stdout, stderr=stderr)
 
         data = open(pjoin(MG5DIR, 'TEST_MW_W2J_prod', 'Events', 'fermi', 'weights.out')).read() 
 

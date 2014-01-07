@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -540,7 +540,7 @@ class TestFKSProcess(unittest.TestCase):
                               MG.Leg({'id': 21, 'state':True})])
         
 
-        dict = {'legs' : leglist, 'orders':{'QCD':2, 'QED':0},
+        dict = {'legs' : leglist, 'orders':{'QCD':2, 'QED':0, 'WEIGHTED':2},
                    'model': self.mymodel,
                    'id': 1,
                    'required_s_channels':[],
@@ -555,29 +555,68 @@ class TestFKSProcess(unittest.TestCase):
 
         target_fks_infos = [ \
                 # real config 1: g g > g g g
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':True},
-                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True},
-                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':True,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}]},
+                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True,
+                     'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}]},
+                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True,
+                     'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}]}],
                 # real config 2: u g > u g g
-                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}]}],
                 # real config 3: ux g > ux g g
-                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}]}],
                 # real config 4: d g > d g g
-                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}]}],
                 # real config 5: dx g > dx g g
-                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':3, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 5},
+                                {'born_conf': 1, 'real_conf': 4},
+                                {'born_conf': 2, 'real_conf': 3}]}],
                 # real config 6: g u > u g g
-                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}]}],
                 # real config 7: g ux > ux g g
-                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}]}],
                 # real config 8: g d > d g g
-                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}]}],
                 # real config 9: g dx > dx g g
-                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False}],
+                [{'i':3, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 12},
+                                {'born_conf': 1, 'real_conf': 6},
+                                {'born_conf': 2, 'real_conf': 9}]}],
                 # real config 10: g g > u ux g
-                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False}],
+                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}]}],
                 # real config 11: g g > d dx g
-                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False}]]
+                [{'i':4, 'j':3, 'ij':3, 'ij_glu':3, 'need_color_links':False,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 0},
+                                {'born_conf': 1, 'real_conf': 14},
+                                {'born_conf': 2, 'real_conf': 11}]}]]
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),11)
@@ -695,7 +734,7 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(len(fksproc.real_amps), 11)
 
 
-    def test_generate_reals_no_combine(self):
+    def test_generate_reals_combine(self):
         """tests the generate_reals function, if all the needed lists
         -- amplitudes
         -- real amps
@@ -714,10 +753,22 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(len(amp_ugugg), 1)
         self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
         self.assertEqual(amp_ugugg[0].fks_infos,
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':True},
-                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True},
-                 {'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True},
-                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True}])
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':0, 'need_color_links':True,
+                    'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                                {'born_conf': 1, 'real_conf': 10},
+                                {'born_conf': 2, 'real_conf': 9}]},
+                 {'i':5, 'j':2, 'ij':2, 'ij_glu':2, 'need_color_links':True,
+                     'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                                 {'born_conf': 1, 'real_conf': 4},
+                                 {'born_conf': 2, 'real_conf': 7}]},
+                 {'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True,
+                     'rb_links':[{'born_conf': 0, 'real_conf': 1},
+                                {'born_conf': 1, 'real_conf': 13},
+                                {'born_conf': 2, 'real_conf': 8}]},
+                 {'i':5, 'j':4, 'ij':4, 'ij_glu':4, 'need_color_links':True,
+                     'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                                 {'born_conf': 1, 'real_conf': 5},
+                                 {'born_conf': 2, 'real_conf': 12}]}])
 
         
     def test_find_reals(self):

@@ -65,6 +65,12 @@ C
 C
 C     SPECIAL CUTS
 C
+C      Frixione Isolation cut
+       REAL*8 PTGMIN,R0GAMMA,XN,EPSGAMMA ! photon cuts
+       LOGICAL ISOEM ! photon cuts
+       COMMON /TO_ISOGAMMA_CUTS/PTGMIN,R0GAMMA,XN,EPSGAMMA
+       COMMON /TO_ISOGAMMA_EM/ISOEM
+
 C-- this are somewhat old kind of cuts that where used for specific
 c   purposes
 c
@@ -77,3 +83,8 @@ C    FLAG FOR CUTTING DECAY PRODUCTS AND AUTOMATICALLY SETTING PTJ/MJJ
 C
       logical cut_decays, auto_ptj_mjj
       common /to_cut_decays/cut_decays,auto_ptj_mjj
+
+C COMMON BLOCK FOR JET MEASURE CUTS: DURHAM KT
+      REAL*8 KT_DURHAM, D_PARAMETER
+      LOGICAL DO_KT_DURHAM
+      COMMON /JET_MEASURE_CUTS/ KT_DURHAM, D_PARAMETER

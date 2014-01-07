@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -129,10 +129,11 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         matrix_elements = FKSHelasProcessList()
 
-        for proc in fksprocs:
-            logger.info("Generating Helas calls for FKS %s" % \
-              proc.born_amp.get('process').nice_string(print_weighted = False).\
-                                                  replace('Process', 'process'))
+        for i, proc in enumerate(fksprocs):
+            logger.info("Generating Helas calls for FKS %s (%d / %d)" % \
+              (proc.born_amp.get('process').nice_string(print_weighted = False).\
+                                                  replace('Process', 'process'),
+                i + 1, len(fksprocs)))
             matrix_element_list = [FKSHelasProcess(proc, self['real_matrix_elements'],
                                                            fksmulti['real_amplitudes'],
                                                           loop_optimized = self.loop_optimized,
@@ -399,7 +400,7 @@ class FKSHelasRealProcess(object): #test written
             else:
                 logger.info('generating matrix element...')
                 self.matrix_element = helas_objects.HelasMatrixElement(
-                                        fksrealproc.amplitude, **opts)
+                                                  fksrealproc.amplitude, **opts)
                 #generate the color for the real
                 self.matrix_element.get('color_basis').build(
                                     self.matrix_element.get('base_amplitude'))

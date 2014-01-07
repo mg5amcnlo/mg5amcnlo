@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """All the routines to choose the position to each vertex and the 
@@ -202,7 +202,7 @@ class FeynmanLine(object):
         """Returns True if the particle is a fermion."""
 
         model_info = self.model.get_particle(abs(self.id))
-        if model_info.get('line') == 'straight':
+        if model_info.get('spin') % 2 == 0:
             return True
 
     def is_external(self):
@@ -1787,11 +1787,11 @@ class DiagramDrawer(object):
     def draw_diagram(self, diagram=None, number=0):
         """Building the diagram Line after Line. 
         This is the key routine of 'draw'."""
-
+        
         # If No diagram set, use the one use at init
         if diagram is None:
             diagram = self.diagram
-                
+
         # drawing the vertex
         [self.draw_vertex(vertex) for vertex in diagram.vertexList]
 
@@ -1814,6 +1814,7 @@ class DiagramDrawer(object):
         # Finalize information related to the graph. First, associate a diagram
         #position to the diagram representation.
         self.put_diagram_number(number)
+        
 
         # Then If a file exist write the text in it                 
         if self.file:
@@ -1837,7 +1838,7 @@ class DiagramDrawer(object):
         """Draw the line information.
         First, call the method associate the line type [draw_XXXXXX]
         Then finalize line representation by adding his name and, if it's an 
-        external particle, the MadGraph number associate to it."""
+        external particle, the MadGraph5_aMC@NLO number associate to it."""
 
         # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
@@ -1850,7 +1851,7 @@ class DiagramDrawer(object):
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
         self.associate_name(line, name)
-        # And associate the MadGraph Number if it is an external particle
+        # And associate the MadGraph5_aMC@NLO Number if it is an external particle
         if line.is_external():
             number = line.number
             self.associate_number(line, number)
@@ -1878,10 +1879,13 @@ class DiagramDrawer(object):
             
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
-        self.associate_name(line, name)
-        
-        #store begin for helping future curving
-        self.curved_part_start = (line.begin.pos_x, line.begin.pos_y)
+        if self.curved_part_start == (line.begin.pos_x, line.begin.pos_y):
+            self.associate_name(line, name, loop=True, reverse=True)
+            self.curved_part_start = (line.end.pos_x, line.end.pos_y)
+        else:
+            self.associate_name(line, name, loop=True)
+            #store begin for helping future curving
+            self.curved_part_start = (line.begin.pos_x, line.begin.pos_y)
 
     def draw_vertex(self, vertex):
         """default vertex style"""
@@ -1906,7 +1910,7 @@ class DiagramDrawer(object):
 
     def associate_number(self, line, number):
         """Method to associate a number to 'line'. By default this method is 
-        call only for external particles and the number is the MadGraph number 
+        call only for external particles and the number is the MadGraph5_aMC@NLO number 
         associate to the particle. The default routine doesn't do anything"""
         pass
     

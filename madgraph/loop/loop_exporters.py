@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Methods and classes to export matrix elements to v4 format."""
@@ -65,10 +65,9 @@ class LoopExporterFortran(object):
         from this class AND from the corresponding ProcessExporterFortran(ME,SA,...).
         It plays the same role as ProcessExporterFrotran and simply defines here
         loop-specific helpers functions necessary for all loop exporters.
-        Notice that we do have LoopExporterFortran inheriting from 
-        ProcessExporterFortran hence giving access to arguments like dir_path and
-        clean. This creates a diamond inheritance scheme in which we avoid mro
-        (method resolution order) ambiguity by using unique method names here."""
+        Notice that we do not have LoopExporterFortran inheriting from 
+        ProcessExporterFortran but give access to arguments like dir_path and
+        clean using options. This avoids method resolution object ambiguity"""
 
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
@@ -120,6 +119,17 @@ class LoopExporterFortran(object):
 
         # Return to original PWD
         os.chdir(cwd)
+    
+    def get_aloha_model(self, model):
+        """ Caches the aloha model created here as an attribute of the loop 
+        exporter so that it can later be used in the LoopHelasMatrixElement
+        in the function compute_all_analytic_information for recycling aloha 
+        computations across different LoopHelasMatrixElements steered by the
+        same loop exporter.
+        """
+        if not hasattr(self, 'aloha_model'):
+            self.aloha_model = create_aloha.AbstractALOHAModel(model.get('name'))
+        return self.aloha_model
 
     #===========================================================================
     # write the multiple-precision header files
@@ -173,18 +183,26 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         except os.error:
             logger.error('Could not cd to directory %s' % dirpath)
             return 0
-                                       
+                     
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
-                            writers.FortranWriter('cts_mpc.h'),)
+                                            writers.FortranWriter('cts_mpc.h'))
 
         # Return to original PWD
         os.chdir(cwd)
 
+    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+                                                         wanted_couplings = []):
+        """ Caches the aloha model created here when writing out the aloha 
+        fortran subroutine.
+        """
+        self.get_aloha_model(model)
+        super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
+           wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
+
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
-    
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
@@ -219,7 +237,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                                  new_helas_call)
 
     def make_source_links(self):
-        """ In the loop output, we don't need the files fromt he Source folder """
+        """ In the loop output, we don't need the files from the Source folder """
         pass
 
     def make_model_symbolic_link(self):
@@ -254,7 +272,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         
         # To store the result
         res_list = [[] for i in range(n_amps)]
-        
         for i, coeff_list in enumerate(color_amplitudes):
                 for (coefficient, amp_number) in coeff_list:
                     res_list[amp_number-1].append((i,self.cat_coeff(\
@@ -324,6 +341,21 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 progress_bar.update(i+1)
             line_num=[]
             line_denom=[]
+
+            # Treat the special case where this specific amplitude contributes to no
+            # color flow at all. So it is zero because of color but not even due to
+            # an accidental cancellation among color flows, but simply because of its
+            # projection to each individual color flow is zero. In such case, the 
+            # corresponding jampl_list is empty and all color coefficients must then
+            # be zero. This happens for example in the Higgs Effective Theory model
+            # for the bubble made of a 4-gluon vertex and the effective ggH vertex.
+            if len(jampl_list)==0:
+                line_num=[0]*len(ampb_to_jampb)
+                line_denom=[1]*len(ampb_to_jampb)
+                ColorMatrixNumOutput.append(line_num)
+                ColorMatrixDenomOutput.append(line_denom)
+                continue
+
             for jampb_list in ampb_to_jampb:
                 real_num=0
                 imag_num=0
@@ -350,7 +382,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                         imag_num=imag_num-buff_num
                     else:
                         imag_num=imag_num+buff_num
-                assert not (real_num!=0 and imag_num!=0), "MadGraph5 found a "+\
+                assert not (real_num!=0 and imag_num!=0), "MadGraph5_aMC@NLO found a "+\
                   "color matrix element which has both a real and imaginary part."
                 if imag_num!=0:
                     res=fractions.Fraction(imag_num,common_denom)
@@ -372,7 +404,6 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                               "%d-%m-%Y %H:%M"))            
         if progress_bar!=None:
             progress_bar.finish()
-
 
         return (ColorMatrixNumOutput,ColorMatrixDenomOutput)
 
@@ -573,6 +604,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         LoopFortranModel = helas_call_writers.FortranUFOHelasCallWriter(
                      argument=fortran_model.get('model'),
                      hel_sum=matrix_element.get('processes')[0].get('has_born'))
+
+        # Compute the analytical information of the loop wavefunctions in the
+        # loop helas matrix elements using the cached aloha model to reuse
+        # as much as possible the aloha computations already performed for
+        # writing out the aloha fortran subroutines.
+        matrix_element.compute_all_analytic_information(
+          self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
@@ -876,8 +914,11 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
             replace_dict['set_reference']='\n'.join([
-              'C  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE*(10.0d0**(5*(-2*NEXTERNAL+8)))'])
+              'C For loop-induced, the reference for comparison is set later'+\
+              ' from the total contribution of the previous PS point considered.',
+              'C But you can edit here the value to be used for the first PS point.',
+                'if (NPSPOINTS.eq.0) then','ref=1.0d-50','else',
+                'ref=nextRef/DBLE(NPSPOINTS)','endif'])
             replace_dict['loop_induced_setup'] = '\n'.join([
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
@@ -1104,7 +1145,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ Writes loop_matrix.f, CT_interface.f and loop_num.f only but with
         the optimized FortranModel"""
         # Create the necessary files for the loop matrix element subroutine
-
+        
         if not isinstance(fortran_model,\
           helas_call_writers.FortranUFOHelasCallWriter):
             raise MadGraph5Error, 'The optimized loop fortran output can only'+\
@@ -1112,6 +1153,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         OptimizedFortranModel=\
           helas_call_writers.FortranUFOHelasCallWriterOptimized(\
           fortran_model.get('model'),False)
+
+        # Compute the analytical information of the loop wavefunctions in the
+        # loop helas matrix elements using the cached aloha model to reuse
+        # as much as possible the aloha computations already performed for
+        # writing out the aloha fortran subroutines.
+        matrix_element.compute_all_analytic_information(
+          self.get_aloha_model(matrix_element.get('processes')[0].get('model')))
 
         # Initialize a general replacement dictionary with entries common to 
         # many files generated here.
@@ -1123,10 +1171,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         self.general_replace_dict['loop_max_coefs']=\
                         q_polynomial.get_number_of_coefs_for_rank(max_loop_rank)
         max_loop_vertex_rank=matrix_element.get_max_loop_vertex_rank()
-        if max_loop_vertex_rank > 1:
-            raise MadGraph5Error, 'The optimized loop fortran output can only'+\
-              ' handle renormalizable gauge theories for which the maximum loop'+\
-              ' power brought by any loop interaction is one.'
         self.general_replace_dict['vertex_max_coefs']=\
                  q_polynomial.get_number_of_coefs_for_rank(max_loop_vertex_rank)
         self.general_replace_dict['nloopwavefuncs']=\
@@ -1371,8 +1415,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # with the born or the loop ones.
         if not matrix_element.get('processes')[0].get('has_born'):
             replace_dict['set_reference']='\n'.join([
-              'C  Please specify below the reference value you want to use for'+\
-              ' comparisons.','ref=LSCALE*(10.0d0**(-2*NEXTERNAL+8))'])
+              'C Chose the arbitrary scale of reference to use for comparisons'+\
+              ' for this loop-induced process.','ref=1.0d-50'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nctamps'
             replace_dict['squaring']=\

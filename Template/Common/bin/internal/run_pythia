@@ -18,6 +18,6 @@ echo $$ >> ../myprocid
 echo " " >> ../Cards/pythia_card.dat
 echo "      LHAPATH=$pydir/PDFsets" >> ../Cards/pythia_card.dat
 export PDG_MASS_TBL=$pydir/mass_width_2004.mc
-
+rm -rf Events/hepmv_event.hepmc &> /dev/null
 $pydir/pythia && touch pythia.done
 

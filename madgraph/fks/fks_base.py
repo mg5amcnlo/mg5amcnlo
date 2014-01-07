@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -43,11 +43,14 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         """Default values for all properties"""
         super(FKSMultiProcess, self).default_setup()
         self['born_processes'] = FKSProcessList()
+        if not 'OLP' in self.keys():
+            self['OLP'] = 'MadLoop'
     
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSMultiProcess, self).get_sorted_keys()
-        keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 'has_fsr']
+        keys += ['born_processes', 'real_amplitudes', 'real_pdgs', 'has_isr', 
+                 'has_fsr', 'OLP']
         return keys
 
     def filter(self, name, value):
@@ -61,14 +64,21 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         if name == 'real_amplitudes':
             if not isinstance(value, diagram_generation.AmplitudeList):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list for real_amplitudes " % str(value)                             
+                        "%s is not a valid list for real_amplitudes " % str(value)
+                                                  
         if name == 'real_pdgs':
             if not isinstance(value, list):
                 raise self.PhysicsObjectError, \
-                        "%s is not a valid list for real_amplitudes " % str(value)                             
+                        "%s is not a valid list for real_amplitudes " % str(value)
+        
+        if name == 'OLP':
+            if not isinstance(value,str):
+                raise self.PhysicsObjectError, \
+                    "%s is not a valid string for OLP " % str(value)
+                                                     
         return super(FKSMultiProcess,self).filter(name, value)
     
-    def __init__(self,  *arguments):
+    def __init__(self, *arguments, **options):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
@@ -81,13 +91,17 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         old_levels = [logg.level for logg in loggers_off]
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
-
+        
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
         
+        if 'OLP' in options.keys():
+            self['OLP']=options['OLP']
+            del options['OLP']
+
         try:
             # Now generating the borns for the first time.
-            super(FKSMultiProcess, self).__init__(*arguments)
+            super(FKSMultiProcess, self).__init__(*arguments,**options)
         except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
             raise InvalidCmd, "Born diagrams could not be generated for the "+\
@@ -123,7 +137,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
 
         amps = self.get('amplitudes')
-        for amp in amps:
+        for i, amp in enumerate(amps):
+            logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
+                % (amp['process'].nice_string(print_weighted=False).replace(\
+                                                                 'Process', ''),
+                 i + 1, len(amps)))
+
             born = FKSProcess(amp)
             self['born_processes'].append(born)
             born.generate_reals(self['pdgs'], self['real_amplitudes'])
@@ -138,7 +157,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         if amps:
             if self['process_definitions'][0].get('NLO_mode') == 'all':
-                logger.info('Generating virtual matrix elements using MadLoop:')
                 self.generate_virtuals()
             
             elif not self['process_definitions'][0].get('NLO_mode') in ['all', 'real']:
@@ -175,7 +193,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['pdgs'].extend(other['pdgs'])
         self['has_isr'] = self['has_isr'] or other['has_isr']
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
-
+        self['OLP'] = other['OLP']
 
     def get_born_amplitudes(self):
         """return an amplitudelist with the born amplitudes"""
@@ -189,30 +207,34 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
     def get_real_amplitudes(self):
         """return an amplitudelist with the real amplitudes"""
-#        return diagram_generation.AmplitudeList([real.amplitude \
-#                           for born in self['born_processes'] \
-#                           for real in born.real_amps])
         return self.get('real_amplitudes')
 
 
     def generate_virtuals(self):
         """For each process among the born_processes, creates the corresponding
         virtual amplitude"""
+        
+        # If not using MadLoop, then the LH order file generation and processing
+        # will be entirely done during the output, so nothing must be done at
+        # this stage yet.
+        if self['OLP']!='MadLoop':
+            logger.info("The loop matrix elements will be generated by "+\
+                                     '%s at the output stage only.'%self['OLP'])
+            return
 
-        for born in self['born_processes']:
-                myproc = copy.copy(born.born_proc)
-                myproc['orders'] = copy.copy(born.born_proc['orders'])
-                if 'WEIGHTED' in myproc['orders'].keys():
-                    del myproc['orders']['WEIGHTED']
-                if 'WEIGHTED' in myproc['squared_orders'].keys():
-                    del myproc['squared_orders']['WEIGHTED']
-                myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-                logger.info('Generating virtual matrix element with MadLoop for process%s' \
-                        % myproc.nice_string(print_weighted = False).replace(\
-                                                                 'Process', ''))
-                myamp = loop_diagram_generation.LoopAmplitude(myproc)
-                if myamp.get('diagrams'):
-                    born.virt_amp = myamp
+        for i, born in enumerate(self['born_processes']):
+            logger.info('Generating virtual matrix elements using MadLoop:')
+            myproc = copy.copy(born.born_proc)
+            # take the orders that are actually used bu the matrix element
+            myproc['orders'] = fks_common.find_orders(born.born_amp)
+            myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+            logger.info('Generating virtual matrix element with MadLoop for process%s (%d / %d)' \
+                    % (myproc.nice_string(print_weighted = False).replace(\
+                                                             'Process', ''),
+                        i + 1, len(self['born_processes'])))
+            myamp = loop_diagram_generation.LoopAmplitude(myproc)
+            if myamp.get('diagrams'):
+                born.virt_amp = myamp
 
 
 class FKSRealProcess(object): 
@@ -246,14 +268,19 @@ class FKSRealProcess(object):
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('orders'))
+        # compute the weighted order if not present
+        if not 'WEIGHTED' in orders:
+            orders['WEIGHTED'] = sum([v * born_proc.get('model').get('order_hierarchy')[o] \
+                        for o, v in orders.items()])
+
         for order in perturbed_orders:
             try:
                 orders[order] +=1
             except KeyError:
                 pass
             orders['WEIGHTED'] += born_proc.get('model').get('order_hierarchy')[order]
-        self.process.set('orders', orders)
 
+        self.process.set('orders', orders)
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs]) 
         self.colors = [leg['color'] for leg in leglist]
@@ -343,7 +370,6 @@ class FKSProcess(object):
         self.nlegs = 0
         self.fks_ipos = []
         self.fks_j_from_i = {}
-#        self.color_links = []
         self.real_amps = []
         self.remove_reals = remove_reals
         self.nincoming = 0
@@ -366,11 +392,6 @@ class FKSProcess(object):
 
             self.born_proc.set('legs_with_decays', MG.LegList())
 
-            logger.info("Generating FKS-subtracted matrix elements for born process%s" \
-                % self.born_proc.nice_string(print_weighted=False).replace(\
-                                                                 'Process', '')) 
-
-#            self.model = self.born_proc['model']
             self.leglist = fks_common.to_fks_legs(
                                     self.born_proc['legs'], self.born_proc['model'])
             self.nlegs = len(self.leglist)
@@ -381,8 +402,10 @@ class FKSProcess(object):
             for leg in self.leglist:
                 if not leg['state']:
                     self.nincoming += 1
-            # find the correct qcd/qed orders from born_amp
-            self.orders = fks_common.find_orders(self.born_amp)
+            self.orders = self.born_amp['process']['orders']
+            # this is for cases in which the user specifies e.g. QED=0
+            if sum(self.orders.values()) == 0:
+                self.orders = fks_common.find_orders(self.born_amp)
                 
             self.ndirs = 0
             for order in self.born_proc.get('perturbation_couplings'):
@@ -441,6 +464,18 @@ class FKSProcess(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
+        self.link_born_reals()
+
+
+    def link_born_reals(self):
+        """create the rb_links in the real matrix element to find 
+        which configuration in the real correspond to which in the born
+        """
+        for real in self.real_amps:
+            for info in real.fks_infos:
+                info['rb_links'] = fks_common.link_rb_configs(\
+                        self.born_amp, real.amplitude,
+                        info['i'], info['j'], info['ij'])
 
 
     def find_reals(self, pert_order):

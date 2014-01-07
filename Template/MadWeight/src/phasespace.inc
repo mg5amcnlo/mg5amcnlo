@@ -1,5 +1,4 @@
-      integer max_particles 
-      parameter (max_particles=12) 
+	  include 'maxparticles.inc' 
       integer max_branches
       parameter (max_branches=max_particles-1)
       integer max_configs

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -179,7 +179,8 @@ class IOTestManager(unittest.TestCase):
             self.assertEqual(a,b)
         self.assertEqual(len(list_sol), len(list_cur))
 
-    def need(self, folderName=None, testName=None):
+    @classmethod
+    def need(cls,folderName=None, testName=None):
         """ Returns True if the selected filters do not exclude the testName
         and folderName given in argument. Specify None to disregard the filters
         corresponding to this category."""
@@ -188,10 +189,10 @@ class IOTestManager(unittest.TestCase):
             return True
         
         if not testName is None:
-            pattern = [f[1:] for f in self.testNames_filter if f.startswith('+')]
-            chosen = [f for f in self.testNames_filter if \
+            pattern = [f[1:] for f in cls.testNames_filter if f.startswith('+')]
+            chosen = [f for f in cls.testNames_filter if \
                             not f.startswith('-') and not f.startswith('+')]
-            veto = [f[1:] for f in self.testNames_filter if f.startswith('-')]
+            veto = [f[1:] for f in cls.testNames_filter if f.startswith('-')]
             if testName in veto:
                 return False
             if chosen!=['ALL'] and not testName in chosen:
@@ -199,10 +200,10 @@ class IOTestManager(unittest.TestCase):
                     return False
 
         if not folderName is None:
-            pattern = [f[1:] for f in self.testFolders_filter if f.startswith('+')]
-            chosen = [f for f in self.testFolders_filter if \
+            pattern = [f[1:] for f in cls.testFolders_filter if f.startswith('+')]
+            chosen = [f for f in cls.testFolders_filter if \
                             not f.startswith('-') and not f.startswith('+')]
-            veto = [f[1:] for f in self.testFolders_filter if f.startswith('-')]
+            veto = [f[1:] for f in cls.testFolders_filter if f.startswith('-')]
             if folderName in veto:
                 return False
             if chosen!=['ALL'] and not folderName in chosen:
@@ -210,8 +211,8 @@ class IOTestManager(unittest.TestCase):
                     return False
         
         if not folderName is None and not testName is None:
-            if (folderName,testName) in self.all_tests.keys() and \
-               (folderName,testName) in self.instance_tests:
+            if (folderName,testName) in cls.all_tests.keys() and \
+               (folderName,testName) in cls.instance_tests:
                 return False
 
         return True
@@ -273,7 +274,7 @@ class IOTestManager(unittest.TestCase):
             be so). Then feel free to automatically regenerate this file with
             the newest version by doing 
             
-              ./test_manager -updateIOTests folderName/testName/fileName
+              ./test_manager -i U folderName/testName/fileName
                 
             If update is True (meant to be used by __main__ only) then
             it will create/update/remove the files instead of testing them.
@@ -306,8 +307,11 @@ class IOTestManager(unittest.TestCase):
         modifications={'updated':[],'created':[], 'removed':[]}
         
         # List all the names of the files for which modifications have been
-        # reviewed at least once
-        reviewed_file_names = set([])
+        # reviewed at least once.The approach taken here is different than
+        # with the list refusedFolder and refusedTest.
+        # The key of the dictionary are the filenames and the value are string
+        # determining the user answer for that file.
+        reviewed_file_names = {}
         
         # Chose what test to cover
         if testKeys == 'instanceList':
@@ -361,17 +365,24 @@ class IOTestManager(unittest.TestCase):
                         continue
                     if path.basename(file) not in activeFiles:
                         if force==0 or (force==1 and \
-                                path.basename(file) not in reviewed_file_names):
-                            reviewed_file_names.add(path.basename(file))
+                         path.basename(file) not in reviewed_file_names.keys()):
                             answer = Cmd.timed_input(question=
 """Obsolete ref. file %s in %s/%s detected, delete it? [y/n] >"""\
                                     %(path.basename(file),folder_name,test_name)
                                                                    ,default="y")
-                            if answer not in ['Y','y','']:
-                                if verbose: 
-                                    print "    > [ IGNORED ] file deletion "+\
+                            reviewed_file_names[path.basename(file)] = answer
+                        elif (force==1 and \
+                             path.basename(file) in reviewed_file_names.keys()):
+                            answer = reviewed_file_names[path.basename(file)]
+                        else:
+                            answer = 'Y'
+                            
+                        if answer not in ['Y','y','']:
+                            if verbose: 
+                                print "    > [ IGNORED ] file deletion "+\
                           "%s/%s/%s"%(folder_name,test_name,path.basename(file))
-                                continue
+                            continue
+
                         os.remove(file)
                         if verbose: print "    > [ REMOVED ] %s/%s/%s"\
                                     %(folder_name,test_name,path.basename(file))
@@ -461,9 +472,9 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    target = target.replace('MadGraph 5 v. %(version)s, %(date)s'\
+                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
-                                          'MadGraph 5 v. %(version)s, %(date)s')
+                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')
@@ -481,9 +492,7 @@ class IOTestManager(unittest.TestCase):
                             file.write(target)
                             file.close()
                             if force==0 or (force==1 and path.basename(\
-                                   comparison_path) not in reviewed_file_names):
-                                reviewed_file_names.add(\
-                                                 path.basename(comparison_path))
+                            comparison_path) not in reviewed_file_names.keys()):
                                 text = \
 """File %s in test %s/%s differs by the following (reference file first):
 """%(fname,folder_name,test_name)
@@ -501,11 +510,18 @@ class IOTestManager(unittest.TestCase):
                                 answer = Cmd.timed_input(question=
 """Ref. file %s differs from the new one (see diff. before), update it? [y/n] >"""%fname
                                                                    ,default="y")
-                                os.remove(tmp_path)                   
-                                if answer not in ['Y','y','']:
-                                    if verbose: print "    > [ IGNORED ] %s"\
-                                                                          %fname
-                                    continue
+                                os.remove(tmp_path)
+                                reviewed_file_names[path.basename(\
+                                                      comparison_path)] = answer        
+                            elif (force==1 and path.basename(\
+                                comparison_path) in reviewed_file_names.keys()):
+                                answer = reviewed_file_names[path.basename(\
+                                                               comparison_path)]
+                            else:
+                                answer = 'Y'
+                            if answer not in ['Y','y','']:
+                                if verbose: print "    > [ IGNORED ] %s"%fname
+                                continue
                             
                             # Copying the existing reference as a backup
                             back_up_path = pjoin(_hc_comparison_files,folder_name,\
@@ -518,16 +534,21 @@ class IOTestManager(unittest.TestCase):
                                       '/'.join(comparison_path.split('/')[-3:]))
                     else:
                         if force==0 or (force==1 and path.basename(\
-                                   comparison_path) not in reviewed_file_names):
-                            reviewed_file_names.add(\
-                                                 path.basename(comparison_path))
+                            comparison_path) not in reviewed_file_names.keys()):
                             answer = Cmd.timed_input(question=
 """New file %s detected, create it? [y/n] >"""%fname
                                                                    ,default="y")
-                            if answer not in ['Y','y','']:
-                                if verbose: print "    > [ IGNORED ] %s"\
-                                                                          %fname
-                                continue
+                            reviewed_file_names[path.basename(\
+                                                      comparison_path)] = answer
+                        elif (force==1 and path.basename(\
+                                comparison_path) in reviewed_file_names.keys()):
+                            answer = reviewed_file_names[\
+                                                 path.basename(comparison_path)]
+                        else:
+                            answer = 'Y'
+                        if answer not in ['Y','y','']:
+                            if verbose: print "    > [ IGNORED ] %s"%fname
+                            continue
                         if verbose: print "    > [ CREATED ] %s"%fname
                         modifications['created'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))

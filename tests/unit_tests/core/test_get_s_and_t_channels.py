@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -69,13 +69,15 @@ class TestGetSandTchannels(unittest.TestCase):
                         [[5,4,-1], [2,3,-2], [-2,-1,-3]] ]
 
         for id, diag in enumerate(me.get('diagrams')):
-            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, new_pdg = 7, reverse_t_ch = False)
+            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, 
+                        model=self.base_model, new_pdg = 7, reverse_t_ch = False)
             self.assertEqual( [ [l['number'] for l in v['legs']] for v in s_ch] + \
                               [ [l['number'] for l in v['legs']] for v in t_ch] , 
                               target[id])
 
         for id, diag in enumerate(me.get('diagrams')):
-            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, new_pdg = 7, reverse_t_ch = True)
+            s_ch,t_ch = diag.get('amplitudes')[0].get_s_and_t_channels(ninitial = 2, 
+                        model=self.base_model, new_pdg = 7, reverse_t_ch = True)
             self.assertEqual( [ [l['number'] for l in v['legs']] for v in s_ch] + \
                               [ [l['number'] for l in v['legs']] for v in t_ch] , 
                               target_flip[id])

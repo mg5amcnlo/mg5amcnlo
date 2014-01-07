@@ -1,3 +1,4 @@
+set automatic_html_opening False --no_save
 generate p p > e+ ve [QCD]
 output
 launch -p

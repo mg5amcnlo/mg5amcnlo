@@ -47,6 +47,8 @@ c     instead of stopping the code, as this might accidentally happen.
 c     This will be called for any PDG code, but we only support up to 7
       if(iabs(ipart).gt.7)then
          write(*,*) 'PDF not supported for pdg ',ipdg
+         write(*,*) 'For lepton colliders, please set the lpp* '//
+     $    'variables to 0 in the run_card'  
          open(unit=26,file='../../../error',status='unknown')
          write(26,*) 'Error: PDF not supported for pdg ',ipdg
          stop 1
@@ -63,9 +65,9 @@ c     Check if result can be reused since any of last two calls
 
 c     Reuse previous result, if possible
       if (ireuse.gt.0.)then
-         if(pdflast(iporg,ireuse).ne.-99d9) then
+         if (pdflast(iporg,ireuse).ne.-99d9) then
             pdg2pdf=pdflast(iporg,ireuse)
-            return
+            return 
          endif
       endif
 

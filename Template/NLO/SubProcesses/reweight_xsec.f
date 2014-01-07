@@ -28,7 +28,7 @@ c
           enddo
         enddo
       elseif(itype.ge.2.and.itype.le.4)then
-        icnt=2-itype
+        icnt=itype-2
         do i=1,nexternal
           do j=0,3
             wgtkin(j,i,itype)=p1_cnt(j,i,icnt)
@@ -191,6 +191,7 @@ c Set all reweight variables equal to zero
       integer i,j,k
 c
       wgtref=0.d0
+      wgtref_nbody=0.d0
       do k=1,4
         wgtqes2(k)=0.d0
         wgtxbj(1,k)=0.d0
@@ -245,9 +246,12 @@ c Set all reweight variables equal to zero
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
       logical all
-      integer i,j,k,iFKS
+      integer i,j,k,iFKS,l
 c
-      wgtref_all(iFKS)=0.d0
+      do l=1,maxproc_save
+         wgtref_all(iFKS,l)=0.d0
+         if (all) wgtref_nbody_all(l)=0.d0
+      enddo
       do k=1,4
          wgtqes2_all(k,iFKS)=0.d0
          wgtxbj_all(1,k,iFKS)=0.d0
@@ -309,19 +313,36 @@ c should not be used if wgtkin(0,1,*)=-99
       end
       
 
-      subroutine fill_reweight0inc(iFKS)
+      subroutine fill_reweight0inc_nbody(iproc)
+c Set all reweight variables equal to zero
+      implicit none
+      include "reweight_all.inc"
+      integer iproc
+      logical debug
+      parameter (debug=.false.)
+      if (debug) write (*,*) 'wgtref_nbody',wgtref_nbody
+     $     ,wgtref_nbody_all(iproc)
+      call reweight_overwrite(wgtref_nbody,wgtref_nbody_all(iproc),2)
+      return
+      end
+
+
+      subroutine fill_reweight0inc(iFKS,iproc)
 c Set all reweight variables equal to zero
       implicit none
       include "genps.inc"
       include "nexternal.inc"
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
-      integer i,j,k,iFKS
+      integer i,j,k,iFKS,iproc
       logical debug
       parameter (debug=.false.)
 c
-      if (debug) write (*,*) 'wgtref',iFKS,wgtref,wgtref_all(iFKS)
-      call reweight_overwrite(wgtref,wgtref_all(iFKS),0)
+      if (debug) write (*,*) 'wgtref',iFKS,wgtref,wgtref_all(iFKS,iproc)
+      call reweight_overwrite(wgtref,wgtref_all(iFKS,iproc),0)
+c$$$      if (debug) write (*,*) 'wgtref_nbody',wgtref_nbody
+c$$$     $     ,wgtref_nbody_all(iproc)
+c$$$      call reweight_overwrite(wgtref_nbody,wgtref_nbody_all(iproc),2)
       do k=1,4
          if (debug) write (*,*) 'wgtqes2',k,iFKS,wgtqes2(k)
      &        ,wgtqes2_all(k,iFKS)
@@ -444,20 +465,23 @@ c     i=2: overwrite 'a' by 'b'
       end
 
 
-      subroutine sum_reweight(iFKS_s,iFKS)
+      subroutine sum_reweight(iFKS_s,iFKS,iproc)
 c Set all reweight variables equal to zero
       implicit none
       include "genps.inc"
       include "nexternal.inc"
       include "nFKSconfigs.inc"
       include "reweight_all.inc"
-      integer i,j,k,iFKS_s,iFKS
+      integer i,j,k,iFKS_s,iFKS,iproc
       logical debug
       parameter (debug=.false.)
 c
-      if (debug) write (*,*) 'wgtref',iFKS_s,iFKS,wgtref_all(iFKS_s)
-     &     ,wgtref_all(iFKS)
-      call reweight_sum(wgtref_all(iFKS_s),wgtref_all(iFKS))
+      if (debug) write (*,*) 'wgtref',iFKS_s,iFKS,wgtref_all(iFKS_s
+     $     ,iproc),wgtref_all(iFKS,iproc)
+      call reweight_sum(wgtref_all(iFKS_s,iproc),wgtref_all(iFKS,iproc))
+      if (debug) write (*,*) 'wgtref_nbody',iFKS_s,iFKS
+     $     ,wgtref_nbody_all(iproc),wgtref_nbody_all(iproc)
+      call reweight_sum(wgtref_nbody_all(iproc),wgtref_nbody_all(iproc))
       do k=1,4
          if (debug) write (*,*) 'wgtqes2',k,iFKS_s,iFKS,wgtqes2_all(k
      &        ,iFKS_s),wgtqes2_all(k,iFKS)
@@ -618,6 +642,13 @@ c with the reference weight
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -648,7 +679,17 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,1))
+          call set_cms_stuff(mohdr)
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_NLO',kwgtinfo
           stop
@@ -681,7 +722,16 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,2))
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
+           endif
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_NLO',kwgtinfo
           stop
@@ -760,7 +810,7 @@ c
       nFKSprocess=save_nFKSprocess
 c
       wgtNLO11=xsec11
-      wgtNLO12=xsec12
+      wgtNLO12=xsec12-xsec20
       wgtNLO20=xsec20
       xsec=xsec11+xsec12
       compute_rwgt_wgt_NLO=xsec
@@ -781,6 +831,7 @@ c with the reference weight
       include 'q_es.inc'
       include 'run.inc'
       include "reweight.inc"
+      include 'nFKSconfigs.inc'
 
       logical passcuts
       double precision compute_rwgt_wgt_Hev
@@ -792,13 +843,31 @@ c with the reference weight
       double precision pi
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -828,7 +897,16 @@ c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
           call set_cms_stuff(mohdr)
-          call set_alphaS(wgtkin(0,1,1))
+          if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -846,11 +924,16 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
+            xsec=xsec+CONV*PD(i_process)*wgtwmcxsec(i)*g**(2*wgtbpower
+     $           +2.d0)
           endif
         enddo
       endif
 c
+
+      if (wgtwreal(2).eq.0d0 .and. wgtwreal(3).eq.0d0 .and.
+     $     wgtwreal(4).eq.0d0) goto 543
+
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
      #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5).and.
@@ -863,7 +946,16 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,2))
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
+           endif
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -881,11 +973,14 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwreal(k)*g**(2*wgtbpower+2.d0)
+            xsec=xsec+CONV*PD(i_process)*wgtwreal(k)*g**(2*wgtbpower
+     $           +2.d0)
           endif
         enddo
       endif
 c
+ 543  continue
+
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
@@ -898,7 +993,16 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,1))
+           if (ickkw.eq.3) then 
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0c in compute_rwgt_wgt_Hev',kwgtinfo
           stop
@@ -915,7 +1019,7 @@ c Should cause the code to crash if used
         else
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
-          xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+          xsec=xsec+CONV*PD(i_process)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
         endif
       endif
 c
@@ -943,6 +1047,7 @@ c with the reference weight
       include 'q_es.inc'
       include 'run.inc'
       include "reweight.inc"
+      include 'nFKSconfigs.inc'
 
       logical passcuts
       double precision compute_rwgt_wgt_Sev
@@ -956,12 +1061,31 @@ c with the reference weight
       parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -992,8 +1116,17 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
-          call set_cms_stuff(mohdr)
-          call set_alphaS(wgtkin(0,1,1))
+           call set_cms_stuff(mohdr)
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0a in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1011,7 +1144,12 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*wgtwmcxsec(i)*g**(2*wgtbpower+2.d0)
+            do j=1,iproc_save(nFKSprocess)
+               if (eto(j,nFKSprocess).eq.i_process) then
+                  xsec=xsec+CONV*PD(j)*wgtwmcxsec(i)*g**(2*wgtbpower
+     $                 +2.d0)
+               endif
+            enddo
           endif
         enddo
       endif
@@ -1029,7 +1167,17 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.3.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,2))
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(2))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(2)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(2)
+              qes2=wgtqes2(2)
+           else
+              call set_alphaS(wgtkin(0,1,2))
+           endif
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1080,21 +1228,27 @@ c Should cause the code to crash if used
           else
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
-            xsec=xsec+xlum*( wgtwreal(k)+wgtwdeg(k)+
-     #                       wgtwdegmuf(k)*xlgmuf )*
-     #                g**(2*wgtbpower+2.d0)
+            do j=1,iproc_save(nFKSprocess)
+               if (eto(j,nFKSprocess).eq.i_process) then
+                  xsec=xsec+CONV*PD(j)*( wgtwreal(k)+wgtwdeg(k)
+     $                 +wgtwdegmuf(k)*xlgmuf )*g**(2*wgtbpower+2.d0)
+               endif
+            enddo
             if(k.eq.2)then
               nFKSprocess=nFKSprocess_used_Born
               xlum = dlum()
-              if(wgtbpower.gt.0)then
-                xsec=xsec+xlum*wgtwborn(k)*g**(2*wgtbpower)
-              else
-                xsec=xsec+xlum*wgtwborn(k)
-              endif
-              xsec=xsec+xlum*( wgtwns(k)+
-     #                         wgtwnsmuf(k)*xlgmuf+
-     #                         wgtwnsmur(k)*xlgmur )*
-     #                  g**(2*wgtbpower+2.d0)
+              do j=1,iproc_save(nFKSprocess)
+                 if (eto(j,nFKSprocess).eq.i_process) then
+                    if(wgtbpower.gt.0)then
+                       xsec=xsec+CONV*PD(j)*wgtwborn(k)*g**(2*wgtbpower)
+                    else
+                       xsec=xsec+CONV*PD(j)*wgtwborn(k)
+                    endif
+                    xsec=xsec+CONV*PD(j)*( wgtwns(k)+ wgtwnsmuf(k)
+     $                   *xlgmuf+wgtwnsmur(k)*xlgmur )*g**(2*wgtbpower
+     $                   +2.d0)
+                 endif
+              enddo
             endif
           endif
         enddo
@@ -1113,7 +1267,16 @@ c
 c Should cause the code to crash if used
           QES2=0.d0
         elseif(kwgtinfo.ge.2.or.kwgtinfo.le.5)then
-          call set_alphaS(wgtkin(0,1,1))
+           if (ickkw.eq.3) then
+              mu_r=sqrt(wgtmuR2(1))*muR_over_ref
+              scale=mu_r
+              g=sqrt(4d0*pi*alphas(scale))
+              call update_as_param()
+              q2fact(1)=muF1_over_ref**2*wgtmuF12(1)
+              q2fact(2)=muF2_over_ref**2*wgtmuF22(1)
+           else
+              call set_alphaS(wgtkin(0,1,1))
+           endif
         else
           write(*,*)'Error #0b in compute_rwgt_wgt_Sev',kwgtinfo
           stop
@@ -1130,7 +1293,11 @@ c Should cause the code to crash if used
         else
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
-          xsec=xsec+xlum*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+          do j=1,iproc_save(nFKSprocess)
+             if (eto(j,nFKSprocess).eq.i_process) then
+                xsec=xsec+CONV*PD(j)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
+             endif
+          enddo
         endif
       endif
 c
@@ -1171,12 +1338,31 @@ c with the reference weight
       parameter (tiny=1.d-2)
       parameter (pi=3.14159265358979323846d0)
 
-      integer i,k,izero,mohdr
+      integer i,j,k,izero,mohdr
       parameter (izero=0)
       parameter (mohdr=-100)
+
+      integer iproc_save(fks_configs),eto(maxproc,fks_configs)
+     $     ,etoi(maxproc,fks_configs),maxproc_found
+      common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      DOUBLE PRECISION       CONV
+      PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
+      integer i_process
+      common/c_addwrite/i_process
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       integer save_nFKSprocess
+c FxFx merging
+      logical rewgt_mohdr_calculated,rewgt_izero_calculated
+      double precision rewgt_mohdr,rewgt_izero,rewgt_exp_mohdr
+     $     ,rewgt_exp_izero
+      logical setclscales
+      double precision rewgt
+      external setclscales,rewgt
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -1199,7 +1385,17 @@ c
       call set_cms_stuff(izero)
 
       if( passcuts(wgtkin_all(0,1,2,0),rwgt) )then
-         call set_alphaS(wgtkin_all(0,1,2,0))
+         if (ickkw.eq.3) then
+            mu_r=sqrt(wgtmuR2_all(2,0))*muR_over_ref
+            scale=mu_r
+            g=sqrt(4d0*pi*alphas(scale))
+            call update_as_param()
+            q2fact(1)=muF1_over_ref**2*wgtmuF12_all(2,0)
+            q2fact(2)=muF2_over_ref**2*wgtmuF22_all(2,0)
+            qes2=wgtqes2_all(2,0)
+         else
+            call set_alphaS(wgtkin_all(0,1,2,0))
+         endif
          QES2_local=wgtqes2_all(2,0)
          if(abs(QES2/QES2_local-1.d0).gt.tiny)then
             write(*,*)'Error in compute_rwgt_wgt_Sev_nbody'
@@ -1212,15 +1408,17 @@ c
          xbk(2) = wgtxbj_all(2,2,0)
          nFKSprocess=nFKSprocess_used_Born
          xlum = dlum()
-         if(wgtbpower.gt.0)then
-            xsec=xsec+xlum*wgtwborn_all*g**(2*wgtbpower)
-         else
-            xsec=xsec+xlum*wgtwborn_all
-         endif
-         xsec=xsec+xlum*( wgtwns_all+
-     &        wgtwnsmuf_all*xlgmuf+
-     &        wgtwnsmur_all*xlgmur )*
-     &        g**(2*wgtbpower+2.d0)
+         do j=1,iproc_save(nFKSprocess)
+            if (eto(j,nFKSprocess).eq.i_process) then
+               if(wgtbpower.gt.0)then
+                  xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2*wgtbpower)
+               else
+                  xsec=xsec+CONV*PD(j)*wgtwborn_all
+               endif
+               xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all*xlgmuf+
+     $              wgtwnsmur_all*xlgmur )*g**(2*wgtbpower+2.d0)
+            endif
+         enddo
       endif
 c
       muR_over_ref=save_murrat
@@ -1321,7 +1519,7 @@ c
       wgtrefNLO12=wgtNLO12
       wgtrefNLO20=wgtNLO20
 c
-      if(doNLOscaleunc)then
+      if(do_rwgt_scale)then
         do kr=1,numscales
           do kf=1,numscales
             pr_muR_over_ref=ymuR_over_ref*yfactR(kr)
@@ -1337,7 +1535,7 @@ c
         enddo
       endif
 c
-      if(doNLOPDFunc)then
+      if(do_rwgt_pdf)then
         do n=0,numPDFs-1
           call InitPDF(n)
           dummy=compute_rwgt_wgt_NLO(ymuR_over_ref,ymuF1_over_ref,
@@ -1363,11 +1561,12 @@ c
       include 'run.inc'
       include "reweight.inc"
       include "reweightNLO.inc"
-      integer i,itmp,nsets,npairs
+      include "../../Source/pdf.inc"
+      integer i,itmp,nsets
       double precision delta
 c
-      if( (doNLOscaleunc.or.doNLOPDFunc).and.
-     #    (.not.doNLOreweight) )then
+      if( (do_rwgt_scale.or.do_rwgt_pdf).and.
+     #    (.not.doreweight) )then
         write(*,*)'Error #0 in setup_fill_rwgt_NLOplot'
         write(*,*)' NLO weights are not being saved:'
         write(*,*)' set doNLOreweight=.true.'
@@ -1379,37 +1578,31 @@ c
       ymuF1_over_ref=muF1_over_ref
       ymuF2_over_ref=muF2_over_ref
 c
-      if(.not.doNLOscaleunc)goto 111
-      numscales=numscales_init
+      if(.not.do_rwgt_scale)goto 111
+      numscales=3
       if(numscales.gt.maxscales)then
         write(*,*)'Error #1 in setup_fill_rwgt_NLOplot'
         write(*,*)' Increase maxscales in reweight0.inc'
         stop
       endif
-      yfactF(1)=yfactF0
-      yfactF(2)=yfactFlow
-      delta=(yfactFupp-yfactFlow)/dfloat(numscales-2)
-      do i=3,numscales
-        yfactF(i)=yfactF(i-1)+delta
-      enddo
-      yfactR(1)=yfactR0
-      yfactR(2)=yfactRlow
-      delta=(yfactRupp-yfactRlow)/dfloat(numscales-2)
-      do i=3,numscales
-        yfactR(i)=yfactR(i-1)+delta
-      enddo
+      yfactF(1)=1d0
+      yfactF(2)=rw_Fscale_up
+      yfactF(3)=rw_Fscale_down
+      yfactR(1)=1d0
+      yfactR(2)=rw_Rscale_up
+      yfactR(3)=rw_Rscale_down
 c
  111  continue
-      if(.not.doNLOPDFunc)goto 222
-      idpdf(0)=idefPDF
-      idpdf(1)=ifirstPDF
-      itmp=ilastPDF
+      if(.not.do_rwgt_pdf)goto 222
+      idpdf(0)=lhaid
+      idpdf(1)=pdf_set_min
+      itmp=pdf_set_max
       nsets=itmp-idpdf(1)+1
       if(mod(nsets,2).ne.0)then
         write(*,*)'The number of error sets must be even',nsets
         stop
       else
-        npairs=nsets/2
+        numPDFpairs=nsets/2
       endif
       do i=2,nsets
         idpdf(i)=idpdf(1)+i-1

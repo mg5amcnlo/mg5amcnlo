@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """All models for MG5, in particular UFO models (by FeynRules)"""
@@ -17,7 +17,7 @@
 import os
 import sys
 
-def load_model(name):
+def load_model(name, decay=False):
     
     # avoid final '/' in the path
     if name.endswith('/'):
@@ -37,5 +37,18 @@ def load_model(name):
 
     sys.path.insert(0, os.sep.join(path_split[:-1]))
     __import__(path_split[-1])
+    output = sys.modules[path_split[-1]]
+    if decay:
+        dec_name = '%s.decays' % path_split[-1]
+        try:
+            __import__(dec_name)
+        except ImportError:
+            pass
+        else:
+            output.all_decays = sys.modules[dec_name].all_decays
+    
     sys.path.pop(0)
+    
+    
+    
     return sys.modules[path_split[-1]]

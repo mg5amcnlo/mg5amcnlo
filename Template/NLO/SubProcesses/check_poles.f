@@ -18,6 +18,7 @@ C
       parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3, nexternal)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
@@ -36,6 +37,11 @@ C
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 cc
       include 'run.inc'
       include 'coupl.inc'
@@ -76,13 +82,22 @@ c
           pmass_rambo(i-nincoming) = pmass(i)
       enddo
 
-      nfksprocess=1
+c Find the nFKSprocess for which we compute the Born-like contributions,
+c ie. which is a Born+g real-emission process
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (particle_type(i_fks).eq.8) exit
+      enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)
 
       nfail = 0
       npointsChecked = 0
+
+c Make sure that stability checks are always used by MadLoop, even for
+c initialization
+      CALL FORCE_STABILITY_CHECK(.TRUE.)
 
 200   continue
           calculatedborn = .false.
@@ -167,7 +182,9 @@ C         Otherwise, perform the check
 
           call getpoles(p, mu_r**2, fks_double, fks_single, fksprefact)
 
-          
+          if ( tolerance.lt.0.0d0 ) then
+                write(*,*) 'PASSED', tolerance
+          else
           if ( double.ne.0d0 ) then
              if ((dabs((double-fks_double)/double).gt.tolerance).or. 
      1            (dabs((single-fks_single)/single).gt.tolerance)) then
@@ -192,7 +209,7 @@ C         Otherwise, perform the check
                 write(*,*) 'PASSED', tolerance
              endif
           endif
-
+          endif
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
           write(*,*) 'BORN                 ', real(born(1))

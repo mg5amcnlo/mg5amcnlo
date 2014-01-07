@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -62,6 +62,7 @@ def loadLoopToyModel():
                   'charge':0.,
                   'pdg_code':21,
                   'propagating':True,
+                  'propagator':0,                                             
                   'is_part':True,
                   'counterterm':{('QCD', ((6,),)): {0: 'UVWfct_G_1', -1: 'UVWfct_G_1_1eps'}, ('QCD', ((5,),)): {0: 'UVWfct_G_0', -1: 'UVWfct_G_0_1eps'}},
                   'self_antipart':True}))
@@ -79,6 +80,7 @@ def loadLoopToyModel():
                   'charge':2. / 3.,
                   'pdg_code':2,
                   'propagating':True,
+                  'propagator':'',                                             
                   'is_part':True,
                   'self_antipart':False}))
     antiu = copy.copy(mypartlist[1])
@@ -97,6 +99,7 @@ def loadLoopToyModel():
                   'charge':-1. / 3.,
                   'pdg_code':1,
                   'propagating':True,
+                  'propagator':'',
                   'is_part':True,
                   'self_antipart':False}))
     antid = copy.copy(mypartlist[2])

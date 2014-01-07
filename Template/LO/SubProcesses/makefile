@@ -36,22 +36,27 @@ $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 $(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
 	cd ../../Source; make
 
+$(LIBDIR)libpdf.$(libext): 
+	cd ../../Source/PDF; make
+
 # Dependencies
 
 driver.f: genps.inc qmass.inc
 setcuts.f: qmass.inc
 qmass.inc: nexternal.inc
-	touch qmass.inc
-symmetry.o: genps.inc nexternal.inc configs.inc ../../Source/run_config.inc
+	   touch qmass.inc
+symmetry.o: genps.inc nexternal.inc configs.inc run_config.inc
 genps.o: genps.inc nexternal.inc configs.inc
 cuts.o: genps.inc nexternal.inc pmass.inc
-setcuts.o: genps.inc ../../Source/run_config.inc
+setcuts.o: genps.inc run_config.inc
 invarients.o: genps.inc nexternal.inc
 myamp.o: props.inc genps.inc nexternal.inc
-reweight.o: sudakov.inc cluster.inc sudakov.inc run.inc message.inc
+reweight.o: sudakov.inc cluster.inc sudakov.inc run.inc message.inc \
+	    run_config.inc
 cluster.o: cluster.inc genps.inc nexternal.inc message.inc
 addmothers.o: genps.inc nexternal.inc symswap.inc message.inc
-unwgt.o: genps.inc nexternal.inc symswap.inc cluster.inc run.inc message.inc
+unwgt.o: genps.inc nexternal.inc symswap.inc cluster.inc run.inc message.inc \
+	 run_config.inc
 initcluster.o: message.inc
 
 clean:

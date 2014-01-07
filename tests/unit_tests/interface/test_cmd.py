@@ -1,15 +1,15 @@
 ##############################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Basic test of the command interface """
@@ -156,20 +156,14 @@ class TestValidCmd(unittest.TestCase):
         master = ms_cmd.MadSpinInterface()
         self.assertRaises(Exception, master.do_define,('aa'))
         
-        import tests.acceptance_tests.test_cmd_madloop as cmd_madloop
-        tmp = cmd_madloop.TestCmdLoop
-        tmp.setup_logFile_for_logger('fatalerror', level=logging.WARNING)
-        try:
-            master.run_cmd('define aa')
-        except Exception:
-            self.assertTrue(False, 'error are not treated correctly')
-        
-        text = open('/tmp/fatalerror.log').read()
-        misc.sprint(text)
-        self.assertTrue('{' not in text)
-        self.assertTrue('MS_debug' in text)
-        tmp.setup_logFile_for_logger('fatalerror', restore=True, \
-                                                  level=logging.WARNING)
+        with misc.MuteLogger(['fatalerror'], [40],['/tmp/fatalerror.log'], keep=False):
+            try:
+                master.run_cmd('define aa')
+            except Exception, error:
+                self.assertTrue(False, 'error are not treated correctly: %s' % error)
+            text = open('/tmp/fatalerror.log').read()
+            self.assertTrue('{' not in text)
+            self.assertTrue('MS_debug' in text)
 
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
@@ -193,10 +187,10 @@ class TestValidCmd(unittest.TestCase):
                         categories_nb[cat] += 1
                     else:
                         categories_nb[cat] = 1
-                
-        target = set(['Not in help', 'Main commands'])
+
+        target = set(['Not in help', 'Main commands', 'Documented commands'])
         self.assertEqual(target, category)
-        self.assertEqual(categories_nb['Not in help'], 21)
+        self.assertEqual(categories_nb['Not in help'], 25)
     
     
     
