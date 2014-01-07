@@ -740,7 +740,7 @@ end
         pathdir = os.getcwd()
 
         
-        for i, range(len(matrix_element.born_me_list)):
+        for i in range(len(matrix_element.born_me_list)):
             filename = 'born_%d.f' % (i + 1)
             calls_born, ncolor_born = \
                 self.write_born_fks(writers.FortranWriter(filename),\
