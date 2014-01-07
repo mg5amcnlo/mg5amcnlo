@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# SOURCE INPUT FILES
+source shower_card.dat
+source banner.dat
+
+# PATH TO SOURCE CODES
+HWPATH="../srcHerwig"
+PYPATH="../srcPythia"
+
+# SHOWER VERSIONS 
+HERWIGVER="herwig6521.o"
+PYTHIAVER="pythia6426.o"
+
+##### LOAD THE SCRIPTS
+. Scripts/MCatNLO_MadFKS_$MCMODE.Script
+
+##### EXECUTION
+# compileMC or runMC
+runMC
+
+#### CLEAN UP
+rm -f `pwd`/*.o
+rm -f `pwd`/*.so
+rm -f `pwd`/HWPPAnalyzer/*.o
+rm -f `pwd`/HWPPAnalyzer/*.so
+rm -f `pwd`/Pythia8.cc
+rm -f `pwd`/Makefile
+rm -f `pwd`/MCATNLO_PYTHIA8_*

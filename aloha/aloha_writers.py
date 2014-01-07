@@ -692,7 +692,10 @@ class ALOHAWriterForFortran(WriteALOHA):
         else:
             tmp = Fraction(str(number))
             tmp = tmp.limit_denominator(100)
-            out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
+            if not abs(tmp - number) / abs(tmp + number) < 1e-8:
+                out = '%s%s' % (number, self.format)
+            else:
+                out = '%s%s/%s%s' % (tmp.numerator, self.format, tmp.denominator, self.format)
         return out
     
     def define_expression(self):
@@ -763,10 +766,17 @@ class ALOHAWriterForFortran(WriteALOHA):
                                                                   self.offshell)
             if 'L' not in self.tag:
                 coeff = 'denom*'    
-                if not aloha.complex_mass:                
-                    out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
-                      {'i': self.outgoing, 'COUP': coup_name})
+                if not aloha.complex_mass:
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s * (M%(i)s -CI* W%(i)s))\n' % \
+                                  {'i': self.outgoing, 'COUP': coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+
                     out.write('    denom = %(COUP)s/(P%(i)s(0)**2-P%(i)s(1)**2-P%(i)s(2)**2-P%(i)s(3)**2 - M%(i)s**2)\n' % \
                       {'i': self.outgoing, 'COUP': coup_name})
                 self.declaration.add(('complex','denom'))
@@ -1169,29 +1179,29 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     else:
         tag=list(tag)
 
-
-        
-
     if name is None:
         prefix=''
         if 'MP' in tag:
             prefix = 'MP_'
             tag.remove('MP')
+        if any(t.startswith('P') for t in tag):
+            #put the propagator tag at the end
+            propa = [t for t in tag if t.startswith('P')][0]
+            tag.remove(propa)
+            tag.append(propa)
         name = prefix + abstract.name + ''.join(tag)
     
     if outgoing is None:
         outgoing = abstract.outgoing
 
-    
     return '%s_%s' % (name, outgoing)
 
-def combine_name(name, other_names, outgoing, tag=None):
+def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
-    
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
-    p=re.compile('^(?P<type>[FSVT]+)(?P<id>\d+)')
+    p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')
     routine = ''
     if p.search(name):
         base, id = p.search(name).groups()
@@ -1211,6 +1221,8 @@ def combine_name(name, other_names, outgoing, tag=None):
     if routine:
         if tag is not None:
             routine += ''.join(tag)
+        if unknown_propa and outgoing:
+            routine += '%(propa)s'
         if outgoing is not None:
             return routine +'_%s' % outgoing
         else:
@@ -1228,6 +1240,8 @@ def combine_name(name, other_names, outgoing, tag=None):
                 addon = ''
             else:
                 name = short_name
+    if unknown_propa:
+        addon += '%(propa)s'
 
     if outgoing is not None:
         return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
@@ -1252,8 +1266,17 @@ class ALOHAWriterForCPP(WriteALOHA):
     
     
     def change_number_format(self, number):
-        """Format numbers into C++ format"""
-        if isinstance(number, complex):
+        """Formating the number"""
+
+        def isinteger(x):
+            try:
+                return int(x) == x
+            except TypeError:
+                return False
+
+        if isinteger(number):
+            out = '%s.' % (str(int(number)))
+        elif isinstance(number, complex):
             if number.imag:
                 if number.real:
                     out = '(%s + %s*cI)' % (self.change_number_format(number.real), \
@@ -1269,13 +1292,16 @@ class ALOHAWriterForCPP(WriteALOHA):
                     else: 
                         out = '%s * cI' % self.change_number_format(number.imag)
             else:
-                out = '%s' % (self.change_number_format(number.real))                         
+                out = '%s' % (self.change_number_format(number.real))
         else:
-            if number == int(number):
-                out = '%d.' % int(number)
+            tmp = Fraction(str(number))
+            tmp = tmp.limit_denominator(100)
+            if not abs(tmp - number) / abs(tmp + number) < 1e-8:
+                out = '%.9f' % (number)
             else:
-                out = '%.9f' % number
+                out = '%s./%s.' % (tmp.numerator, tmp.denominator)
         return out
+    
     
     def shift_indices(self, match):
         """shift the indices for non impulsion object"""
@@ -1542,9 +1568,16 @@ class ALOHAWriterForCPP(WriteALOHA):
             if 'L' not in self.tag:
                 coeff = 'denom'
                 if not aloha.complex_mass:
-                    out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+
                     out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - pow(M%(i)s,2));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 self.declaration.add(('complex','denom'))
@@ -1794,16 +1827,29 @@ class ALOHAWriterForPython(WriteALOHA):
     writer = writers.PythonWriter
     
     @staticmethod
-    def change_number_format(obj):
+    def change_number_format(obj, pure_complex=''):
+        change_number_format = ALOHAWriterForPython.change_number_format
         if obj.real == 0 and obj.imag:
             if int(obj.imag) == obj.imag: 
                 return '%ij' % obj.imag
             else:
-                return '%sj' % str(obj.imag)
-        elif obj.imag == 0 and int(obj.real) == obj:
-            return '%i' % obj.real 
-        else:
-            return str(obj)
+                return change_number_format(obj.imag, pure_complex='j')
+        elif obj.imag != 0:
+            return '(%s+%s)' % (change_number_format(obj.real),
+                               change_number_format(obj.imag, pure_complex='j')) 
+        elif obj.imag == 0: 
+            if int(obj.real) == obj:
+                return '%i%s' % (obj.real,pure_complex)
+            obj = obj.real
+            tmp = Fraction(str(obj))
+            tmp = tmp.limit_denominator(100)
+            if not abs(tmp - obj) / abs(tmp + obj) < 1e-8:
+                out = str(obj)
+            elif tmp.denominator != 1:
+                out = '%i%s/%i' % (tmp.numerator, pure_complex, tmp.denominator)
+            else:
+                out = '%i%s' % (tmp.numerator, pure_complex)
+        return out 
     
     
     def shift_indices(self, match):
@@ -1860,9 +1906,16 @@ class ALOHAWriterForPython(WriteALOHA):
             if not 'L' in self.tag:
                 coeff = 'denom'
                 if not aloha.complex_mass:
-                    out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
+                    if self.routine.denominator:
+                        out.write('    denom = %(COUP)s/%(denom)s\n' % {'COUP': coup_name,\
+                                'denom':self.write_obj(self.routine.denominator)}) 
+                    else:
+                        out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s * (M%(i)s -1j* W%(i)s))\n' % 
                           {'i': self.outgoing,'coup':coup_name})
                 else:
+                    if self.routine.denominator:
+                        raise Exception, 'modify denominator are not compatible with complex mass scheme'                
+                    
                     out.write('    denom = %(coup)s/(P%(i)s[0]**2-P%(i)s[1]**2-P%(i)s[2]**2-P%(i)s[3]**2 - M%(i)s**2)\n' % 
                           {'i': self.outgoing,'coup':coup_name})                    
             else:

@@ -30,7 +30,7 @@ C
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
       REAL*8 SQRTS ! sqrt(s)= center of mass energy
-      REAL*8 MATELEM, MATELEMS(NSPLITORDERS)        
+      REAL*8 MATELEM, MATELEMS(0:NSPLITORDERS)        
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
 C     
@@ -85,11 +85,8 @@ c
 c     Now we can call the matrix element!
 c
       CALL SMATRIX_SPLITORDERS(P,MATELEMS)
-      MATELEM=0.0d0
+      MATELEM=MATELEMS(0)
       %(printout_sqorders)s
-      DO I=1,NSPLITORDERS
-        MATELEM=MATELEM+MATELEMS(I)
-      ENDDO
 c
 
       write (*,*) "Total Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)	

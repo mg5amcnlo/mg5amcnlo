@@ -410,7 +410,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             myprocdef = mg_interface.MadGraphCmd.extract_process(self,line)
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
-
         print 'MZ, PROC orders', myprocdef['orders']
         print 'MZ, PROC squared orders', myprocdef['squared_orders']
         print 'MZ, PROC overall orders', myprocdef['overall_orders']
@@ -419,15 +418,18 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
-                                   ignore_six_quark_processes))
+                                   ignore_six_quark_processes,
+                                   OLP=self.options['OLP']))
+            
         except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
-                                   ignore_six_quark_processes)
+                                   ignore_six_quark_processes,
+                                   OLP=self.options['OLP'])
 
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
-
+        
         args = self.split_arg(line)
         # Check Argument validity
         self.check_output(args)
@@ -472,6 +474,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Automatically run finalize
         self.finalize(nojpeg)
             
+        # Generate the virtuals if from OLP
+        if self.options['OLP']!='MadLoop':
+            self._curr_exporter.generate_virtuals_from_OLP(
+              self._curr_matrix_elements,self._export_dir,self.options['OLP'])
+                
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
 
@@ -562,11 +569,12 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
-                        self._curr_exporter.generate_directories_fks(\
-                            me, self._curr_fortran_model, ime, path)
+                        self._curr_exporter.generate_directories_fks(me, 
+                        self._curr_fortran_model, ime, path,self.options['OLP'])
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
+            
             if self.options['loop_optimized_output'] and \
                     len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
                 self._curr_exporter.write_coef_specs_file(\

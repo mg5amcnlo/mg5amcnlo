@@ -25,6 +25,7 @@ import re
 import StringIO
 import madgraph.core.color_algebra as color
 from madgraph import MadGraph5Error, MG5DIR
+import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
 
@@ -199,7 +200,7 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
                    'is_part', 'self_antipart', 'ghost', 'counterterm']
 
     def default_setup(self):
@@ -217,6 +218,7 @@ class Particle(PhysicsObject):
         self['antitexname'] = 'none'
         self['line'] = 'dashed'
         self['propagating'] = True
+        self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
@@ -2652,11 +2654,14 @@ class Process(PhysicsObject):
         # Too long name are problematic so restrict them to a maximal of 70 char
         if len(mystr) > 64 and main:
             if schannel and forbid:
-                return self.shell_string(True, False, False, pdg_order)+ '_%s' % self['uid']
+                out = self.shell_string(True, False, True, pdg_order)
             elif schannel:
-                return self.shell_string(False, False, False, pdg_order)+'_%s' % self['uid']
+                out = self.shell_string(False, False, True, pdg_order)
             else:
-                return mystr[:64]+'_%s' % self['uid']
+                out = mystr[:64]
+            if not out.endswith('_%s' % self['uid']):    
+                out += '_%s' % self['uid']
+            return out
 
         return mystr
 
@@ -2744,17 +2749,22 @@ class Process(PhysicsObject):
         """Give the pdg code of the process including decay"""
         
         finals = self.get_final_ids()
-        to_add = []
         for proc in self.get('decay_chains'):
             init = proc.get_initial_ids()[0]
-            while 1:
-                try:
-                    finals.remove(init)
-                except:
-                    break
-            to_add += proc.get_final_ids_after_decay()
-        finals += to_add
-        return finals 
+            #while 1:
+            try:
+                pos = finals.index(init)
+            except:
+                break
+            finals[pos] = proc.get_final_ids_after_decay()
+        output = []
+        for d in finals:
+            if isinstance(d, list):
+                output += d
+            else:
+                output.append(d)
+        
+        return output
     
 
     def get_final_legs(self):
@@ -3102,6 +3112,29 @@ class ProcessDefinition(Process):
 
         return mystr
 
+    def get_process_with_legs(self, LegList):
+        """ Return a Process object which has the same properties of this 
+            ProcessDefinition but with the specified LegList as legs attribute. 
+            """
+            
+        return Process({\
+            'legs': LegList,
+            'model':self.get('model'),
+            'id': self.get('id'),
+            'orders': self.get('orders'),
+            'squared_orders': self.get('squared_orders'),
+            'has_born': self.get('has_born'),
+            'required_s_channels': self.get('required_s_channels'),
+            'forbidden_onsh_s_channels': self.get('forbidden_onsh_s_channels'),            
+            'forbidden_s_channels': self.get('forbidden_s_channels'),
+            'forbidden_particles': self.get('forbidden_particles'),
+            'perturbation_couplings': self.get('perturbation_couplings'),
+            'is_decay_chain': self.get('is_decay_chain'),
+            'overall_orders': self.get('overall_orders'),
+            'split_orders': self.get('split_orders'),
+            'NLO_mode': self.get('NLO_mode')
+            })
+            
     def get_process(self, initial_state_ids, final_state_ids):
         """ Return a Process object which has the same properties of this 
             ProcessDefinition but with the specified given leg ids. """
@@ -3117,19 +3150,9 @@ class ProcessDefinition(Process):
         for i, fs_id in enumerate(final_state_ids):
             assert fs_id in my_fsids[i]
         
-        return Process({\
-            'legs': LegList(\
+        return self.get_process_with_legs(LegList(\
                [Leg({'id': id, 'state':False}) for id in initial_state_ids] + \
-               [Leg({'id': id, 'state':True}) for id in final_state_ids]),
-            'model':self.get('model'),
-            'id': self.get('id'),
-            'orders': self.get('orders'),
-            'required_s_channels': self.get('required_s_channels'),
-            'forbidden_s_channels': self.get('forbidden_s_channels'),
-            'forbidden_particles': self.get('forbidden_particles'),
-            'perturbation_couplings': self.get('perturbation_couplings'),
-            'is_decay_chain': self.get('is_decay_chain'),
-            'overall_orders': self.get('overall_orders')})
+               [Leg({'id': id, 'state':True}) for id in final_state_ids]))
 
     def __eq__(self, other):
         """Overloading the equality operator, so that only comparison

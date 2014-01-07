@@ -489,9 +489,9 @@ class MatrixElementEvaluator(object):
         if nincoming == 1:
 
             # Momenta for the incoming particle
-            p.append([m1, 0., 0., 0.])
+            p.append([abs(m1), 0., 0., 0.])
 
-            p_rambo, w_rambo = rambo.RAMBO(nfinal, m1, masses)
+            p_rambo, w_rambo = rambo.RAMBO(nfinal, abs(m1), masses)
 
             # Reorder momenta from px,py,pz,E to E,px,py,pz scheme
             for i in range(1, nfinal+1):
@@ -568,7 +568,12 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
         process = matrix_element.get('processes')[0]
         model = process.get('model')
-            
+        
+        if options and 'split_orders' in options.keys():
+            split_orders = options['split_orders']
+        else:
+            split_orders = -1
+        
         if "loop_matrix_elements" not in self.stored_quantities:
             self.stored_quantities['loop_matrix_elements'] = []
 
@@ -632,7 +637,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
 
-        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'))
+        self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
+                                                      split_orders=split_orders)
+
         self.fix_MadLoopParamCard(os.path.join(export_dir,'Cards'),
            mp = gauge_check and self.loop_optimized_output, MLOptions=MLOptions)
         
@@ -716,35 +723,54 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         file.close()
 
     @classmethod
-    def fix_PSPoint_in_check(cls, dir_name, read_ps = True, npoints = 1,
-                             hel_config = -1, mu_r=0.0):
+    def fix_PSPoint_in_check(cls, dir_path, read_ps = True, npoints = 1,
+                             hel_config = -1, mu_r=0.0, split_orders=-1):
         """Set check_sa.f to be reading PS.input assuming a working dir dir_name.
         if hel_config is different than -1 then check_sa.f is configured so to
         evaluate only the specified helicity.
         If mu_r > 0.0, then the renormalization constant value will be hardcoded
         directly in check_sa.f, if is is 0 it will be set to Sqrt(s) and if it
-        is < 0.0 the value in the param_card.dat is used."""
+        is < 0.0 the value in the param_card.dat is used.
+        If the split_orders target (i.e. the target squared coupling orders for 
+        the computation) is != -1, it will be changed in check_sa.f via the
+        subroutine CALL SET_COUPLINGORDERS_TARGET(split_orders)."""
 
-        file = open(os.path.join(dir_name,'check_sa.f'), 'r')
+        file_path = dir_path
+        if not os.path.isfile(dir_path) or \
+                                   not os.path.basename(dir_path)=='check_sa.f':
+            file_path = os.path.join(dir_path,'check_sa.f')
+            if not os.path.isfile(file_path):
+                directories = glob.glob(os.path.join(dir_path,'P0_*'))
+                if len(directories)>0 and os.path.isdir(directories[0]):
+                     file_path = os.path.join(directories[0],'check_sa.f')
+        if not os.path.isfile(file_path):
+            raise MadGraph5Error('Could not find the location of check_sa.f'+\
+                                  ' from the specified path %s.'%str(file_path))    
+
+        file = open(file_path, 'r')
         check_sa = file.read()
         file.close()
         
-        file = open(os.path.join(dir_name,'check_sa.f'), 'w')
+        file = open(file_path, 'w')
         check_sa = re.sub(r"READPS = \S+\)","READPS = %s)"%('.TRUE.' if read_ps \
                                                       else '.FALSE.'), check_sa)
         check_sa = re.sub(r"NPSPOINTS = \d+","NPSPOINTS = %d"%npoints, check_sa)
         if hel_config != -1:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIXHEL(P,%d,MATELEM)"\
-                                                          %hel_config, check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                      "SLOOPMATRIXHEL_THRES(P,%d,MATELEM,"%hel_config, check_sa)
         else:
-            check_sa = re.sub(r"SLOOPMATRIX\S+\)","SLOOPMATRIX(P,MATELEM)",\
-                                                                       check_sa)
+            check_sa = re.sub(r"SLOOPMATRIX\S+\(\S+,MATELEM,",
+                                        "SLOOPMATRIX_THRES(P,MATELEM,",check_sa)
         if mu_r > 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","MU_R=%s"%\
                                         (("%.17e"%mu_r).replace('e','d')),check_sa)
         elif mu_r < 0.0:
             check_sa = re.sub(r"MU_R=SQRTS","",check_sa)
-            
+        
+        if split_orders > 0:
+            check_sa = re.sub(r"SET_COUPLINGORDERS_TARGET\(-?\d+\)",
+                     "SET_COUPLINGORDERS_TARGET(%d)"%split_orders,check_sa) 
+        
         file.write(check_sa)
         file.close()
 
@@ -829,7 +855,13 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     '1eps':0.0,
                     '2eps':0.0,
                     'gev_pow':0,
-                    'export_format':'Default'}
+                    'export_format':'Default',
+                    'accuracy':0.0,
+                    'return_code':0,
+                    'Split_Orders_Names':[],
+                    'Loop_SO_Results':[],
+                    'Born_SO_Results':[]
+                    }
         res_p = []
         
         # output is supposed to be a file, if it is its content directly then
@@ -859,7 +891,26 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['gev_pow']=int(splitline[1])
             elif splitline[0]=='Export_Format':
                 res_dict['export_format']=splitline[1]
-
+            elif splitline[0]=='ACC':
+                res_dict['accuracy']=float(splitline[1])
+            elif splitline[0]=='RETCODE':
+                res_dict['return_code']=int(splitline[1])
+            elif splitline[0]=='Split_Orders_Names':
+                res_dict['Split_Orders_Names']=splitline[1:]
+            elif splitline[0] in ['Loop_SO_Results', 'Born_SO_Results']:
+                # The value for this key of this dictionary is a list of elements
+                # with format ([],{}) where the first list specifies the split
+                # orders to which the dictionary in the second position corresponds 
+                # to.
+                res_dict[splitline[0]].append(\
+                                         ([int(el) for el in splitline[1:]],{}))
+            elif splitline[0]=='SO_Loop':
+                res_dict['Loop_SO_Results'][-1][1][splitline[1]]=\
+                                                             float(splitline[2])
+            elif splitline[0]=='SO_Born':
+                res_dict['Born_SO_Results'][-1][1][splitline[1]]=\
+                                                             float(splitline[2])
+        
         res_dict['res_p'] = res_p
 
         if format=='tuple':
@@ -1005,7 +1056,42 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         except IndexError:
             raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
                                                            'not well formatted.'
+
+    @classmethod
+    def set_MadLoop_Params(cls,MLCardPath,params):
+        """ Set the parameters in MadLoopParamCard to the values specified in
+        the dictionary params.
+        The key is the name of the parameter and the value is the corresponding
+        string to write in the card."""
         
+        # Not elegant, but the file is small anyway, so no big deal.
+        MLCard_lines = open(MLCardPath).readlines()
+        newCard_lines = []
+        modified_Params = []
+        param_to_modify=None
+        for i, line in enumerate(MLCard_lines):
+            if not param_to_modify is None:
+                modified_Params.append(param_to_modify)
+                newCard_lines.append(params[param_to_modify]+'\n')
+                param_to_modify = None
+            else:
+                if line.startswith('#') and \
+                   line.split()[0][1:] in params.keys():
+                    param_to_modify = line.split()[0][1:]
+                newCard_lines.append(line)
+        if not param_to_modify is None:
+            raise MadGraph5Error, 'The MadLoop param card %s is '%MLCardPath+\
+                                                           'not well formatted.'
+        
+        left_over = set(params.keys())-set(modified_Params)
+        if left_over != set([]):
+            raise MadGraph5Error, 'The following parameters could not be '+\
+                             'accessed in MadLoopParams.dat : %s'%str(left_over)
+
+        newCard=open(MLCardPath,'w')
+        newCard.writelines(newCard_lines)
+        newCard.close()
+
     @classmethod    
     def run_initialization(cls, run_dir=None, SubProc_dir=None, infos=None,\
                             req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -1069,7 +1155,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             curr_attempt = to_attempt.pop()+1
             # Plus one because the filter are written on the next PS point after
             # initialization is performed.
-            cls.fix_PSPoint_in_check(SubProc_dir, read_ps = False, 
+            cls.fix_PSPoint_in_check(run_dir, read_ps = False, 
                                                          npoints = curr_attempt)
             compile_time, run_time, ram_usage = cls.make_and_run(run_dir)
             if compile_time==None:
@@ -1215,13 +1301,18 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         return infos
 
     def time_matrix_element(self, matrix_element, reusing = False,
-                                        param_card = None, keep_folder = False):
+                       param_card = None, keep_folder = False, options=None):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
         
         # Normally, this should work for loop-induced processes as well
 #        if not matrix_element.get('processes')[0]['has_born']:
 #            return None
+
+        if options and 'split_orders' in options.keys():
+            split_orders = options['split_orders']
+        else:
+            split_orders = -1
 
         assert ((not reusing and isinstance(matrix_element, \
                  helas_objects.HelasMatrixElement)) or (reusing and 
@@ -1260,7 +1351,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # We cannot estimate from the initialization, so we run just a 3
             # PS point run to evaluate it.
             self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-                                  read_ps = False, npoints = 3, hel_config = -1)
+                                  read_ps = False, npoints = 3, hel_config = -1, 
+                                                      split_orders=split_orders)
             compile_time, run_time, ram_usage = self.make_and_run(dir_name)
             time_per_ps_estimate = run_time/3.0
         
@@ -1294,15 +1386,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                     "with %d PS points."%target_pspoints_number)
         
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number*2, \
-                                                  hel_config = contributing_hel)
+                          read_ps = False, npoints = target_pspoints_number*2, \
+                       hel_config = contributing_hel, split_orders=split_orders)
         compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_total']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1)
+             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                      split_orders=split_orders)
         compile_time, run_time, ram_usage = self.make_and_run(dir_name, 
                                                                   checkRam=True)
         if compile_time == None: return None
@@ -1320,15 +1413,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         self.skip_loop_evaluation_setup(dir_name,skip=True)
 
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1)
+             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                      split_orders=split_orders)
         compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_unpolarized_coefs']=\
                    (run_time-res_timings['Booting_time'])/target_pspoints_number
         
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number*2, \
-                                                  hel_config = contributing_hel)
+                          read_ps = False, npoints = target_pspoints_number*2, \
+                       hel_config = contributing_hel, split_orders=split_orders)
         compile_time, run_time, ram_usage = self.make_and_run(dir_name)
         if compile_time == None: return None
         res_timings['run_polarized_coefs']=\
@@ -1354,9 +1448,11 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not options:
             reusing = False
             nPoints = 100
+            split_orders = -1
         else:
             reusing = options['reuse']
-            nPoints = options['npoints']  
+            nPoints = options['npoints']
+            split_orders = options['split_orders']
         
         assert ((not reusing and isinstance(matrix_element, \
                  helas_objects.HelasMatrixElement)) or (reusing and 
@@ -1445,7 +1541,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
                                                               fd=sys.stdout)
         self.fix_PSPoint_in_check(os.path.join(export_dir,'SubProcesses'),
-                                   read_ps = True, npoints = 1, hel_config = -1)
+          read_ps = True, npoints = 1, hel_config = -1, split_orders=split_orders)
         # Recompile (Notice that the recompilation is only necessary once) for
         # the change above to take effect.
         # Make sure to recreate the executable and modified sources
@@ -1593,13 +1689,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 # Write it in the input file
                 PSPoint = format_PS_point(p,0)
                 dp_res=[]
-                dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,1,
+                                                     split_orders=split_orders))
                 dp_dict['CTModeA']=dp_res[-1]
-                dp_res.append(self.get_me_value(StabChecker,PSPoint,2))
+                dp_res.append(self.get_me_value(StabChecker,PSPoint,2,
+                                                     split_orders=split_orders))
                 dp_dict['CTModeB']=dp_res[-1]
                 for rotation in range(1,num_rotations+1):
                     PSPoint = format_PS_point(p,rotation)
-                    dp_res.append(self.get_me_value(StabChecker,PSPoint,1))
+                    dp_res.append(self.get_me_value(StabChecker,PSPoint,1,
+                                                     split_orders=split_orders))
                     dp_dict['Rotation%i'%rotation]=dp_res[-1]
                 # Make sure all results make sense
                 if any([not res for res in dp_res]):
@@ -1610,13 +1709,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     UPS = [i,p]
                     qp_res=[]
                     PSPoint = format_PS_point(p,0)
-                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,4,
+                                                     split_orders=split_orders))
                     qp_dict['CTModeA']=qp_res[-1]
-                    qp_res.append(self.get_me_value(StabChecker,PSPoint,5))
+                    qp_res.append(self.get_me_value(StabChecker,PSPoint,5,
+                                                     split_orders=split_orders))
                     qp_dict['CTModeB']=qp_res[-1]
                     for rotation in range(1,num_rotations+1):
                         PSPoint = format_PS_point(p,rotation)
-                        qp_res.append(self.get_me_value(StabChecker,PSPoint,4))
+                        qp_res.append(self.get_me_value(StabChecker,PSPoint,4,
+                                                     split_orders=split_orders))
                         qp_dict['Rotation%i'%rotation]=qp_res[-1]
                     # Make sure all results make sense
                     if any([not res for res in qp_res]):
@@ -1695,7 +1797,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         return return_dict
 
     @classmethod
-    def get_me_value(cls, StabChecker, PSpoint, mode, hel=-1, mu_r=-1.0):
+    def get_me_value(cls, StabChecker, PSpoint, mode, hel=-1, mu_r=-1.0,
+                                                               split_orders=-1):
         """ This version of get_me_value is simplified for the purpose of this
         class. No compilation is necessary. The CT mode can be specified."""
 
@@ -1706,6 +1809,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         StabChecker.stdin.write('%s\n'%PSpoint)
         StabChecker.stdin.write('%.16E\n'%mu_r) 
         StabChecker.stdin.write('%d\n'%hel)
+        StabChecker.stdin.write('%d\n'%split_orders)
         try:
             while True:
                 output = StabChecker.stdout.readline()  
@@ -1793,27 +1897,11 @@ def run_multiprocs_no_crossings(function, multiprocess, stored_quantities,
                                      multiprocess, model, id_anti_id_dict):
                 continue
             # Generate process based on the selected ids
-            process = base_objects.Process({\
-                'legs': base_objects.LegList(\
-                        [base_objects.Leg({'id': id, 'state':False}) for \
-                         id in is_prod] + \
-                        [base_objects.Leg({'id': id, 'state':True}) for \
-                         id in fs_prod]),
-                'model':multiprocess.get('model'),
-                'id': multiprocess.get('id'),
-                'orders': multiprocess.get('orders'),
-                'required_s_channels': \
-                              multiprocess.get('required_s_channels'),
-                'forbidden_s_channels': \
-                              multiprocess.get('forbidden_s_channels'),
-                'forbidden_particles': \
-                              multiprocess.get('forbidden_particles'),
-                'perturbation_couplings': \
-                              multiprocess.get('perturbation_couplings'),
-                'is_decay_chain': \
-                              multiprocess.get('is_decay_chain'),
-                'overall_orders': \
-                              multiprocess.get('overall_orders')})
+            process = multiprocess.get_process_with_legs(base_objects.LegList(\
+                            [base_objects.Leg({'id': id, 'state':False}) for \
+                             id in is_prod] + \
+                            [base_objects.Leg({'id': id, 'state':True}) for \
+                             id in fs_prod]))
 
             if opt is not None:
                 if isinstance(opt, dict):
@@ -1914,8 +2002,13 @@ def generate_loop_matrix_element(process_definition, reuse,
     timing['Diagrams_generation']=time.time()-start
     timing['n_loops']=len(amplitude.get('loop_diagrams'))
     start=time.time()
+    
     matrix_element = loop_helas_objects.LoopHelasMatrixElement(amplitude,
                         optimized_output = loop_optimized_output,gen_color=True)
+    # Here, the alohaModel used for analytica computations and for the aloha
+    # subroutine output will be different, so that some optimization is lost.
+    # But that is ok for the check functionality.
+    matrix_element.compute_all_analytic_information()
     timing['HelasDiagrams_generation']=time.time()-start
     
     if loop_optimized_output:
@@ -1924,9 +2017,11 @@ def generate_loop_matrix_element(process_definition, reuse,
                                                 ldiag.get('loop_wavefunctions')]
         timing['n_loop_wfs']=len(lwfs)
         timing['loop_wfs_ranks']=[]
-        for rank in range(0,max([l.get('rank') for l in lwfs])+1):
+        for rank in range(0,max([l.get_analytic_info('wavefunction_rank') \
+                                                             for l in lwfs])+1):
             timing['loop_wfs_ranks'].append(\
-                                  len([1 for l in lwfs if l.get('rank')==rank]))
+                len([1 for l in lwfs if \
+                               l.get_analytic_info('wavefunction_rank')==rank]))
     
     return timing, matrix_element
 
@@ -1950,7 +2045,7 @@ def check_profile(process_definition, param_card = None,cuttools="",
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myProfiler.loop_optimized_output=False
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
-                                            param_card, keep_folder=keep_folder)
+                            param_card, keep_folder=keep_folder,options=options)
     
     if timing2 == None:
         return None, None
@@ -2016,7 +2111,7 @@ def check_timing(process_definition, param_card= None, cuttools="",
     if not reusing and not matrix_element.get('processes')[0].get('has_born'):
         myTimer.loop_optimized_output=False
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
-                                                      keep_folder = keep_folder)
+                                     keep_folder = keep_folder, options=options)
     
     if timing2 == None:
         return None
@@ -2146,7 +2241,7 @@ def check_process(process, evaluator, quick, options):
     # Now, generate all possible permutations of the legs
     number_checked=0
     for legs in itertools.permutations(process.get('legs')):
-
+        
         order = [l.get('number') for l in legs]
         if quick:
             found_leg = True
@@ -2173,21 +2268,9 @@ def check_process(process, evaluator, quick, options):
         if order != range(1,len(legs) + 1):
             logger.info("Testing permutation: %s" % \
                         order)
-
-        newproc = base_objects.Process({'legs':legs,
-            'orders':copy.copy(process.get('orders')),
-            'model':process.get('model'),
-            'id':copy.copy(process.get('id')),
-            'uid':process.get('uid'),
-            'required_s_channels':copy.copy(process.get('required_s_channels')),
-            'forbidden_s_channels':copy.copy(process.get('forbidden_s_channels')),
-            'forbidden_particles':copy.copy(process.get('forbidden_particles')),
-            'is_decay_chain':process.get('is_decay_chain'),
-            'overall_orders':copy.copy(process.get('overall_orders')),
-            'decay_chains':process.get('decay_chains'),
-            'perturbation_couplings':copy.copy(process.get('perturbation_couplings')),
-            'squared_orders':copy.copy(process.get('squared_orders')),
-            'has_born':process.get('has_born')})
+        
+        newproc = copy.copy(process)
+        newproc.set('legs',legs)
 
         # Generate the amplitude for this process
         try:
@@ -2199,8 +2282,7 @@ def check_process(process, evaluator, quick, options):
                                             number_checked%2 == 0 else 'default'
                 amplitude = loop_diagram_generation.LoopAmplitude(newproc)
                 if not amplitude.get('process').get('has_born'):
-                    evaluator.loop_optimized_output = False
-                    
+                    evaluator.loop_optimized_output = False   
         except InvalidCmd:
             result=False
         else:
@@ -2239,7 +2321,8 @@ def check_process(process, evaluator, quick, options):
 
         process_matrix_elements.append(matrix_element)
 
-        res = evaluator.evaluate_matrix_element(matrix_element, p = p)
+        res = evaluator.evaluate_matrix_element(matrix_element, p = p, 
+                                                                options=options)
         if res == None:
             break
 
@@ -3146,7 +3229,8 @@ def check_lorentz_process(process, evaluator,options=None):
                                                  auth_skipping = True, options=options)
     else:
         data = evaluator.evaluate_matrix_element(matrix_element, p=p, output='jamp',
-                auth_skipping = True, PS_name = 'original', MLOptions=MLOptions)
+                auth_skipping = True, PS_name = 'original', MLOptions=MLOptions,
+                                                              options = options)
 
     if data and data['m2']:
         if not isinstance(amplitude, loop_diagram_generation.LoopAmplitude):
@@ -3203,7 +3287,7 @@ def check_lorentz_process(process, evaluator,options=None):
         # We only consider the rotations around the z axis so to have the
         boost_p = boost_momenta(p, 3)
         results.append(('Z-axis boost',
-                       evaluator.evaluate_matrix_element(matrix_element,
+            evaluator.evaluate_matrix_element(matrix_element, options=options,
             p=boost_p, PS_name='zBoost', output='jamp',MLOptions = MLOptions)))
         # We add here also the boost along x and y for reference. In the output
         # of the check, it is now clearly stated that MadLoop improve_ps script
@@ -3212,23 +3296,23 @@ def check_lorentz_process(process, evaluator,options=None):
         if not options['events']:
             boost_p = boost_momenta(p, 1)
             results.append(('X-axis boost',
-                           evaluator.evaluate_matrix_element(matrix_element,
+                evaluator.evaluate_matrix_element(matrix_element, options=options,
                 p=boost_p, PS_name='xBoost', output='jamp',MLOptions = MLOptions)))
             boost_p = boost_momenta(p, 2)
             results.append(('Y-axis boost',
-                           evaluator.evaluate_matrix_element(matrix_element,
+                evaluator.evaluate_matrix_element(matrix_element,options=options,
                 p=boost_p, PS_name='yBoost', output='jamp',MLOptions = MLOptions)))
         # We only consider the rotations around the z axis so to have the 
         # improve_ps fortran routine work.
         rot_p = [[pm[0],-pm[2],pm[1],pm[3]] for pm in p]
         results.append(('Z-axis pi/2 rotation',
-                       evaluator.evaluate_matrix_element(matrix_element,
+            evaluator.evaluate_matrix_element(matrix_element,options=options,
             p=rot_p, PS_name='Rotation1', output='jamp',MLOptions = MLOptions)))
         # Now a pi/4 rotation around the z-axis
         sq2 = math.sqrt(2.0)
         rot_p = [[pm[0],(pm[1]-pm[2])/sq2,(pm[1]+pm[2])/sq2,pm[3]] for pm in p]
         results.append(('Z-axis pi/4 rotation',
-                       evaluator.evaluate_matrix_element(matrix_element,
+            evaluator.evaluate_matrix_element(matrix_element,options=options,
             p=rot_p, PS_name='Rotation2', output='jamp',MLOptions = MLOptions)))
             
         
@@ -3380,7 +3464,7 @@ def get_value(process, evaluator, p=None, options=None):
            gen_color = True, optimized_output = evaluator.loop_optimized_output)
 
     mvalue = evaluator.evaluate_matrix_element(matrix_element, p=p,
-                                               output='jamp')
+                                                  output='jamp',options=options)
     
     if mvalue and mvalue['m2']:
         return {'process':process.base_string(),'value':mvalue,'p':p}
@@ -3467,9 +3551,6 @@ def output_lorentz_inv_loop(comparison_results, output='text'):
                    fixed_string_length("%1.10e" % res[1]['m2'], col_size) + \
                    fixed_string_length("%1.10e" % rel_diff, col_size) + \
                    ("Passed" if this_pass else "Failed")
-    res_str += '\n' + 'NB: Keep in mind that for the lorentz transformation '+\
-                                                 'which give a p_t to the \n'+\
-                 'initial momenta, MadLoop improve_ps routine will be bypassed.' 
     if all_pass:
         res_str += '\n' + 'Summary: passed'
     else:

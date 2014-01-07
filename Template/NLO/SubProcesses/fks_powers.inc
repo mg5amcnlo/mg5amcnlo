@@ -27,11 +27,6 @@
       parameter (xiScut=0.5d0)
       parameter (xiBSVcut=1.0d0)
 
-c For multichanneling: (if changed, also recompile and run 'gensym')  
-c Should be kept to .true. for FKS from Born
-      logical onlyBorn
-      parameter (onlyBorn = .true.)
-
 c Fraction of events for which to include the finite part of
 c the virtual correction
       double precision virt_fraction

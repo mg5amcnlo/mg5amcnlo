@@ -82,6 +82,19 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     if  [[ ! -e ColorNumFactors.dat ]] ; then
 	ln -sf ../ColorNumFactors.dat .
     fi
+    if  [[ ! -e FKS_params.dat ]] ; then
+	ln -sf ../FKS_params.dat .
+    fi
+    if  [[ ! -e OLE_order.olc ]] ; then
+	ln -sf ../OLE_order.olc .
+    fi
+    if  [[ ! -e param_card.dat ]] ; then
+	if [[ -e ../../Cards/param_card.dat ]] ; then
+	    ln -sf ../../Cards/param_card.dat .
+	else
+	    ln -sf ../../../Cards/param_card.dat .
+	fi
+    fi
     
 #   check where is the basic file for the creation of input_app.txt
 #       

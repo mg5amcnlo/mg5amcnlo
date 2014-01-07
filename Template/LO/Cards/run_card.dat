@@ -221,6 +221,16 @@
  -1  = ht2max ! maximum Ht for the two leading jets
  -1  = ht3max ! maximum Ht for the three leading jets
  -1  = ht4max ! maximum Ht for the four leading jets
+#***********************************************************************
+# Photon-isolation cuts, according to hep-ph/9801442                   *
+# When ptgmin=0, all the other parameters are ignored                  *
+# When ptgmin>0, pta and draj are not going to be used                 *
+#***********************************************************************
+   0 = ptgmin ! Min photon transverse momentum
+ 0.4 = R0gamma ! Radius of isolation code
+ 1.0 = xn ! n parameter of eq.(3.4) in hep-ph/9801442
+ 1.0 = epsgamma ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
+ .true. = isoEM ! isolate photons from EM energy (photons and leptons)
 #*********************************************************************
 # WBF cuts                                                           *
 #*********************************************************************

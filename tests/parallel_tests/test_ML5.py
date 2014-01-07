@@ -197,7 +197,7 @@ class ML5Test(unittest.TestCase):
         if chosen_runner == 'ML4':
             runner = loop_me_comparator.LoopMG4Runner()
             # Replace here the path of your ML4 installation
-            runner.setup('/Users/Spooner/Documents/PhD/MadFKS/ML4ParrallelTest/NLOComp')
+            runner.setup('/Users/valentin/Documents/Work/aMC@NLO_v4/ML4ParrallelTest/NLOComp')
         
         self.create_pickle(my_proc_list,pickle_file, runner, ref_runner=None, \
                                                       model=model,energy=energy)

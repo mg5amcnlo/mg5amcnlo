@@ -12,7 +12,7 @@ int main(int argc, char** argv){
   // Read param_card and set parameters
   process.initProc("../../Cards/param_card.dat");
 
-  double energy = 1000;
+  double energy = 1500;
   double weight;
 
   // Get phase space point

@@ -1,0 +1,48 @@
+   Product name : STDHEP
+       Versions : v5_06_01
+ Product Number : PM0091
+           Date : 13-Nov-2007
+  Origin/Author : Lynn Garren
+     Maintainer : Lynn Garren
+  Support Level : 5*
+
+Description:
+   STDHEP contains a set of translation routines which convert
+   Herwig, Jetset, Isajet, or QQ events to and from the standard
+   HEP event format.  STDHEP also contains utility routines
+   to work with the HEPEVT common block and a set of I/O routines.
+   The HEPEVT common block allows 4000 particles per event.
+
+   This release of StdHep contains all necessary files to build the 
+   StdHep and mcfio libraries.  You will need Isajet, Herwig, Pythia, 
+   and/or QQ to build anything besides the "standalone" examples.
+   
+   StdHep C++ code is in CLHEP.
+
+   StdHep uses include files from the event generators.
+   These include files are subject to change.  Also, the generator
+   particle numbering is subject to change.  Thus, we cannot
+   guarantee that StdHep will work with releases of the generators
+   other than those it was built with.
+
+This release of StdHep was built with and contains headers from (see src/inc/*):
+   Isajet v7_72a
+   Herwig v6_510a
+   Pythia v6_413
+   QQ v9_2b
+
+Usage:
+   % setup stdhep
+   See $STDHEP_DIR/example.
+
+Rebuilding the libraries:
+
+   cd $STDHEP_DIR
+   gmake clean (to get rid of the old libraries)
+   gmake all
+   gmake DEBUG=-g all (to build debug libraries)
+   optional:  gmake cleanobjs (to get rid of *.o files)
+
+Documentation:
+   Documentation is available at http://cepa.fnal.gov/psm/stdhep/
+   or in $STDHEP_DIR/doc.

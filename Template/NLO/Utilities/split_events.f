@@ -16,13 +16,16 @@ c handling_lhe_events.f fill_MC_mshell.f
       character*140 buff
       character*10 MonteCarlo
       character*3 str
-      integer evts,leftover,loc,loc1,loc2
+      integer evts,leftover,loc,loc1,loc2,isc,ipdf
+      integer numscales,numPDFpairs
+      common/cwgxsec1/numscales,numPDFpairs
 c
       write (*,*) 'give the name of the original event file'
       read (*,*) event_file
       ifile=34
       open(unit=ifile,file=event_file,status='old')
-      call read_lhef_header(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,isc,ipdf,MonteCarlo)
+      numscales=int(sqrt(dble(isc)))
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      &     XSECUP,XERRUP,XMAXUP,LPRUP)

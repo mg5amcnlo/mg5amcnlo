@@ -396,7 +396,7 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,ptHW6,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -411,7 +411,8 @@ c      include "fks.inc"
      # dE0sqdc(nexternal),x,yi,yj,xij,z(nexternal),xi(nexternal),
      # xjac(nexternal),zHW6,xiHW6,xjacHW6_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,
-     # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2
+     # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2,
+     # max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -524,13 +525,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if qMC (or similar
+c May remove UseSudakov from the definition below if ptHW6 (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
-      if(extra.and.qMC.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_HW6: qMC=',qMC
+     #                xm12,xm22,tk,uk,q1q,q2q,ptHW6,extra)
+      if(extra.and.ptHW6.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_HW6: ptHW6=',ptHW6
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -600,7 +601,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(qMC)
+        probne=bogus_probne_fun(ptHW6)
       endif
 c
 C
@@ -663,6 +664,11 @@ c Compute deadzones
      &      E0sq(npartner),ileg,npartner
           stop
         endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(ptHW6.gt.max_scale(npartner))lzone(npartner)=.false.
 c EW deadzone (QED branching when either the mother or a daughter is a photon)
 c to be updated !!!!!!
         if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
@@ -1127,7 +1133,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(qMC.le.scalemax)then
+              if(ptHW6.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -1135,7 +1141,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              ptresc=(ptHW6-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -1233,7 +1239,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=qMC
+        scale1_lhe(nFKSprocess)=ptHW6
       endif
 c
       if(dampMCsubt)then
@@ -1281,7 +1287,7 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,ptHWPP,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -1297,7 +1303,7 @@ c      include "fks.inc"
      # xjac(nexternal),zHWPP,xiHWPP,xjacHWPP_xiztoxy,ap,Q,
      # beta,xfact,prefact,kn,knbar,kn0,betae0,betad,betas,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,w1,w2,
-     # xitmp,xjactmp,ztmp,upper_scale2,xmp2,lambda
+     # xitmp,xjactmp,ztmp,upper_scale2,xmp2,lambda,max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -1410,13 +1416,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if qMC (or similar
+c May remove UseSudakov from the definition below if ptHWPP (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
-      if(extra.and.qMC.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_HWPP: qMC=',qMC
+     #                xm12,xm22,tk,uk,q1q,q2q,ptHWPP,extra)
+      if(extra.and.ptHWPP.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_HWPP: ptHWPP=',ptHWPP
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -1486,7 +1492,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(qMC)
+        probne=bogus_probne_fun(ptHWPP)
       endif
 c
 C
@@ -1543,6 +1549,11 @@ c Compute deadzones
            stop
          endif
          if(xi(npartner).lt.upper_scale2)lzone(npartner)=.true.
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c EW deadzone (QED branching when either the mother or a daughter is a photon)
 c to be updated !!!!!!
         if(i_type.eq.0.or.j_type.eq.0.or.m_type.eq.0)lzone(npartner)=.true.
@@ -1989,7 +2000,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(qMC.le.scalemax)then
+              if(ptHWPP.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -1997,7 +2008,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              ptresc=(ptHWPP-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -2095,7 +2106,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=qMC
+        scale1_lhe(nFKSprocess)=ptHWPP
       endif
 c
       if(dampMCsubt)then
@@ -2143,7 +2154,7 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,tPY6Q,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -2163,7 +2174,7 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2,xma2
+     # xmrec2,www,massmax,massmin,ma2,xma2,max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -2281,13 +2292,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if qMC (or similar
+c May remove UseSudakov from the definition below if tPY6Q (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
-      if(extra.and.qMC.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY6Q: qMC=',qMC
+     &                   xm12,xm22,tk,uk,q1q,q2q,tPY6Q,extra)
+      if(extra.and.tPY6Q.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY6Q: tPY6Q=',tPY6Q
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -2306,6 +2317,7 @@ c variable, not yet defined) will not be needed in the computation of probne
            scalemin=max(scalemin,sqrt(xm12))
            scalemax=max(scalemin,scalemax)
         endif
+
         emscasharp=(scalemax-scalemin).lt.(0.001d0*scalemax)
         if(emscasharp)then
           emsca_bare=scalemax
@@ -2362,7 +2374,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(qMC)
+        probne=bogus_probne_fun(tPY6Q)
       endif
 c
 C
@@ -2394,7 +2406,7 @@ c xmcsubt note
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
 c
-c Compute deadzones:
+c Compute deadzones
          lzone(npartner)=.true.
          mstj50=2
          mstp67=2
@@ -2431,6 +2443,13 @@ c$$$ is useless
                if(theta2.ge.theta2_cc)lzone(npartner)=.false.
             endif
          endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         xifake(npartner)=xi(npartner)
+         if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
+         if(xifake(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -2474,7 +2493,7 @@ c
             en_mother=en_fks+sqrt(xmm2+veckn_ev**2)
 c The following constraint is deduced by imposing (p1+p2-kmother)**2=krecoil**2 and
 c isolating mother's energy. Recall that krecoil**2=xmrec2 and that kmother**2=ma**2
-            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/en_mother.ge.tiny)then
+            if(abs(en_mother-(s-xmrec2+ma2)/(2*sqrt(s)))/max(en_mother,1d0).ge.tiny)then
                write(*,*)'error C in xmcsubt_PY6Q'
                write(*,*)en_mother,(s-xmrec2+ma2)/(2*sqrt(s))
                stop
@@ -2951,7 +2970,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(qMC.le.scalemax)then
+              if(tPY6Q.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -2959,7 +2978,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              ptresc=(tPY6Q-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -3057,7 +3076,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=qMC
+        scale1_lhe(nFKSprocess)=tPY6Q
       endif
 c
       if(dampMCsubt)then
@@ -3105,7 +3124,7 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,ptPY6PT,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -3122,7 +3141,7 @@ c      include "fks.inc"
      # beta,xfact,prefact,kn,knbar,kn0,betad,betas,parp67,
      # gfactazi,s,gfunsoft,gfuncoll,gfunazi,bogus_probne_fun,
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,thetac,ycc,
-     # p_born_partner(0:3),p_born_fksfather(0:3)
+     # p_born_partner(0:3),p_born_fksfather(0:3),max_scale(nexternal-1)
       logical lzcc
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
@@ -3241,13 +3260,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if qMC (or similar
+c May remove UseSudakov from the definition below if ptPY6PT (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
-      if(extra.and.qMC.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY6PT: qMC=',qMC
+     &                   xm12,xm22,tk,uk,q1q,q2q,ptPY6PT,extra)
+      if(extra.and.ptPY6PT.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY6PT: ptPY6PT=',ptPY6PT
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -3279,7 +3298,9 @@ c Distinguish initial or final state radiation
         isr=.true.
         delta=min(1.d0,deltaI)
       elseif(ileg.eq.3.or.ileg.eq.4)then
-        write(*,*)'FSR not available for PYTHIA6PT'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
+        write(*,*)'FSR not available for PYTHIA6PT !!!!'
         stop
         fsr=.true.
         delta=min(1.d0,deltaO)
@@ -3320,7 +3341,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(qMC)
+        probne=bogus_probne_fun(ptPY6PT)
       endif
 c
 C
@@ -3351,8 +3372,8 @@ c xmcsubt note
          z(npartner)=ztmp
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
-c
-c Compute deadzones:
+
+c Compute deadzones
          lzone(npartner)=.true.
          parp67=1d0
          mstp67=2
@@ -3380,14 +3401,16 @@ c Compute deadzones:
             write(*,*)'No way'
             stop
          endif
+         max_scale(npartner)=scalemax
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
             xifake(npartner)=xi(npartner)
-            if(ileg.eq.3)then
-               xifake(npartner)=xi(npartner)+xm12
-               upper_scale=max(upper_scale,sqrt(xm12))
-            endif
+            if(ileg.eq.3)xifake(npartner)=xi(npartner)+xm12
             if(sqrt(xifake(npartner)).gt.upper_scale)lzone(npartner)=.false.
          endif
 c EW deadzone (QED branching when either the mother or a daughter is a photon)
@@ -3732,7 +3755,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                   xkernazi(2)=0.d0
                 endif
               else
-                write(*,*)'Error 7 in xmcsubt_PYPT: unknown ileg'
+                write(*,*)'Error 7 in xmcsubt_PY6PT: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -3825,7 +3848,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
                   xkernazi(2)=0.d0
                 endif
               else
-                write(*,*)'Error 7b in xmcsubt_PYPT: unknown ileg'
+                write(*,*)'Error 7b in xmcsubt_PY6PT: unknown ileg'
                 write(*,*)ileg
                 stop
               endif
@@ -3842,7 +3865,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(qMC.le.scalemax)then
+              if(ptPY6PT.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -3850,7 +3873,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              ptresc=(ptPY6PT-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -3948,7 +3971,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=qMC
+        scale1_lhe(nFKSprocess)=ptPY6PT
       endif
 c
       if(dampMCsubt)then
@@ -3998,7 +4021,7 @@ c      include "fks.inc"
       logical lzone(nexternal),flagmc
 
       double precision emsca_bare,etot,ptresc,rrnd,ref_scale,
-     & scalemin,scalemax,wgt1,qMC,emscainv,emscafun
+     & scalemin,scalemax,wgt1,ptPY8,emscainv,emscafun
       double precision emscwgt(nexternal),emscav(nexternal)
       integer jpartner,mpartner
       logical emscasharp
@@ -4017,7 +4040,9 @@ c      include "fks.inc"
      # ztmp,xitmp,xjactmp,get_angle,w1,w2,z0,dz0dy,
      # p_born_partner(0:3),p_born_fksfather(0:3),
      # ma,mbeff,mceff,betaa,lambdaabc,zminus,zplus,xmm2,
-     # xmrec2,www,massmax,massmin,ma2
+     # xmrec2,www,massmax,massmin,ma2,p_mum(0:3),p_partner(0:3,nexternal-1),
+     # p_dip(0:3,nexternal-1),m_dip(nexternal-1),m_partner(nexternal-1),m_mum,
+     # m2_dipole(nexternal-1),m_dipole(nexternal-1),max_scale(nexternal-1)
 
       double precision veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -4135,13 +4160,13 @@ c entering this function
         stop
       endif
 
-c May remove UseSudakov from the definition below if qMC (or similar
+c May remove UseSudakov from the definition below if ptPY8 (or similar
 c variable, not yet defined) will not be needed in the computation of probne
       extra=dampMCsubt.or.AddInfoLHE.or.UseSudakov
       call xiz_driver(xi_i_fks,y_ij_fks,shat,pp,ileg,
-     #                xm12,xm22,tk,uk,q1q,q2q,qMC,extra)
-      if(extra.and.qMC.lt.0.d0)then
-        write(*,*)'Error in xmcsubt_PY8: qMC=',qMC
+     &                   xm12,xm22,tk,uk,q1q,q2q,ptPY8,extra)
+      if(extra.and.ptPY8.lt.0.d0)then
+        write(*,*)'Error in xmcsubt_PY8: ptPY8=',ptPY8
         stop
       endif
       call get_mbar(pp,y_ij_fks,ileg,bornbars,bornbarstilde)
@@ -4212,7 +4237,7 @@ c probne may be moved later if necessary
 c this is standard MC@NLO
         probne=1.d0
       else
-        probne=bogus_probne_fun(qMC)
+        probne=bogus_probne_fun(ptPY8)
       endif
 c
 C
@@ -4244,8 +4269,29 @@ c xmcsubt note
          xi(npartner)=xitmp
          xjac(npartner)=xjactmp
 c
-c Compute deadzones:
+c Compute deadzones
          lzone(npartner)=.true.
+c impose pT < min(scalup,mDipole/2) for FSR
+         if(ileg.gt.2)then
+            do i=0,3
+               p_mum(i)=p_born(i,fksfather)
+               p_partner(i,npartner)=p_born(i,ipartners(npartner))
+               p_dip(i,npartner)=p_mum(i)+p_partner(i,npartner)
+            enddo
+            m_dip(npartner)=sqrt(dot(p_dip(0,npartner),p_dip(0,npartner)))
+            m_partner(npartner)=sqrt(dot(p_partner(0,npartner),p_partner(0,npartner)))
+            m_mum=0d0
+            if(ileg.eq.3)m_mum=sqrt(xm12)
+            m2_dipole(npartner)=(m_dip(npartner)-m_partner(npartner))**2-m_mum**2
+            m_dipole(npartner)=sqrt(m2_dipole(npartner))
+            max_scale(npartner)=min(scalemax,m_dipole(npartner)/2d0)
+         else
+            max_scale(npartner)=scalemax
+         endif
+         max_scale(npartner)=
+     &        min(max_scale(npartner),shower_S_scale(nFKSprocess*2-1))
+         max_scale(npartner)=max(max_scale(npartner),3d0)
+         if(xi(npartner).gt.max_scale(npartner)**2)lzone(npartner)=.false.
 c Implementation of a maximum scale for the shower if the shape is not active.
          if(.not.dampMCsubt)then
             call assign_scalemax(shat,xi_i_fks,upper_scale)
@@ -4766,7 +4812,7 @@ c           xm22 = 0 = squared FKS-mother and FKS-sister mass
 c
           if(dampMCsubt)then
             if(emscasharp)then
-              if(qMC.le.scalemax)then
+              if(ptPY8.le.scalemax)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
               else
@@ -4774,7 +4820,7 @@ c
                 emscav(npartner)=scalemax
               endif
             else
-              ptresc=(qMC-scalemin)/(scalemax-scalemin)
+              ptresc=(ptPY8-scalemin)/(scalemax-scalemin)
               if(ptresc.le.0.d0)then
                 emscwgt(npartner)=1.d0
                 emscav(npartner)=emsca_bare
@@ -4872,7 +4918,7 @@ c min() avoids troubles if ran2()=1
           ipartner_lhe(nFKSprocess)=min( int(ran2()*ipartners(0))+1,ipartners(0) )
           ipartner_lhe(nFKSprocess)=ipartners(ipartner_lhe(nFKSprocess))
         endif
-        scale1_lhe(nFKSprocess)=qMC
+        scale1_lhe(nFKSprocess)=ptPY8
       endif
 c
       if(dampMCsubt)then

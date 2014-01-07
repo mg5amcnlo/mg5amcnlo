@@ -442,7 +442,7 @@ class FKSHelasRealProcess(object): #test written
             else:
                 logger.info('generating matrix element...')
                 self.matrix_element = helas_objects.HelasMatrixElement(
-                                        fksrealproc.amplitude, **opts)
+                                                  fksrealproc.amplitude, **opts)
                 #generate the color for the real
                 self.matrix_element.get('color_basis').build(
                                     self.matrix_element.get('base_amplitude'))

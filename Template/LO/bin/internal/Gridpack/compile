@@ -64,7 +64,7 @@ cd ..
 if [[ -d Source ]]; then
     cd Source
     for i in ../bin/internal/gen_ximprove all ../bin/internal/combine_events; do
-    make $i > /dev/null
+    make $i -j 1 > /dev/null
     if [[ $? -ne 0 ]];then
         # Make didn't exit successfully
         echo Error make $i in Source not successful > ../error
@@ -95,7 +95,7 @@ if [[ -d SubProcesses ]]; then
 	rm -f wait.ajob* >& /dev/null
 	rm -f run.ajob* >& /dev/null
 	rm -f done.ajob* >& /dev/null
-        make madevent > /dev/null
+        make madevent -j 1 > /dev/null
 	if [[ $? -ne 0 ]];then
 	    # Make didn't exit successfully
 	    echo Error make madevent not successful > error

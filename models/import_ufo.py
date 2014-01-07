@@ -21,7 +21,8 @@ import os
 import re
 import sys
 
-from madgraph import MadGraph5Error, MG5DIR
+
+from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.color_algebra as color
@@ -200,7 +201,10 @@ def import_full_model(model_path, decay=False):
             # might be None for ghost
         
     # save in a pickle files to fasten future usage
-    save_load_object.save_to_file(os.path.join(model_path, pickle_name), model) 
+    if ReadWrite:
+        save_load_object.save_to_file(os.path.join(model_path, pickle_name),
+                                   model, log=False) 
+ 
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
     #    model = import_ufo.RestrictModel(model)
@@ -361,10 +365,10 @@ class UFOMG5Converter(object):
 	          or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
-            if hasattr(particle_info, 'GoldstoneBoson'):
-                if particle_info.GoldstoneBoson:
-                    return
-                
+            if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+                return
+            elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
+                return      
         # Initialize a particles
         particle = base_objects.Particle()
 
@@ -389,18 +393,32 @@ class UFOMG5Converter(object):
                     particle.set(key,abs(value))
                     if value<0:
                         particle.set('ghost',True)
+                elif key == 'propagator':
+                    if aloha.unitary_gauge:
+                        particle.set(key, str(value[0]))
+                    else: 
+                        particle.set(key, str(value[1]))
                 else:
                     particle.set(key, value)    
             elif key == 'loop_particles':
                 loop_particles = value
             elif key == 'counterterm':
                 counterterms = value
-            elif key.lower() not in ('ghostnumber','selfconjugate','goldstoneboson','partial_widths'):
-                # add charge -we will check later if those are conserved 
+            elif key.lower() not in ('ghostnumber','selfconjugate','goldstone',
+                                             'goldstoneboson','partial_widths'):
+                # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
         
-        assert(12 == nb_property) #basic check that all the information is there         
+        if not hasattr(particle_info, 'propagator'):
+            nb_property += 1
+            if particle.get('spin') >= 3:
+                if particle.get('mass').lower() == 'zero':
+                    particle.set('propagator', 0) 
+                elif particle.get('spin') == 3 and not aloha.unitary_gauge:
+                    particle.set('propagator', 0)
+                
+        assert(13 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:
@@ -1417,40 +1435,52 @@ class RestrictModel(model_reader.ModelReader):
         if simplify:
             # check if the parameters is still usefull:
             re_str = '|'.join(special_parameters)
-            re_pat = re.compile(r'''\b(%s)\b''' % re_str)
-            used = set()
-            # check in coupling
-            for name, coupling_list in self['couplings'].items():
-                for coupling in coupling_list:
-                    for use in  re_pat.findall(coupling.expr):
-                        used.add(use)
+            if len(re_str) > 25000: # size limit on mac
+                split = len(special_parameters) // 2
+                re_str = ['|'.join(special_parameters[:split]),
+                          '|'.join(special_parameters[split:])]
+            else:
+                re_str = [ re_str ]
+            for expr in re_str:
+                re_pat = re.compile(r'''\b(%s)\b''' % expr)
+                used = set()
+                # check in coupling
+                for name, coupling_list in self['couplings'].items():
+                    for coupling in coupling_list:
+                        for use in  re_pat.findall(coupling.expr):
+                            used.add(use)
         else:
             used = set([i for i in special_parameters if i])
         
         # simplify the regular expression
-        re_str = '|'.join([param for param in special_parameters 
-                                                      if param not in used])
-        re_pat = re.compile(r'''\b(%s)\b''' % re_str)            
-        param_info = {}
-        # check in parameters
-        for dep, param_list in self['parameters'].items():
-            for tag, parameter in enumerate(param_list):
-                # update information concerning zero/one parameters
-                if parameter.name in special_parameters:
-                    param_info[parameter.name]= {'dep': dep, 'tag': tag, 
-                                                           'obj': parameter}
-                    continue
-                                    
-                # Bypass all external parameter
-                if isinstance(parameter, base_objects.ParamCardVariable):
-                    continue
-                
-                # If there is no further special parameter to look for
-                if re_str!='' and simplify:
-                    # check the presence of zero/one parameter
-                    for use in  re_pat.findall(parameter.expr):
-                        used.add(use)
-        
+        re_str = '|'.join([param for param in special_parameters if param not in used])
+        if len(re_str) > 25000: # size limit on mac
+            split = len(special_parameters) // 2
+            re_str = ['|'.join(special_parameters[:split]),
+                          '|'.join(special_parameters[split:])]
+        else:
+            re_str = [ re_str ]
+        for expr in re_str:                                                      
+            re_pat = re.compile(r'''\b(%s)\b''' % expr)
+               
+            param_info = {}
+            # check in parameters
+            for dep, param_list in self['parameters'].items():
+                for tag, parameter in enumerate(param_list):
+                    # update information concerning zero/one parameters
+                    if parameter.name in special_parameters:
+                        param_info[parameter.name]= {'dep': dep, 'tag': tag, 
+                                                               'obj': parameter}
+                        continue
+                                        
+                    # Bypass all external parameter
+                    if isinstance(parameter, base_objects.ParamCardVariable):
+                        continue
+    
+                    if simplify:
+                        for use in  re_pat.findall(parameter.expr):
+                            used.add(use)
+                        
         # modify the object for those which are still used
         for param in used:
             if not param:

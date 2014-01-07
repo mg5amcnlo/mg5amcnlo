@@ -11,7 +11,9 @@ C
       parameter (zero = 0d0)
       integer npoints, npointsChecked
       integer i, j, k
+      integer return_code
       double precision tolerance, tolerance_default
+      double precision, allocatable :: accuracies(:)
       double precision accuracy
       parameter (tolerance_default = 1d-5)
       double precision ren_scale, energy
@@ -19,11 +21,13 @@ C
       parameter (energy = 1d3)
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
       double precision p(0:3, nexternal), prambo(0:3, nexternal)
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
       double precision pswgt
-      double precision virt_wgts(3), fks_double, fks_single
+      double precision fks_double, fks_single
+      double precision, allocatable :: virt_wgts(:,:)
       double precision double, single, finite
       double complex born(2)
       logical calculatedborn
@@ -37,17 +41,31 @@ C
       integer ngluons,nquarks(-6:6)
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
 cc
       include 'run.inc'
       include 'coupl.inc'
       include 'q_es.inc'
+      integer nsqso      
       double precision pmass(nexternal), pmass_rambo(nexternal)
       integer nfail
+      logical first_time
+      data first_time/.TRUE./
       
-
 C-----
 C  BEGIN CODE
 C-----  
+      if (first_time) then
+          call get_nsqso_loop(nsqso)          
+          allocate(virt_wgts(0:3,0:nsqso))
+          allocate(accuracies(0:nsqso))
+          first_time = .false.
+      endif
+
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -70,7 +88,12 @@ C-----
           pmass_rambo(i-nincoming) = pmass(i)
       enddo
 
-      nfksprocess=1
+c Find the nFKSprocess for which we compute the Born-like contributions,
+c ie. which is a Born+g real-emission process
+      do nFKSprocess=1,fks_configs
+         call fks_inc_chooser()
+         if (particle_type(i_fks).eq.8) exit
+      enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setfksfactor(1)
@@ -139,11 +162,13 @@ C-----
           enddo
 
           call sborn(p_born, born)
-          call sloopmatrix_thres(p_born,virt_wgts,tolerance,accuracy) 
+          call sloopmatrix_thres(p_born,virt_wgts,tolerance,
+     1 accuracies,return_code)
+          accuracy=accuracies(0)
 
-          finite = virt_wgts(1)/dble(ngluons)
-          single = virt_wgts(2)/dble(ngluons)
-          double = virt_wgts(3)/dble(ngluons)
+          finite = virt_wgts(1,0)/dble(ngluons)
+          single = virt_wgts(2,0)/dble(ngluons)
+          double = virt_wgts(3,0)/dble(ngluons)
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks

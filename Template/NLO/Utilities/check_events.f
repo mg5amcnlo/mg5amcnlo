@@ -7,7 +7,8 @@ c LH files created by Herwig, assuming they are identified by a
 c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
-     # iuseres_1,iwhmass,ilepmass,idec
+     # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
+     # isavePDF,itemp
       double precision chtot,xint,xinterr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
@@ -60,8 +61,11 @@ c negative number of events
       include 'reweight0.inc'
       integer kr,kf,kpdf
       double precision sum_wgt_resc_scale(maxscales,maxscales),
-     # sum_wgt_resc_pdf(0:maxPDFs)
-
+     # sum_wgt_resc_pdf(0:maxPDFs),
+     # xmax_wgt_resc_scale(maxscales,maxscales),
+     # xmax_wgt_resc_pdf(0:maxPDFs),
+     # xmin_wgt_resc_scale(maxscales,maxscales),
+     # xmin_wgt_resc_pdf(0:maxPDFs)
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -80,7 +84,7 @@ c negative number of events
       enddo
 
       write (*,*) 'Enter event file name'
-      read (*,*) event_file
+      read (*,'(a)') event_file
 
       write (*,*) 'Enter 0 to get integrals from res_1_tot.txt'
       write (*,*) '      1 otherwise'
@@ -136,7 +140,32 @@ c read from events
       keepevent=.true.
       shower=.false.
 
-      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
+     #                           MonteCarlo)
+      isavesc=itempsc
+      isavePDF=itempPDF
+      if(itempsc.ne.0)then
+        numscales=int(sqrt(dble(itempsc)))
+        if(numscales**2.ne.itempsc)then
+          write(*,*)'Different number of muR and muF choices?',itempsc
+          stop
+        endif
+      else
+        write(*,*)'Enter numscales, <0 to ignore'
+        read(*,*)itemp
+        if(itemp.gt.0)numscales=itemp
+      endif
+      if(itempPDF.ne.0)then
+        numPDFpairs=itempPDF/2
+        if(2*numPDFpairs.ne.itempPDF)then
+          write(*,*)'Number of PDF sets not even',itempPDF
+          stop
+        endif
+      else
+        write(*,*)'Enter numPDFpairs, <0 to ignore'
+        read(*,*)itemp
+        if(itemp.gt.0)numPDFpairs=itemp
+      endif
 c Showered LH files have maxevt<0; in that case, it is not the number of
 c events, but its upper bound
       if(maxevt.lt.0)then
@@ -204,11 +233,12 @@ c
      #           wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           if(i.eq.1)then
             if( (jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #          jwgtinfo.eq.8 )rwgtinfo=.true.
+     #          jwgtinfo.eq.8.or.jwgtinfo.eq.9 )rwgtinfo=.true.
             saved_weight=abs(XWGTUP)
           else
             if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #           jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+     #           jwgtinfo.eq.8.or.jwgtinfo.eq.9) .and. 
+     #          (.not.rwgtinfo) )then
               write(*,*)'Inconsistency #2 in event file',i,' ',buff
               stop
             endif
@@ -248,7 +278,12 @@ c
 
       open (unit=ifile,file=event_file,status='old')
 
-      call read_lhef_header_full(ifile,maxevt,MonteCarlo)
+      call read_lhef_header_full(ifile,maxevt,itempsc,itempPDF,
+     #                           MonteCarlo)
+      if(itempsc.ne.isavesc.or.itempPDF.ne.isavePDF)then
+        write(*,*)'Error in check_events'
+        write(*,*)itempsc,isavesc,itempPDF,isavePDF
+      endif
       maxevt=abs(maxevt)
       call read_lhef_init(ifile,
      &     IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
@@ -262,14 +297,18 @@ c
       npartH_lhe=0
       itoterr=0
       mtoterr=0
-      if(jwgtinfo.eq.8)then
+      if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
         do kr=1,maxscales
           do kf=1,maxscales
             sum_wgt_resc_scale(kr,kf)=0.d0
+            xmax_wgt_resc_scale(kr,kf)=-1.d100
+            xmin_wgt_resc_scale(kr,kf)=1.d100
           enddo
         enddo
         do kpdf=0,maxPDFs
           sum_wgt_resc_pdf(kpdf)=0.d0
+          xmax_wgt_resc_pdf(kpdf)=-1.d100
+          xmin_wgt_resc_pdf(kpdf)=1.d100
         enddo
       endif
 
@@ -290,16 +329,28 @@ c
 c Note: with pre-beta2 convention, the reweighting cross sections were
 c normalized such that one needed to compute e.g. 
 c XWGTUP*wgtxsecmu(kr,kf)/wgtref
-         if(jwgtinfo.eq.8)then
+         if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
            do kr=1,numscales
              do kf=1,numscales
                sum_wgt_resc_scale(kr,kf)=sum_wgt_resc_scale(kr,kf)+
      #                                   wgtxsecmu(kr,kf)
+               xmax_wgt_resc_scale(kr,kf)=
+     #           max(xmax_wgt_resc_scale(kr,kf),
+     #               wgtxsecmu(kr,kf))
+               xmin_wgt_resc_scale(kr,kf)=
+     #           min(xmin_wgt_resc_scale(kr,kf),
+     #               wgtxsecmu(kr,kf))
              enddo
            enddo
            do kpdf=1,2*numPDFpairs
              sum_wgt_resc_pdf(kpdf)=sum_wgt_resc_pdf(kpdf)+
      #                              wgtxsecPDF(kpdf)
+             xmax_wgt_resc_pdf(kpdf)=
+     #         max(xmax_wgt_resc_pdf(kpdf),
+     #             wgtxsecPDF(kpdf))
+             xmin_wgt_resc_pdf(kpdf)=
+     #         min(xmin_wgt_resc_pdf(kpdf),
+     #             wgtxsecPDF(kpdf))
            enddo
          endif
 
@@ -314,7 +365,8 @@ c XWGTUP*wgtxsecmu(kr,kf)/wgtref
      #                       jwgtinfo,mexternal,iwgtnumpartn,
      #            wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
           if( ((jwgtinfo.eq.0.and.wgtcentral.ne.0.d0) .or.
-     #         jwgtinfo.eq.8) .and. (.not.rwgtinfo) )then
+     #         jwgtinfo.eq.8.or.jwgtinfo.eq.9) .and. 
+     #        (.not.rwgtinfo) )then
              write(*,*)'Inconsistency #2 in event file',i,' ',buff
              stop
            endif
@@ -489,29 +541,59 @@ c Error if more that 1sigma away
         write(64,*)'PDF lower:',wgt4a,' +-',wgt4s
         write(64,*)'PDF upper:',wgt5a,' +-',wgt5s
 
-        if(jwgtinfo.eq.8)then
+        if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
           write(64,*)'  '
           write(64,*)'Sums of rescaled weights'
           do kr=1,numscales
             do kf=1,numscales
               if(event_norm.eq.'ave')then
-                write(64,*)'scales',kr,kf,' ->',
+                write(64,300)'scales',kr,kf,' ->',
      #                     sum_wgt_resc_scale(kr,kf)/maxevt
               else
-                write(64,*)'scales',kr,kf,' ->',
+                write(64,300)'scales',kr,kf,' ->',
      #                     sum_wgt_resc_scale(kr,kf)
               endif
             enddo
           enddo
           if(event_norm.eq.'ave')then
             do kpdf=1,2*numPDFpairs
-              write(64,*)'PDF',kpdf,' ->',
+              write(64,301)'PDF',kpdf,' ->',
      #                   sum_wgt_resc_pdf(kpdf)/maxevt
             enddo
           else
             do kpdf=1,2*numPDFpairs
-              write(64,*)'PDF',kpdf,' ->',
+              write(64,301)'PDF',kpdf,' ->',
      #                   sum_wgt_resc_pdf(kpdf)
+            enddo
+          endif
+        endif
+        if(jwgtinfo.eq.8.or.jwgtinfo.eq.9)then
+          write(64,*)'  '
+          write(64,*)'Max and min of rescaled weights'
+          do kr=1,numscales
+            do kf=1,numscales
+              if(event_norm.eq.'ave')then
+                write(64,400)'scales',kr,kf,' ->',
+     #                     xmax_wgt_resc_scale(kr,kf),
+     #                     xmin_wgt_resc_scale(kr,kf)
+              else
+                write(64,400)'scales',kr,kf,' ->',
+     #                     xmax_wgt_resc_scale(kr,kf),
+     #                     xmin_wgt_resc_scale(kr,kf)
+              endif
+            enddo
+          enddo
+          if(event_norm.eq.'ave')then
+            do kpdf=1,2*numPDFpairs
+              write(64,401)'PDF',kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf),
+     #                   xmin_wgt_resc_pdf(kpdf)
+            enddo
+          else
+            do kpdf=1,2*numPDFpairs
+              write(64,401)'PDF',kpdf,' ->',
+     #                   xmax_wgt_resc_pdf(kpdf),
+     #                   xmin_wgt_resc_pdf(kpdf)
             enddo
           endif
         endif
@@ -531,6 +613,10 @@ c Error if more that 1sigma away
       if(idec.eq.0)call finalizedecays()
 
  200  format(1a,1x,i1,4(1x,i2),2(1x,d14.8),1x,i1,2(1x,i2),5(1x,d14.8))
+ 300  format(a,2(1x,i2),a,(1x,f16.6))
+ 301  format(a,6x,i3,a,(1x,f16.6))
+ 400  format(a,2(1x,i2),a,2(1x,f16.6))
+ 401  format(a,6x,i3,a,2(1x,f16.6))
 
       end
 
