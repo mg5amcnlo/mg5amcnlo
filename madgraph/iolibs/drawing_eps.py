@@ -450,9 +450,10 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
-        if d == 0:
-            raise self.DrawDiagramError('Line can not have 0 length')
-        
+        # HSS, 24/10/2012, for tadpole
+        #if d == 0:
+        #    raise self.DrawDiagramError('Line can not have 0 length')
+        # HSS
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import re,string,os,sys,subprocess
-srcdir = '/Users/valentin/Documents/Work/MG5/MG5_aMC_2.1_withTIR/vendor/IREGI/src/oneloop/src'
+srcdir = '/Users/erdissshaw/Works/MG5_aMC_2.1/vendor/IREGI/src/oneloop/src'
 sys.path.append(srcdir)
 import avh_pc,avh_pc_olo
 
