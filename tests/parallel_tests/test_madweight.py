@@ -79,8 +79,7 @@ class TestMadWeight(unittest.TestCase):
                  set nb_exp_events 2
                  set log_level debug
                  set nb_event_by_node 1
-                 set mw_perm montecarlo T
-                 set mw_run MW_int_points 2000 
+                 set mw_perm montecarlo F
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
 
@@ -207,8 +206,7 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_parameter 12 23
                  set mw_parameter 13 80 90
-                 set mw_run MW_int_points 5000 
-                 set mw_perm montecarlo T
+                 set mw_run MW_int_points 2500 
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
