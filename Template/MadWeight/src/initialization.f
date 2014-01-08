@@ -390,8 +390,8 @@ c      include './genps.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
 
-      logical use_perm,perm_with_b
-      common/global_run_perm/use_perm,perm_with_b
+      logical use_perm,perm_with_b, montecarlo_perm
+      common/global_run_perm/use_perm,perm_with_b, montecarlo_perm
       
       integer matching_type_part(3:max_particles) 
       integer inv_matching_type_part(3:max_particles)

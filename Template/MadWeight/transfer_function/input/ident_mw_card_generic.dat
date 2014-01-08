@@ -1,12 +1,13 @@
 ******************************************
 *                                        *
 *  Linking file between value and name   *
-*        O. Mattelaer   June 2013        * 
+*        O. Mattelaer   January 2014     * 
 *                                        * 
-* version 0.1.4				 *
+* version 0.1.5                          *
 ******************************************
 MW_perm         bjet_is_jet   perm_with_b      logical    .false.	
 MW_perm         permutation   use_perm         logical    .true. 
+MW_perm         montecarlo    montecarlo_perm  logical    .true.
 MW_run          mw_int_points nevents          integer    10000
 MW_run          7             final_prec       real       0.005
 MW_run          710           min_prec_cut1    real       0.0005  
@@ -23,3 +24,5 @@ MW_run          nwa           nwa              logical    .false.
 MW_run          isr           isr              integer    0
 MW_run          use_cut       use_cut          logical    .false.
 MW_run          bw_cut        bw_cut           logical    .false.
+MW_run          integrator    integrator       string     'v'
+MW_run          pretrained    pretrained       logical    .true.

@@ -9,7 +9,8 @@ mw_run  nb_event_by_node integer  10                    # decide how many events
 mw_run  event_packing    integer  20                    # the input event files will be splitted in event_packing*nb_event_by_node 
 mw_run  log_level        string   'channel'             # from low level of log to extensive log: weight, permutation, channel, iteration, full     
 mw_run  nwa              float    0.1                   # width below NWA is used instead of performing the actual integrals
-
+mw_run  integrator       string   'v'                   # default integrator method (v/m -> vegas/mint)
+mw_run  pretrained_tf    logical   T                    # if we pre-trained the grid for the TF
 
 mw_parameter mode logical 1                         
 mw_parameter 1    logical mw_parameter@@mode # choose the mode for the generation of the param_card.dat
@@ -21,7 +22,7 @@ mw_perm  bjet_is_jet_for_selection  logical mw_perm@@bjet_is_jet  #don't use bta
 mw_perm  combine_mode    integer 1        # how to combine the permutation 1: average
                                           #                                2: first permutation 
                                           #                                3: higher permutation only
-
+mw_perm  montecarlo     logical T         # Perform the MC over permutation or not...
 
        
 mw_gen     1         integer 1            # choose which propagator to allign in ECS:

@@ -79,16 +79,25 @@ class TestMadWeight(unittest.TestCase):
                  set nb_exp_events 2
                  set log_level debug
                  set nb_event_by_node 1
+                 set mw_perm montecarlo T
+                 set mw_run MW_int_points 2000 
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
-        
-        devnull =open(os.devnull,'w')
+
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
         start = time.time()
         print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
-                        stdout=devnull, stderr=devnull)
+                        stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
         print 'tt~ full takes %smin %is' % (run_time//60, run_time % 60)
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod_full', 'Events', 'fermi', 'weights.out')).read()
@@ -106,7 +115,6 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
@@ -133,16 +141,26 @@ class TestMadWeight(unittest.TestCase):
                  set nb_exp_events 1
                  set log_level debug
                  set nb_event_by_node 1
+                 set mw_run pretrained T
+                 set mw_perm montecarlo T
+                 set mw_run MW_int_points 2000
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
-        devnull =open(os.devnull,'w')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        
         start = time.time()
         print 'this mw test is expected to take 2 min on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
-                        stdout=devnull, stderr=devnull)
+                        stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
         print 'tt~ semi takes %smin %is' % (run_time//60, run_time % 60)
         data = open(pjoin(MG5DIR, 'TEST_MW_TT_prod', 'Events', 'fermi', 'weights.out')).read()
@@ -160,14 +178,13 @@ class TestMadWeight(unittest.TestCase):
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]
-            
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
-        except Exception, error:
-            pass
+        #try:
+        #    shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod'))
+        #except Exception, error:
+        #    pass
 
             
     def test_short_mw_wa(self):
@@ -190,16 +207,25 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_parameter 12 23
                  set mw_parameter 13 80 90
+                 set mw_run MW_int_points 5000 
+                 set mw_perm montecarlo T
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
-        devnull =open(os.devnull,'w')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        
         start = time.time()
         print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
-                        stdout=devnull, stderr=devnull)
+                        stdout=stdout, stderr=stderr)
         run_time =  time.time() - start
         print 'wa takes %smin %is' % (run_time//60, run_time % 60)
         data = open(pjoin(MG5DIR, 'TEST_MW_WA_prod', 'Events', 'fermi', 'weights.out')).read()

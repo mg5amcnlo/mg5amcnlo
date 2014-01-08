@@ -10,8 +10,8 @@
 ##    Author: Mattelaer Olivier (UCL-CP3)                               ##
 ##            Artoisenet Pierre (UCL-CP3)                               ##
 ##                                                                      ##
-##    Version:     1.1.5                                                ##
-##    Last change: 01/06/10                                             ##
+##    Version:     5.0.0                                                ##
+##    Last change: 01/10/14                                             ##
 ##                                                                      ##
 ##########################################################################
 ##                                                                      ##
@@ -24,9 +24,9 @@
 Block MW_Run 
 #   TAG                 VALUE                    UTILITY
      name                fermi    # name for the run  
-     nb_exp_events        4     # number of experimental events to consider
-     MW_int_points        50000   # number of points in MadWeight integration
-     nb_event_by_node     1      # one job submission compute the weight for N events
+     nb_exp_events        4       # number of experimental events to consider
+     MW_int_points        4000    # number of points in MadWeight integration
+     nb_event_by_node     1       # one job submission compute the weight for N events
      log_level            weight  # from low level of log to extensive log: 
                                   # weight, permutation, channel, full
      use_cut              F       # use the cut defined in run_card.dat
@@ -36,9 +36,7 @@ Block MW_Run
                                   # isr=1 : correct kinematic based on reconstructed Pt(isr)
                                   # isr=2 : correct kinematic based on reconstructed Pt(isr)
                                   #         + boost the weight to the CMS frame
-
-     
-
+                                  
 #*************************************************************************
 ##                  define the different param_card's                   ##  
 #*************************************************************************
@@ -71,6 +69,9 @@ Block MW_perm
 #   TAG           VALUE                    UTILITY
      permutation  T         # make permutation
      bjet_is_jet  T         # consider permutation between b-jets and light jets
+     montecarlo   T         # Monte-Carlo over permutation (Huge speed up if many permutation)
+     
+     
 #*************************************************************************
 ##                       Phase-Space Integration mapping                ##
 #*************************************************************************

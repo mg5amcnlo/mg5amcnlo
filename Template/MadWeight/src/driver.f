@@ -25,11 +25,6 @@ C
       include 'permutation.inc'
       include 'madweight_param.inc'
 C
-C     PARAMETERS
-C
-      character*1 integrator
-      parameter (integrator='v')  ! v= vegas, m=mint
-C
 C     LOCAL (Variable of integration)
 C
       DOUBLE PRECISION SD,CHI,CROSS
@@ -118,6 +113,8 @@ c      common/cifold/ifold
       double precision xi(100,20),si,si2,swgt,schi
       common/bveg2/xi,si,si2,swgt,schi,ndo,it
 
+      integer integral_index, nb_sol_perm
+
 C**************************************************************************
 C    step 1: initialisation     
 C**************************************************************************
@@ -137,11 +134,24 @@ c     VEGAS parameters for the first loop
       nitmax=ITMX  
       imode=0
 
+      if (montecarlo_perm) then
+         nb_sol_perm = 1
+      else
+         nb_sol_perm = NPERM
+      endif
+
+
+
+
 c     initialization of the variables in the loops
       check_value=0d0
       loop_index=0
+      integral_index = 0
+       do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
        do config_pos=1,nb_sol_config
-       order_value(config_pos)=1d99
+       integral_index = integral_index +1
+       order_value(integral_index)=1d99
+       enddo
        enddo
       OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
 C
@@ -159,16 +169,27 @@ C
       chan_val=0d0
       chan_err=0d0
 
+       integral_index = 0
+      do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
+           if (.not.montecarlo_perm) then
+               call get_perm(perm_pos, perm_id)
+               call assign_perm(perm_id)
+               curr_perm = perm_pos
+           endif
+
       do config_pos=1,nb_sol_config
+          integral_index = integral_index + 1
           NCALL = nevents
           iseed = iseed + 1 ! avoid to have the same seed
           NDIM=Ndimens
           if(ISR.eq.3) NDIM=NDIM+2
           if(NPERM.ne.1) NDIM = NDIM + 1
+          if (montecarlo_perm) NCALL = nevents * NPERM
+
 c
-          if(order_value(config_pos).gt.check_value) then
-             write(*,*) "** Current channel of integration: ",config_pos,
-     &                  "/", nb_sol_config, ' **'
+          if(order_value(integral_index).gt.check_value) then
+             write(*,*) "** Current channel of integration: ",integral_index,
+     &                  "/", nb_sol_config*nb_sol_perm, ' **'
              if (loop_index.eq.1) then
                 ndo=100
                 do i = 1, NPERM
@@ -180,7 +201,7 @@ c
                     enddo
                 enddo
                 do i =1, dim_phase_space
-                  if (var2random(i,config_pos).ne.0) then
+                  if (var2random(i,config_pos).ne.0.and.pretrained) then
                     call prepare_tf_grid(var2random(i,config_pos))
                   endif
                 enddo
@@ -188,7 +209,7 @@ c
              else
                 do i = 1, ndo
                     do j = 1, NDIM
-                        xi(i,j) = xi_by_channel(i, j, config_pos)
+                        xi(i,j) = xi_by_channel(i, j, integral_index)
                     enddo
                 enddo
             endif
@@ -204,15 +225,17 @@ c                See if this is require to continue to update this
                        goto 2
                     endif
                 endif
-                call sort_perm
-                call get_new_perm_grid(NDIM)
+                if (montecarlo_perm) then
+                    call sort_perm
+                    call get_new_perm_grid(NDIM)
+                endif
              endif
              if (loop_index.eq.1) then
                  ITMX = max_it_step1
                  acc = max(final_prec, 0.9* check_value/(cross+3*SD))
              else
                  ITMX = 2
-                 acc = max(0.9*check_value/order_value(config_pos),
+                 acc = max(0.9*check_value/order_value(integral_index),
      &                                                       final_prec)
              endif
              call check_nan(cross)
@@ -224,12 +247,12 @@ c                See if this is require to continue to update this
              if (cross.eq.0d0)then
                 write(*,*) 'VEGAs no pre-training'
                 NCALL = 2 * nevents
+                if (montecarlo_perm) NCALL = 2 * nevents * NPERM
                 do i = 1, NPERM
                     perm_order(i,config_pos) = i
                 enddo
                 CALL VEGAS(fct,CROSS,SD,CHI)
              else
-                write(*,*) 'VEGAS1'
                 CALL VEGAS1(fct,CROSS,SD,CHI)
              endif
              call check_nan(cross)
@@ -237,6 +260,7 @@ c            See if this is require to continue to update this
              if (sd/cross.le.final_prec) goto 2
 
              if (loop_index.eq.2) then
+                NCALL = NCALL * nb_sol_perm
                 ITMX = max_it_step2
                 acc = max(0.9*check_value/(cross+3*SD), final_prec)
                 CALL VEGAS2(fct,CROSS,SD,CHI)
@@ -247,9 +271,9 @@ c            See if this is require to continue to update this
                 chan_val=chan_val+cross
                 temp_err=temp_err+SD
                 chan_err=chan_err+SD
-                order_value(config_pos) = cross
-                order_error(config_pos) = sd
-                if (histo) call histo_combine_iteration(config_pos)
+                order_value(integral_index) = cross
+                order_error(integral_index) = sd
+                if (histo) call histo_combine_iteration(integral_index)
                 if (loop_index.eq.1) then
                   if (config_pos.eq.1)then
                      check_value = (cross + 3*SD) * min_prec_cut1
@@ -260,11 +284,11 @@ c            See if this is require to continue to update this
                 endif
                 do i = 1, 100
                     do j=1,NDIM
-                        xi_by_channel(i, j, config_pos) = xi(i,j)
+                        xi_by_channel(i, j, integral_index) = xi(i,j)
                     enddo
                 enddo
              else
-                order_value(config_pos)=0d0
+                order_value(integral_index)=0d0
              endif
              if (nb_point_by_perm(1).ne.0)then
                   DO I =1,NPERM
@@ -293,12 +317,15 @@ c     &                             * value**2 )/(nb_point_by_perm(I)-1))
             ENDIF
           endif
        enddo
+       enddo
        check_value = temp_val * min_prec_cut1 
        if (loop_index.eq.1) then
           NCALL = nevents
           ITMX = max_it_step2
           if (temp_val.ne.0d0) goto 1 ! refine the integration
        endif
+       temp_val = temp_val / nb_sol_perm
+       temp_err = temp_err / nb_sol_perm
 
        write(*,*) "the weight is",temp_val,"+/-",temp_err
 

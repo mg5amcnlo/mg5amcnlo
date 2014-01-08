@@ -1,8 +1,8 @@
 C	definition of variables for permutation	
 C		definition also present in get_feynman_content.f
 C
-       logical use_perm,perm_with_b
-       common/global_run_perm/use_perm,perm_with_b
+       logical use_perm,perm_with_b, montecarlo_perm
+       common/global_run_perm/use_perm,perm_with_b, montecarlo_perm
 C
 C	definition of variables for the number of events in the integration
 C		definition also present in driver.f
@@ -31,13 +31,15 @@ C
       logical histo
       common/to_histo/histo
 c
-c   narrow width approximation
+c   narrow width approximation/optimization PS
 c
       double precision NWA
-      common /to_NWA/NWA
+      logical pretrained
+      common /to_NWA/NWA,pretrained
 c
 c     ISR mode
 c
+      character*1 integrator
       integer ISR
       common /to_correct_ISR/ISR
 c

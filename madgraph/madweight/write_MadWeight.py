@@ -600,7 +600,10 @@ class MG_diagram(diagram_class.MG_diagram):
         text += ' parameter (nb_sol_config=' + str(len(self.code)) + ')\n'
         text += ' integer dim_phase_space\n parameter (dim_phase_space=%i)\n' % ((3*len(self.ext_content))+2)
         text += ' integer nb_channel\n'
-        text += ' parameter (nb_channel=%i)\n' % len(self.code)
+        if self.MWparam['mw_perm']['montecarlo']:
+            text += ' parameter (nb_channel=%i)\n' % len(self.code)
+        else:
+            text += ' parameter (nb_channel=%i)\n' % (len(self.code) * 48)
 #        text+=' integer max_branch\n'                    
 #        text+=' parameter (max_branch='+str(len(self.ext_content))+')\n'        
         text = put_in_fortran_format(text)
@@ -692,7 +695,11 @@ class MG_diagram(diagram_class.MG_diagram):
         text = '        INTEGER    NPERM\n'
         text += '       PARAMETER (NPERM=%s)\n' % len(permutations)
         text += ' integer nb_channel2\n'
-        text += ' parameter (nb_channel2=%i)\n' % len(self.code)
+        if self.MWparam['mw_perm']['montecarlo']:
+            text += ' parameter (nb_channel2=%i)\n' % len(self.code)
+        else:
+            text += ' parameter (nb_channel2=%i)\n' % (len(self.code) * 48)
+        
         text += '''        double precision perm_value(NPERM)
         double precision perm_error(NPERM)
         integer curr_perm, nb_point_by_perm(NPERM), perm_order(NPERM,nb_channel2)
@@ -745,7 +752,11 @@ c
         INTEGER NDIM,NCALL,ITMX,NPRN
         COMMON/BVEG1/XL,XU,ACC, NDIM,NCALL,ITMX,NPRN
         integer perm_id(nexternal-2) !permutation of 1,2,...,nexternal-2
-
+C
+C     Keep track of whether cuts already calculated for this event 
+C     
+      LOGICAL CUTSDONE,CUTSPASSED
+      COMMON/TO_CUTSDONE/CUTSDONE,CUTSPASSED
 c
 c       external
 c
@@ -794,6 +805,8 @@ c       choose the permutation (point by point in the ps)
            curr_perm = new_perm
         endif
     """
+        if not self.MWparam['mw_perm']['montecarlo'] and len(permutations) >1:
+            data['perm_init'] = ""
                 
         if self.MWparam['mw_run']['histo']:
             data['histo'] = """
@@ -804,6 +817,8 @@ c       choose the permutation (point by point in the ps)
             
         if self.MWparam['mw_run']['use_cut']:
             data['use_cuts'] = """
+        CUTSPASSED=.FALSE.
+        CUTSDONE=.FALSE.
         if (.not.passcuts(momenta(0,1))) then
             fct = 0d0
             return
