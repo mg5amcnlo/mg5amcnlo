@@ -979,22 +979,22 @@ class AbstractALOHAModel(dict):
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
 
-        if aloha_lib.KERNEL.unknow_fct:
-            if  language == 'Fortran':
-                logger.warning('''Some function present in the lorentz structure are not
-            recognized. A Template file has been created:
-            %s
-            Please edit this file to include the associated definition.''' % \
-               pjoin(output_dir, 'additional_aloha_function.f') )
-            else:
-                logger.warning('''Some function present in the lorentz structure are 
-                not recognized. Please edit the code to add the defnition of such function.''')
-                logger.info('list of missing fct: %s .' % \
-                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
-        
-        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
-            if language == 'Fortran':
-                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
+#        if aloha_lib.KERNEL.unknow_fct:
+#            if  language == 'Fortran':
+#                logger.warning('''Some function present in the lorentz structure are not
+#            recognized. A Template file has been created:
+#            %s
+#            Please edit this file to include the associated definition.''' % \
+#               pjoin(output_dir, 'additional_aloha_function.f') )
+#            else:
+#                logger.warning('''Some function present in the lorentz structure are 
+#                not recognized. Please edit the code to add the defnition of such function.''')
+#                logger.info('list of missing fct: %s .' % \
+#                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
+#        
+#        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
+#            if language == 'Fortran':
+#                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
         
 
         
