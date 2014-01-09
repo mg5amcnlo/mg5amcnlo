@@ -2185,12 +2185,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """detect the type of the file and overwritte the current file"""
         
         if path.endswith('.lhco'):
-            logger.info('copy %s as Events/input.lhco' % (path))
-            files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco' ))     
+            #logger.info('copy %s as Events/input.lhco' % (path))
+            #files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco' ))
+            self.setM('mw_run', 'inputfile', path)     
             return
         elif path.endswith('.lhco.gz'):
-            logger.info('copy %s as Events/input.lhco.gz' % (path))
-            files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco.gz' ))
+            #logger.info('copy %s as Events/input.lhco.gz' % (path))
+            #files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco.gz' ))
+            self.setM('mw_run', 'inputfile', path)     
             return             
         else:
             card_name = CommonRunCmd.detect_card_type(path)
@@ -2225,7 +2227,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif not '.lhco' in answer:
             path = pjoin(me_dir, 'Cards', answer)
         else:
-            path = pjoin(me_dir, 'Events', answer)
+            path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
+            if not os.path.exists(path):
+                logger.info('Path in MW_card not existing')
+                path = pjoin(me_dir, 'Events', answer)
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd, error:

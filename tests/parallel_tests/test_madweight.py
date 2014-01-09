@@ -146,7 +146,7 @@ class TestMadWeight(unittest.TestCase):
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
-        if logging.getLogger('madgraph').level <= 20:
+        if 1:#logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
         else:

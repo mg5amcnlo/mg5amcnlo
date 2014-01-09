@@ -72,6 +72,8 @@ class MG_diagram(diagram_class.MG_diagram):
             self.solve_blob_sector()
             print self
             num_sol = self.load_fortran_code(num_sol)
+            
+        self.create_permutation_weight_functions_caller()
 
 
     def load_fortran_code(self, num_sol=0):
@@ -105,6 +107,62 @@ class MG_diagram(diagram_class.MG_diagram):
                 num_sol -= 1
                 
         return num_sol
+
+    def create_permutation_weight_functions_caller(self):
+        """Define the function to associate a initial weight to each permutation.
+        Those weight can be use both to remove permutation and/or to initialize the grid
+        on the permutation."""
+
+        def get_all_child(mother):
+            if mother.external:
+                return [mother]
+            else:
+                output = []
+                for child in mother.des:
+                    output += get_all_child(child)
+                return output 
+
+        template = """
+        double precision function WEIGTHING_PERM(perm_id)
+        
+        include nexternal.inc
+        integer perm_id(3:nexternal)
+        integer content(nexternal)
+        integer i 
+        
+        WEIGTHING_PERM = weight_global(perm_id)
+        %s
+        return
+        end
+        """
+        
+        data = []
+        
+        for part in self.prop_content:
+            if part.mass:
+                mass = self.dict_Fmass[abs(part.pid)]
+                width = self.dict_Fwidth[abs(part.pid)]
+                content = [p.MG for p in get_all_child(part)]
+                content.append(0)
+                initcontent = "\n".join(""" content(%i) = %i
+            """ % a for a in enumerate(content))
+
+                dico = {'pid': part.pid, 
+                             'mass': mass,
+                             'width': width,
+                             'initcontent': initcontent
+                             }
+            
+                line = """%(initcontent)s
+                WEIGTHING_PERM = weight_BW(perm_id, %(mass)s, %(width)s, content, %(pid)i)
+                """ % dico
+                data.append(line)
+                
+        text = template % '\n'.join(data)
+        #print text
+            
+
+
 
 
 #    def create_MadWeight_code(self, level, num_sol):

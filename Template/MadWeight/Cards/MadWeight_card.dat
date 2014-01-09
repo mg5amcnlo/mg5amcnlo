@@ -34,8 +34,8 @@ Block MW_Run
      nwa                  0.1     # width below narrow width approximation is used.
      isr                  0       # isr=0 : ignore ISR effect (except if all FS particles are visible)
                                   # isr=1 : correct kinematic based on reconstructed Pt(isr)
-                                  # isr=2 : correct kinematic based on reconstructed Pt(isr)
-                                  #         + boost the weight to the CMS frame
+	 inputfile          './Events/input.lhco' # path to the input file (in lhco format)
+                                  
                                   
 #*************************************************************************
 ##                  define the different param_card's                   ##  

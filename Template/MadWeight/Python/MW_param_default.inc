@@ -11,6 +11,7 @@ mw_run  log_level        string   'channel'             # from low level of log 
 mw_run  nwa              float    0.1                   # width below NWA is used instead of performing the actual integrals
 mw_run  integrator       string   'v'                   # default integrator method (v/m -> vegas/mint)
 mw_run  pretrained_tf    logical   T                    # if we pre-trained the grid for the TF
+mw_run  inputfile        string   './Events/input.lhco' # path to the inputfile
 
 mw_parameter mode logical 1                         
 mw_parameter 1    logical mw_parameter@@mode # choose the mode for the generation of the param_card.dat

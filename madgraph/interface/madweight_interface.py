@@ -630,7 +630,19 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                  'transfer_card.dat', 'input.lhco']
         if not self.force:
             self.ask_edit_cards(cards, mode='fixed', plot=False)
-        with misc.chdir(self.me_dir):          
+        with misc.chdir(self.me_dir): 
+            if not os.path.exists(self.MWparam['mw_run']['inputfile']):
+                raise self.InvalidCmd('Please specify a valid LHCO File')
+            if pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']) not in 
+                    [pjoin(self.me_dir, 'Events', 'input.lhco'), pjoin(self.me_dir, 'Events', 'input.lhco.gz')]:
+                zipped = self.MWparam['mw_run']['inputfile'].endswith('.gz')
+                if zipped:
+                    files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
+                             pjoin(self.me_dir, 'Events', 'input.lhco.gz'))
+                else
+                    files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
+                             pjoin(self.me_dir, 'Events', 'input.lhco'))                
+                     
             if not (os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')) or \
                      os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco.gz'))):
                 raise self.InvalidCmd('Please specify a valid LHCO File')
