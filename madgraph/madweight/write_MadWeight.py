@@ -160,7 +160,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 
         text = template % '\n'.join(data)
         #print text
-            
+        #raise Exception    
 
 
 

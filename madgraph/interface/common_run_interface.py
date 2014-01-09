@@ -2187,12 +2187,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if path.endswith('.lhco'):
             #logger.info('copy %s as Events/input.lhco' % (path))
             #files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco' ))
-            self.setM('mw_run', 'inputfile', path)     
+            self.do_set('mw_run inputfile %s' % os.path.relpath(path, self.mother_interface.me_dir))
             return
         elif path.endswith('.lhco.gz'):
             #logger.info('copy %s as Events/input.lhco.gz' % (path))
             #files.cp(path, pjoin(self.mother_interface.me_dir, 'Events', 'input.lhco.gz' ))
-            self.setM('mw_run', 'inputfile', path)     
+            self.do_set('mw_run inputfile %s' % os.path.relpath(path, self.mother_interface.me_dir))     
             return             
         else:
             card_name = CommonRunCmd.detect_card_type(path)

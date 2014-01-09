@@ -616,7 +616,10 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 shutil.rmtree(pjoin(self.me_dir, 'SubProcesses', Pdir, name))
             except Exception, error:
                 logger.warning(error)            
-        
+    
+    def ask_edit_cards(self, cards, *arg, **opts):
+        super(MadWeightCmd, self).ask_edit_cards(cards, *arg, **opts)
+        self.configure()
         
     def do_launch(self, line):
         """MadWeight Function:run the full suite of commands"""
@@ -631,15 +634,17 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if not self.force:
             self.ask_edit_cards(cards, mode='fixed', plot=False)
         with misc.chdir(self.me_dir): 
-            if not os.path.exists(self.MWparam['mw_run']['inputfile']):
+            print self.MWparam['mw_run']['inputfile']
+            if not os.path.exists(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile'])):
+                print self.MWparam['mw_run']['inputfile']
                 raise self.InvalidCmd('Please specify a valid LHCO File')
-            if pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']) not in 
+            if pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']) not in \
                     [pjoin(self.me_dir, 'Events', 'input.lhco'), pjoin(self.me_dir, 'Events', 'input.lhco.gz')]:
                 zipped = self.MWparam['mw_run']['inputfile'].endswith('.gz')
                 if zipped:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco.gz'))
-                else
+                else:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco'))                
                      
