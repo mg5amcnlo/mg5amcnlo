@@ -111,6 +111,9 @@ class Cluster(object):
             cwd = os.getcwd()
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+            
+        if not required_output and output_files:
+            required_output = output_files
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir or \
             (input_files == [] == output_files):
@@ -776,6 +779,9 @@ class CondorCluster(Cluster):
         """Submit the job on the cluster NO SHARE DISK
            input/output file should be give relative to cwd
         """
+        
+        if not required_output and output_files:
+            required_output = output_files
         
         if (input_files == [] == output_files):
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
