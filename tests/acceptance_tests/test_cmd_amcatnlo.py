@@ -325,7 +325,7 @@ class TestMECmdShell(unittest.TestCase):
         """test the param_card created is correct"""
         
         self.generate_production()
-        cmd = """generate_events LO -p
+        cmd = """generate_events aMC@LO -p
                  set parton_shower herwigpp
                  set nevents 100
                  """
@@ -347,7 +347,7 @@ class TestMECmdShell(unittest.TestCase):
         """test the param_card created is correct"""
         
         self.generate_production()
-        cmd = """generate_events LO
+        cmd = """generate_events aMC@LO
                  set parton_shower herwig6
                  set nevents 100
                  """
@@ -374,7 +374,7 @@ class TestMECmdShell(unittest.TestCase):
         """test the param_card created is correct"""
         
         self.generate_production()
-        cmd = """generate_events LO
+        cmd = """generate_events aMC@LO
                  set nevents 100
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
@@ -404,7 +404,7 @@ class TestMECmdShell(unittest.TestCase):
         #change to py6
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6Q'))       
-        self.do('generate_events LO -f')        
+        self.do('generate_events aMC@LO -f')        
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/events.lhe.gz' % self.path))
@@ -458,7 +458,7 @@ class TestMECmdShell(unittest.TestCase):
         """test the param_card created is correct"""
         
         self.generate_production()
-        self.do('generate_events NLO -f')
+        self.do('generate_events aMC@NLO -f')
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -479,7 +479,7 @@ class TestMECmdShell(unittest.TestCase):
         #change splitevent generation
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace(' -1 = nevt_job', ' 100 = nevt_job'))
-        self.do('generate_events NLO -fp')        
+        self.do('generate_events aMC@NLO -fp')        
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -497,7 +497,7 @@ class TestMECmdShell(unittest.TestCase):
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6Q'))
         
-        self.do('generate_events NLO -f')        
+        self.do('generate_events aMC@NLO -f')        
         
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
