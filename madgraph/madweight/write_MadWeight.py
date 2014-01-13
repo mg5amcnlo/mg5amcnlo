@@ -18,7 +18,7 @@ except ImportError:
     import internal.misc as misc   
 
 
-
+pjoin = os.path.join 
 def create_all_fortran_code(MW_info, i=1):
     """goes  in each subprocess and creates the fortran code in each of them"""
     # load template for file    
@@ -121,20 +121,44 @@ class MG_diagram(diagram_class.MG_diagram):
                 for child in mother.des:
                     output += get_all_child(child)
                 return output 
+        
+        fsock = open(pjoin(self.directory, 'permutation_weight.f'), 'w')
+        if self.MWparam['mw_perm']['preselect'] == 'None':
+            fsock.write(""" subroutine GET_PERM_WEIGHT()
+            return
+            end
+            """
+            )
+            return
 
-        template = """
-        double precision function WEIGTHING_PERM(perm_id)
+
+        template = """      subroutine GET_PERM_WEIGHT()
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc'
+      include 'permutation.inc'
+      integer perm
+      integer perm_id(nexternal-2)
+      integer content(nexternal)
+      integer i
+      double precision WEIGHT
+      double precision weight_perm_global, weight_perm_BW
+      external weight_perm_global, weight_perm_BW
+
+
+      do perm = 1, NPERM
+         curr_perm = perm
+         call get_perm(perm, perm_id)
+         call assign_perm(perm_id)
+
         
-        include nexternal.inc
-        integer perm_id(3:nexternal)
-        integer content(nexternal)
-        integer i 
-        
-        WEIGTHING_PERM = weight_global(perm_id)
+        weight = weight_perm_global(perm,perm_id)
         %s
-        return
-        end
-        """
+        perm_value(perm) = weight
+      enddo
+      return
+      end
+"""
         
         data = []
         
@@ -144,8 +168,7 @@ class MG_diagram(diagram_class.MG_diagram):
                 width = self.dict_Fwidth[abs(part.pid)]
                 content = [p.MG for p in get_all_child(part)]
                 content.append(0)
-                initcontent = "\n".join(""" content(%i) = %i
-            """ % a for a in enumerate(content))
+                initcontent = "\n".join("""          content(%i) = %i""" % (a+1, b) for a,b in enumerate(content))
 
                 dico = {'pid': part.pid, 
                              'mass': mass,
@@ -154,13 +177,18 @@ class MG_diagram(diagram_class.MG_diagram):
                              }
             
                 line = """%(initcontent)s
-                WEIGTHING_PERM = weight_BW(perm_id, %(mass)s, %(width)s, content, %(pid)i)
+                weight = weight * weight_perm_BW(perm, perm_id, %(mass)s, %(width)s, content, %(pid)i)
                 """ % dico
                 data.append(line)
                 
         text = template % '\n'.join(data)
-        #print text
-        #raise Exception    
+        fsock.write(text)
+        
+        if self.MWparam['mw_perm']['preselect'] == 'default':
+            fsock.write(open(pjoin(self.directory, '../permutation_weight_default.dat')).read())
+        else:
+            fsock.write(open(pjoin(self.directory,'../..',self.MWparam['mw_perm']['preselect'])).read())
+        
 
 
 
@@ -753,6 +781,7 @@ class MG_diagram(diagram_class.MG_diagram):
         text = '        INTEGER    NPERM\n'
         text += '       PARAMETER (NPERM=%s)\n' % len(permutations)
         text += ' integer nb_channel2\n'
+        text += '         integer min_perm(%i)\n'  % len(self.code)
         if self.MWparam['mw_perm']['montecarlo']:
             text += ' parameter (nb_channel2=%i)\n' % len(self.code)
         else:
@@ -761,7 +790,7 @@ class MG_diagram(diagram_class.MG_diagram):
         text += '''        double precision perm_value(NPERM)
         double precision perm_error(NPERM)
         integer curr_perm, nb_point_by_perm(NPERM), perm_order(NPERM,nb_channel2)
-        common/mw_perm_value/ perm_order,perm_value, perm_error, nb_point_by_perm, curr_perm'''
+        common/mw_perm_value/ perm_order,perm_value, perm_error, nb_point_by_perm, curr_perm, min_perm'''
         text = put_in_fortran_format(text)
         open(self.directory + '/permutation.inc', 'w').write(text)
 
@@ -832,6 +861,7 @@ c       choose the permutation (point by point in the ps)
 
          if (jac.gt.0d0) then
          %(use_cuts)s
+         %(jac_scaling)s
            fct=jac
            xbk(1)=X1
            xbk(2)=X2
@@ -852,17 +882,20 @@ c       choose the permutation (point by point in the ps)
          """
         
         data = {'perm_init': '', 'perm_storing':'',
-                'histo':'', 'use_cuts':''}
+                'histo':'', 'use_cuts':'', 'jac_scaling': ''}
         
         if self.MWparam['mw_perm']['permutation'] and len(permutations) >1:
             data['perm_init'] = """
-        new_perm = perm_order(1 + int((NPERM * x(NDIM))), config_pos)
+        new_perm = perm_order(min_perm(config_pos) + int(((NPERM - min_perm(config_pos) +1) * x(NDIM))), config_pos)
         if (new_perm.ne.curr_perm) then
            call get_perm(new_perm, perm_id)
            call assign_perm(perm_id)
            curr_perm = new_perm
         endif
     """
+            data['jac_scaling'] = """    
+            jac = jac * (NPERM - min_perm(config_pos) +1)/NPERM
+            """
         if not self.MWparam['mw_perm']['montecarlo'] and len(permutations) >1:
             data['perm_init'] = ""
                 

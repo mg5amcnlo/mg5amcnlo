@@ -20,6 +20,8 @@ mw_parameter 2    logical 0                  # put on 1 to add new param_card.da
 mw_perm  permutation    logical T                       # make the permutation between identical particles/jets
 mw_perm  bjet_is_jet    logical T                       #consider bjet like normal jet for permutation
 mw_perm  bjet_is_jet_for_selection  logical mw_perm@@bjet_is_jet  #don't use btagging for selceting events (follow precedent rules)
+mw_perm  preselect      string   'default'              # How to pre-select permutation (None/default/path)
+mw_perm  min_perm_cut   float    5e-4                   # permutation to remove if relative weight lower than
 mw_perm  combine_mode    integer 1        # how to combine the permutation 1: average
                                           #                                2: first permutation 
                                           #                                3: higher permutation only

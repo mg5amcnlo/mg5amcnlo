@@ -70,7 +70,11 @@ Block MW_perm
      permutation  T         # make permutation
      bjet_is_jet  T         # consider permutation between b-jets and light jets
      montecarlo   T         # Monte-Carlo over permutation (Huge speed up if many permutation)
-     
+     preselect    'default' # How to pre-select the correct permutation set. 
+                            # put 'None' if no pre-selection to perform.
+                            # You can set the path to a fortran file defining the require function
+                            # See file SubProcesses/permutation_weight_default.dat for
+                            # instructions.
      
 #*************************************************************************
 ##                       Phase-Space Integration mapping                ##

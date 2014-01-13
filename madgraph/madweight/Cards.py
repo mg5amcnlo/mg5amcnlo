@@ -291,6 +291,7 @@ class Card(dict):
         elif type in ['integer','string']:
             return value
         elif type in ['double','real']:
+            value = str(value)
             value=value.replace('d','e')
             value=value.replace('D','e')
             value=float(value)

@@ -94,6 +94,12 @@ c     set parameters for the transfer functions
       include 'transfer_card.inc'
 
 c     set permutation info
+      if (montecarlo_perm) then
+        do i = 1, nb_channel2
+           min_perm(i) = 1
+        enddo
+      endif
+
       curr_perm = 1
       do i = 1, NPERM
          perm_value(i) = 0d0

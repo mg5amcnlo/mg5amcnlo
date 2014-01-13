@@ -146,7 +146,7 @@ class TestMadWeight(unittest.TestCase):
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
-        if 1:#logging.getLogger('madgraph').level <= 20:
+        if logging.getLogger('madgraph').level <= 20:
             stdout=None
             stderr=None
         else:
@@ -174,6 +174,7 @@ class TestMadWeight(unittest.TestCase):
 9 2 6.79399430333e-25 7.38824630883e-27
 """
         expected = self.get_result(expected)
+        
         for key, (value,error) in expected.items():
             assert key in solution
             value2, error2 = solution[key]

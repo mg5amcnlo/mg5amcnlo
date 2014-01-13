@@ -22,9 +22,9 @@ C       definition of variables for the optimization of the driver
 C               definition also present in driver.f
 C
        double precision min_prec_cut1,min_prec_cut2,value_cut1,
-     &      value_cut2,final_prec
+     &      value_cut2,final_prec, min_perm_cut
        common/global_precision/ min_prec_cut1,min_prec_cut2,value_cut1,
-     &      value_cut2,final_prec
+     &      value_cut2,final_prec, min_perm_cut
 C
 C   variable for use histogram
 C	 	

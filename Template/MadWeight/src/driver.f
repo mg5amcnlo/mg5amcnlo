@@ -24,6 +24,8 @@ C
       include 'data.inc'
       include 'permutation.inc'
       include 'madweight_param.inc'
+      double precision perm_init_weight(NPERM)
+      common/perm_init_weight/perm_init_weight
 C
 C     LOCAL (Variable of integration)
 C
@@ -115,14 +117,16 @@ c      common/cifold/ifold
 
       integer integral_index, nb_sol_perm
 
+c      double precision WEIGTHING_PERM
+c      external WEIGTHING_PERM
 C**************************************************************************
 C    step 1: initialisation     
 C**************************************************************************
       call global_init
       store=0d0
 c      need to have everything initialize including perm at some point
-      call get_perm(1, perm_id)
-      call assign_perm(perm_id)
+c      call get_perm(1, perm_id)
+c      call assign_perm(perm_id)
 
 
 c     VEGAS parameters for the first loop
@@ -140,19 +144,34 @@ c     VEGAS parameters for the first loop
          nb_sol_perm = NPERM
       endif
 
-
-
-
 c     initialization of the variables in the loops
       check_value=0d0
       loop_index=0
       integral_index = 0
-       do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
-       do config_pos=1,nb_sol_config
-       integral_index = integral_index +1
-       order_value(integral_index)=1d99
-       enddo
-       enddo
+      do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
+         do config_pos=1,nb_sol_config
+            integral_index = integral_index +1
+            order_value(integral_index)=1d99
+         enddo
+      enddo
+
+c     Remove the (apriori) pointless permuation!
+      config_pos = 1
+      call GET_PERM_WEIGHT()
+      call sort_perm()
+      call get_min_perm()
+      do i =1, nb_sol_config
+         min_perm(i) = min_perm(1)
+         do j = 1, NPERM
+            perm_order(j,i) = perm_order(j,1)
+         enddo
+      enddo
+c     re-init permvalue
+      do perm_pos = 1, NPERM
+         perm_value(perm_pos) = 0d0
+         nb_point_by_perm(perm_pos) = 0
+      enddo
+
       OPEN(UNIT=23,FILE='./details.out',STATUS='UNKNOWN')
 C
 C     initialization of the permutation
@@ -161,7 +180,6 @@ C
       loop_index=loop_index+1
       temp_err=0d0
       temp_val=0d0
-
       permutation_weight=1d0
       call initialize
       normalize_perm = NPERM
@@ -169,7 +187,7 @@ C
       chan_val=0d0
       chan_err=0d0
 
-       integral_index = 0
+      integral_index = 0
       do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
            if (.not.montecarlo_perm) then
                call get_perm(perm_pos, perm_id)
@@ -179,22 +197,27 @@ C
 
       do config_pos=1,nb_sol_config
           integral_index = integral_index + 1
-          NCALL = nevents
+          NCALL = nevents * loop_index**2
           iseed = iseed + 1 ! avoid to have the same seed
           NDIM=Ndimens
           if(ISR.eq.3) NDIM=NDIM+2
           if(NPERM.ne.1) NDIM = NDIM + 1
-          if (montecarlo_perm) NCALL = nevents * NPERM
-
+          if (montecarlo_perm) NCALL = NCALL * (NPERM - min_perm(config_pos) + 1)
+c          if (min_perm(config_pos).eq. NPERM) then
+c             WRITE(*,*) 'ERROR IN MIN_PERM', min_perm(config_pos)
+c             STOP
+c             NCALL = nevents*NPERM
+c             min_perm(config_pos) = 1
+c          endif
 c
           if(order_value(integral_index).gt.check_value) then
              write(*,*) "** Current channel of integration: ",integral_index,
      &                  "/", nb_sol_config*nb_sol_perm, ' **'
              if (loop_index.eq.1) then
+c     INITIAL TRY FOR IMPORTANCE OF PERM
+c         call get_min_perm(config_pos)
+c     END IMPORTANCE OF PERM
                 ndo=100
-                do i = 1, NPERM
-                    perm_order(i,config_pos) = i
-                enddo
                 do i =1, NDIM
                     do j =1, 100
                        xi(j,i) = j*1d0/100d0
@@ -260,7 +283,7 @@ c            See if this is require to continue to update this
              if (sd/cross.le.final_prec) goto 2
 
              if (loop_index.eq.2) then
-                NCALL = NCALL * nb_sol_perm
+c                NCALL = NCALL * nb_sol_perm
                 ITMX = max_it_step2
                 acc = max(0.9*check_value/(cross+3*SD), final_prec)
                 CALL VEGAS2(fct,CROSS,SD,CHI)
@@ -357,10 +380,11 @@ C*******************************************************************************
 c     ==================================
       subroutine get_new_perm_grid(NDIM)
       implicit none
-      integer i, j, step,NDIM
+      integer i, j, step,NDIM,k
       double precision cross, total, prev_total, value
       include 'permutation.inc'
       include 'phasespace.inc'
+      include 'madweight_param.inc'
       integer*4 it,ndo
       double precision xi(100,20),si,si2,swgt,schi
       common/bveg2/xi,si,si2,swgt,schi,ndo,it
@@ -369,12 +393,14 @@ c     ==================================
       total = 0d0
       cross = 0d0
       DO I =1,NPERM
-         cross = cross + perm_value(i)/(nb_point_by_perm(i)+1e-99)
+         cross = cross + perm_value(i)/(nb_point_by_perm(i)+1d-99)
+c         write(*,*)perm_value(i), (nb_point_by_perm(i)+1d-99), perm_value(i)/(nb_point_by_perm(i)+1d-99), cross
       ENDDO
+c      write(*,*) '=>', cross
       prev_total = 0d0
       do i=1,NPERM
            value = perm_value(perm_order(i, config_pos))/
-     &                (nb_point_by_perm(perm_order(i,config_pos))+1e-99)
+     &                (nb_point_by_perm(perm_order(i,config_pos))+1d-99)
            total = total + value
 c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
            do while (total.gt.((step)*cross/ndo))
@@ -384,6 +410,63 @@ c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
            enddo
            prev_total = total
       enddo
+      min_perm(config_pos) = 1
+      do i=1,NPERM
+          j = perm_order(i, config_pos)
+          if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/cross.lt.min_prec_cut1) then
+             min_perm(config_pos) = min_perm(config_pos) + 1
+c             write(*,*) '**************************',
+c     &         config_pos, perm_value(j)/(nb_point_by_perm(j)+1d-99)/cross
+c     &         , i, j, nb_point_by_perm(j)
+c             stop(1)
+           endif
+      enddo
+c      do i=2,NPERM
+c        j = perm_order(i-1, config_pos)
+c        k = perm_order(i, config_pos)
+c        if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/total.gt.
+c     &     perm_value(k)/(nb_point_by_perm(k)+1d-99)/total)then
+c            write(*,*) 'FAIL',i, perm_value(j), perm_value(k)
+c           stop
+c        endif
+c      enddo
+c      WRITE(*,*) '***************************************', config_pos, min_perm(config_pos)
+
+      return
+      end
+c     ==================================
+      subroutine get_min_perm()
+      implicit none
+      double precision cross
+      integer i,j      
+      include 'permutation.inc'
+      include 'madweight_param.inc'
+      include 'phasespace.inc'
+      
+      
+      cross = 0d0
+      DO I =1,NPERM
+         j = perm_order(i, config_pos)
+         cross = cross + perm_value(i)
+      ENDDO
+      min_perm(config_pos) = 1
+      do i=1,NPERM
+          j = perm_order(i, config_pos)
+          if (perm_value(j)/cross.lt.min_perm_cut) then
+             min_perm(config_pos) = min_perm(config_pos) + 1
+           endif
+      enddo
+c      do i=2,NPERM
+c        j = perm_order(i-1, config_pos)
+c        k = perm_order(i, config_pos)
+c        if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/total.gt.
+c     &     perm_value(k)/(nb_point_by_perm(k)+1d-99)/total)then
+c            write(*,*) 'FAIL',i, perm_value(j), perm_value(k)
+c           stop
+c        endif
+c      enddo
+c      WRITE(*,*) '***************************************', config_pos, min_perm(config_pos)
+
       return
       end
 
@@ -392,11 +475,15 @@ c     ==================================
       subroutine sort_perm()
       implicit none
       include 'permutation.inc'
+      include 'phasespace.inc'
       double precision data(NPERM)
       integer i,j
-      data(1) = perm_value(1)/nb_point_by_perm(1)
+      do i=1,NPERM
+         perm_order(i, config_pos) = i 
+      enddo
+      data(1) = perm_value(1)/(nb_point_by_perm(1)+1d-99)
       do i=2,NPERM
-         data(i) = perm_value(i)/nb_point_by_perm(i)
+         data(i) = perm_value(i)/(nb_point_by_perm(i)+1d-99)
  2       do j=1, i-1
             if (data(i).ge.data(i-j)) then
                 if (j.ne.1) then

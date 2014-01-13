@@ -17,7 +17,7 @@ PROCESS= driver.o  setscales.o   d_choices.o cuts.o\
          $(patsubst %.f,%.o,$(wildcard matrix*.f))
 
 
-MW_PS= main_code.o gen_ps.o initialization.o call_TF.o permutation.o multi_channel.o
+MW_PS= main_code.o gen_ps.o initialization.o call_TF.o permutation.o multi_channel.o permutation_weight.o
 
 
 $(PROG): $(PROCESS) $(MW_PS)  makefile $(LIBS) 
@@ -39,6 +39,7 @@ multi_channel.o:  coupl.inc d_choices.inc
 permutation.o:  nexternal.inc phasespace.inc
 setscale.o : genps.inc nexternal.inc coupl.inc maxamps.inc leshouche.inc run.inc
 cuts.o: maxparticles.inc nexternal.inc coupl.inc cuts.inc
+permutation.o: phasespace.inc nexternal.inc data.inc coupl.inc madweight_card.inc  maxparticles.inc
 maxparticles.inc:
 	ln ../../Source/maxparticles.inc
 cuts.inc:
