@@ -26,7 +26,11 @@ c
       dimension RAND(20)
       DATA NPRN/0/,NDMX/100/,ALPH/1.5D0/,ONE/1.D0/,MDS/1/
       DATA XL/20*0.d0/,XU/20*1.d0/
-
+      logical use_sobol
+      common /to_use_sobol/use_sobol
+      DATA use_sobol/.false./
+      LOGICAL FLAG(2)
+      DOUBLE PRECISION QUASI(1111)
 c      integer          iseed
       common /to_seed/ iseed
       NUM=12345
@@ -110,11 +114,22 @@ c     main integration loop
             d(i,j)=ti
  10         di(i,j)=ti
 c
+      if (use_sobol) then
+        call INSOBL(FLAG,NDIM,int(calls*itmx),NTAUS) 
+      endif
  11   fb=0.
       f2b=fb
       k=0
+
  12   k=k+1
-      call randa(ndim,rand)
+
+      if (use_sobol) then
+        CALL GOSOBL(quasi)
+         do 43 j=1,ndim
+43         rand(j)=quasi(j)
+      else
+        call randa(ndim,rand)
+      endif
 c      write(*,*) ndim,rand
       wgt=xjac
       do 15 j=1,ndim

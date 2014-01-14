@@ -10,7 +10,7 @@ LIBDIR        = ../../../lib/
 include ../../make_opts
 
 PLOT= dbook.o topgraph.o
-OBJS= nexper_2.o  eq_solver.o vegas.o stat.o htuple.o mint-integrator.o xran1.o $(PLOT)
+OBJS= nexper_2.o  eq_solver.o vegas.o stat.o htuple.o mint-integrator.o xran1.o toms659.o $(PLOT)
 
 all: $(LIBDIR)$(LIBRARY)
 
