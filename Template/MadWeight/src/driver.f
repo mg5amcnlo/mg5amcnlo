@@ -134,8 +134,6 @@ c     VEGAS parameters for the first loop
       NPRN = 1
       NCALL = nevents
       ITMX = max_it_step1
-      ncalls0=ncall  
-      nitmax=ITMX  
       imode=0
 
       if (montecarlo_perm) then
@@ -238,7 +236,15 @@ c     END IMPORTANCE OF PERM
             endif
             if (loop_index.eq.1) then
                 ITMX=2
-                CALL VEGAS1(fct,CROSS,SD,CHI)
+
+                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                   nitmax=ITMX
+                   ncalls0=ncall
+                   call mint(fct_mint,ndim,ncalls0,nitmax,imode,
+     .             xgrid,xint,ymax,cross,SD,.false.,acc)
+                else
+                   CALL VEGAS1(fct,CROSS,SD,CHI)
+                endif
 c                See if this is require to continue to update this
                  if (sd/cross.le.final_prec) goto 2
                  if (config_pos.ne.1) then
@@ -274,9 +280,23 @@ c                See if this is require to continue to update this
                 do i = 1, NPERM
                     perm_order(i,config_pos) = i
                 enddo
-                CALL VEGAS(fct,CROSS,SD,CHI)
+                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                   nitmax=ITMX
+                   ncalls0=ncall
+                   call mint(fct_mint,ndim,ncalls0,nitmax,imode,
+     .             xgrid,xint,ymax,cross,SD,.false.,acc)
+                else
+                   CALL VEGAS(fct,CROSS,SD,CHI)
+                endif
              else
-                CALL VEGAS1(fct,CROSS,SD,CHI)
+                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                   nitmax=ITMX
+                   ncalls0=ncall
+                   call mint(fct_mint,ndim,ncalls0,nitmax,imode,
+     .             xgrid,xint,ymax,cross,SD,.false.,acc)
+                else
+                  CALL VEGAS1(fct,CROSS,SD,CHI)
+                endif
              endif
              call check_nan(cross)
 c            See if this is require to continue to update this
@@ -286,7 +306,14 @@ c            See if this is require to continue to update this
 c                NCALL = NCALL * nb_sol_perm
                 ITMX = max_it_step2
                 acc = max(0.9*check_value/(cross+3*SD), final_prec)
-                CALL VEGAS2(fct,CROSS,SD,CHI)
+                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                   nitmax=ITMX
+                   ncalls0=ncall
+                   call mint(fct_mint,ndim,ncalls0,nitmax,imode,
+     .             xgrid,xint,ymax,cross,SD,.false.,acc)
+                else
+                   CALL VEGAS2(fct,CROSS,SD,CHI)
+                endif
              endif
 
  2           if (CROSS.lt.1d99) then
