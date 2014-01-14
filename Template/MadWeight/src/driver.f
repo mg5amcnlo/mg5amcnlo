@@ -30,7 +30,7 @@ C
 C     LOCAL (Variable of integration)
 C
       DOUBLE PRECISION SD,CHI,CROSS
-      INTEGER I,J,convergence_status
+      INTEGER I,J,K,convergence_status
       integer pos,channel_pos
       double precision temp_err, temp_val
       double precision order_value(nb_channel)
@@ -70,9 +70,6 @@ C
       Double precision ALPH
       integer NDMX,MDS
       COMMON/BVEG3/ALPH,NDMX,MDS
-
-
-
 C
 C     Global  number of dimensions
 C
@@ -168,7 +165,7 @@ c     Remove the (apriori) pointless permuation!
       enddo
 c     re-init permvalue
       do perm_pos = 1, NPERM
-         perm_value(perm_pos) = 0d0
+         perm_value(perm_pos,1) = 0d0
          nb_point_by_perm(perm_pos) = 0
       enddo
 
@@ -264,8 +261,8 @@ c                See if this is require to continue to update this
              call check_nan(cross)
              write(*,*) 'cross', cross
              DO I =1,NPERM
-                 perm_value(I) = 0d0
-                 perm_error(I) = 0d0
+                 perm_value(I,1) = 0d0
+                 perm_error(I,1) = 0d0
              ENDDO
              if (cross.eq.0d0)then
                 write(*,*) 'VEGAs no pre-training'
@@ -313,31 +310,36 @@ c                NCALL = NCALL * nb_sol_perm
              else
                 order_value(integral_index)=0d0
              endif
-             if (nb_point_by_perm(1).ne.0)then
-                  DO I =1,NPERM
-                    value = perm_value(I) / DBLE(IT) !(nb_point_by_perm(I))
-                    error = dsqrt(dabs(perm_error(I)*nb_point_by_perm(I)/DBLE(IT)**2-value**2))
-c                    error = sqrt(abs(perm_error(I) - nb_point_by_perm(I)
-c     &                             * value**2 )/(nb_point_by_perm(I)-1))
-                    call get_perm(I, loc_perm)
-                    write(23,*) I,' ',config_pos,' ',value,' ', error,
-     &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
-                    nb_point_by_perm(I) = 0
-                    perm_value(I) = 0
-                    perm_error(I) = 0
-                  ENDDO
-            else if(cross.eq.0d0) then
-                  DO I =1,NPERM
-                    value = 0d0
-                    error = 0d0
-                    call get_perm(I, loc_perm)
-                    write(23,*) I,' ',config_pos,' ',value,' ', error,
-     &              '1   2', (2+loc_perm(j-2), j=3,nexternal)
-                    nb_point_by_perm(I) = 0
-                    perm_value(I) = 0
-                    perm_error(I) = 0
-                  ENDDO 
-            ENDIF
+             ! Compute the final value for each perm/tf choice!
+             call MC_GET_INTEGRAL()
+             DO J=1,NB_TF
+                if (montecarlo_perm) then
+                   DO I=1,NPERM
+                      value = perm_value_it(i,j)
+                      error = perm_error_it(i,j)
+                      call get_perm(I, loc_perm)
+                      write(23,*) I,' ',config_pos,' ',J,' ',value,' ', error,
+     &              '1   2', (2+loc_perm(k-2), k=3,nexternal)
+                      perm_value_it(i,j) = 0d0
+                      perm_error_it(i,j) = 0d0
+                      perm_value(i,j) = 0d0
+                      perm_error(i,j) = 0d0
+                      nb_point_by_perm(I) = 0
+                   ENDDO
+                   value =  tf_value_it(j)
+                   error =  tf_error_it(j)
+                   write(23,*) 0,' ',config_pos,' ',J,' ',value,' ', error
+                else
+                   I = perm_pos
+                   value = perm_value_it(i,j)
+                   error = perm_error_it(i,j)
+                   call get_perm(I, loc_perm)
+                   write(23,*) I,' ',config_pos,' ',J,' ',value,' ', error,                                                                                                                             
+     &              '1   2', (2+loc_perm(k-2), k=3,nexternal)
+                endif
+                tf_value_it(j) = 0d0
+                tf_error_it(j) = 0d0
+             ENDDO
           endif
        enddo
        enddo
@@ -393,13 +395,13 @@ c     ==================================
       total = 0d0
       cross = 0d0
       DO I =1,NPERM
-         cross = cross + perm_value(i)/(nb_point_by_perm(i)+1d-99)
+         cross = cross + perm_value(i,1)/(nb_point_by_perm(i)+1d-99)
 c         write(*,*)perm_value(i), (nb_point_by_perm(i)+1d-99), perm_value(i)/(nb_point_by_perm(i)+1d-99), cross
       ENDDO
 c      write(*,*) '=>', cross
       prev_total = 0d0
       do i=1,NPERM
-           value = perm_value(perm_order(i, config_pos))/
+           value = perm_value(perm_order(i, config_pos),1)/
      &                (nb_point_by_perm(perm_order(i,config_pos))+1d-99)
            total = total + value
 c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
@@ -413,10 +415,10 @@ c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
       min_perm(config_pos) = 1
       do i=1,NPERM
           j = perm_order(i, config_pos)
-          if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/cross.lt.min_prec_cut1) then
+          if (perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/cross.lt.min_prec_cut1) then
              min_perm(config_pos) = min_perm(config_pos) + 1
 c             write(*,*) '**************************',
-c     &         config_pos, perm_value(j)/(nb_point_by_perm(j)+1d-99)/cross
+c     &         config_pos, perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/cross
 c     &         , i, j, nb_point_by_perm(j)
 c             stop(1)
            endif
@@ -424,9 +426,9 @@ c             stop(1)
 c      do i=2,NPERM
 c        j = perm_order(i-1, config_pos)
 c        k = perm_order(i, config_pos)
-c        if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/total.gt.
-c     &     perm_value(k)/(nb_point_by_perm(k)+1d-99)/total)then
-c            write(*,*) 'FAIL',i, perm_value(j), perm_value(k)
+c        if (perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/total.gt.
+c     &     perm_value(k,1)/(nb_point_by_perm(k)+1d-99)/total)then
+c            write(*,*) 'FAIL',i, perm_value(j,1), perm_value(k,1)
 c           stop
 c        endif
 c      enddo
@@ -447,21 +449,21 @@ c     ==================================
       cross = 0d0
       DO I =1,NPERM
          j = perm_order(i, config_pos)
-         cross = cross + perm_value(i)
+         cross = cross + perm_value(i,1)
       ENDDO
       min_perm(config_pos) = 1
       do i=1,NPERM
           j = perm_order(i, config_pos)
-          if (perm_value(j)/cross.lt.min_perm_cut) then
+          if (perm_value(j,1)/cross.lt.min_perm_cut) then
              min_perm(config_pos) = min_perm(config_pos) + 1
            endif
       enddo
 c      do i=2,NPERM
 c        j = perm_order(i-1, config_pos)
 c        k = perm_order(i, config_pos)
-c        if (perm_value(j)/(nb_point_by_perm(j)+1d-99)/total.gt.
-c     &     perm_value(k)/(nb_point_by_perm(k)+1d-99)/total)then
-c            write(*,*) 'FAIL',i, perm_value(j), perm_value(k)
+c        if (perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/total.gt.
+c     &     perm_value(k,1)/(nb_point_by_perm(k)+1d-99)/total)then
+c            write(*,*) 'FAIL',i, perm_value(j,1), perm_value(k,1)
 c           stop
 c        endif
 c      enddo
@@ -481,9 +483,9 @@ c     ==================================
       do i=1,NPERM
          perm_order(i, config_pos) = i 
       enddo
-      data(1) = perm_value(1)/(nb_point_by_perm(1)+1d-99)
+      data(1) = perm_value(1,1)/(nb_point_by_perm(1)+1d-99)
       do i=2,NPERM
-         data(i) = perm_value(i)/(nb_point_by_perm(i)+1d-99)
+         data(i) = perm_value(i,1)/(nb_point_by_perm(i)+1d-99)
  2       do j=1, i-1
             if (data(i).ge.data(i-j)) then
                 if (j.ne.1) then
@@ -739,4 +741,100 @@ C 102  format(A5,I2,A1,I3)
 C
 C      end
 **************************************************************************************
+
+      SUBROUTINE MC_INIT_VAR()
+
+      include 'nexternal.inc'
+      include 'permutation.inc'
+
+      integer i, j
+
+
+      do i=1, NPERM
+      do j=1, nb_tf
+        perm_value(i,j) = 0d0 ! sum of fct
+        perm_error(i,j) = 0d0 ! sum of fct**2
+        perm_value_it(i,j) = 0d0   ! weigthed sum on iteration result
+        perm_error_it(i,j) = 0d0   ! sum (1/sigma**2)
+        tf_value_it(j) = 0d0       ! weigthed sum on iteration result for all perm
+        tf_value_it(j) = 0d0       ! sum (1/sigma**2) all perm
+      enddo
+        nb_point_by_perm(i) = 0
+      enddo
+
+      return
+      end
+
+      SUBROUTINE MC_END_ITER()
+
+      include 'nexternal.inc'
+      include 'permutation.inc'
+
+      integer i
+      double precision sum_perm(nb_tf)
+      double precision sum_error(nb_tf)
+      double precision sum_nb_point
+
+      double precision value, error
+
+      sum_nb_point = 0
+      do j=1,nb_tf
+        sum_perm(j) = 0d0
+        sum_error(j) =0d0
+      enddo
+      do i=1, NPERM
+          sum_nb_point = sum_nb_point + nb_point_by_perm(i)
+          do j=1, nb_tf
+            sum_perm(j) = sum_perm(j) + perm_value(i,j)
+            sum_error(j) = sum_error(j) + perm_error(i,j)
+            if (nb_point_by_perm(i).gt.0) then
+                value = perm_value(i,j)
+                error = (perm_error(i,j) / nb_point_by_perm(i) - value**2)/ nb_point_by_perm(i)
+                if (error.gt.0d0)then
+                    perm_value_it(i,j) = perm_value_it(i,j) + value**3/error
+                    perm_error_it(i,j) = perm_error_it(i,j) + value**2/error
+                endif
+            endif
+                perm_value(i,j) = 0d0
+                perm_error(i,j) = 0d0
+          enddo
+          nb_point_by_perm(i) = 0
+      enddo
+      do j =1, nb_tf
+          value = sum_perm(j) 
+          if (sum_nb_point.gt.0) then
+             error = sum_error(j) - value**2/(sum_nb_point-1)
+          else
+             error = 0d0
+          endif
+          if (error.gt.0d0)then
+              tf_value_it(j) = tf_value_it(j) + value**3/error
+              tf_error_it(j) = tf_error_it(j) + value**2/error
+              write(*,*) '                     ',j, tf_value_it(j) / tf_error_it(j), '+-',
+     &             tf_value_it(j) / tf_error_it(j)  / DSQRT(tf_error_it(j))
+           endif
+      enddo
+      return
+      end
+
+      SUBROUTINE MC_GET_INTEGRAL()
+
+      include 'nexternal.inc'
+      include 'permutation.inc'
+      do j =1, nb_tf
+          if (tf_error_it(j).gt.0)then
+              tf_value_it(j) = tf_value_it(j) / tf_error_it(j)
+              tf_error_it(j) = tf_value_it(j) / DSQRT(tf_error_it(j))
+          endif
+      enddo
+      do i=1, NPERM
+          do j=1, nb_tf
+            if (perm_error_it(i,j).gt.0) then
+                perm_value_it(i,j) = perm_value_it(i,j) / perm_error_it(i,j)
+                perm_error_it(i,j) = perm_value_it(i,j) / DSQRT(perm_error_it(i,j))
+            endif
+          enddo
+      enddo
+      return
+      end
 

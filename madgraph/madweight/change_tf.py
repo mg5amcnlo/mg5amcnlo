@@ -44,7 +44,10 @@ def create_TF_main(name,make, MW_dir):
     print "ident_card created"      
     create_version(name)
     print 'TransferFunctionVersion created'
+    fsock = open('nb_tf.inc','w').write('       integer nb_tf\n      parameter (nb_tf=1)\n')
     os.chdir('../../../') #go to main
+    
+    
 #    P_dir,MW_dir=MW_param.detect_SubProcess(P_mode=1)
 
     for directory in MW_dir:
@@ -204,7 +207,7 @@ class TF_input(XML_input):
                 i+=1
                 if not('tf_'+blockname+"_"+variable+"_"+prov[i] in list_var):
                     list_var.append('tf_'+blockname+"_"+variable+"_"+prov[i])
-                output+='tf_'+blockname+"_"+variable+"_"+prov[i]
+                output+='tf_'+blockname+"_"+variable+"_"+prov[i]+"(curr_tf)"
                 i+=1    
             output+=prov[-1]
             return output,list_var
@@ -249,7 +252,7 @@ class TF_input(XML_input):
         current_block=''
         current_var=''
         for fortran_var in list_var:
-            tag,block,var,number=fortran_var.split('_')
+            tag,block,var,number=fortran_var.split('_',3)
             if block != current_block:
                 current_block=block
                 current_var=''
@@ -579,7 +582,8 @@ def create_param_inc(list_var):
     
     common_text=''
     for name in list_var:
-        line="        double precision  "+name+"\n"
+        name = name.replace('(curr_tf)','')
+        line="        double precision  "+name+"(nb_tf)\n"
         out.writelines(line)
         common_text+=name+','
     common_text=common_text[:-1] #suppress last coma
@@ -665,6 +669,7 @@ def update_dir(name,make,MW_dir):
         for directory in MW_dir:
             os.chdir(main+"/SubProcesses/"+directory)
             os.system("ln -s ../../Source/MadWeight/transfer_function/TF_param.inc TF_param.inc")
+            os.system("ln -s ../../Source/MadWeight/transfer_function/nb_tf.inc nb_tf.inc")
             os.system("make")
             os.chdir('../../')            
     else:
@@ -673,6 +678,7 @@ def update_dir(name,make,MW_dir):
         for directory in MW_dir:
             os.chdir("SubProcesses/"+directory)
             os.system("ln -s ../../Source/MadWeight/transfer_function/TF_param.inc TF_param.inc")
+            os.system("ln -s ../../Source/MadWeight/transfer_function/nb_tf.inc nb_tf.inc")
             os.chdir('../../')            
 
     #charge card
@@ -682,7 +688,7 @@ def update_dir(name,make,MW_dir):
 
     #create output
     madweight.create_include_file(ident,'./Source/madweight_card.inc')
-    transfer.create_include_file(ident,'./Source/MadWeight/transfer_function/transfer_card.inc')
+    transfer.create_include_file_tf(ident,'./Source/MadWeight/transfer_function')
 
     os.chdir('./Source/MadWeight/transfer_function')
 

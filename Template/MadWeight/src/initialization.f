@@ -6,6 +6,7 @@ C*******************************************************************************
       parameter (zero=0d0,pi=3.141592653589793d0)
 C
       include 'nexternal.inc'
+      include 'permutation.inc'
       include 'TF_param.inc'
       include 'coupl.inc'
       include 'run.inc'
@@ -49,7 +50,6 @@ c     experimental event
       double precision alphas
       external alphas
 
-      include 'permutation.inc'
 
 c
 c     set parameters of the run
@@ -92,6 +92,7 @@ c     deternime the final state content
 c     set parameters for the transfer functions
       call Init_MET_LHCO
       include 'transfer_card.inc'
+      curr_tf = 1
 
 c     set permutation info
       if (montecarlo_perm) then
@@ -102,9 +103,11 @@ c     set permutation info
 
       curr_perm = 1
       do i = 1, NPERM
-         perm_value(i) = 0d0
-         perm_error(i) = 0d0
-         nb_point_by_perm(i) = 0
+      do j =1, nb_tf
+         perm_value(i,j) = 0d0
+         perm_error(i,j) = 0d0
+      enddo
+      nb_point_by_perm(i) = 0
       enddo
 
       CALL PRINTOUT

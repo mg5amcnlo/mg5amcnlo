@@ -154,7 +154,7 @@ class MG_diagram(diagram_class.MG_diagram):
         
         weight = weight_perm_global(perm,perm_id)
         %s
-        perm_value(perm) = weight
+        perm_value(perm, 1) = weight
       enddo
       return
       end
@@ -780,6 +780,7 @@ class MG_diagram(diagram_class.MG_diagram):
         
         text = '        INTEGER    NPERM\n'
         text += '       PARAMETER (NPERM=%s)\n' % len(permutations)
+        text += '       include \'nb_tf.inc\'\n'
         text += ' integer nb_channel2\n'
         text += '         integer min_perm(%i)\n'  % len(self.code)
         if self.MWparam['mw_perm']['montecarlo']:
@@ -787,10 +788,16 @@ class MG_diagram(diagram_class.MG_diagram):
         else:
             text += ' parameter (nb_channel2=%i)\n' % (len(self.code) * 48)
         
-        text += '''        double precision perm_value(NPERM)
-        double precision perm_error(NPERM)
+        text += '''        double precision perm_value(NPERM, nb_tf)
+        double precision perm_error(NPERM,nb_tf)
+        double precision perm_value_it(NPERM, nb_tf)
+        double precision perm_error_it(NPERM, nb_tf)
+        double precision tf_value_it(nb_tf)
+        double precision tf_error_it(nb_tf)
         integer curr_perm, nb_point_by_perm(NPERM), perm_order(NPERM,nb_channel2)
-        common/mw_perm_value/ perm_order,perm_value, perm_error, nb_point_by_perm, curr_perm, min_perm'''
+        common/mw_perm_value/ perm_order,perm_value, perm_error, nb_point_by_perm, curr_perm, min_perm 
+        common/mc_value_error/perm_value_it, perm_error_it, tf_value_it,tf_error_it
+        '''
         text = put_in_fortran_format(text)
         open(self.directory + '/permutation.inc', 'w').write(text)
 
@@ -805,6 +812,8 @@ C*********************************************************************
         include 'run.inc'
         include 'coupl.inc'
         include 'madweight_param.inc'
+        integer curr_tf
+        common/transfer_fct_curr_tf/curr_tf
 
 c
 c       this is the function which is called by the integrator
@@ -849,6 +858,7 @@ c       external
 c
         double precision dsig
         external dsig
+        double precision fct_before_tf, fct2
         double precision alphas
         external alphas
         logical passcuts
@@ -856,27 +866,36 @@ c
         include 'data.inc'
 
 c       choose the permutation (point by point in the ps)
+        curr_tf = 1
         %(perm_init)s
-         call get_PS_point(x)
+        nb_point_by_perm(curr_perm) = nb_point_by_perm(curr_perm) + 1
+        call get_PS_point(x)
 
          if (jac.gt.0d0) then
          %(use_cuts)s
          %(jac_scaling)s
-           fct=jac
            xbk(1)=X1
            xbk(2)=X2
-           fct=fct*dsig(momenta(0,1),wgt)
-           call transfer_fct(momenta(0,1),TWGT)
-           fct=fct*twgt
-
+           fct_before_tf=jac*dsig(momenta(0,1),wgt)
+           
+           do curr_tf=1,nb_tf
+               call transfer_fct(momenta(0,1),TWGT)
+               if (curr_tf.eq.1)then
+                   fct = fct_before_tf*twgt
+                   fct2 = fct 
+               else
+                   fct2 = fct_before_tf*twgt
+               endif
+               
+                
          %(histo)s
-        perm_value(curr_perm) = perm_value(curr_perm) + fct*wgt
-        perm_error(curr_perm) = perm_error(curr_perm) + fct**2*wgt**2
-        nb_point_by_perm(curr_perm) = nb_point_by_perm(curr_perm) + 1
-
+        perm_value(curr_perm, curr_tf) = perm_value(curr_perm, curr_tf) + fct2*wgt
+        perm_error(curr_perm, curr_tf) = perm_error(curr_perm, curr_tf) + fct**2*wgt**2
+        enddo
          else
            fct=0d0
          endif
+        curr_tf = 1
          
          end
          """

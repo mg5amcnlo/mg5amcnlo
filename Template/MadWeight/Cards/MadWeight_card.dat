@@ -34,7 +34,7 @@ Block MW_Run
      nwa                  0.1     # width below narrow width approximation is used.
      isr                  0       # isr=0 : ignore ISR effect (except if all FS particles are visible)
                                   # isr=1 : correct kinematic based on reconstructed Pt(isr)
-	 inputfile          './Events/input.lhco' # path to the input file (in lhco format)
+     inputfile          './Events/input.lhco' # path to the input file (in lhco format)
                                   
                                   
 #*************************************************************************
@@ -79,6 +79,7 @@ Block MW_perm
 #*************************************************************************
 ##                       Phase-Space Integration mapping                ##
 #*************************************************************************
+Block MW_gen
     force_nwa     2         # Only consider the change of variable alligning particles 
                             # with width smaller than this value. This speed up the code
                             # but can lead to zero weight for background event where the

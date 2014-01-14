@@ -117,10 +117,10 @@ class TestMadWeight(unittest.TestCase):
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
-        except Exception, error:
-            pass
+        #try:
+        #    shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
+        #except Exception, error:
+        #    pass
             
     def test_short_mw_tt_semi(self):
         """checking that the weight for p p > t t~ semilept is working"""

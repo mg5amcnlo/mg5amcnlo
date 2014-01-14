@@ -2,6 +2,10 @@ c*********************************************************
 c                  TF_param.inc                         **
 c*********************************************************
       include 'phasespace.inc'
+      
+      integer curr_tf
+      common/transfer_fct_curr_tf/curr_tf
+      
 c
 c external functions
 c

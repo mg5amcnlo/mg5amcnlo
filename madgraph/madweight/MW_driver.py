@@ -167,7 +167,7 @@ class Weight(list):
             
         #3 full log
         if self.log_level == 'full':
-             self.log = open('log.txt').read().replace('<','!>')
+            self.log = open('log.txt').read().replace('<','!>')
         
     def get_details(self):
         """ """

@@ -2,6 +2,7 @@
       implicit none
 c     
       include 'nexternal.inc'
+      include 'nb_tf.inc'
       include 'TF_param.inc'
 
 
