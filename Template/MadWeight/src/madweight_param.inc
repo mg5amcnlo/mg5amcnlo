@@ -47,3 +47,10 @@ c     CUTS
 c
       logical use_cut, bw_cut
       common /to_use_cut/ use_cut, bw_cut
+c
+c     activate / desactivate sobol generator
+c
+      logical use_sobol
+      common /to_use_sobol/use_sobol
+
+

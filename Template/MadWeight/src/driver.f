@@ -633,6 +633,28 @@ C*******************************************************************************
         return
         end
 
+      double precision function fct_mint(x,w,ifirst)
+
+      implicit none
+      double precision x(20),w
+      integer ifirst
+
+      double precision store
+      common /to_storage/store
+
+      double precision fct
+      external fct
+      double precision temp 
+
+      temp = fct(x,w)*w
+      store=store+temp
+      if(ifirst.eq.2) then
+      fct_mint=store
+      else
+      fct_mint=temp
+      endif
+
+      end
 
 
 

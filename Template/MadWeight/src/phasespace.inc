@@ -11,5 +11,3 @@ c     channel position
       integer max_channel
       parameter (max_channel=10000)
 
-      logical use_sobol
-      common /to_use_sobol/use_sobol 
