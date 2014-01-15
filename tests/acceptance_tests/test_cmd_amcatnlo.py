@@ -256,6 +256,20 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
 
 
+    def test_launch_amcatnlo_name(self):
+        """tests if the p p > e+ ve process works specifying the run name"""
+        self.generate(['p p > e+ ve [QCD]'], 'sm')
+
+        self.do('launch aMC@NLO -fp -n myrun')
+
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/myrun_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/res_1.txt' % self.path))
+
+
     @set_global()
     def test_ppgogo_nlo(self):
         """tests if the p p > go go (in the mssm) process works at fixed order"""
@@ -319,6 +333,24 @@ class TestMECmdShell(unittest.TestCase):
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
         self.assertTrue(os.path.getsize('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path) > \
                         os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
+
+
+    def test_generate_events_name(self):
+        """test if the generate_events and successively the shower script in 
+        the bin directory works fine"""
+        
+        self.generate_production()
+        # to check that the cleaning of files work well
+        os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
+        self.do('quit')
+        misc.call([pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
+                stdout = open(os.devnull, 'w'))
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/myrun_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/myrun/res_1.txt' % self.path))
 
 
     def test_generate_events_lo_hwpp_set(self):

@@ -604,7 +604,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
-        options['name'] = ''
         self.check_launch(argss, options)
         if not os.path.isdir(os.path.join(os.getcwd(), argss[0], 'Events')):
             self.do_switch('ML5')

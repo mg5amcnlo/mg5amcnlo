@@ -386,7 +386,9 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name']])
+        if self.options['name']:
+            option_line += '--name %s' %  self.options['name']  
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":
