@@ -8,7 +8,7 @@ c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
-     # isavePDF,itemp
+     # isavePDF,itemp,ii
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
@@ -501,9 +501,9 @@ c Don't check momentum conservation in that case
       open(unit=99,file='SCALUP.top',status='unknown')
       call mclear
       xnorm=1d0
-      do i=1,nplots
-         call mopera(i,'+',i,i,xnorm,0.d0)
-         call mfinal(i)
+      do ii=1,nplots
+         call mopera(ii,'+',ii,ii,xnorm,0.d0)
+         call mfinal(ii)
       enddo
       call multitop(1,3,2,'scalup    ',' ','LOG')
       call multitop(2,3,2,'scalup    ',' ','LOG')
