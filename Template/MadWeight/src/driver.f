@@ -155,8 +155,7 @@ c     initialization of the variables in the loops
 c     Remove the (apriori) pointless permuation!
       config_pos = 1
       call GET_PERM_WEIGHT()
-      call sort_perm()
-      call get_min_perm()
+      call get_min_perm() ! this also order the permutation
       do i =1, nb_sol_config
          min_perm(i) = min_perm(1)
          do j = 1, NPERM
@@ -211,9 +210,6 @@ c
              write(*,*) "** Current channel of integration: ",integral_index,
      &                  "/", nb_sol_config*nb_sol_perm, ' **'
              if (loop_index.eq.1) then
-c     INITIAL TRY FOR IMPORTANCE OF PERM
-c         call get_min_perm(config_pos)
-c     END IMPORTANCE OF PERM
                 ndo=100
                 do i =1, NDIM
                     do j =1, 100
@@ -259,7 +255,7 @@ c                See if this is require to continue to update this
      &                                                       final_prec)
              endif
              call check_nan(cross)
-             write(*,*) 'cross', cross
+c             write(*,*) 'cross', cross
              DO I =1,NPERM
                  perm_value(I,1) = 0d0
                  perm_error(I,1) = 0d0
@@ -395,34 +391,28 @@ c     ==================================
       total = 0d0
       cross = 0d0
       DO I =1,NPERM
-         cross = cross + perm_value(i,1)/(nb_point_by_perm(i)+1d-99)
-c         write(*,*)perm_value(i), (nb_point_by_perm(i)+1d-99), perm_value(i)/(nb_point_by_perm(i)+1d-99), cross
+         cross = cross + perm_value_it(i,1)/(perm_error_it(i,1)+1d-99)
       ENDDO
 c      write(*,*) '=>', cross
       prev_total = 0d0
+      min_perm(config_pos) = 1
       do i=1,NPERM
-           value = perm_value(perm_order(i, config_pos),1)/
-     &                (nb_point_by_perm(perm_order(i,config_pos))+1d-99)
+           j = perm_order(i, config_pos)
+           value = perm_value_it(j,1)/
+     &                (perm_error_it(j,1)+1d-99)
            total = total + value
-c           write(*,*) i, value, total, step, ((step+1)*cross/ndo)
            do while (total.gt.((step)*cross/ndo))
               xi(step, NDIM) = ((i-1)*1d0/NPERM + (step*cross/(1d0*ndo)
      &          -prev_total)/(value*NPERM))
                step = step + 1
            enddo
            prev_total = total
-      enddo
-      min_perm(config_pos) = 1
-      do i=1,NPERM
-          j = perm_order(i, config_pos)
-          if (perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/cross.lt.min_prec_cut1) then
-             min_perm(config_pos) = min_perm(config_pos) + 1
-c             write(*,*) '**************************',
-c     &         config_pos, perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/cross
-c     &         , i, j, nb_point_by_perm(j)
-c             stop(1)
+          !check if it has to be consider or not
+           if (value/cross.lt.min_prec_cut1) then
+              min_perm(config_pos) = min_perm(config_pos) + 1
            endif
-      enddo
+        enddo
+
 c      do i=2,NPERM
 c        j = perm_order(i-1, config_pos)
 c        k = perm_order(i, config_pos)
@@ -439,36 +429,53 @@ c      WRITE(*,*) '***************************************', config_pos, min_per
 c     ==================================
       subroutine get_min_perm()
       implicit none
-      double precision cross
+      double precision cross,tmp
       integer i,j      
+
       include 'permutation.inc'
       include 'madweight_param.inc'
       include 'phasespace.inc'
-      
-      
+      double precision data(NPERM)
+c     First sort them
+      do i=1,NPERM
+         perm_order(i, config_pos) = i
+      enddo
+      data(1) = perm_value(1,1)
+      do i=2,NPERM
+         data(i) = perm_value(i,1)
+ 2       do j=1, i-1
+            if (data(i).ge.data(i-j)) then
+                if (j.ne.1) then
+                     call move_pos(i,i-j+1, data)
+                endif
+                goto 1
+            endif
+         enddo
+         call move_pos(i,1,data)
+ 1    enddo
+
+c     select them
       cross = 0d0
       DO I =1,NPERM
-         j = perm_order(i, config_pos)
          cross = cross + perm_value(i,1)
       ENDDO
       min_perm(config_pos) = 1
       do i=1,NPERM
           j = perm_order(i, config_pos)
-          if (perm_value(j,1)/cross.lt.min_perm_cut) then
+          tmp = perm_value(j,1)
+          if (tmp/cross.lt.min_perm_cut) then
              min_perm(config_pos) = min_perm(config_pos) + 1
+c             if ((i+1).ne.min_perm(config_pos)) stop
+c          else
+c             write(*,*) i, j, tmp, min_perm(config_pos), 'kept'
            endif
-      enddo
-c      do i=2,NPERM
-c        j = perm_order(i-1, config_pos)
-c        k = perm_order(i, config_pos)
-c        if (perm_value(j,1)/(nb_point_by_perm(j)+1d-99)/total.gt.
-c     &     perm_value(k,1)/(nb_point_by_perm(k)+1d-99)/total)then
-c            write(*,*) 'FAIL',i, perm_value(j,1), perm_value(k,1)
-c           stop
-c        endif
-c      enddo
-c      WRITE(*,*) '***************************************', config_pos, min_perm(config_pos)
 
+
+      enddo
+      
+      if (min_perm(config_pos).eq.1) then
+      stop
+      endif
       return
       end
 
@@ -483,9 +490,9 @@ c     ==================================
       do i=1,NPERM
          perm_order(i, config_pos) = i 
       enddo
-      data(1) = perm_value(1,1)/(nb_point_by_perm(1)+1d-99)
+      data(1) = perm_value_it(1,1)/(1d-99+perm_error_it(1,1))
       do i=2,NPERM
-         data(i) = perm_value(i,1)/(nb_point_by_perm(i)+1d-99)
+         data(i) = perm_value_it(i,1)/(perm_error_it(i,1)+1d-99)
  2       do j=1, i-1
             if (data(i).ge.data(i-j)) then
                 if (j.ne.1) then
@@ -789,7 +796,7 @@ C      end
             sum_error(j) = sum_error(j) + perm_error(i,j)
             if (nb_point_by_perm(i).gt.0) then
                 value = perm_value(i,j)
-                error = (perm_error(i,j) / nb_point_by_perm(i) - value**2)/ nb_point_by_perm(i)
+                error = perm_error(i,j) - perm_value(i,j)**2/(nb_point_by_perm(i)-1)
                 if (error.gt.0d0)then
                     perm_value_it(i,j) = perm_value_it(i,j) + value**3/error
                     perm_error_it(i,j) = perm_error_it(i,j) + value**2/error
