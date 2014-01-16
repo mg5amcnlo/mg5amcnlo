@@ -15,7 +15,6 @@ make -f make_cuttools
 To create a static library "libavh_olo.a", 
 set your Fortran compiler in the file "Config", and execute
 
-./configure.py
 ./create.py
 
 ########################################################################
@@ -23,7 +22,6 @@ set your Fortran compiler in the file "Config", and execute
 To create a dynamic library "libavh_olo.so" with gfortran,
 set the Fortran compiler in the file "Config" to gfortran, and execute
 
-./configure.py
 ./create.py dynamic
 
 Put the library "libavh_olo.so" where the linker can find it,
@@ -35,7 +33,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:DirectoryWhereLibraryIs
 
 To create just a source file, execute
 
-./configure.py
 ./create.py source
 
 ########################################################################

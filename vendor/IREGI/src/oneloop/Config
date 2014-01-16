@@ -13,5 +13,5 @@ DPKIND = selected_real_kind(15)
 TLEVEL = no
 CPPINTF = no
 
-DDF90MOD = ~/fortran/ddfun90/
-MPF90MOD = ~/fortran/mpfun90/
+#DDF90MOD = ~/fortran/ddfun90/
+#MPF90MOD = ~/fortran/mpfun90/

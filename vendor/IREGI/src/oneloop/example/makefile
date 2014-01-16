@@ -3,8 +3,8 @@ FFLAGS =
 
 FILE = example.f
 
-WITHLT = yes
-#WITHLT = no
+#WITHLT = yes
+WITHLT = no
 
 LTHOME = $(HOME)/loopcal/LoopTools-2.6/build
 LTLIB = ooptools

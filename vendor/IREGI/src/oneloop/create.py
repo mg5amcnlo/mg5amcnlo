@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import re,string,os,sys,subprocess
-srcdir = '/Users/erdissshaw/Works/MG5_aMC_2.1/vendor/IREGI/src/oneloop/src'
+locdir,thisFile = os.path.split(os.path.abspath(sys.argv[0]))
+srcdir = os.path.join(locdir,'src')
 sys.path.append(srcdir)
 import avh_pc,avh_pc_olo
 
@@ -10,6 +11,10 @@ kindmod = ''
 ddtype  = ''
 qdtype  = ''
 mptype  = ''
+tlevel = 'no'
+cppintf = 'no'
+ddf90mod = ''
+mpf90mod = ''
 
 lines = open('Config','r').readlines()
 for line in lines:

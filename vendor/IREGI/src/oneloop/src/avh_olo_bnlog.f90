@@ -1,20 +1,20 @@
 !!
-!! Copyright (C) 2013 Andreas van Hameren. 
+!! Copyright (C) 2014 Andreas van Hameren. 
 !!
-!! This file is part of OneLOop-3.3.2.
+!! This file is part of OneLOop-3.4.
 !!
-!! OneLOop-3.3.2 is free software: you can redistribute it and/or modify
+!! OneLOop-3.4 is free software: you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
 !! the Free Software Foundation, either version 3 of the License, or
 !! (at your option) any later version.
 !!
-!! OneLOop-3.3.2 is distributed in the hope that it will be useful,
+!! OneLOop-3.4 is distributed in the hope that it will be useful,
 !! but WITHOUT ANY WARRANTY; without even the implied warranty of
 !! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 !! GNU General Public License for more details.
 !!
 !! You should have received a copy of the GNU General Public License
-!! along with OneLOop-3.3.2.  If not, see <http://www.gnu.org/licenses/>.
+!! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
 !!
 
 
@@ -282,8 +282,12 @@ contains
 !
   yy = 1-1/xx
   y_lt_0 = (yy.lt.RZRO)
-  if (y_lt_0) then ;yy=log(-yy)
-              else ;yy=log( yy)
+  if (y_lt_0) then 
+    yy = log(-yy)
+    aa = sqrt(yy*yy+ONEPI*ONEPI)
+  else
+    yy = log( yy)
+    aa = abs(yy)
   endif
 !
   omx = 1
@@ -292,7 +296,6 @@ contains
   enddo
   omx = (1-xx)*omx ! (1-x^{rank+1})
 !
-  aa = abs(yy)
   if     (aa.ge.thrs(6,irank,prcpar)) then
     rslt = aCoef(irank,irank)
     do ii=irank,1,-1
