@@ -57,7 +57,7 @@ class RunningMW(object):
         fsock.close()
 
         self.fsock = open('output_%s_%s.xml' % (self.card_nb, self.sample_nb), 'w')
-        self.fsock.write('<card id=\'%s\'>' % self.card_nb)
+        self.fsock.write('<card id=\'%s\'>\n' % self.card_nb)
         while self.get_next_event(create=True):
             
             if not self.debug:
@@ -132,16 +132,74 @@ class RunningMW(object):
         weight.write(self.fsock)
 
 
+class TFsets(dict):
+    """ """
+    nb_space=4
+    def __init__(self, tf_set):
+        self.value = 0
+        self.error = 0
+        self.error2 = 0
+        self.tf_set = tf_set
+        
+        dict.__init__(self)
+    
+    def add(self, perm_id, channel_id, value, error, perm_order):
+        
+        if perm_id in self:
+            perm_obj = self[perm_id]
+        else:
+            perm_obj = Permutation(perm_id, perm_order)
+            self[perm_id] = perm_obj
+        perm_obj.add(channel_id, value, error)
+                
+    def write(self, fsock, log_level):
+        """ """
+                
+        self.value, self.error = self.calculate_total()
+        fsock.write('%s<tfset id=\'%s\' value=\'%s\' error=\'%s\'>' % \
+                        (' '*self.nb_space,self.tf_set, self.value, self.error))
+        
+        if log_level in ['permutation','channel', 'iterations', 'full']:
+            fsock.write('\n')
+            perm_ids = self.keys()
+            perm_ids.sort()
+            for perm_id in perm_ids:
+                obj = self[perm_id]
+                obj.write(fsock, log_level)
+            fsock.write('%s</tfset>' % (' ' * self.nb_space))
+        else:
+            fsock.write('</tfset>\n')
+            
+    def calculate_total(self):
+        
+        if self.value:
+            self.error = math.sqrt(self.error2)
+            return self.value, self.error 
+        total = 0
+        error = 0
+        if '0' in self.keys():
+            self.value, self.error =  self['0'].calculate_total()
+            self.error2 = self.error**2
+            return self.value, self.error
+        else:
+            for perm in self.values():
+                value, error =  perm.calculate_total() 
+                total += value
+                error += error**2
+        self.value = total
+        self.error2 = error
+        self.error = math.sqrt(error)
+            
+        return total, self.error
 
-
-class Weight(list):
+class Weight(dict):
     
     def __init__(self, lhco_number, log_level):
         self.log_level = log_level
         self.value = 0
         self.error = 0
         self.lhco_number = lhco_number
-        list.__init__(self)
+        dict.__init__(self)
         self.log = ''        
     
     def get(self):
@@ -160,10 +218,8 @@ class Weight(list):
             self.error = float(error)
             break
         os.remove('weights.out')
-        #2.
-        if self.log_level in ['permutation', 'channel', 'iteration', 'full']:
-            self.get_details()
-
+        #2. details
+        self.get_details()
             
         #3 full log
         if self.log_level == 'full':
@@ -175,31 +231,32 @@ class Weight(list):
             ff=open('details.out', 'r')
         except Exception:
             return
-        current = {}
 
         for line in ff:
             split = line.split()
-            perm_id, channel_id, value, error = split[:4]
-            perm_order = split[4:]
-            if perm_id in current:
-                perm_obj = current[perm_id]
+            perm_id, channel_id, tf_id, value, error = split[:5]
+            perm_order = split[5:]
+            value = float(value)
+            error = float(error)
+            if tf_id not in self:
+                tfsets = TFsets(tf_id)
+                self[tf_id] = tfsets
             else:
-                perm_obj = Permutation(perm_id, perm_order)
-                current[perm_id] = perm_obj
-                self.append(perm_obj)
-            perm_obj.add(channel_id, value, error)
-        
+                tfsets = self[tf_id] 
+            tfsets.add(perm_id, channel_id, value, error, perm_order)
+                    
     def write(self, fsock):
+        """ """ 
         
-        fsock.write('<event id=\'%s\' value=\'%s\' error=\'%s\'>' % \
-                                    (self.lhco_number, self.value, self.error))
-        if self.log_level in ['permutation', 'channel', 'iteration', 'full']:
-            fsock.write('\n')
-            for permutation in self:
-                permutation.write(fsock, self.log_level)
+        fsock.write('<event id=\'%s\' value=\'%s\' error=\'%s\'>\n' % \
+                    (self.lhco_number, self.value, self.error))
+        tfsets = self.keys()
+        tfsets.sort()
+        for tf_id in tfsets:
+            self[tf_id].write(fsock, self.log_level)
         if 'full' == self.log_level:
             fsock.write('\n    <log>\n%s\n</log>\n' % self.log)#.replace('\n','\n<br></br>')) 
-        fsock.write('</event>\n')
+        fsock.write('</event>\n')        
     
     def __str__(self):
         return 'Weight(%s)' % self.value
@@ -208,10 +265,11 @@ class Weight(list):
         return 'Weight(%s)' % self.value
             
 class Permutation(dict):
-    
+    nb_space=8
     def __init__(self, perm_id, perm_order):
         self.value = 0
         self.error = 0
+        self.error2 = 0
         self.id = perm_id
         self.perm_order = ' '.join(perm_order)
         
@@ -225,32 +283,40 @@ class Permutation(dict):
         """ """
         
         self.value, self.error = self.calculate_total()
+        if self.id =='0':
+            return
         
-        fsock.write('    <permutation id=\'%s\' value=\'%s\' error=\'%s\'>\n        %s' % \
-                             (self.id, self.value, self.error, self.perm_order))
+        fsock.write('%s<permutation id=\'%s\' value=\'%s\' error=\'%s\'>\n%s%s' % \
+            (' '*self.nb_space,self.id, self.value, self.error,
+             ' '*(self.nb_space+2), self.perm_order))
         
         if log_level in ['channel', 'iterations', 'full']:
             fsock.write('\n')
             for channel in self.values():
                 channel.write(fsock, log_level)
                 fsock.write('\n')
-            fsock.write('    </permutation>\n')
+            fsock.write('%s</permutation>\n' % (' '*self.nb_space))
         else:
             fsock.write('</permutation>\n')
             
     def calculate_total(self):
         
+        if self.value:
+            self.error = math.sqrt(self.error2)
+            return self.value, self.error
         total = 0
         error = 0
         for channel in self.values():
             total += channel.value
             error += channel.error**2
-            
-        return total, math.sqrt(error)        
+        self.value = total
+        self.error2 = error
+        self.error = math.sqrt(self.error2)
+        return total, self.error   
     
 class Channel(object):
     """ """
-    
+    nb_space=12
     def __init__(self, channel_id, value, error):
         """ """
         self.channel_id = channel_id
@@ -259,14 +325,17 @@ class Channel(object):
     
     def write(self, fsock, log_level):
         
-        fsock.write('        <channel id=\'%s\' value=\'%s\' error=\'%s\'></channel>' %
-                    (self.channel_id, self.value, self.error))
+        fsock.write('%s<channel id=\'%s\' value=\'%s\' error=\'%s\'></channel>' %
+                    (' '*self.nb_space,self.channel_id, self.value, self.error))
 
 if __name__ == '__main__':
-    
-    card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb = sys.argv[1:]
-    fsock = open('argurments', 'w')
-    fsock.write(' '.join(sys.argv[1:]))
-    fsock.close()
+    try:                                                                                                                                                                                                   
+        card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb = sys.argv[1:]                                                                                                            
+    except:                                                                                                                                                                                                
+        card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb = open('arguments').read().split() 
+    else:
+        fsock = open('arguments', 'w')
+        fsock.write(' '.join(sys.argv[1:]))
+        fsock.close()
     running_mw = RunningMW(card_nb, first_event, nb_event, evt, mw_int_points, log_level, sample_nb)
     running_mw.run()

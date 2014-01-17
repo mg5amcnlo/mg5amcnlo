@@ -70,10 +70,10 @@ c     specific case of nexternal=4, num_inv=0
 
       px_visible=0d0
       py_visible=0d0
-      open(unit=90,file="./start")
-      write(90,*) 'start'
-      close(90)
-      open(UNIT=32,FILE='vegas_value.out',STATUS='unknown')
+c      open(unit=90,file="./start")
+c      write(90,*) 'start'
+c      close(90)
+c      open(UNIT=32,FILE='vegas_value.out',STATUS='unknown')
 
       close(89)
 

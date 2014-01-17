@@ -50,7 +50,7 @@ c
 c     variable for selecting perm in loop 1
 c
       double precision minimal_value1,minimal_value2
-      double precision best_precision, chan_val, chan_err
+      double precision best_precision
       double precision check_value
       integer loop_index
 c      integer best_config
@@ -180,9 +180,6 @@ C
       call initialize
       normalize_perm = NPERM
 
-      chan_val=0d0
-      chan_err=0d0
-
       integral_index = 0
       do perm_pos=1,nb_sol_perm ! nb_sol_perm=1 if MC over perm
            if (.not.montecarlo_perm) then
@@ -210,6 +207,7 @@ c
              write(*,*) "** Current channel of integration: ",integral_index,
      &                  "/", nb_sol_config*nb_sol_perm, ' **'
              if (loop_index.eq.1) then
+                call MC_INIT_VAR()
                 ndo=100
                 do i =1, NDIM
                     do j =1, 100
@@ -284,9 +282,7 @@ c                NCALL = NCALL * nb_sol_perm
 
  2           if (CROSS.lt.1d99) then
                 temp_val=temp_val+cross
-                chan_val=chan_val+cross
-                temp_err=temp_err+SD
-                chan_err=chan_err+SD
+                temp_err=temp_err+SD**2
                 order_value(integral_index) = cross
                 order_error(integral_index) = sd
                 if (histo) call histo_combine_iteration(integral_index)
@@ -310,6 +306,9 @@ c                NCALL = NCALL * nb_sol_perm
              call MC_GET_INTEGRAL()
              DO J=1,NB_TF
                 if (montecarlo_perm) then
+                   value =  tf_value_it(j)
+                   error =  tf_error_it(j)
+                   write(23,*) 0,' ',config_pos,' ',J,' ',value,' ', error
                    DO I=1,NPERM
                       value = perm_value_it(i,j)
                       error = perm_error_it(i,j)
@@ -322,9 +321,6 @@ c                NCALL = NCALL * nb_sol_perm
                       perm_error(i,j) = 0d0
                       nb_point_by_perm(I) = 0
                    ENDDO
-                   value =  tf_value_it(j)
-                   error =  tf_error_it(j)
-                   write(23,*) 0,' ',config_pos,' ',J,' ',value,' ', error
                 else
                    I = perm_pos
                    value = perm_value_it(i,j)
@@ -346,7 +342,7 @@ c                NCALL = NCALL * nb_sol_perm
           if (temp_val.ne.0d0) goto 1 ! refine the integration
        endif
        temp_val = temp_val / nb_sol_perm
-       temp_err = temp_err / nb_sol_perm
+       temp_err = DSQRT(temp_err) / nb_sol_perm
 
        write(*,*) "the weight is",temp_val,"+/-",temp_err
 
@@ -764,7 +760,7 @@ C      end
         perm_value_it(i,j) = 0d0   ! weigthed sum on iteration result
         perm_error_it(i,j) = 0d0   ! sum (1/sigma**2)
         tf_value_it(j) = 0d0       ! weigthed sum on iteration result for all perm
-        tf_value_it(j) = 0d0       ! sum (1/sigma**2) all perm
+        tf_error_it(j) = 0d0       ! sum (1/sigma**2) all perm
       enddo
         nb_point_by_perm(i) = 0
       enddo
@@ -783,6 +779,16 @@ C      end
       double precision sum_nb_point
 
       double precision value, error
+
+c     for debugging
+c      double precision calls,ti,tsi
+c      COMMON/BVEG4/calls,ti,tsi
+c      double precision xi(100,20)
+c      integer ndo,it
+c      double precision si,si2,swgt,schi
+c      common/bveg2/xi,si,si2,swgt,schi,ndo,it
+
+
 
       sum_nb_point = 0
       do j=1,nb_tf
@@ -817,10 +823,21 @@ C      end
           if (error.gt.0d0)then
               tf_value_it(j) = tf_value_it(j) + value**3/error
               tf_error_it(j) = tf_error_it(j) + value**2/error
-              write(*,*) '                     ',j, tf_value_it(j) / tf_error_it(j), '+-',
+              write(*,*) '                       ',j, tf_value_it(j) / tf_error_it(j), '+-',
      &             tf_value_it(j) / tf_error_it(j)  / DSQRT(tf_error_it(j))
            endif
       enddo
+
+c     SECURITY CHECK
+c      if ((si/swgt - tf_value_it(1) / tf_error_it(1)).gt.(tf_value_it(1)
+c     &    / tf_error_it(1)  / DSQRT(tf_error_it(1)))) then
+c        write(*,*) 'ERROR ON ITERATION COMBINAISON'
+c        write(*,*) 'INFO', SI, SWGT
+c        write(*,*) 'VEGAS:', si/swgt
+c        write(*,*) 'MINE', tf_value_it(1) / tf_error_it(1)
+c        stop 1
+c      endif
+
       return
       end
 

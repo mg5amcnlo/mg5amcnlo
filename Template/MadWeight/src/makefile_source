@@ -50,7 +50,7 @@ $(LIBDIR)libblocks.$(libext):
 	cd MadWeight/blocks; make	
 $(LIBDIR)libtools.$(libext): 
 	cd MadWeight/tools; make	
-$(LIBDIR)libTF.$(libext): MadWeight/transfer_function 
+$(LIBDIR)libTF.$(libext): MadWeight/transfer_function/transfer_function.o MadWeight/transfer_function/nb_tf.inc 
 	cd MadWeight/transfer_function; make	
 
 # Binaries

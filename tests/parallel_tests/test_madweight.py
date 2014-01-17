@@ -54,11 +54,15 @@ class TestMadWeight(unittest.TestCase):
         for line in text.split('\n'):
             line = line.strip().split('#')[0]
             split = line.split()
-            if not len(split) == 4:
+            if not len(split) in [4,5]:
                 continue
-            event_nb, card_nb, weight, error = map(float, split)
+            if len(split) ==4:
+                event_nb, card_nb, weight, error = map(float, split)
+                tf_set = 1.
+            else:
+                event_nb, card_nb, tf_set, weight, error = map(float, split)
             
-            solution[(event_nb,card_nb)] = (weight,error)
+            solution[(event_nb,card_nb,tf_set)] = (weight,error)
         return solution
 
     def test_short_mw_tt_full_lept(self):

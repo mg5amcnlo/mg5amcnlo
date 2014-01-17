@@ -176,7 +176,7 @@ c
 c
       if(nprn.eq.0)go to 21
       tsi=dsqrt(tsi)
-      write(6,*) 'vegas: iteration',it,'chi2:',chi2a
+      write(6,*) 'vegas: iteration',it, 'value:', avgi,'chi2:',chi2a
 c      write(6,201)it,ti,tsi,avgi,sd,chi2a
       call mc_end_iter()
       if(nprn.ge.0)go to 21

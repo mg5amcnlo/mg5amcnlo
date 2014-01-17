@@ -46,11 +46,12 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	
-$(LIBDIR)libblocks.$(libext): 
+$(LIBDIR)libblocks.$(libext): MadWeight/blocks
 	cd MadWeight/blocks; make	
-$(LIBDIR)libtools.$(libext): 
+$(LIBDIR)libtools.$(libext): MadWeight/tools
 	cd MadWeight/tools; make	
-
+$(LIBDIR)libTF.$(libext): MadWeight/transfer_function/transfer_function.o MadWeight/transfer_function/nb_tf.inc 
+	cd MadWeight/transfer_function; make
 
 # Binaries
 

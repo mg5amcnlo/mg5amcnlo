@@ -28,12 +28,11 @@ transfer_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
 madweight_card.inc:../../Cards/transfer_card.dat ../../Cards/MadWeight_card.dat
 	python ../../bin/internal/madweight/Cards.py
 
-driver.o: phasespace.inc nexternal.inc data.inc coupl.inc madweight_card.inc 
-initialization.o: madweight_card.inc TF_param.inc coupl.inc run.inc madweight_param.inc pmass.inc nexternal.inc maxamps.inc leshouche.inc
+driver.o: phasespace.inc nexternal.inc data.inc coupl.inc madweight_card.inc nb_tf.inc
+initialization.o: madweight_card.inc TF_param.inc coupl.inc run.inc madweight_param.inc pmass.inc nexternal.inc maxamps.inc leshouche.inc nb_tf.inc
 matrix.o:nexternal.inc coupl.inc
-call_TF.o:transfer_card.inc ../../Cards/transfer_card.dat
+call_TF.o:transfer_card.inc ../../Cards/transfer_card.dat nb_tf.inc nexternal.inc TF_param.inc phasespace.inc run.inc 
 gen_ps.o: data.inc phasespace.inc nexternal.inc coupl.inc madweight_param.inc props.inc run.inc
-call_TF.o: nexternal.inc TF_param.inc phasespace.inc run.inc 
 d_choices.o: d_choices.inc
 multi_channel.o:  coupl.inc d_choices.inc
 permutation.o:  nexternal.inc phasespace.inc
