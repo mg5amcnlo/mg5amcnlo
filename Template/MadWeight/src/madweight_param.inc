@@ -7,8 +7,8 @@ C
 C	definition of variables for the number of events in the integration
 C		definition also present in driver.f
 C
-       integer nevents
-       common/number_integration_points/nevents
+       integer nevents, nevents_refine
+       common/number_integration_points/nevents,nevents_refine
 C
 C	definition of variables for the optimization of the driver
 C		definition also present in driver.f

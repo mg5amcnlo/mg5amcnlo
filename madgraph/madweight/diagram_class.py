@@ -829,7 +829,6 @@ class Option:
            if key != 'comment':
                exec('%s = %s' % (tag_to_genvar[key],value))
 
-
        self.ecs_on=[]
        for letter in 'abcdef':
            cond='self.use_ecs_'+letter

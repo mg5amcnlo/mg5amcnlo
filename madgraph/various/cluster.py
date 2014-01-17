@@ -147,7 +147,7 @@ class Cluster(object):
         do
             cp -r $MYTMP/$i $MYPWD
         done
-        #rm -rf $MYTMP
+        rm -rf $MYTMP
         """
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,

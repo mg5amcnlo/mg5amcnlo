@@ -190,7 +190,11 @@ C
 
       do config_pos=1,nb_sol_config
           integral_index = integral_index + 1
-          NCALL = nevents * loop_index**2
+          if (loop_index.eq.1)then
+              NCALL = nevents
+          else
+              NCALL = nevents_refine
+          endif
           iseed = iseed + 1 ! avoid to have the same seed
           NDIM=Ndimens
           if(ISR.eq.3) NDIM=NDIM+2
