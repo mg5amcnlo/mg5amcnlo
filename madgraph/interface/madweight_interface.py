@@ -526,13 +526,14 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         else:
             out_path = pjoin(out_dir, 'output.xml')
             if os.path.exists(out_path):
-                answer = self.ask('output file already exists. Do you want to run a refine?', 'y',
+                answer = self.ask('output file already exists. Do you want to run a refine?', 'stop',
                          ['y','n','stop'])
                 if answer == 'y':
                     args.append('-refine')
                     out_path = pjoin(out_dir, 'refine.xml')
                     logger.warning("The correct command is ./bin/mw_options collect -refine")
                 elif answer == 'stop':
+                    logger.warning("The correct command for refine is ./bin/mw_options collect -refine")
                     return
 
         fsock = open(out_path, 'w')
@@ -570,12 +571,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if '-refine' in args:
             xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
             for MWdir in self.MWparam.MW_listdir:
-                out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+                out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
                 ref_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
-                xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
-                xml_reader2.refine(ref_output)
+                base_output = xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
+                base_output.refine(ref_output)
                 files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
-                xml_reader2.write(pjoin(out_dir, 'output.xml'), MWdir)
+                base_output.write(pjoin(out_dir, 'output.xml'), MWdir)
 
         # 3. Read the (final) log file for extracting data
         total = {}
@@ -590,7 +591,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
             #
             log_level = self.MWparam['mw_run']['log_level']            
-            generator =  ((int(i),int(j),int(k),data[i][j][k]) for i in data 
+            generator =  ((int(i),j,int(k),data[i][j][k]) for i in data 
                                                                for j in data[i] 
                                                                for k in data[i][j])
             for card, event, tf_set, obj in generator:
@@ -851,16 +852,17 @@ class MadWeightCmdShell(MadWeightCmd, cmd.CmdShell):
 class CollectObj(dict):
     pass
 
+    #2 #############################################################################  
     def refine(self, other):
-        """ """
         
-        for card in other:
-            if not card in self:
-                self[card] = other[card]
+        for card, CardDATA in other.items():
+            if card not in self.output:
+                self.output[card] = other[card]
                 continue
-            for event_nb in other[card]:
-                self[card][event_nb] = other[card][event_nb]        
-        return
+            
+            for event, obj2 in CardDATA.items():
+                self.output[card][event] = obj2
+        
     
     def write(self, out_path, MWdir):
         """ """
@@ -886,24 +888,12 @@ class MWParserXML(xml.sax.handler.ContentHandler):
     def __init__(self, keep_level='weight'):
         self.in_el = {'process': '', 'card':'', 'event':'', 'tfset':'' ,
                       'permutation':'', 'channel':'','full':''}
-        if keep_level in ['weight', 'event']:
+        if keep_level in ['weight', 'event', 'debug']:
             keep_level = 'tfset'
         self.all_event = {}
         self.keep_level = keep_level
         self.buffer=''
         self.output = CollectObj() 
-
-    #2 #############################################################################  
-    def refine(self, other):
-        
-        for card, CardDATA in other.items():
-            if card not in self.output:
-                self.output[card] = other[card]
-                continue
-            
-            for event, obj2 in CardDATA.items():
-                self.output[card][event] = obj2
-        
 
 
     #2 #############################################################################  

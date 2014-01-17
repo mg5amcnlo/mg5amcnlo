@@ -110,9 +110,20 @@ class RunningMW(object):
         if create:
             try:
                 self.lhco_number = int(evt.split('\n')[0].split()[1])
-            except:
-                print [evt]
-                raise
+            except ValueError:
+                self.lhco_number = evt.split('\n')[0].split()[1]
+                evt = evt.split('\n')
+                id, nblhco, trigger = evt[0].split()
+                if '.' in nblhco:
+                    nblhco, _ = nblhco.split('.',1)
+                elif ',' in nblhco:
+                    nblhco, _ = nblhco.split(',',1)
+                nblhco = ''.join(i for i in nblhco if i.isdigit())
+                if not nblhco:
+                    nblhco = '1'
+                
+                evt[0] = ' '.join([id, nblhco,trigger])
+                evt = '\n'.join(evt)
             if self.allow_event(self.lhco_number):
                 fsock = open('verif.lhco', 'w')
                 fsock.write(evt)
