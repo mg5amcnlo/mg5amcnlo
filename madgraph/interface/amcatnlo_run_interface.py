@@ -132,7 +132,8 @@ def check_compiler(options, block=False):
     If block, stops the execution, otherwise just print a warning"""
 
     msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
-            'gfortran 4.6 or later installed.\n%s has been detected'
+            'gfortran 4.6 or later installed.\n%s has been detected\n'+\
+            'Note that You can still run all MadEvent run without any problem!'
     #first check that gfortran is installed
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
