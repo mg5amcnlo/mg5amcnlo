@@ -174,7 +174,8 @@ c     call graph_init
 
 c      write(*,*) 'pmass ok'
       return
- 48   stop
+ 48   write(*,*) 'FAILS EVENTS READING!'
+      stop
       end
 
 

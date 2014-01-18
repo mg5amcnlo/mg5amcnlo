@@ -12,7 +12,7 @@
 # For more information, please visit: http://madgraph.phys.ucl.ac.be            
 #                                                                               
 ################################################################################
-
+from __future__ import division
 import math
 import os 
 import sys
@@ -149,7 +149,6 @@ class TFsets(dict):
     def __init__(self, tf_set):
         self.value = 0
         self.error = 0
-        self.error2 = 0
         self.tf_set = tf_set
         
         dict.__init__(self)
@@ -184,24 +183,21 @@ class TFsets(dict):
     def calculate_total(self):
         
         if self.value:
-            self.error = math.sqrt(self.error2)
             return self.value, self.error 
         total = 0
-        error = 0
+        total_error = 0
         if '0' in self.keys():
             self.value, self.error =  self['0'].calculate_total()
-            self.error2 = self.error**2
             return self.value, self.error
         else:
             for perm in self.values():
                 value, error =  perm.calculate_total() 
                 total += value
-                error += error**2
-        self.value = total
-        self.error2 = error
-        self.error = math.sqrt(error)
-            
-        return total, self.error
+                total_error += error**2
+        self.value = total / len(self)
+        self.error = math.sqrt(total_error) / len(self) 
+        
+        return self.value, self.error
 
 class Weight(dict):
     

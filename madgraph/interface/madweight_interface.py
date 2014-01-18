@@ -417,17 +417,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 nb_job = self.MWparam.nb_event_MW[dirname]
                 if self.MWparam['mw_run']['nb_event_by_node'] > 1:
                     nb_job = (nb_job+1) // self.MWparam['mw_run']['nb_event_by_node']
-                if not os.path.exists(pjoin(self.me_dir,'SubProcesses',dirname,self.MWparam.name,'verif_%i.lhco' % (nb_job-1))):
-                    logger.warning("Not enough events for submission. Did you run check_events?")
-                    for i in range(nb_job):
-                        if os.path.exists(pjoin(self.me_dir,'SubProcesses',dirname,self.MWparam.name,'verif_%i.lhco' % i)):
-                            nb_job = i
-                        else:
-                            if i==0:
-                                raise Exception, 'No valid events founds. Potentially no events at all for this process'
-                            break
-                        
-                
+                                    
                 for event_sample in range(nb_job):
                     self.submit_job(dirname, nb_card, event_sample)        
     

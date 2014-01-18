@@ -112,8 +112,7 @@ class TestMadWeight(unittest.TestCase):
 24 2 4.48106063562e-22 2.23501639194e-24 
 28 1 1.22526200347e-23 5.8955444892e-26 
 28 2 5.53271960779e-23 2.59251688524e-25 
-"""
-    
+"""   
         expected = self.get_result(expected)
         for key, (value,error) in expected.items():
             assert key in solution
@@ -146,7 +145,8 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_run pretrained T
                  set mw_perm montecarlo T
-                 set mw_run MW_int_points 2000
+                 set mw_run MW_int_points 1000
+                 set mw_run MW_int_refine 8000
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         

@@ -473,9 +473,6 @@ c             write(*,*) i, j, tmp, min_perm(config_pos), 'kept'
 
       enddo
       
-      if (min_perm(config_pos).eq.1) then
-      stop
-      endif
       return
       end
 

@@ -337,7 +337,8 @@ class Card(dict):
                     #elif ident[block][tag][2]: #check if default value is defined
                     #    value=self.pass_in_type(ident[block][tag][2],ident[block][tag][1])
                     #   out.writelines('        '+ident[block][tag][0]+' = '+str(value)+'\n')
-                        
+        if nb_element ==0:
+            nb_element = 1          
         fsock = open(pjoin(output,'nb_tf.inc'),'w')
         fsock.write("""
         integer nb_tf
