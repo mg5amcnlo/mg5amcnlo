@@ -146,6 +146,7 @@ C
 C LOCAL VARIABLES 
 C
 	  %(real_dp_format)s THRS
+	  LOGICAL EXT_NUM_FOR_R1
 C  
 C GLOBAL VARIABLES 
 C
@@ -165,6 +166,9 @@ C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
 %(initiregi)s
+C      The initialization below is for CT v1.9.2+
+       EXT_NUM_FOR_R1=.TRUE.
+       CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
 	  END
 
 	  SUBROUTINE %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)

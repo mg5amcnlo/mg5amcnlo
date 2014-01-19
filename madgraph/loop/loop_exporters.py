@@ -1045,20 +1045,20 @@ ANS(0)=0.0d0
               'HELPICKED_BU=HELPICKED','HELPICKED=H','MP_DONE=.FALSE.',
               'IF(SKIPLOOPEVAL) THEN','GOTO 1227','ENDIF'])
             replace_dict['loop_induced_finalize'] = \
-            """HELPICKED=HELPICKED_BU
+            ("""HELPICKED=HELPICKED_BU
                DO I=NCTAMPS+1,NLOOPAMPS
                IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.S(I))) THEN
                  WRITE(*,*) '##W03 WARNING Contribution ',I
                  WRITE(*,*) ' is unstable for helicity ',H
                ENDIF
-C                IF(.NOT.ISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
+C                IF(.NOT.%(proc_prefix)sISZERO(ABS(AMPL(2,I))+ABS(AMPL(3,I)),REF,-1,H)) THEN
 C                  WRITE(*,*) '##W04 WARNING Contribution ',I,' for helicity ',H,' has a contribution to the poles.'
 C                  WRITE(*,*) 'Finite contribution         = ',AMPL(1,I)
 C                  WRITE(*,*) 'single pole contribution    = ',AMPL(2,I)
 C                  WRITE(*,*) 'double pole contribution    = ',AMPL(3,I)
 C                ENDIF
                ENDDO
-               1227 CONTINUE"""
+               1227 CONTINUE""")%replace_dict
             replace_dict['loop_helas_calls']=""
             replace_dict['nctamps_or_nloopamps']='nloopamps'
             replace_dict['nbornamps_or_nloopamps']='nloopamps'
@@ -1100,12 +1100,12 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['actualize_ans']='\n'.join(actualize_ans)
         else:
             replace_dict['actualize_ans']=\
-            """IF(.NOT.ISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
+            ("""IF(.NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
                  WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
                  WRITE(*,*) 'Finite contribution         = ',ANS(1)
                  WRITE(*,*) 'single pole contribution    = ',ANS(2)
                  WRITE(*,*) 'double pole contribution    = ',ANS(3)
-               ENDIF"""
+               ENDIF""")%replace_dict
         
         # Write out the color matrix
         (CMNum,CMDenom) = self.get_color_matrix(matrix_element)

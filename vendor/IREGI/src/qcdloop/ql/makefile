@@ -1,4 +1,4 @@
-FFLAGS 	= -O 
+FFLAGS 	= -O -fPIC
 HERE = $(PWD)
 LIBDIR = $(HERE)/../ff/
 FC = gfortran

@@ -1,5 +1,5 @@
 FC            = gfortran
-FFLAGS        = 
+FFLAGS        = -fPIC
 
 LFLAGS	      = $(FFLAGS)
 

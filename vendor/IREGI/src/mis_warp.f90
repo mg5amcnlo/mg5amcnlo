@@ -243,13 +243,29 @@ CONTAINS
           temp(ep)=qlI2(p12,m12,m22,musq,ep)
        ENDDO
     ELSE
+!       CALL olo_unit(6,'printall')
        CALL olo_scale(MU_R_IREGI)
        CALL olo(zolo, DCMPLX(p12),DCMPLX(m12),DCMPLX(m22))
        temp(-1)=zolo(1)
        temp(0)=zolo(0)
     ENDIF
+!    IF(ABS(p12*m12*m22).GT.1d0)THEN
+!       temp(-1)=DCMPLX(1d0)
+!       temp(0)=DCMPLX(0.745754405349275d0,-4.747187659478749d0)
+!    ENDIF
     B0C1(1)=temp(-1)*ipi2
     B0C1(4)=temp(0)*ipi2+factor1*temp(-1)
+!    IF(ABS(p12*m12*m22).GT.1d0)THEN
+!       B0C1(4)=DCMPLX(46.852864216788554d0,-9.634620424960666d0)
+!    ENDIF
+!    PRINT *,"======================================"
+!    PRINT *,"mass=",p12,m12,m22
+!    WRITE(*,'(i2,1x,4e25.17)')1,MU_R_IREGI,p12,m12,m22
+!    PRINT *,"mass=",p12,m12,m22
+!    PRINT *,zolo(0)
+!    PRINT *,zolo(1)
+!    CALL olo(zolo,DCMPLX(p12),DCMPLX(m12),DCMPLX(0d0))
+!    PRINT *,zolo(0)
     RETURN
   END FUNCTION B0C1
 
@@ -272,6 +288,7 @@ CONTAINS
 !       ENDIF
 !       first=.FALSE.
 !    ENDIF
+    STOP
     IF((ABS(p12)+ABS(m12)+ABS(m22))/3d0.LT.EPS)THEN
        B0CC1(1)=ipi2
        B0CC1(2)=-ipi2
