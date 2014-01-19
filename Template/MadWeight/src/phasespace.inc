@@ -9,4 +9,5 @@ c     channel position
       common /to_config/config_pos,perm_pos
 
       integer max_channel
-      parameter (max_channel=10000) 
+      parameter (max_channel=10000)
+

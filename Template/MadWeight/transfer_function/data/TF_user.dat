@@ -88,6 +88,10 @@
      #  "width_type" could be large or thin. thin is for acurate resolution 
      #     on the Energy of the particles (up to 5-10%)
   <variable name='E'> 
+     <include>
+c    additional variable to add if default are not enough
+     integer k ! not use but for the example!
+     </include>
      #   Three name are available E/THETA/PHI
      <tf>
         prov1=(#1*pexp(0))    ! biais of the gaussian (proportional to the energy)

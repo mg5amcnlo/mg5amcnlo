@@ -25,8 +25,8 @@ Block MW_Run
 #   TAG                 VALUE                    UTILITY
      name                fermi    # name for the run  
      nb_exp_events        4       # number of experimental events to consider
-     MW_int_points        4000    # number of points (by permutation) in MadWeight integration for survey 
-     MW_int_refine        10000   # number of points (by permutation) in MadWeight integration for survey 
+     MW_int_points        2000    # number of points (by permutation) in MadWeight integration for survey 
+     MW_int_refine        10000   # number of points (by permutation) in MadWeight integration for refine 
      precision            0.005   # stops computation if precision is reached.
      nb_event_by_node     1       # one job submission compute the weight for N events
      log_level            weight  # from low level of log to extensive log: 

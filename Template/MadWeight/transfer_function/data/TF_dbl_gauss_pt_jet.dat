@@ -78,6 +78,9 @@
 <width_type> large </width_type>
 # width_type should be thin or large (thin is for energy acuurate up to 5-10%)
 <variable name='E'>
+<include>
+c       just for the example.
+</include>
 <tf>
         prov1=(#1+#2*dsqrt(p(0))+#3*p(0))
         prov2=(#4+#5*dsqrt(p(0))+#6*p(0))

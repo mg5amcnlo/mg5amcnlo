@@ -147,6 +147,7 @@ class TestMadWeight(unittest.TestCase):
                  set mw_perm montecarlo T
                  set mw_run MW_int_points 1000
                  set mw_run MW_int_refine 8000
+                 set mw_run  use_sobol T
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         

@@ -98,6 +98,8 @@ class XML_input(xml.sax.handler.ContentHandler):
             self.block[self.inblock][self.in_variable].change_width(self.buffer)  
         elif name == "info":
             self.block[self.inblock].def_info(self.buffer)
+        elif name == "include":
+            self.block[self.inblock][self.in_variable].def_include(self.buffer)
             
     #2 ############################################################################# 
     def read_file(self,filepos):
@@ -227,6 +229,7 @@ class TF_input(XML_input):
                 new_rule={'tf_var':tf_var,'width_var':width_var}
                 new_rule['tf_definition']=block[variable].tf_code
                 new_rule['width_definition']=block[variable].width_code
+                new_rule['tf_include']=block[variable].includetext
                 new_text=mod_file.mod_text(new_text,new_rule) #change default variable in real one
                 new_text,list_var=create_optional_variable(new_text,block.name,variable,list_var)
                 new_text=MW_fct.put_in_fortran_format(new_text)
@@ -309,11 +312,11 @@ class TF_block(dict):
         elif "large" in text.lower():
             self.order=2
  
-     #2 #############################################################################    
+    #2 #############################################################################    
     def def_info(self,text):
         """ store the information on the block (comming from the xml) """
         self.infotext=text
-    
+
     #2 #############################################################################    
     def info(self):
         text = 'Parameter for particles: '+','.join(self.particles)+'\n'
@@ -332,6 +335,13 @@ class TF_on_var:
         """ initialize the content to delta """
         self.tf_code=' tf=1d0'
         self.width_code=' width=0d0' 
+        self.includetext= '' 
+
+    #2 #############################################################################    
+    def def_include(self,text):
+        """ store the information on the block (comming from the xml) """
+        self.includetext=text
+    
 
     #2 ############################################################################# 
     def change_tf(self,text):

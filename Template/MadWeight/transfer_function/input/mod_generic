@@ -58,6 +58,7 @@ C+-----------------------------------------------------------------------+
       parameter (pi=3.141592654d0)
       include 'nb_tf.inc'
       include 'TF_param.inc'     
+$B$ tf_include $E$
 
 $B$ tf_definition $E$
 
@@ -88,6 +89,8 @@ C+-----------------------------------------------------------------------+
 
 	  include 'nb_tf.inc'
       include 'TF_param.inc'     
+
+$B$ tf_include $E$
 
 $B$ width_definition $E$
       
