@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.9.0 (Apr 25 2013)
+              CutTools V1.9.2 (Jan 17 2014)
 
               contact author: pittau@ugr.es
 
@@ -481,6 +481,19 @@ compiling and running example0.f in the directory "examples"
 - more precise computation of del12 in dp_bild_l and mp_build_l and 
   protection added against 1/0
 
+- December 13 2013:
+
+  line logical, intent(in) :: ext_num_for_r1in moved before
+  include 'cts_mpinit.h' 
+  in cts_cuttools.f90
+
+- Jan 17 2014:
+
+  interfaced with OneLOop-3.4.tgz
+  To do so cts_qpinit.in <- cts_mpinit.in 
+  and      cts_qprec.in  <- cts_mprec.in 
+  in directory cts
+
 ---------------------------------------------------------------------------
-Last modification of this document: Apr 25 2013
+Last modification of this document: Jan 17 2014
 ---------------------------------------------------------------------------
