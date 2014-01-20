@@ -35,7 +35,7 @@ mw_gen     1         integer 1            # choose which propagator to allign in
 mw_gen     2         integer 1            # Same condition but for blobs
 mw_gen     3         integer 4            # maximal multiplicity for ECS sector
 # Preference in blob generation (If more than one "True", we will perform a multi-channel techniques)
-mw_gen     4         logical T            #      maximizes  the number of aligned BW
+mw_gen     4         logical F            #      maximizes  the number of aligned BW
 mw_gen     5         logical T            #      choose all momenta as  variables of integration
 mw_gen     6         logical T            #      mixed choice between the two above options
 mw_gen     10        logical T            # Authorizes ECS A  (0 neut)

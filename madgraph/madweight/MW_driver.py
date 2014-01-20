@@ -291,15 +291,20 @@ class Permutation(dict):
         
         self.value, self.error = self.calculate_total()
         if self.id =='0':
-            return
+            tag = 'all'
+        else:
+            tag = self.id
         
         fsock.write('%s<permutation id=\'%s\' value=\'%s\' error=\'%s\'>\n%s%s' % \
-            (' '*self.nb_space,self.id, self.value, self.error,
+            (' '*self.nb_space, tag, self.value, self.error,
              ' '*(self.nb_space+2), self.perm_order))
         
         if log_level in ['channel', 'iterations', 'full']:
             fsock.write('\n')
-            for channel in self.values():
+            ids = self.keys()
+            ids.sort()
+            for pid in ids:
+                channel = self[pid]
                 channel.write(fsock, log_level)
                 fsock.write('\n')
             fsock.write('%s</permutation>\n' % (' '*self.nb_space))

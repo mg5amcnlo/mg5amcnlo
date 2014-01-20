@@ -148,6 +148,7 @@ class TestMadWeight(unittest.TestCase):
                  set mw_run MW_int_points 1000
                  set mw_run MW_int_refine 8000
                  set mw_run  use_sobol T
+                 set mw_gen force_nwa 2
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
