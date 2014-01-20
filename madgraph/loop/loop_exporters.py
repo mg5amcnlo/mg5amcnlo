@@ -186,7 +186,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                      
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
-                            writers.FortranWriter('cts_mpc.h'),)
+                                            writers.FortranWriter('cts_mpc.h'))
 
         # Return to original PWD
         os.chdir(cwd)
@@ -237,7 +237,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                                                                  new_helas_call)
 
     def make_source_links(self):
-        """ In the loop output, we don't need the files fromt he Source folder """
+        """ In the loop output, we don't need the files from the Source folder """
         pass
 
     def make_model_symbolic_link(self):

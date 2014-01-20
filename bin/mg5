@@ -27,4 +27,4 @@ exe_path = os.path.join(root_path,'bin','mg5_aMC')
 print '\033[91mWarning: The script ./bin/mg5 will be removed in future versions; use ./bin/mg5_aMC instead.\033[0m'
 
 sys.argv.pop(0)
-os.system('%s %s' %( str(exe_path) , ' '.join(sys.argv) ))
+os.system('%s %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))

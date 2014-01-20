@@ -4019,7 +4019,11 @@ class Channel(base_objects.Diagram):
                     structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
-                    lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
+                    lor_value = eval(new_structure % q_dict_lor)
+                    if lor_value == 0:
+                        new_structure = new_structure.replace('-','+')
+                        lor_value = eval(new_structure % q_dict_lor)
+                    lorentz_factor += abs(eval(v))**2 * lor_value**2
 
                 apx_m *= lorentz_factor
 

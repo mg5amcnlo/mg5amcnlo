@@ -132,7 +132,8 @@ def check_compiler(options, block=False):
     If block, stops the execution, otherwise just print a warning"""
 
     msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
-            'gfortran 4.6 or later installed.\n%s has been detected'
+            'gfortran 4.6 or later installed.\n%s has been detected\n'+\
+            'Note that You can still run all MadEvent run without any problem!'
     #first check that gfortran is installed
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
@@ -331,8 +332,10 @@ class HelpToCmd(object):
         _compile_parser.print_help()
 
     def help_generate_events(self):
-        """help for generate_events command"""
+        """help for generate_events commandi
+        just call help_launch"""
         _generate_events_parser.print_help()
+
 
     def help_calculate_xsect(self):
         """help for generate_events command"""
@@ -708,17 +711,9 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, opts, line) 
 
     def complete_generate_events(self, text, line, begidx, endidx):
-        """auto-completion for launch command"""
-        
-        args = self.split_arg(line[0:begidx])
-        if len(args) == 1:
-            #return mode
-            return self.list_completion(text,['LO','NLO'],line)
-        else:
-            opts = []
-            for opt in _generate_events_parser.option_list:
-                opts += opt._long_opts + opt._short_opts
-            return self.list_completion(text, opts, line) 
+        """auto-completion for generate_events command
+        call the compeltion for launch"""
+        self.complete_launch(text, line, begidx, endidx)
 
 
     def complete_shower(self, text, line, begidx, endidx):
@@ -836,7 +831,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def do_shower(self, line):
         """ run the shower on a given parton level file """
         argss = self.split_arg(line)
-        (options, argss) = _generate_events_parser.parse_args(argss)
+        (options, argss) = _launch_parser.parse_args(argss)
         # check argument validity and normalise argument
         options = options.__dict__
         options['reweightonly'] = False
@@ -956,76 +951,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO """
+        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO 
+        this function wraps the do_launch one"""
         
         self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
-        (options, argss) = _generate_events_parser.parse_args(argss)
+        (options, argss) = _calculate_xsect_parser.parse_args(argss)
         options = options.__dict__
         options['reweightonly'] = False
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
+        self.do_launch(line, options, argss)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-        
-        mode = argss[0]
-        self.ask_run_configuration(mode, options)
-
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
-
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
-
-        self.compile(mode, options) 
-        self.run(mode, options)
-        self.update_status('', level='all', update_results=True)
 
         
     ############################################################################      
     def do_generate_events(self, line):
-        """Main commands: generate events """
-        
-        self.start_time = time.time()
-        argss = self.split_arg(line)
-        # check argument validity and normalise argument
-        (options, argss) = _generate_events_parser.parse_args(argss)
-        options = options.__dict__
-        options['reweightonly'] = False
-        self.check_generate_events(argss, options)
-        
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-
-        mode = 'aMC@' + argss[0]
-        if options['parton'] and mode == 'aMC@NLO':
-            mode = 'noshower'
-        elif options['parton'] and mode == 'aMC@LO':
-            mode = 'noshowerLO'
-        self.ask_run_configuration(mode, options)
-
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
-
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
-
-        self.compile(mode, options) 
-        evt_file = self.run(mode, options)
-        if not options['parton']:
-            self.run_mcatnlo(evt_file)
-
-        self.update_status('', level='all', update_results=True)
+        """Main commands: generate events  
+        this function just wraps the do_launch one"""
+        self.do_launch(line)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1039,15 +984,28 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
-    def do_launch(self, line):
-        """Main commands: launch the full chain """
+    def do_launch(self, line, options={}, argss=[]):
+        """Main commands: launch the full chain 
+        options and args are relevant if the function is called from other 
+        functions, such as generate_events or calculate_xsect"""
         
-        self.start_time = time.time()
-        argss = self.split_arg(line)
-        # check argument validity and normalise argument
-        (options, argss) = _launch_parser.parse_args(argss)
-        options = options.__dict__
-        self.check_launch(argss, options)
+        if not argss and not options:
+            self.start_time = time.time()
+            argss = self.split_arg(line)
+            # check argument validity and normalise argument
+            (options, argss) = _launch_parser.parse_args(argss)
+            options = options.__dict__
+            self.check_launch(argss, options)
+
+        if 'run_name' in options.keys() and options['run_name']:
+            self.run_name = options['run_name']
+            # if a dir with the given run_name already exists
+            # remove it and warn the user
+            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
+                logger.warning('Removing old run information in \n'+
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
+                self.results.delete_run(self.run_name)
 
         if options['multicore']:
             self.cluster_mode = 2
@@ -1570,8 +1528,8 @@ Integrated cross-section
         except Exception as e:
             debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
 
-        logger.info(message+'\n')
         logger.debug(debug_msg+'\n')
+        logger.info(message+'\n')
         
         # Now copy relevant information in the Events/Run_<xxx> directory
         evt_path = pjoin(self.me_dir, 'Events', self.run_name)
@@ -1924,7 +1882,9 @@ Integrated cross-section
         else:            
             debug_msg += '\n\n  Inclusive timing profile non available.'
         
-        for name in stats['timings'].keys():
+        sorted_keys = sorted(stats['timings'].keys(), key= lambda stat: \
+                              sum(stats['timings'][stat].values()), reverse=True)
+        for name in sorted_keys:
             if name=='Total':
                 continue
             if sum(stats['timings'][name].values())<=0.0:
@@ -1937,17 +1897,17 @@ Integrated cross-section
                 debug_msg += '\n\n  Timing profile for %s unavailable.'%name
                 continue
             TimeList.sort()
-            debug_msg += '\n  Timing profile for %s :'%name
-            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
-                                             (TimeList[-1][0],TimeList[-1][1])
-            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
-                                             (TimeList[0][0],TimeList[0][1])
+            debug_msg += '\n  Timing profile for <%s> :'%name
             try:
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
                        float((100.0*(sum(stats['timings'][name].values())/
                                       sum(stats['timings']['Total'].values()))))
             except KeyError, ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
 
         # =============================     
         # == log file eror detection ==
@@ -3397,11 +3357,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if not mode =='onlyshower':
             self.run_card = self.banner.charge_card('run_card')
             self.run_tag = self.run_card['run_tag']
-            self.run_name = self.find_available_run_name(self.me_dir)
-            #add a tag in the run_name for distinguish run_type
-            if self.run_name.startswith('run_'):
-                if mode in ['LO','aMC@LO','noshowerLO']:
-                    self.run_name += '_LO' 
+            #this is if the user did not provide a name for the current run
+            if not hasattr(self, 'run_name') or not self.run_name:
+                self.run_name = self.find_available_run_name(self.me_dir)
+                #add a tag in the run_name for distinguish run_type
+                if self.run_name.startswith('run_'):
+                    if mode in ['LO','aMC@LO','noshowerLO']:
+                        self.run_name += '_LO' 
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
@@ -3466,7 +3428,7 @@ _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
-_launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
+_launch_parser.add_option("-x", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found")
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
@@ -3477,6 +3439,41 @@ _launch_parser.add_option("-p", "--parton", default=False, action='store_true',
 _launch_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from " + \
                             "the last available results")
+_launch_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
+
+
+_generate_events_usage = "generate_events [MODE] [options]\n" + \
+                "-- execute aMC@NLO \n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
+                "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
+                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
+                "     event file is generated which will be showered with the MonteCarlo specified \n" + \
+                "     in the run_card.dat\n"
+
+_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
+_generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the generate_events, without editing them")
+_generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',
+                            help="Submit the jobs on the cluster")
+_generate_events_parser.add_option("-m", "--multicore", default=False, action='store_true',
+                            help="Submit the jobs on multicore mode")
+_generate_events_parser.add_option("-x", "--nocompile", default=False, action='store_true',
+                            help="Skip compilation. Ignored if no executable is found")
+_generate_events_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
+                            help="Skip integration and event generation, just run reweight on the" + \
+                                 " latest generated event files (see list in SubProcesses/nevents_unweighted)")
+_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")
+_generate_events_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
+_generate_events_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
+
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -3490,9 +3487,10 @@ _calculate_xsect_parser.add_option("-c", "--cluster", default=False, action='sto
                             help="Submit the jobs on the cluster")
 _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
-_calculate_xsect_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
+_calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='store_true',
+                            help="Skip compilation. Ignored if no executable is found")
+_calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
@@ -3503,25 +3501,3 @@ _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
 
-_generate_events_usage = "generate_events [ORDER] [options]\n" + \
-                "-- generate events to be showered, corresponding to a cross-section computed up to ORDER.\n" + \
-                "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n" + \
-                "   The number of events and the specific parton shower MC can be specified \n" + \
-                "   in the run_card.dat\n"
-
-_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
-_generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
-                                help="Use the card present in the directory for the launch, without editing them")
-_generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',
-                            help="Submit the jobs on the cluster")
-_generate_events_parser.add_option("-m", "--multicore", default=False, action='store_true',
-                            help="Submit the jobs on multicore mode")
-_generate_events_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
-_generate_events_parser.add_option("-o", "--only-generation", default=False, action='store_true',
-                            help="Skip grid set up, just generate events starting from" + \
-                            "the last available results")
-_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
-                            help="Stop the run after the parton level file generation (you need " + \
-                                    "to shower the file in order to get physical results)")

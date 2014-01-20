@@ -1515,11 +1515,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
             raise self.WebRestriction, 'import requires at least one option'
         
         if args[0] not in self._import_formats:
-            args[:] = ['command', './Cards/proc_card_mg5.dat']
+            args[:] = ['command', './proc_card_mg5.dat']
         elif args[0] == 'proc_v4':
-            args[:] = [args[0], './Cards/proc_card.dat']
+            args[:] = [args[0], './proc_card.dat']
         elif args[0] == 'command':
-            args[:] = [args[0], './Cards/proc_card_mg5.dat']
+            args[:] = [args[0], './proc_card_mg5.dat']
 
         CheckValidForCmd.check_import(self, args)
         
@@ -1556,12 +1556,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
     def check_output(self, args):
         """ check the validity of the line"""
 
-        
         # first pass to the default
         CheckValidForCmd.check_output(self, args)
+        args[:] = ['.', '-f']        
         
-        args[:] = [self._export_format, '.', '-f']
-
+        self._export_dir = os.path.realpath(os.getcwd())
         # Check that we output madevent
         if 'madevent' != self._export_format:
                 raise self.WebRestriction, 'only available output format is madevent (at current stage)'
@@ -3009,6 +3008,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         proc_line = " ".join(args[1:])
         myprocdef = self.extract_process(proc_line)
 
+        # If the test has to write out on disk, it should do so at the location
+        # specified below where the user must be sure to have writing access.
+        output_path = os.getcwd()
+
         # Check that we have something    
         if not myprocdef:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -3075,14 +3078,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
-                                                  cmd = self,
-                                                  )        
+                                                  output_path = output_path,
+                                                  cmd = self)        
 
         if args[0] in ['stability']:
             stability = process_checks.check_stability(myprocdef,
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
+                                                  output_path = output_path,
                                                   cmd = self)
 
         if args[0] in ['profile']:
@@ -3092,6 +3096,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                   param_card = param_card,
                                                   cuttools=CT_dir,
                                                   options = options,
+                                                  output_path = output_path,
                                                   cmd = self)
 
         if args[0] in  ['gauge', 'full'] and \
@@ -3119,6 +3124,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                 options=options,
                                                 cuttools=CT_dir,
                                                 reuse = options['reuse'],
+                                                output_path = output_path,
                                                 cmd = self)
             
             # restore previous settings
@@ -3133,6 +3139,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                             cuttools=CT_dir,
                                             reuse = options['reuse'],
                                             cmd = self,
+                                            output_path = output_path,
                                             options=options)
             nb_processes += len(comparisons[0])
 
@@ -3143,6 +3150,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
+                                          output_path = output_path,
                                           options=options)
             nb_processes += len(lorentz_result)
         
@@ -3152,6 +3160,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                           cuttools=CT_dir,
                                           reuse = options['reuse'],
                                           cmd = self,
+                                          output_path = output_path,
                                           options=options)
             nb_processes += len(gauge_result)     
             
@@ -3180,14 +3189,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if stability:
             text += 'Stability result for the '+('optimized' if \
               self.options['loop_optimized_output'] else 'default')+' output:\n'
-            text += process_checks.output_stability(stability,
-                                    mg_root=self._mgme_dir)
+            text += process_checks.output_stability(stability,output_path)
         
         if profile_time and profile_stab:
             text += 'Timing result '+('optimized' if \
                     self.options['loop_optimized_output'] else 'default')+':\n'
             text += process_checks.output_profile(myprocdef, profile_stab,
-                                   profile_time, self._mgme_dir,options['reuse']) + '\n'
+                             profile_time, output_path, options['reuse']) + '\n'
         if lorentz_result:
             text += 'Lorentz invariance results:\n'
             text += process_checks.output_lorentz_inv(lorentz_result) + '\n'
@@ -4157,10 +4165,27 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
             status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            
         if not status:
             logger.info('Compilation succeeded')
         else:
-            logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
+            # For pythia-pgs check when removing the "-fno-second-underscore" flag
+            if name == 'pythia-pgs':
+                to_comment = ['libraries/PGS4/src/stdhep-dir/mcfio/arch_mcfio',
+                              'libraries/PGS4/src/stdhep-dir/src/stdhep_Arch']
+                for f in to_comment:
+                    f = pjoin(MG5DIR, name, *f.split('/'))
+                    text = "".join(l for l in open(f) if 'fno-second-underscore' not in l)
+                    fsock = open(f,'w').write(text)
+                try:
+                    misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
+                except Exception:
+                    pass
+                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+            if not status:
+                logger.info('Compilation succeeded')
+            else:
+                logger.warning('Error detected during the compilation. Please check the compilation error and run make manually.')
 
 
         # Special treatment for TD/Ghostscript program (require by MadAnalysis)
@@ -5261,7 +5286,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         
         options = config[self._export_format]
         # check
-        if not noclean and os.path.isdir(self._export_dir) and options['check']:
+        if os.path.realpath(self._export_dir) == os.getcwd():
+            if not args[0] in ['.', '-f']:
+                raise self.InvalidCmd, 'Wrong path directory to create in local directory use \'.\''                
+        elif not noclean and os.path.isdir(self._export_dir) and options['check']:
             if not force:
                 # Don't ask if user already specified force or noclean
                 logger.info('INFO: directory %s already exists.' % self._export_dir)

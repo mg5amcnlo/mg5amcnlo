@@ -370,7 +370,12 @@ class aMCatNLOLauncher(ExtLauncher):
         
         #Check if some configuration were overwritten by a command. If so use it    
         set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        all_options = usecmd.options_configuration.keys() +  usecmd.options_madgraph.keys() + usecmd.options_madevent.keys()
         for line in set_cmd:
+            arg = line.split()
+            if arg[1] not in all_options:
+                continue
+            misc.sprint(line)
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
@@ -381,7 +386,9 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name']])
+        if self.options['name']:
+            option_line += '--name %s' %  self.options['name']  
         command = 'launch ' + self.run_mode + ' ' + option_line
 
         if mode == "1":

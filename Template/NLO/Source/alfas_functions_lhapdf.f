@@ -81,13 +81,10 @@ c
       external alphasPDF
 
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
 
-c     This function takes 20 micro seconds to run, so it
-c     is fine to time it with cpu_time which takes 0.3 microsec only
-
+c     This function takes 20 micro seconds to run, so it is ok to profile
+c     it with the 0.3 ms function cpu_time.
       call cpu_time(tbefore)
       ALPHAS=alphasPDF(Q)
       call cpu_time(tAfter)

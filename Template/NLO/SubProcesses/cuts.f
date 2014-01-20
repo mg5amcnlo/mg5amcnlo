@@ -247,7 +247,7 @@ c more than the Born).
 
 c Uncomment for bypassing jet algo and cuts
 c$$$      goto 122
-      if (ptj.gt.0d0.or.nQCD.gt.1) then
+      if (ptj.gt.0d0.and.nQCD.gt.1) then
 
 c Cut some peculiar momentum configurations, i.e. two partons very soft.
 c This is needed to get rid of numerical instabilities in the Real emission

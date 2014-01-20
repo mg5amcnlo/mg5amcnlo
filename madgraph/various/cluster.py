@@ -111,6 +111,9 @@ class Cluster(object):
             cwd = os.getcwd()
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+            
+        if not required_output and output_files:
+            required_output = output_files
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir or \
             (input_files == [] == output_files):
@@ -777,6 +780,9 @@ class CondorCluster(Cluster):
            input/output file should be give relative to cwd
         """
         
+        if not required_output and output_files:
+            required_output = output_files
+        
         if (input_files == [] == output_files):
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
@@ -1006,12 +1012,13 @@ class PBSCluster(Cluster):
             if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
-                status = line.split()[4]
+                jobstatus = line.split()[4]
+                
         if status.returncode != 0:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
-        if status in self.idle_tag:
+        if jobstatus in self.idle_tag:
             return 'I' 
-        elif status in self.running_tag:                
+        elif jobstatus in self.running_tag:                
             return 'R' 
         return 'F'
         

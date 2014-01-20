@@ -2,6 +2,8 @@
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+c     Timing profile statistics
+      include 'timing_variables.inc'
       integer ndim,iconfig
       double precision wgt,x(99),p(0:3,nexternal)
       integer iforest(2,-max_branch:-1,lmaxconfigs)
@@ -29,7 +31,9 @@ c      integer mapconfig(0:lmaxconfigs)
       common/ciconfig0/iconfig0
       include 'coupl.inc'
       include 'born_props.inc'
-c      
+c     
+      call cpu_time(tBefore)
+c
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
@@ -52,6 +56,8 @@ c the updated wgt (i.e. the jacobian for the event)
       enddo
       wgt=wgt*jac
 c
+      call cpu_time(tAfter)      
+      tGenPS = tGenPS + (tAfter-tBefore)
       return
       end 
       
@@ -1369,8 +1375,11 @@ c
          xiimin=0d0
       endif
       if (xiimax.lt.xiimin) then
-         write (*,*) 'Error #10 in genps_fks.f',icountevts,xiimax,xiimin
-         stop
+         write (*,*) 'WARNING #10 in genps_fks.f',icountevts,xiimax
+     $        ,xiimin
+         xjac=-342d0
+         pass=.false.
+         return
       endif
 
       xinorm=xiimax-xiimin

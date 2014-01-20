@@ -8,7 +8,7 @@
      
   
 ------------------------------------------------------------------------
-|              You are using CutTools - Version 1.9.0                  |
+|              You are using CutTools - Version 1.9.1                  |
 |              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |
 |              Published in JHEP 0803:042,2008                         |
 |              http://www.ugr.es/~pittau/CutTools                      |
@@ -18,12 +18,12 @@
    
 ########################################################################
 #                                                                      #
-#                      You are using OneLOop-3.2                       #
+#                      You are using OneLOop-3.4                       #
 #                                                                      #
 # for the evaluation of 1-loop scalar 1-, 2-, 3- and 4-point functions #
 #                                                                      #
 # author: Andreas van Hameren <hamerenREMOVETHIS@ifj.edu.pl>           #
-#   date: 19-07-2012                                                   #
+#   date: 02-01-2014                                                   #
 #                                                                      #
 # Please cite                                                          #
 #    A. van Hameren,                                                   #
