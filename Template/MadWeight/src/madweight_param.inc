@@ -39,7 +39,7 @@ c
 c
 c     ISR mode
 c
-      character*1 integrator
+      integer integrator
       common /to_integrator/integrator
       integer ISR
       common /to_correct_ISR/ISR

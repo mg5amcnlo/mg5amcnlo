@@ -26,6 +26,6 @@ MW_run          nwa           nwa              logical    .false.
 MW_run          isr           isr              integer    0
 MW_run          use_cut       use_cut          logical    .false.
 MW_run          bw_cut        bw_cut           logical    .false.
-MW_run          integrator    integrator       string     'v'
+MW_run          integrator    integrator       integer     0
 MW_run          use_sobol     use_sobol        logical    .false.
 MW_run          pretrained    pretrained       logical    .true.

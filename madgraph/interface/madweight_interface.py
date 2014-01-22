@@ -337,6 +337,15 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         misc.compile(arg=["../lib/libmodel.a"], cwd=pjoin(self.me_dir,'Source')) 
         misc.compile(arg=["../lib/libgeneric.a"], cwd=pjoin(self.me_dir,'Source')) 
         misc.compile(arg=["../lib/libcernlib.a"], cwd=pjoin(self.me_dir,'Source')) 
+
+#
+#       here check validity of some parameters
+        if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['montecarlo_perm']=='t':
+           raise Exception, 'Cannot use mint if monte carlo over permutations'
+        if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['use_sobol']=='t':
+           raise Exception, 'sobol generator with mint not implemented'
+ 
+
         
         for MW_dir in self.MWparam.MW_listdir:
             misc.compile(cwd=pjoin(self.me_dir,'SubProcesses', MW_dir))
