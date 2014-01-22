@@ -2333,6 +2333,16 @@
    allocate          (vveck1(dmns_b), stat=ierr)
    allocate          (b_rat1(dmns_b), stat=ierr)
    allocate         (b3_rat1(dmns_b), stat=ierr)
+   p0vecb=0.0d0
+   l5vec=0.0d0
+   l6vec=0.0d0
+   bcoeff=0.0d0
+   bcoeff_2=0.0d0
+   save_bcoeff=0.0d0
+   vvecb=0.0d0
+   vveck1=0.0d0
+   b_rat1=0.0d0
+   b3_rat1=0.0d0
   end subroutine dp_allocate_vectorsb
 !
   subroutine dp_allocate_vectorsa
@@ -2345,6 +2355,15 @@
    allocate (save_acoeff(0:4,dmns_a), stat=ierr)
    allocate   (kvec(0:3,dmns_a),      stat=ierr) 
    allocate     (a_rat1(dmns_a),      stat=ierr) 
+   vveca=0.0d0
+   p0veca=0.0d0
+   l7vec=0.0d0
+   l8vec=0.0d0
+   acoeff=0.0d0
+   acoeff_2=0.0d0
+   save_acoeff=0.0d0
+   kvec=0.0d0
+   a_rat1=0.0d0
   end subroutine dp_allocate_vectorsa
 !
   subroutine mp_allocate_arrays(np)
