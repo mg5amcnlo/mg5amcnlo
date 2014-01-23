@@ -636,6 +636,29 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             value = question_instance.default(default)
         return value
  
+    def do_import(self, line):
+        """Advanced commands: Import command files"""
+
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_import(args)
+        
+        # Execute the card
+        self.import_command_file(args[1])
+         
+    def check_import(self, args):
+        """check import command"""
+        
+        if '-f' in args:
+            self.force = True
+            args.remove('-f')
+        if args[0] != 'command':
+            args.set(0, 'command')
+        if len(args) != 2:
+            raise self.InvalidCmd('import command requires one filepath argument')
+        if not os.path.exists(args[1]):
+            raise 'No such file or directory %s' % args[1]
+        
     
     def check_answer_in_input_file(self, question_instance, default, path=False):
         """Questions can have answer in output file (or not)"""

@@ -1479,18 +1479,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_element,
             fortran_model)
 
-        if self.opt['export_format']=='standalone_msP':
-            filename = 'configs_production.inc'
+        if self.opt['export_format'] == 'standalone_msP':
+            filename =  pjoin(dirpath,'configs_production.inc')
             mapconfigs, s_and_t_channels = self.write_configs_file(\
                 writers.FortranWriter(filename),
                 matrix_element)
 
-            filename = 'props_production.inc'
+            filename =  pjoin(dirpath,'props_production.inc')
             self.write_props_file(writers.FortranWriter(filename),
                              matrix_element,
                              s_and_t_channels)
 
-            filename = 'nexternal_prod.inc'
+            filename =  pjoin(dirpath,'nexternal_prod.inc')
             self.write_nexternal_madspin(writers.FortranWriter(filename),
                              nexternal, ninitial)
 

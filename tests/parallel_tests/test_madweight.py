@@ -192,8 +192,8 @@ class TestMadWeight(unittest.TestCase):
         #except Exception, error:
         #    pass
 
-            
-    def test_short_mw_wa(self):
+
+    def test_short_mw_wa_refine(self):
         """checking that the weight for p p > w a, w > l- is working"""
 
         try:
@@ -213,7 +213,12 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_parameter 12 23
                  set mw_parameter 13 80 90
-                 set mw_run MW_int_points 2500 
+                 set mw_run MW_int_points 100
+                 set mw_run MW_int_refine 100
+                 launch -i
+                 refine 0.01
+                 set mw_run MW_int_points 1000
+                 set mw_run MW_int_refine 10000
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
@@ -226,7 +231,7 @@ class TestMadWeight(unittest.TestCase):
             stderr=devnull
         
         start = time.time()
-        print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print 'this mw test is expected to take 15s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),

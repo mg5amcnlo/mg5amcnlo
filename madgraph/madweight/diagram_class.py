@@ -375,7 +375,6 @@ class MG_diagram(diagram):
 
         for pid in particle_list_pid:
             if pid not in decay_list_pid:
-                print 'error 377'
                 return 0
             
         #print 'pass in step 3 '

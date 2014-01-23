@@ -232,7 +232,7 @@ c
             if (loop_index.eq.1) then
                 ITMX=2
 
-                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                if ((.not.montecarlo_perm).and.(integrator.eq.1)) then
                    nitmax=ITMX
                    ncalls0=ncall
                    call mint(fct_mint,ndim,ncalls0,nitmax,imode,
@@ -275,7 +275,7 @@ c             write(*,*) 'cross', cross
                 do i = 1, NPERM
                     perm_order(i,config_pos) = i
                 enddo
-                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                if ((.not.montecarlo_perm).and.(integrator.eq.1)) then
                    nitmax=ITMX
                    ncalls0=ncall
                    call mint(fct_mint,ndim,ncalls0,nitmax,imode,
@@ -284,7 +284,7 @@ c             write(*,*) 'cross', cross
                    CALL VEGAS(fct,CROSS,SD,CHI)
                 endif
              else
-                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                if ((.not.montecarlo_perm).and.(integrator.eq.1)) then
                    nitmax=ITMX
                    ncalls0=ncall
                    call mint(fct_mint,ndim,ncalls0,nitmax,imode,
@@ -301,7 +301,7 @@ c            See if this is require to continue to update this
 c                NCALL = NCALL * nb_sol_perm
                 ITMX = max_it_step2
                 acc = max(0.9*check_value/(cross+3*SD), final_prec)
-                if ((.not.montecarlo_perm).and.(integrator.eq.'m')) then
+                if ((.not.montecarlo_perm).and.(integrator.eq.1)) then
                    nitmax=ITMX
                    ncalls0=ncall
                    call mint(fct_mint,ndim,ncalls0,nitmax,imode,

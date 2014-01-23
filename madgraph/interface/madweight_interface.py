@@ -325,7 +325,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
         write_MadWeight.create_all_fortran_code(self.MWparam)
         
-    def do_compile(self, line):
+    def do_compile(self, line, refine=False):
         """MadWeight Function:compile the code"""
         self.configure()
         
@@ -348,8 +348,14 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
 
         
         for MW_dir in self.MWparam.MW_listdir:
-            misc.compile(cwd=pjoin(self.me_dir,'SubProcesses', MW_dir))
-            if not os.path.exists(pjoin(self.me_dir,'SubProcesses',MW_dir, 'comp_madweight')):
+            logger.info('compile %s' %MW_dir)
+            pdir = pjoin(self.me_dir,'SubProcesses',MW_dir)
+            if refine and os.path.exists(pjoin(pdir, 'initialization.o')):
+                os.remove(pjoin(pdir, 'initialization.o'))
+            if refine and  os.path.exists(pjoin(pdir, 'comp_madweight')):
+                os.remove(pjoin(pdir, 'comp_madweight'))
+            misc.compile(cwd=pdir)
+            if not os.path.exists(pjoin(pdir, 'comp_madweight')):
                 raise Exception, 'compilation fails'
         logger.info('MadWeight code has been compiled.')
         
@@ -415,6 +421,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_submit_jobs(self, line):
         """MadWeight Function:Submitting the jobs to the cluster"""
         
+        self.clean_old_run(keep_event=True)
         self.configure()
         args = self.split_arg(line)
         self.check_launch_jobs(args)
@@ -525,16 +532,15 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         else:
             out_path = pjoin(out_dir, 'output.xml')
             if os.path.exists(out_path):
-                answer = self.ask('output file already exists. Do you want to run a refine?', 'stop',
-                         ['y','n','stop'])
-                if answer == 'y':
-                    args.append('-refine')
-                    out_path = pjoin(out_dir, 'refine.xml')
-                    logger.warning("The correct command is ./bin/mw_options collect -refine")
-                elif answer == 'stop':
-                    logger.warning("The correct command for refine is ./bin/mw_options collect -refine")
-                    return
-
+                logger.warning('Output file already exists. Current one will be tagged with _old suffix')
+                logger.warning('Run "collect -refine to instead update your current results."')
+                files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+                files.mv(pjoin(out_dir, 'weights.out'), pjoin(out_dir, 'weights.out'))
+                for MWdir in self.MWparam.MW_listdir:
+                    out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+                    files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+                out_dir = pjoin(self.me_dir, 'Events', name)
+                    
         fsock = open(out_path, 'w')
         fsock.write('<madweight>\n<banner>\n')
         # BANNER
@@ -544,6 +550,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             fsock.write(open(pjoin(self.me_dir,'Cards',card)).read().replace('<','!>'))
             fsock.write('</%s>\n' % cname)
         fsock.write('</banner>\n')
+        at_least_one = False
         for MWdir in self.MWparam.MW_listdir:
             out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
             input_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
@@ -557,6 +564,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
             fsock2.write('<subprocess id=\'%s\'>\n' % MWdir)
             for output in glob.glob(pjoin(input_dir, 'output_*_*.xml')):
+                at_least_one = True
                 text = open(output).read()
                 fsock2.write(text)
                 fsock.write(text)
@@ -572,11 +580,23 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             for MWdir in self.MWparam.MW_listdir:
                 out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
                 ref_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
+                xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
                 base_output = xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
+
                 base_output.refine(ref_output)
                 files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
                 base_output.write(pjoin(out_dir, 'output.xml'), MWdir)
-
+        elif not at_least_one:
+            logger.warning("Nothing to collect restore _old file as current.")
+            out_dir = pjoin(self.me_dir, 'Events', name)
+            files.mv(pjoin(out_dir, 'output_old.xml'), pjoin(out_dir, 'output.xml'))
+            files.mv(pjoin(out_dir, 'weights_old.out'), pjoin(out_dir, 'weights.out'))
+            for MWdir in self.MWparam.MW_listdir:
+                out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+                files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+            
+            
+            
         # 3. Read the (final) log file for extracting data
         total = {}
         likelihood = {}
@@ -729,6 +749,19 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if args[0] < 0 or args[0]>1:
             raise self.InvalidCmd('The first argument should be a number between 0 and 1.')
     
+    def clean_old_run(self, keep_event=False):
+        
+        for MWdir in self.MWparam.MW_listdir:
+            input_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, self.MWparam.name)
+            if not os.path.exists(input_dir):
+                continue
+            for filename in os.listdir(input_dir):
+                if keep_event and filename.startswith('verif'):
+                    continue
+                os.remove(pjoin(input_dir, filename))
+            
+            
+    
     def do_refine(self, line):
         """MadWeight Function:syntax: refine X
         relaunch the computation of the weight which have a precision lower than X"""
@@ -736,7 +769,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         self.check_refine(args)
         self.configure()
         
-        
+        self.clean_old_run(keep_event=True)     
+        if not self.force:
+            cards = ['madweight_card.dat'] 
+            self.ask_edit_cards(cards, mode='fixed', plot=False)
+            self.exec_cmd("treatcards")
+            self.do_compile('', refine=True) # force re-compilation
         
         nb_events_by_file = self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing'] 
         asked_events = self.MWparam['mw_run']['nb_exp_events']
@@ -747,14 +785,18 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         # events/cards to refine
         fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'), 'r')
         for line in fsock:
-            line = line.split('#')[0].split()
-            if len(line) == 4:
-                lhco_nb, card_nb, value, error = line
+            if '#' in line:
+                line = line.split('#')[0]
+            line = line.split()
+            if len(line) == 5:
+                lhco_nb, card_nb, tf_set, value, error = line
             else:
                 continue
+            if tf_set != '1':
+                continue
             if float(value) * precision < float(error):
-                allow_refine.append((int(card_nb), int(lhco_nb)))
-
+                allow_refine.append((int(card_nb), lhco_nb))
+                
         xml_reader = MWParserXML(keep_level=self.MWparam['mw_run']['log_level'])        
         for MWdir in self.MWparam.MW_listdir:
             # We need to know in which file are written all the relevant event
@@ -764,14 +806,17 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 for line in open(pjoin(self.me_dir, 'SubProcesses', MWdir, name, evt)):
                     split = line.split()
                     if len(split) == 3:
-                        event_to_file[int(split[1])] = evt_nb
+                        event_to_file[split[1]] = evt_nb
 
             to_refine = {}
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
-
-            generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
-            for card, event, obj in generator:
+            generator =  ((int(i),j,int(k),data[i][j][k]) for i in data 
+                                                               for j in data[i] 
+                                                               for k in data[i][j])
+            for card, event, tf_set, obj in generator:
+                if tf_set != 1:
+                    continue
                 value, error = obj.value, obj.error
                 if value * precision < error:
                     if card not in to_refine:
@@ -780,7 +825,6 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                         to_refine[card].append(event)
             if to_refine:
                 self.resubmit(MWdir, to_refine, event_to_file)
-        
         
         # control
         starttime = time.time()
@@ -791,7 +835,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         except Exception:
             self.cluster.remove()
             raise                
-        except KeyboardInterupt:
+        except KeyboardInterrupt:
             if not self.force:
                 ans = self.ask('Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])
@@ -822,23 +866,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     self.submit_job(M_path, card, i, evt_file=evt_nb,
                                     restrict_evt=sub_list)                        
         
-
-    def collect_for_refine(self):
-        """Collect data for refine"""
-
-        #1 Load the object
-        #2 Load the new object
-        #3 Merge them
         
-        xml_reader = MWParserXML()
-        for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
-            data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
-        
-        
-
-
-
         
 #===============================================================================
 # MadEventCmd
@@ -855,17 +883,17 @@ class CollectObj(dict):
     def refine(self, other):
         
         for card, CardDATA in other.items():
-            if card not in self.output:
-                self.output[card] = other[card]
+            if card not in self:
+                self[card] = other[card]
                 continue
             
             for event, obj2 in CardDATA.items():
-                self.output[card][event] = obj2
+                self[card][event] = obj2
+
         
     
     def write(self, out_path, MWdir):
         """ """
-        
         fsock = open(out_path, 'w')
         fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
         for card in self:
@@ -875,6 +903,7 @@ class CollectObj(dict):
             fsock.write('</card>\n')
         
         fsock.write('</subprocess>')
+        fsock.close()
         
 
 #1 ################################################################################# 
@@ -924,6 +953,8 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             else:
                 data =  MW_driver.Weight(id, self.keep_level)
                 self.all_event[(card,id)] = data
+            data.value = value
+            data.error = error
             self.in_el['event'] = data
             # assign it in the mother:
             card = self.in_el['card']
@@ -933,6 +964,8 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             value = float(attributes['value'])
             error = float(attributes['error'])
             data =  MW_driver.TFsets(id)
+            data.value = value
+            data.error = error
             data.add('0', '', value, error, '')
             #assign it to the mother:
             event = self.in_el['event']

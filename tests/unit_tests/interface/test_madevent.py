@@ -78,6 +78,15 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertEqual(detect(pjoin(card_dir, 'pgs_card_default.dat')),
                          'pgs_card.dat')
         
+        # Reweight
+        card_dir= pjoin(root_path,'..','Template','LO', 'Cards')
+        self.assertEqual(detect(pjoin(card_dir, 'reweight_card_default.dat')),
+                         'reweight_card.dat')
+        
+        #MadSpin card are tested in their specific routine. (in fact acceptance test)
+        card_dir= pjoin(root_path,'..','Template', 'Common', 'Cards')
+        self.assertEqual(detect(pjoin(card_dir, 'madspin_card_default.dat')),
+                         'madspin_card.dat') 
         
     def test_help_category(self):
         """Check that no help category are introduced by mistake.

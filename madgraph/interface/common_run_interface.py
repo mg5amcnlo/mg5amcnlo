@@ -637,6 +637,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'madspin_card.dat'
         elif 'launch' in text and 'set' in text:
             return 'reweight_card.dat'
+        elif 'decay' in text and 'launch' in text:
+            return 'madspin_card.dat'
         else:
             return 'unknown'
 
