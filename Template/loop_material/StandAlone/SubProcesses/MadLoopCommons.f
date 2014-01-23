@@ -43,6 +43,10 @@
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
+      LOGICAL RCINIT
+      DATA RCINIT/.TRUE./
+      COMMON/REDUCTIONCODEINIT/RCINIT
+
       character(512) MLPath
       data MLPath/'[[NA]]'/      
       common/MLPATH/MLPath

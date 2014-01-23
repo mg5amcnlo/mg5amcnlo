@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
  
-              CutTools V1.9.2 (Jan 17 2014)
+              CutTools V1.9.3 (Jan 23 2014)
 
               contact author: pittau@ugr.es
 
@@ -494,6 +494,10 @@ compiling and running example0.f in the directory "examples"
   and      cts_qprec.in  <- cts_mprec.in 
   in directory cts
 
+- Jan 23 2014:
+
+  All variables initialized to 0 after any "allocate" statement
+
 ---------------------------------------------------------------------------
-Last modification of this document: Jan 17 2014
+Last modification of this document: Jan 23 2014
 ---------------------------------------------------------------------------

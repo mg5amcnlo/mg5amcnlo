@@ -1,10 +1,10 @@
 PRECISION= QP
 #PRECISION= MP
-CTS_VERSION = v1.9.2
+CTS_VERSION = v1.9.3
 SRC = ./src
 EXE = 
 FC  = gfortran
-FFLAGS = -fno-automatic -O2 -funroll-all-loops  
+FFLAGS = -fPIC -fno-automatic -O2 -funroll-all-loops  
 #FFLAGS = -fno-automatic -Ofast -funroll-all-loops  
 BLD = includects
 CTS_DIR = cuttools_$(CTS_VERSION)
