@@ -1,14 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.0.1(23/12/13) RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
+2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
+                    the bug fix in 2.0.0
+                RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
                     In rare cases this error stopped the code, while this was not needed.
                 RF: When using non-optimized loop output, the code now also works fine.
                 OM: Modification of the code to allow the code to run on our servers
-                OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
-                    the bug fix in 2.0.0
                 VH: Improve the timing routine of the NLO code (displayed in debug mode)
                 VH: FIX the import of old UFO model (those without the all_orders attribute).
-
+                OM: Add a functionalities for restrict_model if a file paramcard_RESTRICTNAME.dat
+                    exists, then this file is use as default param_card for that restriction.
 
 2.0.0(14/12/13)    CHANGE IN DEFAULT:
                    ------------------

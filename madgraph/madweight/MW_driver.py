@@ -41,7 +41,7 @@ class RunningMW(object):
         self.last_line = ''
         self.nb_line_by_event = 0
         
-        restrict_path = evt_file.replace('verif','restrict')
+        restrict_path = evt_file.replace('verif','restrict%i' % self.card_nb).replace('.lhco','.dat')
         if os.path.exists(restrict_path):
             allow = map(int, open(restrict_path).read().split())
             self.allow_event = lambda x: int(x) in allow
@@ -59,7 +59,6 @@ class RunningMW(object):
         self.fsock = open('output_%s_%s.xml' % (self.card_nb, self.sample_nb), 'w')
         self.fsock.write('<card id=\'%s\'>\n' % self.card_nb)
         while self.get_next_event(create=True):
-            
             if not self.debug:
                 subprocess.call('./comp_madweight', stdout=open('log.txt','w'))
             else:
@@ -70,17 +69,21 @@ class RunningMW(object):
             self.get_one_job_result()
         self.fsock.write('</card>')
     
-    def get_next_event(self, create=True):
+    def get_next_event(self, create=True, update_event_nb=True):
         """prepare the verif.lhco"""
     
-        self.current_event +=1
-        if self.current_event >= self.first_event + self.nb_events:
-            return False
 
-        if self.current_event == 0:
+
+        if self.current_event == -1:
             self.input_file = open(self.evtfile)
+            self.current_event +=1
             for i in range(self.first_event):
                 self.get_next_event(False)
+        
+        if update_event_nb:
+            self.current_event +=1
+            if self.current_event >= self.first_event + self.nb_events + 1:
+                return False
         
         evt = self.last_line
         self.last_line = '' 
@@ -106,30 +109,31 @@ class RunningMW(object):
         if not evt:
             return False    
         
-        # now write the verif.lhco event:
-        if create:
-            try:
-                self.lhco_number = int(evt.split('\n')[0].split()[1])
-            except ValueError:
-                self.lhco_number = evt.split('\n')[0].split()[1]
-                evt = evt.split('\n')
-                id, nblhco, trigger = evt[0].split()
-                if '.' in nblhco:
-                    nblhco, _ = nblhco.split('.',1)
-                elif ',' in nblhco:
-                    nblhco, _ = nblhco.split(',',1)
-                nblhco = ''.join(i for i in nblhco if i.isdigit())
-                if not nblhco:
-                    nblhco = '1'
-                
-                evt[0] = ' '.join([id, nblhco,trigger])
-                evt = '\n'.join(evt)
-            if self.allow_event(self.lhco_number):
+
+        try:
+            self.lhco_number = int(evt.split('\n')[0].split()[1])
+        except ValueError:
+            self.lhco_number = evt.split('\n')[0].split()[1]
+            evt = evt.split('\n')
+            id, nblhco, trigger = evt[0].split()
+            if '.' in nblhco:
+                nblhco, _ = nblhco.split('.',1)
+            elif ',' in nblhco:
+                nblhco, _ = nblhco.split(',',1)
+            nblhco = ''.join(i for i in nblhco if i.isdigit())
+            if not nblhco:
+                nblhco = '1'
+            
+            evt[0] = ' '.join([id, nblhco,trigger])
+            evt = '\n'.join(evt)
+        if self.allow_event(self.lhco_number):
+            # now write the verif.lhco event:
+            if create:
                 fsock = open('verif.lhco', 'w')
                 fsock.write(evt)
                 fsock.close()
-            else:
-                return self.get_next_event(create)
+        else:
+            return self.get_next_event(create, update_event_nb=False)
             
         return evt
 

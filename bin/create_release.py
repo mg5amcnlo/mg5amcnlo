@@ -123,7 +123,7 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
         web_version = int(filetext.read().strip())            
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")

@@ -1,1 +1,1 @@
-../src/cts/cts_mprec.h
+  use mpmodule

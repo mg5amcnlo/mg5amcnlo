@@ -477,9 +477,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         if restrict_evt:
             restrict_path = pjoin(self.me_dir, 'SubProcesses', dirname, name, 
-                                                  'restrict_%i.dat' % evt_file)
+                                                  'restrict%i_%i.dat' % (nb_card,evt_file))
             input_files.append(restrict_path)
-            open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))
+            #open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))
         
         # Need to add PDF (maybe also symfact, ...) ?
         
@@ -719,6 +719,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 if zipped:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco.gz'))
+                    if os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')):
+                        os.remove(pjoin(self.me_dir, 'Events', 'input.lhco'))
                 else:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco'))                
@@ -796,8 +798,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 continue
             if float(value) * precision < float(error):
                 allow_refine.append((int(card_nb), lhco_nb))
-                
-        xml_reader = MWParserXML(keep_level=self.MWparam['mw_run']['log_level'])        
+        logger.info("%s selected jobs for the refinment." % len(allow_refine))
         for MWdir in self.MWparam.MW_listdir:
             # We need to know in which file are written all the relevant event
             event_to_file = {}
@@ -807,9 +808,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     split = line.split()
                     if len(split) == 3:
                         event_to_file[split[1]] = evt_nb
-
             to_refine = {}
             out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
+            xml_reader = MWParserXML(keep_level='weight')
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
             generator =  ((int(i),j,int(k),data[i][j][k]) for i in data 
                                                                for j in data[i] 
@@ -849,7 +850,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 
     def resubmit(self, M_path, to_refine, event_to_file):
         """resubmit various jobs"""
-        
+
         for card, event_list in to_refine.items():
             packets = {}
             for event in event_list:
@@ -858,13 +859,21 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     packets[evt_nb_file].append(event)
                 else:
                     packets[evt_nb_file] = [event]
+
+#                evt_file = (sample_nb // self.MWparam['mw_run']['event_packing'])
+#        open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))   
+
             max_evts = self.MWparam['mw_run']['nb_event_by_node']
             for evt_nb, evt_list in packets.items():
+                restrict_path = pjoin(self.me_dir, 'SubProcesses', M_path, self.MWparam.name, 
+                                                  'restrict%i_%i.dat' % (card,evt_nb_file))
+                open(restrict_path, 'w').write(' '.join(map(str, evt_list)))  
+                
                 nb_weights = len(evt_list)
                 for i in range(1+ (nb_weights-1)//max_evts):
-                    sub_list = evt_list[max_evts * i: max_evts * (i+1)]
+                    #sub_list = evt_list[max_evts * i: max_evts * (i+1)]
                     self.submit_job(M_path, card, i, evt_file=evt_nb,
-                                    restrict_evt=sub_list)                        
+                                    restrict_evt=True)                        
         
         
         
@@ -977,7 +986,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             id = attributes['id']
             value = float(attributes['value'])
             error = float(attributes['error'])
-            data =  MW_driver.Permutation(id, tfset.tf_set, '')
+            data =  MW_driver.Permutation(id, '')
             data.value = value
             data.error = error
             self.in_el['permutation'] = data
@@ -1012,6 +1021,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
     #2 ############################################################################# 
     def read_file(self,filepos):
         """ parse the file and fulfill the object """
+        self.output = CollectObj()
         parser = xml.sax.make_parser(  )
         parser.setContentHandler(self)
         parser.parse(filepos)
