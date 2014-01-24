@@ -1479,18 +1479,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_element,
             fortran_model)
 
-        if self.opt['export_format']=='standalone_msP':
-            filename = 'configs_production.inc'
+        if self.opt['export_format'] == 'standalone_msP':
+            filename =  pjoin(dirpath,'configs_production.inc')
             mapconfigs, s_and_t_channels = self.write_configs_file(\
                 writers.FortranWriter(filename),
                 matrix_element)
 
-            filename = 'props_production.inc'
+            filename =  pjoin(dirpath,'props_production.inc')
             self.write_props_file(writers.FortranWriter(filename),
                              matrix_element,
                              s_and_t_channels)
 
-            filename = 'nexternal_prod.inc'
+            filename =  pjoin(dirpath,'nexternal_prod.inc')
             self.write_nexternal_madspin(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
@@ -2071,7 +2071,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
 
         path = os.path.join(_file_path,'iolibs','template_files','madweight_makefile_source')
-        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)'
+        set_of_lib = '$(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libtf.$(libext)'
         text = open(path).read() % {'libraries': set_of_lib}
         writer.write(text)
 
@@ -4875,8 +4875,19 @@ class UFO_model_to_mg4(object):
     def create_param_card(self):
         """ create the param_card.dat """
 
-        out_path = pjoin(self.dir_path, 'param_card.dat')
-        param_writer.ParamCardWriter(self.model, out_path)
+        #1. Check if a default param_card is present:
+        done = False
+        if hasattr(self.model, 'restrict_card'):
+            restrict_name = os.path.basename(self.model.restrict_card)[9:-4]
+            model_path = self.model.get('modelpath')
+            if os.path.exists(pjoin(model_path,'paramcard_%s.dat' % restrict_name)):
+                done = True
+                files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
+                         pjoin(self.dir_path, 'param_card.dat'))
+        if not done:
+            out_path = pjoin(self.dir_path, 'param_card.dat')
+            param_writer.ParamCardWriter(self.model, out_path)
+            
         out_path2 = None
         if hasattr(self.model, 'rule_card'):
             out_path2 = pjoin(self.dir_path, 'param_card_rule.dat')

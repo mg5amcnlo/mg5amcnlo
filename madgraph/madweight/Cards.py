@@ -39,6 +39,7 @@ import sys
 import logging
 
 logger = logging.getLogger('madgraph.madweight')
+pjoin = os.path.join
 
 class FileInputException(Exception): pass
 
@@ -55,7 +56,7 @@ def create_include_file(MWparam):
 
     #create output
     madweight.create_include_file(ident,'./Source/madweight_card.inc')
-    transfer.create_include_file(ident,'./Source/MadWeight/transfer_function/transfer_card.inc')
+    transfer.create_include_file_tf(ident,'./Source/MadWeight/transfer_function/')
 
     #make all the symbolic link
     for dir in MWparam.MW_listdir:
@@ -277,6 +278,74 @@ class Card(dict):
                     elif ident[block][tag][2]: #check if default value is defined
                         value=self.pass_in_type(ident[block][tag][2],ident[block][tag][1])
                         out.writelines('        '+ident[block][tag][0]+' = '+str(value)+'\n')
+
+    #2 #########################################################################
+    def create_include_file_tf(self,card,output):
+        """ create an output of type name(I)=value from part common in both card
+            be careful of the restriction in the ident file -> 4 column (only one tag) or 5 (one tag+default value)
+
+            Default value are used only if the block is defined in the card but not the entry
+        """
+        
+        
+        logger.debug('create file %s' % output)
+        out=file(output+'transfer_card.inc','w')
+        out.writelines('C automatic include file for card '+self.file+' and '+card.file+'\n\n')
+
+        if card.type=='ident':
+            ident=card.info
+            info=self.info
+        elif self.type=='ident':
+            info=card.info
+            ident=self.info
+        
+        nb_element = 0    
+        
+        #template = "        DATA ( %s(I), I=1,nb_tf) / %s /\n"
+        template = "        %s(%s) = %s \n"    
+        for block in info.keys(): 
+            if ident.has_key(block):
+                for tag in ident[block].keys():
+                    type_format = ident[block][tag][1]
+                    if info[block].has_key(tag):
+                        values = info[block][tag]
+                    else:
+                        values = [ident[block][tag][2]] * max(1, nb_element)
+
+                    # convert the input in the fortran format
+                    if isinstance(values, list):
+                        values = [str(self.pass_in_type(value, type_format)) for value in values]
+                    else:
+                        values = [str(self.pass_in_type(values, type_format))]
+                    # check that all element have the same number of input
+                    if not nb_element:
+                        nb_element = len(values)
+                    elif nb_element != len(values):    
+                        print nb_element, len(values)
+                        raise Exception, 'All input in tranfer_card.dat should have the same number of element'
+
+                    # add the line
+                    out.writelines(''.join(template % (ident[block][tag][0], i+1,val)
+                                           for i,val in enumerate(values)))
+                    out.writelines('\n')
+                    
+                    
+                    
+                    #if info[block].has_key(tag):
+                    #    value=self.pass_in_type(info[block][tag],ident[block][tag][1])
+                    #    out.writelines('        '+ident[block][tag][0]+' = '+str(value)+'\n')
+                    #elif ident[block][tag][2]: #check if default value is defined
+                    #    value=self.pass_in_type(ident[block][tag][2],ident[block][tag][1])
+                    #   out.writelines('        '+ident[block][tag][0]+' = '+str(value)+'\n')
+        if nb_element ==0:
+            nb_element = 1          
+        fsock = open(pjoin(output,'nb_tf.inc'),'w')
+        fsock.write("""
+        integer nb_tf
+        parameter (nb_tf=%i)
+        """ % nb_element)
+        
+
 
     #3 #########################################################################
     def pass_in_type(self,value,type):

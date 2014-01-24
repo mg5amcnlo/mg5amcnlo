@@ -375,7 +375,6 @@ class MG_diagram(diagram):
 
         for pid in particle_list_pid:
             if pid not in decay_list_pid:
-                print 'error 377'
                 return 0
             
         #print 'pass in step 3 '
@@ -828,7 +827,6 @@ class Option:
        for key, value in info['mw_gen'].items():
            if key != 'comment':
                exec('%s = %s' % (tag_to_genvar[key],value))
-
 
        self.ecs_on=[]
        for letter in 'abcdef':

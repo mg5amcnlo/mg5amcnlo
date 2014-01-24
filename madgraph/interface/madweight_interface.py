@@ -257,10 +257,14 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))])
         
+
         if self.configured > time_mod and \
                            hasattr(self,'MWparam') and hasattr(self,'run_card'):
             return
-                        
+        self.configured = time.time()
+        
+        
+                  
         self.MWparam = MW_info.MW_info(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
         self.run_card = banner.RunCard(run_card)
@@ -321,7 +325,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
         write_MadWeight.create_all_fortran_code(self.MWparam)
         
-    def do_compile(self, line):
+    def do_compile(self, line, refine=False):
         """MadWeight Function:compile the code"""
         self.configure()
         
@@ -333,10 +337,25 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         misc.compile(arg=["../lib/libmodel.a"], cwd=pjoin(self.me_dir,'Source')) 
         misc.compile(arg=["../lib/libgeneric.a"], cwd=pjoin(self.me_dir,'Source')) 
         misc.compile(arg=["../lib/libcernlib.a"], cwd=pjoin(self.me_dir,'Source')) 
+
+#
+#       here check validity of some parameters
+        if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['montecarlo_perm']=='t':
+           raise Exception, 'Cannot use mint if monte carlo over permutations'
+        if self.MWparam['mw_run']['integrator']=='m' and  self.MWparam['mw_run']['use_sobol']=='t':
+           raise Exception, 'sobol generator with mint not implemented'
+ 
+
         
         for MW_dir in self.MWparam.MW_listdir:
-            misc.compile(cwd=pjoin(self.me_dir,'SubProcesses', MW_dir))
-            if not os.path.exists(pjoin(self.me_dir,'SubProcesses',MW_dir, 'comp_madweight')):
+            logger.info('compile %s' %MW_dir)
+            pdir = pjoin(self.me_dir,'SubProcesses',MW_dir)
+            if refine and os.path.exists(pjoin(pdir, 'initialization.o')):
+                os.remove(pjoin(pdir, 'initialization.o'))
+            if refine and  os.path.exists(pjoin(pdir, 'comp_madweight')):
+                os.remove(pjoin(pdir, 'comp_madweight'))
+            misc.compile(cwd=pdir)
+            if not os.path.exists(pjoin(pdir, 'comp_madweight')):
                 raise Exception, 'compilation fails'
         logger.info('MadWeight code has been compiled.')
         
@@ -402,6 +421,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_submit_jobs(self, line):
         """MadWeight Function:Submitting the jobs to the cluster"""
         
+        self.clean_old_run(keep_event=True)
         self.configure()
         args = self.split_arg(line)
         self.check_launch_jobs(args)
@@ -413,7 +433,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 nb_job = self.MWparam.nb_event_MW[dirname]
                 if self.MWparam['mw_run']['nb_event_by_node'] > 1:
                     nb_job = (nb_job+1) // self.MWparam['mw_run']['nb_event_by_node']
-                
+                                    
                 for event_sample in range(nb_job):
                     self.submit_job(dirname, nb_card, event_sample)        
     
@@ -457,9 +477,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         if restrict_evt:
             restrict_path = pjoin(self.me_dir, 'SubProcesses', dirname, name, 
-                                                  'restrict_%i.dat' % evt_file)
+                                                  'restrict%i_%i.dat' % (nb_card,evt_file))
             input_files.append(restrict_path)
-            open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))
+            #open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))
         
         # Need to add PDF (maybe also symfact, ...) ?
         
@@ -506,6 +526,31 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         name = self.MWparam.name
         # 1. Concatanate the file. #############################################
+        out_dir = pjoin(self.me_dir, 'Events', name)
+        if '-refine' in args:
+            out_path = pjoin(out_dir, 'refine.xml') 
+        else:
+            out_path = pjoin(out_dir, 'output.xml')
+            if os.path.exists(out_path):
+                logger.warning('Output file already exists. Current one will be tagged with _old suffix')
+                logger.warning('Run "collect -refine to instead update your current results."')
+                files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+                files.mv(pjoin(out_dir, 'weights.out'), pjoin(out_dir, 'weights.out'))
+                for MWdir in self.MWparam.MW_listdir:
+                    out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+                    files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+                out_dir = pjoin(self.me_dir, 'Events', name)
+                    
+        fsock = open(out_path, 'w')
+        fsock.write('<madweight>\n<banner>\n')
+        # BANNER
+        for card in ['proc_card_mg5.dat','MadWeight_card.dat','transfer_card.dat','param_card.dat','run_card.dat']:
+            cname = card[:-4]
+            fsock.write('<%s>\n' % cname)
+            fsock.write(open(pjoin(self.me_dir,'Cards',card)).read().replace('<','!>'))
+            fsock.write('</%s>\n' % cname)
+        fsock.write('</banner>\n')
+        at_least_one = False
         for MWdir in self.MWparam.MW_listdir:
             out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
             input_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
@@ -514,79 +559,110 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             if '-refine' in args:
                 out_path = pjoin(out_dir, 'refine.xml') 
             else:
-                out_path = pjoin(out_dir, 'output.xml')
-            fsock = open(out_path, 'w')
+                out_path = pjoin(out_dir, 'output.xml')  
+            fsock2 = open(out_path,'w')
             fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
+            fsock2.write('<subprocess id=\'%s\'>\n' % MWdir)
             for output in glob.glob(pjoin(input_dir, 'output_*_*.xml')):
-                fsock.write(open(output).read())
+                at_least_one = True
+                text = open(output).read()
+                fsock2.write(text)
+                fsock.write(text)
                 os.remove(output)
-            fsock.write('</subprocess>')
-            fsock.close()
-
+            fsock.write('</subprocess>\n')
+            fsock2.write('</subprocess>\n')
+            fsock2.close()
+        fsock.write('\n</madweight>\n')          
+        fsock.close()
         # 2. Special treatment for refine mode
         if '-refine' in args:
             xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
             for MWdir in self.MWparam.MW_listdir:
-                out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+                out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
+                ref_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
+                xml_reader2 = MWParserXML(self.MWparam['mw_run']['log_level'])
                 base_output = xml_reader2.read_file(pjoin(out_dir, 'output.xml'))
-                sec_output = xml_reader2.read_file(pjoin(out_dir, 'refine.xml'))
-                base_output.refine(sec_output)
+
+                base_output.refine(ref_output)
                 files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
                 base_output.write(pjoin(out_dir, 'output.xml'), MWdir)
-
+        elif not at_least_one:
+            logger.warning("Nothing to collect restore _old file as current.")
+            out_dir = pjoin(self.me_dir, 'Events', name)
+            files.mv(pjoin(out_dir, 'output_old.xml'), pjoin(out_dir, 'output.xml'))
+            files.mv(pjoin(out_dir, 'weights_old.out'), pjoin(out_dir, 'weights.out'))
+            for MWdir in self.MWparam.MW_listdir:
+                out_dir = pjoin(self.me_dir, 'Events', name, MWdir)
+                files.mv(pjoin(out_dir, 'output.xml'), pjoin(out_dir, 'output_old.xml'))
+            
+            
+            
         # 3. Read the (final) log file for extracting data
         total = {}
         likelihood = {}
         err_likelihood = {}
         cards = set()
         events = set()
+        tf_sets = set()
         for MW_dir in self.MWparam.MW_listdir:
             out_dir = pjoin(self.me_dir, 'Events', name, MW_dir)
             xml_reader = MWParserXML()
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
-            generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
-            for card, event, obj in generator:
+            #
+            log_level = self.MWparam['mw_run']['log_level']            
+            generator =  ((int(i),j,int(k),data[i][j][k]) for i in data 
+                                                               for j in data[i] 
+                                                               for k in data[i][j])
+            for card, event, tf_set, obj in generator:
                 # update the full list of events/cards
                 cards.add(card)
                 events.add(event)
+                tf_sets.add(tf_set)
                 # now compute the associate value, error[square]
-                if (card,event) in total:
-                    value, error = total[(card, event)]                    
+                if (card,event, tf_set) in total:
+                    value, error = total[(card, event, tf_set)]                    
                 else:
                     value, error = 0, 0
+                obj.calculate_total()
                 value, error = (value + obj.value, error + obj.error**2) 
-                total[(card, event)] = (value, error)
-                if value:
-                    if card not in likelihood:
-                        likelihood[card], err_likelihood[card] = 0, 0
-                    likelihood[card] -= math.log(value)
-                    err_likelihood[card] += error / value
-                else:
-                    likelihood[card] = float('Inf')
-                    err_likelihood[card] = float('nan')
+                total[(card, event, tf_set)] = (value, error)
+                if tf_set == 1:
+                    if value:
+                        if card not in likelihood:
+                            likelihood[card], err_likelihood[card] = 0, 0
+                        likelihood[card] -= math.log(value)
+                        err_likelihood[card] += error / value
+                    else:
+                        likelihood[card] = float('Inf')
+                        err_likelihood[card] = float('nan')
 
                 
         # write the weights file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'), 'w')
         logger.info('Write output file with weight information: %s' % fsock.name)
-        fsock.write('# Weight (un-normalize) for each card/event\n')
-        fsock.write('# format: LHCO_event_number card_id value integration_error\n')
+        fsock.write('# Weight (un-normalize) for each card/event/set of transfer fct\n')
+        fsock.write('# format: LHCO_event_number card_id tf_set_id value integration_error\n')
         events = list(events)
         events.sort()
         cards = list(cards)
         cards.sort()
+        tf_sets = list(tf_sets)
+        tf_sets.sort()
         for event in events:
             for card in cards:
-                try:
-                    value, error = total[(card, event)]
-                except KeyError:
-                    continue
-                error = math.sqrt(error)
-                fsock.write('%s %s %s %s \n' % (event, card, value, error))
+                for tf_set in tf_sets:
+                    try:
+                        value, error = total[(card, event,tf_set)]
+                    except KeyError:
+                        continue
+                    error = math.sqrt(error)
+                    fsock.write('%s %s %s %s %s \n' % (event, card, tf_set, value, error))
     
         # write the likelihood file:
         fsock = open(pjoin(self.me_dir, 'Events', name, 'un-normalized_likelihood.out'), 'w')
         fsock.write('# Warning:  this Likelihood needs a bin by bin normalization !\n')
+        fsock.write('# IF more than one set of transfer function are define. ONLY the first one is ')
+        fsock.write('# include in this file.')
         fsock.write('# format: card_id value integration_error\n')
         for card in cards:
             value, error = likelihood[card], err_likelihood[card]
@@ -619,6 +695,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     
     def ask_edit_cards(self, cards, *arg, **opts):
         super(MadWeightCmd, self).ask_edit_cards(cards, *arg, **opts)
+        self.configured = 0
         self.configure()
         
     def do_launch(self, line):
@@ -634,9 +711,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if not self.force:
             self.ask_edit_cards(cards, mode='fixed', plot=False)
         with misc.chdir(self.me_dir): 
-            print self.MWparam['mw_run']['inputfile']
             if not os.path.exists(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile'])):
-                print self.MWparam['mw_run']['inputfile']
                 raise self.InvalidCmd('Please specify a valid LHCO File')
             if pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']) not in \
                     [pjoin(self.me_dir, 'Events', 'input.lhco'), pjoin(self.me_dir, 'Events', 'input.lhco.gz')]:
@@ -644,6 +719,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 if zipped:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco.gz'))
+                    if os.path.exists(pjoin(self.me_dir, 'Events', 'input.lhco')):
+                        os.remove(pjoin(self.me_dir, 'Events', 'input.lhco'))
                 else:
                     files.cp(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile']),
                              pjoin(self.me_dir, 'Events', 'input.lhco'))                
@@ -674,6 +751,19 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         if args[0] < 0 or args[0]>1:
             raise self.InvalidCmd('The first argument should be a number between 0 and 1.')
     
+    def clean_old_run(self, keep_event=False):
+        
+        for MWdir in self.MWparam.MW_listdir:
+            input_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, self.MWparam.name)
+            if not os.path.exists(input_dir):
+                continue
+            for filename in os.listdir(input_dir):
+                if keep_event and filename.startswith('verif'):
+                    continue
+                os.remove(pjoin(input_dir, filename))
+            
+            
+    
     def do_refine(self, line):
         """MadWeight Function:syntax: refine X
         relaunch the computation of the weight which have a precision lower than X"""
@@ -681,7 +771,12 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         self.check_refine(args)
         self.configure()
         
-        
+        self.clean_old_run(keep_event=True)     
+        if not self.force:
+            cards = ['madweight_card.dat'] 
+            self.ask_edit_cards(cards, mode='fixed', plot=False)
+            self.exec_cmd("treatcards")
+            self.do_compile('', refine=True) # force re-compilation
         
         nb_events_by_file = self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing'] 
         asked_events = self.MWparam['mw_run']['nb_exp_events']
@@ -692,15 +787,18 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         # events/cards to refine
         fsock = open(pjoin(self.me_dir, 'Events', name, 'weights.out'), 'r')
         for line in fsock:
-            line = line.split('#')[0].split()
-            if len(line) == 4:
-                lhco_nb, card_nb, value, error = line
+            if '#' in line:
+                line = line.split('#')[0]
+            line = line.split()
+            if len(line) == 5:
+                lhco_nb, card_nb, tf_set, value, error = line
             else:
                 continue
+            if tf_set != '1':
+                continue
             if float(value) * precision < float(error):
-                allow_refine.append((int(card_nb), int(lhco_nb)))
-
-        xml_reader = MWParserXML(keep_level=self.MWparam['mw_run']['log_level'])        
+                allow_refine.append((int(card_nb), lhco_nb))
+        logger.info("%s selected jobs for the refinment." % len(allow_refine))
         for MWdir in self.MWparam.MW_listdir:
             # We need to know in which file are written all the relevant event
             event_to_file = {}
@@ -709,14 +807,17 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 for line in open(pjoin(self.me_dir, 'SubProcesses', MWdir, name, evt)):
                     split = line.split()
                     if len(split) == 3:
-                        event_to_file[int(split[1])] = evt_nb
-
+                        event_to_file[split[1]] = evt_nb
             to_refine = {}
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
+            out_dir = pjoin(self.me_dir, 'Events',name, MWdir)
+            xml_reader = MWParserXML(keep_level='weight')
             data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
-
-            generator =  ((int(i),int(j),data[i][j]) for i in data for j in data[i])
-            for card, event, obj in generator:
+            generator =  ((int(i),j,int(k),data[i][j][k]) for i in data 
+                                                               for j in data[i] 
+                                                               for k in data[i][j])
+            for card, event, tf_set, obj in generator:
+                if tf_set != 1:
+                    continue
                 value, error = obj.value, obj.error
                 if value * precision < error:
                     if card not in to_refine:
@@ -725,7 +826,6 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                         to_refine[card].append(event)
             if to_refine:
                 self.resubmit(MWdir, to_refine, event_to_file)
-        
         
         # control
         starttime = time.time()
@@ -736,7 +836,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         except Exception:
             self.cluster.remove()
             raise                
-        except KeyboardInterupt:
+        except KeyboardInterrupt:
             if not self.force:
                 ans = self.ask('Error detected. Do you want to clean the queue?',
                              default = 'y', choices=['y','n'])
@@ -750,7 +850,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 
     def resubmit(self, M_path, to_refine, event_to_file):
         """resubmit various jobs"""
-        
+
         for card, event_list in to_refine.items():
             packets = {}
             for event in event_list:
@@ -759,31 +859,23 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                     packets[evt_nb_file].append(event)
                 else:
                     packets[evt_nb_file] = [event]
+
+#                evt_file = (sample_nb // self.MWparam['mw_run']['event_packing'])
+#        open(restrict_path, 'w').write(' '.join(map(str, restrict_evt)))   
+
             max_evts = self.MWparam['mw_run']['nb_event_by_node']
             for evt_nb, evt_list in packets.items():
+                restrict_path = pjoin(self.me_dir, 'SubProcesses', M_path, self.MWparam.name, 
+                                                  'restrict%i_%i.dat' % (card,evt_nb_file))
+                open(restrict_path, 'w').write(' '.join(map(str, evt_list)))  
+                
                 nb_weights = len(evt_list)
                 for i in range(1+ (nb_weights-1)//max_evts):
-                    sub_list = evt_list[max_evts * i: max_evts * (i+1)]
+                    #sub_list = evt_list[max_evts * i: max_evts * (i+1)]
                     self.submit_job(M_path, card, i, evt_file=evt_nb,
-                                    restrict_evt=sub_list)                        
-        
-
-    def collect_for_refine(self):
-        """Collect data for refine"""
-
-        #1 Load the object
-        #2 Load the new object
-        #3 Merge them
-        
-        xml_reader = MWParserXML()
-        for MW_dir in self.MWparam.MW_listdir:
-            out_dir = pjoin(self.me_dir, 'SubProcesses', MWdir, name)
-            data = xml_reader.read_file(pjoin(out_dir, 'output.xml'))
+                                    restrict_evt=True)                        
         
         
-
-
-
         
 #===============================================================================
 # MadEventCmd
@@ -796,20 +888,21 @@ class MadWeightCmdShell(MadWeightCmd, cmd.CmdShell):
 class CollectObj(dict):
     pass
 
+    #2 #############################################################################  
     def refine(self, other):
-        """ """
         
-        for card in other:
-            if not card in self:
+        for card, CardDATA in other.items():
+            if card not in self:
                 self[card] = other[card]
                 continue
-            for event_nb in other[card]:
-                self[card][event_nb] = other[card][event_nb]        
-        return
+            
+            for event, obj2 in CardDATA.items():
+                self[card][event] = obj2
+
+        
     
     def write(self, out_path, MWdir):
         """ """
-        
         fsock = open(out_path, 'w')
         fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
         for card in self:
@@ -819,6 +912,7 @@ class CollectObj(dict):
             fsock.write('</card>\n')
         
         fsock.write('</subprocess>')
+        fsock.close()
         
 
 #1 ################################################################################# 
@@ -829,13 +923,15 @@ class MWParserXML(xml.sax.handler.ContentHandler):
 
     #2 #############################################################################        
     def __init__(self, keep_level='weight'):
-        self.in_el = {'process': '', 'card':'', 'event':'', 'permutation':'', 'channel':'',
-                      'full':''}
-        if keep_level == 'weight':
-            keep_level = 'event'
+        self.in_el = {'process': '', 'card':'', 'event':'', 'tfset':'' ,
+                      'permutation':'', 'channel':'','full':''}
+        if keep_level in ['weight', 'event', 'debug']:
+            keep_level = 'tfset'
+        self.all_event = {}
         self.keep_level = keep_level
         self.buffer=''
         self.output = CollectObj() 
+
 
     #2 #############################################################################  
     def startElement(self, name, attributes):
@@ -845,7 +941,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             return
         
         obj_class = {'event': MW_driver.Weight, 'permutation':MW_driver.Permutation,
-         'channel': MW_driver.Channel}
+         'channel': MW_driver.Channel, 'tfset':MW_driver.TFsets}
         
         
         if name == "process":
@@ -854,19 +950,39 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             id = attributes['id']
             if id not in self.output:
                 self.output[id] = {}
-            self.in_el[name] = self.output[id]            
+            self.in_el[name] = self.output[id]
+            self.curr_card_id = id            
         elif name == 'event':
             id = attributes['id']
             value = float(attributes['value'])
             error = float(attributes['error'])
-            data =  MW_driver.Weight(id, self.keep_level)
+            card = self.curr_card_id
+            if ((card,id) in self.all_event):
+                data = self.all_event[(card,id)]
+            else:
+                data =  MW_driver.Weight(id, self.keep_level)
+                self.all_event[(card,id)] = data
             data.value = value
             data.error = error
             self.in_el['event'] = data
             # assign it in the mother:
             card = self.in_el['card']
             card[id] = data
+        elif name == 'tfset':
+            id = attributes['id']
+            value = float(attributes['value'])
+            error = float(attributes['error'])
+            data =  MW_driver.TFsets(id)
+            data.value = value
+            data.error = error
+            data.add('0', '', value, error, '')
+            #assign it to the mother:
+            event = self.in_el['event']
+            event[id] = data
+            self.in_el['tfset'] = data
         elif name == 'permutation':
+            tfset = self.in_el['tfset']
+            
             id = attributes['id']
             value = float(attributes['value'])
             error = float(attributes['error'])
@@ -875,8 +991,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
             data.error = error
             self.in_el['permutation'] = data
             # assign it in the mother:
-            event = self.in_el['event']
-            event.append(data)
+            tfset[id] = data
         elif name == 'channel':
             id = attributes['id']
             value = float(attributes['value'])
@@ -906,6 +1021,7 @@ class MWParserXML(xml.sax.handler.ContentHandler):
     #2 ############################################################################# 
     def read_file(self,filepos):
         """ parse the file and fulfill the object """
+        self.output = CollectObj()
         parser = xml.sax.make_parser(  )
         parser.setContentHandler(self)
         parser.parse(filepos)

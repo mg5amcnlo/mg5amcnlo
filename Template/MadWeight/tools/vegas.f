@@ -48,6 +48,7 @@ c     initialises  cumulative  variables but not grid
       si2=si
       swgt=si
       schi=si
+      call mc_init_var()
 c
       entry vegas2(fxn,avgi,sd,chi2a)
 c     no initialisation
@@ -190,7 +191,9 @@ c
 c
       if(nprn.eq.0)go to 21
       tsi=dsqrt(tsi)
-      write(6,201)it,ti,tsi,avgi,sd,chi2a
+      write(6,*) 'vegas: iteration',it, 'value:', avgi,'chi2:',chi2a
+c      write(6,201)it,ti,tsi,avgi,sd,chi2a
+      call mc_end_iter()
       if(nprn.ge.0)go to 21
       do 20 j=1,ndim
  20      write(6,202) j,(xi(i,j),di(i,j),d(i,j),i=1,nd)
@@ -334,4 +337,6 @@ c      RANDOM = SEED*MINV
       end
 C
 C
+
+
     

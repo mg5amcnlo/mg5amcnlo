@@ -2015,16 +2015,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 to_define = to_keep
             self.write_configuration(filepath, basefile, basedir, to_define)
   
-    ############################################################################
-    def do_import(self, line):
-        """Advanced commands: Import command files"""
-
-        args = self.split_arg(line)
-        # Check argument's validity
-        self.check_import(args)
-        
-        # Execute the card
-        self.import_command_file(args[1])  
+ 
 
     ############################################################################ 
     def do_print_results(self, line):

@@ -54,11 +54,15 @@ class TestMadWeight(unittest.TestCase):
         for line in text.split('\n'):
             line = line.strip().split('#')[0]
             split = line.split()
-            if not len(split) == 4:
+            if not len(split) in [4,5]:
                 continue
-            event_nb, card_nb, weight, error = map(float, split)
+            if len(split) ==4:
+                event_nb, card_nb, weight, error = map(float, split)
+                tf_set = 1.
+            else:
+                event_nb, card_nb, tf_set, weight, error = map(float, split)
             
-            solution[(event_nb,card_nb)] = (weight,error)
+            solution[(event_nb,card_nb,tf_set)] = (weight,error)
         return solution
 
     def test_short_mw_tt_full_lept(self):
@@ -108,8 +112,7 @@ class TestMadWeight(unittest.TestCase):
 24 2 4.48106063562e-22 2.23501639194e-24 
 28 1 1.22526200347e-23 5.8955444892e-26 
 28 2 5.53271960779e-23 2.59251688524e-25 
-"""
-    
+"""   
         expected = self.get_result(expected)
         for key, (value,error) in expected.items():
             assert key in solution
@@ -117,10 +120,10 @@ class TestMadWeight(unittest.TestCase):
             self.assertTrue(abs(value-value2) < 5* abs(error+error2))
             self.assertTrue(abs(value-value2)/abs(value+value2) < 2*abs(value/error))
             self.assertTrue(abs(error2)/abs(value2) < 0.02)
-        try:
-            shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
-        except Exception, error:
-            pass
+        #try:
+        #    shutil.rmtree(pjoin(MG5DIR,'TEST_MW_TT_prod_full'))
+        #except Exception, error:
+        #    pass
             
     def test_short_mw_tt_semi(self):
         """checking that the weight for p p > t t~ semilept is working"""
@@ -142,7 +145,10 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_run pretrained T
                  set mw_perm montecarlo T
-                 set mw_run MW_int_points 2000
+                 set mw_run MW_int_points 1000
+                 set mw_run MW_int_refine 8000
+                 set mw_run  use_sobol T
+                 set mw_gen force_nwa 2
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
@@ -186,8 +192,8 @@ class TestMadWeight(unittest.TestCase):
         #except Exception, error:
         #    pass
 
-            
-    def test_short_mw_wa(self):
+
+    def test_short_mw_wa_refine(self):
         """checking that the weight for p p > w a, w > l- is working"""
 
         try:
@@ -207,7 +213,12 @@ class TestMadWeight(unittest.TestCase):
                  set nb_event_by_node 1
                  set mw_parameter 12 23
                  set mw_parameter 13 80 90
-                 set mw_run MW_int_points 2500 
+                 set mw_run MW_int_points 100
+                 set mw_run MW_int_refine 100
+                 launch -i
+                 refine 0.01
+                 set mw_run MW_int_points 1000
+                 set mw_run MW_int_refine 10000
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
@@ -220,7 +231,7 @@ class TestMadWeight(unittest.TestCase):
             stderr=devnull
         
         start = time.time()
-        print 'this mw test is expected to take 30s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
+        print 'this mw test is expected to take 15s on two core. (MBP retina 2012) current time: %02dh%02d' % (time.localtime().tm_hour, time.localtime().tm_min) 
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),

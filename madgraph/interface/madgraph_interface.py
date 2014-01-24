@@ -4787,7 +4787,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if hasattr(self, 'do_shell'):
                     MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
                 else:
-                    MW = madweight_interfaces.MadWeightCmd(me_dir=args[1],options=self.options)
+                    MW = madweight_interface.MadWeightCmd(me_dir=args[1],options=self.options)
                 # transfer interactive configuration
                 config_line = [l for l in self.history if l.strip().startswith('set')]
                 for line in config_line:

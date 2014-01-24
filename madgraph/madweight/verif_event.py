@@ -608,7 +608,7 @@ pat_lhco_line=re.compile(r'''^\s*(?P<card>\d*)\s+               #cardinal
                         
                         
 pat_new_block=re.compile(r'''^\s*0\s+               #cardinal
-                               (?P<type>\d*)                # type: 0 = photon,1 = elec,2 = muon,3 = hadronic tau,4 = jet,6 =MTE
+                               (?P<type>\S*)                # type: 0 = photon,1 = elec,2 = muon,3 = hadronic tau,4 = jet,6 =MTE
                                \s+(?P<eta>[+-\.\de]+)\s+
                                ''',re.I+re.VERBOSE)
     

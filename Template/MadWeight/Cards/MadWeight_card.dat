@@ -25,7 +25,9 @@ Block MW_Run
 #   TAG                 VALUE                    UTILITY
      name                fermi    # name for the run  
      nb_exp_events        4       # number of experimental events to consider
-     MW_int_points        4000    # number of points in MadWeight integration
+     MW_int_points        2000    # number of points (by permutation) in MadWeight integration for survey 
+     MW_int_refine        10000   # number of points (by permutation) in MadWeight integration for refine 
+     precision            0.005   # stops computation if precision is reached.
      nb_event_by_node     1       # one job submission compute the weight for N events
      log_level            weight  # from low level of log to extensive log: 
                                   # weight, permutation, channel, full
@@ -34,7 +36,7 @@ Block MW_Run
      nwa                  0.1     # width below narrow width approximation is used.
      isr                  0       # isr=0 : ignore ISR effect (except if all FS particles are visible)
                                   # isr=1 : correct kinematic based on reconstructed Pt(isr)
-	 inputfile          './Events/input.lhco' # path to the input file (in lhco format)
+     inputfile          './Events/input.lhco' # path to the input file (in lhco format)
                                   
                                   
 #*************************************************************************
@@ -75,10 +77,11 @@ Block MW_perm
                             # You can set the path to a fortran file defining the require function
                             # See file SubProcesses/permutation_weight_default.dat for
                             # instructions.
-     
+     min_perm_cut 5e-4      # Cut for discarding permutation on the preselected method
 #*************************************************************************
 ##                       Phase-Space Integration mapping                ##
 #*************************************************************************
+Block MW_gen
     force_nwa     2         # Only consider the change of variable alligning particles 
                             # with width smaller than this value. This speed up the code
                             # but can lead to zero weight for background event where the

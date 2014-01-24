@@ -126,18 +126,21 @@ class Testmadweight(unittest.TestCase):
 
 class TestMadWeight(unittest.TestCase):
     """A couple of points in order to ensure the MW is working fine."""
-    
-    
+
     def get_result(self, text):
         solution = {}
         for line in text.split('\n'):
             line = line.strip().split('#')[0]
             split = line.split()
-            if not len(split) == 4:
+            if not len(split) in [4,5]:
                 continue
-            event_nb, card_nb, weight, error = map(float, split)
+            if len(split) ==4:
+                event_nb, card_nb, weight, error = map(float, split)
+                tf_set = 1.
+            else:
+                event_nb, card_nb, tf_set, weight, error = map(float, split)
             
-            solution[(event_nb,card_nb)] = (weight,error)
+            solution[(event_nb,card_nb,tf_set)] = (weight,error)
         return solution
             
     def test_mw_wproduction(self):
@@ -162,14 +165,20 @@ class TestMadWeight(unittest.TestCase):
                  """
         open('/tmp/mg5_cmd','w').write(cmd)
         
-        devnull =open(os.devnull,'w')
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+        
         subprocess.call([pjoin(MG5DIR,'bin','mg5'), 
                          '/tmp/mg5_cmd'],
                          cwd=pjoin(MG5DIR),
-                        stdout=devnull, stderr=devnull)
+                        stdout=stdout, stderr=stderr)
 
         data = open(pjoin(MG5DIR, 'TEST_MW_W_prod', 'Events', 'fermi', 'weights.out')).read() 
-
 
         solution = self.get_result(data)
         expected = """# Weight (un-normalize) for each card/event

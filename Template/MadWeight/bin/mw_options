@@ -158,7 +158,7 @@ try:
             cmd_line.run_cmd('quit')
     elif args:
         # a single command is provided
-        cmd_line = cmd_interface.MadEventCmd()
+        cmd_line = cmd_interface.MadWeightCmd()
         if not hasattr(cmd_line, 'do_%s' % args[0]):
             if parser_error:
                 print parser_error

@@ -56,7 +56,9 @@ C+-----------------------------------------------------------------------+
       double precision weight
       double precision pi
       parameter (pi=3.141592654d0)
+      include 'nb_tf.inc'
       include 'TF_param.inc'     
+$B$ tf_include $E$
 
 $B$ tf_definition $E$
 
@@ -85,7 +87,10 @@ C+-----------------------------------------------------------------------+
       double precision pi
       parameter (pi=3.141592654d0)
 
+	  include 'nb_tf.inc'
       include 'TF_param.inc'     
+
+$B$ tf_include $E$
 
 $B$ width_definition $E$
       
@@ -117,8 +122,9 @@ c     parameter
 c                                                                        
       include 'run.inc'
       include 'nexternal.inc'
-      include 'TF_param.inc'
       include 'permutation.inc'
+      include 'TF_param.inc'
+
 c                                                                        
 c     global                                                             
 c                                                                        

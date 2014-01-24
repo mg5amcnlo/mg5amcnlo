@@ -9,7 +9,7 @@ mw_run  nb_event_by_node integer  10                    # decide how many events
 mw_run  event_packing    integer  20                    # the input event files will be splitted in event_packing*nb_event_by_node 
 mw_run  log_level        string   'channel'             # from low level of log to extensive log: weight, permutation, channel, iteration, full     
 mw_run  nwa              float    0.1                   # width below NWA is used instead of performing the actual integrals
-mw_run  integrator       string   'v'                   # default integrator method (v/m -> vegas/mint)
+mw_run  integrator       integer  0                   # default integrator method (0/1 -> vegas/mint)
 mw_run  pretrained_tf    logical   T                    # if we pre-trained the grid for the TF
 mw_run  use_sobol        logical   F                    # don t use sobol generator by default
 mw_run  inputfile        string   './Events/input.lhco' # path to the inputfile
@@ -35,7 +35,7 @@ mw_gen     1         integer 1            # choose which propagator to allign in
 mw_gen     2         integer 1            # Same condition but for blobs
 mw_gen     3         integer 4            # maximal multiplicity for ECS sector
 # Preference in blob generation (If more than one "True", we will perform a multi-channel techniques)
-mw_gen     4         logical T            #      maximizes  the number of aligned BW
+mw_gen     4         logical F            #      maximizes  the number of aligned BW
 mw_gen     5         logical T            #      choose all momenta as  variables of integration
 mw_gen     6         logical T            #      mixed choice between the two above options
 mw_gen     10        logical T            # Authorizes ECS A  (0 neut)

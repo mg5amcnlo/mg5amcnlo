@@ -15,8 +15,10 @@ OBJS           =  transfer_function.o
 
 all: $(LIBDIR)$(LIBRARY)
 
-$(LIBDIR)$(LIBRARY): $(OBJS)
+$(LIBDIR)$(LIBRARY): $(OBJS) nb_tf.inc
 	$(call CREATELIB, $@, $^)
+
+transfer_function.o: nb_tf.inc
 
 clean:
 	$(RM) *.o $(LIBDIR)$(LIBRARY)

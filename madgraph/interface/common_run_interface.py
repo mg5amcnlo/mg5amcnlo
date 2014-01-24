@@ -637,6 +637,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'madspin_card.dat'
         elif 'launch' in text and 'set' in text:
             return 'reweight_card.dat'
+        elif 'decay' in text and 'launch' in text:
+            return 'madspin_card.dat'
         else:
             return 'unknown'
 
@@ -2055,7 +2057,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('block %s was not present in the current MadWeight card. We are adding it' % block)
             self.mw_card[block] = {}
         elif name not in self.mw_card[block]:
-            logger.info('$BLACK name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block))
+            logger.info('name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block),'$MG:color:BLACK')
         if value == 'default':
             import madgraph.madweight.Cards as mwcards
             mw_default = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card_default.dat'))

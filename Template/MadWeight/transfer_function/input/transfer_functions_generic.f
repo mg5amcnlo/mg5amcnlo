@@ -8,6 +8,7 @@ c     parameter
 c
       include '../../nexternal.inc'
       include '../../run.inc'
+      include 'nb_tf.inc'
       include 'TF_param.inc'
 
 c
@@ -319,6 +320,7 @@ C
       double precision x1_exp,x2_exp
       parameter (pi=3.141592654d0)
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 
@@ -349,6 +351,7 @@ C
       double precision x1_exp,x2_exp
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
       x1_exp=phi_init(opt_lhco)
       x2_exp=pt_init(opt_lhco)
@@ -373,6 +376,7 @@ c      double precision weight
 c      double precision pi
 c      parameter (pi=3.141592654d0)
 c      include '../../nexternal.inc'
+c            include 'nb_tf.inc'
 c      include 'TF_param.inc'     
 c
 c$$tf_pt$$
@@ -399,6 +403,7 @@ C
       double precision pi
       parameter (pi=3.141592654d0)
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_j$$
@@ -420,6 +425,7 @@ $$tf_e_j$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_j$$
@@ -441,6 +447,7 @@ $$tf_phi_j$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_j$$
@@ -466,6 +473,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_b$$
@@ -487,6 +495,7 @@ $$tf_e_b$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_b$$
@@ -508,6 +517,7 @@ $$tf_phi_b$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_b$$
@@ -532,6 +542,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_g$$
@@ -553,6 +564,7 @@ $$tf_e_g$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_g$$
@@ -574,6 +586,7 @@ $$tf_phi_g$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_g$$
@@ -598,6 +611,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_e$$
@@ -619,6 +633,7 @@ $$tf_e_e$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_e$$
@@ -640,6 +655,7 @@ $$tf_phi_e$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_e$$
@@ -665,6 +681,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_m$$
@@ -686,6 +703,7 @@ $$tf_e_m$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_m$$
@@ -707,6 +725,7 @@ $$tf_phi_m$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_m$$
@@ -732,6 +751,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_e_t$$
@@ -753,6 +773,7 @@ $$tf_e_t$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_phi_t$$
@@ -774,6 +795,7 @@ $$tf_phi_t$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$tf_theta_t$$
@@ -801,6 +823,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_x1$$
@@ -822,6 +845,7 @@ $$sigma_x1$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_x2$$
@@ -840,7 +864,8 @@ c      double precision pi
 c      parameter (pi=3.141592654d0)
 
 c      include '../../nexternal.inc'
-c      include 'TF_param.inc'     
+c            include 'nb_tf.inc'
+      include 'TF_param.inc'
 
 c$$sigma_pt$$
       
@@ -857,6 +882,7 @@ c      end
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_j$$
@@ -874,6 +900,7 @@ $$sigma_e_j$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_j$$
@@ -891,6 +918,7 @@ $$sigma_phi_j$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_j$$
@@ -913,6 +941,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_b$$
@@ -932,6 +961,7 @@ $$sigma_e_b$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_b$$
@@ -951,6 +981,7 @@ $$sigma_phi_b$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_b$$
@@ -973,6 +1004,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_g$$
@@ -992,6 +1024,7 @@ $$sigma_e_g$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_g$$
@@ -1010,6 +1043,7 @@ $$sigma_phi_g$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_g$$
@@ -1031,6 +1065,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_e$$
@@ -1049,6 +1084,7 @@ $$sigma_e_e$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_e$$
@@ -1067,6 +1103,7 @@ $$sigma_phi_e$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_e$$
@@ -1089,6 +1126,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_m$$
@@ -1107,6 +1145,7 @@ $$sigma_e_m$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_m$$
@@ -1124,6 +1163,7 @@ $$sigma_phi_m$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_m$$
@@ -1146,6 +1186,7 @@ C
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_e_t$$
@@ -1164,6 +1205,7 @@ $$sigma_e_t$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_phi_t$$
@@ -1181,6 +1223,7 @@ $$sigma_phi_t$$
       parameter (pi=3.141592654d0)
 
       include '../../nexternal.inc'
+            include 'nb_tf.inc'
       include 'TF_param.inc'     
 
 $$sigma_theta_t$$

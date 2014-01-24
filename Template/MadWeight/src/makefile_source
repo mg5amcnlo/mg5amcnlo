@@ -30,7 +30,7 @@ LIBRARIES=$(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext)
 
 # Compile commands
 
-all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext)
+all: $(LIBRARIES) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(LIBDIR)libTF.$(libext)
 
 # Libraries
 
@@ -50,7 +50,8 @@ $(LIBDIR)libblocks.$(libext):
 	cd MadWeight/blocks; make	
 $(LIBDIR)libtools.$(libext): 
 	cd MadWeight/tools; make	
-
+$(LIBDIR)libTF.$(libext): MadWeight/transfer_function/transfer_function.o MadWeight/transfer_function/nb_tf.inc 
+	cd MadWeight/transfer_function; make	
 
 # Binaries
 
