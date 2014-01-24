@@ -61,7 +61,7 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,KK,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -180,18 +180,17 @@ C
       function getrapidity(en,pl)
       implicit none
       real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-      parameter (tiny=1.d-5)
-c
+      parameter (tiny=1.d-8)
       xplus=en+pl
       xminus=en-pl
       if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
+         if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+            y=0.5d0*log( xplus/xminus  )
+         else
+            y=sign(1.d0,pl)*1.d8
+         endif
+      else 
+         y=sign(1.d0,pl)*1.d8
       endif
       getrapidity=y
       return

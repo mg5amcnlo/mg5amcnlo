@@ -9,23 +9,24 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
+      SUBROUTINE PYABEG(nnn,wwwi)
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
-      implicit none
+      INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      integer nwgt,max_weight,nwgt_analysis,kk,l
+      integer nwgt,max_weight,nwgt_analysis,kk,l,nnn
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
+c
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       nwgt_analysis=nwgt
       do kk=1,nwgt_analysis
       l=(kk-1)*40
@@ -132,12 +133,12 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
-      DO I=1,NPL
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
-      ENDDO
+ 	CALL MFINAL3(I+NPL)             
+      ENDDO                          
 C
       do kk=1,nwgt_analysis
          l=(kk-1)*40
@@ -187,12 +188,12 @@ c
          call multitop(NPL+l+38,NPL-1,3,2,'njets',' ','LOG')
          call multitop(NPL+l+39,NPL-1,3,2,'xsec',' ','LOG')
       enddo
-c
+
       CLOSE(99)
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
+      SUBROUTINE PYANAL(nnn,xww)
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -202,7 +203,7 @@ C----------------------------------------------------------------------
      &PSUB,MJ1,Y,YCUT,YJ1
       INTEGER ICHSUM,ICHINI,IHEP,IFH,IST,ID,IJ,ID1
       LOGICAL DIDSOF
-      REAL*8 WWW0,TINY
+      REAL*8 WWW0
       INTEGER KK
       INTEGER NN,NMAX,I,J,NJ
       PARAMETER (NMAX=2000)
@@ -213,13 +214,15 @@ C----------------------------------------------------------------------
       integer nwgt_analysis,max_weight,l
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
-      DATA TINY/.1D-5/
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
@@ -236,7 +239,6 @@ C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
         CALL HWWARN('PYANAL',111)
-        CALL HWUEPR
         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
@@ -249,7 +251,7 @@ C EFFECT, SO THROW THE EVENT AWAY
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-          IF(ID1.EQ.25.AND.IST.EQ.1)THEN
+          IF(ID1.EQ.25)THEN
             IFH=IFH+1
             DO IJ=1,5
 	      PPH(IJ)=PHEP(IJ,IHEP)
@@ -267,9 +269,9 @@ C---FIND FINAL STATE HADRONS
           ENDDO
         ENDIF
  100  CONTINUE
-      IF(IFH.NE.1)THEN
-         CALL HWUEPR
-         CALL HWWARN('PYANAL',501)
+      IF(IFH.EQ.0)THEN
+         CALL HWWARN('PYANAL',503)
+         GOTO 999
       ENDIF
 C---CLUSTER THE EVENT
       palg =1.d0
@@ -283,8 +285,8 @@ C---CLUSTER THE EVENT
         yjet(i)=0d0
         jet(i)=0
       enddo
-      njet=0
-      njet_central=0
+      njet=-1
+      njet_central=-1
       y_central=2.5d0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
       do i=1,njet

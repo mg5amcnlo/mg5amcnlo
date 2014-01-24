@@ -9,8 +9,8 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
-C     USER''S ROUTINE FOR INITIALIZATION
+      SUBROUTINE PYABEG(nnn,wwwi)
+C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
@@ -18,7 +18,7 @@ C----------------------------------------------------------------------
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
       integer nsingle,ncorr,nlepton,nplots,ncuts
       common/cplots/nsingle,ncorr,nlepton,nplots,ncuts
@@ -33,15 +33,15 @@ C----------------------------------------------------------------------
       PARAMETER (PI=3.14159265358979312D0)
       real*8 sbin(100),smin(100),smax(100)
       real*8 cbin(100),cmin(100),cmax(100)
-      integer i,kk,l,icuts
+      integer i,kk,l,icuts,nnn
       integer l0,ilep1,ilep2,io,ipair
-c      
+c
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       nwgt_analysis=nwgt
 c The analysis will consider:
 c  MAXELM e-
@@ -132,16 +132,15 @@ c
       enddo
       enddo
  999  END
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVTTOT)
-C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
       integer nsingle,ncorr,nlepton,nplots,ncuts
       common/cplots/nsingle,ncorr,nlepton,nplots,ncuts
-      INTEGER I,J,kk,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer l0,ilep1,ilep2,io,ipair,icuts
       integer NPL
       parameter(NPL=15000)
@@ -182,8 +181,8 @@ C
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
-C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
+      SUBROUTINE PYANAL(nnn,xww)
+C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
@@ -193,7 +192,7 @@ C----------------------------------------------------------------------
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
 c
       integer nsingle,ncorr,nlepton,nplots,ncuts
@@ -207,16 +206,17 @@ c
      # PELM(4,25),PELP(4,25),PMUM(4,25),PMUP(4,25),PLEP(4,25),
      # obs(100)
 c
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
         CALL HWWARN('PYANAL',111)
@@ -362,22 +362,20 @@ c
       implicit none
       real*8 getrapidity,en,pl,tiny,xplus,xminus,y
       parameter (tiny=1.d-8)
-c
       xplus=en+pl
       xminus=en-pl
       if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
+         if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+            y=0.5d0*log( xplus/xminus  )
+         else
+            y=sign(1.d0,pl)*1.d8
+         endif
+      else 
+         y=sign(1.d0,pl)*1.d8
       endif
       getrapidity=y
       return
       end
-
 
       function getpseudorap(en,ptx,pty,pl)
       implicit none
@@ -776,6 +774,7 @@ c$$$         CALL HWUBPR
          STOP
       ENDIF
       END
+
 
       subroutine HWUEPR
       INCLUDE 'HEPMC.INC'
