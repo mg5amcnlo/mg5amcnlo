@@ -166,10 +166,11 @@ C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
 %(initiregi)s
-C Below is not Needed: Huasheng must confirm
 C      The initialization below is for CT v1.9.2+
-C       EXT_NUM_FOR_R1=.TRUE.
-C       CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+       IF (CTINIT) THEN
+	     CTINIT=.FALSE.
+		 CALL %(proc_prefix)sINITCT()
+	   ENDIF
 	  END
 
 	  SUBROUTINE %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)
