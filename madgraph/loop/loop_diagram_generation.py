@@ -340,9 +340,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
-            #            if len(diag.get_loop_lines_pdgs())<5 and \
-            #               any([i in diag.get_loop_lines_pdgs() for i in[24,-24,23]]):
-            #                valid_diag=False
+            #if len(diag.get_loop_lines_pdgs())<5 and \
+            #  any([i in diag.get_loop_lines_pdgs() for i in[24,-24,23]]):
+            #    valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
@@ -385,7 +385,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_diags.append(diag)
                 
         self['loop_diagrams'] = new_diag_selection
-        self['loop_diagrams'] = discarded_diags
         warn_msg = """
     The user-defined loop diagrams filter is turned on and discarded %d loops."""\
     %len(discarded_diags)
