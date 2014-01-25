@@ -316,7 +316,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         
         # By default the user filter does nothing, if you want to turn it on
         # and edit it then remove the print statement below.
-        #return
+        return
 
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()

@@ -151,6 +151,9 @@ C
 C GLOBAL VARIABLES 
 C
 	  include 'MadLoopParams.inc'
+	  LOGICAL CTINIT, TIRINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT
+	  
 C ----------
 C BEGIN CODE
 C ----------
