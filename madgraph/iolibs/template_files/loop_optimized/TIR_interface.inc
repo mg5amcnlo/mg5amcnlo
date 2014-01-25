@@ -39,9 +39,9 @@ C LOCAL VARIABLES
 C
 	  INTEGER I, J, K
 	  INTEGER NLOOPCOEFS
-	  LOGICAL INIT
-	  DATA INIT /.TRUE./
-	  SAVE INIT
+	  LOGICAL CTINIT, TIRINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT
+
        %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C
@@ -65,8 +65,8 @@ C BEGIN CODE
 C ----------
 
 C INITIALIZE TIR IF NEEDED
-      IF (INIT) THEN
-	    INIT=.FALSE.
+      IF (TIRINIT) THEN
+	    TIRINIT=.FALSE.
 		CALL %(proc_prefix)sINITTIR()
       ENDIF
 
@@ -166,9 +166,10 @@ C 2 -> AVH
 C 3 -> QCDLOOP
       LOOPLIB=CTLOOPLIBRARY
 %(initiregi)s
+C Below is not Needed: Huasheng must confirm
 C      The initialization below is for CT v1.9.2+
-       EXT_NUM_FOR_R1=.TRUE.
-       CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
+C       EXT_NUM_FOR_R1=.TRUE.
+C       CALL CTSINIT(THRS,LOOPLIB,EXT_NUM_FOR_R1)
 	  END
 
 	  SUBROUTINE %(proc_prefix)sSORT_PJCOEFS(RANK,NLOOPCOEFS,PJCOEFS,TIRCOEFS)

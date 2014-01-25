@@ -331,13 +331,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
 #            if i!=8:
 #                valid_diag = False                
-            
+
+            # Ex. 0: Keeps only the top quark loops.
+#            if any([pdg not in [6,-6] for pdg in diag.get_loop_lines_pdgs()]):
+#                valid_diag = False
+
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
             #        differentiated and always the particle PDG is returned.
             #        In this example, only boxes are selected.
 #            if len(diag.get_loop_lines_pdgs())<5 and \
-#               any([i in diag.get_loop_lines_pdgs() for i in[24,-24,23,23]]):
+#               any([i in diag.get_loop_lines_pdgs() for i in[24,-24,23]]):
 #                valid_diag=False
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
@@ -381,6 +385,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_diags.append(diag)
                 
         self['loop_diagrams'] = new_diag_selection
+        self['loop_diagrams'] = discarded_diags
         warn_msg = """
     The user-defined loop diagrams filter is turned on and discarded %d loops."""\
     %len(discarded_diags)
