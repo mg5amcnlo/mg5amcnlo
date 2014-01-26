@@ -284,22 +284,45 @@ class MG_diagram(diagram_class.MG_diagram):
             i+=1
             text += ' local_%s = %s \n' %(i,write_call_for_peak(self,unaligned))
             peak_to_prov[unaligned]=i
-            
-        for j in range(0,len(peak_by_channel)):
-            den_text += ' + '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
-            if j == label:
-                   num_text += ' * '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
         
-        #define the return value
-        text+='\n' #make a break
-        text+=num_text+'\n'
-        text+=den_text+'\n'
-        if i:
-            text+=' multi_channel_weight = num/den\n'
+
+        if 'restrict_channel' in self.MWparam['mw_gen']:
+            if isinstance(self.MWparam['mw_gen']['restrict_channel'], list):
+                allowed_channel = [int(i)-1 for i in self.MWparam['mw_gen']['restrict_channel']]
+            elif self.MWparam['mw_gen']['restrict_channel'] in ['','0','F']:
+                allowed_channel = range(0,len(peak_by_channel))
+            else:
+                allowed_channel = [int(self.MWparam['mw_gen']['restrict_channel'])-1]
         else:
-            value=str(1.0/len(peak_by_channel))
-            value=value.replace('e','d')
-            text=' multi_channel_weight = %s\n' % value
+            allowed_channel = range(0,len(peak_by_channel))
+        for j in xrange(0,len(peak_by_channel)):
+            if j in allowed_channel:
+                den_text += ' + '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
+                if j == label:
+                    num_text += ' * '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
+            elif j ==label:
+                if num_text.startswith(' num=0d0'):
+                    num_text += ' * '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
+                else: 
+                    num_text = ' num=0d0 ! '+product_of_peak(peak_by_channel[j],all_peak,peak_to_prov)
+                
+        #define the return value
+        if not num_text.startswith(' num=0d0'):
+            text+='\n' #make a break
+            text+=num_text+'\n'
+            text+=den_text+'\n'
+            if i:
+                text+=' multi_channel_weight = num/den\n'
+            else:
+                value=str(1.0/len(peak_by_channel))
+                value=value.replace('e','d')
+                text=' multi_channel_weight = %s\n' % value
+        else:
+            text+='\n' #make a break
+            text+=num_text+'\n'
+            text+=den_text+'\n'
+            text = 'c'+text.replace('\n','\nc')
+            text += '\n multi_channel_weight = 0d0\n'
         return text
              
     def create_multi_channel_weight(self,label, num_sol):
@@ -520,7 +543,6 @@ class MG_diagram(diagram_class.MG_diagram):
                 p_random +=1 
             elif block.chgt_var == 'C':
                 neut = block.neut_content[0]
-                misc.sprint( particle.MG, 3*particle.MG-5,3*particle.MG-6)
                 mapping[3*neut.MG-6] = p_random + 1
                 mapping[3*neut.MG-5] = p_random + 2
                 p_random += 2                
@@ -665,6 +687,32 @@ class MG_diagram(diagram_class.MG_diagram):
  #       write_mchannel += self.write_channel_weight(self.unaligned,'+')
         write_mchannel += template.dico['END_FOR_MULTICHANNEL']  
         write_mchannel= put_in_fortran_format(write_mchannel)      
+
+        # Add to data.inc the ordering of the config.
+        dico = {'nb_sol_config':len(self.code),
+                'values':[]}
+        if 'restrict_channel' in self.MWparam['mw_gen']:
+            if isinstance(self.MWparam['mw_gen']['restrict_channel'], list):
+                allowed_channel = [int(i) for i in self.MWparam['mw_gen']['restrict_channel']]
+            elif self.MWparam['mw_gen']['restrict_channel'] in ['','0','F']:
+                allowed_channel = range(1,len(self.allowed_channel)+1)
+            else:
+                allowed_channel = [int(self.MWparam['mw_gen']['restrict_channel'])]
+            full = allowed_channel + [0] * (len(self.code) - len(allowed_channel))
+            dico['values'] = ','.join(map(str, full))
+        else:
+            dico['values'] = ','.join(map(str, range(1, len(self.code)+1)))
+            
+        write_data += put_in_fortran_format("""
+C+-----------------------------------------------------------------------+
+C|                  ORDERING OF THE CONFIGURATION                        |
+C+-----------------------------------------------------------------------+
+C|     order from the most important to the least important              |
+C|         0 means that the configuration is bypassed                    |
+C+-----------------------------------------------------------------------+
+        data (config_ordering(label),label=1,%(nb_sol_config)i) /%(values)s/
+C+-----------------------------------------------------------------------+
+        """ % dico)
         
                     
         mod_file.mod_text(write_main, template.dico, self.directory + '/main_code.f')
@@ -690,6 +738,8 @@ class MG_diagram(diagram_class.MG_diagram):
             text += ' parameter (nb_channel=%i)\n' % len(self.code)
         else:
             text += ' parameter (nb_channel=%i)\n' % (len(self.code) * 48)
+            
+        text+=" integer config_ordering(nb_sol_config)\n "
 #        text+=' integer max_branch\n'                    
 #        text+=' parameter (max_branch='+str(len(self.ext_content))+')\n'        
         text = put_in_fortran_format(text)
@@ -802,7 +852,7 @@ class MG_diagram(diagram_class.MG_diagram):
         open(self.directory + '/permutation.inc', 'w').write(text)
 
         #Update main_code.f
-        template = """
+        template = """       
 C*********************************************************************
         double precision function fct(x,wgt)
         implicit none

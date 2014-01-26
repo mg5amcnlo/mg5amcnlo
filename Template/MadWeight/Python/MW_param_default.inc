@@ -45,3 +45,4 @@ mw_gen     13        logical T            # Authorizes ECS D  (2 neut ttbar-like
 mw_gen     14        logical T            # Authorizes ECS E  (2 neut HWW-like)
 mw_gen     15        logical T            # Authorizes ECS F  (2 neut [WW in T-channel]-like)
 mw_gen     force_nwa float   2.0          # width below the mass should ALWAYS be align.
+

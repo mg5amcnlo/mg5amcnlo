@@ -58,6 +58,7 @@ c
 c     logical
 c
       logical debug
+      integer config_step
 
 C
 C     GLOBAL     (BLOCK IN COMMON WITH VEGAS)
@@ -186,8 +187,10 @@ C
                curr_perm = perm_pos
            endif
 
-      do config_pos=1,nb_sol_config
+      do config_step=1,nb_sol_config
+          config_pos = config_ordering(config_step)
           integral_index = integral_index + 1
+          if (config_pos.eq.0) goto 3
           if (loop_index.eq.1)then
               NCALL = nevents
           else
@@ -295,12 +298,15 @@ c             write(*,*) 'cross', cross
              endif
              call check_nan(cross)
 c            See if this is require to continue to update this
+             write(*,*) 'cross, sd', cross, sd
+             if (cross.eq.0d0) goto 2
              if (sd/cross.le.final_prec) goto 2
 
              if (loop_index.eq.2) then
 c                NCALL = NCALL * nb_sol_perm
                 ITMX = max_it_step2
-                acc = max(0.9*check_value/(cross+3*SD), final_prec)
+                write(*,*) check_value, cross,sd, check_value/(cross+SD), final_prec
+                acc = max(0.9*check_value/(cross+SD), final_prec)
                 if ((.not.montecarlo_perm).and.(integrator.eq.1)) then
                    nitmax=ITMX
                    ncalls0=ncall
@@ -311,20 +317,14 @@ c                NCALL = NCALL * nb_sol_perm
                 endif
              endif
 
- 2           if (CROSS.lt.1d99) then
+ 2           if (CROSS.lt.1d99.and.cross.ne.0d0) then
                 temp_val=temp_val+cross
                 temp_err=temp_err+SD**2
                 order_value(integral_index) = cross
                 order_error(integral_index) = sd
                 if (histo) call histo_combine_iteration(integral_index)
-                if (loop_index.eq.1) then
-                  if (config_pos.eq.1)then
-                     check_value = (cross + 3*SD) * min_prec_cut1
-                  else
-                     check_value = max(
+                check_value = max(
      &                  (cross + SD)* min_prec_cut1, check_value)
-                  endif
-                endif
                 do i = 1, 100
                     do j=1,NDIM
                         xi_by_channel(i, j, integral_index) = xi(i,j)
@@ -363,7 +363,7 @@ c                NCALL = NCALL * nb_sol_perm
                 tf_value_it(j) = 0d0
                 tf_error_it(j) = 0d0
              ENDDO
-          endif
+ 3         endif
        enddo
        enddo
        check_value = temp_val * min_prec_cut1 

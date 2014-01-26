@@ -825,7 +825,7 @@ class Option:
 
        #replace defined value:
        for key, value in info['mw_gen'].items():
-           if key != 'comment':
+           if key in tag_to_genvar:
                exec('%s = %s' % (tag_to_genvar[key],value))
 
        self.ecs_on=[]
