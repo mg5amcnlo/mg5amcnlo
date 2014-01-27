@@ -478,7 +478,11 @@ SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 BeamRemnants:primordialKT = off    ! No primordial kT
 
 ! 8) Particle characteristics.
-5:m0 = $BMASS                      ! bottom mass
+1:m0 = $DMASSPY                    ! down mass
+2:m0 = $UMASSPY                    ! up mass
+3:m0 = $SMASSPY                    ! strange mass
+4:m0 = $CMASSPY                    ! charm mass
+5:m0 = $BMASSPY                    ! bottom mass
 6:m0 = $TMASS                      ! top mass
 23:m0 = $ZMASS                     ! Z mass
 24:m0 = $WMASS                     ! W mass
