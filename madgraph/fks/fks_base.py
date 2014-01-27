@@ -104,7 +104,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for ord, val in procdef['orders'].items():
                 procdef['squared_orders'][ord] = 2 * val
 
-
+        #set the orders to an empty dictionary
+        procdef['orders'] = {}
 
     
     def __init__(self, *arguments, **options):
@@ -113,6 +114,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
         legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
+        print 'IN INIT'
 
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
@@ -142,7 +144,12 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 self.correct_procdef(procdef)
             
             #---now generate the amplitudes
+                print 'AA', procdef['orders']
+                print 'AA', procdef['squared_orders']
             self.get('amplitudes')
+            for procdef in self['process_definitions']:
+                print 'AA', procdef['orders']
+                print 'AA', procdef['squared_orders']
 
         except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
@@ -181,6 +188,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     break
 
         amps = self.get('amplitudes')
+        print 'MZ1', len(amps)
+        if amps:
+            print 'MZ1', amps[0]['process']['orders']
         #generate reals, but combine them after having combined the borns
         for amp in amps:
             born = FKSProcess(amp)
@@ -594,6 +604,11 @@ class FKSProcess(object):
             #initialize with an amplitude
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 pertur = start_proc.get('process')['perturbation_couplings']
+                print 'MZ pertur', pertur
+                print 'MZ, orders', start_proc.get('process')['orders']
+                print 'MZ, squared orders', start_proc.get('process')['squared_orders']
+                print 'MZ, overall orders', start_proc.get('process')['overall_orders']
+                print 'MZ, born orders', start_proc.get('process')['born_orders']
                 self.born_amp_list.append(diagram_generation.Amplitude(\
                                 copy.copy(fks_common.sort_proc(\
                                     start_proc['process'], 

@@ -688,27 +688,26 @@ class FKSLegList(MG.LegList):
                 keys = [itemgetter('id'), itemgetter('id')]
                 reversing = True
 
-            for i, list in enumerate([massive_legs, massless_legs]):
+            for i, llist in enumerate([massive_legs, massless_legs]):
                 init_pdg_legs = []
-                list = dict[col]
                 if len(initial_legs) == 2:
                 #put first legs which have the same abs(pdg) of the initial ones
                     for i in range(len(set([ abs(l['id']) for l in initial_legs]))):
                         pdg = abs(initial_legs[i]['id'])
-                        init_pdg_legs = [l for l in list if abs(l['id']) == pdg]
+                        init_pdg_legs = [l for l in llist if abs(l['id']) == pdg]
                         if init_pdg_legs:
                             # sort in order to put first quarks then antiparticles,
                             #  and to put fks partons as n j i
-                            init_pdg_legs.sort(key = keys[i_m], reverse=reversing)
+                            init_pdg_legs.sort(key = keys[i], reverse=reversing)
                             sorted_leglist.extend(FKSLegList(init_pdg_legs))
 
                     init_pdgs = [ abs(l['id']) for l in initial_legs]
-                    other_legs = [l for l in list if not abs(l['id']) in init_pdgs]
-                    other_legs.sort(key = keys[i_m], reverse=reversing)
+                    other_legs = [l for l in llist if not abs(l['id']) in init_pdgs]
+                    other_legs.sort(key = keys[i], reverse=reversing)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    list.sort(key = keys[i_m], reverse=reversing)
-                    sorted_leglist.extend(FKSLegList(list))
+                    llist.sort(key = keys[i], reverse=reversing)
+                    sorted_leglist.extend(FKSLegList(llist))
 
         for i, l in enumerate(sorted_leglist):
             self[i] = l
