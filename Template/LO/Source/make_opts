@@ -1,7 +1,7 @@
 # Environment variables
 
 ifeq ($(origin FFLAGS),undefined)
-  FFLAGS= -O -w
+  FFLAGS= -O -w -fPIC
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 FFLAGS+= -ffixed-line-length-132
@@ -17,6 +17,12 @@ endif
 UNAME := $(shell uname)
 
 # Option dynamic
+
+ifeq ($(UNAME), Darwin)
+  dylibext=dylib
+else
+  dylibext=so  
+endif
 
 ifdef dynamic
   ifeq ($(UNAME), Darwin)

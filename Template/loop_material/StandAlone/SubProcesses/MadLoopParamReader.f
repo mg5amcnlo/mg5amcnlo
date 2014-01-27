@@ -2,7 +2,8 @@
 
       implicit none
 
-      CHARACTER*64 fileName, buff, buff2, mode
+      CHARACTER(512) fileName, buff, buff2, mode
+      
       include "MadLoopParams.inc"
 
       logical printParam, couldRead, paramPrinted
@@ -92,6 +93,9 @@
           else if (buff .eq. '#HelInitStartOver') then
              read(666,*,end=999) HelInitStartOver
 
+          else if (buff .eq. '#WriteOutFilters') then
+             read(666,*,end=999) WriteOutFilters
+
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
              if (ImprovePSPoint .lt. -1 .or.
@@ -152,6 +156,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > LoopInitStartOver         = ',LoopInitStartOver
       write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
+      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters      
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -180,6 +185,7 @@ C     a non existing or malformed parameter file
       DoubleCheckHelicityFilter=.True.
       LoopInitStartOver=.False.
       HelInitStartOver=.False.
+      WriteOutFilters=.True.
       ZeroThres=1.0d-9
       ImprovePSPoint=2
 

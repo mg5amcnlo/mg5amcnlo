@@ -1008,6 +1008,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         array_rep.append(self['color_key'])
         # Also need to specify if it is a loop wf
         array_rep.append(int(self['is_loop']))
+        
         # Finally, the mother numbers
         array_rep.extend([mother['number'] for \
                           mother in self['mothers']])
@@ -1054,10 +1055,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
         if self.get('color') == 8 and \
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
-               [m.get('color') for m in self.get('mothers')] == [8, 8]:
-            if hasattr(self, 'octet_majorana_flip'):
-                return
-            self.octet_majorana_flip = True
+               [m.get('color') for m in self.get('mothers')] == [8, 8] and \
+               self.get('coupling')[0] != '-':
             self.set('coupling', ['-%s' % c 
                                               for c in self.get('coupling')])
         
@@ -1546,10 +1545,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
         # Sort according to spin and flow direction
         res.sort()
-#        if not self['is_loop']:
         res.append(self.get_spin_state_number())
         res.append(self.find_outgoing_number())
-#        else:
+
         if self['is_loop']:
             res.append(self.get_loop_index())
             if not self.get('mothers'):
@@ -2607,25 +2605,97 @@ class HelasAmplitude(base_objects.PhysicsObject):
         # If there are fermion line pairs, append them as
         # [NI,NO,n1,n2,...]
         fermion_numbers = [f.get_fermion_order() for f in fermions]
-        for iferm in range(0, len(fermion_numbers), 2):
-            fermion_number_list.append(fermion_numbers[iferm][0])
-            fermion_number_list.append(fermion_numbers[iferm+1][0])
-            fermion_number_list.extend(fermion_numbers[iferm][1])
-            fermion_number_list.extend(fermion_numbers[iferm+1][1])
 
+        # Apply the right sign correction for anti-commutating ghost loops
+        if self.get('type')=='loop':
+            # Fetch the second l-cut wavefunctions
+            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                    len(m.get('mothers'))==0][0]
+            ghost_factor = -1 if lcuf_wf_2.is_anticommutating_ghost() else 1
+        else:
+            # no ghost at tree level
+            ghost_factor = 1
+
+        # Now put together the fermion line merging in this amplitude
+        if self.get('type')=='loop' and len(fermion_numbers)>0:
+            # Remember that the amplitude closing the loop is always a 2-point
+            # "fake interaction" attached on the second l-cut wavefunction.
+            # So len(fermion_numbers) is either be 0 or 2.
+            lcut_wf2_number = lcuf_wf_2.get('number_external')
+            assert len(fermion_numbers)==2, "Incorrect number of fermions"+\
+                " (%d) for the amp. closing the loop."%len(fermion_numbers)
+            # Fetch the first l-cut wavefunctions
+            lcuf_wf_1=[m for m in self.get('mothers') if m['is_loop'] and \
+                                                     len(m.get('mothers'))>0][0]
+            while len(lcuf_wf_1.get('mothers'))>0:
+                lcuf_wf_1 = lcuf_wf_1.get_loop_mother()
+            lcut_wf1_number = lcuf_wf_1.get('number_external')
+            
+            # We must now close the loop fermion flow, if there is any.
+            # This means merging the two lists representing the fermion flow of
+            # each of the two l-cut fermions into one. Example for the process
+            # g g > go go [virt=QCD] in the MSSM.
+            # Loop diagram 21 has the fermion_number_list
+            # [[3, [5, 4]], [6, []]]
+            # and 22 has 
+            # [[6, []], [4, [3, 5]]]
+            # Which should be merged into [3,4] both times
+            
+            # Here, iferm_to_replace is the position of the fermion line 
+            # pairing which is *not* [6,[]] in the above example.
+            iferm_to_replace = (fermion_numbers.index([lcut_wf2_number,[]])+1)%2
+        
+            if fermion_numbers[iferm_to_replace][0]==lcut_wf1_number:
+                # We have a closed loop fermion flow here, so we just append
+                # [lwf2_number,lwf1_number] or [lwf2_number,lwf1_number]
+                # depending on which one is incoming or outgoing
+                fermion_number_list.extend([fermion_numbers[0][0],
+                                                         fermion_numbers[1][0]])
+                fermion_number_list.extend(fermion_numbers[iferm_to_replace][1])
+            else:
+                # The fermion flow escape the loop in this case.
+                fermion_number_list = \
+                                 copy.copy(fermion_numbers[iferm_to_replace][1])
+                # We must find to which external fermion the lcut_wf1 is 
+                # connected (i.e. 5 being connected to 3(resp. 4) in the example 
+                # of diagram 22 (resp. 21) above)
+                i_connected_fermion = fermion_number_list.index(lcut_wf1_number)
+                fermion_number_list[i_connected_fermion] = \
+                                            fermion_numbers[iferm_to_replace][0]
+        else:
+            for iferm in range(0, len(fermion_numbers), 2):
+                fermion_number_list.append(fermion_numbers[iferm][0])
+                fermion_number_list.append(fermion_numbers[iferm+1][0])
+                fermion_number_list.extend(fermion_numbers[iferm][1])
+                fermion_number_list.extend(fermion_numbers[iferm+1][1])
+
+        # Bosons are treated in the same way for a bosonic loop than for tree
+        # level kind of amplitudes.
         for boson in bosons:
             # Bosons return a list [n1,n2,...]
             fermion_number_list.extend(boson.get_fermion_order())
 
+#         if not hasattr(HelasAmplitude,"counter"):
+#             HelasAmplitude.counter=1
+#             print "MMMMME"
+#         save1 = copy.deepcopy(fermion_number_list)
+#         save2 = copy.deepcopy(fermion_number_list2)
+#         save3 = copy.deepcopy(fermion_number_list)
+#         save4 = copy.deepcopy(fermion_number_list2)
+#         if HelasAmplitude.counter<500000 and self.get('type')=='loop' and \
+#           HelasAmplitude.sign_flips_to_order(save1)*HelasAmplitude.sign_flips_to_order(save2)==-1:
+#             print "Before %i=%s"%(HelasAmplitude.counter,str(fermion_numbers_save))
+#             print "FOOOOR %i=%s"%(HelasAmplitude.counter,str(fermion_number_list))
+#             print "NEW %i=%s"%(HelasAmplitude.counter,str(fermion_number_list2))
+#             print "Relative sign =%d"%(HelasAmplitude.sign_flips_to_order(save3)*HelasAmplitude.sign_flips_to_order(save4))
+#         HelasAmplitude.counter=self.counter+1
+
+        #fermion_number_list = fermion_number_list2
+
         fermion_factor = HelasAmplitude.sign_flips_to_order(fermion_number_list)
-        # Apply the right sign correction for anti-commutating ghost loops
-        if self.get('type')=='loop':
-            lcuf_wf_2=[m for m in self.get('mothers') if m['is_loop'] and \
-                                                        not m.get('mothers')][0]
-            self['fermionfactor'] = -fermion_factor if \
-                        lcuf_wf_2.is_anticommutating_ghost() else fermion_factor
-        else:
-            self['fermionfactor'] = fermion_factor
+        
+        self['fermionfactor'] = fermion_factor*ghost_factor
+#        print "foooor %i ="%HelasAmplitude.counter, fermion_factor, self.get('type')
 
     @staticmethod
     def sign_flips_to_order(fermions):

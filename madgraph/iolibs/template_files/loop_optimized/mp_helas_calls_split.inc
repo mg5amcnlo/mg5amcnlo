@@ -1,4 +1,4 @@
-      SUBROUTINE %(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C  
       IMPLICIT NONE
 C  
@@ -42,31 +42,31 @@ C
 
 	  INTEGER GOODHEL(NCOMB)
 	  LOGICAL GOODAMP(NSQUAREDSO,NLOOPGROUPS)
-	  common/Filters/GOODAMP,GOODHEL
+	  common/%(proc_prefix)sFilters/GOODAMP,GOODHEL
 
 	  INTEGER SQSO_TARGET
-	  common/SOCHOICE/SQSO_TARGET
+	  common/%(proc_prefix)sSOCHOICE/SQSO_TARGET
       
 	  LOGICAL UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
-	  common/SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       %(mp_born_amps_decl)s
 	  %(complex_mp_format)s W(20,NWAVEFUNCS)
-	  common/MP_W/W
+	  common/%(proc_prefix)sMP_W/W
 
 	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
-	  common/MP_WL/WL,PL
+	  common/%(proc_prefix)sMP_WL/WL,PL
 
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
-	  common/MP_LCOEFS/LOOPCOEFS
+	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
-	  common/MP_AMPL/AMPL
+	  common/%(proc_prefix)sMP_AMPL/AMPL
 
       %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
-	  common/LOOPRES/LOOPRES,S
+	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
 C
 C ----------
 C BEGIN CODE

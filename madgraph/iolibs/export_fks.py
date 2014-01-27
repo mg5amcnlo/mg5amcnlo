@@ -139,6 +139,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
+                  "SubProcesses/MadLoopCommons.f",
                   "SubProcesses/MadLoopParams.inc"]
         
         for file in cpfiles:
@@ -148,6 +149,18 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
         self.write_mp_files(writers.FortranWriter('cts_mprec.h'),\
                             writers.FortranWriter('cts_mpc.h'),)
+
+        
+        # Finally make sure to turn off MC over Hel for the default mode.
+        FKS_card_path = pjoin(self.dir_path,'Cards','FKS_params.dat')
+        FKS_card_file = open(FKS_card_path,'r')
+        FKS_card = FKS_card_file.read()
+        FKS_card_file.close()
+        FKS_card = re.sub(r"#NHelForMCoverHels\n-?\d+",
+                                             "#NHelForMCoverHels\n-1", FKS_card)
+        FKS_card_file = open(FKS_card_path,'w')
+        FKS_card_file.write(FKS_card)
+        FKS_card_file.close()
 
         # Return to original PWD
         os.chdir(cwd)
@@ -311,6 +324,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         ff.write(text)
         ff.close()
 
+    def get_ME_identifier(self, matrix_element):
+        """ A function returning a string uniquely identifying the matrix 
+        element given in argument so that it can be used as a prefix to all
+        MadLoop5 subroutines and common blocks related to it. This allows
+        to compile several processes into one library as requested by the 
+        BLHA (Binoth LesHouches Accord) guidelines. The MadFKS design
+        necessitates that there is no process prefix."""
+        
+        return ''
 
     #===============================================================================
     # write_coef_specs
@@ -438,7 +460,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'driver_mintMC.f',
                      'driver_vegas.f',
                      'driver_reweight.f',
-                     'fastjetfortran_madfks.cc',
+                     'fastjetfortran_madfks_core.cc',
+                     'fastjetfortran_madfks_full.cc',
+                     'fjcore.cc',
+                     'fjcore.hh',
                      'fks_Sij.f',
                      'fks_powers.inc',
                      'fks_singular.f',
@@ -476,7 +501,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
-                     'write_ajob_basic.f',
                      'handling_lhe_events.f',
                      'write_event.f',
                      'fill_MC_mshell.f',
@@ -948,6 +972,13 @@ end
 
         matrix_element = loop_matrix_element
 
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
         # Create the directory PN_xx_xxxxx in the specified path
         name = "V%s" % matrix_element.get('processes')[0].shell_string()
         dirpath = os.path.join(dir_name, name)
@@ -989,36 +1020,33 @@ end
                            len(matrix_element.get_all_amplitudes()))
 
         filename = "loop_matrix.ps"
-        writers.FortranWriter(filename).writelines("""C Post-helas generation loop-drawing is not ready yet.""")
+        writers.FortranWriter(filename).writelines(
+                   """C Post-helas generation loop-drawing is not ready yet.""")
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
               matrix_element.get('base_amplitude').get('loop_diagrams')[:1000]),
               filename,
               model=matrix_element.get('processes')[0].get('model'),
               amplitude='')
         logger.info("Drawing loop Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
+            matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         filename = "born_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(matrix_element.get('base_amplitude').\
-                                             get('born_diagrams'),
-                                          filename,
-                                          model=matrix_element.get('processes')[0].\
-                                             get('model'),
-                                          amplitude='')
+            get('born_diagrams'),filename,model=matrix_element.get('processes')[0].\
+                                                      get('model'),amplitude='')
         logger.info("Generating born Feynman diagrams for " + \
-                     matrix_element.get('processes')[0].nice_string(print_weighted=False))
+            matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc']
+                     'MadLoopCommons.f','MadLoopParams.inc']
 
-        os.system("ln -s "+name+"/MadLoopParams.dat ../")
-        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
-        os.system("ln -s "+name+"/HelConfigs.dat ../")
-        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
-        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
+        # We should move to MadLoop5_resources directory from the SubProcesses
+
+        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+                                              pjoin('..','MadLoop5_resources'))
 
         for file in linkfiles:
             ln('../../%s' % file)
@@ -2360,6 +2388,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                        
         # We add here the user-friendly MadLoop option setter.
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
+                  "SubProcesses/MadLoopCommons.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
         
@@ -2393,6 +2422,13 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         matrix_element = loop_matrix_element
 
+        # Create the MadLoop5_resources directory if not already existing
+        dirpath = os.path.join(dir_name, 'MadLoop5_resources')
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+
         # Create the directory PN_xx_xxxxx in the specified path
         name = "V%s" % matrix_element.get('processes')[0].shell_string()
         dirpath = os.path.join(dir_name, name)
@@ -2414,6 +2450,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         calls=self.write_matrix_element_v4(None,matrix_element,fortran_model)
+        
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
@@ -2459,18 +2496,17 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc']
+                     'MadLoopParams.inc','MadLoopCommons.f']
 
-        os.system('ln -s ../../../Cards/MadLoopParams.dat . ')
         for file in linkfiles:
             ln('../../%s' % file)
 
-        os.system("ln -s "+name+"/MadLoopParams.dat ../")
-        os.system("ln -s "+name+"/ColorDenomFactors.dat ../")
-        os.system("ln -s "+name+"/HelConfigs.dat ../")
-        os.system("ln -s "+name+"/ColorNumFactors.dat ../")
 
         os.system("ln -s ../../makefile_loop makefile")
+        
+# We should move to MadLoop5_resources directory from the SubProcesses
+        ln(pjoin('../../..','Cards','MadLoopParams.dat'),
+                                              pjoin('..','MadLoop5_resources'))        
 
         linkfiles = ['mpmodule.mod']
 

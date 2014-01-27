@@ -288,6 +288,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_configurations.append(diag_config)
         self[diags] = newdiagselection
 
+
     def user_filter(self, model, structs):
         """ User-defined user-filter. By default it is not called, but the expert
         user can turn it on and code here is own filter. Some default examples
@@ -301,11 +302,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
+        i=0
         for diag in self['loop_diagrams']:
             if diag.get('tag')==[]:
                 raise MadGraph5Error, "Before using the user_filter, please "+\
                        "make sure that the loop diagrams have been tagged first."
             valid_diag = True
+            i=i+1
+            
+            # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
+#            if i!=8:
+#                valid_diag = False                
             
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 

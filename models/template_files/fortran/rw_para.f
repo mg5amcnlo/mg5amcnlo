@@ -12,7 +12,10 @@ c************************************************************************
       character*(*) param_name
       logical readlha
 
-      %(includes)s
+      include 'coupl.inc'
+      include 'input.inc'
+      include 'mp_coupl.inc'
+      include 'mp_input.inc'
 
       integer maxpara
       parameter (maxpara=5000)
@@ -20,7 +23,7 @@ c************************************************************************
       integer npara
       character*20 param(maxpara),value(maxpara)
 
-      %(load_card)s
+      call LHA_loadcard(param_name,npara,param,value)
       include 'param_read.inc'
       call coup()
 
@@ -28,5 +31,45 @@ c************************************************************************
 
       end
 
+      subroutine setpara2(param_name)
+      implicit none
+
+      character(512) param_name
+
+      integer k
+      logical found
+
+      character(512) ParamCardPath
+      DATA ParamCardPath/'.'/
+      common/ParamCardPath/ParamCardPath
+
+      if (param_name(1:1).ne.' ') then
+        ! Save the basename of the param_card for the ident_card.
+        ! If no absolute path was used then this ParamCardPath
+        ! remains empty
+        ParamCardPath = '.'
+        k = LEN(param_name)
+        found = .False.
+        do while (k.ge.1.and..not.found)
+          if (param_name(k:k).eq.'/') then
+              found=.True.
+          endif
+          k=k-1
+        enddo
+        if (k.ge.1) then
+          ParamCardPath(1:k)=param_name(1:k)
+        endif
+        call setpara(param_name)
+      endif
+      if (param_name(1:1).ne.'*') then
+         ! Dummy call to printout so that it is available in the
+         ! dynamic library for MadLoop BLHA2
+         ! In principle the --whole-archive option of ld could be 
+         ! used but it is not always supported
+         call printout()
+      endif
+      return
+
+      end
 
 

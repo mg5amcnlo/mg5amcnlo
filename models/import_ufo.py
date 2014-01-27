@@ -182,7 +182,6 @@ def import_full_model(model_path, decay=False):
     model.set('name', os.path.split(model_path)[-1])
     # Load the Parameter/Coupling in a convinient format.
     parameters, couplings = OrganizeModelExpression(ufo_model).main()
-
     model.set('parameters', parameters)
     model.set('couplings', couplings)
     model.set('functions', ufo_model.all_functions)
@@ -878,7 +877,16 @@ class OrganizeModelExpression:
     def analyze_parameters(self):
         """ separate the parameters needed to be recomputed events by events and
         the others"""
-        
+        # HSS 27/10/2013
+        # in order to match in Gmu scheme
+        # test whether aEWM1 is the exteranl or not
+        # if not, take Gf as the track_dependant varaible
+        present_aEWM1 = any([param.name == 'aEWM1' for param in self.model.all_parameters\
+                                if param.nature == 'external'])
+        #exter_pa = [param.name for param in self.model.all_parameters\
+        #                        if param.nature == 'external']
+        if not present_aEWM1:
+            self.track_dependant = ['aS','Gf','MU_R']
         for param in self.model.all_parameters:
             if param.nature == 'external':
                 parameter = base_objects.ParamCardVariable(param.name, param.value, \
@@ -897,7 +905,6 @@ class OrganizeModelExpression:
         avoid duplication """
         
         assert isinstance(parameter, base_objects.ModelVariable)
-        
         if parameter.name in self.all_expr.keys():
             return
         
