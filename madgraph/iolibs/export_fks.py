@@ -1031,9 +1031,10 @@ end
     # write_split_me_fks
     #===========================================================================
     def write_split_me_fks(self, writer, matrix_element, fortran_model,
-                                              proc_type, proc_prefix=''):
+                                    proc_type, proc_prefix='',start_dict={}):
         """Export a matrix element using the split_order format
-        proc_type is either born or real"""
+        proc_type is either born or real
+        start_dict contains additional infos to be put in replace_dict"""
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1051,6 +1052,10 @@ end
 
         replace_dict = {'global_variable':'', 'amp2_lines':'',
                                                       'proc_prefix':proc_prefix}
+
+        # update replace_dict according to start_dict
+        for k,v in start_dict.items():
+            replace_dict[k] = v
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -1172,8 +1177,19 @@ end
         for i, me in enumerate(matrix_element.born_me_list):
             filename = 'born_%d.f' % (i + 1)
             ###calls_born, ncolor_born = \
+
+            born_dict = {}
+            born_dict['nconfs'] = len(matrix_element.get_fks_info_list())
+
+            den_factor_lines = self.get_den_factor_lines(matrix_element,i)
+            born_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
+
+            ij_lines = self.get_ij_lines(matrix_element)
+            born_dict['ij_lines'] = '\n'.join(ij_lines)
+
             self.write_split_me_fks(writers.FortranWriter(filename),
-                                        me, fortran_model, 'born', "%d" % (i+1))
+                                        me, fortran_model, 'born', "%d" % (i+1),
+                                        start_dict = born_dict)
 
 
 #        filename = 'born_conf.inc'
@@ -2272,7 +2288,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
     #===============================================================================
     # get_den_factor_lines
     #===============================================================================
-    def get_den_factor_lines(self, fks_born):
+    def get_den_factor_lines(self, fks_born, iborn):
         """returns the lines with the information on the denominator keeping care
         of the identical particle factors in the various real emissions"""
     
@@ -2281,8 +2297,8 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
         lines.append('DATA IDEN_VALUES /' + \
                      ', '.join(['%d' % ( 
-                     fks_born.born_matrix_element.get_denominator_factor() / \
-                     fks_born.born_matrix_element['identical_particle_factor'] * \
+                     fks_born.born_me_list[iborn].get_denominator_factor() / \
+                     fks_born.born_me_list[iborn]['identical_particle_factor'] * \
                      fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
                      for info in info_list]) + '/')
 

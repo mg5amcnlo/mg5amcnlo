@@ -701,7 +701,8 @@ class FKSProcess(object):
         if combine:
             self.combine_real_amplitudes()
         self.generate_real_amplitudes(pdg_list, real_amp_list)
-        self.link_born_reals()
+        print 'MZ, fix LINK'
+        #self.link_born_reals()
 
 
     def link_born_reals(self):
