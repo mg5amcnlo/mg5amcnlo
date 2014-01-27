@@ -286,7 +286,7 @@ C---CLUSTER THE EVENT
         jet(i)=0
       enddo
       njet=-1
-      njet_central=-1
+      njet_central=0
       y_central=2.5d0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
       do i=1,njet
