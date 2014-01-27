@@ -300,14 +300,25 @@ class FKSHelasProcess(object):
         return initial + '-> ' + final
 
 
-    def get(self, key):
-        """the get function references to born_matrix_element"""
-        return self.born_matrix_element.get(key)
+    def get(self, key, ime=None):
+        """the get function references to the borns
+        if ime is passed, refer to the i-th ME, otherwise
+        loop over them"""
+
+        if ime != None:
+            return self.born_me_list[ime].get(key)
+        else:
+            llist = []
+            for me in self.born_me_list:
+                llist.extend(me.get(key))
+            return llist
     
     def get_used_lorentz(self):
         """the get_used_lorentz function references to born, reals
         and virtual matrix elements"""
-        lorentz_list = self.born_matrix_element.get_used_lorentz()
+        lorentz_list = []
+        for me in self.born_me_list:
+            lorentz_list.extend(me.get_used_lorentz())
         for real in self.real_processes:
             lorentz_list.extend(real.matrix_element.get_used_lorentz())
         if self.virt_matrix_element:
@@ -318,7 +329,9 @@ class FKSHelasProcess(object):
     def get_used_couplings(self):
         """the get_used_couplings function references to born, reals
         and virtual matrix elements"""
-        coupl_list = self.born_matrix_element.get_used_couplings()
+        coupl_list = []
+        for me in self.born_me_list:
+            coupl_list.extend(me.get_used_couplings())
         for real in self.real_processes:
             coupl_list.extend([c for c in\
                         real.matrix_element.get_used_couplings()])

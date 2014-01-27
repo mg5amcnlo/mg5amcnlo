@@ -745,9 +745,137 @@ end
 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
-            self.write_matrix_element_fks(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, n + 1, 
-                                            fortran_model)
+            self.write_split_me_fks(writers.FortranWriter(filename),
+                                            fksreal.matrix_element, 
+                                            fortran_model, 'real', "%d" % (n+1))
+
+
+    #===========================================================================
+    # write_split_me_fks
+    #===========================================================================
+    def write_split_me_fks(self, writer, matrix_element, fortran_model,
+                                              proc_type, proc_prefix=''):
+        """Export a matrix element using the split_order format
+        proc_type is either born or real"""
+
+        if not matrix_element.get('processes') or \
+               not matrix_element.get('diagrams'):
+            return 0
+
+        if not isinstance(writer, writers.FortranWriter):
+            raise writers.FortranWriter.FortranWriterError(\
+                "writer not FortranWriter")
+            
+        if not self.opt.has_key('sa_symmetry'):
+            self.opt['sa_symmetry']=False
+
+        # Set lowercase/uppercase Fortran code
+        writers.FortranWriter.downcase = False
+
+        replace_dict = {'global_variable':'', 'amp2_lines':'',
+                                                      'proc_prefix':proc_prefix}
+
+        # Extract helas calls
+        helas_calls = fortran_model.get_matrix_element_calls(\
+                    matrix_element)
+        replace_dict['helas_calls'] = "\n".join(helas_calls)
+
+        # Extract version number and date from VERSION file
+        info_lines = self.get_mg5_info_lines()
+        replace_dict['info_lines'] = info_lines
+
+        # Set the size of Wavefunction
+        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
+            replace_dict['wavefunctionsize'] = 20
+        else:
+            replace_dict['wavefunctionsize'] = 8
+
+        # Extract process info lines
+        process_lines = self.get_process_info_lines(matrix_element)
+        replace_dict['process_lines'] = process_lines
+
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        replace_dict['nexternal'] = nexternal
+
+        # Extract ncomb
+        ncomb = matrix_element.get_helicity_combinations()
+        replace_dict['ncomb'] = ncomb
+
+        # Extract helicity lines
+        helicity_lines = self.get_helicity_lines(matrix_element)
+        replace_dict['helicity_lines'] = helicity_lines
+
+        # Extract overall denominator
+        # Averaging initial state color, spin, and identical FS particles
+        replace_dict['den_factor_line'] = self.get_den_factor_line(matrix_element)
+
+        # Extract ngraphs
+        ngraphs = matrix_element.get_number_of_amplitudes()
+        replace_dict['ngraphs'] = ngraphs
+
+        # Extract nwavefuncs
+        nwavefuncs = matrix_element.get_number_of_wavefunctions()
+        replace_dict['nwavefuncs'] = nwavefuncs
+
+        # Extract ncolor
+        ncolor = max(1, len(matrix_element.get('color_basis')))
+        replace_dict['ncolor'] = ncolor
+
+        replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+
+        # Extract color data lines
+        color_data_lines = self.get_color_data_lines(matrix_element)
+        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
+
+        if self.opt['export_format']=='standalone_msP':
+        # For MadSpin need to return the AMP2
+            amp2_lines = self.get_amp2_lines(matrix_element, [] )
+            replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
+            replace_dict['global_variable'] = "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
+
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+            # For convenience we also write the driver check_sa_splitOrders.f
+            # that explicitely writes out the contribution from each squared order.
+            # The original driver still works and is compiled with 'make' while
+            # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
+            check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
+            self.write_check_sa_splitOrders(\
+                                    squared_orders,split_orders,check_sa_writer)
+
+        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
+
+        if proc_type=='born':
+            file = open(pjoin(_file_path, \
+            'iolibs/template_files/bornmatrix_splitorders_fks.inc')).read()
+        elif proc_type=='real':
+            file = open(pjoin(_file_path, \
+            'iolibs/template_files/realmatrix_splitorders_fks.inc')).read()
+
+        file = file % replace_dict
+
+        # Write the file
+        writer.writelines(file)
+
+        return len(filter(lambda call: call.find('#') != 0, helas_calls))
+
 
     def write_pdf_calls(self, matrix_element, fortran_model):
         """writes the parton_lum_i.f files which contain the real matrix elements""" 
@@ -764,11 +892,11 @@ end
         pathdir = os.getcwd()
 
         
-        for i in range(len(matrix_element.born_me_list)):
+        for i, me in enumerate(matrix_element.born_me_list):
             filename = 'born_%d.f' % (i + 1)
-            calls_born, ncolor_born = \
-                self.write_born_fks(writers.FortranWriter(filename),\
-                                 matrix_element, i, fortran_model)
+            ###calls_born, ncolor_born = \
+            self.write_split_me_fks(writers.FortranWriter(filename),
+                                        me, fortran_model, 'born', "%d" % (i+1))
 
 
 #        filename = 'born_conf.inc'
@@ -1149,109 +1277,6 @@ Parameters              %(params)s\n\
         return
 
 
-    #===============================================================================
-    # write_born_fks
-    #===============================================================================
-    # test written
-    def write_born_fks(self, writer, fksborn, i, fortran_model):
-        """Export a matrix element to a born.f file in MadFKS format for the
-        i-th born matrix element in fksborn"""
-
-        matrix_element = fksborn.born_me_list[i]
-        
-        if not matrix_element.get('processes') or \
-               not matrix_element.get('diagrams'):
-            return 0
-    
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
-    
-        replace_dict = {}
-    
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-    
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-        
-    
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-    
-        # Extract helicity lines
-        helicity_lines = self.get_helicity_lines(matrix_element)
-        replace_dict['helicity_lines'] = helicity_lines
-    
-        # Extract IC line
-        ic_line = self.get_ic_line(matrix_element)
-        replace_dict['ic_line'] = ic_line
-    
-        # Extract overall denominator
-        # Averaging initial state color, spin, and identical FS particles
-        #den_factor_line = get_den_factor_line(matrix_element)
-    
-        # Extract ngraphs
-        ngraphs = matrix_element.get_number_of_amplitudes()
-        replace_dict['ngraphs'] = ngraphs
-    
-        # Extract nwavefuncs
-        nwavefuncs = matrix_element.get_number_of_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-    
-        # Extract ncolor
-        ncolor = max(1, len(matrix_element.get('color_basis')))
-        replace_dict['ncolor'] = ncolor
-    
-        # Extract color data lines
-        color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
-    
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
-    
-        # Extract amp2 lines
-        amp2_lines = self.get_amp2_lines(matrix_element)
-        replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
-    
-        # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
-
-        # Set the size of Wavefunction
-        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
-            replace_dict['wavefunctionsize'] = 20
-        else:
-            replace_dict['wavefunctionsize'] = 8
-
-        # Extract glu_ij_lines
-        ij_lines = self.get_ij_lines(fksborn, i)
-        replace_dict['ij_lines'] = '\n'.join(ij_lines)
-
-        # Extract den_factor_lines
-        den_factor_lines = self.get_den_factor_lines(fksborn, i)
-        replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
-    
-        # Extract the number of FKS process
-        replace_dict['nconfs'] = len(fksborn.get_fks_info_list(i))
-
-        file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/born_fks.inc')).read()
-        file = file % replace_dict
-        
-        # Write the file
-        writer.writelines(file)
-    
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
-
-
     def write_born_hel(self, writer, fksborn, fortran_model):
         """Export a matrix element to a born_hel.f file in MadFKS format"""
 
@@ -1619,99 +1644,6 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         return True
 
  
-    #===============================================================================
-    # write_matrix_element_fks
-    #===============================================================================
-    #test written
-    def write_matrix_element_fks(self, writer, matrix_element, n, fortran_model):
-        """Export a matrix element to a matrix.f file in MG4 madevent format"""
-    
-        if not matrix_element.get('processes') or \
-               not matrix_element.get('diagrams'):
-            return 0,0
-    
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
-                "writer not FortranWriter")
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
-    
-        replace_dict = {}
-        replace_dict['N_me'] = n
-    
-        # Extract version number and date from VERSION file
-        info_lines = self.get_mg5_info_lines()
-        replace_dict['info_lines'] = info_lines
-    
-        # Extract process info lines
-        process_lines = self.get_process_info_lines(matrix_element)
-        replace_dict['process_lines'] = process_lines
-    
-        # Extract ncomb
-        ncomb = matrix_element.get_helicity_combinations()
-        replace_dict['ncomb'] = ncomb
-    
-        # Extract helicity lines
-        helicity_lines = self.get_helicity_lines(matrix_element)
-        replace_dict['helicity_lines'] = helicity_lines
-    
-        # Extract IC line
-        ic_line = self.get_ic_line(matrix_element)
-        replace_dict['ic_line'] = ic_line
-    
-        # Extract overall denominator
-        # Averaging initial state color, spin, and identical FS particles
-        den_factor_line = self.get_den_factor_line(matrix_element)
-        replace_dict['den_factor_line'] = den_factor_line
-    
-        # Extract ngraphs
-        ngraphs = matrix_element.get_number_of_amplitudes()
-        replace_dict['ngraphs'] = ngraphs
-    
-        # Extract ncolor
-        ncolor = max(1, len(matrix_element.get('color_basis')))
-        replace_dict['ncolor'] = ncolor
-    
-        # Extract color data lines
-        color_data_lines = self.get_color_data_lines(matrix_element)
-        replace_dict['color_data_lines'] = "\n".join(color_data_lines)
-    
-        # Extract helas calls
-        helas_calls = fortran_model.get_matrix_element_calls(\
-                    matrix_element)
-        replace_dict['helas_calls'] = "\n".join(helas_calls)
-    
-        # Extract nwavefuncs (important to place after get_matrix_element_calls
-        # so that 'me_id' is set)
-        nwavefuncs = matrix_element.get_number_of_wavefunctions()
-        replace_dict['nwavefuncs'] = nwavefuncs
-    
-        # Extract amp2 lines
-        amp2_lines = self.get_amp2_lines(matrix_element)
-        replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
-
-        # Set the size of Wavefunction
-        if not self.model or any([p.get('spin') in [4,5] for p in self.model.get('particles') if p]):
-            replace_dict['wavefunctionsize'] = 20
-        else:
-            replace_dict['wavefunctionsize'] = 8
-    
-        # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-    
-        replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
-    
-        realfile = open(os.path.join(_file_path, \
-                             'iolibs/template_files/realmatrix_fks.inc')).read()
-
-        realfile = realfile % replace_dict
-        
-        # Write the file
-        writer.writelines(realfile)
-    
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
-
-
     #===============================================================================
     # write_pdf_file
     #===============================================================================
