@@ -63,7 +63,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
-      REAL*8 BORN_%(proc_prefix)s,borns(2,0:NSQAMPSO)
+      REAL*8,borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/

@@ -491,11 +491,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               matrix_element,
                               fortran_model)
         
-        filename = 'real_from_born_configs.inc'
-        self.write_real_from_born_configs(
-                              writers.FortranWriter(filename), 
-                              matrix_element,
-                              fortran_model)
+##        filename = 'real_from_born_configs.inc'
+##        self.write_real_from_born_configs(
+##                              writers.FortranWriter(filename), 
+##                              matrix_element,
+##                              fortran_model)
 
         filename = 'ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
@@ -1134,13 +1134,6 @@ end
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
             jamp_lines = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
-            # For convenience we also write the driver check_sa_splitOrders.f
-            # that explicitely writes out the contribution from each squared order.
-            # The original driver still works and is compiled with 'make' while
-            # the splitOrders one is compiled with 'make check_sa_born_splitOrders'
-            check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
-            self.write_check_sa_splitOrders(\
-                                    squared_orders,split_orders,check_sa_writer)
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
 
@@ -1231,18 +1224,19 @@ end
 #                             fortran_model)
         
         #write the sborn_sf.f and the b_sf_files
-        filename = ['sborn_sf.f', 'sborn_sf_dum.f']
-        for i, links in enumerate([matrix_element.color_links, []]):
-            self.write_sborn_sf(writers.FortranWriter(filename[i]),
-                                                links,
-                                                fortran_model)
-        self.color_link_files = [] 
-        for i in range(len(matrix_element.color_links)):
-            filename = 'b_sf_%3.3d.f' % (i + 1)              
-            self.color_link_files.append(filename)
-            self.write_b_sf_fks(writers.FortranWriter(filename),
-                         matrix_element, i,
-                         fortran_model)
+        for j, born in enumerate(matrix_element.born_me_list):
+            filename = ['sborn_sf_%d.f' % (j+1), 'sborn_sf_%d_dum.f' % (j+1)]
+            for i, links in enumerate([matrix_element.color_links[j], []]):
+                self.write_sborn_sf(writers.FortranWriter(filename[i]),
+                                                    links,
+                                                    fortran_model)
+            self.color_link_files = [] 
+            for i in range(len(matrix_element.color_links[j])):
+                filename = 'b_%d_sf_%3.3d.f' % (j + 1, i + 1)              
+                self.color_link_files.append(filename)
+                self.write_b_sf_fks(writers.FortranWriter(filename),
+                             matrix_element, i, j,
+                             fortran_model)
 
     def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
         """Generates the library for computing the loop matrix elements
@@ -1726,10 +1720,11 @@ c     this subdir has no soft singularities
     # write_b_sf_fks
     #===============================================================================
     #test written
-    def write_b_sf_fks(self, writer, fksborn, i, fortran_model):
-        """Create the b_sf_xxx.f file for the soft linked born in MadFKS format"""
+    def write_b_sf_fks(self, writer, fksborn, ilink, iborn, fortran_model):
+        """Create the b_sf_xxx.f file for the ilink-th soft linked born 
+        for the iborn-th born in MadFKS format"""
 
-        matrix_element = copy.copy(fksborn.born_matrix_element)
+        matrix_element = copy.copy(fksborn.born_me_list[iborn])
 
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
@@ -1741,12 +1736,12 @@ c     this subdir has no soft singularities
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        iborn = i + 1
-        link = fksborn.color_links[i]
+        link = fksborn.color_links[iborn][ilink]
     
         replace_dict = {}
         
-        replace_dict['iborn'] = iborn
+        replace_dict['iborn'] = iborn + 1
+        replace_dict['ilink'] = ilink + 1
     
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
@@ -1770,7 +1765,7 @@ c     this subdir has no soft singularities
         replace_dict['ic_line'] = ic_line
 
         # Extract den_factor_lines
-        den_factor_lines = self.get_den_factor_lines(fksborn)
+        den_factor_lines = self.get_den_factor_lines(fksborn,iborn)
         replace_dict['den_factor_lines'] = '\n'.join(den_factor_lines)
     
         # Extract ngraphs
@@ -1797,27 +1792,45 @@ c     this subdir has no soft singularities
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
     
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP1')
-            new_jamp_lines.append(line)
-        replace_dict['jamp1_lines'] = '\n'.join(new_jamp_lines)
-    
+
+        # JAMP definition, depends on the number of independent split orders
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['nAmpSplitOrders']=len(amp_orders)
+            replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+            replace_dict['nSplitOrders']=len(split_orders)
+            amp_so = self.get_split_orders_lines(
+                    [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+            sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+            replace_dict['ampsplitorders']='\n'.join(amp_so)
+            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp1_lines'] = '\n'.join(jamp_lines).replace('JAMP', 'JAMP1')    
+
         matrix_element.set('color_basis', link['link_basis'] )
-        jamp_lines = self.get_JAMP_lines(matrix_element)
-        new_jamp_lines = []
-        for line in jamp_lines:
-            line = string.replace(line, 'JAMP', 'JAMP2')
-            new_jamp_lines.append(line)
-        replace_dict['jamp2_lines'] = '\n'.join(new_jamp_lines)
+        if len(split_orders)==0:
+            replace_dict['nSplitOrders']=''
+            # Extract JAMP lines
+            jamp_lines = self.get_JAMP_lines(matrix_element)
+        else:
+            jamp_lines = self.get_JAMP_lines_split_order(\
+                       matrix_element,amp_orders,split_order_names=split_orders)
+
+        replace_dict['jamp2_lines'] = '\n'.join(jamp_lines).replace('JAMP','JAMP2')
     
     
         # Extract the number of FKS process
         replace_dict['nconfs'] = len(fksborn.get_fks_info_list())
 
         file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/b_sf_xxx_fks.inc')).read()
+                          'iolibs/template_files/b_sf_xxx_splitorders_fks.inc')).read()
         file = file % replace_dict
         
         # Write the file
