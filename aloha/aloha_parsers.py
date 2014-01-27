@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -187,6 +187,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
+            print p[:]
             raise Exception("Syntax error at '%s' in '%s'" % (p.value, self.f))
         else:
             logger.error("Syntax error at EOF")
@@ -202,7 +203,8 @@ class ALOHAExpressionParser(UFOExpressionParser):
 
     def p_expression_pi(self, p):
         '''expression : PI'''
-        p[0] = 'M_PI'
+        KERNEL.has_pi = True
+        p[0] = 'Param(\'PI\')'
 
     def p_expression_power(self, p):
         'expression : expression POWER expression'
@@ -217,9 +219,10 @@ class ALOHAExpressionParser(UFOExpressionParser):
              new = aloha_lib.KERNEL.add_function_expression('pow', eval(p[1]), eval(p[3]))
              p[0] = str(new)
 
+
     def p_expression_variable(self, p):
         "expression : VARIABLE"
-        p[0] = p[1]
+        p[0] = 'Param(\'%s\')' % p[1]
         
     def p_expression_variable2(self, p):
         "expression : '\\'' VARIABLE '\\''"
@@ -281,6 +284,21 @@ class ALOHAExpressionParser(UFOExpressionParser):
         new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]))
         p[0] = str(new)
     
+    def p_expression_function3(self, p):
+        "expression : FUNCTION '(' expression ',' expression ',' expression ')'"
+        
+        if p[1] in self.aloha_object:
+            p[0] = p[1]+'('+p[3]+','+ p[5]+','+p[7]+')'
+            return
+        
+        p1 = p[1]
+        re_groups = self.re_cmath_function.match(p1)
+        if re_groups:
+            p1 = re_groups.group("name")
+
+        new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]), eval(p[5]),eval(p[7]))
+        p[0] = str(new)
+
     
     def p_expression_binop(self, p):
         '''expression : expression '=' expression

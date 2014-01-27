@@ -2,7 +2,7 @@ SUBROUTINE SMATRIX%(proc_id)s(P,ANS)
 C  
 %(info_lines)s
 C 
-C MadGraph for Madevent Version
+C MadGraph5_aMC@NLO for Madevent Version
 C 
 C Returns amplitude squared summed/avg over colors
 c and helicities

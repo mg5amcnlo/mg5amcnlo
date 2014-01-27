@@ -29,7 +29,7 @@ C
 
 	  %(nbornamps_decl)s
       INTEGER    NLOOPS, NLOOPGROUPS, NCTAMPS
-      PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d) 
+      PARAMETER (NLOOPS=%(nloops)d, NLOOPGROUPS=%(nloop_groups)d, NCTAMPS=%(nctamps)d)
       INTEGER    NCOLORROWS
 	  PARAMETER (NCOLORROWS=%(nloopamps)d)
 	  INTEGER    NEXTERNAL
@@ -55,6 +55,13 @@ C     These are constants related to the split orders
 	  PARAMETER (NSQSOXNLG=NSQUAREDSO*NLOOPGROUPS)
 	  INTEGER NSQUAREDSOP1
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
+C     The total number of loop reduction libraries
+C     At present, there are only CutTools,PJFry++,IREGI
+      INTEGER NLOOPLIB
+      PARAMETER (NLOOPLIB=3)
+C     Only CutTools provides QP
+      INTEGER QP_NLOOPLIB
+      PARAMETER (QP_NLOOPLIB=1)
 C     This parameter is designed for the check timing command of MG5
       LOGICAL SKIPLOOPEVAL
       PARAMETER (SKIPLOOPEVAL=.FALSE.)
@@ -74,7 +81,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J,K,H,DUMMY
+      INTEGER I,J,K,H,DUMMY,I_QP_LIB
 
       CHARACTER*512 ParamFN,HelConfigFN,LoopFilterFN,ColorNumFN,ColorDenomFN,HelFilterFN
 	  CHARACTER*512 TMP
@@ -132,6 +139,12 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
       DATA DONEHELDOUBLECHECK/.FALSE./
 	  INTEGER NEPS
 	  DATA NEPS/0/
+C     Below are variables to bypass the checkphase and insure stability check to take place
+      LOGICAL OLD_CHECKPHASE, OLD_HELDOUBLECHECKED
+	  INTEGER OLD_GOODHEL(NCOMB)
+	  LOGICAL OLD_GOODAMP(NSQUAREDSO,NLOOPGROUPS)
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
 C
 C FUNCTIONS
 C
@@ -139,7 +152,8 @@ C
 	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
       INTEGER %(proc_prefix)sISSAME
-      LOGICAL %(proc_prefix)sIsZero
+      LOGICAL %(proc_prefix)sISZERO
+      INTEGER SET_RET_CODE_U
 C  
 C GLOBAL VARIABLES
 C  
@@ -160,6 +174,10 @@ C
 	  LOGICAL MP_DONE
 	  DATA MP_DONE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
+C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
+          LOGICAL LOOPLIBS_AVAILABLE(3)
+	  %(data_looplibs_av)s
+	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
@@ -216,6 +234,14 @@ C     loop split orders contributions have been reached already and the rest can
 	  integer I_SO
 	  DATA I_SO/1/
 	  common/%(proc_prefix)sI_SO/I_SO
+	  integer I_LIB
+	  DATA I_LIB/1/
+	  common/%(proc_prefix)sI_LIB/I_LIB
+C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+       	  LOGICAL QP_TOOLS_AVAILABLE
+       	  DATA QP_TOOLS_AVAILABLE/.FALSE./
+       	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
+       	  common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
 	  %(dp_born_amps_decl)s	  
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
@@ -282,6 +308,31 @@ IF(ML_INIT) THEN
 ENDIF
 
 IF(NTRY.EQ.0) THEN
+C  CALL MADLOOPPARAMREADER(paramFileName,.TRUE.)
+  QP_TOOLS_AVAILABLE=.FALSE.
+  INDEX_QP_TOOLS(1:QP_NLOOPLIB+1)=0
+C SKIP THE ONES THAT NOT AVAILABLE
+  J=1
+  DO I=1,NLOOPLIB
+     IF(MLReductionLib(J).EQ.0)EXIT
+     IF(.NOT.LOOPLIBS_AVAILABLE(MLReductionLib(J)))THEN
+	MLReductionLib(J:NLOOPLIB-1)=MLReductionLib(J+1:NLOOPLIB)
+	MLReductionLib(NLOOPLIB)=0
+     ELSE
+	J=J+1
+     ENDIF
+  ENDDO
+  IF(MLReductionLib(1).EQ.0)THEN
+     STOP "No available loop reduction lib is provided. Make sure MLReductionLib is correct."
+  ENDIF
+  J=0
+  DO I=1,NLOOPLIB
+     IF(MLReductionLib(I).EQ.1)THEN
+      J=J+1
+      IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+      INDEX_QP_TOOLS(J)=I
+     ENDIF	
+  ENDDO
 
 C Setup the file paths
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
@@ -292,7 +343,7 @@ C Setup the file paths
   CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
   CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
-  CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+  CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
 
   HELDOUBLECHECKED=.NOT.DoubleCheckHelicityFilter
 OPEN(1, FILE=LoopFilterFN, err=100, status='OLD',           action='READ')
@@ -387,6 +438,10 @@ DO I=2,MAXSTABILITYLENGTH
   EVAL_DONE(I)=.FALSE.
 ENDDO
 
+IF(.NOT.BYPASS_CHECK) THEN
+  NTRY=NTRY+1
+ENDIF
+
 IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES_BU=MLSTABTHRES
   MLSTABTHRES=USER_STAB_PREC
@@ -398,11 +453,10 @@ C Or, because this is very slow, we keep the orignal value. The accuracy returne
   CTMODEINIT=CTMODEINIT_BU
 ENDIF
 
-IF(DONEHELDOUBLECHECK) THEN
+IF(DONEHELDOUBLECHECK.AND.(.NOT.HELDOUBLECHECKED)) THEN
   HELDOUBLECHECKED=.TRUE.
   DONEHELDOUBLECHECK=.FALSE.
 ENDIF
-NTRY=NTRY+1
 
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
@@ -427,6 +481,23 @@ OPEN(1, FILE=LoopFilterFN, err=111, status='NEW',action='WRITE')
   CLOSE(1)
 FOUNDLOOPFILTER=.TRUE.
 ENDIF
+ENDIF
+
+IF (BYPASS_CHECK) THEN
+  OLD_CHECKPHASE = CHECKPHASE
+  OLD_HELDOUBLECHECKED = HELDOUBLECHECKED
+  CHECKPHASE = .FALSE.
+  HELDOUBLECHECKED = .TRUE.
+  DO I=1,NCOMB
+    OLD_GOODHEL(I)=GOODHEL(I)
+	GOODHEL(I)=1
+  ENDDO
+  DO I=1,NSQUAREDSO
+    DO J=1,NLOOPGROUPS
+      OLD_GOODAMP(I,J)=GOODAMP(I,J)
+	  GOODAMP(I,J)=.TRUE.
+    ENDDO
+  ENDDO
 ENDIF
 
 IF(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
@@ -476,7 +547,9 @@ DO K=1, 3
     AMPL(K,I)=(0.0d0,0.0d0)
   ENDDO
 ENDDO
-
+C     USE THE FIRST LOOP REDUCTION LIBRARY AND THE FIRST QP LOOP REDUCTION LIBRARY
+I_LIB=1
+I_QP_LIB=1
 200 CONTINUE
 
 IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
@@ -576,7 +649,11 @@ DO I=0,NSQUAREDSO
     BUFFR_BIS(J,I)=ANS(J,I)
   ENDDO
 ENDDO
+
 300 CONTINUE
+C     Free cache when using IREGI
+%(iregi_free_ps)s
+
 DO I=0,NSQUAREDSO
   DO J=1,3
     ANS(J,I)=BUFFR_BIS(J,I)
@@ -777,7 +854,8 @@ ENDDO
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   STAB_INDEX=STAB_INDEX+1  
-  IF(DOING_QP_EVALS) THEN
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
+C NOW,ONLY CUTTOOLS PROVIDES QP
     DO I=0,NSQUAREDSO
 	  DO K=1,3
         QP_RES(K,I,STAB_INDEX)=ANS(K,I)
@@ -791,7 +869,7 @@ IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
 	ENDDO
   ENDIF
 
-  IF(DOING_QP_EVALS) THEN	
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN	
       BASIC_CT_MODE=4
   ELSE
       BASIC_CT_MODE=1
@@ -826,14 +904,18 @@ C BEGINNING OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
-  IF(DOING_QP_EVALS) THEN
+  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
     CALL %(proc_prefix)sCOMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
 	DO I=0,NSQUAREDSO
 	  ACCURACY(I)=ACC(I)
 	ENDDO
-	RET_CODE_H=3	
+	RET_CODE_H=3
+	RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.TRUE.,.TRUE.)	
 	IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
+	  I_QP_LIB=I_QP_LIB+1
+	  IF(I_QP_LIB.GT.QP_NLOOPLIB.OR.INDEX_QP_TOOLS(I_QP_LIB).EQ.0)THEN
 	  RET_CODE_H=4
+	  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.TRUE.,.FALSE.)
 	  NEPS=NEPS+1
       CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
 	  IF(NEPS.LE.10) THEN	  
@@ -867,28 +949,95 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  IF(NEPS.EQ.10) THEN
 	    WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
 	  ENDIF
+    ELSE
+     I_LIB=INDEX_QP_TOOLS(I_QP_LIB)
+     EVAL_DONE(1)=.TRUE.
+     DO I=2,MAXSTABILITYLENGTH
+     EVAL_DONE(I)=.FALSE.
+     ENDDO
+     STAB_INDEX=0
+     IF(NRotations_QP.GE.1)THEN
+	goto 200
+     ELSE
+	goto 300
+     ENDIF
     ENDIF
-  ELSE
+    ENDIF
+  ELSEIF(.NOT.DOING_QP_EVALS)THEN
     CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
 	IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
-	  DOING_QP_EVALS=.TRUE.
-	  EVAL_DONE(1)=.TRUE.
-	  DO I=2,MAXSTABILITYLENGTH
-        EVAL_DONE(I)=.FALSE.
-      ENDDO
-	  STAB_INDEX=0
-	  CTMODE=4
-	  goto 200
+	  I_LIB=I_LIB+1
+	  IF((I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0).AND.QP_TOOLS_AVAILABLE)THEN
+	        I_LIB=INDEX_QP_TOOLS(1)
+		I_QP_LIB=1
+		DOING_QP_EVALS=.TRUE.
+	  	EVAL_DONE(1)=.TRUE.
+	  	DO I=2,MAXSTABILITYLENGTH
+        	EVAL_DONE(I)=.FALSE.
+      		ENDDO
+	  	STAB_INDEX=0
+		CTMODE=4
+	  	goto 200
+	  ELSEIF(I_LIB.LE.NLOOPLIB.AND.MLReductionLib(I_LIB).GT.0)THEN
+	        EVAL_DONE(1)=.TRUE.
+		DO I=2,MAXSTABILITYLENGTH
+		EVAL_DONE(I)=.FALSE.
+		ENDDO
+		STAB_INDEX=0
+		IF(NRotations_DP.GE.1)THEN
+		   goto 200
+		ELSE
+		   goto 300
+		ENDIF
+	  ELSE
+	     DO I=0,NSQUAREDSO
+	       ACCURACY(I)=ACC(I)
+	     ENDDO
+	     RET_CODE_H=4
+	     RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
+	     NEPS=NEPS+1
+             IF(NEPS.LE.10) THEN
+             WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+	     WRITE(*,*) '##W03 WARNING No quadruple precision will be used.'
+              IF (NSQUAREDSO.NE.1) THEN
+                  WRITE(*,*) 'Accuracies for each split order, starting with the summed case'
+              	  WRITE(*,*) 'DP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
+              ELSE
+              	WRITE(*,*) 'DP accuracy: ',ACC(1)
+	      ENDIF
+              DO J=0,NSQUAREDSO
+                  IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN
+                    IF (J.EQ.0) THEN
+                      WRITE(*,*) 'Details for all split orders summed :'
+                    ELSE
+                      WRITE(*,*) 'Details for split order index : ',J
+                    ENDIF
+                    WRITE(*,*) 'Best estimate (fin,1eps,2eps):',(ANS(I,J),I=1,3)
+               	     WRITE(*,*) 'Finite double precision evaluations :',(DP_RES(1,J,I),I=1,N_DP_EVAL)
+                  ENDIF
+                ENDDO
+            WRITE(*,*) 'PS point specification :'
+            WRITE(*,*) 'Renormalization scale MU_R=',MU_R
+            DO I=1,NEXTERNAL
+            WRITE (*,'(i2,1x,4e27.17)') i, P(0,i),P(1,i),P(2,i),P(3,i)
+            ENDDO
+            ENDIF
+            IF(NEPS.EQ.10) THEN
+             WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
+            ENDIF
+	  ENDIF
     ELSE
 	  DO I=0,NSQUAREDSO
 	    ACCURACY(I)=ACC(I)
 	  ENDDO
-      RET_CODE_H=2	
-	ENDIF	
+      	  RET_CODE_H=2
+	  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.TRUE.)	
+	  ENDIF	
   ENDIF
 ELSE
   RET_CODE_H=1
   ACCURACY=-1.0d0
+  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
 ENDIF
 
  9999 CONTINUE
@@ -901,10 +1050,10 @@ ELSE
 ENDIF
 IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
   RET_CODE_H=1
+  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
   RET_CODE_T=RET_CODE_T+2
   ACCURACY=-1.0d0
 ENDIF
-RET_CODE_U=0
 
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN
@@ -912,6 +1061,19 @@ IF (USER_STAB_PREC.GT.0.0d0) THEN
   CTMODEINIT=CTMODEINIT_BU  
 ENDIF
 
+C Reinitialize the check phase logicals and the filters if check bypassed
+IF (BYPASS_CHECK) THEN
+  CHECKPHASE = OLD_CHECKPHASE
+  HELDOUBLECHECKED = OLD_HELDOUBLECHECKED
+  DO I=1,NCOMB
+	GOODHEL(I)=OLD_GOODHEL(I)
+  ENDDO
+  DO I=1,NSQUAREDSO
+    DO J=1,NLOOPGROUPS
+      GOODAMP(I,J)=OLD_GOODAMP(I,J)
+    ENDDO
+  ENDDO
+ENDIF
       END
 
 C --=========================================--
@@ -1290,6 +1452,21 @@ C --=========================================--
 C   Definition of additional access routines
 C --=========================================--
 
+	  SUBROUTINE %(proc_prefix)sFORCE_STABILITY_CHECK(ONOFF)
+C
+C This function can be called by the MadLoop user so as to always have stability
+C checked, even during initialisation, when calling the *_thres routines.
+C
+      LOGICAL ONOFF
+
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  DATA BYPASS_CHECK, ALWAYS_TEST_STABILITY /.FALSE.,.FALSE./
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
+	  ALWAYS_TEST_STABILITY = ONOFF
+
+	  END
+
 	  SUBROUTINE %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOTARGET)
 	  IMPLICIT NONE
 C
@@ -1366,18 +1543,30 @@ C
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
+
       CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS)
+	  IF(ALWAYS_TEST_STABILITY.AND.(H.eq.1.OR.ACCURACY(0).lt.0.0d0)) THEN
+	    BYPASS_CHECK = .TRUE.
+        CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS) 
+	    BYPASS_CHECK = .FALSE.
+C       Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
+	  ENDIF
+
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
 	  
       DO I=0,NSQUAREDSO
 	    PREC_FOUND(I)=ACCURACY(I)
 	  ENDDO
-	  PREC_FOUND=ACCURACY
       RET_CODE=100*H+10*T+U
 
 	  END
@@ -1417,8 +1606,16 @@ C         MadLoop in initialization phase. Only double precision used.
 C     T == 4
 C         MadLoop in initialization phase. Quadruple precision used.
 C
-C     U is a number left for future use (always set to 0 for now).
-C     example: TIR vs OPP usage.
+C     U == 0
+C         Not stable.
+C     U == 1
+C         Stable with CutTools in double precision.
+C     U == 2
+C         Stable with PJFry++.
+C     U == 3
+C         Stable with IREGI.
+C     U == 9
+C         Stable with CutTools in quadruple precision.         
 C
       IMPLICIT NONE
 C  
@@ -1449,20 +1646,29 @@ C
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
       CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
+	  IF(ALWAYS_TEST_STABILITY.AND.(H.eq.1.OR.ACCURACY(0).lt.0.0d0)) THEN
+	    BYPASS_CHECK = .TRUE.	  
+        CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
+		BYPASS_CHECK = .FALSE.
+C     Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
+	  ENDIF
+
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
-
       DO I=0,NSQUAREDSO	  
 	    PREC_FOUND(I)=ACCURACY(I)
 	  ENDDO
-	  PREC_FOUND=ACCURACY
 	  RET_CODE=100*H+10*T+U
 
 	  END
-
 

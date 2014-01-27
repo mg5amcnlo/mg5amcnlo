@@ -6,16 +6,24 @@ c****************************************************************
 c
 c     Constants
 c
+      include 'maxparticles.inc'
       include 'run_config.inc'
+      include 'run.inc'
+      include 'cuts.inc'
       integer    maxsubprocesses
       parameter (maxsubprocesses=9999)
       integer    cmax_events
       parameter (cmax_events=5000000)
       integer    sfnum
       parameter (sfnum=17)   !Unit number for scratch file
-      include 'maxparticles.inc'
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
+c
+c     for the run_card
+c
+      real*8 sf1,sf2,pb1,pb2,D
+      integer lhaid
+      character*7 pdlabel
 c     
 c     Local
 c
@@ -31,12 +39,12 @@ c
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
       double precision xdum,rxsec
       integer i4,r8,record_length
-      integer iseed
+      integer jseed,iseed
       real xran1
       double precision wgt,maxwgt
       double precision p(0:4,maxexternal)
       integer ic(7,maxexternal),n
-      double precision scale,aqcd,aqed
+      double precision sscale,aqcd,aqed
       character*20 param(maxpara),value(maxpara)
       integer npara,nunwgt
       double precision xtrunc, min_goal,max_goal
@@ -50,22 +58,31 @@ c
       common/to_param_card_name/param_card_name
 
       character*300 buff
-
-      data iseed/-1/
+      logical u_syst
+      character*(s_bufflen) s_buff(7)
+      integer nclus
+      character*(clus_bufflen) buffclus(max_particles)
+      data s_buff/7*''/
+      data jseed/-1/
+      data buffclus/max_particles*' '/
 c-----
 c  Begin Code
 c-----
 c
 c     Get requested number of events
 c
-      call load_para(npara,param,value)
-      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
-      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+      include 'run_card.inc'
+c      call load_para(npara,param,value)
+c      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
+c      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
       if (gridrun.and.gridpack) then
-         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
+          nreq = gevents
+c         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
       else
-         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
+          nreq = nevents
+c         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
       endif
+c      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
 
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'
@@ -101,7 +118,7 @@ c
       I4 = 4
       R8 = 8
       record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
-     &   300
+     &   300+7*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
 C $E$ scratch_name $E$ !this is tag for automatic modification by MW
@@ -130,7 +147,7 @@ c     Get Random order for events
 c
       do i=1,kevent
          iarray(i)=i
-         xarray(i)=xran1(iseed)
+         xarray(i)=xran1(jseed)
       enddo
       call sortO3(xarray,iarray,kevent)
 c
@@ -143,11 +160,29 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
       open(unit=15,file=filename,status='unknown',err=98)
       call writebanner(15,kevent,rxsec,maxwgt,xsec/kevent,xerr)
       do i=1,kevent
-         read(sfnum,rec=iarray(i)) wgt,n,
-     &        ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &        ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
-     &     buff
-         call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff)
+            read(sfnum,rec=iarray(i)) wgt,n,
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
+c     Systematics info on/off
+         if(s_buff(1)(1:7).eq.'<mgrwt>') then
+            u_syst=.true.
+         else
+            u_syst=.false.
+         endif
+c        Find nclus
+         nclus=max_particles
+         do j=1,max_particles
+            if(buffclus(j).eq.' ')then
+               nclus=j-1
+               exit
+            elseif(buffclus(j).eq.'</clustering>') then
+               nclus=j
+               exit
+            endif
+         enddo
+         call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,
+     $        u_syst,s_buff,nclus,buffclus)
       enddo
       close(15)
 c
@@ -168,9 +203,9 @@ c
          do i=1,kevent
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &        buff
-            if (dabs(wgt) .gt. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
                nunwgt=nunwgt+1
                if (dabs(wgt) .gt. goal_wgt) then
@@ -194,7 +229,8 @@ c            write(*,*) min_goal,goal_wgt,max_goal
 c            write(*,*) min_goal,goal_wgt,max_goal
             if (goal_wgt .lt. min_goal) then
                done=.true.
-               write(*,*) 'Failed to find requested number of unweighted events',nreq,nunwgt
+               write(*,*) 'Failed to find requested number ',
+     $              'of unweighted events',nreq,nunwgt
             endif
          endif
          ntry=ntry+1
@@ -207,7 +243,8 @@ c            write(*,*) min_goal,goal_wgt,max_goal
          write(*,*) 'Found ',nunwgt,' events writing first ',nreq
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
-      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum, '%% of cross section'
+      write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum,
+     $     '%% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='../Events/unweighted_events.lhe'
@@ -220,10 +257,27 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
          if (keep(i) .and. ntry .lt. nreq) then
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
-     &           ((p(m,j),m=0,4),j=1,maxexternal),scale,aqcd,aqed,
-     $        buff
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
             wgt=dsign(xsec/nreq,wgt)
-            call write_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff)
+c     Systematics info on/off
+            if(s_buff(1)(1:7).eq.'<mgrwt>') then
+               u_syst=.true.
+            else
+               u_syst=.false.
+            endif
+c        Find nclus
+            do j=1,max_particles
+               if(buffclus(j).eq.' ')then
+                  nclus=j-1
+                  exit
+               elseif(buffclus(j).eq.'</clustering>') then
+                  nclus=j
+                  exit
+               endif
+            enddo
+            call write_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,
+     $           buff,u_syst,s_buff,nclus,buffclus)
             ntry=ntry+1
          endif
       enddo
@@ -258,7 +312,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -354,7 +408,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -514,6 +568,7 @@ c
       integer    maxexternal
       parameter (maxexternal=2*max_particles-3)
       include 'run_config.inc'
+      include 'run.inc'
       integer    max_read
       parameter (max_read = 5000000)
 c
@@ -530,16 +585,21 @@ c
       double precision gsfact
       real xwgt(max_read),xtot
       integer i,j,k,m, ic(7,maxexternal),n
-      double precision scale,aqcd,aqed,tmpsum
-      integer ievent,iseed
+      double precision sscale,aqcd,aqed,tmpsum
+      integer ievent,jseed
       logical done,found
       character*300 buff
+      logical u_syst
+      character*(s_bufflen) s_buff(7)
       character*300 fullname
+      integer nclus
+      character*(clus_bufflen) buffclus(max_particles)
+      data buffclus/max_particles*' '/
 c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -554,7 +614,7 @@ c
 c
 c     data
 c
-      data iseed/-1/
+      data jseed/-1/
 c-----
 c  Begin Code
 c-----     
@@ -582,17 +642,19 @@ c
 c     Now loop through events
 c
       do while (.not. done)
-         call read_event(15,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+         call read_event(15,P,wgt,n,ic,ievent,sscale,aqcd,aqed,buff,
+     $        u_syst,s_buff,nclus,buffclus,done)
          if (.not. done) then
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
             if (dabs(wgt) .gt. maxwgt) maxwgt=dabs(wgt)
-            if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .ge. goal_wgt*xran1(jseed)) then
                kevent=kevent+1
                if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
                write(sfnum,rec=kevent) wgt,n,
-     &              ((ic(i,j),j=1,maxexternal),i=1,7),ievent,
-     &              ((p(i,j),i=0,4),j=1,maxexternal),scale,aqcd,aqed,buff
+     &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
+     &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
                sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup

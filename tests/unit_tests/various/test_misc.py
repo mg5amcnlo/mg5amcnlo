@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2012 The MadGraph Development team and Contributors
+# Copyright (c) 2012 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """Test the validity of the LHE parser"""
@@ -51,7 +51,29 @@ class TEST_misc(unittest.TestCase):
         self.assertTrue(eq(-100,-1e2))
         self.assertTrue(eq(-100,-1e2 + 1e-6))
         self.assertFalse(eq(-100,-1e2 + 1e-4))
-        self.assertTrue(eq(-80.419, -80.419002))        
+        self.assertTrue(eq(-80.419, -80.419002))
         
+        # check with 0
+        self.assertTrue(eq(0 ,1e-11))  
+        self.assertTrue(eq(0 ,1e-8))
+        self.assertTrue(eq(0 ,1e-7))
+        self.assertFalse(eq(0 ,1e-6))          
+        self.assertFalse(eq(0 ,1e-1))
+
+        self.assertTrue(eq(1e-11, 0))  
+        self.assertTrue(eq(1e-8, 0))
+        self.assertTrue(eq(1e-7, 0))
+        self.assertFalse(eq(1e-6, 0))          
+        self.assertFalse(eq(1e-1, 0))
         
+        self.assertFalse(eq(0 ,1e-11, zero_limit=False))  
+        self.assertFalse(eq(0 ,1e-8, zero_limit=False))
+        self.assertFalse(eq(0 ,1e-7, zero_limit=False))
+        self.assertFalse(eq(0 ,1e-6, zero_limit=False))          
+        self.assertFalse(eq(0 ,1e-1, zero_limit=False))
         
+        self.assertFalse(eq(1e-11, 0, zero_limit=False))  
+        self.assertFalse(eq(1e-8, 0, zero_limit=False))
+        self.assertFalse(eq(1e-7, 0, zero_limit=False))
+        self.assertFalse(eq(1e-6, 0, zero_limit=False))          
+        self.assertFalse(eq(1e-1, 0, zero_limit=False))         

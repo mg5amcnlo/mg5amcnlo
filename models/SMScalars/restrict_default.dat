@@ -18,7 +18,7 @@ Block MASS
     6 1.720000e+02 # MT 
    15 1.777000e+00 # MTA 
    23 9.118800e+01 # MZ 
-   25 1.200000e+02 # MH 
+   25 1.250000e+02 # MH 
   9000006 4.000000e+01 # MSk 
   9000007 4.000000e+01 # MSk 
   9000008 4.000000e+01 # MSk 
@@ -46,7 +46,7 @@ Block MASS
 DECAY   6 1.461100e+00 
 DECAY  23 2.441404e+00 
 DECAY  24 2.047600e+00 
-DECAY  25 2.392700e-01 
+DECAY  25 2.373296e-01
 ##  Not dependent paramater.
 ## Those values should be edited following analytical the 
 ## analytical expression. Some generator could simply ignore 

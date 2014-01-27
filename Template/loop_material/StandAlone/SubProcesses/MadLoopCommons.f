@@ -43,6 +43,10 @@
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
+      LOGICAL CTINIT,TIRINIT
+      DATA CTINIT,TIRINIT/.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT
+
       character(512) MLPath
       data MLPath/'[[NA]]'/      
       common/MLPATH/MLPath
@@ -117,3 +121,176 @@ C     Check that the FilePath set is correct
       close(1)
 
       end
+
+      INTEGER FUNCTION SET_RET_CODE_U(MLRed,DOING_QP,STABLE)
+C
+C This functions returns the value of U
+C
+C
+C     U == 0
+C         Not stable.
+C     U == 1
+C         Stable with CutTools in double precision.
+C     U == 2
+C         Stable with PJFry++.
+C     U == 3
+C         Stable with IREGI.
+C     U == 9
+C         Stable with CutTools in quadruple precision.
+C
+      IMPLICIT NONE
+C     
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER MLRed
+      LOGICAL DOING_QP,STABLE
+C
+C LOCAL VARIABLES
+C
+C
+C FUNCTION
+C
+C
+C BEGIN CODE
+C
+      IF(.NOT.STABLE)THEN
+         SET_RET_CODE_U=0
+         RETURN
+      ENDIF
+      IF(DOING_QP)THEN
+         IF(MLRed.EQ.1)THEN
+            SET_RET_CODE_U=9
+            RETURN
+         ELSE
+            STOP 'Only CutTools can use quardruple precision'
+         ENDIF
+      ENDIF
+      IF(MLRed.GE.1.AND.MLRed.LE.3)THEN
+         SET_RET_CODE_U=MLRed
+      ELSE
+         STOP 'Only CutTools,PJFry++,IREGI are available'
+      ENDIF
+      END
+
+      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,
+     $     LPASS)
+C
+C DETECT WHICH LOOP LIB PASSED
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER LIBNUM,NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C     
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      IF(LIBNUM.EQ.1)THEN
+C CutTools
+         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.2)THEN
+C PJFry++
+         CALL DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.3)THEN
+C IREGI
+         CALL DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSE
+         STOP 'ONLY CUTTOOLS,PJFry++,IREGI are provided'
+      ENDIF
+      RETURN
+      END
+
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C DETECT THE CUTTOOLS CAN BE USED OR NOT
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+      IF(NLOOPLINE+1.LT.RANK)LPASS=.FALSE.
+      RETURN
+      END
+
+      SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C DETECT THE PJFRY++ CAN BE USED OR NOT
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+      IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5
+     $     .OR.NLOOPLINE.GT.6.OR.complex_mass)LPASS=.FALSE.
+      RETURN
+      END
+
+      SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
+C     
+C DETECT THE IREGI CAN BE USED OR NOT
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C     
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
+      RETURN
+      END

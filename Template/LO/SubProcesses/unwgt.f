@@ -224,8 +224,7 @@ c     Constants
 c
       include 'genps.inc'
       include 'nexternal.inc'
-      double precision trunc_max
-      parameter       (trunc_max = 0.01)  !Maximum % cross section to truncate
+      include 'run_config.inc'
 c
 c     Arguments
 c
@@ -243,6 +242,10 @@ c
       double precision scale,aqcd,aqed
       integer ievent
       character*300 buff
+      logical u_syst
+      character*(s_bufflen) s_buff(7)
+      integer nclus
+      character*(clus_bufflen) buffclus(nexternal)
 C     
 C     GLOBAL
 C
@@ -298,7 +301,8 @@ c
       done = .false. 
       do i=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+     $           u_syst,s_buff,nclus,buffclus,done)
          else
             wgt = 0d0
          endif
@@ -327,7 +331,8 @@ c      endif
       nover = 0
       do j=1,nw
          if (.not. done) then
-            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,done)
+            call read_event(lun,P,wgt,n,ic,ievent,scale,aqcd,aqed,buff,
+     $           u_syst,s_buff,nclus,buffclus,done)
          else
             write(*,*) 'Error done early',j,nw
          endif
@@ -340,7 +345,8 @@ c      endif
             endif
             xtot = xtot + dabs(wgt)
             i=i+1
-            call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,buff)
+            call write_Event(lunw,p,wgt,n,ic,ngroup,scale,aqcd,aqed,
+     $           buff,u_syst,s_buff,nclus,buffclus)
          endif
       enddo
       write(*,*) 'Found ',nw,' events.'
@@ -371,6 +377,8 @@ c
       include 'message.inc'
       include 'cluster.inc'
       include 'run.inc'
+      include 'run_config.inc'
+
 c
 c     Arguments
 c
@@ -379,9 +387,9 @@ c
 c
 c     Local
 c
-      integer i,j,k
-      double precision xtarget,targetamp(maxflow)
-      integer ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
+      integer i,j,k,iini,ifin
+      double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
+      integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
       double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
@@ -401,7 +409,10 @@ c
       external ran1
 
       character*300 buff
-
+      character*(s_bufflen) s_buff(7)
+      integer nclus
+      character*(clus_bufflen) buffclus(nexternal)
+      character*40 cfmt
 C     
 C     GLOBAL
 C
@@ -542,28 +553,12 @@ c
 c     Add info on resonant mothers
 c
       call addmothers(ipsel,jpart,pb,isym,jsym,sscale,aaqcd,aaqed,buff,
-     $                npart,numproc)
+     $                npart,numproc,flip)
 
-c     Need to flip after addmothers, since color might get overwritten
-      if (flip) then
-         do i=1,7
-            j=jpart(i,1)
-            jpart(i,1)=jpart(i,2)
-            jpart(i,2)=j
-         enddo
-         ptcltmp(1)=ptclus(1)
-         ptclus(1)=ptclus(2)
-         ptclus(2)=ptcltmp(1)
-c        flip mass of the initial state
-         tmp = pb(4,1)
-         pb(4,1) = pb(4,2)
-         pb(4,2) = tmp
-      endif
 
 c
 c     Write events to lun
 c
-c      write(*,*) 'Writing event'
       if(q2fact(1).gt.0.and.q2fact(2).gt.0)then
          sscale = sqrt(max(q2fact(1),q2fact(2)))
       else if(q2fact(1).gt.0)then
@@ -580,12 +575,81 @@ c      write(*,*) 'Writing event'
         write(*,*)' write_leshouche: SCALUP to: ',sscale
       endif
       
-      
+c     Write out buffer for systematics studies
+      ifin=1
+      if(use_syst)then
+c         print *,'Systematics:'
+c         print *,'s_scale: ',s_scale
+c         print *,'n_qcd,n_alpsem: ',n_qcd,n_alpsem
+c         print *,'s_qalps: ',(s_qalps(I),I=1,n_alpsem) 
+c         print *,'n_pdfrw: ',n_pdfrw
+c         print *,'i_pdgpdf: ',((i_pdgpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+c         print *,'s_xpdf: ',((s_xpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+c         print *,'s_qpdf: ',((s_qpdf(i,j),i=1,n_pdfrw(j)),j=1,2)
+         s_buff(1) = '<mgrwt>'
+         write(s_buff(2), '(a,I3,E15.8,a)') '<rscale>',n_qcd-n_alpsem,
+     $        s_scale,'</rscale>'
+         if(n_alpsem.gt.0) then
+            write(cfmt,'(a,I1,a)') '(a,I3,',n_alpsem,'E15.8,a)'
+            write(s_buff(3), cfmt) '<asrwt>',n_alpsem,
+     $           (s_qalps(I),I=1,n_alpsem) ,'</asrwt>'
+         else
+            write(s_buff(3), '(a)') '<asrwt>0</asrwt>'
+         endif
+         if(n_pdfrw(1).gt.0)then
+            if(2*n_pdfrw(1).lt.10) then
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+            else
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(1),'I9,',2*n_pdfrw(1),'E15.8,a)'
+            endif
+            write(s_buff(4), cfmt) '<pdfrwt beam="1">',
+     $           n_pdfrw(1),(i_pdgpdf(i,1),i=1,n_pdfrw(1)),
+     $           (s_xpdf(i,1),i=1,n_pdfrw(1)),
+     $           (s_qpdf(i,1),i=1,n_pdfrw(1)),
+     $           '</pdfrwt>'
+         else
+            write(s_buff(4), '(a)') '<pdfrwt beam="1">0</pdfrwt>'
+         endif
+         if(n_pdfrw(2).gt.0)then
+            if(2*n_pdfrw(2).lt.10) then
+               write(cfmt,'(a,I1,a,I1,a)') '(a,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            else
+               write(cfmt,'(a,I1,a,I2,a)') '(a,I3,',
+     $              n_pdfrw(2),'I9,',2*n_pdfrw(2),'E15.8,a)'
+            endif
+            write(s_buff(5), cfmt) '<pdfrwt beam="2">',
+     $           n_pdfrw(2),(i_pdgpdf(i,2),i=1,n_pdfrw(2)),
+     $           (s_xpdf(i,2),i=1,n_pdfrw(2)),
+     $           (s_qpdf(i,2),i=1,n_pdfrw(2)),
+     $           '</pdfrwt>'
+         else
+            write(s_buff(5), '(a)') '<pdfrwt beam="2">0</pdfrwt>'
+         endif
+         write(s_buff(6), '(a,E15.8,a)') '<totfact>',s_rwfact,
+     $        '</totfact>'
+         s_buff(7) = '</mgrwt>'
+      endif
+
+c     Write out buffers for clustering info
+      nclus=0
+      if(icluster(1,1).ne.0 .and. ickkw.ne.0 .and. clusinfo)then
+         nclus=nexternal
+         write(buffclus(1),'(a)')'<clustering>'
+         do i=1,nexternal-2
+            write(buffclus(i+1),'(a13,f9.3,a2,4I3,a7)') '<clus scale="',
+     $           dsqrt(pt2ijcl(i)),'">',(icluster(j,i),j=1,4),'</clus>'
+         enddo
+         write(buffclus(nexternal),'(a)')'</clustering>'
+      endif
+
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff)
+     &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)
       if(btest(mlevel,1))
      &   call write_event(6,pb(0,1),wgt,npart,jpart(1,1),ngroup,
-     &   sscale,aaqcd,aaqed,buff)
+     &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)
 
       end
       

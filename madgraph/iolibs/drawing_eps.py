@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -158,6 +158,24 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Ffermion')
 
+    def draw_curved_dashed(self, line, cercle):
+        """ADD the EPS code for this fermion line."""
+
+        if not cercle:
+            curvature = 0.4
+        else:
+            curvature = 1
+        
+        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
+            curvature *= -1
+        
+        #add the code in the correct format
+        x1, y1 = self.rescale(line.begin.pos_x, line.begin.pos_y)
+        self.text += ' %s  %s moveto \n' % (x1, y1)
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x, line.end.pos_y, '%s Fhiggsl' %\
+                         curvature)
+
     def draw_curved_straight(self, line, cercle):
         """ADD the EPS code for this fermion line."""
 
@@ -254,7 +272,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
     # HSS
 
-    def draw_wavy(self, line, opt=0, type='d'):
+    def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""
 
         #add the code in the correct format
@@ -396,7 +414,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
 
     def associate_number(self, line, number):
-        """Write in the EPS figure the MadGraph number associate to the line.
+        """Write in the EPS figure the MadGraph5_aMC@NLO number associate to the line.
         Note that this routine is called only for external particle."""
 
         # find the external vertex associate to the line
@@ -422,7 +440,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += ' %s  %s moveto \n' % (x, y)
         self.text += '(%s)   show\n' % (number)
 
-    def associate_name(self, line, name):
+    def associate_name(self, line, name, loop=False, reverse=False):
         """ADD the EPS code associate to the name of the particle. Place it near
         to the center of the line.
         """
@@ -432,11 +450,10 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
-	# HSS, 24/10/2012, for tadpole
+        # HSS, 24/10/2012, for tadpole
         #if d == 0:
         #    raise self.DrawDiagramError('Line can not have 0 length')
-	# HSS
-
+        # HSS
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:
@@ -451,7 +468,21 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         else:
             dx = 0.01 #0.05
             dy = 0.02 #d * 0.12 
+        if loop:
+            dx, dy = 1.5* dx, dy
+            if x1 == x2:
+                if y1 < y2:
+                    dx, dy = -dx, -dy
+            elif y1 == y2:
+                if x1 >x2:
+                    dx, dy = -dx, -dy
+            elif x1 < x2:
+                dx, dy = -dx, -dy
+        if reverse:
+            dx, dy = -dx, -dy
+
             
+                
         # Assign position
         x_pos = (x1 + x2) / 2 + dx
         y_pos = (y1 + y2) / 2 + dy
@@ -618,7 +649,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         self.text += ' 260         50  moveto\n'
-        self.text += ' (Diagrams made by MadGraph5) show\n'       
+        self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'       
         # Loop on all diagram
         for i,diagram in enumerate(diagramlist):
             # Check if they need to be convert in correct format

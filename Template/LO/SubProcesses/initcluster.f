@@ -3,6 +3,7 @@
       implicit none
 
       include 'message.inc'
+      include 'maxparticles.inc'
       include 'run.inc'
       include 'nexternal.inc'
       include 'maxamps.inc'

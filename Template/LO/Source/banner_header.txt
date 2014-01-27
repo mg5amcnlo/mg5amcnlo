@@ -3,15 +3,15 @@
 <!--
 #*********************************************************************
 #                                                                    *
-#                            MadGraph 5                              *
+#                        MadGraph5_aMC@NLO                           *
 #                                                                    *
 #                           Going Beyond                             *
 #                                                                    *
 #                   http://madgraph.hep.uiuc.edu                     *
 #                   http://madgraph.phys.ucl.ac.be                   *
-#                   http://madgraph.roma2.infn.it                    *
+#                   http://amcatnlo.cern.ch                          *
 #                                                                    *
-#                         The MadGraph team                          *
+#                     The MadGraph5_aMC@NLO team                     *
 #                                                                    *
 #....................................................................*
 #                                                                    *

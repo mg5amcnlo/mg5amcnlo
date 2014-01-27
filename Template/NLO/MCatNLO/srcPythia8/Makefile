@@ -1,6 +1,37 @@
 SHELL = /bin/sh
 
 -include $(PYTHIA8LOCATION)/config.mk
+ifeq ($(shell uname),AIX)
+F77=xlf -qextname -qflttrap=overflow:zerodivide:invalid:enable -O3 -qstrict \
+#       -qautodbl=dblpad
+SYSOBJ=
+AUTODBL=-qautodbl=dblpad
+endif
+ifeq ($(shell uname),SunOS)
+F77= f77 -fnonstd
+SYSOBJ=
+endif
+ifeq ($(shell uname),Linux)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CXX= g++
+SYSOBJ=trapfpe.o
+endif
+ifeq ($(shell uname),HP-UX)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+SYSOBJ=
+endif
+ifeq ($(shell uname),OSF1)
+F77= f77 
+CXX= g++
+SYSOBJ=
+endif
+ifeq ($(shell uname),Darwin)
+F77=gfortran -w -fno-automatic -ffixed-line-length-132
+CXX= g++
+endif
+
+DEBUG=
+FF=$(F77) $(DEBUG)
 
 # Location of directories.
 TOPDIR=$(shell \pwd)

@@ -143,6 +143,11 @@ C     Otherwise it will look for it automatically and find it if it has not
 C     been moved
 c     MadLoopResourcePath = '<MadLoop5_resources_path>'
 c     CALL SETMADLOOPPATH(MadLoopResourcePath)
+c     To force the stabiliy check to also be performed in the initialization phase
+c     CALL %(proc_prefix)sFORCE_STABILITY_CHECK(.TRUE.)
+c     To chose a particular tartget split order, SOTARGET is an integer labeling
+c     the possible squared order couplings contributions (only in optimized mode)
+c     CALL %(proc_prefix)sSET_COUPLINGORDERS_TARGET(SOTARGET)
 
 C
 C     Now we can call the matrix element

@@ -149,6 +149,13 @@ C IF UNSTABLE IT GOES TO THE SAME PATTERN BUT STAB_INDEX IS THEN I+20.
 	  INTEGER N_DP_EVAL, N_QP_EVAL
 	  DATA N_DP_EVAL/1/
 	  DATA N_QP_EVAL/1/
+c     This is used for loop-induced where the reference scale for comparisons is infered from
+c     the previous points
+	  %(real_dp_format)s NEXTREF
+	  DATA NEXTREF/ZERO/
+	  INTEGER NPSPOINTS
+	  DATA NPSPOINTS/0/
+
 	  %(real_dp_format)s ACC
 	  %(real_dp_format)s DP_RES(3,MAXSTABILITYLENGTH)
 C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
@@ -170,6 +177,13 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
       DATA DONEHELDOUBLECHECK/.FALSE./	  
 	  INTEGER NEPS
 	  DATA NEPS/0/
+C     Below are variables to bypass the checkphase and insure stability check to take place
+      LOGICAL OLD_CHECKPHASE, OLD_HELDOUBLECHECKED
+	  LOGICAL OLD_GOODHEL(NCOMB)
+	  LOGICAL OLD_GOODAMP(NLOOPAMPS,NCOMB)
+
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY 
 C
 C FUNCTIONS
 C
@@ -374,11 +388,14 @@ C Or, because this is very slow, we keep the orignal value. The accuracy returne
   CTMODEINIT=CTMODEINIT_BU
 ENDIF
 
-IF(DONEHELDOUBLECHECK) THEN
+IF(.NOT.BYPASS_CHECK) THEN
+  NTRY=NTRY+1
+ENDIF
+
+IF(DONEHELDOUBLECHECK.AND.(.NOT.HELDOUBLECHECKED)) THEN
   HELDOUBLECHECKED=.TRUE.
   DONEHELDOUBLECHECK=.FALSE.
 ENDIF
-NTRY=NTRY+1
 
 CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
@@ -400,6 +417,23 @@ OPEN(1, FILE=LoopFilterFN, err=111, status='NEW',action='WRITE')
   CLOSE(1)
 FOUNDLOOPFILTER=.TRUE.
 ENDIF
+ENDIF
+
+IF (BYPASS_CHECK) THEN
+  OLD_CHECKPHASE = CHECKPHASE
+  OLD_HELDOUBLECHECKED = HELDOUBLECHECKED
+  CHECKPHASE = .FALSE.
+  HELDOUBLECHECKED = .TRUE.
+  DO I=1,NCOMB
+    OLD_GOODHEL(I)=GOODHEL(I)
+	GOODHEL(I) = .TRUE.
+  ENDDO
+  DO I=1,NCOMB
+    DO J=1,NLOOPAMPS
+      OLD_GOODAMP(J,I)=GOODAMP(J,I)
+	  GOODAMP(J,I) = .TRUE.
+	ENDDO
+  ENDDO
 ENDIF
 
 IF(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
@@ -446,6 +480,10 @@ DO K=1, 3
   ENDDO
 ENDDO
 
+LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
+
+%(set_reference)s
+
 200 CONTINUE
 
 IF (CTMODE.EQ.0.OR.CTMODE.GE.4) THEN
@@ -456,10 +494,6 @@ IF (.NOT.MP_PS_SET.AND.(CTMODE.EQ.0.OR.CTMODE.GE.4)) THEN
   CALL %(proc_prefix)sSET_MP_PS(P_USER)
   MP_PS_SET = .TRUE.
 ENDIF
-
-LSCALE=DSQRT(ABS((P(0,1)+P(0,2))**2-(P(1,1)+P(1,2))**2-(P(2,1)+P(2,2))**2-(P(3,1)+P(3,2))**2))
-
-%(set_reference)s
 
 DO K=1,3
   ANS(K)=0.0d0
@@ -516,6 +550,8 @@ ENDIF
 1226 CONTINUE
 
 IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
+C  Update of NEXTREF, will be used for loop induced only.
+  NEXTREF = NEXTREF + ANS(1) + ANS(2) + ANS(3)
   IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
   BUFFR(1)=BUFFR(1)+ANS(1)
   BUFFR(2)=BUFFR(2)+ANS(2)
@@ -592,6 +628,8 @@ C GOTO NEXT HELICITY OR FINISH
     ANS(1)=BUFFR(1)
 	ANS(2)=BUFFR(2)
 	ANS(3)=BUFFR(3)
+C We add one here to the number of PS points used for building the reference scale for comparison (used only for loop-induced processes).
+    NPSPOINTS = NPSPOINTS+1
 	IF(NTRY.EQ.0) THEN
 	  NATTEMPTS=NATTEMPTS+1
 	  IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
@@ -728,6 +766,21 @@ ANSRETURNED(0,0)=ANS(0)
 ANSRETURNED(1,0)=ANS(1)
 ANSRETURNED(2,0)=ANS(2)
 ANSRETURNED(3,0)=ANS(3)
+
+C Reinitialize the check phase logicals and the filters if check bypassed
+IF (BYPASS_CHECK) THEN
+  CHECKPHASE = OLD_CHECKPHASE
+  HELDOUBLECHECKED = OLD_HELDOUBLECHECKED
+  DO I=1,NCOMB
+    GOODHEL(I)=OLD_GOODHEL(I)
+  ENDDO
+  DO I=1,NCOMB
+    DO J=1,NLOOPAMPS
+      GOODAMP(J,I)=OLD_GOODAMP(J,I)
+	ENDDO
+  ENDDO
+ENDIF
+
 END
 
       SUBROUTINE %(proc_prefix)scompute_accuracy(fulllist, length, acc, estimate)
@@ -854,6 +907,22 @@ C ----------
 C BEGIN CODE
 C ----------
       write(*,*) 'WARNING:: Ignored, the possibility of selecting specific squared order contributions is not available in the default mode.'
+
+	  END
+
+	  SUBROUTINE %(proc_prefix)sFORCE_STABILITY_CHECK(ONOFF)
+C
+C This function can be called by the MadLoop user so as to always have stability
+C checked, even during initialisation, when calling the *_thres routines.
+C
+      LOGICAL ONOFF
+
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  DATA BYPASS_CHECK, ALWAYS_TEST_STABILITY /.FALSE.,.FALSE./
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
+	  ALWAYS_TEST_STABILITY = ONOFF
+
 	  END
 
       SUBROUTINE %(proc_prefix)sGET_NSQSO_LOOP(NSQSO)
@@ -896,18 +965,28 @@ C
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
       CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS)
-C Reset it to default value not to affect next runs
-	  USER_STAB_PREC = -1.0d0
+	  IF(ALWAYS_TEST_STABILITY.AND.(H.eq.1.OR.ACCURACY(0).lt.0.0d0)) THEN
+	    BYPASS_CHECK = .TRUE.
+        CALL %(proc_prefix)sSLOOPMATRIXHEL(P,HEL,ANS) 
+	    BYPASS_CHECK = .FALSE.
+C     Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
+	  ENDIF
 	  
+C Reset it to default value not to affect next runs
+	  USER_STAB_PREC = -1.0d0	  
       DO I=0,NSQUAREDSO
 	    PREC_FOUND(I)=ACCURACY(I)
 	  ENDDO
-	  PREC_FOUND=ACCURACY
       RET_CODE=100*H+10*T+U
 
 	  END
@@ -976,14 +1055,25 @@ C
 	  %(real_dp_format)s ACCURACY(0:NSQUAREDSO)
 	  common/%(proc_prefix)sACC/ACCURACY,H,T,U
 
+	  LOGICAL BYPASS_CHECK, ALWAYS_TEST_STABILITY
+	  COMMON/%(proc_prefix)sBYPASS_CHECK/BYPASS_CHECK, ALWAYS_TEST_STABILITY
+
 C ----------
 C BEGIN CODE
 C ----------
       USER_STAB_PREC = PREC_ASKED
       CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
+	  IF(ALWAYS_TEST_STABILITY.AND.(H.eq.1.OR.ACCURACY(0).lt.0.0d0)) THEN
+	    BYPASS_CHECK = .TRUE.
+        CALL %(proc_prefix)sSLOOPMATRIX(P,ANS)
+		BYPASS_CHECK = .FALSE.
+C     Make sure we correctly return an initialization-type T code
+		IF (T.eq.2) T=4
+		IF (T.eq.1) T=3
+	  ENDIF
+
 C Reset it to default value not to affect next runs
 	  USER_STAB_PREC = -1.0d0
-
 	  DO I=0,NSQUAREDSO
 	    PREC_FOUND(I)=ACCURACY(I)
 	  ENDDO

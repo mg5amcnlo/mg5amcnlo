@@ -30,7 +30,7 @@ C ----------
 C  
 %(info_lines)s
 C 
-C MadGraph StandAlone Version
+C MadGraph5_aMC@NLO StandAlone Version
 C 
 C Returns amplitude squared summed/avg over colors
 c and helicities
@@ -68,8 +68,8 @@ C
 C GLOBAL VARIABLES
 C
       INTEGER USERHEL
-	  DATA USERHEL/-1/
 	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+	  DATA USERHEL/-1/	  
 
 %(helicity_lines)s
 %(den_factor_line)s

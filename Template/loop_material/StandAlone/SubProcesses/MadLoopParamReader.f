@@ -3,10 +3,13 @@
       implicit none
 
       CHARACTER(512) fileName, buff, buff2, mode
-      
+      CHARACTER*10 MLReductionLib_str,MLReductionLib_str_save
+      CHARACTER*2  MLReductionLib_char
+      INTEGER MLRed,i,j,k
+
       include "MadLoopParams.inc"
 
-      logical printParam, couldRead, paramPrinted
+      logical printParam, couldRead, paramPrinted, find
       data paramPrinted/.FALSE./
       couldRead=.False.
 !     Default parameters
@@ -102,7 +105,54 @@
      &           ImprovePSPoint .gt. 2 ) then
                stop 'ImprovePSPoint must be >= -1 and <=2.'
              endif
-
+          else if (buff .eq. '#MLReductionLib') then
+             read(666,*,end=999) MLReductionLib_str
+             MLReductionLib(1:4)=0
+             MLReductionLib_str_save=MLReductionLib_str
+             j=0
+             DO
+                i=index(MLReductionLib_str,'|')
+                IF(i.EQ.0)THEN
+                   MLReductionLib_char=MLReductionLib_str
+                ELSE
+                   MLReductionLib_char=MLReductionLib_str(:i-1)
+                ENDIF
+                IF(MLReductionLib_char.EQ.'1 ')THEN
+                   MLRed=1
+                ELSEIF(MLReductionLib_char.EQ.'2 ')THEN
+                   MLRed=2
+                ELSEIF(MLReductionLib_char.EQ.'3 ')THEN
+                   MLRed=3
+                ELSE
+                   PRINT *, 'MLReductionLib is wrong: '//
+     $                  TRIM(MLReductionLib_str_save)
+                   STOP
+                ENDIF
+                find=.FALSE.
+                DO k=1,j
+                   IF(MLReductionLib(k).EQ.MLRed)THEN
+                      find=.TRUE.
+                      EXIT
+                   ENDIF
+                ENDDO
+                IF(.NOT.find)THEN
+                   j=j+1
+                   MLReductionLib(j)=MLRed
+                ENDIF
+                IF(i.EQ.0)THEN
+                   EXIT
+                ELSE
+                   MLReductionLib_str=MLReductionLib_str(i+1:)
+                ENDIF
+             ENDDO
+          else if (buff .eq. '#IREGIRECY') then
+             read(666,*,end=999) IREGIRECY
+          else if (buff .eq. '#IREGIMODE') then
+             read(666,*,end=999) IREGIMODE
+             if (IREGIMODE .lt. 0 .or.
+     &            IREGIMODE .gt.2) then
+                stop 'IREGIMODE must be >=0 and <=2.'
+             endif
           else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
@@ -140,6 +190,10 @@ C     a non existing or malformed parameter file
       endif
       write(*,*)
      & '==============================================================='
+      write(*,*) ' > MLReductionLib            = '
+     $     //TRIM(MLReductionLib_str_save)
+      write(*,*) ' > IREGIMODE                 = ',IREGIMODE
+      write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
       write(*,*) ' > MLStabThres               = ',MLStabThres
       write(*,*) ' > NRotations_DP             = ',NRotations_DP
@@ -172,6 +226,10 @@ C     a non existing or malformed parameter file
       
       include "MadLoopParams.inc"
 
+      MLReductionLib(1)=1
+      MLReductionLib(2:4)=0
+      IREGIMODE=2
+      IREGIRECY=.TRUE.
       CTModeInit=0
       CTModeRun=-1
       NRotations_DP=1

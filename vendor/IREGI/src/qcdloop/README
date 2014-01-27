@@ -1,0 +1,18 @@
+This directory contains three subdirectories
+        ff  -- the ff library 
+	ql  -- the ql library 
+	Doc -- contains the documentation file 
+
+
+Typing make should compile the ff library, the ql library and the test
+program test.f. Executing ./test one should then reproduce the output
+in test.out.
+
+The directory ff is taken from http://www.xs4all.nl/~gjvo/FF.html. The
+file ffinit_mine.f replaces the original file ff_init.f. One has to
+adjust here the path (twice) and set it to the location of the the ff
+library. The makefile in ff has been modified accordingly.
+
+For any problems or bug reports send an email to ellis@fnal.gov and
+g.zanderighi1@physics.ox.ac.uk. 
+

@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph Development team and Contributors
+# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 ##   Diagram of Class
@@ -243,6 +243,34 @@ class Width(aloha_lib.FactoryLorentz):
     @classmethod
     def get_unique_name(self, particle):
         return '_W%s' % particle
+
+#===============================================================================
+# Param
+#===============================================================================
+class L_Param(aloha_lib.LorentzObject):
+    """ Object for a Model Parameter """
+ 
+    
+    def __init__(self, Lname, name):
+        self.varname = name
+        aloha_lib.LorentzObject.__init__(self, name, [], [])
+        
+    def create_representation(self):
+        param = aloha_lib.Variable( self.varname, aloha_lib.ExtVariable)
+
+        self.representation= aloha_lib.LorentzObjectRepresentation(
+                            param, [], [])
+
+class Param(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Param
+    
+    @classmethod
+    def get_unique_name(self, name):
+        if name == 'Pi':
+            KERNEL.has_pi = True
+        return 'Param_%s' % name
+
 #===============================================================================
 # Scalar
 #===============================================================================

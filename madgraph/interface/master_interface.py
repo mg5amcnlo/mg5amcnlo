@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -61,9 +61,9 @@ class Switcher(object):
         self.change_principal_cmd(main)
         self.cmd.__init__(self, *args, **opt)       
 
-    interface_names= {'MadGraph':('MG5',MGcmd.MadGraphCmd),
-                      'MadLoop':('ML5',LoopCmd.LoopInterface),
-                      'aMC@NLO':('aMC@NLO',amcatnloCmd.aMCatNLOInterface)}
+    interface_names= {'MadGraph':('MG5_aMC',MGcmd.MadGraphCmd),
+                      'MadLoop':('MG5_aMC',LoopCmd.LoopInterface),
+                      'aMC@NLO':('MG5_aMC',amcatnloCmd.aMCatNLOInterface)}
 
     _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
     current_interface = None
@@ -288,14 +288,38 @@ class Switcher(object):
         return self.cmd.check_add(self, *args, **opts)
         
     def check_answer_in_input_file(self, *args, **opts):
-        return self.cmd.check_answer_in_input_file(self, *args, **opts)
-        
+        return self.cmd.check_answer_in_input_file(self, *args, **opts)  
+    
     def check_check(self, *args, **opts):
         return self.cmd.check_check(self, *args, **opts)
         
     def check_define(self, *args, **opts):
         return self.cmd.check_define(self, *args, **opts)
-        
+
+    def check_decay_diagram(self, *args, **opts):
+        return self.cmd.check_decay_diagram(self, *args, **opts)
+
+    def complete_decay_diagram(self, *args, **opts):
+        return self.cmd.complete_decay_diagram(self, *args, **opts)
+
+    def do_decay_diagram(self, *args, **opts):
+        return self.cmd.do_decay_diagram(self, *args, **opts)
+
+    def help_decay_diagram(self, *args, **opts):
+        return self.cmd.help_decay_diagram(self, *args, **opts)
+
+    def check_compute_widths(self, *args, **opts):
+        return self.cmd.check_compute_widths(self, *args, **opts)
+    
+    def complete_compute_widths(self, *args, **opts):
+        return self.cmd.complete_compute_widths(self, *args, **opts)
+
+    def do_compute_widths(self, *args, **opts):
+        return self.cmd.do_compute_widths(self, *args, **opts)
+
+    def help_compute_widths(self, *args, **opts):
+        return self.cmd.help_compute_widths(self, *args, **opts)
+
     def check_display(self, *args, **opts):
         return self.cmd.check_display(self, *args, **opts)
         
@@ -346,7 +370,7 @@ class Switcher(object):
 
     def complete_switch(self, *args, **opts):
         return self.cmd.complete_switch(self, *args, **opts)
-        
+
     def complete_check(self, *args, **opts):
         return self.cmd.complete_check(self, *args, **opts)
         
@@ -573,7 +597,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
         else:
             raise MadGraph5Error, 'Type of interface not valid: %s' % name  
         
-        if self.current_interface!=old_cmd:
+        if self.interface_names[old_cmd][0]!=self.interface_names[name][0]:
             logger.info("Switching from interface %s to %s"\
                         %(self.interface_names[old_cmd][0],\
                           self.interface_names[name][0]))
@@ -642,11 +666,11 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
             raise
         
     # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, final=False):
         
         """Force to use the web configuration file only"""
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return Switcher.set_configuration(self, config_path=config_path)
+        return Switcher.set_configuration(self, config_path=config_path, final=final)
     
     def do_save(self, line, check=True, **opt):
         """Save information to file"""

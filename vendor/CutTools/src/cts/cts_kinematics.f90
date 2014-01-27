@@ -41,7 +41,7 @@
    , dimension(:,:), public, allocatable :: vden
   include 'cts_mpc.h'
    , dimension(:,:), public, allocatable :: mp_vden
-  integer, private :: ierr
+  integer, private :: ierr,icomp1,icomp2
   save den,vden
 !
   interface load_denominators
@@ -165,15 +165,39 @@
   subroutine dp_allocate_den
    use dimensions
    use maxsolutions
+   ierr= -1
    allocate (vden(1:dmns_a, max_solutions), stat=ierr)
    allocate (den(1:dmns_a), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in dp_allocate_den"
+   vden= 0.d0
+   do icomp2= 1,dmns_a
+    den(icomp2)%i= 0
+    den(icomp2)%m2= 0.d0
+    den(icomp2)%p(0)= 0.d0
+    den(icomp2)%p(1)= 0.d0
+    den(icomp2)%p(2)= 0.d0
+    den(icomp2)%p(3)= 0.d0
+   enddo
   end subroutine dp_allocate_den
 !
   subroutine mp_allocate_den
    use dimensions
    use maxsolutions
+   ierr= -1
    allocate (mp_vden(1:dmns_a, max_solutions), stat=ierr)
    allocate (mp_den(1:dmns_a), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in mp_allocate_den"
+   do icomp2= 1,dmns_a
+    do icomp1= 1,max_solutions 
+      mp_vden(icomp2,icomp1)= 0.d0
+    enddo
+    mp_den(icomp2)%i= 0
+    mp_den(icomp2)%m2= 0.d0
+    mp_den(icomp2)%p(0)= 0.d0
+    mp_den(icomp2)%p(1)= 0.d0
+    mp_den(icomp2)%p(2)= 0.d0
+    mp_den(icomp2)%p(3)= 0.d0
+   enddo
   end subroutine mp_allocate_den
 !
   subroutine dp_load_vden(q,i,j,p0,m20)
@@ -2070,7 +2094,7 @@
   implicit none
   private
   public :: get_coefficients,dp_allocate_arrays,mp_allocate_arrays
-  integer, private :: ierr
+  integer, private :: ierr,icomp1,icomp2
 !
 ! variables for the rational terms
 !
@@ -2306,13 +2330,20 @@
   end subroutine dp_allocate_arrays
 !
   subroutine dp_allocate_vectorsd
+   ierr= -1
    allocate      (p0vecd(0:3,dmns_d), stat=ierr)
    allocate      (dcoeff(0:1,dmns_d), stat=ierr)
    allocate (save_dcoeff(0:1,dmns_d), stat=ierr)
    allocate        (tvec(0:3,dmns_d), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in dp_allocate_vectorsd"
+   p0vecd= 0.d0
+   dcoeff= 0.d0
+   save_dcoeff= 0.d0
+   tvec= 0.d0
   end subroutine dp_allocate_vectorsd
 !
   subroutine dp_allocate_vectorsc
+   ierr= -1
    allocate      (p0vecc(0:3,dmns_c), stat=ierr)
    allocate       (l3vec(0:3,dmns_c), stat=ierr)  
    allocate       (l4vec(0:3,dmns_c), stat=ierr)  
@@ -2320,9 +2351,18 @@
    allocate    (ccoeff_2(0:2,dmns_c), stat=ierr)
    allocate (save_ccoeff(0:6,dmns_c), stat=ierr)
    allocate         (c4_rat1(dmns_c), stat=ierr)  
+   if (ierr.ne.0) STOP "Allocation error in dp_allocate_vectorsc"
+   p0vecc= 0.d0
+   l3vec= 0.d0  
+   l4vec= 0.d0  
+   ccoeff= 0.d0
+   ccoeff_2= 0.d0
+   save_ccoeff= 0.d0
+   c4_rat1= 0.d0  
   end subroutine dp_allocate_vectorsc
 !
   subroutine dp_allocate_vectorsb
+   ierr= -1
    allocate      (p0vecb(0:3,dmns_b), stat=ierr)
    allocate       (l5vec(0:3,dmns_b), stat=ierr)  
    allocate       (l6vec(0:3,dmns_b), stat=ierr)  
@@ -2333,9 +2373,21 @@
    allocate          (vveck1(dmns_b), stat=ierr)
    allocate          (b_rat1(dmns_b), stat=ierr)
    allocate         (b3_rat1(dmns_b), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in dp_allocate_vectorsb"
+   p0vecb= 0.d0
+   l5vec= 0.d0  
+   l6vec= 0.d0  
+   bcoeff= 0.d0
+   bcoeff_2= 0.d0
+   save_bcoeff= 0.d0
+   vvecb= 0.d0
+   vveck1= 0.d0
+   b_rat1= 0.d0
+   b3_rat1= 0.d0
   end subroutine dp_allocate_vectorsb
 !
   subroutine dp_allocate_vectorsa
+   ierr= -1
    allocate  (vveca(0:3,dmns_a),      stat=ierr)
    allocate (p0veca(0:3,dmns_a),      stat=ierr)
    allocate  (l7vec(0:3,dmns_a),      stat=ierr)  
@@ -2345,6 +2397,16 @@
    allocate (save_acoeff(0:4,dmns_a), stat=ierr)
    allocate   (kvec(0:3,dmns_a),      stat=ierr) 
    allocate     (a_rat1(dmns_a),      stat=ierr) 
+   if (ierr.ne.0) STOP "Allocation error in dp_allocate_vectorsa"
+   vveca= 0.d0
+   p0veca= 0.d0
+   l7vec= 0.d0 
+   l8vec= 0.d0 
+   acoeff= 0.d0
+   acoeff_2= 0.d0
+   save_acoeff= 0.d0
+   kvec= 0.d0
+   a_rat1= 0.d0 
   end subroutine dp_allocate_vectorsa
 !
   subroutine mp_allocate_arrays(np)
@@ -2356,13 +2418,26 @@
   end subroutine mp_allocate_arrays
 !
   subroutine mp_allocate_vectorsd
+   ierr= -1
    allocate (mp_p0vecd(0:3,dmns_d), stat=ierr)
    allocate (mp_dcoeff(0:1,dmns_d), stat=ierr)
    allocate (save_mp_dcoeff(0:1,dmns_d), stat=ierr)
    allocate (mp_tvec(0:3,dmns_d), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in mp_allocate_vectorsd"
+   do icomp2= 1,dmns_d
+    do icomp1= 0,3
+     mp_p0vecd(icomp1,icomp2)= 0.d0
+     mp_tvec(icomp1,icomp2)= 0.d0
+    enddo
+    do icomp1= 0,1
+     mp_dcoeff(icomp1,icomp2)= 0.d0
+     save_mp_dcoeff(icomp1,icomp2)= 0.d0
+    enddo
+   enddo
   end subroutine mp_allocate_vectorsd
 !
   subroutine mp_allocate_vectorsc
+   ierr= -1
    allocate      (mp_p0vecc(0:3,dmns_c), stat=ierr)
    allocate       (mp_l3vec(0:3,dmns_c), stat=ierr)  
    allocate       (mp_l4vec(0:3,dmns_c), stat=ierr)  
@@ -2370,9 +2445,26 @@
    allocate    (mp_ccoeff_2(0:2,dmns_c), stat=ierr)
    allocate (save_mp_ccoeff(0:6,dmns_c), stat=ierr)
    allocate         (mp_c4_rat1(dmns_c), stat=ierr)  
+   if (ierr.ne.0) STOP "Allocation error in mp_allocate_vectorsc"
+   do icomp2= 1,dmns_c
+    do icomp1= 0,3
+     mp_p0vecc(icomp1,icomp2)= 0.d0
+     mp_l3vec(icomp1,icomp2)= 0.d0 
+     mp_l4vec(icomp1,icomp2)= 0.d0  
+    enddo
+    do icomp1= 0,6
+     mp_ccoeff(icomp1,icomp2)= 0.d0 
+     save_mp_ccoeff(icomp1,icomp2)= 0.d0 
+    enddo
+    do icomp1= 0,2
+     mp_ccoeff_2(icomp1,icomp2)= 0.d0
+    enddo
+    mp_c4_rat1(icomp2)= 0.d0
+   enddo
   end subroutine mp_allocate_vectorsc
 !
   subroutine mp_allocate_vectorsb
+   ierr= -1
    allocate      (mp_p0vecb(0:3,dmns_b), stat=ierr)
    allocate       (mp_l5vec(0:3,dmns_b), stat=ierr)  
    allocate       (mp_l6vec(0:3,dmns_b), stat=ierr)  
@@ -2383,9 +2475,27 @@
    allocate          (mp_vveck1(dmns_b), stat=ierr)
    allocate          (mp_b_rat1(dmns_b), stat=ierr)
    allocate         (mp_b3_rat1(dmns_b), stat=ierr)
+   if (ierr.ne.0) STOP "Allocation error in mp_allocate_vectorsb"
+   do icomp2= 1,dmns_b
+    do icomp1= 0,3
+     mp_p0vecb(icomp1,icomp2)= 0.d0
+     mp_l5vec(icomp1,icomp2)= 0.d0
+     mp_l6vec(icomp1,icomp2)= 0.d0
+     mp_vvecb(icomp1,icomp2)= 0.d0
+    enddo 
+    do icomp1= 0,8
+     mp_bcoeff(icomp1,icomp2)= 0.d0
+     save_mp_bcoeff(icomp1,icomp2)= 0.d0 
+    enddo
+    mp_bcoeff_2(icomp2)= 0.d0
+    mp_vveck1(icomp2)= 0.d0
+    mp_b_rat1(icomp2)= 0.d0
+    mp_b3_rat1(icomp2)= 0.d0
+   enddo
   end subroutine mp_allocate_vectorsb
 !
   subroutine mp_allocate_vectorsa
+   ierr= -1
    allocate  (mp_vveca(0:3,dmns_a)     , stat=ierr)
    allocate (save_mp_acoeff(0:4,dmns_a), stat=ierr)
    allocate (mp_p0veca(0:3,dmns_a),      stat=ierr)
@@ -2394,6 +2504,21 @@
    allocate (mp_acoeff(0:4,dmns_a),      stat=ierr)
    allocate   (mp_kvec(0:3,dmns_a),      stat=ierr) 
    allocate     (mp_a_rat1(dmns_a),      stat=ierr) 
+   if (ierr.ne.0) STOP "Allocation error in mp_allocate_vectorsa"
+   do icomp2= 1,dmns_a
+    do icomp1= 0,3
+     mp_vveca(icomp1,icomp2)= 0.d0
+     mp_p0veca(icomp1,icomp2)= 0.d0
+     mp_l7vec(icomp1,icomp2)= 0.d0
+     mp_l8vec(icomp1,icomp2)= 0.d0
+     mp_kvec(icomp1,icomp2)= 0.d0
+    enddo
+    do icomp1= 0,4
+     save_mp_acoeff(icomp1,icomp2)= 0.d0
+     mp_acoeff(icomp1,icomp2)= 0.d0
+    enddo
+    mp_a_rat1(icomp2)= 0.d0
+   enddo
   end subroutine mp_allocate_vectorsa
 ! 
   subroutine dp_get_coefficients(p,numdummy,number_propagators,dmr,ql)

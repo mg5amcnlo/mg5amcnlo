@@ -109,6 +109,7 @@ c
 c
 c     Global
 c
+      include 'maxparticles.inc'
       include 'run.inc'
 
       double precision cm_rap
@@ -144,6 +145,7 @@ c
 c
 c     Global
 c
+      include 'maxparticles.inc'
       include 'run.inc'
 c-----
 c  Begin Code
@@ -240,10 +242,17 @@ c
 c     Local
 c
 
+      include 'maxparticles.inc'
       include 'run.inc'
+      include 'cuts.inc'
 
       double precision pt1,pt2,ptm1,ptm2,eta1,eta2,phi1,phi2,p1a,p2a,costh,sumdot
       integer j
+c
+c     Functions
+c
+      double precision DJB
+
 c-----
 c  Begin Code
 c-----
@@ -267,11 +276,19 @@ c            dj = 2d0*p1(0)*p2(0)*(1d0-costh)    !JADE
         p2a = dsqrt(pt2+p2(3)**2)
         eta1 = 0.5d0*log((p1a+p1(3))/(p1a-p1(3)))
         eta2 = 0.5d0*log((p2a+p2(3))/(p2a-p2(3)))
-c        ptm1 = max((p1(0)-p1(3))*(p1(0)+p1(3)),0d0)
-c        ptm2 = max((p2(0)-p2(3))*(p2(0)+p2(3)),0d0)
-        dj = max(p1(4),p2(4))+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
-     &     (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2
-
+c     For massless-massive merging, use massless mT
+c     to avoid depletion/enhancement of cone around massive particle
+c     (only soft divergence)
+        if(p1(4).lt.1d0.and.(p2(4).ge.3d0.and.maxjetflavor.gt.4.or.
+     $       p2(4).ge.1d0.and.maxjetflavor.gt.3))then
+           dj = DJB(p1)*(1d0+1d-6)
+        elseif(p2(4).lt.1d0.and.(p1(4).ge.3d0.and.maxjetflavor.gt.4.or.
+     $       p1(4).ge.1d0.and.maxjetflavor.gt.3))then
+           dj = DJB(p2)*(1d0+1d-6)
+        else
+           dj = max(p1(4),p2(4))+min(pt1,pt2)*2d0*(cosh(eta1-eta2)-
+     &          (p1(1)*p2(1)+p1(2)*p2(2))/dsqrt(pt1*pt2))/D**2
+        endif
 c        write(*,'(a,5e16.4)')'Mom(1): ',(p1(j),j=1,3),p1(0),p1(4)
 c        write(*,'(a,5e16.4)')'Mom(2): ',(p2(j),j=1,3),p2(0),p2(4)
 c       print *,'pT1: ',sqrt(pt1),' pT2: ',sqrt(pt2)
@@ -334,6 +351,7 @@ c
 c     Local
 c
 
+      include 'maxparticles.inc'
       include 'run.inc'
 
       double precision pt1,pt2,ptm1,eta1,eta2,phi1,phi2,p1a,p2a,costh
@@ -386,6 +404,7 @@ c
 c     Local
 c
       double precision pm1
+      include 'maxparticles.inc'
       include 'run.inc'
 
 c-----

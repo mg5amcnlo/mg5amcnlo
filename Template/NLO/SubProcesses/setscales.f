@@ -212,6 +212,7 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       include 'reweight0.inc'
+      include 'run.inc'
       double precision muR_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,sumdot
       external pt,et,dot,sumdot
@@ -228,9 +229,37 @@ c for 'geometric mean'
       double precision pQCD(0:3,nexternal),PJET(0:3,nexternal)
       double precision rfj,sycut,palg,amcatnlo_fastjetdmergemax
      &     ,tmp1,tmp2,xm2
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imurtype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+c     Note that nFxFx_ren_scales includes the one scale that corresponds
+c     to the real-emission one (and is zero for the n-body conf.). Skip
+c     that scale here.
+         if (nint(wgtbpower).gt.nFxFx_ren_scales-1) then
+c For processes that have alpha_S to some (non-zero) power at the lowest
+c multiplicity Born, use the transverse mass of that system for those
+c alpha_S
+            tmp=FxFx_ren_scales(0)**
+     &           (nint(wgtbpower)-(nFxFx_ren_scales-1))
+         elseif(nint(wgtbpower).eq.0) then
+c lowest multiplicity for processes without QCD use the transverse mass
+c of the colorless system (as returned by setclscales)
+            tmp=FxFx_ren_scales(0)
+         else
+            tmp=1d0
+         endif
+         do i=2,nFxFx_ren_scales
+            tmp=tmp*FxFx_ren_scales(i)
+         enddo
+         tmp=tmp**(1d0/max(wgtbpower,1d0))
+         temp_scale_id='FxFx merging scale'
+      elseif(imurtype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imurtype.eq.2)then
         do i=nincoming+1,nexternal
@@ -262,7 +291,8 @@ c geometric mean (to reweight alphaS)
             palg=1.d0
             rfj=0.4d0
             sycut=0d0
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet,njet,jet)
+            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     $           pjet,njet,jet)
             if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/
@@ -363,6 +393,7 @@ c a scale to be used as a reference for factorizations scales
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
+      include 'run.inc'
       double precision muF_ref_dynamic,pp(0:3,nexternal)
       double precision tmp,scale_global_reference,pt,et,dot,xm2,sumdot
       external pt,et,dot,sumdot
@@ -370,9 +401,18 @@ c a scale to be used as a reference for factorizations scales
       common/ctemp_scale_id/temp_scale_id
       integer i,imuftype
       parameter (imuftype=1)
+c FxFx
+      integer nFxFx_ren_scales
+      double precision FxFx_ren_scales(0:nexternal),FxFx_fac_scale(2)
+      common/c_FxFx_scales/FxFx_ren_scales,nFxFx_ren_scales
+     $     ,FxFx_fac_scale
 c
       tmp=0
-      if(imuftype.eq.1)then
+      if(ickkw.eq.3)then
+c FxFx merging scale:
+        tmp=min(FxFx_fac_scale(1),FxFx_fac_scale(2))
+        temp_scale_id='FxFx merging scale'
+      elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(imuftype.eq.2)then
         do i=nincoming+1,nexternal
@@ -473,10 +513,10 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
-      double precision tmp,pt,et,dot,xm2,sumdot
+      double precision tmp,pt,et,dot,xm2,sumdot,xmt2
       external pt,et,dot,sumdot
       integer i,itype
-      parameter (itype=2)
+      parameter (itype=3)
       character*80 temp_scale_id
       common/ctemp_scale_id/temp_scale_id
 c
@@ -495,6 +535,15 @@ c Sum of transverse masses
           tmp=tmp+sqrt(pt(pp(0,i))**2+xm2)
         enddo
         temp_scale_id='sum_i mT(i), i=final state'
+      elseif(itype.eq.3)then
+c Sum of transverse masses divided by 2
+         do i=nincoming+1,nexternal
+c     m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
+            xmt2=(pp(0,i)+pp(3,i))*(pp(0,i)-pp(3,i))
+c     take max() to avoid numerical instabilities
+            tmp=tmp+sqrt(max(xmt2,0d0))/2d0
+         enddo
+         temp_scale_id='H_T/2 := sum_i mT(i)/2, i=final state'
       else
         write(*,*)'Unknown option in scale_global_reference',itype
         stop

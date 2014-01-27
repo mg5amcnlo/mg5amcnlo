@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ How to import a UFO model to the MG5 format """
@@ -131,12 +131,15 @@ def import_model(model_name, decay=False, restrict=True):
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
                                             keep_external=keep_external)
+        model.path = model_path
+
     return model
 
 _import_once = []
 def import_full_model(model_path, decay=False):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
+
 
     assert model_path == find_ufo_path(model_path)
        
@@ -171,10 +174,10 @@ def import_full_model(model_path, decay=False):
                 _import_once.append((model_path, aloha.unitary_gauge))
                 return model
     if (model_path, aloha.unitary_gauge) in _import_once:
-        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch mg5' 
- 
+        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
+
     # Load basic information
-    ufo_model = ufomodels.load_model(model_path)
+    ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
     model = ufo2mg5_converter.load_model()
     
@@ -408,7 +411,7 @@ class UFOMG5Converter(object):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
-        
+
         if not hasattr(particle_info, 'propagator'):
             nb_property += 1
             if particle.get('spin') >= 3:
@@ -816,7 +819,7 @@ class UFOMG5Converter(object):
         data_string = '*'.join(output)
 
         # Change convention for summed indices
-        p = re.compile(r'''\'\w(?P<number>\d+)\'''')
+        p = re.compile(r'\'\w(?P<number>\d+)\'')
         data_string = p.sub('-\g<number>', data_string)
          
         # Shift indices by -1
@@ -1227,6 +1230,9 @@ class RestrictModel(model_reader.ModelReader):
             value = self['parameter_dict'][param.name]
             if value in [0,1,0.000001e-99,9.999999e-1]:
                 continue
+            if param.lhablock.lower() == 'decay':
+                continue
+            
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
             if key in block_value_to_var:
@@ -1304,7 +1310,7 @@ class RestrictModel(model_reader.ModelReader):
             # delete the old parameters
             if not keep_external:                
                 external_parameters.remove(obj)
-            elif obj.lhablock in ['MASS','DECAY']:
+            elif obj.lhablock.upper() in ['MASS','DECAY']:
                 external_parameters.remove(obj)
             else:
                 obj.name = ''

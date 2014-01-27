@@ -22,7 +22,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         if [[ "$4" != "" ]]; then
             if [[ -e ../$4\_G$i ]]; then
                 if [[ $1 == '0' ]]; then
-                    cp -f ../$4\_G$i/*.sv1 . >/dev/null 2>&1
+                    cp -f ../$4\_G$i/mint_grids . >/dev/null 2>&1
                     cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1
                 elif [[ $1 == '1' ]]; then
                     cp -f ../$4\_G$i/mint_grids . >/dev/null 2>&1
@@ -62,7 +62,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
             fi
         fi
     fi
-   
     if  [[ ! -e randinit ]] ; then
         if [[ -e ../randinit ]] ; then
             cp ../randinit .
@@ -76,33 +75,25 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
 		else
 			ln -sf ../../symfact.dat .    
 		fi
-
     fi
 
-    if  [[ ! -e FKS_params.dat ]] ; then
-	ln -sf ../FKS_params.dat .
-    fi
-
+    link1up FKS_params.dat
     link1up MadLoop5_resources
-
     link1up OLE_order.olc
-
-    if  [[ ! -e param_card.dat ]] ; then
-	if [[ -e ../../Cards/param_card.dat ]] ; then
-	    ln -sf ../../Cards/param_card.dat .
-	elif [[ -e ../../../Cards/param_card.dat ]] ; then
-	    ln -sf ../../../Cards/param_card.dat .
-	fi
-    fi
+    link1up param_card.dat
     
 #   check where is the basic file for the creation of input_app.txt
 #       
     if [[ $1 == '0' ]]; then
- 	if  [[  -e ../madin.$2 ]] ; then
- 	    input_template=../madin.$2
- 	else
- 	    input_template=../../madin.$2
-        fi 
+	if [[ $3 == '-1' && -e ./madinM1 ]] ; then
+	    input_template=./madinM1
+	else
+ 	    if  [[  -e ../madin.$2 ]] ; then
+ 		input_template=../madin.$2
+ 	    else
+ 		input_template=../../madin.$2
+ 	    fi 
+	fi
     elif [[ $1 == '2' ]]; then
     	if [[ $3 == '0' || $3 == '2' ]]; then
     	    if [[  -e ../madinMMC_$2.2 ]] ; then
@@ -120,7 +111,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         echo $i >> input_app.txt
         tail -n 4 $input_template >> input_app.txt
         T="$(date +%s)"
-        ../madevent_vegas > log.txt <input_app.txt 2>&1
+        ../madevent_mintFO > log.txt <input_app.txt 2>&1
         status=$?
         T="$(($(date +%s)-T))"
         echo "Time in seconds: ${T}" >>log.txt
@@ -148,5 +139,5 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     fi
     exit $status
 done
-
+    
 

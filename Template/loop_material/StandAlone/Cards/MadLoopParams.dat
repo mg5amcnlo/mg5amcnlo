@@ -2,6 +2,36 @@
 ! The name of the variable to define must start with the '#' sign and then
 ! the value should be put immediately on the next line.
 
+!     
+#MLReductionLib
+1|2|3
+! Default :: 1|2|3
+!     The tensor integral reduction library.The current choices are:
+!     1 | CutTools
+!     2 | PJFry++
+!     3 | IREGI
+!     One can use the combinations to reduce integral,e.g.
+!     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
+!     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
+!  
+
+!     =================================================================================
+!     The parameters below set the parameters for IREGI
+!     =================================================================================
+
+#IREGIMODE
+2
+! Default :: 2
+!     IMODE=0, IBP reduction
+!     IMODE=1, PaVe reduction
+!     IMODE=2, PaVe reduction with stablility improved by IBP reduction
+
+#IREGIRECY
+.TRUE.
+! Default :: .TRUE.
+!     Use RECYCLING OR NOT IN IREGI
+!
+
 !     =================================================================================
 !     The parameters below set the stability checks of MadLoop at run time
 !     =================================================================================
@@ -78,7 +108,7 @@
 !     The parameters below set two CutTools internal parameters accessible to the user. 
 !     =================================================================================
 
-!     Choose here what library to chose for CutTools to compute the scalar loops of the
+!     Choose here what library to chose for CutTools/TIR to compute the scalar loops of the
 !     master integral basis. The choices are as follows:
 !     2 | AVH
 !     3 | QCDLoop

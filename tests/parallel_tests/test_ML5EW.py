@@ -4,7 +4,7 @@ import pydoc
 import os
 import unittest
 import sys
-
+import re
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
 sys.path.append(_mg5_path)
@@ -180,32 +180,47 @@ class ML5EWTest(unittest.TestCase):
             stored_runner = me_comparator.PickleRunner.find_comparisons(
                               os.path.join(_pickle_path,pickle_file))[0]
             energy = stored_runner.energy
-            
+
+        file = open(os.path.join(_mg5_path,'Template','loop_material','StandAlone',
+                                 'Cards','MadLoopParams.dat'), 'r')
+
+        MLParams = file.read()
+        MLred = re.search(r'#MLReductionLib\n',MLParams)
+        MLredstr=MLParams[MLred.end():MLred.end()+1]
+        if loop_induce and MLredstr!="1":return            
         # Create a MERunner object for MadLoop 5 optimized
         # Open Loops is not avaiable for loop induced processes
         if not loop_induce:
             ML5_opt = loop_me_comparator.LoopMG5Runner()
             ML5_opt.setup(_mg5_path, optimized_output=True, temp_dir=filename,\
                           mu_r=mu_r)
-    
-        # Create a MERunner object for MadLoop 5 default
-        ML5_default = loop_me_comparator.LoopMG5Runner()
-        ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename,\
+
+        if MLredstr=="1":
+            # Create a MERunner object for MadLoop 5 default
+            ML5_default = loop_me_comparator.LoopMG5Runner()
+            ML5_default.setup(_mg5_path, optimized_output=False, temp_dir=filename,\
                           mu_r=mu_r) 
 
         # Create and setup a comparator
         my_comp = loop_me_comparator.LoopMEComparator()
         
+        if MLredstr=="1":
         # Always put the saved run first if you use it, so that the corresponding PS
         # points will be used.
-        if pickle_file != "" and not loop_induce:
-            my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
-        elif pickle_file !="" and loop_induce:
-            my_comp.set_me_runners(stored_runner,ML5_default)
-        elif pickle_file == "" and not loop_induce:
-            my_comp.set_me_runners(ML5_opt,ML5_default)
+            if pickle_file != "" and not loop_induce:
+                my_comp.set_me_runners(stored_runner,ML5_opt,ML5_default)
+            elif pickle_file !="" and loop_induce:
+                my_comp.set_me_runners(stored_runner,ML5_default)
+            elif pickle_file == "" and not loop_induce:
+                my_comp.set_me_runners(ML5_opt,ML5_default)
+            else:
+                raise MadGraph5Error, \
+                    'Cannot find pickle_file for loop induced process.'
         else:
-            raise MadGraph5Error, 'Cannot find pickle_file for loop induced process.'
+            if pickle_file !="":
+                my_comp.set_me_runners(stored_runner,ML5_opt)
+            else:
+                raise MadGraph5Error,"CANNOT find the stored result with TIR"
         
         # Run the actual comparison
         my_comp.run_comparison(my_proc_list,

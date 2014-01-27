@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -150,7 +150,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def rate_proc_difficulty(self, proc, mode):
         """ Gives an integer more or less representing the difficulty of the process.
         For now it is very basic and such that "difficult" processes start at 
-        a value of about 30."""
+        a value of about 35."""
         
         def pdg_difficulty(pdg):
             """ Gives a score from the pdg of a leg to state how it increases the
@@ -214,7 +214,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         tool = 'MadLoop' if mode.startswith('ML5') else 'aMC@NLO'
         # The threshold for the triggering of the 'Warning difficult process'
         # message.
-        difficulty_threshold = 30
+        difficulty_threshold = 35
         # Check that we have something    
         if not proc:
             raise self.InvalidCmd("Empty or wrong format process, please try again.")
@@ -278,15 +278,12 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
   guarantee a correct behavior of the code in this context. Please visit
   http://amcatnlo.cern.ch/list.htm for a list of processes we have 
   validated. If your process does not appear and you have successfully
-  studied it with MadGraph5 v2.0, please report it.
+  studied it with MadGraph5_aMC@NLO, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
-    # HSS, 13/11/2012
-    # add a line 'coupling_type = 'QCD''
     def validate_model(self, loop_type='virtual',coupling_type='QCD', stop=True):
         """ Upgrade the model sm to loop_sm if needed """
-    # HSS
 
         if not self._curr_model:
             if coupling_type=='QED':
@@ -296,7 +293,6 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
               (coupling_type not in self._curr_model['perturbation_couplings']):
-            
             if loop_type.startswith('real'):
                 if loop_type == 'real':
                     logger.info(\
@@ -307,12 +303,13 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                       "You are entering aMC@NLO with a model which does not "+\
                                                    " support loop corrections.")
             else:
+                logger.info(\
+                  "The current model %s does not allow to generate"%self._curr_model.get('name')+
+                  " loop corrections of type %s."%coupling_type)
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
-		        # HSS, 13/11/2012
                 if model_name.split('-')[0]=='loop_sm':
 		           model_name = model_name[5:]
-                # HSS
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and coupling_type == 'QED':
@@ -321,32 +318,19 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                         self._curr_model = None
                         mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
                     if coupling_type == 'QCD':
-                        logger.info(\
-                         "The default sm model does not allow to generate"+
-                         " loop processes. MG5 now loads 'loop_sm' instead.")
-                        mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
-                                                            'loop_'+model_name)
+                        add_on = ''
                     elif coupling_type == 'QED':
-                        logger.info(\
-                         "The default sm model does not allow to generate"+
-                         " loop processes. MG5 now loads 'loop_qcd_qed_sm' instead.")
-                        mpath=os.path.join(os.path.dirname(os.path.join(model_path)),
-                                                            'loop_qcd_qed_'+model_name)
-                        model_name = 'qcd_qed_'+model_name
+                        add_on = 'qcd_qed_'
                     else:
 			            raise MadGraph5Error(
                           "The pertubation coupling cannot be '%s' in loop processes"%coupling_type)
-        # HSS
-                    #self.do_import("model %s"%str(mpath))
-                    # Once the loop_sm model will support Feynman gauge, please
-                    # uncomment below.
-#                    if self.options['gauge']!='Feynman':
-#                        self._curr_model = None
-#                        mg_interface.MadGraphCmd.do_set(self,'gauge Feynman')
+
+                    logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
+
                     #import model with correct treatment of the history
                     self.history.move_to_last('generate')
                     last_command = self.history[-1]
-                    self.exec_cmd(" import model loop_%s" % model_name, precmd=True)
+                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=True)
                     self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
@@ -398,6 +382,20 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
+        # Set where to look for IREGI installation
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        if not os.path.isdir(self._iregi_dir):
+            logger.warning(('Warning: Directory %s is not a valid IREGI directory.'+\
+                            'Using default IREGI instead.')%\
+                           self._iregi_dir)
+            self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        # Set where to look for PJFry++ installation
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
+        #if not os.path.isdir(self._pjfry_dir):
+        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
+        #                    'Using default PJFry++ instead.')%\
+        #                   self._pjfry_dir)
+        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
     
     def do_display(self,line, *argss, **opt):
         """ Display born or loop diagrams, otherwise refer to the default display
@@ -535,7 +533,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
 
-        # Fortran MadGraph Standalone
+        # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format == 'standalone':
             for me in matrix_elements:
                 calls = calls + \

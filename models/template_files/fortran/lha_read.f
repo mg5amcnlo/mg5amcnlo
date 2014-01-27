@@ -71,7 +71,7 @@ c +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
       if(len_trim(string).le.0) return
       
-      do while(string(1:1) .eq. ' ') 
+      do while(string(1:1) .eq. ' ' .or. string(1:1) .eq. CHAR(9)) 
         string=string(2:len(string))
       end do
       if (index(string,' ').gt.1) then

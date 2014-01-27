@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 """ Command interface for MadSpin """
@@ -260,8 +260,6 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
-        if s_orig == s_new:
-            raise self.InvalidCmd, 'original card and new card are identical'
         old_param = check_param_card.ParamCard(s_orig.splitlines())
         new_param =  check_param_card.ParamCard(s_new.splitlines())
         card_diff = old_param.create_diff(new_param)
@@ -515,6 +513,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                 if has_cms.search(line):
                     complex_mass = True
+            elif line.startswith('define'):
+                try:
+                    self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except Exception:
+                    pass 
                           
         info = self.banner.get('proc_card', 'full_model_line')
         if '-modelname' in info:

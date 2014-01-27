@@ -1,6 +1,6 @@
 ************************************************************
 *                                                          *
-*           W E L C O M E  to  M A D G R A P H  5          *
+*   W E L C O M E  to  M A D G R A P H 5 _ a M C @ N L O   *
 *                                                          *
 *                                                          *
 *                 *                       *                *
@@ -9,24 +9,26 @@
 *                   *        * *        *                  *
 *                 *                       *                *
 *                                                          *
-*    The MadGraph Development Team - Please visit us at    *
+*    The MadGraph5_aMC@NLO Development Team - Find us at   *
 *    https://server06.fynu.ucl.ac.be/projects/madgraph     *
+*                            and                           *
+*                  http://amcatnlo.cern.ch                 *
 *                                                          *
 *                   Code download from:                    *
 *             https://launchpad.net/madgraph5              *
 *                                                          *
-*    Please refer to: MadGraph 5 : Going Beyond.           *
+*    Please refer to: MadGraph5_aMC@NLO                    *
 *                     J. Alwall, M. Herquet, F. Maltoni,   *
 *                     O. Mattelaer, T. Stelzer             *
 *                     JHEP 1106 (2011) 128                 *
 *                     arXiv:1106.0522 [hep-ph]             *
 ************************************************************
 
-To run MadGraph 5 using the command line interface 
+To run MadGraph5_aMC@NLO using the command line interface 
 ---------------------------------------------------
 This mode of running hols both for Leading-Order computations and handling
 of loop processes.
-./bin/mg5
+./bin/mg5_aMC
 Type "help" for list of commands and "help [command]" for help
 on individual commands. 
 Type "tutorial" for an interactive quick-start tutorial for LO computations.
@@ -37,8 +39,7 @@ standalone codes for loop process evaluation for given PS points.
 
 To run using the Template bin/newprocess_mg5 script
 ---------------------------------------------------
-
-Not available anymore (since v2.0.0) !!!
-But you can still run madgraph5 by doing the following:
-./bin/mg5 proc_card.dat
+Not available anymore (since v2.0.0).
+But you can still run MadGraph5_aMC@NLO by doing the following:
+./bin/mg5_aMC proc_card.dat
 

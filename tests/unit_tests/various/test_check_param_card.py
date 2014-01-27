@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph Development team and Contributors
+# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 from __future__ import division
@@ -387,7 +387,7 @@ DECAY 25 2.441404e+00 #  wh
         self.assertEqual(base_model.rule_card.zero, target_zero)
         target_one = []
         self.assertEqual(base_model.rule_card.one, target_one)
-        target_identical = [('mass', [25], [23], ''), ('decay', [25], [23], '')]                
+        target_identical = [('mass', [25], [23], '')]                
         self.assertEqual(base_model.rule_card.identical, target_identical)
         target_rule = []
         self.assertEqual(base_model.rule_card.rule, target_rule)
@@ -419,7 +419,6 @@ DECAY 25 2.441404e+00 #  wh
 </one>
 <identical>
      mass 25 : 23 # 
-     decay 25 : 23 # 
 </identical>
 <opposite>
 </opposite>
@@ -573,6 +572,7 @@ BLOCK SPINFO #  spectrum calculator information
 ###################################
 BLOCK MODSEL #  model selection
       1 1 sugra # 
+      2 1 #  fake line for the formating line point of view
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################
@@ -667,34 +667,34 @@ BLOCK VMIX #  chargino mixing matrix v
 ###################################
 ## INFORMATION FOR HMIX
 ###################################
-BLOCK HMIX #  drbar higgs parameters
+BLOCK HMIX Q= 4.670342e+02 #  drbar higgs parameters
       1 3.576810e+02 #  mu(q)mssm drbar
       2 9.748624e+00 #  tan beta(q)mssm drba
       4 1.664391e+05 #  ma^2(q)mssm drbar
 ###################################
 ## INFORMATION FOR GAUGE
 ###################################
-BLOCK GAUGE #  the gauge couplings
+BLOCK GAUGE Q= 4.670342e+02 #  the gauge couplings
       3 1.101787e+00 #  g3(q) msbar
 ###################################
 ## INFORMATION FOR YU
 ###################################
-BLOCK YU #  the yukawa couplings
+BLOCK YU Q= 4.670342e+02 #  the yukawa couplings
       3 3 8.928445e-01 #  y_t(q) drbar
 ###################################
 ## INFORMATION FOR YD
 ###################################
-BLOCK YD #  the yukawa couplings
+BLOCK YD Q= 4.670342e+02 #  the yukawa couplings
       3 3 1.388402e-01 #  y_b(q) drbar
 ###################################
 ## INFORMATION FOR YE
 ###################################
-BLOCK YE #  the yukawa couplings
+BLOCK YE Q= 4.670342e+02 #  the yukawa couplings
       3 3 1.008908e-01 #  y_tau(q) drbar
 ###################################
 ## INFORMATION FOR MSOFT
 ###################################
-BLOCK MSOFT #  the soft susy breaking masses at the scale q
+BLOCK MSOFT Q= 4.670342e+02 #  the soft susy breaking masses at the scale q
       1 1.013965e+02 #  m_1(q)
       2 1.915042e+02 #  m_2(q)
       3 5.882630e+02 #  m_3(q)

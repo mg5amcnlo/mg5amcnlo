@@ -37,13 +37,13 @@
     :: thrsin
    include 'cts_mpr.h' 
     :: one
-   include 'cts_mpinit.h'
    logical, intent(in) :: ext_num_for_r1in
+   include 'cts_mpinit.h'
    limit= limitvalue ! limit of precision below which the mp routines activate
    call ctscountdigits(ncountd)
    write (*,*) ' '
    write (*,'(a72)') '------------------------------------------------------------------------'
-   write (*,'(a72)') '|              You are using CutTools - Version 1.9.0                  |'  
+   write (*,'(a72)') '|              You are using CutTools - Version 1.9.3                  |'  
    write (*,'(a72)') '|              Authors: G. Ossola, C. Papadopoulos, R. Pittau          |' 
    write (*,'(a72)') '|              Published in JHEP 0803:042,2008                         |'
    write (*,'(a72)') '|              http://www.ugr.es/~pittau/CutTools                      |'

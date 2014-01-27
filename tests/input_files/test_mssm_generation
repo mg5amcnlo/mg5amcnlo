@@ -1,20 +1,22 @@
 import model mssm
-set automatic_html_opening False
+set automatic_html_opening False --no-save
 generate p p > go go
-output /tmp/MGPROCESS/
+output %(dir_name)s
 launch -i
-set madanalysis_path None
-set exrootanalysis_path None
+set madanalysis_path None --no_save
+set exrootanalysis_path None --no_save
+display options
 generate_events
 pythia
-/tmp/MGPROCESS/Cards/pythia_card_default.dat
-./tests/input_files/run_card_matching.dat
+%(dir_name)s/Cards/pythia_card_default.dat
+%(mg5_path)s/tests/input_files/run_card_matching.dat
+set wt Auto
 done
 quit
-history /tmp/MGPROCESS/history
+history %(dir_name)s/history
 launch -i
-set madanalysis_path None
-set exrootanalysis_path None
+set madanalysis_path None --no_save
+set exrootanalysis_path None --no_save
 generate_events
 parton
 done

@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph features.
+"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -316,6 +316,20 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                            'Using default CutTools instead.') % \
                              self._cuttools_dir)
             self._cuttools_dir=str(pjoin(self._mgme_dir,'vendor','CutTools'))
+        # Set where to look for IREGI installation
+        self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        if not os.path.isdir(self._iregi_dir):
+            logger.warning(('Warning: Directory %s is not a valid IREGI directory.'+\
+                            'Using default IREGI instead.')%\
+                           self._iregi_dir)
+            self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
+        # Set where to look for PJFry++ installation
+        #self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
+        #if not os.path.isdir(self._pjfry_dir):
+        #    logger.warning(('Warning: Directory %s is not a valid PJFry++ directory.'+\
+        #                    'Using default PJFry++ instead.')%\
+        #                   self._pjfry_dir)
+        #    self._pjfry_dir="/Users/erdissshaw/Works/PJFry/pjfry-1.1.0-beta1/pjfry_install/lib/"
 
     def do_display(self, line, output=sys.stdout):
         # if we arrive here it means that a _fks_display_opts has been chosen
@@ -575,7 +589,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 #me is a FKSHelasProcessFromReals
                 calls = calls + \
                         self._curr_exporter.generate_directories_fks(me, 
-                        self._curr_fortran_model, ime, path,self.options['OLP'])
+                        self._curr_fortran_model, 
+                        ime, len(self._curr_matrix_elements.get('matrix_elements')), 
+                        path,self.options['OLP'])
                 self._fks_directories.extend(self._curr_exporter.fksdirs)
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')

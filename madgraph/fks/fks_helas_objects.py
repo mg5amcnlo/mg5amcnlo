@@ -1,15 +1,15 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph Development team and Contributors
+# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph5_aMC@NLO project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph license which should accompany this 
+# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
 # distribution.
 #
-# For more information, please visit: http://madgraph.phys.ucl.ac.be
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
@@ -129,10 +129,11 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         matrix_elements = FKSHelasProcessList()
 
-        for proc in fksprocs:
-            logger.info("Generating Helas calls for FKS %s" % \
-              proc.get_born_nice_string().\
-                                    replace('Process', 'process'))
+        for i, proc in enumerate(fksprocs):
+            logger.info("Generating Helas calls for FKS %s (%d / %d)" % \
+              (proc.get_born_nice_string().\
+                                    replace('Process', 'process'),
+                        i + 1, len(fksprocs)))
             matrix_element_list = [\
                     FKSHelasProcess(proc, self['real_matrix_elements'],
                     [amp for amp in fksmulti['real_amplitudes'] if amp['diagrams']],

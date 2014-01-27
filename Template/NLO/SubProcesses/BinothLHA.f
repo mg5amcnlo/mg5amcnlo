@@ -96,9 +96,13 @@ c Ellis-Sexton scale)
          allocate(accuracies(0:nsqso))
          allocate(virt_wgts(0:3,0:nsqso))
          allocate(virt_wgts_hel(0:3,0:nsqso))
+c Make sure that whenever in the initialisation phase, MadLoop calls
+c itself again to perform stability check to make sure no unstable EPS
+c splips unnoticed.
+         CALL FORCE_STABILITY_CHECK(.TRUE.)
          firsttime_run = .false.
       endif
-      if (firsttime) then        
+      if (firsttime) then
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
          tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
@@ -172,7 +176,6 @@ c account)
             stop
          endif
       endif
-      
 c======================================================================
 c If the Virtuals are in the Dimensional Reduction scheme, convert them
 c to the CDR scheme with the following factor (not needed for MadLoop,
@@ -226,7 +229,7 @@ c exists, which should be the case when firsttime is false.
                      goodhel(j)=goodhel(i)
                      hel(0)=hel(0)+1
                      hel(j)=i
-                  endif
+                 endif
                enddo
                goto 202
 201            continue
@@ -347,6 +350,13 @@ c check (only available when not doing MC over hels)
             virt_wgt=0d0
          endif
       endif
+
+c If a MadLoop initialisation PS point (and stability is unknown), we
+c better set the virtual to zero to NOT include it in the
+c result. Sometimes this can be an unstable point with a very large
+c weight, screwing up the complete integration afterward.
+      if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
+     $     .and. ret_code/100.eq.1)virt_wgt=0d0
 
       return
       end
