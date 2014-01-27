@@ -1,5 +1,22 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.1.0(XX/02/14) OM+PA: First Official release of MadWeight inside MG5_aMC
+                      Main update:
+                        - ISR corrections
+                        - possibility to use narrow-width approximation
+                        - introducing a module for the pre-selection of the parton-jet assignment.
+                        - extended formalism for the transfer function (more generic)
+                        - possibility to evaluate the weights for multiple choices of transfer function 
+      			  on the same phase-space point. The phase-space is optimized for the first set of 
+                          parameters.
+		      Speed update:
+                        - More efficient way to group the computation for identical process with different final state.
+                        - Possibility to Monte-Carlo over the permutation.
+                        - More efficient way to choose between the various change of variable.
+                        - Possibility to use mint (not compatible with all of the options)
+			- Possibility to use sobol for the generation of PS point (sometimes faster than pure 
+                          random point generator.
+
 2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
                     the bug fix in 2.0.0
                 RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
