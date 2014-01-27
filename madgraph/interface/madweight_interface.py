@@ -421,8 +421,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
     def do_submit_jobs(self, line):
         """MadWeight Function:Submitting the jobs to the cluster"""
         
-        self.clean_old_run(keep_event=True)
+
         self.configure()
+        self.clean_old_run(keep_event=True)
         args = self.split_arg(line)
         self.check_launch_jobs(args)
         # now args is of the type [True True]
