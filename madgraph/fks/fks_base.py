@@ -80,30 +80,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                                      
         return super(FKSMultiProcess,self).filter(name, value)
 
-
-    @staticmethod
-    def correct_procdef(procdef):
-        """fixes the process definition in order to take into account the fact 
-        that when doing qed or mixed perturbations one needs to include 
-        splittings or loops particles which are formally not of the asked 
-        perturbed orders"""
-
-# if the model is not LoopModel, then allow all perturbation_couplings
-        if procdef.get('model').get('perturbation_couplings'):
-            procdef['perturbation_couplings'] = \
-                procdef.get('model').get('perturbation_couplings')
-        else:
-            procdef['perturbation_couplings'] = \
-                list(procdef.get('model').get('coupling_orders'))
-
-# set the squared orders consistently with the perturbation specified by the user
-        if not procdef['squared_orders']:
-            for ord, val in procdef['orders'].items():
-                procdef['squared_orders'][ord] = 2 * val
-
-        #set the orders to an empty dictionary
-        procdef['orders'] = {}
-
     
     def __init__(self, *arguments, **options):
         """Initializes the original multiprocess, then generates the amps for the 
@@ -111,7 +87,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
         legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
-
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
                        logging.getLogger('madgraph.loop_diagram_generation')]
@@ -137,15 +112,39 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for procdef in self['process_definitions']:
                 if not procdef['orders']:
                     procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
-                self.correct_procdef(procdef)
-            
+
+                # set the squared orders consistently with the perturbation specified by the user
+                if not procdef['squared_orders']:
+                    for ord, val in procdef['orders'].items():
+                        procdef['squared_orders'][ord] = 2 * val
+
+                # then increase the orders which are perturbed
+                for pert in procdef['perturbation_couplings']:
+                    # if orders have been specified increase them
+                    if procdef['orders'].keys() != ['WEIGHTED']:
+                        print procdef['orders'].keys(), "!=WEIGHTED"
+                        try:
+                            procdef['orders'][pert] += 2
+                        except KeyError:
+                            procdef['orders'][pert] = 2
+                        try:
+                            procdef['squared_orders'][pert] += 2
+                        except KeyError:
+                            procdef['squared_orders'][pert] = 2
+
+                # update also the WEIGHTED entry
+                if 'WEIGHTED' in procdef['orders'].keys():
+                    procdef['orders']['WEIGHTED'] += 1 * \
+                            max([procdef.get('model').get('order_hierarchy')[ord] for \
+                            ord in procdef['perturbation_couplings']])
+
+                    procdef['squared_orders']['WEIGHTED'] += 2 * \
+                            max([procdef.get('model').get('order_hierarchy')[ord] for \
+                            ord in procdef['perturbation_couplings']])
+
+
             #---now generate the amplitudes
-                print 'AA', procdef['orders']
-                print 'AA', procdef['squared_orders']
             self.get('amplitudes')
-            for procdef in self['process_definitions']:
-                print 'AA', procdef['orders']
-                print 'AA', procdef['squared_orders']
 
         except InvalidCmd as error:
             # If no born, then this process most likely does not have any.
@@ -277,6 +276,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
         self['OLP'] = other['OLP']
 
+
     def get_born_amplitudes(self):
         """return an amplitudelist with the born amplitudes"""
         return diagram_generation.AmplitudeList([amp for \
@@ -359,27 +359,6 @@ class FKSRealProcess(object):
                                'need_charge_links': need_charge_links})
 
         self.process = copy.copy(born_proc)
-        orders = copy.copy(born_proc.get('born_orders'))
-        sq_orders = copy.copy(born_proc.get('squared_orders'))
-        for order in perturbed_orders:
-            try:
-                # + 2 because e.g. when you do QED corrections to a QCD process
-                # you also want interferences between diagrams with an internal
-                # photon (hence QED=2) with pure QCD diagrams 
-                orders[order] = orders[order] + 2
-            except KeyError:
-                orders[order] = 2
-            try:
-                sq_orders[order] = sq_orders[order] + 2
-            except KeyError:
-                sq_orders[order] = 2
-        # you never do NLO QCD x NLO EW but NLO QCD + NLO EW
-        try:
-            orders['WEIGHTED'] += 2 * max([born_proc.get('model').get('order_hierarchy')[ord] for ord in perturbed_orders])
-        except KeyError:
-            pass
-        self.process.set('orders', orders)
-        self.process.set('squared_orders', sq_orders)
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
@@ -396,12 +375,7 @@ class FKSRealProcess(object):
 
     def generate_real_amplitude(self):
         """generates the real emission amplitude starting from self.process"""
-        print ' GENERATING REAL AMP FOR ', self.process.nice_string()
-        print 'REAL ORDERS', self.process['orders']
-        print 'REAL SQUARED ORDERS', self.process['squared_orders']
-        print 'REAL OVERALL ORDERS', self.process['overall_orders']
         self.amplitude = diagram_generation.Amplitude(self.process)
-        print 'REAL DIAGS', len(self.amplitude['diagrams'])
         return self.amplitude
 
 
@@ -597,7 +571,6 @@ class FKSProcess(object):
             raise fks_common.FKSProcessError(\
                     'Not valid type for remove_reals in FKSProcess')
 
-
         if start_proc:
             #initilaize with process definition (for test purporses)
             if isinstance(start_proc, MG.Process):
@@ -610,11 +583,6 @@ class FKSProcess(object):
             #initialize with an amplitude
             elif isinstance(start_proc, diagram_generation.Amplitude):
                 pertur = start_proc.get('process')['perturbation_couplings']
-                print 'MZ pertur', pertur
-                print 'MZ, orders', start_proc.get('process')['orders']
-                print 'MZ, squared orders', start_proc.get('process')['squared_orders']
-                print 'MZ, overall orders', start_proc.get('process')['overall_orders']
-                print 'MZ, born orders', start_proc.get('process')['born_orders']
                 self.born_amp_list.append(diagram_generation.Amplitude(\
                                 copy.copy(fks_common.sort_proc(\
                                     start_proc['process'], 
@@ -639,8 +607,6 @@ class FKSProcess(object):
             for leg in self.born_amp_list[0]['process']['legs']:
                 if not leg['state']:
                     self.nincoming += 1
-            # find the correct qcd/qed orders from born_amp
-            self.orders = fks_common.find_orders(self.born_amp_list[0])
                 
             self.find_reals(self.born_amp_list[0]['process'].get('perturbation_couplings'))
 
@@ -683,7 +649,6 @@ class FKSProcess(object):
         """
 
         born_proc = copy.copy(self.born_amp_list[0]['process'])
-        born_proc['orders'] = self.orders
         born_pdgs = self.get_pdg_codes()
         # safety check
         if len(born_pdgs) > 1:
