@@ -88,9 +88,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         splittings or loops particles which are formally not of the asked 
         perturbed orders"""
 
-        #keep track of what perturbation the user asked for
-        perturbation = procdef['perturbation_couplings']
-        
 # if the model is not LoopModel, then allow all perturbation_couplings
         if procdef.get('model').get('perturbation_couplings'):
             procdef['perturbation_couplings'] = \
@@ -114,7 +111,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
         legs (stored in pdgs, so that they need to be generated only once and then reicycled
         """
-        print 'IN INIT'
 
         #swhich the other loggers off
         loggers_off = [logging.getLogger('madgraph.diagram_generation'), 
@@ -188,9 +184,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     break
 
         amps = self.get('amplitudes')
-        print 'MZ1', len(amps)
-        if amps:
-            print 'MZ1', amps[0]['process']['orders']
         #generate reals, but combine them after having combined the borns
         for i, amp in enumerate(amps):
             logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
@@ -367,6 +360,7 @@ class FKSRealProcess(object):
 
         self.process = copy.copy(born_proc)
         orders = copy.copy(born_proc.get('born_orders'))
+        sq_orders = copy.copy(born_proc.get('squared_orders'))
         for order in perturbed_orders:
             try:
                 # + 2 because e.g. when you do QED corrections to a QCD process
@@ -375,12 +369,17 @@ class FKSRealProcess(object):
                 orders[order] = orders[order] + 2
             except KeyError:
                 orders[order] = 2
+            try:
+                sq_orders[order] = sq_orders[order] + 2
+            except KeyError:
+                sq_orders[order] = 2
         # you never do NLO QCD x NLO EW but NLO QCD + NLO EW
         try:
             orders['WEIGHTED'] += 2 * max([born_proc.get('model').get('order_hierarchy')[ord] for ord in perturbed_orders])
         except KeyError:
             pass
         self.process.set('orders', orders)
+        self.process.set('squared_orders', sq_orders)
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
@@ -397,7 +396,12 @@ class FKSRealProcess(object):
 
     def generate_real_amplitude(self):
         """generates the real emission amplitude starting from self.process"""
+        print ' GENERATING REAL AMP FOR ', self.process.nice_string()
+        print 'REAL ORDERS', self.process['orders']
+        print 'REAL SQUARED ORDERS', self.process['squared_orders']
+        print 'REAL OVERALL ORDERS', self.process['overall_orders']
         self.amplitude = diagram_generation.Amplitude(self.process)
+        print 'REAL DIAGS', len(self.amplitude['diagrams'])
         return self.amplitude
 
 

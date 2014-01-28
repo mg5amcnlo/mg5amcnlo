@@ -428,11 +428,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
 
-        print 'MZ, PROC orders', myprocdef['orders']
-        print 'MZ, PROC born orders', myprocdef['born_orders']
-        print 'MZ, PROC squared orders', myprocdef['squared_orders']
-        print 'MZ, PROC overall orders', myprocdef['overall_orders']
-        print 'MZ, PROC perturbation couplings', myprocdef['perturbation_couplings']
+        print 'MZinterface, PROC orders', myprocdef['orders']
+        print 'MZinterface, PROC born orders', myprocdef['born_orders']
+        print 'MZinterface, PROC squared orders', myprocdef['squared_orders']
+        print 'MZinterface, PROC overall orders', myprocdef['overall_orders']
+        print 'MZinterface, PROC perturbation couplings', myprocdef['perturbation_couplings']
 
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,

@@ -997,14 +997,13 @@ end
         """Create the ps files containing the feynman diagrams for the born process,
         as well as for all the real emission processes"""
 
-        filename = 'born.ps'
-        plot = draw.MultiEpsDiagramDrawer(matrix_element.born_matrix_element.\
-                                    get('base_amplitude').get('diagrams'),
-                                    filename,
-                                    model=matrix_element.born_matrix_element.\
-                                    get('processes')[0].get('model'),
-                                    amplitude=True, diagram_type='born')
-        plot.draw()
+        for i, me in enumerate(matrix_element.born_me_list):
+            filename = 'born_%d.ps' % (i + 1)
+            plot = draw.MultiEpsDiagramDrawer(me.get('base_amplitude').get('diagrams'),
+                                        filename,
+                                        model=me.get('processes')[0].get('model'),
+                                        amplitude=True, diagram_type='born')
+            plot.draw()
 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.ps' % (n + 1)
