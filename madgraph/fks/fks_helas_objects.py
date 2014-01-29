@@ -221,7 +221,8 @@ class FKSHelasProcess(object):
     """class to generate the Helas calls for a FKSProcess. Contains:
     -- born ME
     -- list of FKSHelasRealProcesses
-    -- color links"""
+    -- color links
+    -- charges"""
     
     def __init__(self, fksproc=None, real_me_list =[], real_amp_list=[], 
             loop_optimized = False, **opts):#test written
@@ -237,6 +238,7 @@ class FKSHelasProcess(object):
 
             self.real_processes = []
             self.perturbation = fksproc.perturbation
+            self.charges_born = fksproc.get_charges() 
             real_amps_new = []
             # combine for example u u~ > t t~ and d d~ > t t~
             for proc in fksproc.real_amps:

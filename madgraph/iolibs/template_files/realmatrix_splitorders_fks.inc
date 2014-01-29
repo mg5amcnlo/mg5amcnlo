@@ -251,7 +251,7 @@ C LOCAL VARIABLES
 C
       INTEGER I,J
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
-	  %(sqsplitorders)s
+%(sqsplitorders)s
 C
 C BEGIN CODE
 C

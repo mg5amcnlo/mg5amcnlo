@@ -1122,6 +1122,7 @@ end
             # Extract JAMP lines
             jamp_lines = self.get_JAMP_lines(matrix_element)
         else:
+            split_orders_name = matrix_element['processes'][0]['split_orders']
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
             replace_dict['nSqAmpSplitOrders']=len(squared_orders)
@@ -1130,7 +1131,10 @@ end
                     [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
             sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
             replace_dict['ampsplitorders']='\n'.join(amp_so)
-            replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
+            # add a comment line
+            replace_dict['sqsplitorders']= \
+    'C the values listed below are for %s\n' % ', '.join(split_orders_name)
+            replace_dict['sqsplitorders']+='\n'.join(sqamp_so)           
             jamp_lines = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
 
@@ -1148,7 +1152,8 @@ end
         # Write the file
         writer.writelines(file)
 
-        return len(filter(lambda call: call.find('#') != 0, helas_calls))
+        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor, \
+                replace_dict['nAmpSplitOrders'], replace_dict['nSqAmpSplitOrders']
 
 
     def write_pdf_calls(self, matrix_element, fortran_model):
@@ -1168,7 +1173,6 @@ end
         
         for i, me in enumerate(matrix_element.born_me_list):
             filename = 'born_%d.f' % (i + 1)
-            ###calls_born, ncolor_born = \
 
             born_dict = {}
             born_dict['nconfs'] = len(matrix_element.get_fks_info_list())
@@ -1179,63 +1183,58 @@ end
             ij_lines = self.get_ij_lines(matrix_element)
             born_dict['ij_lines'] = '\n'.join(ij_lines)
 
-            self.write_split_me_fks(writers.FortranWriter(filename),
+            calls_born, ncolor_born, norders, nsqorders = \
+                self.write_split_me_fks(writers.FortranWriter(filename),
                                         me, fortran_model, 'born', "%d" % (i+1),
                                         start_dict = born_dict)
 
 
-#        filename = 'born_conf.inc'
-#        nconfigs, mapconfigs, s_and_t_channels = \
-#                    self.write_configs_file(
-#                    writers.FortranWriter(filename),
-#                    matrix_element.born_matrix_element, 
-#                    fortran_model)
+            filename = 'born_%d_conf.inc' % (i + 1)
+            nconfigs, mapconfigs, s_and_t_channels = \
+                        self.write_configs_file(
+                        writers.FortranWriter(filename),
+                        me, fortran_model)
 
-#        filename = 'born_props.inc'
-#        self.write_props_file(writers.FortranWriter(filename),
-#                         matrix_element.born_matrix_element,
-#                         fortran_model,
-#                            s_and_t_channels)
+            filename = 'born_%d_props.inc' % (i + 1)
+            self.write_props_file(writers.FortranWriter(filename),
+                             me, fortran_model, s_and_t_channels)
     
-#        filename = 'born_decayBW.inc'
-#        self.write_decayBW_file(writers.FortranWriter(filename),
-#                            s_and_t_channels)
+            filename = 'born_%d_decayBW.inc' % (i + 1)
+            self.write_decayBW_file(writers.FortranWriter(filename),
+                                s_and_t_channels)
 
-#        filename = 'born_leshouche.inc'
-#        nflows = self.write_leshouche_file(writers.FortranWriter(filename),
-#                             matrix_element.born_matrix_element,
-#                             fortran_model)
+            filename = 'born_%d_leshouche.inc'
+            nflows = self.write_leshouche_file(writers.FortranWriter(filename),
+                                 me, fortran_model)
     
-#        filename = 'born_nhel.inc'
-#        self.write_born_nhel_file(writers.FortranWriter(filename),
-#                           matrix_element.born_matrix_element, nflows,
-#                           fortran_model,
-#                           ncolor_born)
+            filename = 'born_%d_nhel.inc' % (i + 1)
+            self.write_born_nhel_file(writers.FortranWriter(filename),
+                               me, nflows, fortran_model, ncolor_born)
     
-#        filename = 'born_ngraphs.inc'
-#        self.write_ngraphs_file(writers.FortranWriter(filename),
-#                            nconfigs)
+            filename = 'born_%d_ngraphs.inc' % (i + 1)
+            self.write_ngraphs_file(writers.FortranWriter(filename),
+                                    nconfigs)
 
-#        filename = 'coloramps.inc'
-#        self.write_coloramps_file(writers.FortranWriter(filename),
-#                             mapconfigs,
-#                             matrix_element.born_matrix_element,
-#                             fortran_model)
+            filename = 'born_%d_coloramps.inc' % (i + 1)
+            self.write_coloramps_file(writers.FortranWriter(filename),
+                                      mapconfigs, me, fortran_model)
         
-        #write the sborn_sf.f and the b_sf_files
-        for j, born in enumerate(matrix_element.born_me_list):
-            filename = ['sborn_sf_%d.f' % (j+1), 'sborn_sf_%d_dum.f' % (j+1)]
-            for i, links in enumerate([matrix_element.color_links[j], []]):
-                self.write_sborn_sf(writers.FortranWriter(filename[i]),
-                                                    links,
-                                                    fortran_model)
+
             self.color_link_files = [] 
-            for i in range(len(matrix_element.color_links[j])):
-                filename = 'b_%d_sf_%3.3d.f' % (j + 1, i + 1)              
+            for j in range(len(matrix_element.color_links[i])):
+                filename = 'b_%d_sf_%3.3d.f' % (i + 1, j + 1)              
                 self.color_link_files.append(filename)
                 self.write_b_sf_fks(writers.FortranWriter(filename),
-                             matrix_element, i, j,
+                             matrix_element, j, i,
                              fortran_model)
+
+            #write the sborn_sf.f and the b_sf_files
+            filename = 'sborn_%d_sf.f' % (i + 1)
+            self.write_sborn_sf(writers.FortranWriter(filename),
+                                matrix_element,
+                                i, nsqorders,
+                                fortran_model)
+
 
     def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
         """Generates the library for computing the loop matrix elements
@@ -1651,56 +1650,61 @@ Parameters              %(params)s\n\
     # write_born_sf_fks
     #===============================================================================
     #test written
-    def write_sborn_sf(self, writer, color_links, fortran_model):
+    def write_sborn_sf(self, writer, me, iborn, nsqorders, fortran_model):
         """Creates the sborn_sf.f file, containing the calls to the different 
         color linked borns"""
         
         replace_dict = {}
-        nborns = len(color_links)
-        ifkss = []
-        iborns = []
-        mms = []
-        nns = [] 
         iflines = "\n"
-        
+        color_links = me.color_links[iborn]
+        nlinks = len(color_links)
+
         #header for the sborn_sf.f file 
         file = """subroutine sborn_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
-          double precision p_born(0:3,nexternal-1),wgt
-          double complex wgt1(2)
-          integer m,n \n"""
+C the first index in wgt is the split order, the second 
+c gives the color link if = 1, or the charge link if = 2
+          double precision p_born(0:3,nexternal-1), wgt(0:%d,2)
+          double precison chargeprod
+          integer m,n 
+          
+          call sborn%d_splitorders(p_born, wgt(0,2))""" % (nsqorders, iborn + 1)
     
-        if nborns > 0:
-
+        if nlinks > 0:
             for i, c_link in enumerate(color_links):
-                iborn = i+1
-                
+                ilink = i+1
                 iff = {True : 'if', False : 'elseif'}[i==0]
-
                 m, n = c_link['link']
-                
+                nexternal, ninitial = me.born_me_list[iborn].get_nexternal_ninitial()
+                chprod = self.get_chargeprod(me.charges_born[iborn], ninitial, m, n) 
                 if m != n:
                     iflines += \
-                    "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
+                    "c link partons %(m)d and %(n)d \n\
                         %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                        call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
-                            %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
+                        call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt(0,1))\n\
+                        chargeprod=%(chprod)15.12e\n" \
+                        % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1, 'chprod': chprod}
                 else:
                     iflines += \
-                    "c b_sf_%(iborn)3.3d links partons %(m)d and %(n)d \n\
+                    "c link partons %(m)d and %(n)d \n\
                         %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                        call sb_sf_%(iborn)3.3d(p_born,wgt)\n\n" \
-                            %{'m':m, 'n': n, 'iff': iff, 'iborn': iborn}
+                        call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt(0,1))\n\
+                        chargeprod=%(chprod)s\n" \
+                        % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1, 'chprod': chprod}
 
             
             file += iflines + \
             """else
             wgt = 0d0
             endif
+
+            do i = 1, %d
+            wgt(i,2) = wgt(i,2) * chargeprod
+            enddo
             
             return
-            end"""        
+            end""" % nsqorders        
         elif nborns == 0:
             #write a dummy file
             file+="""
@@ -1713,6 +1717,12 @@ c     this subdir has no soft singularities
         # Write the end of the file
        
         writer.writelines(file)
+
+    def get_chargeprod(self, charge_list, ninitial, n, m):
+        """return the product of charges (as a string) of particles m and n.
+        Special sign conventions may be needed for initial/final state particles
+        """
+        return charge_list[n - 1] * charge_list[m - 1]
 
     
     #===============================================================================
