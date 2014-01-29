@@ -319,6 +319,7 @@ C ----------
       end
 
 
+
 C
 C Helper functions to deal with the split orders.
 C
@@ -349,17 +350,19 @@ C
 C
 C FUNCTION
 C
-      INTEGER SQSOINDEXB_FROM_ORDERS%(proc_prefix)s
+      INTEGER SQSOINDEXB%(proc_prefix)s_FROM_ORDERS
 C
 C BEGIN CODE
 C
       DO I=1,NSPLITORDERS
 	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
 	  ENDDO
-	  SQSOINDEXB%(proc_prefix)s=SQSOINDEXB_FROM_ORDERS%(proc_prefix)s(SQORDERS)
+	  SQSOINDEXB%(proc_prefix)s=SQSOINDEXB%(proc_prefix)s_FROM_ORDERS(SQORDERS)
 	  END
 
-      INTEGER FUNCTION SQSOINDEXB_FROM_ORDERS%(proc_prefix)s(ORDERS)
+
+
+      INTEGER FUNCTION SQSOINDEXB%(proc_prefix)s_FROM_ORDERS(ORDERS)
 C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
@@ -396,63 +399,12 @@ C
 
 	  END
 
-      SUBROUTINE GET_NSQSO_BORN%(proc_prefix)s(NSQSO)
-C
-C     Simple subroutine returning the number of squared split order
-C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
-C
-      INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
-	  INTEGER NSQSO
 
-	  NSQSO=NSQAMPSO
 
-      END
-
+      INTEGER FUNCTION GETORDPOWFROMINDEX_B%(proc_prefix)s(IORDER, INDX)
 C
-C Helper functions to deal with the split orders.
-C
-
-      INTEGER FUNCTION SQSOINDEXB%(proc_prefix)s(AMPORDERA,AMPORDERB)
-C
-C This functions plays the role of the interference matrix. It can be hardcoded or 
-C made more elegant using hashtables if its execution speed ever becomes a relevant
-C factor. From two split order indices of the jamps, it return the corresponding
-C index in the squared order canonical ordering.
-C
-C CONSTANTS
-C      
-      INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
-	  INTEGER NSPLITORDERS
-	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
-C
-C ARGUMENTS
-C
-	  INTEGER AMPORDERA, AMPORDERB
-C
-C LOCAL VARIABLES
-C
-      INTEGER I, SQORDERS(NSPLITORDERS)
-      INTEGER AMPSPLITORDERS(NAMPSO,NSPLITORDERS)
-	  %(ampsplitorders)s
-C
-C FUNCTION
-C
-      INTEGER SQSOINDEX_FROM_ORDERS%(proc_prefix)s
-C
-C BEGIN CODE
-C
-      DO I=1,NSPLITORDERS
-	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
-	  ENDDO
-	  SQSOINDEX%(proc_prefix)s=SQSOINDEX_FROM_ORDERS%(proc_prefix)s(SQORDERS)
-	  END
-
-      INTEGER FUNCTION SQSOINDEX_FROM_ORDERS%(proc_prefix)s(ORDERS)
-C
-C From a list of values for the split orders, this function returns the
-c corresponding index in the squared orders canonical ordering.
+C Return the power of the IORDER-th order appearing at position INDX
+C in the split-orders output
 C
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
@@ -461,30 +413,30 @@ C
 C
 C ARGUMENTS
 C
-	  INTEGER ORDERS(NSPLITORDERS)
+	  INTEGER IORDER, INDEX
 C
 C LOCAL VARIABLES
 C
-      INTEGER I,J
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
-	  %(sqsplitorders)s
+%(sqsplitorders)s
 C
 C BEGIN CODE
 C
-      DO I=1,NSQAMPSO
-	    DO J=1,NSPLITORDERS
-		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
-		ENDDO
-		SQSOINDEX_FROM_ORDERS%(proc_prefix)s = I
-		RETURN
-1009    CONTINUE
-	  ENDDO
+      IF (IORDER.GT.NSPLITORDERS.OR.IORDER.LT.1) THEN
+      WRITE(*,*) "INVALID IORDER ", IORDER
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSPLITORDERS
+      STOP
+      ENDIF
 
-	  WRITE(*,*) 'ERROR:: Stopping function sqsoindex_from_orders'
-	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSPLITORDERS)
-	  STOP
+      IF (INDEX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
+      WRITE(*,*) "INVALID INDEX ", INDX
+      WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
+      STOP
+      ENDIF
 
-	  END
+      GETORDPOWFROMINDEX_B%(proc_prefix)s=SPLITORDERS(INDX, IORDER)
+      END
+
 
       SUBROUTINE GET_NSQSO_BORN%(proc_prefix)s(NSQSO)
 C
@@ -498,92 +450,5 @@ C
 	  NSQSO=NSQAMPSO
 
       END
-C
-C Helper functions to deal with the split orders.
-C
 
-      INTEGER FUNCTION SQSOINDEX%(proc_prefix)s(AMPORDERA,AMPORDERB)
-C
-C This functions plays the role of the interference matrix. It can be hardcoded or 
-C made more elegant using hashtables if its execution speed ever becomes a relevant
-C factor. From two split order indices of the jamps, it return the corresponding
-C index in the squared order canonical ordering.
-C
-C CONSTANTS
-C      
-      INTEGER NAMPSO, NSQAMPSO
-      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
-	  INTEGER NSPLITORDERS
-	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
-C
-C ARGUMENTS
-C
-	  INTEGER AMPORDERA, AMPORDERB
-C
-C LOCAL VARIABLES
-C
-      INTEGER I, SQORDERS(NSPLITORDERS)
-      INTEGER AMPSPLITORDERS(NAMPSO,NSPLITORDERS)
-	  %(ampsplitorders)s
-C
-C FUNCTION
-C
-      INTEGER SQSOINDEX_FROM_ORDERS%(proc_prefix)s
-C
-C BEGIN CODE
-C
-      DO I=1,NSPLITORDERS
-	    SQORDERS(I)=AMPSPLITORDERS(AMPORDERA,I)+AMPSPLITORDERS(AMPORDERB,I)
-	  ENDDO
-	  SQSOINDEX%(proc_prefix)s=SQSOINDEX_FROM_ORDERS%(proc_prefix)s(SQORDERS)
-	  END
 
-      INTEGER FUNCTION SQSOINDEX_FROM_ORDERS%(proc_prefix)s(ORDERS)
-C
-C From a list of values for the split orders, this function returns the
-c corresponding index in the squared orders canonical ordering.
-C
-      INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
-	  INTEGER NSPLITORDERS
-	  PARAMETER (NSPLITORDERS=%(nSplitOrders)d)
-C
-C ARGUMENTS
-C
-	  INTEGER ORDERS(NSPLITORDERS)
-C
-C LOCAL VARIABLES
-C
-      INTEGER I,J
-      INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
-	  %(sqsplitorders)s
-C
-C BEGIN CODE
-C
-      DO I=1,NSQAMPSO
-	    DO J=1,NSPLITORDERS
-		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
-		ENDDO
-		SQSOINDEX_FROM_ORDERS%(proc_prefix)s = I
-		RETURN
-1009    CONTINUE
-	  ENDDO
-
-	  WRITE(*,*) 'ERROR:: Stopping function sqsoindex_from_orders'
-	  WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSPLITORDERS)
-	  STOP
-
-	  END
-
-      SUBROUTINE GET_NSQSO_BORN%(proc_prefix)s(NSQSO)
-C
-C     Simple subroutine returning the number of squared split order
-C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
-C
-      INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
-	  INTEGER NSQSO
-
-	  NSQSO=NSQAMPSO
-
-      END
