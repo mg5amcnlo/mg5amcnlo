@@ -537,7 +537,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Make sure that all orders specified belong to the model:
         for order in self['process']['orders'].keys()+\
                                        self['process']['squared_orders'].keys():
-            if not order in self['process']['model']['coupling_orders'] and \
+            if not order in self['process']['model'].get('coupling_orders') and \
                                                             order != 'WEIGHTED':
                 raise InvalidCmd("Coupling order %s not found"%order +\
                     " in any interaction of the current model %s."\
@@ -810,7 +810,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-            #print "lcutPart=",[part.get('name') for part in lcutPart]
+
+#            print "lcutPart=",[part.get('name') for part in lcutPart]
             for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.

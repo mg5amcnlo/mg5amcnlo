@@ -1100,7 +1100,8 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['actualize_ans']='\n'.join(actualize_ans)
         else:
             replace_dict['actualize_ans']=\
-            ("""IF(.NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**-2),-1,H)) THEN
+            ("""C We add two powers to the reference value to loosen a bit the vanishing pole check.
+               IF(.NOT.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)).AND..NOT.%(proc_prefix)sISZERO(ABS(ANS(2))+ABS(ANS(3)),REF*(10.0d0**2),-1,H)) THEN
                  WRITE(*,*) '##W05 WARNING Found a PS point with a contribution to the single pole.'
                  WRITE(*,*) 'Finite contribution         = ',ANS(1)
                  WRITE(*,*) 'single pole contribution    = ',ANS(2)
