@@ -28,7 +28,7 @@ C----------------------------------------------------------------------
       integer maxcuts
       parameter (maxcuts=2)
       character*5 cc(maxcuts)
-      data cc/'     ',' cuts'/
+      data cc/'     ','cuts '/
       real*8 pi
       PARAMETER (PI=3.14159265358979312D0)
       real*8 sbin(100),smin(100),smax(100)
@@ -106,7 +106,7 @@ c
           write(tmpstr3,'(i3)')io
           call mbook(l,'sing '//tmpstr1(1:3)//
      &    ' '//tmpstr3(1:3)//' '
-     &       //weights_info(kk)//cc(icuts),sbin(io),smin(io),smax(io))
+     &       //cc(icuts)//weights_info(kk),sbin(io),smin(io),smax(io))
         enddo
         enddo
         ipair=0
@@ -120,7 +120,7 @@ c
           write(tmpstr3,'(i3)')io
           call mbook(l,'corr '//tmpstr1(1:3)//' '//
      &       tmpstr2(1:3)//' '//tmpstr3(1:3)//
-     &     ' '//weights_info(kk)//cc(icuts),cbin(io),cmin(io),cmax(io))
+     &     ' '//cc(icuts)//weights_info(kk),cbin(io),cmin(io),cmax(io))
         enddo
         enddo
         enddo

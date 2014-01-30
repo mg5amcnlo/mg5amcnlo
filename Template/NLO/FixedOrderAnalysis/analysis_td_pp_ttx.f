@@ -10,7 +10,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
-      data cc/'     ',' cuts'/
+      data cc/'     ','cuts '/
       double precision pi
       PARAMETER (PI=3.14159265358979312D0)
       include 'dbook.inc'
@@ -26,45 +26,45 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,2
         l=(kk-1)*40+(i-1)*20
         call bookup(l+ 1,'tt pt            '
-     &       //weights_info(kk)//cc(i),2.d0,0.d0,100.d0)
+     &       //cc(i)//weights_info(kk),2.d0,0.d0,100.d0)
         call bookup(l+ 2,'tt log[pt]       '
-     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+     &       //cc(i)//weights_info(kk),0.05d0,0.1d0,5.d0)
         call bookup(l+ 3,'tt inv m         '
-     &       //weights_info(kk)//cc(i),10.d0,300.d0,1000.d0)
+     &       //cc(i)//weights_info(kk),10.d0,300.d0,1000.d0)
         call bookup(l+ 4,'tt azimt         '
-     &       //weights_info(kk)//cc(i),pi/20.d0,0.d0,pi)
+     &       //cc(i)//weights_info(kk),pi/20.d0,0.d0,pi)
         call bookup(l+ 5,'tt del R         '
-     &       //weights_info(kk)//cc(i),pi/20.d0,0.d0,3*pi)
+     &       //cc(i)//weights_info(kk),pi/20.d0,0.d0,3*pi)
         call bookup(l+ 6,'tb pt            '
-     &       //weights_info(kk)//cc(i),5.d0,0.d0,500.d0)
+     &       //cc(i)//weights_info(kk),5.d0,0.d0,500.d0)
         call bookup(l+ 7,'tb log[pt]       '
-     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+     &       //cc(i)//weights_info(kk),0.05d0,0.1d0,5.d0)
         call bookup(l+ 8,'t pt             '
-     &       //weights_info(kk)//cc(i),5.d0,0.d0,500.d0)
+     &       //cc(i)//weights_info(kk),5.d0,0.d0,500.d0)
         call bookup(l+ 9,'t log[pt]        '
-     &       //weights_info(kk)//cc(i),0.05d0,0.1d0,5.d0)
+     &       //cc(i)//weights_info(kk),0.05d0,0.1d0,5.d0)
         call bookup(l+10,'tt delta eta     '
-     &       //weights_info(kk)//cc(i),0.2d0,-4.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,-4.d0,4.d0)
         call bookup(l+11,'y_tt             '
-     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
         call bookup(l+12,'delta y          '
-     &       //weights_info(kk)//cc(i),0.2d0,-4.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,-4.d0,4.d0)
         call bookup(l+13,'tt azimt         '
-     &       //weights_info(kk)//cc(i),pi/60.d0,2*pi/3,pi)
+     &       //cc(i)//weights_info(kk),pi/60.d0,2*pi/3,pi)
         call bookup(l+14,'tt del R         '
-     &       //weights_info(kk)//cc(i),pi/60.d0,2*pi/3,4*pi/3)
+     &       //cc(i)//weights_info(kk),pi/60.d0,2*pi/3,4*pi/3)
         call bookup(l+15,'y_tb             '
-     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
         call bookup(l+16,'y_t              '
-     &       //weights_info(kk)//cc(i),0.1d0,-4.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
         call bookup(l+17,'tt log[pi-azimt] '
-     &       //weights_info(kk)//cc(i),0.05d0,-4.d0,0.1d0)
+     &       //cc(i)//weights_info(kk),0.05d0,-4.d0,0.1d0)
         call bookup(l+18,'tt pt            '
-     &       //weights_info(kk)//cc(i),20.d0,80.d0,2000.d0)
+     &       //cc(i)//weights_info(kk),20.d0,80.d0,2000.d0)
         call bookup(l+19,'tb pt            '
-     &       //weights_info(kk)//cc(i),20.d0,400.d0,2400.d0)
+     &       //cc(i)//weights_info(kk),20.d0,400.d0,2400.d0)
         call bookup(l+20,'t pt             '
-     &       //weights_info(kk)//cc(i),20.d0,400.d0,2400.d0)
+     &       //cc(i)//weights_info(kk),20.d0,400.d0,2400.d0)
       enddo
       enddo
       return

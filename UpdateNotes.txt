@@ -2,6 +2,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.0.2(xx/xx/xx) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)
+                OM: Fix the bug that the shower_card.dat was wrongly identified as a pythia_card.
+                OM: add one MadSpin option allowing to control the number of simultaneous open files.
 
 2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
                     the bug fix in 2.0.0

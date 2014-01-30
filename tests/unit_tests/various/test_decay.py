@@ -2257,7 +2257,7 @@ class Test_Channel(unittest.TestCase):
                  abs(getattr(decay_objects,g_hww)) **2)
             )
 
-
+        #-------------------------------------
         # Test color multiplicity
 
         # Choose hadronic decay and leptonic decay of tau
@@ -2286,7 +2286,7 @@ class Test_Channel(unittest.TestCase):
                                     abs(getattr(decay_objects,g_wev)) **4))
 
 
-
+        #-------------------------------------
         # Test for off-shell estimation of matrix element
 
         # matrix element: replacing some of the energy into E_est_mean
@@ -2307,7 +2307,7 @@ class Test_Channel(unittest.TestCase):
                                    abs(getattr(decay_objects,g_wev)) **2)
 
         
-
+        #-------------------------------------
         # Test of phase space area calculation
 
         # On-shell phase space area
@@ -2324,48 +2324,73 @@ class Test_Channel(unittest.TestCase):
                                 1/512/math.pi **3 * 0.8 * MH_new **2)
 
 
-
-        # Test of decay width = matrix element * phase space are
+        #-------------------------------------
+        # Test of decay width = matrix element * phase space
 
         # tau hadronic decay
         self.assertAlmostEqual(tau_qdecay.get_apx_decaywidth(full_sm),
                                (0.5/1.777)*tau_qdecay.get_apx_psarea(full_sm)*\
-                                   tau_qdecay.get_apx_matrixelement_sq(full_sm))
-
+                                   tau_qdecay.get_apx_matrixelement_sq(full_sm)
+                               )
 
 
         # Test of the estimated higher level width for off-shell channel
-
+        # Test of onshell width
+        self.assertAlmostEqual(h_ww_wtb.get_apx_decaywidth(full_sm),
+                               (0.5/decay_objects.MH)*\
+                                   h_ww_wtb.get_apx_psarea(full_sm)*\
+                                   h_ww_wtb.get_apx_matrixelement_sq(full_sm)
+                               )
         # Channels with no next-level decay
         self.assertEqual(h_ww_wtb.get_apx_decaywidth_nextlevel(full_sm), 0.)
 
+        #---------------------------------------
+        # Test of the estimated higher level width for off-shell channel:
+        # New Kinematics Regime: 2Mz > Mh > Mz + Mw 
+        MH_new = 175
+        decay_objects.MH = MH_new
+
         # find all channels, width of particles are updated automatically,
         # couplings are also ran according to mother particles.
-        full_sm.find_all_channels(3)
+        full_sm.find_all_channels(2)
         WZ = full_sm.get_particle(23).get('apx_decaywidth')
         WW = full_sm.get_particle(24).get('apx_decaywidth')
 
-        # Offshell case: Brett-Wigner correction of propagator
+        # The error of z should be non-zero
+        WZ_err = full_sm.get_particle(23).get('apx_decaywidth_err')
+        #Z_offshell_channels = full_sm.get_particle(23).get_channels(2, False)
+        #print Z_offshell_channels.nice_string()
+        #print WZ_err
+        self.assertTrue(WZ_err != 0)
 
-        self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(24, q_offshell, 
+        # Choose h > z w+ w-
+        for c in higgs.get_channels(3, False):
+            final_ids = set([l.get('id') for l in c.get_final_legs()])
+            if final_ids == set([-24, 24, 23]):
+                h_zz_zww = c
+                #print h_zz_zww.nice_string()
+
+        # Brett-Wigner correction of propagator
+        self.assertAlmostEqual(h_zz_zww.get_apx_fnrule(24, q_offshell, 
                                                  False, full_sm),
                                ((1-2*((q_offshell/MW) ** 2)+(q_offshell/MW) ** 4)/ \
                              (((q_offshell**2-MW **2)**2+MW**2*WW**2)))
                                )
 
-        # Channels with next-level decay: h > z b b~
-        ratio = (1+ WZ*abs(decay_objects.MZ)/MH_new*\
-                     (1/4/math.pi)*MH_new **3 *0.8/ \
-                     h_zz_zbb.get_apx_fnrule(23, decay_objects.MZ,
-                                             True, full_sm)/ \
-                     h_zz_zbb.get_apx_fnrule(23, 0.5*MH_new,
-                                             True, full_sm)* \
-                     h_zz_zbb.get_apx_fnrule(23, MH_new,
-                                             False, full_sm, True))
+        # Channels with next-level decay: h > z w+ w-
+        err = (WZ*abs(decay_objects.MZ)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
+                *  h_zz_zww.get_apx_fnrule(23, MH_new, False, full_sm, True) \
+                /(h_zz_zww.get_apx_fnrule(23, MH_new/4, True, full_sm)*
+                  h_zz_zww.get_apx_fnrule(23, decay_objects.MZ, True, full_sm))\
+              +2*WW*abs(decay_objects.MW)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
+                *  h_zz_zww.get_apx_fnrule(24, MH_new, False, full_sm, True) \
+                /(h_zz_zww.get_apx_fnrule(24, MH_new/4, True, full_sm)*
+                  h_zz_zww.get_apx_fnrule(24, decay_objects.MW, True, full_sm)))
+           
 
         self.assertAlmostEqual(\
-            h_zz_zbb.get_apx_decaywidth(full_sm)*(ratio-1),
-            h_zz_zbb.get_apx_decaywidth_nextlevel(full_sm), 5)
+            h_zz_zww.get_apx_decaywidth(full_sm)*err,
+            h_zz_zww.get_apx_decaywidth_nextlevel(full_sm), 5)
 
 
 
