@@ -31,7 +31,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*2+(i-1)*1
-      call mbook(l+ 1,'total rate '//weights_info(kk)//cc(i)
+      call mbook(l+ 1,'total rate '//cc(i)//weights_info(kk)
      &     ,1d0,0d0,2d0)
       enddo
       enddo

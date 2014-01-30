@@ -39,15 +39,15 @@ c
       do j=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*10+(j-1)*5
-      call mbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'V pt     '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'V log pt '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.d0,5.d0)
-      call mbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'V y      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'V eta    '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'mV       '//cc(j)//weights_info(kk)
      &     ,bin,xmi,xms)
       enddo
       enddo
