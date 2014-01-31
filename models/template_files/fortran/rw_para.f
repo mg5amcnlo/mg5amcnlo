@@ -28,6 +28,17 @@ c************************************************************************
 
       end
 
+      subroutine setParamLog(OnOff)
+
+      logical OnOff
+      logical WriteParamLog
+      data WriteParamLog/.TRUE./
+      common/IOcontrol/WriteParamLog
+
+      WriteParamLog = OnOff
+
+      end
+
       subroutine setpara2(param_name)
       implicit none
 
@@ -63,6 +74,7 @@ c************************************************************************
          ! In principle the --whole-archive option of ld could be 
          ! used but it is not always supported
          call printout()
+         call setParamLog(.True.)
       endif
       return
 
