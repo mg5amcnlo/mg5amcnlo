@@ -152,7 +152,7 @@ C----------------------------------------------------------------------
      #  PLLB,ENLB,PTPAIR,DLL,CLL,AZI,AZINORM,XMLL,DETALLB
       INTEGER ICHSUM,ICHINI,IHEP,IV,IFV,IST,ID,IJ,ID1,JPR,IDENT,
      #  ILL,ILLB,IHRD,ILL0,ILLB0,NLP,NLM
-      LOGICAL DIDSOF,TEST1,TEST2,flag,ISLP,ISLM,FOUNDP,FOUNDM
+      LOGICAL DIDSOF,flag,ISLP,ISLM,FOUNDP,FOUNDM
       REAL*8 PI,wmass,wgamma,bwcutoff,getinvm,getdelphi,getrapidity,
      &getpseudorap
       PARAMETER (PI=3.14159265358979312D0)
