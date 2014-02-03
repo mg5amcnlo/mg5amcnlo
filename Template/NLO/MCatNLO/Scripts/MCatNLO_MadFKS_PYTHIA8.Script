@@ -516,16 +516,10 @@ cat <<EOF >> $ifile
 5332:maydecay = false              ! stable B hadrons
 EOF
 fi
-if [ $WP_STABLE_PY8 = ".TRUE." ]
+if [[ $WP_STABLE_PY8 = ".TRUE." || $WM_STABLE_PY8 = ".TRUE." ]]
 then
 cat <<EOF >> $ifile
-24:maydecay = false                ! stable W+ boson
-EOF
-fi
-if [ $WM_STABLE_PY8 = ".TRUE." ]
-then
-cat <<EOF >> $ifile
--24:maydecay = false               ! stable W- boson
+24:maydecay = false                ! stable W boson
 EOF
 fi
 if [ $Z_STABLE_PY8 = ".TRUE." ]
