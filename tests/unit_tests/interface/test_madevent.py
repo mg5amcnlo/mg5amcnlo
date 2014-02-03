@@ -87,6 +87,13 @@ class TestMadEventCmd(unittest.TestCase):
         card_dir= pjoin(root_path,'..','Template', 'Common', 'Cards')
         self.assertEqual(detect(pjoin(card_dir, 'madspin_card_default.dat')),
                          'madspin_card.dat') 
+
+        card_dir= pjoin(root_path,'..','Template', 'NLO', 'Cards')
+        # NLO Card
+        self.assertEqual(detect(pjoin(card_dir, 'run_card.dat')),
+                         'run_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'shower_card.dat')),
+                         'shower_card.dat')
         
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
