@@ -1981,7 +1981,7 @@ class DecayModel(model_reader.ModelReader):
 
         # Setup parameters
         # MZ, MB are already read in from param_card
-        MZ_ref = MZ
+        MZ_ref = MZ.real
         if MB == 0:
             MB_ref = 4.7
         else:
@@ -2009,6 +2009,7 @@ class DecayModel(model_reader.ModelReader):
                 a_out = self.newton1(t, amb, loopnum, 4.)
         else:
             # Running the alpha_s from MZ_ref to MB_ref (fermion_num = 5)
+            print q, MZ_ref
             t = 2 * math.log(q/MZ_ref)
             a_out = self.newton1(t, amZ0, loopnum, 5.)
 
