@@ -718,7 +718,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if os.path.exists(event_path+'.gz'):
                 os.system('gunzip -f %s.gz ' % event_path)
             else:
-                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+                raise self.InvalidCmd, 'Events file %s does not exist' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
         
