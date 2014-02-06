@@ -1400,6 +1400,8 @@ class CompleteForCmd(CheckValidForCmd):
         
        except Exception, error:
            print error
+
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 

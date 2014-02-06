@@ -751,7 +751,52 @@ class CompleteForCmd(CheckValidForCmd):
             for opt in _launch_parser.option_list:
                 opts += opt._long_opts + opt._short_opts
             return self.list_completion(text, opts, line)
-            
+           
+    def complete_banner_run(self, text, line, begidx, endidx):
+       "Complete the banner run command"
+       try:
+  
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))        
+        
+        
+        if len(args) > 1:
+            # only options are possible
+            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
+
+            if args[-1] != '--tag=':
+                tags = ['--tag=%s' % t for t in tags]
+            else:
+                return self.list_completion(text, tags)
+            return self.list_completion(text, tags +['--name=','-f'], line)
+        
+        # First argument
+        possibilites = {} 
+
+        comp = self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        if os.path.sep in line:
+            return comp
+        else:
+            possibilites['Path from ./'] = comp
+
+        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = [n.rsplit('/',2)[1] for n in run_list]
+        possibilites['RUN Name'] = self.list_completion(text, run_list)
+        
+        return self.deal_multiple_categories(possibilites)
+    
+        
+       except Exception, error:
+           print error
+
+ 
     def complete_compile(self, text, line, begidx, endidx):
         """auto-completion for launch command"""
         
@@ -1068,7 +1113,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         # Call Generate events
         self.do_launch('-n %s %s' % (self.run_name, '-f' if self.force else ''),
-                       mode=mode_status)
+                       switch=mode_status)
         
     ############################################################################      
     def do_generate_events(self, line):
@@ -1088,7 +1133,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
-    def do_launch(self, line, options={}, argss=[], mode={}):
+    def do_launch(self, line, options={}, argss=[], switch={}):
         """Main commands: launch the full chain 
         options and args are relevant if the function is called from other 
         functions, such as generate_events or calculate_xsect
@@ -1118,11 +1163,13 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         elif options['cluster']:
             self.cluster_mode = 1
         
-        if not mode:
+        if not switch:
             mode = argss[0]
             if mode in ['LO', 'NLO']:
                 options['parton'] = True
             mode = self.ask_run_configuration(mode, options)
+        else:
+            mode = self.ask_run_configuration('auto', options, switch)
 
         self.results.add_detail('run_mode', mode) 
 
@@ -3261,7 +3308,7 @@ Integrated cross-section
 
 
     ############################################################################
-    def ask_run_configuration(self, mode, options):
+    def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
         
         if 'parton' not in options:
@@ -3272,8 +3319,13 @@ Integrated cross-section
         
         void = 'NOT INSTALLED'
         switch_order = ['order', 'fixed_order', 'shower','madspin']
-        switch = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
+        switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
                   'madspin': void}
+        if not switch:
+            switch = switch_default
+        else:
+            switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
+
         default_switch = ['ON', 'OFF']
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
