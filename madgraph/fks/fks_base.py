@@ -122,7 +122,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                 for pert in procdef['perturbation_couplings']:
                     # if orders have been specified increase them
                     if procdef['orders'].keys() != ['WEIGHTED']:
-                        print procdef['orders'].keys(), "!=WEIGHTED"
                         try:
                             procdef['orders'][pert] += 2
                         except KeyError:

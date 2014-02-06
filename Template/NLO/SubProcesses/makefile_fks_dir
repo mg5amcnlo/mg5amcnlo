@@ -1,5 +1,5 @@
 include ../../Source/make_opts
-include ../analyse_opts
+#include ../analyse_opts
 
 LIBDIR = ../../lib/
 ANADIR = ../../FixedOrderAnalysis/
@@ -24,13 +24,19 @@ LIBS = $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libmodel.a	\
 $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 
 # Files for all executables
-FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
-	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
-	 fks_inc_chooser.o leshouche_inc_chooser.o genps_fks.o		\
-	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
-	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
+FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
+	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
+	 real_me_chooser.o						\
+	 fks_inc_chooser.o leshouche_inc_chooser.o 			\
+	 born_leshouche_inc_chooser.o genps_fks.o			\
+	 setcuts.o setscales.o born.o sborn_sf.o 			\
+	 $(patsubst%.f,%.o,$(wildcard b_*_sf_???.f)) 			\
+	 $(patsubst%.f,%.o,$(wildcard born_*.f)) 			\
+	 $(patsubst%.f,%.o,$(wildcard sborn_*_sf.f)) 			\
+	 fks_Sij.o trapfpe.o						\
 	 $(fastjetfortran_madfks) fks_singular.o			\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
+	 born_configs_and_props_inc_chooser.o				\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
 	 reweight.o get_color.o FKSParamReader.o			\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
