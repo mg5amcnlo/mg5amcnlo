@@ -227,8 +227,6 @@ c
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 C INITIALISE
       DO I=1,NMAX
         DO J=1,4
