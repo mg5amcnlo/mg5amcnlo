@@ -327,6 +327,16 @@ class HelpToCmd(object):
         """help for launch command"""
         _launch_parser.print_help()
 
+    def help_banner_run(self):
+        logger.info("syntax: banner_run Path|RUN [--run_options]")
+        logger.info("-- Reproduce a run following a given banner")
+        logger.info("   One of the following argument is require:")
+        logger.info("   Path should be the path of a valid banner.")
+        logger.info("   RUN should be the name of a run of the current directory")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--name=X', 'Define the name associated with the new run')]) 
+
+
     def help_compile(self):
         """help for compile command"""
         _compile_parser.print_help()
@@ -605,6 +615,64 @@ class CheckValidForCmd(object):
         if options['multicore'] and options['cluster']:
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
+
+    def check_banner_run(self, args):
+        """check the validity of line"""
+        
+        if len(args) == 0:
+            self.help_banner_run()
+            raise self.InvalidCmd('banner_run requires at least one argument.')
+        
+        tag = [a[6:] for a in args if a.startswith('--tag=')]
+        
+        
+        if os.path.exists(args[0]):
+            type ='banner'
+            format = self.detect_card_type(args[0])
+            if format != 'banner':
+                raise self.InvalidCmd('The file is not a valid banner.')
+        elif tag:
+            args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                  
+            if not os.path.exists(args[0]):
+                raise self.InvalidCmd('No banner associates to this name and tag.')
+        else:
+            name = args[0]
+            type = 'run'
+            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            if not banners:
+                raise self.InvalidCmd('No banner associates to this name.')    
+            elif len(banners) == 1:
+                args[0] = banners[0]
+            else:
+                #list the tag and propose those to the user
+                tags = [os.path.basename(p)[len(args[0])+1:-11] for p in banners]
+                tag = self.ask('which tag do you want to use?', tags[0], tags)
+                args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                
+                        
+        run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
+        if run_name:
+            try:
+                self.exec_cmd('remove %s all banner -f' % run_name)
+            except Exception:
+                pass
+            self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
+        elif type == 'banner':
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        elif type == 'run':
+            if not self.results[name].is_empty():
+                run_name = self.find_available_run_name(self.me_dir)
+                logger.info('Run %s is not empty so will use run_name: %s' % \
+                                                               (name, run_name))
+                self.set_run_name(run_name)
+            else:
+                try:
+                    self.exec_cmd('remove %s all banner -f' % run_name)
+                except Exception:
+                    pass
+                self.set_run_name(name)
+
 
 
     def check_launch(self, args, options):
@@ -964,7 +1032,43 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_calculate_xsect(argss, options)
         self.do_launch(line, options, argss)
         
+    ############################################################################
+    def do_banner_run(self, line): 
+        """Make a run from the banner file"""
+        
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_banner_run(args)    
+                     
+        # Remove previous cards
+        for name in ['shower_card.dat', 'madspin_card.dat']:
+            try:
+                os.remove(pjoin(self.me_dir, 'Cards', name))
+            except Exception:
+                pass
+            
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
+        
+        # Check if we want to modify the run
+        if not self.force:
+            ans = self.ask('Do you want to modify the Cards/Run Type?', 'n', ['y','n'])
+            if ans == 'n':
+                self.force = True
+        
+        # Compute run mode:
+        if self.force:
+            mode_status = {'order': 'NLO', 'fixed_order': False, 'madspin':False, 'shower':True}
+            banner = banner_mod.Banner(args[0])
+            for line in banner['run_settings']:
+                if '=' in line:
+                    mode, value = [t.strip() for t in line.split('=')]
+                    mode_status[mode] = value
+        else:
+            mode_status = {}
 
+        # Call Generate events
+        self.do_launch('-n %s %s' % (self.run_name, '-f' if self.force else ''),
+                       mode=mode_status)
         
     ############################################################################      
     def do_generate_events(self, line):
@@ -984,10 +1088,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
-    def do_launch(self, line, options={}, argss=[]):
+    def do_launch(self, line, options={}, argss=[], mode={}):
         """Main commands: launch the full chain 
         options and args are relevant if the function is called from other 
-        functions, such as generate_events or calculate_xsect"""
+        functions, such as generate_events or calculate_xsect
+        mode gives the list of switch needed for the computation (usefull for banner_run)
+        """
         
         if not argss and not options:
             self.start_time = time.time()
@@ -1011,11 +1117,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-        mode = argss[0]
-        if mode in ['LO', 'NLO']:
-            options['parton'] = True
-        mode = self.ask_run_configuration(mode, options)
+        
+        if not mode:
+            mode = argss[0]
+            if mode in ['LO', 'NLO']:
+                options['parton'] = True
+            mode = self.ask_run_configuration(mode, options)
 
         self.results.add_detail('run_mode', mode) 
 

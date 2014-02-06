@@ -475,7 +475,7 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             self.help_banner_run()
-            raise self.InvalidCmd('banner_run reauires at least one argument.')
+            raise self.InvalidCmd('banner_run requires at least one argument.')
         
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
@@ -1889,7 +1889,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                      
         # Remove previous cards
         for name in ['delphes_trigger.dat', 'delphes_card.dat',
-                     'pgs_card.dat', 'pythia_card.dat']:
+                     'pgs_card.dat', 'pythia_card.dat', 'madspin_card.dat',
+                     'reweight_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
             except Exception:
