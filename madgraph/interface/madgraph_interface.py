@@ -4146,6 +4146,21 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 open(path, 'w').writelines(text)
             os.environ['FC'] = compiler
                             
+        # For SysCalc link to lhapdf
+        if name == 'SysCalc':
+            if self.options['lhapdf']:
+                ld_path = misc.Popen([self.options['lhapdf'], '--libdir'],
+                                     stdout=subprocess.PIPE).communicate()[0]
+                ld_path = ld_path.replace('\n','')
+                if 'LD_LIBRARY_PATH' not in os.environ:
+                    os.environ['LD_LIBRARY_PATH'] = ld_path
+                elif not os.environ['LD_LIBRARY_PATH']:
+                    os.environ['LD_LIBRARY_PATH'] = ld_path
+                elif 1:#ld_path not in os.environ['LD_LIBRARY_PATH']:
+                    os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
+            else:
+                raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
+
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
             try: 
