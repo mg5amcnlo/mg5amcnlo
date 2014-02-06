@@ -1779,7 +1779,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             loop over the different config file if config_file not define """
         
         super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
-                                                            final=True, **opt)
+                                                            final=final, **opt)
         if not final:
             return self.options # the return is usefull for unittest
 

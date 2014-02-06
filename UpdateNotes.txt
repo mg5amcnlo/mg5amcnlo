@@ -12,6 +12,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     - process with more that 100 subprocesses (note that you need to hack the pythia-pgs
                       package to deal with such large number of sub-process
                     - deal with pdf identification number bigger than 1 million.  
+                OM: Fixed a bug preventing the Madevent run to detect external module (pythia-pgs, syscalc,...)
+                    Bug #1271216 (thanks Iwamoto)
 
 2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
                     the bug fix in 2.0.0
