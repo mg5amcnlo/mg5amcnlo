@@ -251,12 +251,12 @@ C EFFECT, SO THROW THE EVENT AWAY
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-          IF(ID1.EQ.25)THEN
-            IFH=IFH+1
-            DO IJ=1,5
-	      PPH(IJ)=PHEP(IJ,IHEP)
-            ENDDO
-          ENDIF
+        IF(ID1.EQ.25)THEN
+          IFH=1
+          DO IJ=1,5
+            PPH(IJ)=PHEP(IJ,IHEP)
+          ENDDO
+        ENDIF
 C---FIND FINAL STATE HADRONS
         IF (IST.EQ.1 .AND. ABS(ID1).GT.100) THEN
           NN=NN+1
@@ -269,7 +269,7 @@ C---FIND FINAL STATE HADRONS
           ENDDO
         ENDIF
  100  CONTINUE
-      IF(IFH.EQ.0)THEN
+      IF(IFH.NE.1)THEN
          CALL HWWARN('PYANAL',503)
          GOTO 999
       ENDIF
@@ -282,7 +282,13 @@ C---CLUSTER THE EVENT
           pjet(j,i)=0d0
         enddo
         ptjet(i)=0d0
-        yjet(i)=0d0
+        yjet(i)=0d0          IF(ID1.EQ.25)THEN
+            IFH=IFH+1
+            DO IJ=1,5
+              PPH(IJ)=P(IHEP,IJ)
+            ENDDO
+          ENDIF
+
         jet(i)=0
       enddo
       njet=-1
