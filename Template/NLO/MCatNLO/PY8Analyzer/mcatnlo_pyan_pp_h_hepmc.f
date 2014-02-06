@@ -282,7 +282,8 @@ C---CLUSTER THE EVENT
           pjet(j,i)=0d0
         enddo
         ptjet(i)=0d0
-        yjet(i)=0d0          IF(ID1.EQ.25)THEN
+        yjet(i)=0d0
+          IF(ID1.EQ.25)THEN
             IFH=IFH+1
             DO IJ=1,5
               PPH(IJ)=P(IHEP,IJ)
