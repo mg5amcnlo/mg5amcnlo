@@ -2390,6 +2390,7 @@ Integrated cross-section
 
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
+        content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
