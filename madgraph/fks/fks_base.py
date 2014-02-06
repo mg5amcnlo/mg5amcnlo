@@ -318,21 +318,21 @@ class FKSRealProcess(object):
         for i in self.process.get('legs'):
             fks_j_from_i[i.get('number')] = []
             if i.get('state'):
-                for j in self.process.get('legs'):
-                    if j.get('number') != i.get('number') :
-                        ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict,\
-                                                       pert=self.perturbation)
-                        for ij in ijlist:
-                            born_leglist = fks_common.to_fks_legs(
-                                          copy.deepcopy(self.process.get('legs')), 
-                                          self.process.get('model'))
-                            born_leglist.remove(i)
-                            born_leglist.remove(j)
-                            born_leglist.insert(ij.get('number') - 1, ij)
-                            born_leglist.sort(pert = self.perturbation)
-                            if [l['id'] for l in born_leglist] in born_pdg_list:
-                                fks_j_from_i[i.get('number')].append(\
-                                                        j.get('number'))                                
+                for j in [l for l in self.process.get('legs') if \
+                        l.get('number') != i.get('number')]:
+                    ijlist = fks_common.combine_ij(i, j, self.process.get('model'), dict,\
+                                                   pert=self.perturbation)
+                    for ij in ijlist:
+                        born_leglist = fks_common.to_fks_legs(
+                                      copy.deepcopy(self.process.get('legs')), 
+                                      self.process.get('model'))
+                        born_leglist.remove(i)
+                        born_leglist.remove(j)
+                        born_leglist.insert(ij.get('number') - 1, ij)
+                        born_leglist.sort(pert = self.perturbation)
+                        if [l['id'] for l in born_leglist] in born_pdg_list:
+                            fks_j_from_i[i.get('number')].append(\
+                                                    j.get('number'))                                
 
         self.fks_j_from_i = fks_j_from_i
         return fks_j_from_i
