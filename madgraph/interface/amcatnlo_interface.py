@@ -425,6 +425,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    ignore_six_quark_processes,
                                    OLP=self.options['OLP'])
 
+
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
         
