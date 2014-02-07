@@ -307,7 +307,7 @@ C
       STOP
       ENDIF
 
-      GETORDPOWFROMINDEX_B%(proc_prefix)s=SPLITORDERS(INDX, IORDER)
+      GETORDPOWFROMINDEX%(proc_prefix)s=SPLITORDERS(INDX, IORDER)
       END
 
 

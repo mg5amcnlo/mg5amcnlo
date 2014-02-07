@@ -461,8 +461,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             os.path.join(path, borndir))
 
 #write the infortions for the different real emission processes
-
-        self.write_real_matrix_elements(matrix_element, fortran_model)
+        sqsorders_list = \
+            self.write_real_matrix_elements(matrix_element, fortran_model)
 
         self.write_pdf_calls(matrix_element, fortran_model)
 
@@ -501,15 +501,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_ngraphs_file(writers.FortranWriter(filename),
                             nconfigs)
 
-#write the wrappers
-        filename = 'real_me_chooser.f'
-        self.write_real_me_wrapper(writers.FortranWriter(filename), 
-                                   matrix_element, 
-                                   fortran_model)
-
-        filename = 'parton_lum_chooser.f'
-        self.write_pdf_wrapper(writers.FortranWriter(filename), 
-                                   matrix_element, 
+#write the wrappers for real ME's
+        filename = 'real_me_lum_chooser.f'
+        self.write_real_wrappers(writers.FortranWriter(filename), 
+                                   matrix_element, sqsorders_list,
                                    fortran_model)
 
         filename = 'get_color.f'
@@ -556,11 +551,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_Sij.f',
                      'fks_powers.inc',
                      'fks_singular.f',
-                     'fks_inc_chooser.f',
-                     'leshouche_inc_chooser.f',
-                     'born_leshouche_inc_chooser.f',
-                     'configs_and_props_inc_chooser.f',
-                     'born_configs_and_props_inc_chooser.f',
+                     'chooser_functions.f',
                      'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
@@ -932,68 +923,127 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer.writelines(firstlines + lines)
 
 
-    def write_pdf_wrapper(self, writer, matrix_element, fortran_model):
-        """writes the wrapper which allows to chose among the different real matrix elements"""
+    def write_real_wrappers(self, writer, matrix_element, sqsolist, fortran_model):
+        """writes the wrappers which allows to chose among the different real matrix elements
+        and among the different parton luminosities and 
+        among the various helper functions for the split-orders"""
 
-        file = \
-"""double precision function dlum()
-implicit none
-integer nfksprocess
-common/c_nfksprocess/nfksprocess
-"""
+        maxsqso = max(sqsolist)
+
+        # the real me wrapper
+        text = \
+            """subroutine smatrix_real(p, wgt)
+            implicit none
+            include 'nexternal.inc'
+            double precision p(0:3, nexternal)
+            double precision wgt(0:%d)
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            real*4 tbefore, tAfter
+            real*4 tTot, tOLP, tFastJet, tPDF
+            common/timings/tTot, tOLP, tFastJet, tPDF
+            call cpu_time(tbefore)
+            """ % maxsqso
+        # the pdf wrapper
+        text1 = \
+            """\n\ndouble precision function dlum()
+            implicit none
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            """
+        # the wrapper to the function which returns the number of squared 
+        # split orders
+        text2 = \
+            """\n\n integer function get_nsqso_real()
+            implicit none
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            """
+        # the wrapper to the function which returns the power of a given coupling 
+        #appearing at a given index in the ans array
+        function_list = set(['getpowfromindex%(n_me)d' % info \
+                for info in matrix_element.get_fks_info_list()])
+        text3 = \
+            """\n\n integer function getpowfromindex_real(iorder, index)
+            implicit none
+            integer iorder, index
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            integer %s
+            """ % ', '.join(function_list)
+        # the wrapper to the function which returns the index in the res array
+        # of the contribution of given orders
+        function_list = set(['sqsoindex_from_orders_real%(n_me)d' % info \
+                for info in matrix_element.get_fks_info_list()])
+        text4 = \
+            """\n\n integer function sqsoindex_from_orders_real(orders)
+            implicit none
+            integer orders(%d)
+            integer nfksprocess
+            common/c_nfksprocess/nfksprocess
+            integer %s
+            """ % (maxsqso, ', '.join(function_list))
+
         for n, info in enumerate(matrix_element.get_fks_info_list()):
-            file += \
-"""if (nfksprocess.eq.%(n)d) then
-call dlum_%(n_me)d(dlum)
-else""" % {'n': n + 1, 'n_me' : info['n_me']}
-        file += \
-"""
-write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
-stop
-endif
-
-return
-end
-"""
+            text += \
+                """if (nfksprocess.eq.%(n)d) then
+                call smatrix_%(n_me)d_splitorders(p, wgt)
+                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+            text1 += \
+                """if (nfksprocess.eq.%(n)d) then
+                call dlum_%(n_me)d(dlum)
+                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+            text2 += \
+                """if (nfksprocess.eq.%(n)d) then
+                call get_nsqso_real%(n_me)d(get_nsqso_real)
+                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+            text3 += \
+                """if (nfksprocess.eq.%(n)d) then
+                 getpowfromindex_real = getpowfromindex%(n_me)d(iorder, index)
+                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+            text4 += \
+                """if (nfksprocess.eq.%(n)d) then
+                 sqsoindex_from_orders_real = sqsoindex_from_orders_real%(n_me)d(orders)
+                else""" % {'n': n + 1, 'n_me' : info['n_me']}
+        text += \
+            """
+            write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
+            stop\n endif\n call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
+            return \n end
+            """
+        text1 += \
+            """
+            write(*,*) 'ERROR: invalid n in dlum :', nfksprocess\n stop\n endif
+            return \nend
+            """
+        text2 += \
+            """
+            write(*,*) 'ERROR: invalid n in get_nsqso_real :', nfksprocess\n stop\n endif
+            return \nend
+            """
+        text3 += \
+            """
+            write(*,*) 'ERROR: invalid n in getpowfromindex_real :', nfksprocess\n stop\n endif
+            return \nend
+            """
+        text4 += \
+            """
+            write(*,*) 'ERROR: invalid n in sqsoindex_from_orders_real :', nfksprocess\n stop\n endif
+            return \nend
+            """
         # Write the file
-        writer.writelines(file)
+        writer.writelines(text + text1 + text2 + text3 + text4)
         return 0
 
 
-    def write_real_me_wrapper(self, writer, matrix_element, fortran_model):
-        """writes the wrapper which allows to chose among the different real matrix elements"""
 
-        file = \
-"""subroutine smatrix_real(p, wgt)
-implicit none
-include 'nexternal.inc'
-double precision p(0:3, nexternal)
-double precision wgt
-integer nfksprocess
-common/c_nfksprocess/nfksprocess
-real*4 tbefore, tAfter
-real*4 tTot, tOLP, tFastJet, tPDF
-common/timings/tTot, tOLP, tFastJet, tPDF
-call cpu_time(tbefore)
-"""
-        for n, info in enumerate(matrix_element.get_fks_info_list()):
-            file += \
-"""if (nfksprocess.eq.%(n)d) then
-call smatrix_%(n_me)d(p, wgt)
-else""" % {'n': n + 1, 'n_me' : info['n_me']}
-        file += \
-"""
-write(*,*) 'ERROR: invalid n in real_matrix :', nfksprocess
-stop
-endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
-return
-end
-"""
-        # Write the file
-        writer.writelines(file)
-        return 0
+    def write_born_wrappers(self, writer, me_list, fortran_model):
+        """writes the wrappers which allows to chose among the different 
+        born matrix elements, among different color/charge links and 
+        among the various helper functions for the split-orders"""
+        pass
+
+
 
 
     def draw_feynman_diagrams(self, matrix_element):
@@ -1021,12 +1071,17 @@ end
 
     def write_real_matrix_elements(self, matrix_element, fortran_model):
         """writes the matrix_i.f files which contain the real matrix elements""" 
-
+        
+        sqsorders_list = []
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
-            self.write_split_me_fks(writers.FortranWriter(filename),
-                                            fksreal.matrix_element, 
-                                            fortran_model, 'real', "%d" % (n+1))
+            ncalls, ncolors, nsplitorders, nsqsplitorders = \
+                                    self.write_split_me_fks(\
+                                        writers.FortranWriter(filename),
+                                        fksreal.matrix_element, 
+                                        fortran_model, 'real', "%d" % (n+1))
+            sqsorders_list.append(nsqsplitorders)
+        return sqsorders_list
 
 
     #===========================================================================
@@ -1175,9 +1230,15 @@ end
 
         born_list = matrix_element.born_me_list
 
+        # the wrappers
+        filename = 'born_chooser.f'
+        self.write_born_wrappers(writers.FortranWriter(filename),
+                            born_list, fortran_model)
+
+        # the .inc files
         filename = 'nborns.inc'
         self.write_nborns_file(writers.FortranWriter(filename),
-                         len(born_list), fortran_model)
+                            len(born_list), fortran_model)
 
         filename = 'born_configs_and_props_info.inc'
         nconfigs_list, mapconfigs_list, s_and_t_channels_list = \
@@ -1201,6 +1262,7 @@ end
         self.write_coloramps_file_list(writers.FortranWriter(filename),
                                   mapconfigs_list, born_list, fortran_model)
         
+        # the born ME's and color/charge links
         for i, me in enumerate(matrix_element.born_me_list):
             filename = 'born_%d.f' % (i + 1)
 
