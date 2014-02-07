@@ -299,9 +299,6 @@ ERR_NUM_PY8=$(echo "$ERR_FR_PY8 * $NEVENTS" | bc)
 ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
-NUM=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= nevents" | head -1))
-NEVENTS_TOT=${NUM[0]}
-
 echo " "
 echo "*****   All parameters read from event file $EVT_NAMEF"
 echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "

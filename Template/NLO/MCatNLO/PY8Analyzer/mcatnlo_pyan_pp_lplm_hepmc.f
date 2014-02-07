@@ -9,28 +9,29 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
+      SUBROUTINE PYABEG(nnn,wwwi)
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
       real * 8 bin,xmi,xms,pi
       PARAMETER (PI=3.14159265358979312D0)
-      integer j,kk,l
+      integer j,kk,l,jpr,i,nnn
       character*5 cc(2)
       data cc/'     ','cuts '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
+c
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       nwgt_analysis=nwgt
 c
       xmi=50.d0
@@ -86,15 +87,13 @@ c
       enddo
       enddo
  999  END
-
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVTTOT)
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,KK,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -102,7 +101,7 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
-      DO I=1,NPL
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
@@ -139,12 +138,11 @@ c
       call multitop(NPL+l+21,NPL-1,3,2,'total',' ','LOG')
       enddo
       enddo
-c
       CLOSE(99)
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
+      SUBROUTINE PYANAL(nnn,xww)
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -154,23 +152,25 @@ C----------------------------------------------------------------------
      #  PLLB,ENLB,PTPAIR,DLL,CLL,AZI,AZINORM,XMLL,DETALLB
       INTEGER ICHSUM,ICHINI,IHEP,IV,IFV,IST,ID,IJ,ID1,JPR,IDENT,
      #  ILL,ILLB,IHRD,ILL0,ILLB0,NLP,NLM
-      LOGICAL DIDSOF,TEST1,TEST2,flag,ISLP,ISLM,FOUNDP,FOUNDM
+      LOGICAL DIDSOF,flag,ISLP,ISLM,FOUNDP,FOUNDM
       REAL*8 PI,wmass,wgamma,bwcutoff,getinvm,getdelphi,getrapidity,
      &getpseudorap
       PARAMETER (PI=3.14159265358979312D0)
-      REAL*8 WWW0,TINY
+      REAL*8 TINY
       INTEGER KK,i,l
       DATA TINY/.1D-5/
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
+c
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
@@ -274,7 +274,6 @@ c
       call mfill(l+21,(0d0),(WWW(kk)))
 c
       l=l+21
-
       if(abs(etav).lt.ycut)then
         call mfill(l+1,(ptv),(WWW(kk)))
         call mfill(l+2,(ptv),(WWW(kk)))
@@ -379,6 +378,7 @@ c$$$         CALL HWUBPR
          STOP
       ENDIF
       END
+
 
       subroutine HWUEPR
       INCLUDE 'HEPMC.INC'
