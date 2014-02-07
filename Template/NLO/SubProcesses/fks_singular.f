@@ -421,6 +421,12 @@ c FxFx merging
          call get_helicity(i_fks,j_fks)
       endif
 
+c Make sure that the result can be non-zero. If the jacobian from the
+c PS-setup or vegas are zero, we can skip this PS point and 'return'.
+c Note that all the wgts and jacs should be positive.
+      if ( (wgt.le.0d0 .and. jac_cnt(0).le.0d0 .and. jac_cnt(1).le.0d0
+     &     .and. jac_cnt(2).le.0d0) .or. vegaswgt.le.0d0) return
+
       if (firsttime)then
          inoborn_ev=0
          xnoborn_ev=0.d0
@@ -1279,9 +1285,9 @@ c respectively
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
-c
-      if ( (wgt.eq.0d0 .and. jac_cnt(0).eq.0d0 .and. jac_cnt(1).eq.0d0
-     &     .and. jac_cnt(2).eq.0d0) .or. vegaswgt.eq.0d0) return
+c Note that all the wgts and jacs should be positive.
+      if ( (wgt.le.0d0 .and. jac_cnt(0).le.0d0 .and. jac_cnt(1).le.0d0
+     &     .and. jac_cnt(2).le.0d0) .or. vegaswgt.le.0d0) return
 c
       if (fold.eq.0) then
          calculatedBorn=.false.
@@ -4443,6 +4449,7 @@ c convert to Binoth Les Houches Accord standards
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
+c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)

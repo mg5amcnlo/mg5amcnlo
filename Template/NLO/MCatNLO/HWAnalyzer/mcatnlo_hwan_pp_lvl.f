@@ -34,21 +34,21 @@ c
       do i=1,1
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call mbook(l+1,'total rate '//weights_info(kk)//cc(i),
+        call mbook(l+1,'total rate '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call mbook(l+2,'lep rapidity '//weights_info(kk)//cc(i),
+        call mbook(l+2,'lep rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+3,'lep pt '//weights_info(kk)//cc(i),
+        call mbook(l+3,'lep pt '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call mbook(l+4,'et miss '//weights_info(kk)//cc(i),
+        call mbook(l+4,'et miss '//cc(i)//weights_info(kk),
      &       10d0,0d0,200d0)
-        call mbook(l+5,'trans. mass '//weights_info(kk)//cc(i),
+        call mbook(l+5,'trans. mass '//cc(i)//weights_info(kk),
      &       5d0,0d0,200d0)
-        call mbook(l+6,'w rapidity '//weights_info(kk)//cc(i),
+        call mbook(l+6,'w rapidity '//cc(i)//weights_info(kk),
      &       0.5d0,-5d0,5d0)
-        call mbook(l+7,'w pt '//weights_info(kk)//cc(i),
+        call mbook(l+7,'w pt '//cc(i)//weights_info(kk),
      &       10d00,0d0,200d0)
-        call mbook(l+8,'cphi[l,vl] '//weights_info(kk)//cc(i),
+        call mbook(l+8,'cphi[l,vl] '//cc(i)//weights_info(kk),
      &       0.05d0,-1d0,1d0)
       enddo
       enddo

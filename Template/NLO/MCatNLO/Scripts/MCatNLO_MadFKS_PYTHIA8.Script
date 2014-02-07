@@ -299,9 +299,6 @@ ERR_NUM_PY8=$(echo "$ERR_FR_PY8 * $NEVENTS" | bc)
 ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
-NUM=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= nevents" | head -1))
-NEVENTS_TOT=${NUM[0]}
-
 echo " "
 echo "*****   All parameters read from event file $EVT_NAMEF"
 echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
@@ -478,7 +475,11 @@ SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 BeamRemnants:primordialKT = off    ! No primordial kT
 
 ! 8) Particle characteristics.
-5:m0 = $BMASS                      ! bottom mass
+1:m0 = $DMASSPY                    ! down mass
+2:m0 = $UMASSPY                    ! up mass
+3:m0 = $SMASSPY                    ! strange mass
+4:m0 = $CMASSPY                    ! charm mass
+5:m0 = $BMASSPY                    ! bottom mass
 6:m0 = $TMASS                      ! top mass
 23:m0 = $ZMASS                     ! Z mass
 24:m0 = $WMASS                     ! W mass
@@ -512,16 +513,10 @@ cat <<EOF >> $ifile
 5332:maydecay = false              ! stable B hadrons
 EOF
 fi
-if [ $WP_STABLE_PY8 = ".TRUE." ]
+if [[ $WP_STABLE_PY8 = ".TRUE." || $WM_STABLE_PY8 = ".TRUE." ]]
 then
 cat <<EOF >> $ifile
-24:maydecay = false                ! stable W+ boson
-EOF
-fi
-if [ $WM_STABLE_PY8 = ".TRUE." ]
-then
-cat <<EOF >> $ifile
--24:maydecay = false               ! stable W- boson
+24:maydecay = false                ! stable W boson
 EOF
 fi
 if [ $Z_STABLE_PY8 = ".TRUE." ]

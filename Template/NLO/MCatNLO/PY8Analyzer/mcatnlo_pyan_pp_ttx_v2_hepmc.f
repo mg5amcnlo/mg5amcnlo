@@ -9,61 +9,59 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
+      SUBROUTINE PYABEG(nnn,wwwi)
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
       REAL*8 pi
-      integer j,kk,l,i
       PARAMETER (PI=3.14159265358979312D0)
+      integer j,kk,l,i,nnn
       character*5 cc(2)
       data cc/'     ','     '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
 c
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       nwgt_analysis=nwgt
       do i=1,1
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call mbook(l+ 1,'total rate    '//weights_info(kk)//cc(i),
+        call mbook(l+ 1,'total rate    '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call mbook(l+ 2,'t rap         '//weights_info(kk)//cc(i),
+        call mbook(l+ 2,'t rap         '//cc(i)//weights_info(kk),
      &       0.2d0,-5d0,5d0)
-        call mbook(l+ 3,'tx rap        '//weights_info(kk)//cc(i),
+        call mbook(l+ 3,'tx rap        '//cc(i)//weights_info(kk),
      &       0.2d0,-5d0,5d0)
-        call mbook(l+ 4,'t-tx pair rap '//weights_info(kk)//cc(i),
+        call mbook(l+ 4,'t-tx pair rap '//cc(i)//weights_info(kk),
      &       0.1d0,-3d0,3d0)
-        call mbook(l+ 5,'m t-tx        '//weights_info(kk)//cc(i),
+        call mbook(l+ 5,'m t-tx        '//cc(i)//weights_info(kk),
      &       10d0,0d0,1000d0)
-        call mbook(l+ 6,'pt t          '//weights_info(kk)//cc(i),
+        call mbook(l+ 6,'pt t          '//cc(i)//weights_info(kk),
      &       4d0,0d0,400d0)
-        call mbook(l+ 7,'pt tx         '//weights_info(kk)//cc(i),
+        call mbook(l+ 7,'pt tx         '//cc(i)//weights_info(kk),
      &       4d0,0d0,400d0)
-        call mbook(l+ 8,'pt t-tx       '//weights_info(kk)//cc(i),
+        call mbook(l+ 8,'pt t-tx       '//cc(i)//weights_info(kk),
      &       2d0,0d0,200d0)
       enddo
       enddo
-      END
-
-
+ 999  END
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVTTOT)
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,KK,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -71,7 +69,7 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
-      DO I=1,NPL
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
@@ -94,9 +92,8 @@ C
       CLOSE(99)
       END
 
-
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
+      SUBROUTINE PYANAL(nnn,xww)
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -124,25 +121,23 @@ C----------------------------------------------------------------------
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
-
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
         CALL HWWARN('PYANAL',111)
-        CALL HWUEPR
-        WRITE(*,*)PHEP(3,1),PHEP(3,2)
         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
@@ -171,7 +166,6 @@ C FOUND AN ANTITOP; KEEP ONLY THE FIRST ON RECORD
          CALL HWUEPR
          CALL HWWARN('PYANAL',501)
       ENDIF
-C FILL THE FOUR-MOMENTA
       DO IJ=1,5
          XPTQ(IJ)=PHEP(IJ,IT1)
          XPTB(IJ)=PHEP(IJ,IT2)

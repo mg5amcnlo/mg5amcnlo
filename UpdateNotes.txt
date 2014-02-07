@@ -1,5 +1,20 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
+                    previous version)
+                OM: Fix the bug that the shower_card.dat was wrongly identified as a pythia_card.
+                OM: add one MadSpin option allowing to control the number of simultaneous open files.
+                OM: Fix a bug in eps preventing evince preventing label to be displayed on page 2 and following
+                    Thanks to Gauthier Durieux for the fix.
+                OM: Fix a bug(crash) for p p > w+ w- j j introduce in 2.0.0 due to some jet sometimes tagged as QCD
+                    and sometimes not (which was making the automatic scale computation to crash)
+                OM: Change the way to writte the <init> line of the lhe file to take into account
+                    - process with more that 100 subprocesses (note that you need to hack the pythia-pgs
+                      package to deal with such large number of sub-process
+                    - deal with pdf identification number bigger than 1 million.  
+                OM: Fixed a bug preventing the Madevent to detect external module (pythia-pgs, syscalc,...)
+                    Bug #1271216 (thanks Iwamoto)
+
 2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
                     the bug fix in 2.0.0
                 RF: Replaced the Error#10 in the generation of the phase-space (for NLO) to a Warning#10.
@@ -10,6 +25,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 VH: FIX the import of old UFO model (those without the all_orders attribute).
                 OM: Add a functionalities for restrict_model if a file paramcard_RESTRICTNAME.dat
                     exists, then this file is use as default param_card for that restriction.
+                HS: Updated CutTools to v1.9.2
 
 2.0.0(14/12/13)    CHANGE IN DEFAULT:
                    ------------------

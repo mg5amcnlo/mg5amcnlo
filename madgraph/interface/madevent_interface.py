@@ -475,7 +475,7 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             self.help_banner_run()
-            raise self.InvalidCmd('banner_run reauires at least one argument.')
+            raise self.InvalidCmd('banner_run requires at least one argument.')
         
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
@@ -1400,6 +1400,8 @@ class CompleteForCmd(CheckValidForCmd):
         
        except Exception, error:
            print error
+
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
@@ -1779,7 +1781,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             loop over the different config file if config_file not define """
         
         super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
-                                                            final=True, **opt)
+                                                            final=final, **opt)
         if not final:
             return self.options # the return is usefull for unittest
 
@@ -1801,7 +1803,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 elif key == "delphes_path":
                     if not os.path.exists(pjoin(path, 'Delphes')) and not\
                                      os.path.exists(pjoin(path, 'DelphesSTDHEP')):
-                        misc.sprint(pjoin(path, 'Delphes'))
                         logger.info("No valid Delphes path found")
                         continue
                 elif key == "madanalysis_path":
@@ -1890,7 +1891,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                      
         # Remove previous cards
         for name in ['delphes_trigger.dat', 'delphes_card.dat',
-                     'pgs_card.dat', 'pythia_card.dat']:
+                     'pgs_card.dat', 'pythia_card.dat', 'madspin_card.dat',
+                     'reweight_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
             except Exception:

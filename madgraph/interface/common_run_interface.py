@@ -596,7 +596,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if text == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|Herwig\+\+|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|MSTU|Begin Minpts|gridpack|ebeam1|BLOCK|DECAY|launch|madspin|set)', text, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -610,7 +610,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'pgs_card.dat'
         elif 'muon eta coverage' in text:
             return 'pgs_card.dat'
-        elif 'mstp' in text and not 'herwig++' in text:
+        elif 'mstp' in text and not 'b_stable' in text:
             return 'pythia_card.dat'
         elif 'begin minpts' in text:
             return 'plot_card.dat'
@@ -619,7 +619,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'run_card.dat'
         elif 'block' in text and 'decay' in text: 
             return 'param_card.dat'
-        elif 'herwig++' in text:
+        elif 'b_stable' in text:
             return 'shower_card.dat'
         elif 'decay' in text and 'launch' in text:
             return 'madspin_card.dat'
@@ -718,7 +718,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if os.path.exists(event_path+'.gz'):
                 os.system('gunzip -f %s.gz ' % event_path)
             else:
-                raise self.InvalidCmd, 'Events file %s does not exits' % event_path
+                raise self.InvalidCmd, 'Events file %s does not exist' % event_path
         
         self.update_status('Creating Plots for %s level' % mode, level = mode.lower())
         

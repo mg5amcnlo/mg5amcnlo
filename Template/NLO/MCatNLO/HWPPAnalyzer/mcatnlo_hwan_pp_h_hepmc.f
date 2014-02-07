@@ -249,12 +249,12 @@ C EFFECT, SO THROW THE EVENT AWAY
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-          IF(ID1.EQ.25.AND.IST.EQ.1)THEN
-            IFH=IFH+1
-            DO IJ=1,5
-	      PPH(IJ)=PHEP(IJ,IHEP)
-            ENDDO
-          ENDIF
+        IF(ID1.EQ.25)THEN
+          IFH=1
+          DO IJ=1,5
+            PPH(IJ)=PHEP(IJ,IHEP)
+          ENDDO
+        ENDIF
 C---FIND FINAL STATE HADRONS
         IF (IST.EQ.1 .AND. ABS(ID1).GT.100) THEN
           NN=NN+1

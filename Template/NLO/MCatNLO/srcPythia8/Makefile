@@ -63,10 +63,10 @@ endif
 %.o: %.cc
 	$(CXX) -c $< -fPIC $(INCLOPTION) -o $@
 
-Pythia8: $(FORFILE) \
-	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
+Pythia8: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
 	$(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8tohepmc.a
-	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) -I$(HEPMCLOCATION)/$(INCDIR) \
+	$(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
+        -I$(HEPMCLOCATION)/$(INCDIR) -I$(TOPDIR)/$(INCDIR) \
         $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o $@.exe $(FORFILE) \
 	-L$(PYTHIA8LOCATION)/$(LIBDIRARCH) -lpythia8 $(LIBLHAPDF) $(LIBGZIP) \
 	-lpythia8tohepmc -L$(HEPMCLOCATION)/$(LIBDIR) -lHepMC -lHepMCfio $(LIBGFORTRAN) \

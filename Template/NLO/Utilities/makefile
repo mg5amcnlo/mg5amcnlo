@@ -40,8 +40,11 @@ split_events : $(FILES) split_events.o
 sum_plots : sum_plots.o
 	$(FF) $^ -o $@
 
+uncertainties : uncertainties.o
+	$(FF) $^ -o $@
+
 clean:
 	@rm -f *.o
 	@rm -f check_events combine_plots compare_events merge_events plot_events \
-	plot_events_lhef select_events split_events sum_plots
+	plot_events_lhef select_events split_events sum_plots uncertainties
 	@rm -f LHEF.* res_wgt headfile

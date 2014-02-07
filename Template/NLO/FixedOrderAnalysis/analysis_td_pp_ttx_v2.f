@@ -10,7 +10,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
-      data cc/'     ',' Born'/
+      data cc/'     ','Born '/
       include 'dbook.inc'
       call inihist
       nwgt_analysis=nwgt
@@ -23,21 +23,21 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,2
       do kk=1,nwgt_analysis
         l=(kk-1)*16+(i-1)*8
-        call bookup(l+ 1,'total rate    '//weights_info(kk)//cc(i),
+        call bookup(l+ 1,'total rate    '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+ 2,'t rap         '//weights_info(kk)//cc(i),
+        call bookup(l+ 2,'t rap         '//cc(i)//weights_info(kk),
      &       0.2d0,-5d0,5d0)
-        call bookup(l+ 3,'tx rap        '//weights_info(kk)//cc(i),
+        call bookup(l+ 3,'tx rap        '//cc(i)//weights_info(kk),
      &       0.2d0,-5d0,5d0)
-        call bookup(l+ 4,'t-tx pair rap '//weights_info(kk)//cc(i),
+        call bookup(l+ 4,'t-tx pair rap '//cc(i)//weights_info(kk),
      &       0.1d0,-3d0,3d0)
-        call bookup(l+ 5,'m t-tx        '//weights_info(kk)//cc(i),
+        call bookup(l+ 5,'m t-tx        '//cc(i)//weights_info(kk),
      &       10d0,0d0,1000d0)
-        call bookup(l+ 6,'pt t          '//weights_info(kk)//cc(i),
+        call bookup(l+ 6,'pt t          '//cc(i)//weights_info(kk),
      &       4d0,0d0,400d0)
-        call bookup(l+ 7,'pt tx         '//weights_info(kk)//cc(i),
+        call bookup(l+ 7,'pt tx         '//cc(i)//weights_info(kk),
      &       4d0,0d0,400d0)
-        call bookup(l+ 8,'pt t-tx       '//weights_info(kk)//cc(i),
+        call bookup(l+ 8,'pt t-tx       '//cc(i)//weights_info(kk),
      &       2d0,0d0,200d0)
       enddo
       enddo

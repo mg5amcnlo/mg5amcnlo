@@ -18,7 +18,7 @@ C----------------------------------------------------------------------
       PARAMETER (PI=3.14159265358979312D0)
       integer j,kk,l
       character*5 cc(2)
-      data cc/'     ',' cuts'/
+      data cc/'     ','cuts '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -34,50 +34,50 @@ c
       do kk=1,nwgt_analysis
       do j=1,2
       l=(kk-1)*42+(j-1)*21
-      call mbook(l+ 1,'V pt      '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'V pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V pt      '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'V pt      '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
-      call mbook(l+ 3,'V log[pt] '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'V log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)
-      call mbook(l+ 4,'V y       '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'V y       '//cc(j)//weights_info(kk)
      &     ,0.2d0,-9.d0,9.d0)
-      call mbook(l+ 5,'V eta     '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'V eta     '//cc(j)//weights_info(kk)
      &     ,0.2d0,-9.d0,9.d0)
-      call mbook(l+ 6,'mV        '//weights_info(kk)//cc(j)
+      call mbook(l+ 6,'mV        '//cc(j)//weights_info(kk)
      &     ,bin,xmi,xms)
 c
-      call mbook(l+ 7,'lm pt      '//weights_info(kk)//cc(j)
+      call mbook(l+ 7,'lm pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 8,'lm pt      '//weights_info(kk)//cc(j)
+      call mbook(l+ 8,'lm pt      '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
-      call mbook(l+ 9,'lm log[pt] '//weights_info(kk)//cc(j)
+      call mbook(l+ 9,'lm log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)
-      call mbook(l+10,'lm eta     '//weights_info(kk)//cc(j)
+      call mbook(l+10,'lm eta     '//cc(j)//weights_info(kk)
      &     ,0.2d0,-9.d0,9.d0)
-      call mbook(l+11,'lp pt      '//weights_info(kk)//cc(j)
+      call mbook(l+11,'lp pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+12,'lp pt      '//weights_info(kk)//cc(j)
+      call mbook(l+12,'lp pt      '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
-      call mbook(l+13,'lp log[pt] '//weights_info(kk)//cc(j)
+      call mbook(l+13,'lp log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)
-      call mbook(l+14,'lp eta     '//weights_info(kk)//cc(j)
+      call mbook(l+14,'lp eta     '//cc(j)//weights_info(kk)
      &     ,0.2d0,-9.d0,9.d0)
 c
-      call mbook(l+15,'lmlp delta eta     '//weights_info(kk)//cc(j)
+      call mbook(l+15,'lmlp delta eta     '//cc(j)//weights_info(kk)
      $     ,0.2d0,-9.d0,9.d0)
-      call mbook(l+16,'lmlp azimt         '//weights_info(kk)//cc(j)
+      call mbook(l+16,'lmlp azimt         '//cc(j)//weights_info(kk)
      $     ,pi/20.d0,0.d0,pi)
-      call mbook(l+17,'lmlp log[pi-azimt] '//weights_info(kk)//cc(j)
+      call mbook(l+17,'lmlp log[pi-azimt] '//cc(j)//weights_info(kk)
      $     ,0.05d0,-4.d0,0.1d0)
-      call mbook(l+18,'lmlp inv m         '//weights_info(kk)//cc(j)
+      call mbook(l+18,'lmlp inv m         '//cc(j)//weights_info(kk)
      $     ,bin,xmi,xms)
-      call mbook(l+19,'lmlp pt            '//weights_info(kk)//cc(j)
+      call mbook(l+19,'lmlp pt            '//cc(j)//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+20,'lmlp log[pt]       '//weights_info(kk)//cc(j)
+      call mbook(l+20,'lmlp log[pt]       '//cc(j)//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 c
-      call mbook(l+21,'total'//weights_info(kk)//cc(j),1.d0,-1.d0,1.d0)
+      call mbook(l+21,'total'//cc(j)//weights_info(kk),1.d0,-1.d0,1.d0)
       enddo
       enddo
  999  END
