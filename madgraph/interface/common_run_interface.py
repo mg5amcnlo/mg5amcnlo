@@ -1953,7 +1953,46 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.complete_compute_widths(*args,**opts)
+
+
+    def help_asperge(self):
+        """Help associate to the asperge command"""
+        signal.alarm(0)
         
+        print '-- syntax: asperge [options]'
+        print '   Calling ASperGe for diagonalizes all the mass matrices in the model'
+        print '   This works only if the ASperGE module is part of the UFO model (a subdirectory)'
+        print '   If you specify some name after the commands (i.e. asperge m1 m2) then ASperGe will only'
+        print '   diagonalizes the associate mass matrices (here m1 and m2).'
+
+    def complete_asperge(self, *args, **opts):
+        signal.alarm(0) # avoid timer if any 
+        return # Not sure what to do here
+
+    def do_asperge(self, line):
+        """Running ASperGe"""
+
+        path = pjoin(self.me_dir,'bin','internal','ufomodel','ASperGe')
+        if not os.path.exists(path):
+            logger.error('ASperge is not detected for the current model, we therefore not running it.')
+            return
+        elif not os.path.exists(pjoin(path,'ASperGe')):
+            logger.info('ASperGe detected but not compiled. Running the compilation now')
+            try:
+                misc.compile(path)
+            except MadGraph5Error, error:
+                logger.error('''ASperGe fails to compile. Note that gsl need to be installed 
+     for this compilation to go trough. More information on how to install this package on
+     http://www.gnu.org/software/gsl/
+     Full compilation log is available at %s''' % pjoin(self.me_dir, 'ASperge_compilation.log'))
+                open(pjoin(self.me_dir, 'ASperge_compilation.log'),'w').write(str(error))
+                return
+                
+        opts = line.split()
+        card = pjoin(self.me_dir,'Cards', 'param_card.dat')
+        misc.call([path, card] + opts)
+
+
     def copy_file(self, path):
         """detect the type of the file and overwritte the current file"""
         
