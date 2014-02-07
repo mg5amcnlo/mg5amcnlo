@@ -2258,15 +2258,17 @@ C     charge is set 0. with QCD corrections, which is irrelevant
 
         #lines for the declarations
         firstlines = []
+        firstlines.append('integer ifr')
         firstlines.append('integer nborns\nparameter (nborns=%d)' % len(me_list))
         firstlines.append('integer lmaxconfigsb_used\nparameter (lmaxconfigsb_used=%d)' % max(iconfig_list))
         firstlines.append('integer max_branchb_used\nparameter (max_branchb_used=%d)' % -max_leg_number)
         firstlines.append('integer mapconfig_b(nborns, 0 : lmaxconfigsb_used)')
+        firstlines.append('integer iforest_b(nborns, 2, -max_branchb_used:-1, lmaxconfigsb_used)')
         firstlines.append('integer sprop_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
         firstlines.append('integer tprid_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('double precision pmass_d(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('double precision pwidth_d(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
-        firstlines.append('integer pow_d(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('double precision pmass_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('double precision pwidth_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
+        firstlines.append('integer pow_b(nborns, -max_branchb_used:-1, lmaxconfigsb_used)')
         firstlines.append('logical gforceBW_B(nborns, -max_branchb_used : -1, lmaxconfigsb_used)')
 
     

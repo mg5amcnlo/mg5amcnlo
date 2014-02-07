@@ -27,7 +27,7 @@ c MAPCONFIG())
       include 'born_configs_and_props_info.inc'
       include "pmass.inc"
 c     
-      if (max_branchib_used.gt.max_branch) then
+      if (max_branchb_used.gt.max_branch) then
          write (*,*) 'ERROR in born_configs_and_props_inc_chooser:'/
      $        /' increase max_branch',max_branch,max_branchb_used
          stop
@@ -48,7 +48,7 @@ c information.
          if (i.ne.0) then
             do j=-max_branchb_used,-1
                do k=1,2
-                  iforest(k,j,i)=IFOREST_D(NBORN,k,j,i)
+                  iforest(k,j,i)=IFOREST_B(NBORN,k,j,i)
                enddo
                sprop(j,i)=SPROP_B(NBORN,j,i)
                tprid(j,i)=TPRID_B(NBORN,j,i)
