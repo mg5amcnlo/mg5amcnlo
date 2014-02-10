@@ -3928,7 +3928,7 @@ class Channel(base_objects.Diagram):
         cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
-                                        Gamma5\(%(3)s\)|
+                                        Gamma5\(%(2)s\)|
                                         C\(%(2)s\)|
                                         Epsilon\(%(4)s\)|
                                         Metric\(%(2)s\)|
