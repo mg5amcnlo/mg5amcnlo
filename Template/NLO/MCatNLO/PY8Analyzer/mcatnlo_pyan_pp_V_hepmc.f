@@ -11,7 +11,7 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
+      SUBROUTINE PYABEG(nnn,wwwi)
 C     USER'S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -19,22 +19,22 @@ C----------------------------------------------------------------------
       real * 8 xm0,gam,xmlow,xmupp,bin
       real * 8 xmi,xms,pi
       PARAMETER (PI=3.14159265358979312D0)
-      integer j,kk,l,jpr
+      integer j,kk,l,jpr,i,nnn
       character*5 cc(2)
       data cc/'     ','     '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
 c
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       nwgt_analysis=nwgt
       xmi=40.d0
       xms=120.d0
@@ -42,15 +42,15 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do j=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*10+(j-1)*5
-      call mbook(l+ 1,'V pt     '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'V pt     '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V log pt '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'V log pt '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.d0,5.d0)
-      call mbook(l+ 3,'V y      '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'V y      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 4,'V eta    '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'V eta    '//cc(j)//weights_info(kk)
      &     ,0.25d0,-9.d0,9.d0)
-      call mbook(l+ 5,'mV       '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'mV       '//cc(j)//weights_info(kk)
      &     ,bin,xmi,xms)
       enddo
       enddo
@@ -61,7 +61,7 @@ C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,KK,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -69,7 +69,7 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
-      DO I=1,NPL
+      DO I=1,NPL              
  	CALL MFINAL3(I)             
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
@@ -90,7 +90,7 @@ C
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
+      SUBROUTINE PYANAL(nnn,xww)
 C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -101,7 +101,7 @@ C----------------------------------------------------------------------
      # PTDCE,THDCE,ETADCE,PTDCNU,THDCNU,ETADCNU,ETAV,GETPSEUDORAP
       INTEGER ICHSUM,ICHINI,IHEP,JPR,IDENT,IFV,IST,ID,ID1,IHRD,IV,
      # IJ,IE,INU,J
-      LOGICAL DIDSOF,TEST1,TEST2,FLAG
+      LOGICAL DIDSOF,FLAG
       REAL*8 PI
       PARAMETER (PI=3.14159265358979312D0)
       REAL*8 TINY
@@ -111,14 +111,15 @@ C----------------------------------------------------------------------
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
@@ -141,9 +142,7 @@ C EFFECT, SO THROW THE EVENT AWAY
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-        TEST1=ID1.EQ.IDENT
-        TEST2=IST.EQ.1.OR.IST.EQ.11
-        IF(TEST1.AND.TEST2)THEN
+        IF(ID1.EQ.IDENT)THEN
           IV=IHEP
           IFV=IFV+1
           DO IJ=1,5
@@ -179,18 +178,17 @@ C
       function getrapidity(en,pl)
       implicit none
       real*8 getrapidity,en,pl,tiny,xplus,xminus,y
-      parameter (tiny=1.d-5)
-c
+      parameter (tiny=1.d-8)
       xplus=en+pl
       xminus=en-pl
       if(xplus.gt.tiny.and.xminus.gt.tiny)then
-        if( (xplus/xminus).gt.tiny )then
-          y=0.5d0*log( xplus/xminus )
-        else
-          y=sign(1.d0,pl)*1.d8
-        endif
-      else
-        y=sign(1.d0,pl)*1.d8
+         if( (xplus/xminus).gt.tiny.and.(xminus/xplus).gt.tiny)then
+            y=0.5d0*log( xplus/xminus  )
+         else
+            y=sign(1.d0,pl)*1.d8
+         endif
+      else 
+         y=sign(1.d0,pl)*1.d8
       endif
       getrapidity=y
       return
@@ -287,4 +285,3 @@ c$$$         CALL HWUBPR
       ENDDO
       return
       end
-

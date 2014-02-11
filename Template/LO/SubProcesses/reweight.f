@@ -274,12 +274,22 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(2,imo)=ipart(2,ida2)
         endif
       else if(idmo.eq.21)then
+      write(*,*) '277',ida1, ida2,isjet(ida1),isjet(ida2)
 c     gluon -> quark anti-quark: use both, but take hardest as 1
-        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+c     BUT if only one is a jet
+        if(isjet(ida1).and..not.isjet(ida2)) then
+          ipart(1,imo)=ipart(1,ida1)
+          ipart(2,imo)=ipart(1,ida2)
+        else if(isjet(ida2).and..not.isjet(ida1)) then
+          ipart(1,imo)=ipart(1,ida2)
+          ipart(2,imo)=ipart(1,ida1)        
+        else if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+          write(*,*) '1 wins'
           ipart(1,imo)=ipart(1,ida1)
           ipart(2,imo)=ipart(1,ida2)
         else
+          write(*,*) '2 wins'
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(1,ida1)
         endif

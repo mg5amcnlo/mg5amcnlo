@@ -109,6 +109,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  15  = bwcutoff
 #***********************************************************************
 # Cuts on the jets                                                     *
+# Jet clustering is performed by FastJet.
 # When matching to a parton shower, these generation cuts should be    *
 # considerably softer than the analysis cuts.                          *
 # (more specific cuts can be specified in SubProcesses/cuts.f)         *

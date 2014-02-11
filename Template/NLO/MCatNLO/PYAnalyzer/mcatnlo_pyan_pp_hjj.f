@@ -20,7 +20,7 @@ C----------------------------------------------------------------------
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
       character*8 cc(2)
-      data cc/'        ',' vbfcuts'/
+      data cc/'        ','vbfcuts '/
       real*8 pi
       PARAMETER (PI=3.14159265358979312D0)
       integer i,kk,l
@@ -37,129 +37,129 @@ c
       do i=1,2
         l=(kk-1)*108+(i-1)*54
          call mbook(l+  1,'total '
-     &       //weights_info(kk)//cc(i),1.0d0,0.5d0,5.5d0)
+     &       //cc(i)//weights_info(kk),1.0d0,0.5d0,5.5d0)
 
          call mbook(l+  2,'Higgs pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+  3,'Higgs pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  4,'Higgs logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+  5,'Higgs eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+  6,'Higgs y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+  7,'j1 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+  8,'j1 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  9,'j1 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 10,'j1 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 11,'j1 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 12,'j2 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 13,'j2 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 14,'j2 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 15,'j2 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 16,'j2 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 17,'j3 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 18,'j3 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 19,'j3 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 20,'j3 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 21,'j3 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 22,'H+j1 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 23,'H+j1 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 24,'H+j1 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 25,'H+j1 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 26,'H+j1 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 27,'j1+j2 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 28,'j1+j2 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 29,'j1+j2 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 30,'j1+j2 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 31,'j1+j2 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 32,'syst pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 33,'syst pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 34,'syst logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 35,'syst eta '
-     &       //weights_info(kk)//cc(i),0.4d0,-10.d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.4d0,-10.d0,10.d0)
          call mbook(l+ 36,'syst y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 37,'Dphi H-j1 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
          call mbook(l+ 38,'Dphi H-j2 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
          call mbook(l+ 39,'Dphi j1-j2 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
 
          call mbook(l+ 40,'DR H-j1 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
          call mbook(l+ 41,'DR H-j2 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
          call mbook(l+ 42,'DR j1-j2 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
 
          call mbook(l+ 43,'mj1j2 '
-     &       //weights_info(kk)//cc(i),60.0d0,0d0,3000.d0)
+     &       //cc(i)//weights_info(kk),60.0d0,0d0,3000.d0)
 
 c Nason-Oleari plots (hep-ph/0911.5299)
          call mbook(l+ 44,'|yj1-yj2| '
-     &       //weights_info(kk)//cc(i),0.4d0,0.d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.4d0,0.d0,10.d0)
          call mbook(l+ 45,'yj3_rel '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 46,'njets '
-     &       //weights_info(kk)//cc(i),1.d0,-0.5d0,9.5d0)
+     &       //cc(i)//weights_info(kk),1.d0,-0.5d0,9.5d0)
          call mbook(l+ 47,'ptrel_j1 '
-     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+     &       //cc(i)//weights_info(kk),4.d0,0.d0,200.d0)
          call mbook(l+ 48,'ptrel_j2 '
-     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+     &       //cc(i)//weights_info(kk),4.d0,0.d0,200.d0)
          call mbook(l+ 49,'P-veto '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
          call mbook(l+ 50,'jveto pT '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
          call mbook(l+ 51,'jveto pT '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((2d0*vetomax-vetomin)/dble(nbinveto)),
      1    vetomin,2d0*vetomax)
          call mbook(l+ 52,'jveto logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 53,'jveto eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 54,'jveto y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
       enddo
       enddo

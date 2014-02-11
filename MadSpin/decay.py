@@ -3164,7 +3164,7 @@ class decay_all_events(object):
             os.system('lsof -p %s' % external.pid)
             return ' '.join(prod_values.split()[-1*(nb_output-1):])
         
-        if len(self.calculator) > 100:
+        if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than 100 calculator. Perform cleaning')
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()

@@ -1250,8 +1250,11 @@ def check_valid_param_card(path, restrictpath=None):
 if '__main__' == __name__:
 
 
-    make_valid_param_card('./Cards/param_card.dat', './Source/MODEL/param_card_rule.dat', 
-                           outputpath='tmp1.dat')    
-    convert_to_slha1('tmp1.dat' , './param_card.dat')
+    #make_valid_param_card('./Cards/param_card.dat', './Source/MODEL/param_card_rule.dat', 
+    #                       outputpath='tmp1.dat')
+    import sys    
+    args = sys.argv
+    sys.path.append(os.path.dirname(__file__))
+    convert_to_slha1(args[1] , args[2])
 
                          

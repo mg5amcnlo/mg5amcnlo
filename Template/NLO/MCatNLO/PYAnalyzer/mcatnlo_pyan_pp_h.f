@@ -254,15 +254,15 @@ C EFFECT, SO THROW THE EVENT AWAY
         IST =K(IHEP,1)
         ID1 =K(IHEP,2)
         IORI=K(IHEP,3)
+        IF(ID1.EQ.25)THEN
+          IFH=1
+          DO IJ=1,5
+            PPH(IJ)=P(IHEP,IJ)
+          ENDDO
+        ENDIF
         IF (IST.LE.10) THEN
           CALL VVSUM(4,PIHEP,PSUM,PSUM)
           ICHSUM=ICHSUM+PYCHGE(ID1)
-          IF(ID1.EQ.25)THEN
-            IFH=IFH+1
-            DO IJ=1,5
-              PPH(IJ)=P(IHEP,IJ)
-            ENDDO
-          ENDIF
         ENDIF
 C---FIND FINAL STATE HADRONS
         IF (IST.LE.10 .AND. ABS(ID1).GT.100) THEN

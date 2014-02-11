@@ -66,6 +66,8 @@ c negative number of events
      # xmax_wgt_resc_pdf(0:maxPDFs),
      # xmin_wgt_resc_scale(maxscales,maxscales),
      # xmin_wgt_resc_pdf(0:maxPDFs)
+      integer istep
+      double precision percentage
       include 'dbook.inc'
 
       call setcharges(charges)
@@ -494,8 +496,12 @@ c Showered LH files only contain final-state particles.
 c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
 
- 111     continue
+         percentage=i*100d0/maxevt
+         istep=maxevt/10
+         if(mod(i,istep).eq.0.or.i.eq.maxevt)
+     &        write(*,*)'Processed',int(percentage),'% of the file'
 
+ 111     continue
       enddo
 
       open(unit=99,file='SCALUP.top',status='unknown')

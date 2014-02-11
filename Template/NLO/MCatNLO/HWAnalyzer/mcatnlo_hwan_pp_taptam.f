@@ -28,13 +28,13 @@ C----------------------------------------------------------------------
       do i=1,1
       do kk=1,nwgt_analysis
         l=(kk-1)*8+(i-1)*4
-        call mbook(l+1,'total rate  '//weights_info(kk)//cc(i),
+        call mbook(l+1,'total rate  '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call mbook(l+2,'ta+ta- mass '//weights_info(kk)//cc(i),
+        call mbook(l+2,'ta+ta- mass '//cc(i)//weights_info(kk),
      &       5d0,0d0,200d0)
-        call mbook(l+3,'ta+ta- rap  '//weights_info(kk)//cc(i),
+        call mbook(l+3,'ta+ta- rap  '//cc(i)//weights_info(kk),
      &       0.25d0,-5d0,5d0)
-        call mbook(l+4,'ta+ta- pt   '//weights_info(kk)//cc(i),
+        call mbook(l+4,'ta+ta- pt   '//cc(i)//weights_info(kk),
      &       20d0,0d0,400d0)
       enddo
       enddo
