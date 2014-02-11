@@ -75,7 +75,6 @@ c
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
@@ -91,11 +90,11 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+ 	CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do i=1,2
@@ -124,7 +123,6 @@ C
       enddo
       CLOSE(99)
       END
-
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL

@@ -176,12 +176,12 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTVBF.top',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+ 	CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do i=1,2
@@ -365,8 +365,8 @@ C EFFECT, SO THROW THE EVENT AWAY
            ENDDO
         ENDIF
 C FIND THE HIGGS
-        IF(ID.EQ.25.AND.IST.EQ.1)THEN
-           NH=NH+1
+        IF(ID.EQ.25)THEN
+           NH=1
            IH=IHEP
         ENDIF
   100 CONTINUE

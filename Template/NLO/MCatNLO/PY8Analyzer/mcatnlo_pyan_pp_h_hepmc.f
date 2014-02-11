@@ -236,8 +236,8 @@ C INITIALISE
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('PYANAL',111)
-        GOTO 999
+         WRITE(*,*)'WARNING 502 IN PYANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
@@ -268,7 +268,7 @@ C---FIND FINAL STATE HADRONS
         ENDIF
  100  CONTINUE
       IF(IFH.NE.1)THEN
-         CALL HWWARN('PYANAL',503)
+         WRITE(*,*)'WARNING 503 IN PYANAL'
          GOTO 999
       ENDIF
 C---CLUSTER THE EVENT
@@ -411,82 +411,3 @@ c
       getpseudorap=eta
       return
       end
-
-
-
-
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end
-

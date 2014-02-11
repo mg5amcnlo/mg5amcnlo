@@ -52,6 +52,7 @@ c
       enddo
       enddo
  999  END
+
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
@@ -63,12 +64,12 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTSVB.TOP',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+ 	CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do i=1,1
       do kk=1,nwgt_analysis
@@ -161,21 +162,16 @@ C EFFECT, SO THROW THE EVENT AWAY
           CALL VVSUM(4,PIHEP,PSUM,PSUM)
           ICHSUM=ICHSUM+pychge(ID1)
         ENDIF
-        TEST1=IORI.EQ.0
-        TEST2=ID1.EQ.IDENT
-        IF(TEST1.AND.TEST2)IV0=IHEP
-        TEST1=IORI.EQ.IV0
-        IF(TEST1.AND.TEST2)THEN
+        IF(ID1.EQ.IDENT)THEN
           IV=IHEP
-          IFV=IFV+1
+          IFV=1
           DO IJ=1,5
              PPV(IJ)=P(IHEP,ij)
           ENDDO
         ENDIF
   100 CONTINUE
-      IF(IFV.EQ.0) THEN
-         INOBOSON=INOBOSON+1
-         WRITE(*,*)'WARNING 503 IN PYANAL: NO WEAK BOSON ',INOBOSON
+      IF(IFV.NE.1) THEN
+         WRITE(*,*)'WARNING 503 IN PYANAL'
          GOTO 999
       ENDIF
 C CHECK MOMENTUM AND CHARGE CONSERVATION
@@ -185,10 +181,6 @@ C CHECK MOMENTUM AND CHARGE CONSERVATION
       ENDIF
       IF (ICHSUM.NE.ICHINI) THEN
          WRITE(*,*)'WARNING 113 IN PYANAL'
-         GOTO 999
-      ENDIF
-      IF(IFV.GT.1) THEN
-         WRITE(*,*)'WARNING 55 IN PYANAL'
          GOTO 999
       ENDIF
 C FILL THE HISTOS

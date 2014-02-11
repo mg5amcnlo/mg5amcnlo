@@ -112,7 +112,6 @@ C----------------------------------------------------------------------
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
 C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
@@ -125,8 +124,8 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTHG.TOP',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
  	CALL MFINAL3(I+NPL)
@@ -278,7 +277,7 @@ C---FIND FINAL STATE HADRONS
  100  CONTINUE
       IF(IFH.NE.1)THEN
          WRITE(*,*)'WARNING 501 IN PYANAL'
-         STOP
+         GOTO 999
       ENDIF
 C CHECK MOMENTUM AND CHARGE CONSERVATION
       IF (VDOT(3,PSUM,PSUM).GT.1.E-4*P(1,4)**2) THEN
