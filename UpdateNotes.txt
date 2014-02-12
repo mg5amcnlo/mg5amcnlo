@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.1.0(xx/xx/14) OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
+
 2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)
                 OM: Fix the bug that the shower_card.dat was wrongly identified as a pythia_card.
