@@ -566,6 +566,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             question += '   - use the \'set\' command to modify a parameter directly.\n'
             question += '     The set option works only for param_card and run_card.\n'
             question += '     Type \'help set\' for more information on this command.\n'
+            question += '   - call an external program (ASperGE/MadWidth/...).\n'
+            question += '     Type \'help\' for the list of available command\n'
         else:
             question += ' you can also\n'
             question += '   - enter the path to a valid card.\n'
