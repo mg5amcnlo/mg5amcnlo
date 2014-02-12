@@ -257,7 +257,8 @@ class AllResults(dict):
             for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
-                self.current.event_path = pjoin(main_path,'Events') 
+                self.current.event_path = pjoin(main_path,'Events')
+                self.current.me_dir = main_path 
                 if i==0:
                     self.current.update_status()
                 else:

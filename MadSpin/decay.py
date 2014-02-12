@@ -2529,9 +2529,9 @@ class decay_all_events(object):
                         result = re.split('([/$@]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
-                            commandline+="add process %s j %s%s ;" % (process, split, rest)
+                            commandline+="add process %s p %s%s ;" % (process, split, rest)
                         else:
-                            commandline +='add process %s j;' % process
+                            commandline +='add process %s p;' % process
                     else:
                         raise Exception('Madspin: only QCD NLO corrections implemented.')
                 
