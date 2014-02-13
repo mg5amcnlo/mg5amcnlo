@@ -2525,7 +2525,7 @@ class decay_all_events(object):
                     # define the list of particles that are needed for the radiateion
                     pert = fks_common.find_pert_particles_interactions(
                          mgcmd._curr_model,pert_order = order)['soft_particles']
-                    mgcmd.exec_cmd("define pert_%s = %s" % (order, ' '.join(map(str,pert)) ) )
+                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
                     
                     # check if we have to increase by one the born order
                     if '%s=' % order in process:
@@ -2611,26 +2611,36 @@ class decay_all_events(object):
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s, %s %s;" % (process, decay_text, proc_nb)
-                if not order.startswith('virt='):
-                    if 'QCD' in order:
-                        if 'QCD=' in process:
-                            result=re.split(' ',process)
-                            process=''
-                            for r in result:
-                                if 'QCD=' in r:
-                                    ior=re.split('=',r)
-                                    r='QCD=%i' % (int(ior[1])+1)
-                                process=process+r+' '
-                        result = re.split('([/$]|\w+=\w+)', process, 1)
-                        if len(result) ==3:
-                            process, split, rest = result
-                            commandline+="add process %s j %s%s , %s %s ;" % (process, split, rest, decay_text, proc_nb)
-                        else:
-                            commandline +='add process %s j, %s; %s' % (process, decay_text, proc_nb)
+                if not order:
+                    continue
+                elif not order.startswith('virt='):
+                    if '=' in order:
+                        order = order.split('=',1)[1]
+                    # define the list of particles that are needed for the radiateion
+                    pert = fks_common.find_pert_particles_interactions(
+                         mgcmd._curr_model,pert_order = order)['soft_particles']
+                    commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
+                    
+                    # check if we have to increase by one the born order
+                    if '%s=' % order in process:
+                        result=re.split(' ',process)
+                        process=''
+                        for r in result:
+                            if '%s=' % order in r:
+                                ior=re.split('=',r)
+                                r='QCD=%i' % (int(ior[1])+1)
+                            process=process+r+' '
+                    #handle special tag $ | / @
+                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                    if len(result) ==3:
+                        process, split, rest = result
+                        commandline+="add process %s pert_%s %s%s , %s %s ;" % \
+                              (process, order, split, rest, decay_text, proc_nb)
                     else:
-                        raise Exception('Madspin not implemented NLO corrections.')
-                
-        
+                        commandline +='add process %s pert_%s, %s; %s' % \
+                                           (process, order, decay_text, proc_nb)
+                    
+                        
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
         mgcmd.exec_cmd(commandline, precmd=True)
