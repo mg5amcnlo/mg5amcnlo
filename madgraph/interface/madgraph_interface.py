@@ -3625,6 +3625,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if ids:
                     all_ids.append(ids)
                 ids = []
+            elif part_name.isdigit() or (part_name.startswith('-') and part_name[1:].isdigit()):
+                ids.append([int(part_name)])
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
         all_ids.append(ids)
