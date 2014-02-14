@@ -2012,7 +2012,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name = args[start+1]
             value = args[start+2:]
             self.setM(block, name, value)
-            self.mw_card.write(pjoin(self.me_dir,'Cards','Madweight_card.dat'))        
+            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))        
         
         # MadWeight_card NO Block name -----------------------------------------
         elif self.has_mw and args[start] in self.mw_vars \
@@ -2042,7 +2042,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name = args[start+1]
             value = args[start+2]
             self.setM(block, name, value)
-            self.mw_card.write(pjoin(self.me_dir,'Cards','Madweight_card.dat'))    
+            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
         #INVALID --------------------------------------------------------------
         else:
             logger.warning('invalid set command %s ' % line)
