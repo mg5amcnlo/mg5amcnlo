@@ -433,7 +433,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             for dirname in self.MWparam.MW_listdir:
                 nb_job = self.MWparam.nb_event_MW[dirname]
                 if self.MWparam['mw_run']['nb_event_by_node'] > 1:
-                    nb_job = (nb_job+1) // self.MWparam['mw_run']['nb_event_by_node']
+                    nb_job = 1+ (nb_job-1) // self.MWparam['mw_run']['nb_event_by_node']
                                     
                 for event_sample in range(nb_job):
                     self.submit_job(dirname, nb_card, event_sample)        
