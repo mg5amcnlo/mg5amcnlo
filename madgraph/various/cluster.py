@@ -1502,7 +1502,7 @@ class SLURMCluster(Cluster):
     name = 'slurm'
     job_id = 'SLURM_JOBID'
     idle_tag = ['Q','PD','S','CF']
-    running_tag = ['R']
+    running_tag = ['R', 'CG']
     complete_tag = ['C']
 
     @multiple_try()

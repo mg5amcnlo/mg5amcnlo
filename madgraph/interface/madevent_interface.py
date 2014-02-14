@@ -2694,6 +2694,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             nb_event = pat.search(output).groups()[0]
         except AttributeError:
             time.sleep(10)
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
             try:
                 nb_event = pat.search(output).groups()[0]
             except AttributeError:
