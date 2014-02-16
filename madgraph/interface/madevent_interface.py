@@ -2162,6 +2162,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             else:
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+            if self.run_card['use_syst'] in self.true:
+                logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
+            
         logger.info(" " )
 
     def print_results_in_file(self, data, path, mode='w'):
