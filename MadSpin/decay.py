@@ -1293,13 +1293,12 @@ class width_estimate(object):
         if to_decay:
             logger.info('We need to recalculate the branching fractions')
             if hasattr(self.model.get('particles')[0], 'partial_widths'):
-                logger.debug('using the compute_width module of madevent')
-                # use FR to get all partial widths                                      
-                # set the br to partial_width/total_width
-                self.launch_width_evaluation(to_decay, mgcmd) 
+                logger.info('using the FeynRules formula present in the model (arXiv:1402.1178)')
             else:
-                logger.info('compute_width module not available, use numerical estimates instead ')
-                self.extract_br_from_width_evaluation(to_decay)
+                logger.info('Using MadWidth (arXiv:1402.1178)')
+                #self.extract_br_from_width_evaluation(to_decay)
+            self.launch_width_evaluation(to_decay, mgcmd) 
+
        
         return self.br
 
@@ -1444,9 +1443,11 @@ class width_estimate(object):
     def extract_br_from_width_evaluation(self, to_decay):
         """ use MadGraph5_aMC@NLO to generate me's for res > all all  
         """
+        raise DeprecationWarning
+
         if os.path.isdir(pjoin(self.path_me,"width_calculator")):
             shutil.rmtree(pjoin(self.path_me,"width_calculator"))
-            
+        
         assert not os.path.exists(pjoin(self.path_me, "width_calculator"))
         
         path_me = self.path_me 
@@ -1562,11 +1563,16 @@ class width_estimate(object):
         
         self.compute_widths(model, argument)
         self.extract_br_from_card(pjoin(self.path_me, 'param_card.dat'))
+        self.banner['slha'] = open(pjoin(self.path_me, 'param_card.dat')).read()
+        if hasattr(self.banner,'param_card'):
+            del self.banner.param_card
+        self.banner.charge_card('param_card')
         return      
           
     def compute_widths(self, model, opts):
-                
+        
         from madgraph.interface.master_interface import MasterCmd
+        import madgraph.iolibs.helas_call_writers as helas_call_writers
         cmd = MasterCmd()
         #self.define_child_cmd_interface(cmd, interface=False)
         cmd.exec_cmd('set automatic_html_opening False --no_save')
@@ -1580,8 +1586,10 @@ class width_estimate(object):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        
-        cmd.exec_cmd(line, model=model)
+        cmd.exec_cmd('import model %s' % model.get('name'))
+#        cmd._curr_model = model
+#        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
+        cmd.exec_cmd(line)
         #self.child = None
         del cmd                                
 
@@ -2714,7 +2722,7 @@ class decay_all_events(object):
         #self.channel_br = width.get_BR_for_each_decay(self.decay_processes, 
         #                                    self.mgcmd._multiparticles)
         self.width_estimator = width
-        
+        self.banner.param_card = width.banner.param_card
         return width    
 
 

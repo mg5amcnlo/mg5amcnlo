@@ -3903,7 +3903,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
-
                 #check if the decay is present or not:
                 if tuple(child) not in decay_table.keys():
                     to_remove.append(amp)
@@ -5775,7 +5774,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
 
         data = model.set_parameters_and_couplings(opts['path'])
 
-
         # find UFO particles linked to the require names.
         skip_2body = True
         decay_info = {}
@@ -5817,12 +5815,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             if float(opts['body_decay']) == 2:
                 return
 
-
-
         #
         # add info from decay module
         #
-
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()
