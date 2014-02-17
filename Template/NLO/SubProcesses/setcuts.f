@@ -429,11 +429,11 @@ c     difference between the mother and the sister masses. (3rd argument
 c     is '-1', because this alternative mass is SMALLER than the
 c     resonance mass).
                         masslow(itree(k,j))=min(masslow(itree(k,j)),
-     &                       masslow(j)-xm(itree(3-k,j))) ! mass difference
+     &                       max(masslow(j)-xm(itree(3-k,j)),0d0)) ! mass difference
                         widthlow(itree(k,j))=max(widthlow(itree(k,j)),
      &                       widthlow(j)+xw(itree(3-k,j))) ! sum of widths
                         if (pwidth(itree(k,j),iconfig).eq.0d0 .or.
-     $                       masslow(itree(k,j)).gt.pmass(itree(k,j)
+     $                       masslow(itree(k,j)).ge.pmass(itree(k,j)
      $                       ,iconfig)) cycle
                         cBW_FKS_mass(iFKS,itree(k,j),-1)=
      $                       masslow(itree(k,j))
