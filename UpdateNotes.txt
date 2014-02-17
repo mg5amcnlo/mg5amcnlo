@@ -2,6 +2,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.1.0(xx/xx/14) OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
                 OM: Fix a bug leading to a crash with some decay syntax. i.e., p p > t t~, (t > w+ b), (t~ >w- b~)
+                RF: Improve the handling of conflicting Breit-Wigners at NLO
 
 2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)

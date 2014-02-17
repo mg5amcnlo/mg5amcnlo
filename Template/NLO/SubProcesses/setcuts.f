@@ -171,7 +171,8 @@ c
       common/ctau_lower_bound/tau_Born_lower_bound
      &     ,tau_lower_bound_resonance,tau_lower_bound
 c BW stuff
-      double precision mass_min(-nexternal:nexternal)
+      double precision mass_min(-nexternal:nexternal),masslow(
+     $     -nexternal:-1),widthlow(-nexternal:-1)
       integer cBW_FKS_level_max(fks_configs),
      &     cBW_FKS(fks_configs,-nexternal:-1),
      &     cBW_FKS_level(fks_configs,-nexternal:-1)
@@ -380,6 +381,8 @@ c mass of the BW
                cBW_FKS_width(iFKS,i,1)=0d0
                cBW_FKS_mass(iFKS,i,-1)=0d0
                cBW_FKS_width(iFKS,i,-1)=0d0
+               masslow(i)=9d99
+               widthlow(i)=0d0
                if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
                mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
                if (xm(i).lt.mass_min(i)) then
@@ -388,7 +391,8 @@ c mass of the BW
      $                 ,xm(i),mass_min(i)
                   stop
                endif
-               if (pmass(i,iconfig).lt.xm(i)) then
+               if (pmass(i,iconfig).lt.xm(i) .and.
+     $              pwidth(i,iconfig).gt.0d0) then
 c     Possible conflict in BW
                   if (pmass(i,iconfig).lt.mass_min(i)) then
 c     Resonance can never go on-shell due to the kinematics of the event
@@ -407,29 +411,35 @@ c     alternative mass is LARGER than the resonance mass).
                      cBW_FKS_width(iFKS,i,1)=xw(i)
                   endif
 c     set the daughters also as conflicting (recursively)
+                  masslow(i)=pmass(i,iconfig)
+                  widthlow(i)=pwidth(i,iconfig)
                   do j=i,-1
-                     if (cBW_FKS(iFKS,j).ne.0) then
-                        do k=1,2 ! loop over the 2 daughters
-                           if (itree(k,j).lt.0) then
-                              if(cBW_FKS(iFKS,itree(k,j)).ne.2) then
-                                 cBW_FKS(iFKS,itree(k,j))=1
-                                 cBW_FKS_level(iFKS,itree(k,j))=
-     &                                cBW_FKS_level(iFKS,j)+1
-                                 cBW_FKS_level_max(iFKS)=
-     $                                max(cBW_FKS_level_max(iFKS)
-     $                                ,cBW_FKS_level(iFKS,itree(k,j)))
+                     if (cBW_FKS(iFKS,j).eq.0) cycle
+                     do k=1,2   ! loop over the 2 daughters
+                        if (itree(k,j).ge.0) cycle
+                        if (cBW_FKS(iFKS,itree(k,j)).eq.2) cycle
+                        cBW_FKS(iFKS,itree(k,j))=1
+                        cBW_FKS_level(iFKS,itree(k,j))=
+     $                       cBW_FKS_level(iFKS,j)+1
+                        cBW_FKS_level_max(iFKS)=
+     $                       max(cBW_FKS_level_max(iFKS)
+     $                       ,cBW_FKS_level(iFKS,itree(k,j)))
 c     Set here the mass (and width) of the alternative mass; it's the
 c     difference between the mother and the sister masses. (3rd argument
 c     is '-1', because this alternative mass is SMALLER than the
 c     resonance mass).
-                                 cBW_FKS_mass(iFKS,itree(k,j),-1)=
-     &                                pmass(j,iconfig)-xm(itree(3-k,j)) ! mass difference
-                                 cBW_FKS_width(iFKS,itree(k,j),-1)=
-     &                                pwidth(j,iconfig)+xw(itree(3-k,j)) ! sum of widths
-                              endif
-                           endif
-                        enddo
-                     endif
+                        masslow(itree(k,j))=min(masslow(itree(k,j)),
+     &                       masslow(j)-xm(itree(3-k,j))) ! mass difference
+                        widthlow(itree(k,j))=max(widthlow(itree(k,j)),
+     &                       widthlow(j)+xw(itree(3-k,j))) ! sum of widths
+                        if (pwidth(itree(k,j),iconfig).eq.0d0 .or.
+     $                       masslow(itree(k,j)).gt.pmass(itree(k,j)
+     $                       ,iconfig)) cycle
+                        cBW_FKS_mass(iFKS,itree(k,j),-1)=
+     $                       masslow(itree(k,j))
+                        cBW_FKS_width(iFKS,itree(k,j),-1)=
+     $                       widthlow(itree(k,j))
+                     enddo
                   enddo
                else
 c     Normal Breit-Wigner
