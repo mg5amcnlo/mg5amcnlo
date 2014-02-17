@@ -3705,7 +3705,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not line.strip():
                 break
             index_par = line.find(')')
-            # sepcial cases: parenthesis but no ,
+            # special cases: parenthesis but no , => remove the paranthesis!
             if line.lstrip()[0] == '(' and index_par !=-1 and \
                                                     not ',' in line[:index_par]:
                 par_start = line.find('(')
