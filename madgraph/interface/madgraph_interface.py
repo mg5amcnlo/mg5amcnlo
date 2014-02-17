@@ -5742,7 +5742,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         warning_text = """Be carefull automatic computation of the width is
 ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         logger.warning(warning_text)
-
+        self.change_principal_cmd('MadGraph')
         if not model:
             modelname = self._curr_model['name']
             with misc.MuteLogger(['madgraph'], ['INFO']):
