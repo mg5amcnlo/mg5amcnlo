@@ -1295,7 +1295,7 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp']:
+                     ['madevent', 'standalone', 'standalone_cpp', 'matchbox']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1445,6 +1445,11 @@ This will take effect only in a NEW terminal
                                                name_dir(i))
         elif self._export_format == 'standalone_cpp':
             name_dir = lambda i: 'PROC_SA_CPP_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format == 'matchbox':
+            name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -1990,7 +1995,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         forbidden_names = ['MadGraphII', 'Template', 'pythia-pgs', 'CVS',
                             'Calculators', 'MadAnalysis', 'SimpleAnalysis',
                             'mg5', 'DECAY', 'EventConverter', 'Models',
-                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha']
+                            'ExRootAnalysis', 'HELAS', 'Transfer_Fct', 'aloha',
+                            'matchbox']
 
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
@@ -2305,7 +2311,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw']
-    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
+    _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
+                                            'matchbox']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
                     'stdout_level',
@@ -5297,6 +5304,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
+        config['matchbox'] =       {'check': False, 'exporter': 'cpp', 'output': 'Template'}
 
 
         options = config[self._export_format]
@@ -5435,7 +5443,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         path = self._export_dir
         if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
-                                   'standalone_msP', 'standalone_msF', 'standalone_rw']:
+                                   'standalone_msP', 'standalone_msF', 'standalone_rw',
+                                   'matchbox']:
             path = pjoin(path, 'SubProcesses')
 
         cpu_time1 = time.time()
@@ -5528,11 +5537,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     me, self._curr_fortran_model)
 
         # C++ standalone
-        if self._export_format == 'standalone_cpp':
+        if self._export_format in ['standalone_cpp', 'matchbox']:
             for me in matrix_elements:
                 export_cpp.generate_subprocess_directory_standalone_cpp(\
                               me, self._curr_cpp_model,
-                              path = path)
+                              path = path,
+                              format=self._export_format)
 
         cpu_time2 = time.time() - cpu_time1
 
