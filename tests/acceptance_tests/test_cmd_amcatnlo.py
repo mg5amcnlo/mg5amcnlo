@@ -146,6 +146,19 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.top' % self.path))
 
 
+    def test_check_html_long_process_strings(self):
+        """check that the info.html file correctly lists all the subprocesses,
+        even when the process string has to be split on more lines (for length 
+        reasons)"""
+        cmd = os.getcwd()
+        self.generate(['p p > h w+ > ta+ ta- e+ ve [QCD]'], 'sm')
+        self.assertEqual(cmd, os.getcwd())
+
+        info_html_target = open(os.path.join(cmd, 'tests', 'input_files',
+               'info_pp_to_hw_to_lvtata_nloqcd.html')).read()
+        info_html_this = open(os.path.join(self.path, 'HTML', 'info.html')).read()
+        self.assertEqual(info_html_target, info_html_this)
+
 
     def test_check_ppzjj(self):
         """test that p p > z j j is correctly output without raising errors"""
