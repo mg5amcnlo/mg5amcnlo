@@ -1334,64 +1334,42 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
+            # this is for fixed order runs
+            mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
-            if mode == 'LO':
-                req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation'] and req_acc != '-1':
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                elif not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters) 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
-                                   stdout=subprocess.PIPE, \
-                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
-                    
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['born*'])
-                self.results.add_detail('cross', cross)
-                self.results.add_detail('error', error) 
+            req_acc = self.run_card['req_acc_FO']
+            if not options['only_generation'] and req_acc != '-1':
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, '-1', '6','0.10') 
+                self.update_status('Setting up grids', level=None)
+                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
+            elif not options['only_generation']:
+                npoints = self.run_card['npoints_FO_grid']
+                niters = self.run_card['niters_FO_grid']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, npoints, niters) 
+                self.update_status('Setting up grids', level=None)
+                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
 
-                self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
-            elif mode == 'NLO':
-                req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation'] and req_acc != '-1':
-                    self.update_status('Setting up grid', level=None)
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
-                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                elif not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters) 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
-                                   stdout=subprocess.PIPE, \
-                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+            npoints = self.run_card['npoints_FO']
+            niters = self.run_card['niters_FO']
+            self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
+            # collect the results and logs
+            self.collect_log_files(folder_names[mode], 0)
+            p = misc.Popen(['./combine_results_FO.sh', req_acc, '%s_G*' % mode_dict[mode]], \
+                               stdout=subprocess.PIPE, \
+                               cwd=pjoin(self.me_dir, 'SubProcesses'))
+            output = p.communicate()
 
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['all*'])
-                self.results.add_detail('cross', cross)
-                self.results.add_detail('error', error) 
-                self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'all', '0', 'all']], \
-                        'Computing cross-section')
+            self.cross_sect_dict = self.read_results(output, mode)
+            self.print_summary(options, 0, mode)
+            cross, error = sum_html.make_all_html_results(self, ['%s*' % mode_dict[mode]])
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
 
+            self.update_status('Computing cross-section', level=None)
+            self.run_all(job_dict, [['0', mode_dict[mode], '0', mode_dict[mode]]], 'Computing cross-section')
+
+            # collect the results and logs
+            self.collect_log_files(folder_names[mode], 1)
             p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -1505,6 +1483,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                      '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
+                    # collect the results and logs
+                    self.collect_log_files(folder_names[mode], i)
                     p = misc.Popen(['./combine_results.sh'] + \
                                    ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
                                    folder_names[mode],
@@ -1537,7 +1517,42 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
         event_norm=self.run_card['event_norm']
+        self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def collect_log_files(self, folders, istep):
+        """collect the log files and put them in a single, html-friendly file inside the run_...
+        directory"""
+        step_list = ['Grid setting', 'Cross-section computation', 'Event generation']
+        log_file = pjoin(self.me_dir, 'Events', self.run_name, 
+                'alllogs_%d.html' % istep)
+        # this keeps track of which step has been computed for which channel
+        channel_dict = {}
+        log_files = []
+        for folder in folders:
+            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', folder, 'log.txt'))
+
+        content = ''
+
+        content += '<HTML><BODY>\n<font face="courier" size=2>'
+        for log in log_files:
+            channel_dict[os.path.dirname(log)] = [istep]
+            # put an anchor
+            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'),''))
+            # and put some nice header
+            content += '<font color="red">\n'
+            content += '<br>LOG file for integration channel %s, %s <br>' % \
+                    (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'), ''), 
+                     step_list[istep])
+            content += '</font>\n'
+            #then just flush the content of the small log inside the big log
+            content += open(log).read().replace('\n','<br>\n')
+            content +='<br>\n'
+
+        content += '</font>\n</BODY></HTML>\n'
+        open(log_file, 'w').write(content)
+
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
