@@ -2160,7 +2160,7 @@ class decay_all_events(object):
                 stdin_text+='%s  \n' % str(values_for_mc_masses).strip('[]').replace(',', ' ')
             
 #            here apply the reweighting procedure in fortran
-            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
+            trial_nb, BWvalue, weight, momenta, failed, use_mc_masses, helicities = self.loadfortran( 'unweighting', decay_me['path'], stdin_text)
             # next: need to fill all intermediate momenta
             if nb_mc_masses>0 and use_mc_masses==0:nb_fail_mc_mass+=1
             
@@ -2175,7 +2175,7 @@ class decay_all_events(object):
             
             #
             decayed_event = self.decay_one_event_new(self.curr_event,decay['decay_struct'],\
-                                                      event_map, momenta_in_decay,use_mc_masses)
+                                                      event_map, momenta_in_decay,use_mc_masses, helicities)
             
             
             # Treat the case that we ge too many overweight.
@@ -3134,7 +3134,9 @@ class decay_all_events(object):
             failed= float(firstline[4])
             use_mc_masses=int(firstline[5])
             momenta=[external.stdout.readline() for i in range(nexternal)]
-            output = trials, BWvalue, weight, momenta, failed, use_mc_masses
+            lastline=external.stdout.readline().split()
+            helicities=[lastline[i] for i in range(len(lastline))]
+            output = trials, BWvalue, weight, momenta, failed, use_mc_masses, helicities
 
         if len(self.calculator) > 100:
             logger.debug('more than 100 calculator. Perform cleaning')
@@ -3331,7 +3333,7 @@ class decay_all_events(object):
 
         return indices_for_mc_masses,values_for_mc_masses
 
-    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay, use_mc_masses):
+    def decay_one_event_new(self,curr_event,decay_struct, event_map, momenta_in_decay, use_mc_masses, helicities):
         """Write down the event 
            momenta is the list of momenta ordered according to the productin ME
         """
@@ -3369,6 +3371,8 @@ class decay_all_events(object):
                     part_number+=1
                     decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
                     decayed_event.event2mg[part_number]=part_number
+                    # overwrite helicity:
+                    decayed_event.particle[part_number]['helicity']=helicities[part-1]
                 
                 else:
                     # now we need to write the decay products in the event
@@ -3490,6 +3494,7 @@ class decay_all_events(object):
 
                         indexd1=decay_struct[part]["tree"][res]["d1"]["index"]
                         if ( indexd1>0):
+                            hel=helicities[index_d1_for_mom-1]
                             istup=1
                             external+=1
                             if not use_mc_masses or abs(pid) not in self.MC_masses:
@@ -3497,16 +3502,16 @@ class decay_all_events(object):
                             else:
                                 mass=self.MC_masses[abs(pid)]
                         else:
+                            hel=0.
                             decay_struct[part]["tree"][indexd1]["colup1"]=d1colup1
                             decay_struct[part]["tree"][indexd1]["colup2"]=d1colup2
                             istup=2                    
                             mass=mom.m
                         
-                        helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,\
                                 "istup":istup,"mothup1":mothup1,"mothup2":mothup2,\
                                 "colup1":d1colup1,"colup2":d1colup2,"momentum":mom,\
-                                "mass":mass,"helicity":helicity}
+                                "mass":mass,"helicity":hel}
                         decayed_event.event2mg[part_number]=part_number
 
                         part_number+=1
@@ -3520,6 +3525,7 @@ class decay_all_events(object):
 
                         indexd2=decay_struct[part]["tree"][res]["d2"]["index"]
                         if ( indexd2>0):
+                            hel=helicities[index_d2_for_mom-1]
                             istup=1
                             external+=1
                             if not use_mc_masses or abs(pid) not in self.MC_masses:
@@ -3527,6 +3533,7 @@ class decay_all_events(object):
                             else:
                                 mass=self.MC_masses[abs(pid)]
                         else:
+                            hel=0.
                             istup=2
                             decay_struct[part]["tree"][indexd2]["colup1"]=d2colup1
                             decay_struct[part]["tree"][indexd2]["colup2"]=d2colup2
@@ -3535,11 +3542,10 @@ class decay_all_events(object):
 
                         mothup1=part_number-2
                         mothup2=part_number-2
-                        helicity=0.
                         decayed_event.particle[part_number]={"pid":pid,"istup":istup,\
                            "mothup1":mothup1,"mothup2":mothup2,"colup1":d2colup1,\
                            "colup2":d2colup2,\
-                           "momentum":mom,"mass":mass,"helicity":helicity}
+                           "momentum":mom,"mass":mass,"helicity":hel}
 
                         decayed_event.event2mg[part_number]=part_number
 
