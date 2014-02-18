@@ -172,7 +172,8 @@ c
      &     ,tau_lower_bound_resonance,tau_lower_bound
 c BW stuff
       double precision mass_min(-nexternal:nexternal),masslow(
-     $     -nexternal:-1),widthlow(-nexternal:-1)
+     $     -nexternal:-1),widthlow(-nexternal:-1),sum_all_s
+      integer t_channel
       integer cBW_FKS_level_max(fks_configs),
      &     cBW_FKS(fks_configs,-nexternal:-1),
      &     cBW_FKS_level(fks_configs,-nexternal:-1)
@@ -376,6 +377,7 @@ c mass of the BW
                mass_min(i)=xm(i) ! minimal allowed resonance mass (including masses set by cuts)
             enddo
             cBW_FKS_level_max(iFKS)=0
+            t_channel=0
             do i=-1,-(nexternal-3),-1 ! All propagators
                cBW_FKS_mass(iFKS,i,1)=0d0
                cBW_FKS_width(iFKS,i,1)=0d0
@@ -383,7 +385,8 @@ c mass of the BW
                cBW_FKS_width(iFKS,i,-1)=0d0
                masslow(i)=9d99
                widthlow(i)=0d0
-               if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
+               if ( itree(1,i).eq.1 .or. itree(1,i).eq.2 ) t_channel=i
+               if (t_channel.ne.0) exit ! only s-channels
                mass_min(i)=mass_min(itree(1,i))+mass_min(itree(2,i))
                if (xm(i).lt.mass_min(i)) then
                   write (*,*)
@@ -446,6 +449,32 @@ c     Normal Breit-Wigner
                   cBW_FKS(iFKS,i)=0
                endif
             enddo
+c loop over t-channel to make sure that s-hat is consistent with sum of
+c s-channel masses
+            if (t_channel.ne.0) then
+               sum_all_s=0d0
+               do i=t_channel,-(nexternal-3),-1
+c Breit-wigner can never go on-shell:
+                  if ( pmass(itree(2,i),iconfig).lt.sqrt(stot) .and.
+     $                 pwidth(itree(2,i),iconfig).gt.0d0) then
+                     cBW_FKS(iFKS,itree(2,i))=2
+                  endif
+c     s-channel is always 2nd argument of itree, sum it to sum_all_s
+                  sum_all_s=sum_all_s+xm(itree(2,i))
+               enddo
+               if (sum_all_s.gt.sqrt(stot)) then
+c     conflicting BWs: set all s-channels as conflicting
+                  do i=t_channel,-(nexternal-3),-1
+                     if (cBW_FKS(iFKS,itree(2,i)).ne.2) then
+                        cBW_FKS(iFKS,itree(2,i))=1
+                        cBW_FKS_mass(iFKS,itree(2,i),-1)=sqrt(stot)/2d0
+                        cBW_FKS_width(iFKS,itree(2,i),-1)=xw(itree(2,i))
+                     endif
+                  enddo
+               endif
+            endif
+
+
 c Conflicting BW's determined. They are saved in cBW_FKS
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
