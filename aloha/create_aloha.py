@@ -415,12 +415,14 @@ in presence of majorana particle/flow violation"""
             if (spin_id % 2):
                 #propagator outcoming
                 needPflipping = True
-                tag ={'s1': spin_id, 's2': 'I2', 'id': id}
+                tag ={'1': spin_id, '2': 'I2', 'id': id}
             else:
-                tag ={'s1': 'I2', 's2': spin_id, 'id': id}
+                tag ={'1': 'I2', '2': spin_id, 'id': id}
         elif spin == 3 :
-            tag ={'l1': id, 'l2': 'I2', 'id': id}
+            tag ={'1': id, '2': 'I2', 'id': id}
         elif spin == 4:
+            delta = lambda i,j: aloha_object.Identity(i,j)
+            deltaL = lambda i,j: aloha_object.IdentityL(i,j)
             # shift and flip the tag if we multiply by C matrices
             if (id + 1) // 2 in self.conjg:
                 spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
@@ -428,12 +430,14 @@ in presence of majorana particle/flow violation"""
                 spin_id = id
             if spin_id % 2:
                 needPflipping = True
-                tag = {'l1': id, 'l2': 'I2', 's1': spin_id, 's2': 'I3', 'id':id}
+                tag = {'1': 'pr_1', '2': 'pr_2', 'id':id}
             else:
-                tag = {'l1': 'I2', 'l2': id, 's1': 'I3', 's2': spin_id, 'id':id}
+                tag = {'1': 'pr_2', '2': 'pr_1'}
+            numerator *= deltaL('pr_1',id) * deltaL('pr_2', 'I2') * \
+                                    delta('pr_1', spin_id) * delta('pr_2', 'I3')
         elif spin == 5 :
-            tag = {'l11': _spin2_mult + id, 'l2': 2 * _spin2_mult + id, 
-                   'l21': 'I2', 'l22': 'I3', 'id':id}
+            tag = {'1': _spin2_mult + id, '2': 2 * _spin2_mult + id, 
+                   '51': 'I2', '52': 'I3', 'id':id}
         
         for old, new in tag.items():
             if isinstance(new, str):

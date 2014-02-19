@@ -8,6 +8,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     with matching to the parton shower.
                 OM: Fix format of LHE output for 1>N events when the <init> and mother information were wrongly set 
                     to LHC default.
+                OM: Fix the syntax for the custom propagator to follow the description of arXiv:1308.1668 
 
 2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)

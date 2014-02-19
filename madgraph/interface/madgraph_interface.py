@@ -3701,7 +3701,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         while index_comma > -1:
             line = line[index_comma + 1:]
-            misc.sprint(line)
             if not line.strip():
                 break
             index_par = line.find(')')
@@ -3711,7 +3710,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 par_start = line.find('(')
                 line = '%s %s' % (line[par_start+1:index_par], line[index_par+1:]) 
                 index_par = line.find(')')
-                misc.sprint(line) 
             if line.lstrip()[0] == '(':
                 # Go down one level in process hierarchy
                 #level_down = True
