@@ -2571,6 +2571,9 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
+        content += 'EMASS=%s\n' % mcmass_dict[11]
+        content += 'MUMASS=%s\n' % mcmass_dict[13]
+        content += 'TAUMASS=%s\n' % mcmass_dict[15]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
