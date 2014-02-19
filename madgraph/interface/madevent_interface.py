@@ -2454,16 +2454,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             else:
                 run_card = self.run_card
             if self.ninitial == 1:
-                # found the pid of the particle:
-                subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                                 'subproc.mg'))]
-                subproc = subproc[0]
-                line = open(pjoin(self.me_dir, 'SubProcesses', subproc,'leshouche.inc')).readline()
-                #DATA (IDUP(I,1,1),I=1,3)/25,5,-5/
-                pid = line.split('/',1)[1].split(',',1)[0]
-                run_card['lpp1'] =  pid
+                run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
-                run_card['ebeam1'] = param_card['mass'].get((int(pid),)).value
+                run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
                 
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
