@@ -961,10 +961,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             """
         # the wrapper to the function which returns the power of a given coupling 
         #appearing at a given index in the ans array
-        function_list = set(['getpowfromindex%(n_me)d' % info \
+        function_list = set(['getordpowfromindex%(n_me)d' % info \
                 for info in matrix_element.get_fks_info_list()])
         text3 = \
-            """\n\n integer function getpowfromindex_real(iorder, index)
+            """\n\n integer function getordpowfromindex_real(iorder, index)
             implicit none
             integer iorder, index
             integer nfksprocess
@@ -973,7 +973,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             """ % ', '.join(function_list)
         # the wrapper to the function which returns the index in the res array
         # of the contribution of given orders
-        function_list = set(['sqsoindex_from_orders_real%(n_me)d' % info \
+        function_list = set(['sqsoindex_from_orders%(n_me)d' % info \
                 for info in matrix_element.get_fks_info_list()])
         text4 = \
             """\n\n integer function sqsoindex_from_orders_real(orders)
@@ -999,11 +999,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 else""" % {'n': n + 1, 'n_me' : info['n_me']}
             text3 += \
                 """if (nfksprocess.eq.%(n)d) then
-                 getpowfromindex_real = getpowfromindex%(n_me)d(iorder, index)
+                 getordpowfromindex_real = getordpowfromindex%(n_me)d(iorder, index)
                 else""" % {'n': n + 1, 'n_me' : info['n_me']}
             text4 += \
                 """if (nfksprocess.eq.%(n)d) then
-                 sqsoindex_from_orders_real = sqsoindex_from_orders_real%(n_me)d(orders)
+                 sqsoindex_from_orders_real = sqsoindex_from_orders%(n_me)d(orders)
                 else""" % {'n': n + 1, 'n_me' : info['n_me']}
         text += \
             """
@@ -1023,7 +1023,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             """
         text3 += \
             """
-            write(*,*) 'ERROR: invalid n in getpowfromindex_real :', nfksprocess\n stop\n endif
+            write(*,*) 'ERROR: invalid n in getordpowfromindex_real :', nfksprocess\n stop\n endif
             return \nend
             """
         text4 += \
@@ -1036,14 +1036,124 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         return 0
 
 
-
-    def write_born_wrappers(self, writer, me_list, fortran_model):
+    def write_born_wrappers(self, writer, me_list, sqsolist, fortran_model):
         """writes the wrappers which allows to chose among the different 
         born matrix elements, among different color/charge links and 
         among the various helper functions for the split-orders"""
-        pass
 
+        maxsqso = max(sqsolist)
+        nborns = len(me_list)
 
+        # the born me wrapper
+        text = \
+            """subroutine smatrix_born(p, wgt)
+            implicit none
+            include 'nexternal.inc'
+            double precision p(0:3, nexternal)
+            double precision wgt(0:%d)
+            integer nborn
+            common/c_nborn/nborn
+            real*4 tbefore, tAfter
+            real*4 tTot, tOLP, tFastJet, tPDF
+            common/timings/tTot, tOLP, tFastJet, tPDF
+            call cpu_time(tbefore)
+            """ % maxsqso
+        
+        # the sborn (color/charge links) wrapper
+        text1 = """\n\n subroutine sborn_sf(p,m,n,wgt)
+          implicit none
+          include 'nexternal.inc'
+c       the first index in wgt is the split order, the second 
+c        gives the color link if = 1, or the charge link if = 2
+          double precision p(0:3,nexternal-1), wgt(0:%d,2)
+          integer m,n
+          integer nborn
+          common/c_nborn/nborn
+             """ % maxsqso
+
+        # the wrapper to the function which returns the number of squared 
+        # split orders
+        text2 = \
+            """\n\n integer function get_nsqso_born()
+            implicit none
+            integer nborn
+            common/c_nborn/nborn
+            """
+        # the wrapper to the function which returns the power of a given coupling 
+        #appearing at a given index in the ans array
+        function_list = set(['getordpowfromindex_b%d' % (iborn + 1) \
+                for iborn in range(nborns)])
+        text3 = \
+            """\n\n integer function getordpowfromindex_born(iorder, index)
+            implicit none
+            integer iorder, index
+            integer nborn
+            common/c_nborn/nborn
+            integer %s
+            """ % ', '.join(function_list)
+        # the wrapper to the function which returns the index in the res array
+        # of the contribution of given orders
+        function_list = set(['sqsoindexb%d_from_orders' % (iborn + 1) \
+                for iborn in range(nborns)])
+        text4 = \
+            """\n\n integer function sqsoindex_from_orders_born(orders)
+            implicit none
+            integer orders(%d)
+            integer nborn
+            common/c_nborn/nborn
+            integer %s
+            """ % (maxsqso, ', '.join(function_list))
+
+        for n in range(nborns):
+            text += \
+                """if (nborn.eq.%(n)d) then
+                call sborn%(n)d_splitorders(p, wgt)
+                else""" % {'n': n + 1}
+            text1 += \
+                """if (nborn.eq.%(n)d) then
+                call sborn%(n)d_sf(p, m, n, wgt)
+                else""" % {'n': n + 1}
+            text2 += \
+                """if (nborn.eq.%(n)d) then
+                call get_nsqso_born%(n)d(get_nsqso_real)
+                else""" % {'n': n + 1}
+            text3 += \
+                """if (nborn.eq.%(n)d) then
+                 getordpowfromindex_born = getordpowfromindex_b%(n)d(iorder, index)
+                else""" % {'n': n + 1}
+            text4 += \
+                """if (nborn.eq.%(n)d) then
+                 sqsoindex_from_orders_born = sqsoindexb%(n)d_from_orders(orders)
+                else""" % {'n': n + 1}
+        text += \
+            """
+            write(*,*) 'ERROR: invalid n in born_matrix :', nborn
+            stop\n endif\n call cpu_time(tAfter) \n tPDF = tPDF + (tAfter-tBefore)
+            return \n end
+            """
+        text1 += \
+            """
+            write(*,*) 'ERROR: invalid n in sborn_sf :', nborn\n stop\n endif
+            return \nend
+            """
+        text2 += \
+            """
+            write(*,*) 'ERROR: invalid n in get_nsqso_born :', nborn\n stop\n endif
+            return \nend
+            """
+        text3 += \
+            """
+            write(*,*) 'ERROR: invalid n in getordpowfromindex_born :', nborn\n stop\n endif
+            return \nend
+            """
+        text4 += \
+            """
+            write(*,*) 'ERROR: invalid n in sqsoindex_from_orders_born :', nborn\n stop\n endif
+            return \nend
+            """
+        # Write the file
+        writer.writelines(text + text1 + text2 + text3 + text4)
+        return 0
 
 
     def draw_feynman_diagrams(self, matrix_element):
@@ -1230,11 +1340,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         born_list = matrix_element.born_me_list
 
-        # the wrappers
-        filename = 'born_chooser.f'
-        self.write_born_wrappers(writers.FortranWriter(filename),
-                            born_list, fortran_model)
-
         # the .inc files
         filename = 'nborns.inc'
         self.write_nborns_file(writers.FortranWriter(filename),
@@ -1263,6 +1368,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                   mapconfigs_list, born_list, fortran_model)
         
         # the born ME's and color/charge links
+        sqsorders_list = []
         for i, me in enumerate(matrix_element.born_me_list):
             filename = 'born_%d.f' % (i + 1)
 
@@ -1279,6 +1385,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 self.write_split_me_fks(writers.FortranWriter(filename),
                                         me, fortran_model, 'born', "%d" % (i+1),
                                         start_dict = born_dict)
+
+            sqsorders_list.append(nsqorders)
         
 
             self.color_link_files = [] 
@@ -1295,6 +1403,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                 matrix_element,
                                 i, nsqorders,
                                 fortran_model)
+
+        # finally write the wrappers
+        filename = 'born_chooser.f'
+        self.write_born_wrappers(writers.FortranWriter(filename),
+                            born_list, sqsorders_list, fortran_model)
+
 
 
     def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
@@ -1721,16 +1835,16 @@ Parameters              %(params)s\n\
         nlinks = len(color_links)
 
         #header for the sborn_sf.f file 
-        file = """subroutine sborn_sf(p_born,m,n,wgt)
+        file = """subroutine sborn%d_sf(p_born,m,n,wgt)
           implicit none
           include "nexternal.inc"
 C the first index in wgt is the split order, the second 
 c gives the color link if = 1, or the charge link if = 2
           double precision p_born(0:3,nexternal-1), wgt(0:%d,2)
-          double precison chargeprod
+          double precision chargeprod
           integer m,n 
           
-          call sborn%d_splitorders(p_born, wgt(0,2))""" % (nsqorders, iborn + 1)
+          call sborn%d_splitorders(p_born, wgt(0,2))""" % (iborn + 1, nsqorders, iborn + 1)
     
         if nlinks > 0:
             for i, c_link in enumerate(color_links):
