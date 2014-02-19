@@ -1992,7 +1992,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif not os.path.exists(pjoin(path,'ASperGe')):
             logger.info('ASperGe detected but not compiled. Running the compilation now')
             try:
-                misc.compile(path)
+                misc.compile(cwd=path,shell=True)
             except MadGraph5Error, error:
                 logger.error('''ASperGe fails to compile. Note that gsl need to be installed
      for this compilation to go trough. More information on how to install this package on
@@ -2003,11 +2003,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         opts = line.split()
         card = pjoin(self.me_dir,'Cards', 'param_card.dat')
-        returncode = misc.call([pjoin(path,'ASperGe'), card, card] + opts)
+        logger.info('running ASperGE')
+        returncode = misc.call([pjoin(path,'ASperGe'), card, '%s.new' % card] + opts)
         if returncode:
             logger.error('ASperGE fails with status %s' % returncode)
         else:
             logger.info('AsPerGe creates the file succesfully')
+        files.mv(card, '%s.beforeasperge' % card)
+        files.mv('%s.new' % card, card)
 
 
     def copy_file(self, path):
