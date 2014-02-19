@@ -6,6 +6,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		    give the wrong cross section when the phase-space generation is inefficient
                     (like in the case for conflicting Breit-Wigners). This bug did not affect runs
                     with matching to the parton shower.
+                OM: Fix format of LHE output for 1>N events when the <init> and mother information were wrongly set 
+                    to LHC default.
 
 2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)
