@@ -2529,9 +2529,9 @@ class decay_all_events(object):
                         result = re.split('([/$@]|\w+=\w+)', process, 1)
                         if len(result) ==3:
                             process, split, rest = result
-                            commandline+="add process %s j %s%s ;" % (process, split, rest)
+                            commandline+="add process %s p %s%s ;" % (process, split, rest)
                         else:
-                            commandline +='add process %s j;' % process
+                            commandline +='add process %s p;' % process
                     else:
                         raise Exception('Madspin: only QCD NLO corrections implemented.')
                 
@@ -3164,7 +3164,7 @@ class decay_all_events(object):
             os.system('lsof -p %s' % external.pid)
             return ' '.join(prod_values.split()[-1*(nb_output-1):])
         
-        if len(self.calculator) > 100:
+        if len(self.calculator) > self.options['max_running_process']:
             logger.debug('more than 100 calculator. Perform cleaning')
             nb_calls = self.calculator_nbcall.values()
             nb_calls.sort()

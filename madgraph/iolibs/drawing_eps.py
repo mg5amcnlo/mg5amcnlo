@@ -567,6 +567,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += '%%' + 'Page: %s %s \n' % (self.curr_page+1, self.curr_page+1)
         self.text += '%%PageBoundingBox:-20 -20 600 800\n'
         self.text += '%%PageFonts: Helvetica\n'
+        self.text += '/Helvetica findfont %s scalefont setfont\n' % self.font
         self.text += ' 50         770  moveto\n'
         self.text += ' (%s) show\n' % self.legend
         self.text += ' 525         770  moveto\n'

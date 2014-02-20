@@ -327,6 +327,16 @@ class HelpToCmd(object):
         """help for launch command"""
         _launch_parser.print_help()
 
+    def help_banner_run(self):
+        logger.info("syntax: banner_run Path|RUN [--run_options]")
+        logger.info("-- Reproduce a run following a given banner")
+        logger.info("   One of the following argument is require:")
+        logger.info("   Path should be the path of a valid banner.")
+        logger.info("   RUN should be the name of a run of the current directory")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--name=X', 'Define the name associated with the new run')]) 
+
+
     def help_compile(self):
         """help for compile command"""
         _compile_parser.print_help()
@@ -606,6 +616,64 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
 
+    def check_banner_run(self, args):
+        """check the validity of line"""
+        
+        if len(args) == 0:
+            self.help_banner_run()
+            raise self.InvalidCmd('banner_run requires at least one argument.')
+        
+        tag = [a[6:] for a in args if a.startswith('--tag=')]
+        
+        
+        if os.path.exists(args[0]):
+            type ='banner'
+            format = self.detect_card_type(args[0])
+            if format != 'banner':
+                raise self.InvalidCmd('The file is not a valid banner.')
+        elif tag:
+            args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                  
+            if not os.path.exists(args[0]):
+                raise self.InvalidCmd('No banner associates to this name and tag.')
+        else:
+            name = args[0]
+            type = 'run'
+            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            if not banners:
+                raise self.InvalidCmd('No banner associates to this name.')    
+            elif len(banners) == 1:
+                args[0] = banners[0]
+            else:
+                #list the tag and propose those to the user
+                tags = [os.path.basename(p)[len(args[0])+1:-11] for p in banners]
+                tag = self.ask('which tag do you want to use?', tags[0], tags)
+                args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                
+                        
+        run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
+        if run_name:
+            try:
+                self.exec_cmd('remove %s all banner -f' % run_name)
+            except Exception:
+                pass
+            self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
+        elif type == 'banner':
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        elif type == 'run':
+            if not self.results[name].is_empty():
+                run_name = self.find_available_run_name(self.me_dir)
+                logger.info('Run %s is not empty so will use run_name: %s' % \
+                                                               (name, run_name))
+                self.set_run_name(run_name)
+            else:
+                try:
+                    self.exec_cmd('remove %s all banner -f' % run_name)
+                except Exception:
+                    pass
+                self.set_run_name(name)
+
+
 
     def check_launch(self, args, options):
         """check the validity of the line. args is MODE
@@ -683,7 +751,52 @@ class CompleteForCmd(CheckValidForCmd):
             for opt in _launch_parser.option_list:
                 opts += opt._long_opts + opt._short_opts
             return self.list_completion(text, opts, line)
-            
+           
+    def complete_banner_run(self, text, line, begidx, endidx):
+       "Complete the banner run command"
+       try:
+  
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))        
+        
+        
+        if len(args) > 1:
+            # only options are possible
+            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
+
+            if args[-1] != '--tag=':
+                tags = ['--tag=%s' % t for t in tags]
+            else:
+                return self.list_completion(text, tags)
+            return self.list_completion(text, tags +['--name=','-f'], line)
+        
+        # First argument
+        possibilites = {} 
+
+        comp = self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        if os.path.sep in line:
+            return comp
+        else:
+            possibilites['Path from ./'] = comp
+
+        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = [n.rsplit('/',2)[1] for n in run_list]
+        possibilites['RUN Name'] = self.list_completion(text, run_list)
+        
+        return self.deal_multiple_categories(possibilites)
+    
+        
+       except Exception, error:
+           print error
+
+ 
     def complete_compile(self, text, line, begidx, endidx):
         """auto-completion for launch command"""
         
@@ -964,7 +1077,43 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_calculate_xsect(argss, options)
         self.do_launch(line, options, argss)
         
+    ############################################################################
+    def do_banner_run(self, line): 
+        """Make a run from the banner file"""
+        
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_banner_run(args)    
+                     
+        # Remove previous cards
+        for name in ['shower_card.dat', 'madspin_card.dat']:
+            try:
+                os.remove(pjoin(self.me_dir, 'Cards', name))
+            except Exception:
+                pass
+            
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
+        
+        # Check if we want to modify the run
+        if not self.force:
+            ans = self.ask('Do you want to modify the Cards/Run Type?', 'n', ['y','n'])
+            if ans == 'n':
+                self.force = True
+        
+        # Compute run mode:
+        if self.force:
+            mode_status = {'order': 'NLO', 'fixed_order': False, 'madspin':False, 'shower':True}
+            banner = banner_mod.Banner(args[0])
+            for line in banner['run_settings']:
+                if '=' in line:
+                    mode, value = [t.strip() for t in line.split('=')]
+                    mode_status[mode] = value
+        else:
+            mode_status = {}
 
+        # Call Generate events
+        self.do_launch('-n %s %s' % (self.run_name, '-f' if self.force else ''),
+                       switch=mode_status)
         
     ############################################################################      
     def do_generate_events(self, line):
@@ -984,10 +1133,12 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
-    def do_launch(self, line, options={}, argss=[]):
+    def do_launch(self, line, options={}, argss=[], switch={}):
         """Main commands: launch the full chain 
         options and args are relevant if the function is called from other 
-        functions, such as generate_events or calculate_xsect"""
+        functions, such as generate_events or calculate_xsect
+        mode gives the list of switch needed for the computation (usefull for banner_run)
+        """
         
         if not argss and not options:
             self.start_time = time.time()
@@ -1011,11 +1162,14 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-        mode = argss[0]
-        if mode in ['LO', 'NLO']:
-            options['parton'] = True
-        mode = self.ask_run_configuration(mode, options)
+        
+        if not switch:
+            mode = argss[0]
+            if mode in ['LO', 'NLO']:
+                options['parton'] = True
+            mode = self.ask_run_configuration(mode, options)
+        else:
+            mode = self.ask_run_configuration('auto', options, switch)
 
         self.results.add_detail('run_mode', mode) 
 
@@ -2390,6 +2544,7 @@ Integrated cross-section
 
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
+        content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
@@ -3154,7 +3309,7 @@ Integrated cross-section
 
 
     ############################################################################
-    def ask_run_configuration(self, mode, options):
+    def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
         
         if 'parton' not in options:
@@ -3165,8 +3320,13 @@ Integrated cross-section
         
         void = 'NOT INSTALLED'
         switch_order = ['order', 'fixed_order', 'shower','madspin']
-        switch = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
+        switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
                   'madspin': void}
+        if not switch:
+            switch = switch_default
+        else:
+            switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
+
         default_switch = ['ON', 'OFF']
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,

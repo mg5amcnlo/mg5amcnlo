@@ -475,7 +475,7 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             self.help_banner_run()
-            raise self.InvalidCmd('banner_run reauires at least one argument.')
+            raise self.InvalidCmd('banner_run requires at least one argument.')
         
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
@@ -911,8 +911,8 @@ class CheckValidForCmd(object):
                 model.change_mass_to_complex_scheme()
    
             
-        if not hasattr(model.get('particles')[0], 'partial_widths'):
-            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
+#        if not hasattr(model.get('particles')[0], 'partial_widths'):
+#            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
             
         # check if the name are passed to default MG5
         if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
@@ -1400,6 +1400,8 @@ class CompleteForCmd(CheckValidForCmd):
         
        except Exception, error:
            print error
+
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
@@ -1779,7 +1781,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             loop over the different config file if config_file not define """
         
         super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
-                                                            final=True, **opt)
+                                                            final=final, **opt)
         if not final:
             return self.options # the return is usefull for unittest
 
@@ -1801,7 +1803,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 elif key == "delphes_path":
                     if not os.path.exists(pjoin(path, 'Delphes')) and not\
                                      os.path.exists(pjoin(path, 'DelphesSTDHEP')):
-                        misc.sprint(pjoin(path, 'Delphes'))
                         logger.info("No valid Delphes path found")
                         continue
                 elif key == "madanalysis_path":
@@ -1890,7 +1891,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                      
         # Remove previous cards
         for name in ['delphes_trigger.dat', 'delphes_card.dat',
-                     'pgs_card.dat', 'pythia_card.dat']:
+                     'pgs_card.dat', 'pythia_card.dat', 'madspin_card.dat',
+                     'reweight_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
             except Exception:
@@ -2151,6 +2153,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             else:
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+            if self.run_card['use_syst'] in self.true:
+                logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
+            
         logger.info(" " )
 
     def print_results_in_file(self, data, path, mode='w'):
@@ -2683,6 +2688,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             nb_event = pat.search(output).groups()[0]
         except AttributeError:
             time.sleep(10)
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
             try:
                 nb_event = pat.search(output).groups()[0]
             except AttributeError:

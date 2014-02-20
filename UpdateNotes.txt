@@ -17,10 +17,28 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                         - Possibility to use mint (not compatible with all of the options)
 			- Possibility to use sobol for the generation of PS point (sometimes faster than pure 
                           random point generator.
+                OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
+                OM: Fix a bug leading to a crash with some decay syntax. i.e., p p > t t~, (t > w+ b), (t~ >w- b~)
+		RF: Critical bug fixed (introduced in 2.0.2) for fixed order NLO runs that could
+		    give the wrong cross section when the phase-space generation is inefficient
+                    (like in the case for conflicting Breit-Wigners). This bug did not affect runs
+                    with matching to the parton shower.
 
-2.0.2(xx/xx/xx) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
+2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)
-        
+                OM: Fix the bug that the shower_card.dat was wrongly identified as a pythia_card.
+                OM: add one MadSpin option allowing to control the number of simultaneous open files.
+                OM: Fix a bug in eps preventing evince preventing label to be displayed on page 2 and following
+                    Thanks to Gauthier Durieux for the fix.
+                OM: Fix a bug(crash) for p p > w+ w- j j introduce in 2.0.0 due to some jet sometimes tagged as QCD
+                    and sometimes not (which was making the automatic scale computation to crash)
+                OM: Change the way to writte the <init> line of the lhe file to take into account
+                    - process with more that 100 subprocesses (note that you need to hack the pythia-pgs
+                      package to deal with such large number of sub-process
+                    - deal with pdf identification number bigger than 1 million.  
+                OM: Fixed a bug preventing the Madevent to detect external module (pythia-pgs, syscalc,...)
+                    Bug #1271216 (thanks Iwamoto)
+                PT: PYTHIA8 scale and pdf variations
 
 2.0.1(20/01/14) OM: Fix a bug in h > l+ l- l+ l- for group_subproceses =False (decay only). A follow up of 
                     the bug fix in 2.0.0

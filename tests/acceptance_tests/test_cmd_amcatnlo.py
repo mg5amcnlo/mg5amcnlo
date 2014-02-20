@@ -182,6 +182,28 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
 
 
+    def test_split_evt_gen_zeroev(self):
+        """test that the event generation splitting works when some channels have zero events"""
+        cmd = os.getcwd()
+        self.generate(['p p > e+ e- [real=QCD] '], 'sm')
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue( ' -1 = nevt_job' in card)
+        self.assertTrue( '10000 = nevents' in card)
+        self.assertTrue( ' -1 = req_acc' in card)
+        card = card.replace(' -1 = nevt_job', '1 = nevt_job')
+        card = card.replace('10000 = nevents', '6 = nevents')
+        card = card.replace(' -1 = req_acc', '0.1 = req_acc')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.do('generate_events -pf')
+        # test the lhe event file exists
+        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
+
+
     def test_check_ppwy(self):
         """test that the p p > w y (spin 2 graviton) process works with loops. This
         is needed in order to test the correct wavefunction size setting for spin2

@@ -10,7 +10,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE PYABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       implicit none
       include 'reweight0.inc'
@@ -112,10 +112,9 @@ C----------------------------------------------------------------------
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       implicit none
       REAL*8 XNORM
@@ -125,11 +124,11 @@ C----------------------------------------------------------------------
       common/c_analysis/nwgt_analysis
       OPEN(UNIT=99,FILE='PYTHG.TOP',STATUS='UNKNOWN')
       XNORM=1.D0/IEVT
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
 C
       do kk=1,nwgt_analysis
@@ -186,7 +185,7 @@ c
 
 C----------------------------------------------------------------------
       SUBROUTINE PYANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       implicit none
       include 'reweight0.inc'
@@ -228,7 +227,7 @@ C INITIALISE
           PP(J,I)=0D0
         ENDDO
       ENDDO
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,P(3,3)).EQ.SIGN(1.D0,P(4,3)))THEN
          WRITE(*,*)'WARNING 111 IN PYANAL'
@@ -254,15 +253,15 @@ C EFFECT, SO THROW THE EVENT AWAY
         IST =K(IHEP,1)
         ID1 =K(IHEP,2)
         IORI=K(IHEP,3)
+        IF(ID1.EQ.25)THEN
+          IFH=1
+          DO IJ=1,5
+            PPH(IJ)=P(IHEP,IJ)
+          ENDDO
+        ENDIF
         IF (IST.LE.10) THEN
           CALL VVSUM(4,PIHEP,PSUM,PSUM)
           ICHSUM=ICHSUM+PYCHGE(ID1)
-          IF(ID1.EQ.25)THEN
-            IFH=IFH+1
-            DO IJ=1,5
-              PPH(IJ)=P(IHEP,IJ)
-            ENDDO
-          ENDIF
         ENDIF
 C---FIND FINAL STATE HADRONS
         IF (IST.LE.10 .AND. ABS(ID1).GT.100) THEN
@@ -278,7 +277,7 @@ C---FIND FINAL STATE HADRONS
  100  CONTINUE
       IF(IFH.NE.1)THEN
          WRITE(*,*)'WARNING 501 IN PYANAL'
-         STOP
+         GOTO 999
       ENDIF
 C CHECK MOMENTUM AND CHARGE CONSERVATION
       IF (VDOT(3,PSUM,PSUM).GT.1.E-4*P(1,4)**2) THEN

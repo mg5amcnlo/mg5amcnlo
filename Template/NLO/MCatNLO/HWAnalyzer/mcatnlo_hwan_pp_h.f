@@ -10,7 +10,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -112,10 +112,9 @@ C----------------------------------------------------------------------
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
@@ -127,11 +126,11 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
 C
       do kk=1,nwgt_analysis
@@ -188,7 +187,7 @@ c
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -223,7 +222,7 @@ C INITIALISE
           PP(J,I)=0D0
         ENDDO
       ENDDO
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
@@ -252,7 +251,7 @@ C EFFECT, SO THROW THE EVENT AWAY
           IF(ID1.EQ.25)THEN
             IFH=IFH+1
             DO IJ=1,5
-	      PPH(IJ)=PHEP(IJ,IHEP)
+              PPH(IJ)=PHEP(IJ,IHEP)
             ENDDO
           ENDIF
         ENDIF

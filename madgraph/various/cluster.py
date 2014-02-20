@@ -84,13 +84,18 @@ class Cluster(object):
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
-        
-        self.cluster_queue = opts['cluster_queue']
-        self.temp_dir = opts['cluster_temp_path']
+        if 'cluster_queue' in opts:
+            self.cluster_queue = opts['cluster_queue']
+        else:
+            self.cluster_queue = 'madgraph'
+        if 'cluster_temp_path' in opts:
+            self.temp_dir = opts['cluster_temp_path']
+        else:
+            self.temp_dir = None
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
-        self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' else 0
+        self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' in opts else 0
         self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
@@ -380,9 +385,14 @@ class MultiCore(Cluster):
         
         self.submitted = 0
         self.finish = 0
-        self.nb_core = opt['nb_core']
+        if 'nb_core' in opt:
+            self.nb_core = opt['nb_core']
+        elif isinstance(args[0],int):
+            self.nb_core = args[0]
+        else:
+            self.nb_core = 1
         self.update_fct = None
-
+        
         # initialize the thread controler
         self.need_waiting = False
         self.nb_used = 0
@@ -1494,7 +1504,7 @@ class SLURMCluster(Cluster):
     name = 'slurm'
     job_id = 'SLURM_JOBID'
     idle_tag = ['Q','PD','S','CF']
-    running_tag = ['R']
+    running_tag = ['R', 'CG']
     complete_tag = ['C']
 
     @multiple_try()

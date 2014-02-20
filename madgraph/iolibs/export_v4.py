@@ -3881,7 +3881,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         path = pjoin(_file_path,'iolibs','template_files','addmothers.f')
 
-        text = open(path).read() % {'iconfig': 'iconfig'}
+        text = open(path).read() % {'iconfig': 'lconfig'}
         writer.write(text)
         
         return True

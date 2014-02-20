@@ -10,9 +10,9 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
-      implicit none
+      INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
       integer nwgt,max_weight,nwgt_analysis,kk,l
       common/cnwgt/nwgt
@@ -20,6 +20,7 @@ C----------------------------------------------------------------------
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
+c
       call inihist
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c To be changed !!
@@ -117,10 +118,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
@@ -133,10 +133,10 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
 C
       do kk=1,nwgt_analysis
@@ -187,13 +187,13 @@ c
          call multitop(NPL+l+38,NPL-1,3,2,'njets',' ','LOG')
          call multitop(NPL+l+39,NPL-1,3,2,'xsec',' ','LOG')
       enddo
-c
+
       CLOSE(99)
       END
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
@@ -224,20 +224,17 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 C INITIALISE
       DO I=1,NMAX
         DO J=1,4
           PP(J,I)=0D0
         ENDDO
       ENDDO
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('HWANAL',111)
-        CALL HWUEPR
-        GOTO 999
+         WRITE(*,*)'WARNING 502 IN HWANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
@@ -249,12 +246,12 @@ C EFFECT, SO THROW THE EVENT AWAY
       DO 100 IHEP=1,NHEP
         IST=ISTHEP(IHEP)      
         ID1=IDHEP(IHEP)
-          IF(ID1.EQ.25.AND.IST.EQ.1)THEN
-            IFH=IFH+1
-            DO IJ=1,5
-	      PPH(IJ)=PHEP(IJ,IHEP)
-            ENDDO
-          ENDIF
+        IF(ID1.EQ.25)THEN
+          IFH=1
+          DO IJ=1,5
+            PPH(IJ)=PHEP(IJ,IHEP)
+          ENDDO
+        ENDIF
 C---FIND FINAL STATE HADRONS
         IF (IST.EQ.1 .AND. ABS(ID1).GT.100) THEN
           NN=NN+1
@@ -268,8 +265,8 @@ C---FIND FINAL STATE HADRONS
         ENDIF
  100  CONTINUE
       IF(IFH.NE.1)THEN
-         CALL HWUEPR
-         CALL HWWARN('HWANAL',501)
+         WRITE(*,*)'WARNING 503 IN HWANAL'
+         GOTO 999
       ENDIF
 C---CLUSTER THE EVENT
       palg =1.d0
@@ -283,7 +280,7 @@ C---CLUSTER THE EVENT
         yjet(i)=0d0
         jet(i)=0
       enddo
-      njet=0
+      njet=-1
       njet_central=0
       y_central=2.5d0
       call fastjetppgenkt(pp,nn,rfj,sycut,palg,pjet,njet,jet)
@@ -411,82 +408,3 @@ c
       getpseudorap=eta
       return
       end
-
-
-
-
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end
-

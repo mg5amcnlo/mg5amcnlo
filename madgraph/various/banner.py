@@ -43,7 +43,7 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger']
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
     
     def __init__(self, banner_path=None):
         """ """
@@ -82,7 +82,9 @@ class Banner(dict):
       'mggenerationinfo':'',
       'montecarlomasses':'',
       'initrwgt':'',
-      'madspin':'madspin_card.dat' 
+      'madspin':'madspin_card.dat',
+      'mgshowercard':'shower_card.dat',
+      'run_settings':''
       }
     
     def read_banner(self, input_path):
