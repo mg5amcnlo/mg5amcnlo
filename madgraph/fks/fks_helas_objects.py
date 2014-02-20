@@ -235,7 +235,6 @@ class FKSHelasProcess(object):
                     helas_objects.HelasMatrixElement(born_amp, **opts)
                     for born_amp in fksproc.born_amp_list]
 
-
             self.real_processes = []
             self.perturbation = fksproc.perturbation
             self.charges_born = fksproc.get_charges() 

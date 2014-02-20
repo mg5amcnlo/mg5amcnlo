@@ -427,6 +427,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
         myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
+        # split all orders in the model, for the moment it's the simplest solution
+        # mz02/2014
+        myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
+                if o not in myprocdef['split_orders']]
 
         print 'MZinterface, PROC orders', myprocdef['orders']
         print 'MZinterface, PROC born orders', myprocdef['born_orders']

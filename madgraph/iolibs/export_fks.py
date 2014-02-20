@@ -516,6 +516,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                 matrix_element.real_processes[0].get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
+
+        filename = 'born_orders.inc'
+        self.write_born_orders_file(writers.FortranWriter(filename),
+                                    matrix_element)
+
+        filename = 'nsplitcouplings.inc'
+        self.write_nsplitcouplings_file(writers.FortranWriter(filename),
+                                    matrix_element)
     
         filename = 'pmass.inc'
         self.write_pmass_file(writers.FortranWriter(filename),
@@ -759,6 +767,74 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Write the file
         writer.writelines(lines2+lines)
 
+
+    def write_nsplitcouplings_file(self, writer, matrix_element):
+        """writes the include file with numbers of couplings that take part to the orders
+        splitting
+        e.g. 1 if split_orders=[QCD], 2 if split_orders=[QCD,QED]"""
+
+        split_orders = \
+                matrix_element.born_me_list[0]['processes'][0]['split_orders']
+
+        text = 'integer nsplitcouplings\n' 
+        text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
+        text += 'parameter (nsplitcouplings = %d)\n' % len(split_orders)
+        writer.writelines(text)
+
+
+    def write_born_orders_file(self, writer, matrix_element):
+        """writes the include file with the order constraints requested by the user
+        for all the orders which are split"""
+
+        born_orders = matrix_element.born_me_list[0]['processes'][0]['born_orders']
+        split_orders = \
+                matrix_element.born_me_list[0]['processes'][0]['split_orders']
+
+        max_orders = {}
+        if born_orders.keys() == ['WEIGHTED']:
+            # if user has not specified born_orders, check the 'weighted' for each
+            # of the split_orders contributions
+
+            # factor 2 to pass to squared orders
+            wgt_ord_max = 2 * born_orders['WEIGHTED']
+            model = matrix_element.born_me_list[0]['processes'][0]['model']
+            for born_me in matrix_element.born_me_list:
+                squared_orders, amp_orders = born_me.get_split_orders_mapping()
+                for sq_order in squared_orders:
+                    # put the numbers in sq_order in a dictionary, with as keys
+                    # the corresponding order name
+                    ord_dict = {}
+                    assert len(sq_order) == len(split_orders) 
+                    for o, v in zip(split_orders, list(sq_order)):
+                        ord_dict[o] = v
+
+                    wgt = sum([v * model.get('order_hierarchy')[o] for \
+                            o, v in ord_dict.items()])
+                    if wgt > wgt_ord_max:
+                        continue
+                    try:
+                        for o, v in ord_dict.items():
+                            max_orders[o] = max(max_orders[o], v)
+
+                    except KeyError:
+                        for o, v in ord_dict.items():
+                            max_orders[o] = v
+
+        else:
+            #if there are born_orders keep the split_orders which 
+            # statisfy the constraint
+            for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
+                try:
+                    # factor 2 to pass to squared orders
+                    max_orders[o] = 2 * born_orders[o]
+                except KeyError:
+                    # if the order is not in born_orders set it to 1000
+                    max_orders[o] = 1000
+
+        text = 'integer born_orders(%d)\n' % len(split_orders)
+        text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
+        text += 'data born_orders / %s /\n' % ', '.join([str(max_orders[o]) for o in split_orders])
+        writer.writelines(text)
 
 
     def write_configs_and_props_info_file(self, writer, matrix_element, fortran_model):

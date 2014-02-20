@@ -112,6 +112,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for procdef in self['process_definitions']:
                 if not procdef['orders']:
                     procdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(procdef))
+                    procdef.set('born_orders', copy.copy(procdef['orders']))
 
                 # set the squared orders consistently with the perturbation specified by the user
                 if not procdef['squared_orders']:
@@ -140,7 +141,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     procdef['squared_orders']['WEIGHTED'] += 2 * \
                             max([procdef.get('model').get('order_hierarchy')[ord] for \
                             ord in procdef['perturbation_couplings']])
-
 
             #---now generate the amplitudes
             self.get('amplitudes')
