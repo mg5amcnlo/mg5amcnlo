@@ -2169,7 +2169,7 @@ class decay_all_events(object):
             momenta_in_decay=self.get_int_mom_in_decay(decay['decay_struct'],ext_mom)
             # reset extrenal momenta in the production event
             self.reset_mom_in_prod_event(decay['decay_struct'],decay['prod2full'],\
-                                         event_map,momenta_in_decay,ext_mom, use_mc_masses)
+                                         event_map,momenta_in_decay,ext_mom, use_mc_masses, helicities)
             # reset intermediate momenta in prod event
             self.curr_event.reset_resonances()
             
@@ -2278,7 +2278,7 @@ class decay_all_events(object):
                 
         return momenta_in_decay
     
-    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom,use_mc_masses):
+    def reset_mom_in_prod_event(self, decay_struct,prod2full, event_map, momenta_in_decay,ext_mom,use_mc_masses,helicities):
 
         """ Reset the external momenta in the production event, since
             the virtuality of decaying particles has slightly changed the kinematics
@@ -2295,6 +2295,7 @@ class decay_all_events(object):
                     self.curr_event.particle[part_for_curr_evt]['mass']=self.curr_event.particle[part_for_curr_evt]['momentum'].m
                 else:
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
+                    self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[prod2full[part-1]-1]
                     if not use_mc_masses or abs(pid) not in self.MC_masses:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
                     else:
@@ -3371,8 +3372,6 @@ class decay_all_events(object):
                     part_number+=1
                     decayed_event.particle[part_number]=curr_event.particle[part_for_curr_evt]
                     decayed_event.event2mg[part_number]=part_number
-                    # overwrite helicity:
-                    decayed_event.particle[part_number]['helicity']=helicities[part-1]
                 
                 else:
                     # now we need to write the decay products in the event
