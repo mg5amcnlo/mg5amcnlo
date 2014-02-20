@@ -652,11 +652,13 @@ C---------------------------
          htj=htj+ptjet(i)
          if(debug) write (*,*) i, 'htj ',htj
          if(debug.and.i.le.4) write (*,*) 'htmin ',i,' ', htjmin4(i),':',htjmax4(i)
-         if(i.le.4.and.(htj.lt.htjmin4(i) .or.
-     $        htjmax4(i).ge.0d0.and.htj.gt.htjmax4(i))) then
+         if(i.le.4)then
+            if(htj.lt.htjmin4(i) .or.
+     $        htjmax4(i).ge.0d0.and.htj.gt.htjmax4(i)) then
             if(debug) write (*,*) i, ' ht -> fails'
             passcuts=.false.
             return
+            endif
          endif
       enddo
 

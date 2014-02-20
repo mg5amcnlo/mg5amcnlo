@@ -300,11 +300,14 @@ class TestMadWeight(unittest.TestCase):
         
         # But force manual inspection at each change of the file
         expected =open(pjoin(MG5DIR,'tests','input_files','cuts_for_MW.f')).read()
-        #self.maxDiff = None
-        self.assertEqual(text.split('\n'), expected.split('\n'))
+        text = [l.strip() for l in text.split('\n') if l.strip()]
+        expected = [l.strip() for l in expected.split('\n') if l.strip()]
         
-        open('cuts_for_MW.f','w').write(text)
-        self.assertEqual(text, expected, 'Please check that the new cuts.f is compatible with MW')
+        self.maxDiff = None
+        self.assertEqual(text, expected)
+        
+        #open('cuts_for_MW.f','w').write(text)
+        #self.assertEqual(text, expected, 'Please check that the new cuts.f is compatible with MW')
         
         
         
