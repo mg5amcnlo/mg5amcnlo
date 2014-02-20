@@ -10,8 +10,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
                 OM: Fix a bug leading to a crash with some decay syntax. i.e., p p > t t~, (t > w+ b), (t~ >w- b~)
                 OM: Fix format of LHE output for 1>N events when the <init> and mother information were wrongly set 
-                    to LHC default.
+                    to LHC default. Specific support of this option will be part of pythia8 (8.185 and later)
                 OM: Fix the syntax for the custom propagator to follow the description of arXiv:1308.1668 
+                OM: Allow to call ASperGe on the flight if ASperGe module is include in the UFO model.
+                    just type "asperge" at the moment where the code propose you to edit the param_card.
 
 2.0.2(07/02/14) RF: Suppressed the writing of the 'ERROR in OneLOop dilog2_r' messages (introduced in the 
                     previous version)
