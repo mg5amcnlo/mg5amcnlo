@@ -325,6 +325,8 @@ c******************************************************************************
 c look for veto jet without y cuts
          if (i.gt.2.and.yjet(i).gt.min(yjet(1),yjet(2)).and.
      &        yjet(i).lt.max(yjet(1),yjet(2)).and.ijveto.eq.0) ijveto=i
+
+C now look for jets within the rapidity cuts
          if (dabs(yjet(i)).lt.yjmax) then
             njety=njety+1
             if (ij1y.eq.0) then
