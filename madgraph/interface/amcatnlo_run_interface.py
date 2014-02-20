@@ -1547,7 +1547,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                      step_list[istep])
             content += '</font>\n'
             #then just flush the content of the small log inside the big log
-            content += open(log).read().replace('\n','<br>\n')
+            #the PRE tag prints everything verbatim
+            content += '<PRE>\n' + open(log).read() + '\n</PRE>'
             content +='<br>\n'
 
         content += '</font>\n</BODY></HTML>\n'
