@@ -1958,14 +1958,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
 
     def help_asperge(self):
-        """Help associate to the asperge command"""
+        """Help associated to the asperge command"""
         signal.alarm(0)
 
         print '-- syntax: asperge [options]'
-        print '   Calling ASperGe for diagonalizes all the mass matrices in the model'
-        print '   This works only if the ASperGE module is part of the UFO model (a subdirectory)'
-        print '   If you specify some name after the commands (i.e. asperge m1 m2) then ASperGe will only'
-        print '   diagonalizes the associate mass matrices (here m1 and m2).'
+        print '   Call ASperGe to diagonalize all mass matrices in the model.'
+        print '   This works only if the ASperGE module is part of the UFO model (a subdirectory).'
+        print '   If you specify some names after the command (i.e. asperge m1 m2) then ASperGe will only'
+        print '   diagonalize the associate mass matrices (here m1 and m2).'
 
     def complete_asperge(self, text, line, begidx, endidx):
         signal.alarm(0) # avoid timer if any
@@ -1987,14 +1987,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         path = pjoin(self.me_dir,'bin','internal','ufomodel','ASperGE')
         if not os.path.exists(path):
-            logger.error('ASperge is not detected for the current model, we therefore not running it.')
+            logger.error('ASperge has not been detected in the current model, therefore it will not be run.')
             return
         elif not os.path.exists(pjoin(path,'ASperGe')):
-            logger.info('ASperGe detected but not compiled. Running the compilation now')
+            logger.info('ASperGe has been detected but is not compiled. Running the compilation now.')
             try:
                 misc.compile(cwd=path,shell=True)
             except MadGraph5Error, error:
-                logger.error('''ASperGe fails to compile. Note that gsl need to be installed
+                logger.error('''ASperGe failed to compile. Note that gsl is needed
      for this compilation to go trough. More information on how to install this package on
      http://www.gnu.org/software/gsl/
      Full compilation log is available at %s''' % pjoin(self.me_dir, 'ASperge_compilation.log'))
@@ -2014,7 +2014,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
 
     def copy_file(self, path):
-        """detect the type of the file and overwritte the current file"""
+        """detect the type of the file and overwrite the current file"""
 
         card_name = CommonRunCmd.detect_card_type(path)
 
