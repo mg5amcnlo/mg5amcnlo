@@ -1,11 +1,14 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.0(xx/xx/14) OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
-                OM: Fix a bug leading to a crash with some decay syntax. i.e., p p > t t~, (t > w+ b), (t~ >w- b~)
+2.1.0(xx/xx/14) OM: Fix critical bug (returns wrong cross-section/width) for processes where the center of mass 
+                    energy of the beam is lower than 1 GeV. So this has no impact for LHC-collider phenomenology.
+                    This can also impact computation of decay-width if the mass of that particle is below 1 GeV.
 		RF: Critical bug fixed (introduced in 2.0.2) for fixed order NLO runs that could
 		    give the wrong cross section when the phase-space generation is inefficient
                     (like in the case for conflicting Breit-Wigners). This bug did not affect runs
                     with matching to the parton shower.
+                OM: Fix a bug in MadSpin preventing the gridpack to run with NLO processes.
+                OM: Fix a bug leading to a crash with some decay syntax. i.e., p p > t t~, (t > w+ b), (t~ >w- b~)
                 OM: Fix format of LHE output for 1>N events when the <init> and mother information were wrongly set 
                     to LHC default.
                 OM: Fix the syntax for the custom propagator to follow the description of arXiv:1308.1668 
