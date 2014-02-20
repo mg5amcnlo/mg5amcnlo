@@ -2402,14 +2402,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-        
-        
-        if mode in ['run', 'all']:
-            if not hasattr(self, 'run_card'):
-                run_card = banner_mod.RunCard(opt['run_card'])
-            else:
-                run_card = self.run_card
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+    
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
@@ -2444,6 +2437,20 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 devnull.close()
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             param_card.write_inc_file(outfile, ident_card, default)
+      
+      
+        if mode in ['run', 'all']:
+            if not hasattr(self, 'run_card'):
+                run_card = banner_mod.RunCard(opt['run_card'])
+            else:
+                run_card = self.run_card
+            if self.ninitial == 1:
+                run_card['lpp1'] =  0
+                run_card['lpp2'] =  0
+                run_card['ebeam1'] = 0
+                run_card['ebeam2'] = 0
+                
+            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
     ############################################################################      
     def do_survey(self, line):

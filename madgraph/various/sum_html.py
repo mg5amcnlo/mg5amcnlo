@@ -226,7 +226,7 @@ class Combine_results(list, OneResult):
 </tr>
 """
 
-    def get_html(self,run, unit):
+    def get_html(self,run, unit, me_dir = []):
         """write html output"""
         
         # store value for global cross-section
@@ -246,13 +246,28 @@ class Combine_results(list, OneResult):
                 title = oneresult.name
             
             if not isinstance(oneresult, Combine_results):
-                link = '../../SubProcesses/%(P)s/%(G)s/%(R)s_log.txt' % \
+                # this is for the (aMC@)NLO logs
+                if os.path.exists(pjoin(me_dir, 'Events', run, 'alllogs_1.html')):
+                    link = '../../Events/%(R)s/alllogs_1.html#/%(P)s/%(G)s' % \
                                         {'P': self.name,
                                          'G': oneresult.name,
                                          'R': run}
-                mod_link = '../../SubProcesses/%(P)s/%(G)s/log.txt' % \
+                    mod_link = link
+                elif os.path.exists(pjoin(me_dir, 'Events', run, 'alllogs_0.html')):
+                    link = '../../Events/%(R)s/alllogs_0.html#/%(P)s/%(G)s' % \
                                         {'P': self.name,
-                                         'G': oneresult.name}
+                                         'G': oneresult.name,
+                                         'R': run}
+                    mod_link = link
+                else:
+                    # this is for madevent runs
+                    link = '../../SubProcesses/%(P)s/%(G)s/%(R)s_log.txt' % \
+                                            {'P': self.name,
+                                             'G': oneresult.name,
+                                             'R': run}
+                    mod_link = '../../SubProcesses/%(P)s/%(G)s/log.txt' % \
+                                            {'P': self.name,
+                                             'G': oneresult.name}
             else:
                 link = '#%s' % oneresult.name
                 mod_link = link
@@ -399,7 +414,7 @@ def make_all_html_results(cmd, folder_names = []):
                     P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
 
         P_comb.compute_values()
-        P_text += P_comb.get_html(run, unit)
+        P_text += P_comb.get_html(run, unit, cmd.me_dir)
         P_comb.write_results_dat(pjoin(P_path, '%s_results.dat' % run))
         all.append(P_comb)
     all.compute_values()
@@ -407,7 +422,7 @@ def make_all_html_results(cmd, folder_names = []):
 
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
-    fsock.write('%s <dl>' % all.get_html(run, unit))
+    fsock.write('%s <dl>' % all.get_html(run, unit, cmd.me_dir))
     fsock.write('%s </dl></body>' % P_text)
 
 

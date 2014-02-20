@@ -475,7 +475,7 @@ class MultiCore(Cluster):
                         pass
                     self.remove(fail_msg)
             else:
-                pid = max(self.pids + [0]) + 1
+                pid = tuple([id(o) for o in [exe] + argument])
                 self.pids.append(pid)
                 # the function should return 0 if everything is fine
                 # the error message otherwise
@@ -695,6 +695,8 @@ class MultiCore(Cluster):
         if error:
             self.fail_msg = error
         for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
@@ -707,6 +709,8 @@ class MultiCore(Cluster):
 
         time.sleep(1) # waiting if some were submitting at the time of ctrl-c
         for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
             out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS > /dev/null 2>&1' % pid )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} ) 
             if out == 0:

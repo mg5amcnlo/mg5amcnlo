@@ -400,6 +400,8 @@ c******************************************************************************
 c look for veto jet without y cuts
          if (i.gt.2.and.yjet(i).gt.min(yjet(1),yjet(2)).and.
      &        yjet(i).lt.max(yjet(1),yjet(2)).and.ijveto.eq.0) ijveto=i
+
+C now look for jets within the rapidity cuts
          if (dabs(yjet(i)).lt.yjmax) then
             njety=njety+1
             if (ij1y.eq.0) then
@@ -432,6 +434,9 @@ c this is the loop for w-o / w vbf cuts
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
+         ij1 = ij1y
+         ij2 = ij2y
+         ij3 = ij3y
       endif
 
 c Load momenta

@@ -398,7 +398,7 @@ class make_info_html_nlo(make_info_html):
             if line.startswith('C     Process:'):
                 found += 1
                 names[''][0].append(line[15:])
-            elif found >0:
+            elif found >0 and 'IMPLICIT NONE' in line:
                 break    
         return names    
 
