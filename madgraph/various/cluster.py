@@ -1030,7 +1030,7 @@ class PBSCluster(Cluster):
             elif line.startswith(str(id)):
                 jobstatus = line.split()[4]
                 
-        if status.returncode != 0:
+        if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
         if jobstatus in self.idle_tag:
             return 'I' 
@@ -1069,7 +1069,7 @@ class PBSCluster(Cluster):
                 else:
                     fail += 1
 
-        if status.returncode != 0:
+        if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
 
         for id in list(self.submitted_ids):
