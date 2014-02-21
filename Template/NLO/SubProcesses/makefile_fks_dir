@@ -5,6 +5,7 @@ LIBDIR = ../../lib/
 ANADIR = ../../FixedOrderAnalysis/
 
 #check if fastjet-config is set
+fastjet_config=fastjet-config
 ifeq ($(fastjet_config),None) 
     fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o
     FJLIBS += -lstdc++
@@ -26,19 +27,19 @@ $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
-	 real_me_lum_chooser.o chooser_functions.o born_chooser.o	\
-	 genps_fks.o setcuts.o setscales.o born.o sborn_sf.o 		\
-	 $(patsubst%.f,%.o,$(wildcard b_*_sf_???.f)) 			\
-	 $(patsubst%.f,%.o,$(wildcard born_*.f)) 			\
-	 $(patsubst%.f,%.o,$(wildcard sborn_*_sf.f)) 			\
+	 real_me_lum_chooser.o chooser_functions.o			\
+	 genps_fks.o setcuts.o setscales.o 		 		\
+	 $(patsubst %.f,%.o,$(wildcard b_*_sf_???.f)) 			\
+	 $(patsubst %.f,%.o,$(wildcard born_*.f)) 			\
+	 $(patsubst %.f,%.o,$(wildcard sborn_*_sf.f)) 			\
 	 fks_Sij.o trapfpe.o $(fastjetfortran_madfks) fks_singular.o	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 initcluster.o cluster.o reweight.o get_color.o FKSParamReader.o\
+	 get_color.o FKSParamReader.o\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
 
 # Files needed for vegas, mint & mintMC
 RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
-	madfks_plot.o fill_MC_mshell.o born_hel.o open_output_files.o
+	madfks_plot.o fill_MC_mshell.o born_hel.o open_output_files.o reweight.o  initcluster.o cluster.o 
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o

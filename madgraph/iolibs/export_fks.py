@@ -1152,6 +1152,7 @@ c        gives the color link if = 1, or the charge link if = 2
         text2 = \
             """\n\n integer function get_nsqso_born()
             implicit none
+            integer nsqso
             integer nborn
             common/c_nborn/nborn
             """
@@ -1191,7 +1192,7 @@ c        gives the color link if = 1, or the charge link if = 2
                 else""" % {'n': n + 1}
             text2 += \
                 """if (nborn.eq.%(n)d) then
-                call get_nsqso_born%(n)d(get_nsqso_real)
+                call get_nsqso_born%(n)d(nsqso)
                 else""" % {'n': n + 1}
             text3 += \
                 """if (nborn.eq.%(n)d) then
@@ -1214,7 +1215,7 @@ c        gives the color link if = 1, or the charge link if = 2
             """
         text2 += \
             """
-            write(*,*) 'ERROR: invalid n in get_nsqso_born :', nborn\n stop\n endif
+            write(*,*) 'ERROR: invalid n in nsqso :', nborn\n stop\n endif
             return \nend
             """
         text3 += \
@@ -1438,6 +1439,10 @@ c        gives the color link if = 1, or the charge link if = 2
         filename = 'born_ngraphs.inc'
         self.write_ngraphs_file(writers.FortranWriter(filename),
                                 max(nconfigs_list))
+
+        filename = 'ncombs.inc'
+        self.write_ncombs_file(writers.FortranWriter(filename),
+                               born_list[0], fortran_model)
 
         filename = 'born_coloramps.inc'
         self.write_coloramps_file_list(writers.FortranWriter(filename),
@@ -1918,7 +1923,7 @@ C the first index in wgt is the split order, the second
 c gives the color link if = 1, or the charge link if = 2
           double precision p_born(0:3,nexternal-1), wgt(0:%d,2)
           double precision chargeprod
-          integer m,n 
+          integer i,m,n 
           
           call sborn%d_splitorders(p_born, wgt(0,2))""" % (iborn + 1, nsqorders, iborn + 1)
     
@@ -2177,9 +2182,7 @@ c     this subdir has no soft singularities
                 % (i + 1, ', '.join('%d' % pdg for pdg in info['pdgs'])))
             charge_lines.append(\
                 'DATA (PARTICLE_CHARGE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /'\
-                % (i + 1, ', '.join('%dd0' % int(fractions.Fraction(charg))\
-                                    if int(fractions.Fraction(charg*3.))%3 == 0 else\
-                                    '%dd0/3d0' % int(fractions.Fraction(charg*3.))\
+                % (i + 1, ', '.join('%fd0' % float(fractions.Fraction(charg))
                                     for charg in fksborn.real_processes[info['n_me']-1].charges) ))
             fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
                                                                    i + 1))

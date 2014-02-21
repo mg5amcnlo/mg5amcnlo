@@ -56,8 +56,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,I,T_IDENT(NCOMB)
-      REAL*8 MATRIX_%(proc_prefix)s
-      REAL*8 T,T_SAVE(NCOMB,0:NSQAMPSO)
+      REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
@@ -83,10 +82,8 @@ C identical matrix elements
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
             T_IDENT(IHEL)=-1
-	    BUFF=0D0
 	    DO I=1,NSQAMPSO			
                 ANS(I)=ANS(I)+T(I)
-		BUFF=BUFF+T(I)
 	    ENDDO
             DO I=1,IHEL-1
                IF (T(0).EQ.0D0) EXIT
@@ -178,7 +175,9 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      MATRIX_%(proc_prefix)s = 0.D0 
+      DO I=1,NSQAMPSO
+         RES(I)=0d0
+      ENDDO
       DO M = 1, NAMPSO
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)

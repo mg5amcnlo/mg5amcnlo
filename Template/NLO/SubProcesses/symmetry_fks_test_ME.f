@@ -133,11 +133,6 @@ c helicity stuff
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       
 c      integer icomp
-c
-c     DATA
-c
-      integer tprid(-max_branch:-1,lmaxconfigs)
-      include 'born_conf.inc'
 c-----
 c  Begin Code
 c-----

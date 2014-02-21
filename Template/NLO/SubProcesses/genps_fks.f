@@ -6,11 +6,8 @@
       double precision wgt,x(99),p(0:3,nexternal)
       integer iforest(2,-max_branch:-1,lmaxconfigs)
 c      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
-      integer tprid(-max_branch:-1,lmaxconfigs)
       integer            mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
-      include 'born_conf.inc'
       double precision pmass(-nexternal:0,lmaxconfigs)
       double precision pwidth(-nexternal:0,lmaxconfigs)
       integer pow(-nexternal:0,lmaxconfigs)
@@ -27,20 +24,22 @@ c      integer mapconfig(0:lmaxconfigs)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer iconfig0
       common/ciconfig0/iconfig0
+      INTEGER NBORN
+      COMMON/C_NBORN/NBORN
       include 'coupl.inc'
-      include 'born_props.inc'
+      include "born_configs_and_props_info.inc"
 c      
       this_config=iconfig
       iconf=iconfig
       iconfig0=iconfig
       do i=-max_branch,-1
          do j=1,2
-            itree(j,i)=iforest(j,i,iconfig)
+            itree(j,i)=iforest_b(nborn,j,i,iconfig)
          enddo
       enddo
       do i=-nexternal,0
-         qmass(i)=pmass(i,iconfig)
-         qwidth(i)=pwidth(i,iconfig)
+         qmass(i)=pmass_b(nborn,i,iconfig)
+         qwidth(i)=pwidth_b(nborn,i,iconfig)
       enddo
 c
       call generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)

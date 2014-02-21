@@ -1026,9 +1026,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
                                                                  'subproc.mg'))]
         nb_init = self.ninitial
-        pat = re.compile(r'''DATA \(IDUP\(I,\d+\),I=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
+        pat = re.compile(r'''DATA \(IDUP_B\(\d+,ILH,\d+\),ILH=1,\d+\)/([\+\-\d,\s]*)/''', re.I)
         for Pdir in subproc:
-            text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche.inc')).read()
+            text = open(pjoin(self.me_dir, 'SubProcesses', Pdir, 'born_leshouche_info.inc')).read()
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')

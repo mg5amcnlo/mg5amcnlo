@@ -18,12 +18,12 @@ C
 C VARIABLES
 C
       INTEGER I
-	  REAL*8 ANS(0:NSQAMPSO)
+	  COMPLEX*16 ANS(2,0:NSQAMPSO)
 C
 C BEGIN CODE
 C
 	  CALL SBORN%(proc_prefix)s_SPLITORDERS(P,ANS)
-	  ANS_SUMMED=ANS(0)
+	  ANS_SUMMED=ANS(1,0)
 
 END
 
@@ -63,7 +63,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
-      REAL*8,borns(2,0:NSQAMPSO)
+      REAL*8 borns(2,0:NSQAMPSO)
       COMPLEX*16 BORNTILDE
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
@@ -290,7 +290,7 @@ C ----------
         ENDDO
       endif
       Enddo
-      do I = 1,NAMPSQSO
+      do I = 1,NSQAMPSO
           ANS(1,I)=BORNS(1,I)+BORNS(2,I)
       ENDDO
       DO M = 1, NAMPSO
@@ -300,7 +300,7 @@ C ----------
           ZTEMP = ZTEMP + CF(J,I)*JAMPH(2,J,M)
         ENDDO
 	DO N = 1, NAMPSO
-        ANS(2,SQSOINDEXB%(proc_prefix)s(M,N))= ANS(SQSOINDEXB%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
+        ANS(2,SQSOINDEXB%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
         ENDDO
       ENDDO
       ENDDO

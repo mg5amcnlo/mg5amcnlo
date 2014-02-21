@@ -57,7 +57,8 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,j
+      INTEGER IHEL,IDEN,i,j
+      double precision T(0:NSQAMPSO)
 %(den_factor_lines)s
 C  
 C GLOBAL VARIABLES
@@ -98,7 +99,7 @@ C ----------
          ENDIF
       ENDDO
       DO I=0,NSQAMPSO
-        ANS=ANS/DBLE(IDEN)
+        ANS(I)=ANS(I)/DBLE(IDEN)
       ENDDO
       END
        
@@ -132,11 +133,11 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
-      COMPLEX*16 ANS(2,0:NSQAMPSO)
+      REAL*8 ANS(0:NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J
+      INTEGER I,J,M,N
       REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
       COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
 C  
@@ -146,6 +147,10 @@ C
       common/to_saveamp/saveamp
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+C
+C FUNCTION
+C
+      INTEGER SQSOINDEXB%(iborn)s
 C  
 C COLOR DATA
 C  
@@ -161,9 +166,9 @@ C ----------
          amp(i)=saveamp(i,hell)
       enddo
       endif
+%(jamp1_lines)s
+%(jamp2_lines)s
     DO I = 1, NAMPSO
-  %(jamp1_lines)s
-  %(jamp2_lines)s
     ANS(I) = 0d0
     ENDDO
     DO M = 1, NAMPSO
@@ -173,7 +178,7 @@ C ----------
               ZTEMP = ZTEMP + CF(j,i)*JAMP2(J,M)
           ENDDO
 	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB%(iborn)d(M,N))=ANS(SQSOINDEXB%(iborn)d(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)   
+              ANS(SQSOINDEXB%(iborn)d(M,N))=ANS(SQSOINDEXB%(iborn)d(M,N))+ZTEMP*DCONJG(JAMP1(I,N))/DENOM(I)
           ENDDO
       ENDDO
     ENDDO
