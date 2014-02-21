@@ -860,7 +860,6 @@ class AbstractALOHAModel(dict):
                     for outgoing, tag in request[l_name][tmp]:
                         name = aloha_writers.get_routine_name(lorentz.name,outgoing=outgoing,tag=tag)
                         if name not in self.external_routines:
-                            print name
                             self.external_routines.append(name)
                 continue
             

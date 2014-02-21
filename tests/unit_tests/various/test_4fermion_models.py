@@ -176,7 +176,7 @@ class TestSchannelModels(Models4FermionTest):
             amplitudes.append(my_amplitude)
 
         subproc_group = \
-                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
+                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes, "madevent")[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                                   subproc_group)

@@ -1,0 +1,253 @@
+##############################################################
+##                       MadWeight                          ##
+##############################################################
+##   author:                                                ##
+##       olivier.mattelaer@uclouvain.be                     ##
+##       partois@nikhef.nl                                  ##
+##############################################################
+## Update are in time inverse order                         ##
+##############################################################
+
+13/10/11: 2.5.16 (PA) - implement MadWeight (version 2) into mg5
+
+15/09/11: 2.5.15 (OM) - modify clean.py 
+                      - the verif_event will not anymore modify the number of events if the number of selected evens
+		        are below the number of wanted events. This will create some additional warning but it allows
+                        to run correctly in case of multiple final-states. (However see note of 2.5.14 about such type
+ 			of generation)
+                      - debug the gauss_on_lepton transfer functions (Thanks to Michele)
+		      - debug the choice of change of variable in presence of neutrino not coming from a decay 
+                        (Thanks to Chad Shur)
+
+12/08/11: 2.5.14 (OM) - change the collect_result.py (Thanks Rogier)
+		      - allow to define the output format. (Changing this will not allow to run the plot)
+		      - add a smart collect for the weight in case of multiple final states.
+		      	 This type of run is still NOT officially supported. If you try those, please be carefull about
+			 the following points:
+                         Note: in this case, the output format need to be change for example to
+			 weight_format  '%(card)s\t%(event)s\t%(lhco_event)s\t%(value)s\t%(error)s\n'
+			 Note2: The cross-section normalisation will be the full cross-section in all case
+			 	This is NOT correct. -> So don't use the normalize output if you have different final states
+		         Note3: For process with generic leptons, the Subprocess directory might be only for electron.
+			        In that case, all the events with muon might be throw away. 
+                      - weight result will not mix events in case of different final states in 
+                           different subprocesses (assuming that they have a different number in the 
+			   lhco file). Nevertheless the normalization by the cross-section need to be done by 
+			   hand in this case. 
+
+15/07/11: 2.5.13 (OM) - include PBS in the list of supported cluster. (Thanks to NiKHEF)
+                      - add a PBS option for the maximum number of submitted jobs. 
+                      - add possibility to add option at submission for qsub
+                      - fix a problem with string option with space
+
+07/07/11: 2.5.12 (OM) - correct a bug forbidding to use MW with spin 2
+
+06/07/11: 2.5.11 (OM) - correct a bug which was forbiding to define Transfer function for MET.
+	                Note that those type of Transfer Functions are STRONGLY discouraged.
+                 (PA) - Modify the Multi-channel weight. this should slightly improve the 
+                        speed of the integration.
+
+28/06/11:v 2.5.10 (OM) - correct a bug for the f77 compiler (it was working fine with gfortran)
+
+19/07/10:v2.5.9(.2) (OM/PA) - correct multi-channel inconsistencies for HWW 
+                (OM/PA) - new driver
+		(OM/PA) - debug nevents which was not update correctly
+		(OM/PA) - change default TF
+		(OM/PA) - change likelihood computation behavior in case of zero result
+
+11/06/10:v2.5.8 (0M) - authorizes /, tab and comment in the proc_card (thanks to A. Sznajder)
+                (OM) - add a security to avoid to reach integer size limit (thanks to A. Sznajder)
+                (OM) - authorizes to define run name from the MadWeight_card
+                (OM) - add a test suite to test MW for more stability
+                (OM/PA) - correct a bug in data.inc introduces in 2.5.6 (made wrong tt-semi leptonic)
+            
+
+04/06/10:v2.5.7 (OM) - cleaner driver.f
+                (OM) - add control on the BW-cut. (Thanks to Ayres)
+                (OM) - Change the MadWeight_Card format (still support old format)
+
+
+24/04/10:v2.5.6 (OM) - put the mw_gen outside of the MadWeight_card
+                (OM) - debug detection of grid divergencies
+                (OM/PA) - add security for class e
+
+20/04/10:v2.5.5 (OM) - debug data.inc for class c (causes wrong number for class c)
+                (JA) - Conformed to new MadEvent standard, where nexternal is no longer included from genps.inc
+                (OM) - Inclusion to possibility to run in multicore (cluster number 4) (thanks to Erdogan/Gokhan)
+
+04/10:v2.5.4 (OM) - add an option to avoid to write events by events histogram in histogram mode
+                     - correct shift of one bin in the histogram mode
+                     - optimization of file reading
+
+24/02/10:v2.5.3 (OM) - debug a option problem for pt cut in jet/bjet
+
+27/01/10:v2.5.2 (OM) - debug decay in invisible particle 
+ 		     - add a new condor cluster class
+
+30/10/09:v2.5.1 (OM) - correction of multi-channel weight when they are two identical (for the point of view
+		       of aligned peaks)
+		     - correction of data.inc when they ar no visible particule
+		     - suppress multi-channel peaks associated to T channel
+                     - correct blob detection in T-channel (not detected if the blob start with a unaligned peaks)
+		     - correct cross-section normalization factor when the cuts are desactivated
+
+16/10/09:v2.5.0 (OM) - New techniques of integration using the multi-channel techniques.
+                       All the changes of variables are now used (with weighting techniques) in order
+		       to evalute the integrals. This techniques is more stable and faster than the 
+		       techniques used before.
+                     - Change in MadWeight Analyzer in order to produce some "less" optimazed change of
+		       variable, those one fastenize the integration in this new techniques.
+		     - Add some weight for the different channel corresponding to incompatible peaks. This
+		       is used in the multi-channel techniques ans fastenize and stabelize the integration.
+                     - New format for the transfer functions, pass to an xml format. This also comes
+		       with a new way to treat transfer function computation which is more clear and 
+		       marginally faster. adding the possibility to have a transfer function on missing
+		       ET, and on any type of particles.  
+		     - Fix the pointless warning in ./bin/PassToMadWeight.py.
+		     - Change default value for integration optimization in order to be adapted to the new situation.
+		     - inclusion of an (optional) automatic computation of the acceptance term
+                       (computed with Pythia/PGS) the cut selection use the verif_event module of MW.
+                       this is activated via the MadWeight_card.dat
+		       In order to compute the acceptance term, you need a special version of the Pythia-pgs directory
+                       (See the wiki)
+             (OM+AP) - Inclusion of a new module for the differential graph. This module is still in beta, and need some
+		       hardcoding in order to be used. Please contact olivier.mattelaer@uclouvain.be if you want to use this
+		       tool at this stage. More information will appear on the wiki when this module will be fully public.
+
+	     mod_file: list too long (more than 70 files modify or added or deleted)
+		     
+################ Pass to SubVersion 2.5  introducing Multi-channel//Acceptance_term//Histogram   ##########################
+
+22/09/09:v2.2.7 (OM) - first modification in order to use "real" division (for future compatibility 
+			  with Python3)
+                     - collect change automaticaly the number of events if the number of event generated 
+			  is lower than the expected 
+
+10/09/09:v2.2.6(OM)  - debug single machine mode.
+                     - separation between control and status option
+		          status: print the numbre of idle, running, finish job
+		          control: do the same, and launch new job on the cluster when it should be
+			  control should not be call on different shell, status can.
+		     - solve an additional problem with b permutation.
+			  
+23/07/09:v2.2.5(OM)  - improve detection of overtrained grid (less false positive)
+                     - fix uncorrect way to call block a
+                     - correct typo
+
+26/06/09:v2.2.4(OM)  - add auto-refine for cross-section computation
+		     - modification for LHAPDF compatibility
+		       The usage of LHAPDF and MW in the same time is 
+		       far to be garanteed for the moment.
+
+09/06/09:v2.2.3(OM)  - compatibility with gfortran
+                     - authorize run without any events
+                     - debug case sensitivity in input.lhco file
+                     - debug the recover of overtrained grid (if some weight=0 or
+		       if fortran write input in 2 different line
+                     - debug jet/bjet ordering
+                     - modify mod_file.py
+
+22/05/09:v2.2.2(OM)  - debug the way to combine iteration for ME (thanks to A. Freytas)
+
+20/05/09:v2.2.1(OM)  - Add new main script for analyzing cut effect 
+                     - stop grid refinment in step 5 to avoid overtrained grid
+                     - detecting of overtrained grid blows up and recover it
+		     - debug refine in single machine mode (thanks to Andre Sznajder)
+
+13/05/09:v2.2.0(OM)  - Add the possibility of automatic updating grid (new main script)
+                     - Changing the directory structure for an easier one
+                     - Pass to the standard survey/refine system (with multichannel) 
+                          for the computation of the cross section
+                     - Changing the selection of event (possibility of selecting events)
+                     - Gestion of cluster updated 
+                     - differentiate activation of cut
+                    
+################ Pass to SubVersion 2.2  with automatic updating grid ##########################
+
+12/02/09:v2.1.12(OM)      - Add the possibility to add new param_card in existing run
+			  - Add the possibility to remove some param_card in future run
+			  - Add the possibility to add new events in a existing run
+			  - pass the directory gestion in Object oriented
+			  - Add file to have a simple way to define default in MadWeight_card.dat
+			  - New gestion on cvs
+			  mod_file: create_param.py MW_param.py create_run.py cluster.py 
+				    cluster_lib.py collect_result.py Cards.py plot.py
+			  add_file: MW_param_default.dat
+			  
+10/02/09:v2.1.11(OM) - Change the driver.f to have more stable computation of the weight
+
+22/01/09:v2.1.10(OM) - authorize generation with $ and \ character
+                     - Fix: wrong permutation between jet and bjet
+		     - add script in bin (with PassToMadWeight) to recover banner information
+		       mod_file: proc_info.py get_feynman_content.f create_run.py MW_pos
+		       add_file: splitbanner.py
+		       
+
+15/01/09:v2.1.9(OM)   work done in/for SLAC (Thanks to Johan) 
+			- add a file containing all the likelihood value
+			- add an hidden option to select only the best permutation for the weight
+			- authorize generation following mass differences
+			- authorize generation following any function (not compatible with diff mode) 
+			- Fix: supress corectly the old submission file even in any case (Thanks to Camille)
+			- new gestion of SGE cluster (second mode available) 
+			- Fix: create the cross section file even if all event failed
+			- Fix: refine works even for zero weight events
+			- change some log in order to use progress bar 
+			- Fix: correct routine making the link between the card and the param (failing if more than three param)
+			- Fix: correct plot routine: suceed even if some points are missing
+			- Bash cluster (bsub) available 
+			mod_file: plot.py collect_event.py create_param.py cluster_lib.py cluster.py create_run.py
+			add_file: progressbar.py (created by Nilton Volpato) bsub_schedullar
+
+26/12/08:v2.1.8 (OM)    - add security to avoid bug similar to those discover in MG. 
+                          the previous grid for ME is now suppress before and after any run
+
+04/12/08:v2.1.7 (OM)    - debug b-tagging selection of events+ add new option for that
+			  mod_file: verif_event.py
+		        - check in MW/driver if step 2 is needed or not
+			  mod_file: driver.f
+		        - introduce the new_tag refine
+		        - debug tau selection of events from the file input.lhco
+			- suppress the writing of events with madevent
+
+17/11/08:v2.1.6: (OM+PA) - introduce the new_tag refine
+                         - use the run_card value for the seed
+                          mod_file: vegas.f madweight.py MW_param.py collect_result.py 
+
+14/11/08:v2.1.5: (OM)    - add routine to check that the bypass is made properly
+		         - suppress the minor helas error in newprocess run (introduced in 2.1.2)
+		          mod_file: MW_pos (both) expand_madweight.py mod_P_make
+			            newprocess_MW create_run.py cluster.py cluster_lib.py
+				    change_tf.py mod_file.py mod_cuts
+
+11/11/08:v2.1.5: (OM+PA) - correct a bug in the definition of rapidity in MadWeight 
+                           (thanks to Arnaud Pin)
+                 (OM)    - add an option to bipass the cut-check.
+                         - minor fixes
+			 mod_file: expand_madweight.py mod_file.py mod_cuts cuts.f
+                                   MadWeight_Card.dat create_run.py Cards.py 
+				   (MWP/)makefile madweight.py
+		         new_file: suppress_cuts
+07/11/08:v2.1.4: (OM) - correct a series of minor bug (mainly in collect routine)
+		      mod_file: clean.py collect.py cluster.py
+
+28/10/08:v2.1.3: (OM) - new way to handle different cluster type
+		      - inclusion of SGE cluster
+		      - new way to control running/finished job
+		      - new driver
+		        mod_file: madweight.py,create_run.py,collect_run.py
+				  MW_param.py,collect_result.py
+		        new_file: cluster.py,cluster_lib.py,Tools/sge_schedular
+
+
+03/10/08:v2.1.2: (OM)- modification of transfer function module
+		 authorize full local redefinition of TF
+		 directory Transfer_Fct in MG_ME not use anymore
+		   mod_file: all Transfer_fct directory, MWP_template/MW_pos
+                   suppress_file: change_tf.py (move to Transfer_fct)
+                 (0M)- compatibility if symbolic file replace by real file
+		   mod_file: madweight.py
+		 
+
+22/09/08:v2.1.1:(OM) modification for transfer function v1.3
+                   mod_file: mod_cuts,mod_setcuts

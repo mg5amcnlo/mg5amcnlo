@@ -465,7 +465,7 @@ class TestMEfromfile(unittest.TestCase):
         #a=rwa_input('freeze')
         self.check_parton_output(cross=150770.0, error=7.4e+02,target_event=1000)
         self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=6.3e+02,target_event=1000)
-        print '\nMS info: the number of events in the html file is not (always) correct after MS\n'
+        #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
         

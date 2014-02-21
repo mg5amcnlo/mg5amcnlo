@@ -1,6 +1,30 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.1.0(xx/xx/14) OM: Fix critical bug (returns wrong cross-section/width) for processes where the center of mass 
+
+2.1.0(21/02/14) MADWEIGHT RELEASE:
+                ------------------
+                
+                OM+PA: First Official release of MadWeight inside MG5_aMC
+                      Main update:
+                        - ISR corrections
+                        - possibility to use narrow-width approximation
+                        - introducing a module for the pre-selection of the parton-jet assignment.
+                        - extended formalism for the transfer function (more generic)
+                        - possibility to evaluate the weights for multiple choices of transfer function 
+      			  on the same phase-space point. The phase-space is optimized for the first set of 
+                          parameters.
+		      Speed update:
+                        - More efficient way to group the computation for identical process with different final state.
+                        - Possibility to Monte-Carlo over the permutation.
+                        - More efficient way to choose between the various change of variable.
+                        - Possibility to use mint (not compatible with all of the options)
+			- Possibility to use sobol for the generation of PS point (sometimes faster than pure 
+                          random point generator.
+
+                MadEvent/aMC@NLO UPDATE/BUG FIXING:
+ 		-----------------------------------
+
+                OM: Fix critical bug (returns wrong cross-section/width) for processes where the center of mass 
                     energy of the beam is lower than 1 GeV. So this has no impact for LHC-collider phenomenology.
                     This can also impact computation of decay-width if the mass of that particle is below 1 GeV.
 		RF: Critical bug fixed (introduced in 2.0.2) for fixed order NLO runs that could

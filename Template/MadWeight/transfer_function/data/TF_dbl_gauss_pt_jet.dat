@@ -1,0 +1,108 @@
+<file>## #################################################################
+##                                                                      ##
+##                          Matrix Element                              ##
+##                          ==============                              ##
+##                                                                      ##
+##		    Generate the transfer functions	                ##
+##	             -------------------------------                    ##
+## 	     			                                        ##
+##				                                        ##
+##    Authors: Mattelaer Olivier (UCL-CP3/ROMA3-INFN)                   ##
+##             Artoisenet Pierre (OHIO) 		                ##
+##				                                        ##
+##    Version:     2.0.0                         			##
+##    Last change: 22/09/09			                        ##
+##					                                ##
+##########################################################################
+##########################################################################
+##				                                        ##
+##				                                        ##
+##    Instructions:			                                ##
+##									##
+##	- This program  creates transfer functions in THETA/PHI/E       ##
+##	- Those functions must be defined in f77 standard               ##
+##	- In addition to each transfer function(START_TF), you MUST give##
+##	   the typical width associated to your function (START_WIDTH)	##
+##      - If a transfer functions is not defined here it will by default##
+##          - equals to one for neutrino/neutralino                     ##
+##          - a delta functions for the rest                            ##
+##########################################################################
+##                                                                      ##
+##   Syntax/variables:                                                  ## 
+##                                                                      ##
+##  - a definition for transfer functions should define the variable tf ##
+##    while a definition for the width shoud define the variable width  ##                               
+##	- You can use all standard f77 functions. (All variables are	##
+##		in double precision format). 	                        ##
+##	- The experimental event is  defined by the variable pexp(i)    ##
+##		i=0->3 (0->E,1->Px,2->Py,3->Pz)	                        ##
+##	- The partonic event is defined by the variable p(i)	        ##
+##		i=0->3 (0->E,1->Px,2->Py,3->Pz)			        ##
+##		sigma can not depend on those variables		        ##
+##	- You can use 10 local variables			        ##
+##		(double precision):  prov1,prov2,...,prov10	        ##
+##	- You can call specific functions on p or pexp:	                ##
+##		-pt(p)   : transverse momenta 			        ##
+##		-eta(p)  : pseudo-rapidity			        ##
+##		-rap(p)  : rapidity					##
+##		-theta(p): polar angle				        ##
+##		-phi(p)	 : azimuthal angle				##
+##	- The whole LHCO information is available.                      ##
+##              -run_number,trigger                       		##
+##		-eta_init(N),phi_init(N),pt_init(N)                     ##
+##              -j_mass(N),ntrk(N),btag(N),had_em(N)     	        ##
+##		-dummy1(N),dummy2(N)		                        ##
+##	    N is the LHCO tag(first column)	                        ##
+##		- current tag is n_lhco  				##
+##		- tag for missing ET is met_lhco			##
+##				  					##
+##	- You can incorporate parameters that will be passed through    ##
+##	        the transfert_card.dat. Those ones must have the        ##
+##		following syntax: #1,#2,#3,.. You can restart 		##
+##		the assignement for each different transfer function	##
+##	- In addition to each transfer function(tf_), you MUST give	##
+##		the typical width associated to your function (sigma_)	##
+##		This is needed for the phase space generator      	##
+##									##
+##########################################################################
+##########################################################################
+
+##**********************************************************************##
+##                           TF JET					##
+##**********************************************************************## 
+<block name='jet'>   #name can be anything 
+<info> doubel gaussian with parameter depending of the energy </info>
+<particles> u,d,s,c,b,g </particles>
+# this defined when this tf will be used.the letter correspond to the label in
+#        particles.dat
+<width_type> large </width_type>
+# width_type should be thin or large (thin is for energy acuurate up to 5-10%)
+<variable name='E'>
+<include>
+c       just for the example.
+</include>
+<tf>
+        prov1=(#1+#2*dsqrt(p(0))+#3*p(0))
+        prov2=(#4+#5*dsqrt(p(0))+#6*p(0))
+        prov3=(#7+#8*dsqrt(p(0))+#9*p(0))
+        prov4=(#10+#11*dsqrt(p(0))+#12*p(0))
+        prov5=(#13+#14*dsqrt(p(0))+#15*p(0))
+
+        tf=(exp(-(p(0)-pexp(0)-prov1)**2/2d0/prov2**2))                !first gaussian
+        tf=tf+prov3*exp(-(p(0)-pexp(0)-prov4)**2/2d0/prov5**2)     !second gaussian
+        tf=tf*((1d0/dsqrt(2d0*pi))/(prov2+prov3*prov5))            !normalisation 	
+</tf>
+<width>
+        prov2=(#4+#5*dsqrt(pexp(0))+#6*pexp(0))
+        prov5=(#13+#14*dsqrt(pexp(0))+#15*pexp(0))
+
+        width=max(prov2,prov5) 	
+</width>
+</variable>
+
+ # in this case THETA/PHI are not defined because they are considered 
+ # in delta (=default)
+ # The same syntax apply
+</block>
+</file>
+

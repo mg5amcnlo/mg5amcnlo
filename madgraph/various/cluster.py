@@ -147,7 +147,9 @@ class Cluster(object):
             cp -R -L $i $MYTMP
         done
         cd $MYTMP
-        bash ./%(script)s %(arguments)s
+        echo '%(arguments)s' > arguments
+        chmod +x ./%(script)s
+        %(program)s ./%(script)s %(arguments)s
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
@@ -155,12 +157,12 @@ class Cluster(object):
         done
         rm -rf $MYTMP
         """
-        
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
-                'arguments': ' '.join(argument)}
+                'arguments': ' '.join([str(a) for a in argument]),
+                'program': ' ' if '.py' in prog else 'bash'}
         
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
@@ -834,7 +836,7 @@ class CondorCluster(Cluster):
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
         if argument:
-            argument = 'Arguments = %s' % ' '.join(argument)
+            argument = 'Arguments = %s' % ' '.join([str(a) for a in argument])
         else:
             argument = ''
         # input/output file treatment
@@ -1056,12 +1058,12 @@ class PBSCluster(Cluster):
                 raise ClusterManagmentError, 'server disconnected'
             if me_dir in line:
                 ongoing.append(line.split()[0].split('.')[0])
-                status = line.split()[4]
-                if status in self.idle_tag:
+                status2 = line.split()[4]
+                if status2 in self.idle_tag:
                     idle += 1
-                elif status in self.running_tag:
+                elif status2 in self.running_tag:
                     run += 1
-                elif status in self.complete_tag:
+                elif status2 in self.complete_tag:
                     if not self.check_termination(line.split()[0].split('.')[0]):
                         idle += 1
                 else:
@@ -1070,14 +1072,12 @@ class PBSCluster(Cluster):
         if status.returncode != 0:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
 
-
-            
         for id in list(self.submitted_ids):
             if id not in ongoing:
-                status = self.check_termination(id)
-                if status == 'wait':
+                status2 = self.check_termination(id)
+                if status2 == 'wait':
                     run += 1
-                elif status == 'resubmit':
+                elif status2 == 'resubmit':
                     idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
