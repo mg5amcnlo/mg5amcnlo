@@ -2316,7 +2316,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         while not param_card[-1] or param_card[-1].startswith('#'):
             param_card.pop(-1)
 
-        # Append calculated and read decays to the param_card                                   
+        # Append calculated and read decays to the param_card   
         param_card.append("#\n#*************************")
         param_card.append("#      Decay widths      *")
         param_card.append("#*************************")
@@ -2337,7 +2337,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                                        ))
         decay_table = open(output, 'w')
         decay_table.write("\n".join(param_card) + "\n")
+        decay_table.close()
         logger.info("Results written to %s" %  output)
+
 
     ############################################################################
     def do_multi_run(self, line):

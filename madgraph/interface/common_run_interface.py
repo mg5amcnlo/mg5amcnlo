@@ -319,6 +319,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'delphes_path':'./Delphes',
                        'exrootanalysis_path':'./ExRootAnalysis',
                        'syscalc_path': './SysCalc',
+                       'lhapdf': 'lhapdf-config',
                        'timeout': 60,
                        'web_browser':None,
                        'eps_viewer':None,

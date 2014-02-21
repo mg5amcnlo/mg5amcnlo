@@ -339,6 +339,28 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return True
 
     #===========================================================================
+    # write_helamp_madspin
+    #===========================================================================
+    def write_helamp_madspin(self, writer, ncomb):
+        """Write the helamp.inc file for madspin"""
+
+        replace_dict = {}
+
+        replace_dict['ncomb'] = ncomb
+
+        file = """ \
+          integer    ncomb1
+          parameter (ncomb1=%(ncomb)d)
+          double precision helamp(ncomb1)    
+          common /to_helamp/helamp """ % replace_dict
+
+        # Write the file
+        writer.writelines(file)
+
+        return True
+
+
+    #===========================================================================
     # write_nexternal_file
     #===========================================================================
     def write_nexternal_file(self, writer, nexternal, ninitial):
@@ -1340,6 +1362,13 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             filename = 'nexternal_prod.inc'
             self.write_nexternal_madspin(writers.FortranWriter(filename),
                              nexternal, ninitial)
+
+        if self.opt['export_format']=='standalone_msF':
+            filename = 'helamp.inc'
+            ncomb=matrix_element.get_helicity_combinations()
+            self.write_helamp_madspin(writers.FortranWriter(filename),
+                             ncomb)
+
 
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),

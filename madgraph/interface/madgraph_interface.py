@@ -3625,6 +3625,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if ids:
                     all_ids.append(ids)
                 ids = []
+            elif part_name.isdigit() or (part_name.startswith('-') and part_name[1:].isdigit()):
+                ids.append([int(part_name)])
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
         all_ids.append(ids)
@@ -3909,7 +3911,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
-
                 #check if the decay is present or not:
                 if tuple(child) not in decay_table.keys():
                     to_remove.append(amp)
@@ -5747,7 +5748,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         warning_text = """Be carefull automatic computation of the width is
 ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         logger.warning(warning_text)
-
+        self.change_principal_cmd('MadGraph')
         if not model:
             modelname = self._curr_model['name']
             with misc.MuteLogger(['madgraph'], ['INFO']):
@@ -5780,7 +5781,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     param_card.write(opts['path'])
 
         data = model.set_parameters_and_couplings(opts['path'])
-
 
         # find UFO particles linked to the require names.
         skip_2body = True
@@ -5823,12 +5823,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             if float(opts['body_decay']) == 2:
                 return
 
-
-
         #
         # add info from decay module
         #
-
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()
