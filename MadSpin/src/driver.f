@@ -9,12 +9,14 @@ C---  integer    n_max_cg
       include 'coupl.inc'
       include 'nexternal.inc'
       include 'nexternal_prod.inc'
+      include 'helamp.inc'
       !include 'run.inc'
 
 C     
 C     LOCAL
 C     
       INTEGER I,J,K
+      INTEGER HELSET(NEXTERNAL)
       REAL*8 P(0:3,NEXTERNAL_PROD) 
       REAL*8 PFULL(0:3,NEXTERNAL), Ptrial(0:3,NEXTERNAL) 
       double precision x(36), Ecollider
@@ -304,6 +306,11 @@ c   VIb. generate unweighted decay config                               c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
        if (mode.eq.2) then
+c        initialize the helicity amps
+         do i=1,ncomb1
+           helamp(i)=0d0
+         enddo
+
          notpass=.true.
          counter=0
          counter2=0
@@ -345,7 +352,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            if (weight.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
         enddo
 
-
+c       
+        call get_helicity_ID(iconfig)
+        call get_helicities(iconfig,helset) 
 
         if (nb_mc_masses.gt.0) then 
 
@@ -372,6 +381,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
             write (*,*) (pfull(j,i), j=0,3)  
           enddo
         endif
+
+        write(*,*) (helset(j),j=1,nexternal)
 
         call flush()
         goto 1
@@ -407,6 +418,40 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 2     continue
       end
+
+      subroutine get_helicity_ID(iconfig)
+      implicit none
+      include 'helamp.inc'
+c     argument
+      integer iconfig
+
+c     local
+      integer i
+      double precision cumulweight(0:ncomb1),random
+
+
+      cumulweight(0)=0d0
+      do i=1,ncomb1
+         cumulweight(i)=helamp(i)+cumulweight(i-1)
+      enddo
+
+      call  ntuple(random,0d0,1d0,24,1)
+
+      do i=1,ncomb1
+         cumulweight(i)=cumulweight(i)/cumulweight(ncomb1)
+         !write(*,*) random
+         !write(*,*) cumulweight(i-1)
+         !write(*,*) cumulweight(i)
+         if (random.ge.cumulweight(i-1).and.random.le.cumulweight(i))then
+           iconfig=i
+           return
+         endif
+      enddo
+
+
+      return
+      end
+
 
       subroutine get_config(iconfig)
       implicit none

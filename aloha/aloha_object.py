@@ -841,25 +841,35 @@ class Identity(aloha_lib.FactoryLorentz):
     @classmethod
     def get_unique_name(self, spin1, spin2):
         return 'Id_%s_%s' % (spin1, spin2)
+
+#===============================================================================
+# IdentityL
+#===============================================================================
+class L_IdentityL(aloha_lib.LorentzObject):
+    
+    #identity = [[1, 0, 0,0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    identity = {(0,0): 1, (0,1): 0, (0,2): 0, (0,3): 0,\
+              (1,0): 0, (1,1): 1, (1,2): 0, (1,3): 0,\
+              (2,0): 0, (2,1): 0, (2,2): 1, (2,3): 0,\
+              (3,0): 0, (3,1): 0, (3,2): 0, (3,3): 1}
+
+    
+    def __init__(self, name, l1, l2):
+        aloha_lib.LorentzObject.__init__(self, name, [l1,l2], [])
+            
+    def create_representation(self):
         
-##===============================================================================
-## IdentityL  (Commented since not use)
-##===============================================================================
-#class IdentityL(aloha_lib.LorentzObject):
-#    
-#    identity = [[1, 0, 0,0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
-#    
-#    def __init__(self, lorentz1, lorentz2, prefactor=1):
-#        if lorentz1 < lorentz2:
-#            aloha_lib.LorentzObject.__init__(self,[lorentz1, lorentz2], [])
-#        else:
-#            aloha_lib.LorentzObject.__init__(self,[lorentz1, lorentz2], [])
-#            
-#    def create_representation(self):
-#        
-#        self.representation = aloha_lib.LorentzObjectRepresentation(self.identity,
-#                                             self.lorentz_ind,self.spin_ind)
-#    
+        self.representation = aloha_lib.LorentzObjectRepresentation(self.identity,
+                                             self.lorentz_ind,self.spin_ind)
+
+class IdentityL(aloha_lib.FactoryLorentz):
+    
+    object_class = L_Identity
+
+    @classmethod
+    def get_unique_name(self, l1, l2):
+        return 'IdL_%s_%s' % (l1, l2)
+
 #===============================================================================
 # ProjM 
 #===============================================================================    

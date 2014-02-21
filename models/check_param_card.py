@@ -170,6 +170,8 @@ class Block(list):
     def append(self, obj):
         
         assert isinstance(obj, Parameter)
+        if not hasattr(self, 'name'): #can happen if loeaded from pickle
+            self.__init__(obj.lhablock)
         assert not obj.lhablock or obj.lhablock == self.name
 
         #The following line seems/is stupid but allow to pickle/unpickle this object

@@ -1,0 +1,58 @@
+##########################################################################
+##									##
+##									##
+##				MadWeight				##
+##				*********				##
+##									##
+##	Autor:	 Olivier Mattelaer 					##
+##		 Pierre Artoisenet					##
+##									##
+##	date:	Feb 08							##
+##									##
+##########################################################################
+##########################################################################
+##									##
+##  rule to modify ./bin/setup_model.pl file from ME template		##
+##									##
+##									##
+## TAG:									##
+##	EXTRACT_TF							##
+##									##
+##########################################################################
+##
+##
+##########################################################################
+$B$ EXTRACT_TF $B$
+##************************************************************************
+
+# 2b. Extracts the transfer Functions name and copies the relevant files into Source/Transfer_Fct
+$tfdir="Source/MadWeight_File/Transfer_Fct/data";
+open (INPUT, "Cards/proc_card.dat");
+@input=<INPUT>;
+$length=$#input;
+close(INPUT);
+
+    my $transfer_fct='none';
+    $found=0;
+    foreach $i (@input){
+        if($found==1){$transfer_fct = $i;$found=0};
+        if($i =~ '# Begin Transfer Fct'){$found=1};
+        }
+        chomp($transfer_fct);
+    $transfer_fct =~ s/\s+//g;  # clean  from spaces
+        print ">>$transfer_fct<< \n";
+
+
+        if (-e $tfdir."/TF_".$transfer_fct.".dat") {
+      print "TF $transfer_fct found  in $tfdir \n";
+      system("python ./bin/change_tf.py $transfer_fct 0");
+      }
+        else{print "Error Transfer function $transfer_fct not found \n";
+          exit;
+      }
+
+
+
+##************************************************************************
+$E$ EXTRACT_TF $E$
+##########################################################################

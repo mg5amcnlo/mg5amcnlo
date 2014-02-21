@@ -124,24 +124,31 @@ c           banner.py is expected to correct such wrong run_card.
       endif
 
 C       Fill common block for Les Houches init info
-      do i=1,2
-        if(lpp(i).eq.1.or.lpp(i).eq.2) then
-          idbmup(i)=2212
-        elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
-          idbmup(i)=-2212
-        elseif(lpp(i).eq.3) then
-          idbmup(i)=11
-        elseif(lpp(i).eq.-3) then
-          idbmup(i)=-11
-        elseif(lpp(i).eq.0) then
-          idbmup(i)=idup(i,1,1)
-        else
-          idbmup(i)=lpp(i)
-        endif
-      enddo
-      ebmup(1)=ebeam(1)
-      ebmup(2)=ebeam(2)
-      call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+      if (nincoming.eq.2) then
+          do i=1,2
+            if(lpp(i).eq.1.or.lpp(i).eq.2) then
+              idbmup(i)=2212
+            elseif(lpp(i).eq.-1.or.lpp(i).eq.-2) then
+              idbmup(i)=-2212
+            elseif(lpp(i).eq.3) then
+              idbmup(i)=11
+            elseif(lpp(i).eq.-3) then
+              idbmup(i)=-11
+            elseif(lpp(i).eq.0) then
+              idbmup(i)=idup(i,1,1)
+            else
+              idbmup(i)=lpp(i)
+            endif
+          enddo
+          ebmup(1)=ebeam(1)
+          ebmup(2)=ebeam(2)
+          call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+      else
+        idbmup(1) = lpp(1)
+        idbmup(2) = 0
+        ebmup(1)  = ebeam(1)
+        ebmup(2)  = 0
+      endif
 
       return
  99   write(*,*) 'error in reading'

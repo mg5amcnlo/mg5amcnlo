@@ -180,12 +180,12 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do i=1,2
@@ -418,6 +418,8 @@ C---CLUSTER THE EVENT
 c look for veto jet without y cuts
          if (i.gt.2.and.yjet(i).gt.min(yjet(1),yjet(2)).and.
      &      yjet(i).lt.max(yjet(1),yjet(2)).and.ijveto.eq.0) ijveto = i
+
+C now look for jets within the rapidity cuts
          if (dabs(yjet(i)).lt.yjmax) then
              njety=njety+1
              if (ij1y.eq.0) then
@@ -450,6 +452,9 @@ c this is the loop for w-o / w vbf cuts
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
+         ij1 = ij1y
+         ij2 = ij2y
+         ij3 = ij3y
       endif
 
 c Load momenta

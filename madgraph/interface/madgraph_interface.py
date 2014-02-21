@@ -35,6 +35,7 @@ import shutil
 import StringIO
 import traceback
 import time
+import inspect
 import urllib
 
 
@@ -974,6 +975,7 @@ This will take effect only in a NEW terminal
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
                 if mode != self._done_export[1]:
+                    print mode, self._done_export[1]
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
                 args.append(self._done_export[1])
@@ -1052,6 +1054,7 @@ This will take effect only in a NEW terminal
         src_path = pjoin(path,'src')
         include_path = pjoin(path,'include')
         subproc_path = pjoin(path,'SubProcesses')
+        mw_path = pjoin(path,'Source','MadWeight')
 
         if os.path.isfile(pjoin(include_path, 'Pythia.h')):
             return 'pythia8'
@@ -1060,6 +1063,8 @@ This will take effect only in a NEW terminal
 
         if os.path.isdir(src_path):
             return 'standalone_cpp'
+        elif os.path.isdir(mw_path):
+            return 'madweight'
         elif os.path.isfile(pjoin(bin_path,'madevent')):
             return 'madevent'
         elif os.path.isfile(pjoin(bin_path,'aMCatNLO')):
@@ -1295,7 +1300,7 @@ This will take effect only in a NEW terminal
                     raise self.InvalidCmd('%s is not allowed in the output path' % char)
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
-                     ['madevent', 'standalone', 'standalone_cpp']:
+                     ['madevent', 'madweight', 'standalone', 'standalone_cpp']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1440,6 +1445,11 @@ This will take effect only in a NEW terminal
                                                name_dir(i))
         elif self._export_format == 'standalone':
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))                
+        elif self._export_format == 'madweight':
+            name_dir = lambda i: 'PROC_MW_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -2304,7 +2314,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
-                          'matrix', 'standalone_rw']
+                          'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha']
     _set_options = ['group_subprocesses',
                     'ignore_six_quark_processes',
@@ -2549,8 +2559,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))
-
+                  (len(self._curr_amps), ndiags))       
 
     # Define a multiparticle label
     def do_define(self, line, log=True):
@@ -3625,6 +3634,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 if ids:
                     all_ids.append(ids)
                 ids = []
+            elif part_name.isdigit() or (part_name.startswith('-') and part_name[1:].isdigit()):
+                ids.append([int(part_name)])
             else:
                 raise self.InvalidCmd("No particle %s in model" % part_name)
         all_ids.append(ids)
@@ -3704,6 +3715,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             if not line.strip():
                 break
             index_par = line.find(')')
+            # special cases: parenthesis but no , => remove the paranthesis!
+            if line.lstrip()[0] == '(' and index_par !=-1 and \
+                                                    not ',' in line[:index_par]:
+                par_start = line.find('(')
+                line = '%s %s' % (line[par_start+1:index_par], line[index_par+1:]) 
+                index_par = line.find(')')
             if line.lstrip()[0] == '(':
                 # Go down one level in process hierarchy
                 #level_down = True
@@ -3903,7 +3920,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              else -x for x in child]
                 child.sort()
                 child.insert(0, len(child))
-
                 #check if the decay is present or not:
                 if tuple(child) not in decay_table.keys():
                     to_remove.append(amp)
@@ -4786,6 +4802,22 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 stop = self.define_child_cmd_interface(ME)
                 return stop
             ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
+        elif args[0] == 'madweight':
+            import madgraph.interface.madweight_interface as madweight_interface
+            if options['interactive']:
+                if hasattr(self, 'do_shell'):
+                    MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
+                else:
+                    MW = madweight_interface.MadWeightCmd(me_dir=args[1],options=self.options)
+                # transfer interactive configuration
+                config_line = [l for l in self.history if l.strip().startswith('set')]
+                for line in config_line:
+                    MW.exec_cmd(line)
+                stop = self.define_child_cmd_interface(MW)                
+                return stop
+            ext_program = launch_ext.MWLauncher( self, args[1],
+                                                 shell = hasattr(self, 'do_shell'),
+                                                 options=self.options,**options)            
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
             raise self.InvalidCmd , '%s cannot be run from MG5 interface' % args[0]
@@ -5291,13 +5323,13 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         config = {}
         config['madevent'] =       {'check': True,  'exporter': 'v4',  'output':'Template'}
         config['matrix'] =         {'check': False, 'exporter': 'v4',  'output':'dir'}
-        config['standalone'] =     {'check': False, 'exporter': 'v4',  'output':'Template'}
+        config['standalone'] =     {'check': True, 'exporter': 'v4',  'output':'Template'}
         config['standalone_msF'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_msP'] = {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_rw'] =  {'check': False, 'exporter': 'v4',  'output':'Template'}
         config['standalone_cpp'] = {'check': False, 'exporter': 'cpp', 'output': 'Template'}
         config['pythia8'] =        {'check': False, 'exporter': 'cpp', 'output':'dir'}
-
+        config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         options = config[self._export_format]
         # check
@@ -5327,7 +5359,6 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
         if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
-
 
         # Reset _done_export, since we have new directory
         self._done_export = False
@@ -5388,15 +5419,15 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     subproc_groups = group_subprocs.SubProcessGroupList()
                     if non_dc_amps:
                         subproc_groups.extend(\
-                                   group_subprocs.SubProcessGroup.group_amplitudes(\
-                                                                       non_dc_amps))
+                            group_subprocs.SubProcessGroup.group_amplitudes(\
+                                                non_dc_amps, self._export_format))
+
                     if dc_amps:
                         dc_subproc_group = \
-                                 group_subprocs.DecayChainSubProcessGroup.\
-                                                           group_amplitudes(dc_amps)
-                        subproc_groups.extend(\
-                                  dc_subproc_group.\
-                                        generate_helas_decay_chain_subproc_groups())
+                                  group_subprocs.DecayChainSubProcessGroup.\
+                                  group_amplitudes(dc_amps, self._export_format)
+                        subproc_groups.extend(dc_subproc_group.\
+                                    generate_helas_decay_chain_subproc_groups())
 
                     ndiags = sum([len(m.get('diagrams')) for m in \
                               subproc_groups.get_matrix_elements()])
@@ -5434,8 +5465,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
-                                   'standalone_msP', 'standalone_msF', 'standalone_rw']:
+        if self._export_format in ['standalone_cpp', 'madevent', 'standalone', 
+                                   'standalone_msP', 'standalone_msF', 
+                                   'standalone_rw', 'madweight']:
             path = pjoin(path, 'SubProcesses')
 
         cpu_time1 = time.time()
@@ -5502,8 +5534,26 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                                main_file_name)
 
         # Pick out the matrix elements in a list
-        matrix_elements = \
-                        self._curr_matrix_elements.get_matrix_elements()
+        matrix_elements = self._curr_matrix_elements.get_matrix_elements()
+
+        # Fortran MadGraph MadWeight
+        if self._export_format == 'madweight':
+                        
+            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
+                #remove the merging between electron and muon
+                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping() 
+                
+                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
+                    calls = calls + \
+                         self._curr_exporter.generate_subprocess_directory_v4(\
+                                me_group, self._curr_fortran_model,
+                                group_number)
+            else:
+                for me_number, me in \
+                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
+                    calls = calls + \
+                            self._curr_exporter.generate_subprocess_directory_v4(\
+                                me, self._curr_fortran_model, me_number)
 
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in ['standalone', 'standalone_msP', 'standalone_msF', 'standalone_rw']:
@@ -5569,8 +5619,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_msP',
-                                   'standalone_msF', 'standalone_rw', 'NLO']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
+                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight']:
+
             # For v4 models, copy the model/HELAS information.
             if self._model_v4_path:
                 logger.info('Copy %s model files to directory %s' % \
@@ -5587,6 +5638,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                 self._curr_exporter.convert_model_to_mg4(self._curr_model,
                                                wanted_lorentz,
                                                wanted_couplings)
+
         if self._export_format == 'standalone_cpp':
             logger.info('Export UFO model to C++ format')
             # wanted_lorentz are the lorentz structures which are
@@ -5670,14 +5722,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
                pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
-        elif self._export_format == 'madevent':
+        elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False,
                          to_keep={'mg5_path':MG5DIR})
 
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
-                                   'standalone_rw']:
+                                   'standalone_rw', 'madweight']:
 
             self._curr_exporter.finalize_v4_directory( \
                                            self._curr_matrix_elements,
@@ -5687,7 +5739,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            online,
                                            self.options['fortran_compiler'])
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_cpp']:
+        if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
 
         if self._export_format in ['madevent', 'NLO']:
@@ -5741,7 +5793,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         warning_text = """Be carefull automatic computation of the width is
 ONLY valid in Narrow-Width Approximation and at Tree-Level."""
         logger.warning(warning_text)
-
+        self.change_principal_cmd('MadGraph')
         if not model:
             modelname = self._curr_model['name']
             with misc.MuteLogger(['madgraph'], ['INFO']):
@@ -5774,7 +5826,6 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
                     param_card.write(opts['path'])
 
         data = model.set_parameters_and_couplings(opts['path'])
-
 
         # find UFO particles linked to the require names.
         skip_2body = True
@@ -5817,12 +5868,9 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             if float(opts['body_decay']) == 2:
                 return
 
-
-
         #
         # add info from decay module
         #
-
         self.do_decay_diagram('%s %s' % (' '.join([`id` for id in particles]),
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()

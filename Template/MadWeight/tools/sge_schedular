@@ -1,0 +1,20 @@
+#!/bin/sh
+# ---------------------------
+# Job name
+#$ -N madweight
+#
+# memory request
+#$ -l h_vmem=1500M
+#
+# run time definition, expressed in seconds
+#$ -l h_rt=36000
+#
+#   mail
+#$ -m bea
+#$ -M name@institution.eu
+#
+# type of machines (cluster dependent) often mandatory!!!
+#$ -l p=2
+
+
+
