@@ -442,6 +442,15 @@ def rm_file_extension( ext, dirname, names):
 
 
 
+def multiple_replacer(*key_values):
+    replace_dict = dict(key_values)
+    replacement_function = lambda match: replace_dict[match.group(0)]
+    pattern = re.compile("|".join([re.escape(k) for k, v in key_values]), re.M)
+    return lambda string: pattern.sub(replacement_function, string)
+
+def multiple_replace(string, *key_values):
+    return multiple_replacer(*key_values)(string)
+
 # Control
 def check_system_error(value=1):
     def deco_check(f):

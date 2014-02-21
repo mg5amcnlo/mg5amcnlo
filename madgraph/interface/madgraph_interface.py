@@ -298,7 +298,7 @@ class HelpToCmd(cmd.HelpCmd):
               " FILENAME",'$MG:color:BLUE')
         logger.info("-- imports file(s) in various formats",'$MG:color:GREEN')
         logger.info("")
-        logger.info("   import model MODEL[-RESTRICTION] [--modelname]:",'$MG:color:BLACK')
+        logger.info("   import model MODEL[-RESTRICTION] [OPTIONS]:",'$MG:color:BLACK')
         logger.info("      Import a UFO model.")
         logger.info("      MODEL should be a valid UFO model name")
         logger.info("      Model restrictions are specified by MODEL-RESTRICTION")
@@ -897,12 +897,17 @@ class CheckValidForCmd(cmd.CheckCmd):
         """check the validity of line"""
 
         modelname = False
+        prefix = True
         if '-modelname' in args:
             args.remove('-modelname')
             modelname = True
         elif '--modelname' in args:
             args.remove('--modelname')
             modelname = True
+            
+        if '--noprefix' in args:
+            args.remove('--noprefix')
+            prefix = False  
 
         if not args:
             self.help_import()
@@ -927,6 +932,9 @@ class CheckValidForCmd(cmd.CheckCmd):
             if self.history[-1].startswith('import'):
                 self.history[-1] = 'import %s %s' % \
                                 (format, ' '.join(self.history[-1].split()[1:]))
+
+        if not prefix:
+            args.append('--noprefix')
 
         if modelname:
             args.append('-modelname')
@@ -2231,7 +2239,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             if not text and not completion_categories:
                 return ['--modelname']
             elif not (os.path.sep in args[-1] and line[-1] != ' '):
-                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname'])
+                completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname','--noprefix'])
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         return self.deal_multiple_categories(completion_categories)
@@ -3775,8 +3783,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                       helas_call_writers.FortranHelasCallWriter(\
                                                                self._curr_model)
             else:
+                prefix = not '--noprefix' in args
                 try:
-                    self._curr_model = import_ufo.import_model(args[1])
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)

@@ -68,7 +68,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False, restrict=True):
+def import_model(model_name, decay=False, restrict=True, prefix=''):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -103,7 +103,7 @@ def import_model(model_name, decay=False, restrict=True):
                 raise Exception, "%s is not a valid path for restrict file" % restrict
     
     #import the FULL model
-    model = import_full_model(model_path, decay) 
+    model = import_full_model(model_path, decay, prefix) 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
@@ -133,13 +133,15 @@ def import_model(model_name, decay=False, restrict=True):
     return model
 
 _import_once = []
-def import_full_model(model_path, decay=False, prefix=True):
+def import_full_model(model_path, decay=False, prefix=''):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
 
     assert model_path == find_ufo_path(model_path)
-            
+    if prefix is True:
+        prefix='mdl_'
+        
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py']
@@ -168,15 +170,35 @@ def import_full_model(model_path, decay=False, prefix=True):
             if model.has_key('version_tag') and not model.get('version_tag') is None and \
               model.get('version_tag').startswith(os.path.realpath(model_path)) and \
               model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
-                _import_once.append((model_path, aloha.unitary_gauge))
-                return model
+                
+                #check if the prefix is correct one.
+                for key in model.get('parameters'):
+                    for param in model['parameters'][key]:
+                        value = param.name.lower()
+                        if value in ['as','mu_r', 'zero','aewm1']:
+                            continue
+                        if prefix:
+                            if value.startswith(prefix):
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                return model
+                            else:
+                                logger.info('reload from .py file')
+                                break
+                        else:
+                            if value.startswith('mdl_'):
+                                logger.info('reload from .py file')
+                                break                   
+                            else:
+                                _import_once.append((model_path, aloha.unitary_gauge, prefix))
+                                return model
+                    else:
+                        continue
+                    break                                         
             else:
-                print model.get('version_tag')
                 logger.info('reload from .py file')
 
-    if (model_path, aloha.unitary_gauge) in _import_once:
+    if (model_path, aloha.unitary_gauge, prefix) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
-
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
@@ -204,7 +226,6 @@ def import_full_model(model_path, decay=False, prefix=True):
                 p.partial_widths = {}
             # might be None for ghost
     if prefix:
-        misc.sprint("in207")
         model.change_parameter_name_with_prefix()
         
     path = os.path.dirname(os.path.realpath(model_path))
@@ -456,7 +477,7 @@ class UFOMG5Converter(object):
                 newCouplingName='UVWfct_'+particle_info.name+'_'+str(key[-1])
                 particle_counterterms[tuple(newParticleCountertermKey)]=\
                   dict([(key,newCouplingName+('' if key==0 else '_'+str(-key)+'eps'))\
-                        for key in counterterm.keys()])
+                        for key in counterterm])
                 # We want to create the new coupling for this wavefunction
                 # renormalization.
                 self.ufomodel.object_library.Coupling(\
@@ -715,7 +736,7 @@ class UFOMG5Converter(object):
 
         switch = {}
         for i in range(1, nb_fermion+1):
-            if not i in flow.keys():
+            if not i in flow:
                 continue
             switch[i] = len(switch)
             switch[flow[i]] = len(switch)
@@ -858,7 +879,7 @@ class OrganizeModelExpression:
     conj_expr = re.compile(r'''complexconjugate\((?P<expr>\w+)\)''')
     
     #RE expression for is_event_dependent
-    separator = re.compile(r'''[+,\-*/()]''')
+    separator = re.compile(r'''[+,\-*/()\s]*''')
     
     def __init__(self, model):
     
@@ -906,7 +927,7 @@ class OrganizeModelExpression:
         
         assert isinstance(parameter, base_objects.ModelVariable)
         
-        if parameter.name in self.all_expr.keys():
+        if parameter.name in self.all_expr:
             return
         
         self.all_expr[parameter.name] = parameter
@@ -921,7 +942,7 @@ class OrganizeModelExpression:
         
         assert isinstance(coupling, base_objects.ModelVariable)
         
-        if coupling.name in self.all_expr.keys():
+        if coupling.name in self.all_expr:
             return
         self.all_expr[coupling.value] = coupling
         try:
@@ -975,14 +996,14 @@ class OrganizeModelExpression:
         
         # Split the different part of the expression in order to say if a 
         #subexpression is dependent of one of tracked variable
-        expr = self.separator.sub(' ',expr)
+        expr = self.separator.split(expr)
         
         # look for each subexpression
-        for subexpr in expr.split():
+        for subexpr in expr:
             if subexpr in self.track_dependant:
                 depend_on.add(subexpr)
                 
-            elif subexpr in self.all_expr.keys() and self.all_expr[subexpr].depend:
+            elif subexpr in self.all_expr and self.all_expr[subexpr].depend:
                 [depend_on.add(value) for value in self.all_expr[subexpr].depend 
                                 if  self.all_expr[subexpr].depend != ('external',)]
         if depend_on:
