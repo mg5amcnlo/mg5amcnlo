@@ -1063,7 +1063,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for n, info in enumerate(matrix_element.get_fks_info_list()):
             text += \
                 """if (nfksprocess.eq.%(n)d) then
-                call smatrix_%(n_me)d_splitorders(p, wgt)
+                call smatrix%(n_me)d_splitorders(p, wgt)
                 else""" % {'n': n + 1, 'n_me' : info['n_me']}
             text1 += \
                 """if (nfksprocess.eq.%(n)d) then
@@ -1122,7 +1122,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
         # the born me wrapper
         text = \
-            """subroutine smatrix_born(p, wgt)
+            """subroutine sborn(p, wgt)
             implicit none
             include 'nexternal.inc'
             double precision p(0:3, nexternal)

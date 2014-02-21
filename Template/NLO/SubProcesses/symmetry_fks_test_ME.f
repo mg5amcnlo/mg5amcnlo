@@ -131,11 +131,19 @@ c helicity stuff
       integer fks_conf_number,fks_loop_min,fks_loop_max,fks_loop
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+
+      INTEGER NBORN
+      COMMON/C_NBORN/NBORN
       
 c      integer icomp
 c-----
 c  Begin Code
 c-----
+
+      write (*,*) "SETTING NBORN=1"
+      NBORN=1
+
+
       write(*,*)'Enter xi_i, y_ij to be used in coll/soft tests'
       write(*,*)' Enter -2 to generate them randomly'
       read(*,*)xi_i_fks_fix_save,y_ij_fks_fix_save
