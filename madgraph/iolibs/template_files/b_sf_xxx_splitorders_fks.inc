@@ -168,7 +168,7 @@ C ----------
       endif
 %(jamp1_lines)s
 %(jamp2_lines)s
-    DO I = 1, NAMPSO
+    DO I = 0, NSQAMPSO
     ANS(I) = 0d0
     ENDDO
     DO M = 1, NAMPSO
@@ -182,6 +182,9 @@ C ----------
           ENDDO
       ENDDO
     ENDDO
+    do i = 1, nsqampso
+    ans(0) = ans(0) + ans(i)
+    enddo
     END
        
        

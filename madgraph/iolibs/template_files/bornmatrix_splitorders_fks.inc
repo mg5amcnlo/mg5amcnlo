@@ -291,6 +291,8 @@ C ----------
       endif
       Enddo
       do I = 1,NSQAMPSO
+          borns(1,0) = borns(1,0) + borns(1,I)
+          borns(2,0) = borns(2,0) + borns(2,I)
           ANS(1,I)=BORNS(1,I)+BORNS(2,I)
       ENDDO
       DO M = 1, NAMPSO
@@ -303,6 +305,10 @@ C ----------
         ANS(2,SQSOINDEXB%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
         ENDDO
       ENDDO
+      ENDDO
+      do I = 1,NSQAMPSO
+      ans(1,0) = ans(1,0) + ans(1,i)
+      ans(2,0) = ans(2,0) + ans(2,i)
       ENDDO
       nhel(glu_ij) = back_hel
       END

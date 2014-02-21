@@ -20,9 +20,6 @@ c
 c
 c     Local
 c
-      integer iforest(2,-max_branch:-1,lmaxconfigs)
-      integer mapconfig(0:lmaxconfigs)
-      integer sprop(-max_branch:-1,lmaxconfigs)
       integer itree(2,-max_branch:-1)
       integer imatch
       integer i,j, k, n, nsym,l,ii,jj
@@ -132,6 +129,14 @@ c helicity stuff
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
+c born configuration stuff
+      include 'born_ngraphs.inc'
+      integer iforest(2,-max_branch:-1,n_max_cg)
+      integer sprop(-max_branch:-1,n_max_cg)
+      integer tprid(-max_branch:-1,n_max_cg)
+      integer mapconfig(0:n_max_cg)
+      common/c_born_configs_inc/iforest,sprop,tprid,mapconfig
+
       INTEGER NBORN
       COMMON/C_NBORN/NBORN
       
@@ -142,6 +147,7 @@ c-----
 
       write (*,*) "SETTING NBORN=1"
       NBORN=1
+      call born_configs_and_props_inc_chooser
 
 
       write(*,*)'Enter xi_i, y_ij to be used in coll/soft tests'

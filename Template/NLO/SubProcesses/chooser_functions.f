@@ -8,7 +8,7 @@ c MAPCONFIG())
       double precision ZERO
       parameter (ZERO=0d0)
       include 'maxparticles.inc'
-      include 'ngraphs.inc'
+      include 'born_ngraphs.inc'
       integer i,j,k
       INTEGER NBORN
       COMMON/C_NBORN/NBORN

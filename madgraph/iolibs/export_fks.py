@@ -1126,7 +1126,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             implicit none
             include 'nexternal.inc'
             double precision p(0:3, nexternal)
-            double precision wgt(0:%d)
+            double complex wgt(2, 0:%d)
             integer nborn
             common/c_nborn/nborn
             real*4 tbefore, tAfter
@@ -1922,10 +1922,12 @@ Parameters              %(params)s\n\
 C the first index in wgt is the split order, the second 
 c gives the color link if = 1, or the charge link if = 2
           double precision p_born(0:3,nexternal-1), wgt(0:%d,2)
+          double complex wgt_born(2,0:%d)
           double precision chargeprod
           integer i,m,n 
           
-          call sborn%d_splitorders(p_born, wgt(0,2))""" % (iborn + 1, nsqorders, iborn + 1)
+          call sborn%d_splitorders(p_born, wgt_born)""" % \
+                  (iborn + 1, nsqorders, nsqorders, iborn + 1)
     
         if nlinks > 0:
             for i, c_link in enumerate(color_links):
@@ -1955,8 +1957,8 @@ c gives the color link if = 1, or the charge link if = 2
             wgt = 0d0
             endif
 
-            do i = 1, %d
-            wgt(i,2) = wgt(i,2) * chargeprod
+            do i = 0, %d
+            wgt(i,2) = wgt_born(1,i) * chargeprod
             enddo
             
             return
