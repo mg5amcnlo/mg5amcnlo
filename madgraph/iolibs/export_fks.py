@@ -521,6 +521,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_born_orders_file(writers.FortranWriter(filename),
                                     matrix_element)
 
+        filename = 'qcd_qed_pos.inc'
+        self.write_qcd_qed_pos_file(writers.FortranWriter(filename),
+                                    matrix_element)
+
         filename = 'nsplitcouplings.inc'
         self.write_nsplitcouplings_file(writers.FortranWriter(filename),
                                     matrix_element)
@@ -779,6 +783,28 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         text = 'integer nsplitcouplings\n' 
         text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'parameter (nsplitcouplings = %d)\n' % len(split_orders)
+        writer.writelines(text)
+
+
+    def write_qcd_qed_pos_file(self, writer, matrix_element):
+        """writes the include file which gives the info of the position of QCD and QED
+        in the split orders"""
+
+        split_orders = \
+                matrix_element.born_me_list[0]['processes'][0]['split_orders']
+        qcd_pos = -1
+        qed_pos = -1
+        if 'QCD' in split_orders:
+            qcd_pos = split_orders.index('QCD') + 1
+        if 'QED' in split_orders:
+            qed_pos = split_orders.index('QED') + 1
+
+
+        text = """integer qcd_pos, qed_pos
+C if = -1, then it is not in the split_orders
+                  parameter (qcd_pos = %d)
+                  parameter (qed_pos = %d)
+        """ % (qcd_pos, qed_pos)
         writer.writelines(text)
 
 
