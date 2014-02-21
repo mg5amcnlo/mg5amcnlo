@@ -5,7 +5,6 @@ LIBDIR = ../../lib/
 ANADIR = ../../FixedOrderAnalysis/
 
 #check if fastjet-config is set
-fastjet_config=fastjet-config
 ifeq ($(fastjet_config),None) 
     fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o
     FJLIBS += -lstdc++
