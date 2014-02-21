@@ -107,9 +107,6 @@ def import_model(model_name, decay=False, restrict=True):
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
-    path = os.path.dirname(os.path.realpath(model_path))
-    path = os.path.join(path, model.get('name'))
-    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     
     #restrict it if needed       
     if restrict_file:
@@ -136,7 +133,7 @@ def import_model(model_name, decay=False, restrict=True):
     return model
 
 _import_once = []
-def import_full_model(model_path, decay=False):
+def import_full_model(model_path, decay=False, prefix=True):
     """ a practical and efficient way to import one of those models 
         (no restriction file use)"""
 
@@ -173,6 +170,9 @@ def import_full_model(model_path, decay=False):
               model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 _import_once.append((model_path, aloha.unitary_gauge))
                 return model
+            else:
+                print model.get('version_tag')
+                logger.info('reload from .py file')
 
     if (model_path, aloha.unitary_gauge) in _import_once:
         raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
@@ -203,7 +203,13 @@ def import_full_model(model_path, decay=False):
             elif p and not hasattr(p, 'partial_widths'):
                 p.partial_widths = {}
             # might be None for ghost
-            
+    if prefix:
+        misc.sprint("in207")
+        model.change_parameter_name_with_prefix()
+        
+    path = os.path.dirname(os.path.realpath(model_path))
+    path = os.path.join(path, model.get('name'))
+    model.set('version_tag', os.path.realpath(path) +'##'+ str(misc.get_pkg_info()))
     # save in a pickle files to fasten future usage
     if ReadWrite:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
