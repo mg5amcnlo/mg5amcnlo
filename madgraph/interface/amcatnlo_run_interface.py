@@ -35,6 +35,7 @@ import signal
 import tarfile
 import copy
 import datetime
+import tarfile
 
 try:
     import readline
@@ -2792,7 +2793,11 @@ Integrated cross-section
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
-            input_files.append(pjoin(cwd, 'MadLoop5_resources'))
+            tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',
+                                                               dereference=True)
+            tf.add(pjoin(cwd,'MadLoop5_resources'))
+            tf.close()
+            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar'))
 
         Ire = re.compile("for i in ([\d\s]*) ; do")
         try : 

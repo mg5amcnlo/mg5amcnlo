@@ -218,7 +218,7 @@ c exists, which should be the case when firsttime is false.
                    mc_hel=0
                    goto 203
                endif
-               open (unit=67,file='MadLoop5_resources/HelFilter.dat',
+               open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
      $   status='old',err=201)
                hel(0)=0
                j=0

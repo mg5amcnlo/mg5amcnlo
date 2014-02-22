@@ -346,8 +346,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-#            if 23 in diag.get_pdgs_attached_to_loop(structs):
-#                valid_diag=False
+#            if any([pdg not in [6,-6] for pdg in diag.get_loop_lines_pdgs()]) or \
+#                                25 not in diag.get_pdgs_attached_to_loop(structs):
+#                 valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
@@ -356,7 +357,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 #            if 'ZERO' in [model.get_particle(pdg).get('mass') for pdg in \
 #                                                    diag.get_loop_lines_pdgs()]:
 #                valid_diag=False
-          
+
             # Ex. 4: Complicated filter which gets rid of all bubble diagrams made
             #        of two vertices being the four gluon vertex and the effective
             #        glu-glu-Higgs vertex.
