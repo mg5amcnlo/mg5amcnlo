@@ -1367,7 +1367,97 @@ class Model(PhysicsObject):
             part = self.get_particle(25)
             part.set('name', 'h1')
             part.set('antiname', 'h1')
+
+
             
+    def change_parameter_name_with_prefix(self, prefix='mdl_'):
+        """ Change all model parameter by a given prefix.
+        Modify the parameter if some of them are identical up to the case"""
+        
+        lower_dict={}
+        duplicate = set()
+        keys = self.get('parameters').keys()
+        for key in keys:
+            for param in self['parameters'][key]:
+                lower_name = param.name.lower()
+                if not lower_name:
+                    continue
+                try:
+                    lower_dict[lower_name].append(param)
+                except KeyError:
+                    lower_dict[lower_name] = [param]
+                else:
+                    duplicate.add(lower_name)
+                    logger.debug('%s is define both as lower case and upper case.' 
+                                 % lower_name)
+        
+        if prefix == '' and  not duplicate:
+            return
+                
+        re_expr = r'''\b(%s)\b'''
+        to_change = []
+        change={}
+        # recast all parameter in prefix_XX
+        for key in keys:
+            for param in self['parameters'][key]:
+                value = param.name.lower()
+                if value in ['as','mu_r', 'zero','aewm1']:
+                    continue
+                elif value.startswith(prefix):
+                    continue
+                elif value in duplicate:
+                    continue # handle later
+                elif value:
+                    change[param.name] = '%s%s' % (prefix,param.name)
+                    to_change.append(param.name)
+                    param.name = change[param.name]
+            
+        for value in duplicate:
+            for i, var in enumerate(lower_dict[value][1:]):
+                to_change.append(var.name)
+                change[var.name] = '%s%s__%s' % (prefix, var.name.lower(), i+2)
+                var.name = '%s%s__%s' %(prefix, var.name.lower(), i+2)
+                to_change.append(var.name)
+        
+        replace = lambda match_pattern: change[match_pattern.groups()[0]]
+        
+        if not to_change:
+            return
+        
+        if 'parameter_dict' in self:
+            new_dict = dict( (change[name] if (name in change) else name, value) for
+                             name, value in self['parameter_dict'].items())
+            self['parameter_dict'] = new_dict
+        
+        rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(to_change))))
+        
+        # change parameters
+        for key in keys:
+            if key == ('external',):
+                continue
+            for param in self['parameters'][key]:
+                param.expr = rep_pattern.sub(replace, param.expr)
+        # change couplings
+        for key in self['couplings'].keys():
+            for coup in self['couplings'][key]:
+                coup.expr = rep_pattern.sub(replace, coup.expr)
+                
+        # change mass/width
+        for part in self['particles']:
+            if str(part.get('mass')) in to_change:
+                part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+            if str(part.get('width')) in to_change:
+                part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
+            if  hasattr(part, 'partial_widths'):
+                for key, value in part.partial_widths.items():
+                    print value
+                    print part.partial_widths
+                    part.partial_widths[key] = rep_pattern.sub(replace, value)
+                
+        #ensure that the particle_dict is up-to-date
+        self['particle_dict'] =''
+        self.get('particle_dict') 
+
         
 
     def get_first_non_pdg(self):
