@@ -415,6 +415,7 @@ Parameters              alpha_s
       INTEGER FKS_I_D(8), FKS_J_D(8)
       INTEGER FKS_J_FROM_I_D(8, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(8, NEXTERNAL), PDG_TYPE_D(8, NEXTERNAL)
+      REAL*8 PARTICLE_CHARGE_D(8, NEXTERNAL)
 
       DATA FKS_I_D / 5, 5, 5, 5, 5, 5, 5, 5 /
       DATA FKS_J_D / 1, 2, 3, 4, 1, 1, 2, 2 /
@@ -474,6 +475,25 @@ C
      $ -1 /
       DATA (PDG_TYPE_D(8, IPOS), IPOS=1, NEXTERNAL) / 21, 1, 6, -6, 1 /
 
+C     
+C     Particle charge:
+C     charge is set 0. with QCD corrections, which is irrelevant
+      DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(2, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(3, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(4, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(5, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(6, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(7, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
+      DATA (PARTICLE_CHARGE_D(8, IPOS), IPOS=1, NEXTERNAL) / 0D0, 0D0
+     $ , 0D0, 0D0, 0D0 /
 
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()
@@ -1547,14 +1567,14 @@ C     ----------
           IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
      $     ,J)) THEN
             CALCULATEDBORN=.FALSE.
-            WRITE(*,*) 'Error in sb_sf: momenta not the same in the
-     $        born'
+            WRITE(*,*) 'Error in sb_sf: momenta not the same in th'
+     $       //'e born'
             STOP
           ENDIF
         ENDDO
       ELSE
-        WRITE(*,*) 'Error in sb_sf: color_linked borns should be
-     $    called only with calculatedborn = true'
+        WRITE(*,*) 'Error in sb_sf: color_linked borns should b'
+     $   //'e called only with calculatedborn = true'
         STOP
       ENDIF
       ANS = 0D0
@@ -1622,8 +1642,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
-        WRITE(*,*) 'Error in b_sf: color_linked borns should be called
-     $    only with calculatedborn = true'
+        WRITE(*,*) 'Error in b_sf: color_linked borns should be calle'
+     $   //'d only with calculatedborn = true'
         STOP
       ELSEIF (CALCULATEDBORN) THEN
         DO I=1,NGRAPHS

@@ -888,20 +888,28 @@ class TestFKSProcess(unittest.TestCase):
         myfks = fks_base.FKSProcess(MG.Process(dict))
         target_fks_infos = [ \
                 # real config 1: e- g > u u~ e-
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 0, 'born_conf': 1}]}],
                 # real config 2: e+ g > u u~ e+
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 0, 'born_conf': 1}]}],
                 # real config 3: d g > u u~ d
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 2, 'born_conf': 0}, {'real_conf': 1, 'born_conf': 1}]}],
                 # real config 4: d~ g > u u~ d~
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 2, 'born_conf': 0}, {'real_conf': 1, 'born_conf': 1}]}],
                 # real config 5: u g > u u u~
-                [{'i':4, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':4, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}],
                 # real config 6: u~ g > u u~ u~
-                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False}],
+                [{'i':5, 'j':1, 'ij':1, 'ij_glu':1, 'need_color_links':False,
+                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}],
                 # real config 7: a g > u u~ a
-                [{'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True},
-                 {'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links':True}]]
+                [{'i':5, 'j':3, 'ij':3, 'ij_glu':0, 'need_color_links':True,
+                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 3, 'born_conf': 1}]},
+                 {'i':5, 'j':4, 'ij':4, 'ij_glu':0, 'need_color_links':True,
+                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}]]
 
         myfks.generate_reals([],[])
         self.assertEqual(len(myfks.real_amps),7)
@@ -1042,7 +1050,7 @@ class TestFKSProcess(unittest.TestCase):
         target_full = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
         target_full_qed = {1:[],2:[],3:[],4:[1],5:[1,4]}
         borns = [[2,21,2,21], [21,21,21,21], [2,-2,21,21]]
-        borns_qed = [[22,21,22,21],[2,21,21,2]]
+        borns_qed = [[22,21,21,22],[2,21,21,2]]
         self.assertEqual(target_full, realproc.find_fks_j_from_i(borns))
         self.assertEqual(target_full_qed,realproc_qed.find_fks_j_from_i(borns_qed))
         #now the fks_j from_i corresponding onluy to u g > u g born
