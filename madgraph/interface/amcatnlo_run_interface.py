@@ -2795,7 +2795,7 @@ Integrated cross-section
         if os.path.exists(pjoin(cwd,'MadLoop5_resources')):
             tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar'),'w',
                                                                dereference=True)
-            tf.add(pjoin(cwd,'MadLoop5_resources'))
+            tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
             tf.close()
             input_files.append(pjoin(cwd, 'MadLoop5_resources.tar'))
 
