@@ -27,6 +27,7 @@ C***********************************************************************
       double precision fx(-7:7),x,xmu
       double precision u_val,d_val,u_sea,d_sea,s_sea,c_sea,b_sea,gluon
       double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
+      double precision NNevolvePDF
       double precision q2max
       double precision epa_electron,epa_proton
       include 'pdf.inc'
@@ -40,8 +41,19 @@ C---set to zero if x out of range
       if (x .ge. 1d0) then
           return
       endif
- 	  	 
-      if     ((pdlabel(1:3) .eq. 'mrs')
+      if (pdlabel(1:4) .eq. 'nn23') then
+         fx(-5)=NNevolvePDF(-5,x,xmu)
+         fx(-4)=NNevolvePDF(-4,x,xmu)
+         fx(-3)=NNevolvePDF(-3,x,xmu)
+         fx(0)=NNevolvePDF(0,x,xmu)
+         fx(+3)=NNevolvePDF(+3,x,xmu)
+         fx(+4)=NNevolvePDF(+4,x,xmu)
+         fx(+5)=NNevolvePDF(+5,x,xmu)
+         fx(1)=NNevolvePDF(+2,x,xmu)
+         fx(2)=NNevolvePDF(+1,x,xmu)
+         fx(-1)=NNevolvePDF(-2,x,xmu)
+         fx(-2)=NNevolvePDF(-1,x,xmu)
+      elseif     ((pdlabel(1:3) .eq. 'mrs')
      .   .or. (pdlabel(2:4) .eq. 'mrs')) then
 
              if     (pdlabel .eq. 'mrs02nl') then
