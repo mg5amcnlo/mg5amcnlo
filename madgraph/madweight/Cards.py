@@ -433,73 +433,113 @@ class Particles_file(Card):
     
     #2 #########################################################################
     def __init__(self,file='./Source/MODEL/particles.dat',type=''):
-   
-        Card.__init__(self, file, type)
-   
+        
+        print 'going trough'
+        self.charged = False
+        if not os.path.exists(file):
+            self.v4model = False
+            #UFO model
+        else:
+            self.v4model = True
+            Card.__init__(self, file, type)
+        print 'is v4?', self.v4model
     #2 #########################################################################
     def read(self):
         """read a particles.dat file (don't read multiple info now)"""
 
         self.charged=1
-        particle_pattern=re.compile(r'''^\s*
-                                        (?P<part>[\w+-~]{1,4})\s+
-                                        (?P<partx>[\w+-~]{1,5})\s+
-                                        (?P<spin>[SFVT])\s+
-                                        (?P<LineType>[WSDC])\s+
-                                        (?P<mass>\w+)\s+
-                                        (?P<width>\w+)\s+
-                                        (?P<color>[STO])\s+
-                                        (?P<label>[\w+-~]{1,5})\s+
-                                        (?P<pid>[\d-]*)\s*$''',re.VERBOSE)
-        ff=open(self.file,'r')
-
-        particle=[]
-        while 1:
-            line=ff.readline()
-            if line=='':
-                break
-            pat_particle=particle_pattern.search(line)
-            if pat_particle:
-                particle.append(list(pat_particle.groups()))
+        if self.v4model:
+            particle_pattern=re.compile(r'''^\s*
+                                            (?P<part>[\w+-~]{1,4})\s+
+                                            (?P<partx>[\w+-~]{1,5})\s+
+                                            (?P<spin>[SFVT])\s+
+                                            (?P<LineType>[WSDC])\s+
+                                            (?P<mass>\w+)\s+
+                                            (?P<width>\w+)\s+
+                                            (?P<color>[STO])\s+
+                                            (?P<label>[\w+-~]{1,5})\s+
+                                            (?P<pid>[\d-]*)\s*$''',re.VERBOSE)
+            ff=open(self.file,'r')
+    
+            particle=[]
+            while 1:
+                line=ff.readline()
+                if line=='':
+                    break
+                pat_particle=particle_pattern.search(line)
+                if pat_particle:
+                    particle.append(list(pat_particle.groups()))
+                
+            self.info={'particles':particle} 
+        else:
+            # UFO MODEL
+            try:
+                import internal.ufomodel.particles as particles
+            except Exception:
+                print 'fail'
+                sys.path.append(pjoin(os.getcwd(), 'bin'))
+                print sys.path
+                import internal.ufomodel.particles as particles
+            print particles.all_particles
             
-        self.info={'particles':particle} 
+            v4_part_info = []
+            done = []
+            for p in particles.all_particles:
+                if p.pdg_code in done:
+                    continue
+                done += [p.pdg_code,-1*p.pdg_code]
+                info = [p.name, 
+                        p.antiname,
+                        p.spin,
+                        p.line,
+                        p.mass,
+                        p.width,
+                        p.color,
+                        p.name,
+                        p.pdg_code]
+                v4_part_info.append([str(i) for i in info])
+            self.info={'particles':v4_part_info}
         
         
     #3 #########################################################################
     def give_pid_dict(self):
         """ return a list of pid for each tag -d'ont treat multiple tag-"""
  
-#        if not self.charged:
-#            self.read() #not automaticly read for the moment
-#        pid={}
-#        for data in self.info['particles']:
-#            
-#            if data[0]==data[1]:
-#                pid.update({data[0]:[int(data[-1])]})
-#            else:
-#                pid.update({data[0]:[int(data[-1])],data[1]:[-1*int(data[-1])]})
+        if not self.charged:
+            self.read() #not automaticly read for the moment
+        pid={}
+        for data in self.info['particles']:
+            
+            if data[0]==data[1]:
+                pid.update({data[0]:[int(data[-1])]})
+            else:
+                pid.update({data[0]:[int(data[-1])],data[1]:[-1*int(data[-1])]})
 
-        return {'e-': [11], 'a': [22], 've': [12], 'e+': [-11], 'w-': [-24], 'w+': [24], 'vm': [14], 'd~': [-1], 'b': [5], 'vt': [16], 'c~': [-4], 'ta-': [15], 'b~': [-5], 'ta+': [-15], 't~': [-6], 'vm~': [-14], 'c': [4], 'u~': [-2], 'd': [1], 'g': [21], 've~': [-12], 'h': [25], 's~': [-3], 's': [3], 'u': [2], 't': [6], 'mu-': [13], 'z': [23], 'mu+': [-13], 'vt~': [-16]}
+        return pid
+        #return {'e-': [11], 'a': [22], 've': [12], 'e+': [-11], 'w-': [-24], 'w+': [24], 'vm': [14], 'd~': [-1], 'b': [5], 'vt': [16], 'c~': [-4], 'ta-': [15], 'b~': [-5], 'ta+': [-15], 't~': [-6], 'vm~': [-14], 'c': [4], 'u~': [-2], 'd': [1], 'g': [21], 've~': [-12], 'h': [25], 's~': [-3], 's': [3], 'u': [2], 't': [6], 'mu-': [13], 'z': [23], 'mu+': [-13], 'vt~': [-16]}
 
     #3 #########################################################################
     def give_mass_width_dict(self):
         """ return two dict {pid:fortran_mass_code} and {pid:fortran_width_code}
             pid value are always positive
         """
-#        if not self.charged:
-#            self.read() #not automaticly read for the moment
-#        dict_mass={}
-#        dict_width={}
-#        for data in self.info['particles']:
-#            pid=abs(int(data[-1]))
-#            mass=data[-5]
-#            width=data[-4]
-            
-#            dict_mass[pid]=mass
-#            dict_width[pid]=width
-            
-  
-        return {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'MB', 6: 'MT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'MTA', 16: 'ZERO', 21: 'ZERO', 22: 'ZERO', 23: 'MZ', 24: 'MW', 25: 'MH'}, {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'ZERO', 6: 'WT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'ZERO', 16: 'ZERO', 21: 'ZERO', 22: 'WA', 23: 'WZ', 24: 'WW', 25: 'WH'}
+        
+        
+        
+        if not self.charged:
+            self.read() #not automaticly read for the moment
+        dict_mass={}
+        dict_width={}
+        for data in self.info['particles']:
+            pid=abs(int(data[-1]))
+            mass=data[-5]
+            width=data[-4]
+           
+            # Adding model prefixing
+            dict_mass[pid]='mdl_%s' % mass
+            dict_width[pid] = 'mdl_%s' % width
+             
+#        return {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'MB', 6: 'MT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'MTA', 16: 'ZERO', 21: 'ZERO', 22: 'ZERO', 23: 'MZ', 24: 'MW', 25: 'MH'}, {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'ZERO', 6: 'WT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'ZERO', 16: 'ZERO', 21: 'ZERO', 22: 'WA', 23: 'WZ', 24: 'WW', 25: 'WH'}
 
         return dict_mass,dict_width 
 

@@ -1718,6 +1718,33 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.write_source_makefile(writers.FortranWriter(filename))
         
     #===========================================================================
+    # convert_model_to_mg4
+    #===========================================================================    
+    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+                                                         wanted_couplings = []):
+         
+        super(ProcessExporterFortranMW,self).convert_model_to_mg4(model, 
+                                               wanted_lorentz, wanted_couplings)
+         
+        IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
+        try:
+            shutil.rmtree(pjoin(self.dir_path,'bin','internal','ufomodel'))
+        except OSError as error:
+            pass
+        model_path = model.get('modelpath')
+        # This is not safe if there is a '##' or '-' in the path.
+        shutil.copytree(model_path, 
+                               pjoin(self.dir_path,'bin','internal','ufomodel'),
+                               ignore=shutil.ignore_patterns(*IGNORE_PATTERNS))
+        if hasattr(model, 'restrict_card'):
+            out_path = pjoin(self.dir_path, 'bin', 'internal','ufomodel',
+                                                         'restrict_default.dat')
+            if isinstance(model.restrict_card, check_param_card.ParamCard):
+                model.restrict_card.write(out_path)
+            else:
+                files.cp(model.restrict_card, out_path)
+
+    #===========================================================================
     # generate_subprocess_directory_v4 
     #===========================================================================        
     def copy_python_file(self):

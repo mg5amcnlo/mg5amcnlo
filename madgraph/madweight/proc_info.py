@@ -48,35 +48,35 @@ class Decay_info:
             self.ParticlesFile=ParticlesFile #avoid multiple load of this file
 
     def read_config(self, file_name, mglabel2pid_dic):
-       trappe=open(file_name, 'r')
-       buff=trappe.readline()
-       res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[a-zA-Z0-9]*)\s*(?P<width>[a-zA-Z0-9]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
-
-       topo={}
-       while 1:
+        print file_name
+        trappe=open(file_name, 'r')
         buff=trappe.readline()
-        if buff.find('*')>-1: 
-          return topo
-        elif buff!="":        
-          if res_patern.search(buff): 
-             mg_id=res_patern.search(buff).group('mg_id')
-             pid_d1=int(res_patern.search(buff).group('pid_d1'))
-#             if pid_d1>0: pid_d1=mglabel2pid_dic[pid_d1]
-             pid_d2=int(res_patern.search(buff).group('pid_d2'))
-#             if pid_d2>0: pid_d2=mglabel2pid_dic[pid_d2]
-             mass=res_patern.search(buff).group('mass')
-             width= res_patern.search(buff).group('width')
-             SorT= res_patern.search(buff).group('SorT')
-             pid_m= res_patern.search(buff).group('pid_m')
-             topo[int(mg_id)]={}
-             topo[int(mg_id)]['daughters']=[int(pid_d1),int(pid_d2)]
-             topo[int(mg_id)]['mass']=mass
-             topo[int(mg_id)]['width']=width
-             topo[int(mg_id)]['channel']=SorT
-             topo[int(mg_id)]['pid']=int(pid_m)
-        else: 
-          print "error: unexpected format in configs.inc "
+        res_patern=re.compile(r'''^\s*(?P<mg_id>[\-,\d*]*)\s*(?P<pid_d1>[\-,\d*]*)\s*(?P<pid_d2>[\-,\d*]*)\s*(?P<mass>[\_a-zA-Z0-9]*)\s*(?P<width>[\_a-zA-Z0-9]*)\s*(?P<SorT>[a-zA-Z]*)\s*(?P<pid_m>[\-,\d*]*)''',re.I)
 
+        topo={}
+        while 1:
+            buff=trappe.readline()
+            if buff.find('*')>-1: 
+                return topo
+            elif buff!="":        
+                if res_patern.search(buff): 
+                    mg_id=res_patern.search(buff).group('mg_id')
+                    pid_d1=int(res_patern.search(buff).group('pid_d1'))
+#             if pid_d1>0: pid_d1=mglabel2pid_dic[pid_d1]
+                    pid_d2=int(res_patern.search(buff).group('pid_d2'))
+#             if pid_d2>0: pid_d2=mglabel2pid_dic[pid_d2]
+                    mass=res_patern.search(buff).group('mass')
+                    width= res_patern.search(buff).group('width')
+                    SorT= res_patern.search(buff).group('SorT')
+                    pid_m= res_patern.search(buff).group('pid_m')
+                    topo[int(mg_id)]={}
+                    topo[int(mg_id)]['daughters']=[int(pid_d1),int(pid_d2)]
+                    topo[int(mg_id)]['mass']=mass
+                    topo[int(mg_id)]['width']=width
+                    topo[int(mg_id)]['channel']=SorT
+                    topo[int(mg_id)]['pid']=int(pid_m)
+                else: 
+                    print "error: unexpected format in configs.inc "
 
 
     def decay_structure(self,topo,mglabel2pid_dic):
