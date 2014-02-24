@@ -775,7 +775,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def write_nsplitcouplings_file(self, writer, matrix_element):
         """writes the include file with numbers of couplings that take part to the orders
         splitting
-        e.g. 1 if split_orders=[QCD], 2 if split_orders=[QCD,QED]"""
+        e.g. 1 if split_orders=[QCD], 2 if split_orders=[QCD,QED].
+        Also include infos about the order name."""
 
         split_orders = \
                 matrix_element.born_me_list[0]['processes'][0]['split_orders']
@@ -783,6 +784,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         text = 'integer nsplitcouplings\n' 
         text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
         text += 'parameter (nsplitcouplings = %d)\n' % len(split_orders)
+        text += 'character*3 ordernames(nsplitcouplings)\n'
+        text += 'data ordernames / %s /\n' % ', '.join(['"%3s"' % o for o in split_orders])
         writer.writelines(text)
 
 
@@ -1165,9 +1168,7 @@ C if = -1, then it is not in the split_orders
         text1 = """\n\n subroutine sborn_sf(p,m,n,wgt)
           implicit none
           include 'nexternal.inc'
-c       the first index in wgt is the split order, the second 
-c        gives the color link if = 1, or the charge link if = 2
-          double precision p(0:3,nexternal-1), wgt(0:%d,2)
+          double precision p(0:3,nexternal-1), wgt(0:%d)
           integer m,n
           integer nborn
           common/c_nborn/nborn
@@ -1937,70 +1938,37 @@ Parameters              %(params)s\n\
         color linked borns"""
         
         replace_dict = {}
-        iflines = "\n"
         color_links = me.color_links[iborn]
         nlinks = len(color_links)
 
-        #header for the sborn_sf.f file 
-        file = """subroutine sborn%d_sf(p_born,m,n,wgt)
-          implicit none
-          include "nexternal.inc"
-C the first index in wgt is the split order, the second 
-c gives the color link if = 1, or the charge link if = 2
-          double precision p_born(0:3,nexternal-1), wgt(0:%d,2)
-          double complex wgt_born(2,0:%d)
-          double precision chargeprod
-          integer i,m,n 
-          
-          call sborn%d_splitorders(p_born, wgt_born)""" % \
-                  (iborn + 1, nsqorders, nsqorders, iborn + 1)
-    
-        if nlinks > 0:
-            for i, c_link in enumerate(color_links):
-                ilink = i+1
-                iff = {True : 'if', False : 'elseif'}[i==0]
-                m, n = c_link['link']
-                nexternal, ninitial = me.born_me_list[iborn].get_nexternal_ninitial()
-                chprod = self.get_chargeprod(me.charges_born[iborn], ninitial, m, n) 
-                if m != n:
-                    iflines += \
-                    "c link partons %(m)d and %(n)d \n\
-                        %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
-                        call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt(0,1))\n\
-                        chargeprod=%(chprod)15.12e\n" \
-                        % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1, 'chprod': chprod}
-                else:
-                    iflines += \
-                    "c link partons %(m)d and %(n)d \n\
-                        %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
-                        call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt(0,1))\n\
-                        chargeprod=%(chprod)s\n" \
-                        % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1, 'chprod': chprod}
+        replace_dict['iborn'] = iborn + 1
+        replace_dict['nsqorders'] = nsqorders
+        replace_dict['iflines_col'] = ''
+         
+        for i, c_link in enumerate(color_links):
+            ilink = i+1
+            iff = {True : 'if', False : 'elseif'}[i==0]
+            m, n = c_link['link']
+            if m != n:
+                replace_dict['iflines_col'] += \
+                "c link partons %(m)d and %(n)d \n\
+                    %(iff)s ((m.eq.%(m)d .and. n.eq.%(n)d).or.(m.eq.%(n)d .and. n.eq.%(m)d)) then \n\
+                    call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt_col)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
+            else:
+                replace_dict['iflines_col'] += \
+                "c link partons %(m)d and %(n)d \n\
+                    %(iff)s (m.eq.%(m)d .and. n.eq.%(n)d) then \n\
+                    call sb%(iborn)d_sf_%(ilink)3.3d_splitorders(p_born,wgt_col)\n" \
+                    % {'m':m, 'n': n, 'iff': iff, 'ilink': ilink, 'iborn': iborn + 1}
 
-            
-            file += iflines + \
-            """else
-            wgt = 0d0
-            endif
+        replace_dict['iflines_col'] += 'endif\n'
 
-            do i = 0, %d
-            wgt(i,2) = wgt_born(1,i) * chargeprod
-            enddo
-            
-            return
-            end""" % nsqorders        
-        elif nborns == 0:
-            #write a dummy file
-            file+="""
-c     This is a dummy function because
-c     this subdir has no soft singularities
-            wgt = 0d0          
-            
-            return
-            end"""           
-        # Write the end of the file
-       
+        file = open(os.path.join(_file_path, \
+                          'iolibs/template_files/sborn_sf_fks.inc')).read()
+        file = file % replace_dict
         writer.writelines(file)
+
 
     def get_chargeprod(self, charge_list, ninitial, n, m):
         """return the product of charges (as a string) of particles m and n.

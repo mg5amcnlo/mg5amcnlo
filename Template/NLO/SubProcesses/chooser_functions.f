@@ -195,9 +195,13 @@ c fks.inc information
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal), particle_charge_born(nexternal-1)
+      common /c_charges/particle_charge
+      common /c_charges_born/particle_charge_born
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       integer i_type,j_type,m_type
+      double precision ch_i,ch_j,ch_m
       integer particle_type_born(nexternal-1)
       common /c_particle_type_born/particle_type_born
 c
@@ -214,19 +218,25 @@ c
             stop
          endif
          particle_type(i)=particle_type_D(nFKSprocess,i)
+         particle_charge(i)=particle_charge_D(nFKSprocess,i)
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
       enddo
       do i=1,nexternal
 
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
+            particle_charge_born(i)=particle_charge(i)
          elseif (i.gt.max(i_fks,j_fks)) then
             particle_type_born(i-1)=particle_type(i)
+            particle_charge_born(i-1)=particle_charge(i)
          elseif (i.eq.min(i_fks,j_fks)) then
             i_type=particle_type(i_fks)
             j_type=particle_type(j_fks)
+            ch_i=particle_charge(i_fks)
+            ch_j=particle_charge(j_fks)
             if (abs(i_type).eq.abs(j_type)) then
                m_type=8
+               ch_m = 0d0
                if ( (j_fks.le.nincoming .and.
      &              abs(i_type).eq.3 .and. j_type.ne.i_type) .or.
      &              (j_fks.gt.nincoming .and.
@@ -238,24 +248,24 @@ c
             elseif(abs(i_type).eq.3 .and. j_type.eq.8)then
                if(j_fks.le.nincoming)then
                   m_type=-i_type
+                  ch_m = -ch_i
                else
                   write (*,*) 'Error in fks_inc_chooser: (i,j)=(q,g)'
                   stop
                endif
             elseif(i_type.eq.8 .and. abs(j_type).eq.3)then
-               if (j_fks.le.nincoming) then
-                  m_type=j_type
-               else
-                  m_type=j_type
-               endif
+               m_type=j_type
+               ch_m= ch_j
             else
                write(*,*)'Flavour mismatch #2 in fks_inc_chooser',
      &              i_type,j_type,m_type
                stop
             endif
             particle_type_born(i)=m_type
+            particle_charge_born(i)=ch_m
          elseif (i.ne.max(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
+            particle_charge_born(i)=particle_charge(i)
          endif
       enddo
       return
