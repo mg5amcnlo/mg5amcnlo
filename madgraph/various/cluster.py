@@ -1020,7 +1020,7 @@ class PBSCluster(Cluster):
         cmd = 'qstat '+str(id)
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
                                   stderr=open(os.devnull,'w'))
-        
+
         for line in status.stdout:
             line = line.strip()
             if 'cannot connect to server' in line or 'cannot read reply' in line:
@@ -1029,7 +1029,9 @@ class PBSCluster(Cluster):
                 return 'F'
             elif line.startswith(str(id)):
                 jobstatus = line.split()[4]
-                
+            else:
+                jobstatus=""
+                        
         if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
         if jobstatus in self.idle_tag:
