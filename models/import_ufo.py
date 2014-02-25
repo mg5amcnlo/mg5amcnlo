@@ -158,8 +158,10 @@ def import_full_model(model_path, decay=False, prefix=''):
         pickle_name = 'model.pkl'
     else:
         pickle_name = 'model_Feynman.pkl'
-        
+    
+    allow_reload = False
     if files.is_uptodate(os.path.join(model_path, pickle_name), files_list):
+        allow_reload = True
         try:
             model = save_load_object.load_from_file( \
                                           os.path.join(model_path, pickle_name))
@@ -168,9 +170,8 @@ def import_full_model(model_path, decay=False, prefix=''):
         else:
             # We don't care about the restrict_card for this comparison
             if model.has_key('version_tag') and not model.get('version_tag') is None and \
-              model.get('version_tag').startswith(os.path.realpath(model_path)) and \
-              model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
-                
+                model.get('version_tag').startswith(os.path.realpath(model_path)) and \
+                model.get('version_tag').endswith('##' + str(misc.get_pkg_info())):
                 #check if the prefix is correct one.
                 for key in model.get('parameters'):
                     for param in model['parameters'][key]:
@@ -197,8 +198,9 @@ def import_full_model(model_path, decay=False, prefix=''):
             else:
                 logger.info('reload from .py file')
 
-    if (model_path, aloha.unitary_gauge, prefix) in _import_once:
-        raise MadGraph5Error, 'This model is modified on disk. To reload it you need to quit/relaunch MG5_aMC' 
+    if (model_path, aloha.unitary_gauge, prefix) in _import_once and not allow_reload:
+        raise MadGraph5Error, 'This model %s is modified on disk. To reload it you need to quit/relaunch MG5_aMC ' % model_path
+     
     # Load basic information
     ufo_model = ufomodels.load_model(model_path, decay)
     ufo2mg5_converter = UFOMG5Converter(ufo_model)
