@@ -711,6 +711,9 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                  'transfer_card.dat', 'input.lhco']
         if not self.force:
             self.ask_edit_cards(cards, mode='fixed', plot=False)
+        else:
+            self.configured = 0
+            self.configure()
         with misc.chdir(self.me_dir): 
             if not os.path.exists(pjoin(self.me_dir, self.MWparam['mw_run']['inputfile'])):
                 raise self.InvalidCmd('Please specify a valid LHCO File')

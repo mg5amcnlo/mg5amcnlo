@@ -123,8 +123,9 @@ class MG_diagram(diagram_class.MG_diagram):
                 return output 
         
         fsock = open(pjoin(self.directory, 'permutation_weight.f'), 'w')
-        if self.MWparam['mw_perm']['preselect'] == 'None':
-            fsock.write(""" subroutine GET_PERM_WEIGHT()
+        if self.MWparam['mw_perm']['preselect'].lower() == 'none':
+            fsock.write(""" 
+            subroutine GET_PERM_WEIGHT()
             return
             end
             """
