@@ -3896,8 +3896,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                        ('pgs', 'ON'): {'pythia':'ON'},
                        ('delphes', 'ON'): {'pythia': 'ON'}}
         switch_assign = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-        
 
+        
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
             available_mode.append('1')
@@ -3912,7 +3912,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 switch['pgs'] = 'OFF'                
             if self.options['delphes_path']:
                 available_mode.append('3')
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['delphes'] = 'ON'
                 else:
                     switch['delphes'] = 'OFF'
