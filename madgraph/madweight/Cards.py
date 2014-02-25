@@ -434,7 +434,6 @@ class Particles_file(Card):
     #2 #########################################################################
     def __init__(self,file='./Source/MODEL/particles.dat',type=''):
         
-        print 'going trough'
         self.charged = False
         if not os.path.exists(file):
             self.v4model = False
@@ -442,7 +441,7 @@ class Particles_file(Card):
         else:
             self.v4model = True
             Card.__init__(self, file, type)
-        print 'is v4?', self.v4model
+
     #2 #########################################################################
     def read(self):
         """read a particles.dat file (don't read multiple info now)"""
@@ -476,11 +475,8 @@ class Particles_file(Card):
             try:
                 import internal.ufomodel.particles as particles
             except Exception:
-                print 'fail'
                 sys.path.append(pjoin(os.getcwd(), 'bin'))
-                print sys.path
                 import internal.ufomodel.particles as particles
-            print particles.all_particles
             
             v4_part_info = []
             done = []
