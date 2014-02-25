@@ -898,14 +898,14 @@ class ProcessExporterCPP(object):
             # Then write the numerators for the matrix elements
             my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
             t_str=repr(my_cs)
-            t_match=re.compile(r"(\w+)\(\s*(\d+)\s*,\s*(?:(\d+)\s*,\s*)*(\d+)\)")
-            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2)' returns with findall:
-            # [('T', '2', '4', '1'), ('Tr', '4', '5', '6'), ('Epsilon', '5', '3', '2')]
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
             all_matches = t_match.findall(t_str)
 
             tmp_color = [] 
             for match in all_matches:
-                ctype, arg = match[0], list(match[1:])
+                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
                 if ctype not in ['T', 'Tr']:
                     raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
                 tmp_color.append(arg)
@@ -919,7 +919,7 @@ class ProcessExporterCPP(object):
             curr_color += ['0'] * (max_len- len(curr_color)) 
             #format the output
             matrix_strings.append('{%s}' % ','.join(curr_color))
-        
+
         matrix_string = 'static const double res[%s][%s] = {%s};' % \
             (len(color_denominators), max_len, ",".join(matrix_strings))    
 
