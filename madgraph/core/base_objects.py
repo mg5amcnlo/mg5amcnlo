@@ -1552,13 +1552,15 @@ class Model(PhysicsObject):
                         self.get('parameters')[mass.depend].remove(mass)
                         # Make Gf an internal parameter
                         new_param = ModelVariable('mdl_Gf',
-                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - MZ**2))' %\
+                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - mdl_MZ**2))' %\
                         {'MW': mass.name}, 'complex', mass.depend)
                         Gf = self.get_parameter('mdl_Gf')
                         self.get('parameters')[('external',)].remove(Gf)
-                        self.add_param(new_param, ['aEW'])
+                        self.add_param(new_param, ['mdl_aEW'])
                         # Use the new mass for the future modification
                         mass = MW
+                    elif isinstance(mass, ModelVariable):
+                        logger.warning('W mass is not an external parameter. This is not adviced for the complex mass scheme.')
                 
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
