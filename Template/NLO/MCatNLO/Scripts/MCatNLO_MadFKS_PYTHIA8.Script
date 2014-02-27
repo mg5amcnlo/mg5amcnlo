@@ -433,9 +433,9 @@ PhaseSpace:RsepMin = 0.            ! Min R separation in 2->3
 ! 5) Final-state shower.
 TimeShower:pTmaxMatch = 1          ! Use scalup (re-check)
 TimeShower:pTmaxFudge = 1.         ! Factor changing the max scale
-#TimeShower:alphaSvalue = 0.1383   ! Alpha_s(MZ) in final-state shower
-#TimeShower:alphaSorder = 2        ! Alpha_s running order in final-state shower
-#TimeShower:alphaorder = 0         ! Alpha_EM running order in final-state shower
+TimeShower:alphaSvalue = 0.118     ! Alpha_s(MZ) in final-state shower
+TimeShower:alphaSorder = 1         ! Alpha_s running order in final-state shower
+TimeShower:alphaEMorder = 0        ! Alpha_EM running order in final-state shower
 TimeShower:interleave = on         ! If on, FSR interleaved with ISR
 TimeShower:allowBeamRecoil = on    ! If off, no energy transfer to from ISR to FSR
 TimeShower:dampenBeamRecoil = off  ! Dampens the effect of beam recoil
@@ -458,9 +458,9 @@ TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
 SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
-#SpaceShower:alphaSvalue = 0.137   ! Alpha_s(MZ) in final-state shower
-#SpaceShower:alphaSorder = 2       ! Alpha_s running order in final-state shower
-#SpaceShower:alphaEMorder = 0      ! Alpha_EM running order in final-state shower
+SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
+SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
+SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
 SpaceShower:QCDshower = on         ! QCD final-state shower
 SpaceShower:QEDshowerByQ = off     ! Prevent quarks from radiating photons
 SpaceShower:QEDshowerByL = off     ! Prevent leptons from radiating photons
