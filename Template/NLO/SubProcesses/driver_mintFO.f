@@ -10,6 +10,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -203,12 +204,15 @@ c at the NLO)
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
          if(imode.eq.0)then
+c Don't safe the reweight information when just setting up the grids.
+            doreweight=.false.
             do j=0,nintervals
                do i=1,ndimmax
                   xgrid(j,i)=0.d0
                enddo
             enddo
          else
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
