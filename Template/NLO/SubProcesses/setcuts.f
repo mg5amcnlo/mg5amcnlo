@@ -96,15 +96,13 @@ c
          endif
 c-check consistency of maxjetflavor in the run_card and with Nf
 c specified in coupl.inc
-      if (maxjetflavor.gt.int(Nf)) then
-          write(*,*) "WARNING: the value of maxjetflavor specified in"//
-     1   " the run_card is inconsistent with the number of light"//
-     1   " flavours in the model."
-          write(*,*)"Hence it will be set to ", int(Nf)
+      if (maxjetflavor.lt.int(Nf)) then
+         write(*,'(a,i3,a,i3)') "WARNING: the value of maxjetflavor"/
+     $        /"specified in the run_card (",maxjetflavor,") is"/
+     $        /" inconsistent with the number of light flavours in"/
+     $        /"the model. Hence it will be set to:", int(Nf)
           maxjetflavor = int(Nf)
       endif
-      
-
 
       do i=nincoming+1,nexternal
          is_a_j(i)=.false.
@@ -113,7 +111,7 @@ c specified in coupl.inc
          is_a_ph(i)=.false.
 
 c-light-jets
-         if (abs(idup(i,1)).le.min(maxjetflavor,5)) then
+         if (abs(idup(i,1)).le.maxjetflavor) then
               is_a_j(i)=.true.
          endif
          if (abs(idup(i,1)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
@@ -219,19 +217,14 @@ c event could.
             do i=nincoming+1,nexternal
 c Add the minimal jet pTs to tau
                if(IS_A_J(i) .and. i.ne.nexternal)then
-                  if (abs(emass(i)).gt.vtiny) then
-                     write (*,*) 'Error in set_tau_min in setcuts.f:'
-                     write (*,*) 'mass of a jet should be zero',i
-     &                    ,emass(i)
-                     stop
-                  endif
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
-                     taumin(iFKS)=taumin(iFKS)+ptj
-                     taumin_s(iFKS)=taumin_s(iFKS)+ptj
-                     taumin_j(iFKS)=taumin_j(iFKS)+ptj
+                     taumin(iFKS)=taumin(iFKS)+max(ptj,emass(i))
+                     taumin_s(iFKS)=taumin_s(iFKS)+max(ptj,emass(i))
+                     taumin_j(iFKS)=taumin_j(iFKS)+max(ptj,emass(i))
                   elseif (j_fks.ge.1 .and. j_fks.le.nincoming) then
-                     taumin_s(iFKS)=taumin_s(iFKS)+ptj
-                     taumin_j(iFKS)=taumin_j(iFKS)+ptj
+                     taumin(iFKS)=taumin(iFKS)+emass(i)
+                     taumin_s(iFKS)=taumin_s(iFKS)+max(ptj,emass(i))
+                     taumin_j(iFKS)=taumin_j(iFKS)+max(ptj,emass(i))
                   elseif (j_fks.eq.nexternal) then
                      write (*,*)
      &                    'ERROR, j_fks cannot be the final parton'
