@@ -723,7 +723,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # Let the user call get_JAMP_lines_split_order directly from a 
         error_msg="Malformed '%s' argument passed to the "+\
-                                          "get_JAMP_lines_split_order function."
+                 "get_JAMP_lines_split_order function: %s"%str(split_order_amps)
         if(isinstance(col_amps,helas_objects.HelasMatrixElement)):
             color_amplitudes=col_amps.get_color_amplitudes()
         elif(isinstance(col_amps,list)):
@@ -1506,8 +1506,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
+        # The proc_id is for MadEvent grouping which is never used in SA.
         replace_dict = {'global_variable':'', 'amp2_lines':'',
-                                                      'proc_prefix':proc_prefix}
+                                       'proc_prefix':proc_prefix, 'proc_id':''}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -1619,6 +1620,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                           'iolibs/template_files/matrix_standalone_v4.inc')).read()
 
         file = file % replace_dict
+
+        # Add the helper functions.
+        if len(split_orders)>0:
+            file = file + '\n' + open(pjoin(_file_path, \
+             'iolibs/template_files/split_orders_helping_functions.inc'))\
+                                                            .read()%replace_dict
 
         # Write the file
         writer.writelines(file)
@@ -2098,7 +2105,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Set lowercase/uppercase Fortran code
         writers.FortranWriter.downcase = False
 
-        replace_dict = {}
+        # The proc prefix is not used for MadEvent output so it can safely be set
+        # to an empty string.
+        replace_dict = {'proc_prefix':''}
 
         # Extract helas calls
         helas_calls = fortran_model.get_matrix_element_calls(\
@@ -2184,19 +2193,74 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         amp2_lines = self.get_amp2_lines(matrix_element, config_map)
         replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
 
+        # The JAMP definition depends on the splitting order
+        split_orders=matrix_element.get('processes')[0].get('split_orders')
+        if len(split_orders)>0:
+            squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
+            replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
+                              matrix_element.get('processes')[0],squared_orders)
+        else:
+            # Consider the output of a dummy order 'ALL_ORDERS' for which we
+            # set all amplitude order to weight 1 and only one squared order
+            # contribution which is of course ALL_ORDERS=2.
+            squared_orders = [(2,),]
+            amp_orders = [((1,),tuple(range(1,ngraphs+1)))]
+            replace_dict['chosen_so_configs'] = '.TRUE.'
+            
+        replace_dict['nAmpSplitOrders']=len(amp_orders)
+        replace_dict['nSqAmpSplitOrders']=len(squared_orders)
+        replace_dict['nSplitOrders']=max(len(split_orders),1)
+        amp_so = self.get_split_orders_lines(
+                [amp_order[0] for amp_order in amp_orders],'AMPSPLITORDERS')
+        sqamp_so = self.get_split_orders_lines(squared_orders,'SQSPLITORDERS')
+        replace_dict['ampsplitorders']='\n'.join(amp_so)
+        replace_dict['sqsplitorders']='\n'.join(sqamp_so)         
         # Extract JAMP lines
-        jamp_lines = self.get_JAMP_lines(matrix_element)
+        # If no split_orders then artificiall add one entry called 'ALL_ORDERS'
+        jamp_lines = self.get_JAMP_lines_split_order(\
+                             matrix_element,amp_orders,split_order_names=
+                        split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
         file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
         file = file % replace_dict
-
-
+        
+        # Add the split orders helper functions.
+        file = file + '\n' + open(pjoin(_file_path, \
+             'iolibs/template_files/split_orders_helping_functions.inc'))\
+                                                            .read()%replace_dict
         # Write the file
         writer.writelines(file)
 
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+
+
+    def set_chosen_SO_index(self, process, squared_orders):
+        """ From the squared order constraints set by the user, this function
+        finds what indices of the squared_orders list the user intends to pick.
+        It returns this as a string of comma-separated successive '.true.' or 
+        '.false.' for each index."""
+        
+        user_squared_orders = process.get('squared_orders')
+        split_orders = process.get('split_orders')
+        
+        if len(user_squared_orders)==0:
+            return ','.join(['.true.']*len(squared_orders))
+        
+        res = []
+        for sqsos in squared_orders:
+            is_a_match = True
+            for user_sqso, value in user_squared_orders.items():
+                if (process.get_squared_order_type(user_sqso) =='==' and \
+                        value!=sqsos[split_orders.index(user_sqso)]) or \
+                   (process.get_squared_order_type(user_sqso) in ['<=','='] and \
+                                    value<sqsos[split_orders.index(user_sqso)]):
+                    is_a_match = False
+                    break
+            res.append('.true.' if is_a_match else '.false.')
+            
+        return ','.join(res)
 
     #===========================================================================
     # write_auto_dsig_file

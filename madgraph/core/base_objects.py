@@ -2264,6 +2264,11 @@ class Process(PhysicsObject):
         # gives the upper bound for the total weighted order of the
         # squared amplitude.
         self['squared_orders'] = {}
+        # The squared order (sqorders) constraints above can either be upper 
+        # bound (<=) or exact match (==) depending on how they were specified
+        # in the user input. This choice is stored in the dictionary below.
+        # Notice that the upper bound is the default
+        self['sqorders_types'] = {}
         self['has_born'] = True
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
@@ -2289,6 +2294,15 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'sqorders_types':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)
+            for order in value.keys()+value.values():
+                if not isinstance(order, str):
+                    raise self.PhysicsObjectError, \
+                          "%s is not a valid string" % str(value)
 
         if name == 'split_orders':
             if not isinstance(value, list):
@@ -2401,6 +2415,16 @@ class Process(PhysicsObject):
 
         return super(Process, self).set(name, value) # call the mother routine
 
+    def get_squared_order_type(self, order):
+        """ Return what kind of squared order constraint was specified for the
+        order 'order'."""
+
+        if order in self['sqorders_types'].keys():
+            return self['sqorders_types'][order]
+        else:
+            # Default behavior '=' is interpreted as upper bound '<='
+            return '='
+
     def get(self, name):
         """Special get for legs_with_decays"""
         
@@ -2449,7 +2473,8 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-              for key in self['orders'] if print_weighted or key!='WEIGHTED']) + ' '
+              for key in self['orders'] if (print_weighted or key!='WEIGHTED') \
+              and not key in self['squared_orders'].keys()]) + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -2461,9 +2486,11 @@ class Process(PhysicsObject):
             mystr = mystr + '] '
 
         # Add squared orders
-        if self['perturbation_couplings'] and self['squared_orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['squared_orders'][key]) \
-              for key in self['squared_orders'] if print_weighted or key!='WEIGHTED']) + ' ' 
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]) \
+              for key in self['squared_orders'].keys() \
+                                    if print_weighted or key!='WEIGHTED']) + ' '
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:
@@ -2735,6 +2762,14 @@ class Process(PhysicsObject):
         
         for procdef in self['decay_chains']:
             if procdef['perturbation_couplings'] or procdef.are_decays_perturbed():
+                return True
+        return False
+    
+    def decays_have_squared_orders(self):
+        """ Check iteratively that the decayed processes are not perturbed """
+        
+        for procdef in self['decay_chains']:
+            if procdef['squared_orders']!={} or procdef.decays_have_squared_orders():
                 return True
         return False
     
@@ -3057,7 +3092,7 @@ class ProcessDefinition(Process):
 
         return max_order_now, particles, hierarchy
 
-    def nice_string(self, indent=0):
+    def nice_string(self, indent=0, print_weighted=False):
         """Returns a nicely formated string about current process
         content"""
 
@@ -3118,6 +3153,12 @@ class ProcessDefinition(Process):
                 mystr = mystr + order + ' '
             mystr = mystr + '] '
 
+        if self['squared_orders']:
+            mystr = mystr + " ".join([key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]) \
+              for key in self['squared_orders'].keys() \
+                                    if print_weighted or key!='WEIGHTED']) + ' '
+
         # Remove last space
         mystr = mystr[:-1]
 
@@ -3146,6 +3187,7 @@ class ProcessDefinition(Process):
             'model':self.get('model'),
             'id': self.get('id'),
             'orders': self.get('orders'),
+            'sqorders_types': self.get('sqorders_types'),
             'squared_orders': self.get('squared_orders'),
             'has_born': self.get('has_born'),
             'required_s_channels': self.get('required_s_channels'),

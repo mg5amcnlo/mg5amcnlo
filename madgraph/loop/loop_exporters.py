@@ -607,6 +607,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # subroutines and common block so that several processes can be compiled
         # together into one library, as necessary to follow BLHA guidelines.
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element)
+
+        # The proc_id is used for MadEvent grouping, so none of our concern here
+        # and it is simply set to an empty string.        
+        dict['proc_id'] = ''
         # Extract version number and date from VERSION file
         info_lines = self.get_mg5_info_lines()
         dict['info_lines'] = info_lines

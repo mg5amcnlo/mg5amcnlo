@@ -2326,6 +2326,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'complex_mass_scheme',
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
+    _valid_sqso_types = ['==','<=','=']
     _OLP_supported = ['MadLoop', 'GoSam']
 
     # The three options categories are treated on a different footage when a 
@@ -2515,10 +2516,13 @@ This implies that with decay chains:
                     # Redundant with above, but not completely as in the future
                     # one might think of allowing the core process to be 
                     # corrected by loops.
+                    if myprocdef.decays_have_squared_orders():
+                        raise MadGraph5Error("Decay processes cannot specify "+\
+                                                  "squared orders constraints.")                        
                     if myprocdef.are_decays_perturbed():
                         raise MadGraph5Error("Decay processes cannot be perturbed.")
                     if myprocdef.are_negative_orders_present():
-                        raise MadGraph5Error("Decay processes include negative"+\
+                        raise MadGraph5Error("Decay processes cannot include negative"+\
                                                 " coupling orders constraints.")                    
             else:
                 myprocdef = self.extract_process(line)
@@ -3380,7 +3384,9 @@ This implies that with decay chains:
         # Now check for squared orders, specified after the perturbation orders.
         # If it turns out there is no perturbation order then we will use these orders
         # for the regular orders.
-        squared_order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
+        squared_order_pattern = re.compile(\
+            "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
         squared_order_re = squared_order_pattern.match(line)
         squared_orders = {}
         # The 'split_orders' (i.e. those for which individual matrix element
@@ -3389,13 +3395,19 @@ This implies that with decay chains:
         # which there are squared order constraints.
         split_orders = []
         while squared_order_re:
-            squared_orders[squared_order_re.group(2)] = int(squared_order_re.group(3))
-            line = squared_order_re.group(1)
+            type = squared_order_re.group('type')
+            if type not in self._valid_sqso_types:
+                raise self.InvalidCmd, "Type of squared order constraint '%s'"\
+                                                      %type+" is not supported."
+            squared_orders[squared_order_re.group('name')] = \
+                                     (int(squared_order_re.group('value')),type)
+            line = squared_order_re.group('before')
             squared_order_re = squared_order_pattern.match(line)
 
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
-          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
+          re.compile("^(?P<proc>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
+                               "(?P<pertOrders>(\w+\s*)*)\s*\]\s*(?P<rest>.*)$")
         perturbation_couplings_re = perturbation_couplings_pattern.match(line)
         perturbation_couplings = ""
         LoopOption= 'tree'
@@ -3424,18 +3436,49 @@ This implies that with decay chains:
         # squared orders above instead.
         orders = {}
         if not perturbation_couplings_re:
-            for order in squared_orders:
-                orders[order]=squared_orders[order]
-            squared_orders={}
+            new_squared_orders = {}
+            for order in squared_orders.keys():
+                if order.endswith('^2'):
+                    new_squared_orders[order[:-2]]=squared_orders[order]
+                else:
+                    if squared_orders[order][1]!='=':
+                        raise self.InvalidCmd, \
+                          "Amplitude order constraints can only be of type '='"+\
+                                          ", not '%s'."%squared_orders[order][1]
+                    orders[order]=squared_orders[order][0]
+            squared_orders=new_squared_orders
         else:
+            # Make sure all squared orders defined at this stage do no include
+            # the appended ^2
+            new_squared_orders = {}
+            for order in squared_orders.keys():
+                new_squared_orders[order[:-2] if order.endswith('^2') else order]=\
+                                                           squared_orders[order]
+            squared_orders=new_squared_orders                
             # We take the coupling orders (identified by "=")
             # Notice that one can have a negative value of the squared order to
             # indicate that one should take the N^{n}LO contribution into account.
-            order_pattern = re.compile("^(.+)\s+(\w+)\s*=\s*(-?\d+)\s*$")
+            order_pattern = re.compile(\
+           "^(?P<before>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
+                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
-                orders[order_re.group(2)] = int(order_re.group(3))
-                line = order_re.group(1)
+                type = squared_order_re.group('type')
+                if order_re.group('name').endswith('^2'):
+                    if type not in self._valid_sqso_types:
+                        raise self.InvalidCmd, "Type of squared order "+\
+                                     "constraint '%s'"%type+" is not supported."
+                    squared_orders[order_re.group('name')[:-2]] = \
+                                             (int(order_re.group('value')),type)
+                else:
+                    if type != '=':
+                        raise self.InvalidCmd, \
+                          "Amplitude order constraints can only be of type '='"+\
+                                                          ", not '%s'."%type
+
+                    orders[order_re.group('name')] = \
+                                                    int(order_re.group('value'))                    
+                line = order_re.group('before')
                 order_re = order_pattern.match(line)
 
         # if the squared orders are defined but not the orders, assume 
@@ -3443,18 +3486,12 @@ This implies that with decay chains:
         # the the order is correspondingly set to be maximal (99) since there is
         # no way to knwo, during generation, if the amplitude being contstructed
         # will be leading or not.
-        if not orders and squared_orders:
-            for order in squared_orders:
+        if orders=={} and squared_orders!={}:
+            for order in squared_orders.keys():
                 if squared_orders[order]>=0:
-                    orders[order]=squared_orders[order]
+                    orders[order]=squared_orders[order][0]
                 else:
                     orders[order]=99
-        
-        # Now add any order for which there is a squard order constraint to the
-        # 'split_order' list if it was not already present.
-        for sq_order in squared_orders.keys():
-            if sq_order not in split_orders:
-                split_orders.append(sq_order)
 
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
@@ -3590,16 +3627,18 @@ This implies that with decay chains:
                    isinstance(required_schannel_ids[0], list):
                 required_schannel_ids = [required_schannel_ids]
             
+            sqorders_values = dict([(k,v[0]) for k, v in squared_orders.items()])
+            sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
-                              'squared_orders':squared_orders,
+                              'squared_orders':sqorders_values,
+                              'sqorders_types':sqorders_types,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
-                              'forbidden_s_channels': \
-                                                forbidden_schannel_ids,
+                              'forbidden_s_channels': forbidden_schannel_ids,
                               'required_s_channels': required_schannel_ids,
                               'overall_orders': overall_orders,
                               'perturbation_couplings': perturbation_couplings_list,
@@ -3727,15 +3766,6 @@ This implies that with decay chains:
             elif particle in self._multiparticles:
                 final.update(set(self._multiparticles[particle]))
         return final
-            
-            
-            
-        
-        
-        
-        
-        
-
 
     def extract_particle_ids(self, args):
         """Extract particle ids from a list of particle names. If

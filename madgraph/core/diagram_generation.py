@@ -1632,6 +1632,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('perturbation_couplings'),
                               'squared_orders': \
                                  process_definition.get('squared_orders'),
+                              'sqorders_types': \
+                                 process_definition.get('sqorders_types'),                              
                               'overall_orders': \
                                  process_definition.get('overall_orders'),
                               'has_born': \
@@ -1861,6 +1863,12 @@ class MultiProcess(base_objects.PhysicsObject):
                                  process_definition.get('required_s_channels'),
                               'forbidden_onsh_s_channels': \
                                  process_definition.get('forbidden_onsh_s_channels'),
+                              'sqorders_types': \
+                                 process_definition.get('sqorders_types'),
+                              'squared_orders': \
+                                 process_definition.get('squared_orders'),
+                              'split_orders': \
+                                 process_definition.get('split_orders'), 
                               'forbidden_s_channels': \
                                  process_definition.get('forbidden_s_channels'),
                               'forbidden_particles': \
