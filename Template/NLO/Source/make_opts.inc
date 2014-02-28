@@ -27,8 +27,6 @@ ifeq ($(origin FC),default)
    FC=/afs/cern.ch/sw/lcg/external/gcc/4.7.0/x86_64-slc5-gcc47-opt/bin/gfortran
 endif
 
-FC = /usr/local/bin/gfortran
-
 # Options: dynamic, lhapdf
 
 UNAME := $(shell uname)
