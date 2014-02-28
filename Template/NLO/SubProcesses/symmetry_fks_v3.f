@@ -92,10 +92,10 @@ c
 c
 c     External
 c
-      logical pass_point,passcuts
+      logical passcuts
       logical check_swap
       double precision dsig,fks_sij,dsig2,ran2
-      external pass_point,passcuts, dsig,fks_sij,dsig2
+      external passcuts, dsig,fks_sij,dsig2
       external check_swap,ran2
 
 c      integer icomp
@@ -800,10 +800,6 @@ c Dummy routines
 c
 c
       subroutine outfun(pp,www,iplot)
-      end
-
-      logical function pass_point(p)
-      pass_point = .true.
       end
 
       LOGICAL FUNCTION PASSCUTS(P,rwgt)
