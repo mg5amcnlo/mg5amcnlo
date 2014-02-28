@@ -499,7 +499,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         else:
             # ensure that this is running with NO central disk !!!
             if not self.options['cluster_temp_path'] and not self.options['cluster_type'] == 'condor':
-                raise self.ConfigurationError, 'MadWeight requires temp_cluste_path options to be define'
+                raise self.ConfigurationError, 'MadWeight requires temp_cluster_path options to be define'
             self.cluster.submit2(exe, args, cwd, input_files=input_files, output_files=output_file)
 
 

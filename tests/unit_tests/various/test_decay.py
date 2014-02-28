@@ -1275,7 +1275,7 @@ class Test_DecayModel(unittest.TestCase):
         model = decay_objects.DecayModel(model_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         model.read_param_card(param_path)
-        #print decay_objects.MZ
+        #print decay_objects.mdl_MZ
 
         # Test for exception
         self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
@@ -1285,7 +1285,8 @@ class Test_DecayModel(unittest.TestCase):
         # No reference value for q higher than top quark mass
 
         # Set b quark mass to be consistent with SM model
-        decay_objects.MB = 4.7
+        decay_objects.mdl_MB = 4.7
+        model['parameter_dict']['mdl_MB'] = 4.7
         
         # q=400., Nf = 5 quarks
         model.running_externals(400., 1)
@@ -1321,7 +1322,7 @@ class Test_DecayModel(unittest.TestCase):
         temp_aS = 100
         decay_objects.aS = temp_aS
         #Ru11_old = decay_objects.Ru11
-        Ru11_old = decay_objects.RUU1x1
+        Ru11_old = decay_objects.mdl_RUU1x1
         # coupling of no running dependence
         try:
             coup0 = model['couplings'][('aEWM1',)][0]
@@ -1344,7 +1345,7 @@ class Test_DecayModel(unittest.TestCase):
         # Test for parameters
 
         # Ru11 should not change
-        self.assertAlmostEqual(decay_objects.RUU1x1, Ru11_old)
+        self.assertAlmostEqual(decay_objects.mdl_RUU1x1, Ru11_old)
 
         # G should change
         self.assertAlmostEqual(decay_objects.G, \
@@ -1362,7 +1363,7 @@ class Test_DecayModel(unittest.TestCase):
 
         # copying the expr of 
         self.assertAlmostEqual(eval('decay_objects.'+coup_both.name), \
-                                   (-2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I12x33)/3. - (2*decay_objects.ee*complex(0,1)*decay_objects.G*decay_objects.I13x33)/3.)
+                                   (-2*decay_objects.mdl_ee*complex(0,1)*decay_objects.G*decay_objects.mdl_I12x33)/3. - (2*decay_objects.mdl_ee*complex(0,1)*decay_objects.G*decay_objects.mdl_I13x33)/3.)
 
 #===============================================================================
 # Test_Channel
@@ -1546,7 +1547,8 @@ class Test_Channel(unittest.TestCase):
 
         # Test for off-shell decay (h > b b~ w+ w-)
         # Raise the mass of higgs
-        decay_objects.MH = 220
+        setattr(decay_objects, self.my_testmodel.get_particle(25)['mass'], 220)
+        #decay_objects.mdl_MH = 220
         self.assertTrue(h_tt_bbww.get_onshell(self.my_testmodel))
 
     def test_initial_setups(self):
@@ -2080,11 +2082,11 @@ class Test_Channel(unittest.TestCase):
 
         # Test if the 2bodymassdiff calculated during
         # find_channels_nextlevel is right.
-        self.assertAlmostEqual(higgs.get('2body_massdiff'), decay_objects.MH-2*decay_objects.MB)
+        self.assertAlmostEqual(higgs.get('2body_massdiff'), decay_objects.mdl_MH-2*decay_objects.mdl_MB)
 
 
         # Set MH < MW to get the desire channels.
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
         channel_c.get_apx_decaywidth(self.my_testmodel)
         channel_d.get_apx_decaywidth(self.my_testmodel)
         higgs['decay_channels'] = {}
@@ -2136,10 +2138,11 @@ class Test_Channel(unittest.TestCase):
         # Set the higgs mass < Z-boson mass so that identicle particles appear
         # in final state
         MH_new = 91
-        decay_objects.MH = MH_new
+        #decay_objects.mdl_MH = MH_new
+        setattr(decay_objects, higgs['mass'], MH_new)
         higgs.find_channels(4, self.my_testmodel)
 
-
+        MT = getattr(decay_objects, self.my_testmodel.get_particle(6)['mass'])
         # Choose h > w- e+ ve
 
         for c in higgs.get_channels(3, True):
@@ -2213,7 +2216,7 @@ class Test_Channel(unittest.TestCase):
                          q_onshell*2)
         self.assertAlmostEqual(h_ww_weve.get_apx_fnrule(6, q_offshell, 
                                                   False, self.my_testmodel),
-                         q_offshell**2/(q_offshell ** 2 - decay_objects.MT **2)\
+                         q_offshell**2/(q_offshell ** 2 - MT **2)\
                              ** 2)
         # Scalar
         self.assertEqual(h_ww_weve.get_apx_fnrule(25, q_onshell, 
@@ -2337,7 +2340,7 @@ class Test_Channel(unittest.TestCase):
         # Test of the estimated higher level width for off-shell channel
         # Test of onshell width
         self.assertAlmostEqual(h_ww_wtb.get_apx_decaywidth(full_sm),
-                               (0.5/decay_objects.MH)*\
+                               (0.5/MH_new)*\
                                    h_ww_wtb.get_apx_psarea(full_sm)*\
                                    h_ww_wtb.get_apx_matrixelement_sq(full_sm)
                                )
@@ -2348,11 +2351,14 @@ class Test_Channel(unittest.TestCase):
         # Test of the estimated higher level width for off-shell channel:
         # New Kinematics Regime: 2Mz > Mh > Mz + Mw 
         MH_new = 175
-        decay_objects.MH = MH_new
+        setattr(decay_objects, higgs['mass'], MH_new)
+        #decay_objects.mdl_MH = MH_new
 
         # find all channels, width of particles are updated automatically,
         # couplings are also ran according to mother particles.
         full_sm.find_all_channels(2)
+        MZ = getattr(decay_objects, full_sm.get_particle(23)['mass'])
+        MW = getattr(decay_objects, full_sm.get_particle(24)['mass'])
         WZ = full_sm.get_particle(23).get('apx_decaywidth')
         WW = full_sm.get_particle(24).get('apx_decaywidth')
 
@@ -2378,14 +2384,14 @@ class Test_Channel(unittest.TestCase):
                                )
 
         # Channels with next-level decay: h > z w+ w-
-        err = (WZ*abs(decay_objects.MZ)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
+        err = (WZ*abs(MZ)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
                 *  h_zz_zww.get_apx_fnrule(23, MH_new, False, full_sm, True) \
                 /(h_zz_zww.get_apx_fnrule(23, MH_new/4, True, full_sm)*
-                  h_zz_zww.get_apx_fnrule(23, decay_objects.MZ, True, full_sm))\
-              +2*WW*abs(decay_objects.MW)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
+                  h_zz_zww.get_apx_fnrule(23, MZ, True, full_sm))\
+              +2*WW*abs(MW)/MH_new*(1/4/math.pi)*MH_new **3 *0.8 \
                 *  h_zz_zww.get_apx_fnrule(24, MH_new, False, full_sm, True) \
                 /(h_zz_zww.get_apx_fnrule(24, MH_new/4, True, full_sm)*
-                  h_zz_zww.get_apx_fnrule(24, decay_objects.MW, True, full_sm)))
+                  h_zz_zww.get_apx_fnrule(24, MW, True, full_sm)))
            
 
         self.assertAlmostEqual(\
@@ -2589,7 +2595,7 @@ class Test_Channel(unittest.TestCase):
         #    print part['pdg_code'], part['decay_width']
 
         #particle.calculate_branch_ratio()
-        #print decay_objects.MT, decay_objects.MW
+        #print decay_objects.mdl_MT, decay_objects.mdl_MW
         #print decay_objects.GC_857, decay_objects.GC_733, decay_objects.GC_437, decay_objects.GC_665
         #print particle.estimate_width_error()
         #print len(particle.get_channels(3, False))
@@ -2643,7 +2649,7 @@ class Test_IdentifyHelasTag(unittest.TestCase):
         """Test the ability to identify Helas calls."""
 
         # Turn higgs decay into 4-body
-        decay_objects.MH = 80
+        decay_objects.mdl_MH = 80
 
         h = self.my_testmodel.get_particle(25)
         t = self.my_testmodel.get_particle(6)
@@ -2761,11 +2767,15 @@ class Test_IdentifyHelasTag(unittest.TestCase):
     def test_collect_helascalls(self):
         """ Test the collect_helascalls. """
 
-        # Turn top decay into 3-body
-        decay_objects.MT = 60
+
+        
+        
 
         h = self.my_testmodel.get_particle(25)
         t = self.my_testmodel.get_particle(6)
+
+        # Turn top decay into 3-body
+        setattr(decay_objects, t['mass'], 60)
 
         t.find_channels(3, self.my_testmodel)
         #print t.get_channels(3, True).nice_string()
@@ -2838,7 +2848,7 @@ class Test_DecayAmplitude(unittest.TestCase):
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
         t = self.my_testmodel.get_particle(6)
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         # Set channels
         self.my_testmodel.find_all_channels(4)
@@ -2990,7 +3000,7 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         # Set channels and amplitude
 
@@ -3056,7 +3066,7 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         # Set channels and amplitude
         self.my_testmodel.find_all_channels(4)
@@ -3082,7 +3092,7 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         # Set channels and amplitude
         higgs.find_channels(4, self.my_testmodel)
@@ -3100,7 +3110,7 @@ class Test_DecayAmplitude(unittest.TestCase):
 
         # Setup higgs and lower its mass
         higgs = self.my_testmodel.get_particle(25)
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         # Set channels and amplitude
         self.my_testmodel.find_all_channels(4)
@@ -3663,7 +3673,7 @@ class Test_AbstractModel(unittest.TestCase):
         # Set amplitudes
         #----------------------
         # Setup higgs, lower the mass,  and find amplitudes
-        #decay_objects.MH = 50
+        #decay_objects.mdl_MH = 50
 
         higgs = self.my_testmodel.get_particle(25)
         tau = self.my_testmodel.get_particle(15)
@@ -3815,7 +3825,7 @@ class Test_AbstractModel(unittest.TestCase):
         self.my_testmodel.generate_abstract_model()
 
         # Setup higgs, lower the mass,  and find amplitudes
-        decay_objects.MH = 50
+        decay_objects.mdl_MH = 50
 
         higgs = self.my_testmodel.get_particle(25)
         tau = self.my_testmodel.get_particle(15)
@@ -3983,13 +3993,13 @@ class Test_AbstractModel(unittest.TestCase):
         #print ab_model['interaction_coupling_dict'][54], self.my_testmodel.get_interaction(54), ab_model['abstract_interactions_dict'][ab_model['interaction_type_dict'][54]]
 
         self.assertEqual(ab_amp['ab2real_dicts'][-1]['mass_dict'],
-                         {'MSS1_00':'MH',
+                         {'MSS1_00':'mdl_MH',
                           # lepton mass
                           'MNF1_00':'ZERO', 'MNF1_01':'ZERO',
                           'MNF1_02':'ZERO', 'MNF1_03':'ZERO',
                           # w, z boson
-                          'MSV1_00':'MW', 'MSV1_01':'MW',
-                          'MSV1_02':'MZ', 'MSV1_03':'MZ'})
+                          'MSV1_00':'mdl_MW', 'MSV1_01':'mdl_MW',
+                          'MSV1_02':'mdl_MZ', 'MSV1_03':'mdl_MZ'})
         
         coupling = {}
         for candidate in self.my_testmodel['interactions']:
@@ -4065,13 +4075,13 @@ class Test_AbstractModel(unittest.TestCase):
         # Note that w boson is viewed as self-conjugate in abstract model.
         #print amplist2[0].abstract_nice_string()
         self.assertEqual(amplist2[0]['ab2real_dicts'][-1]['mass_dict'],
-                         {'MSV1_00':'MW',
+                         {'MSV1_00':'mdl_MW',
                           # lepton mass
-                          'MNF1_00':'MTA', 'MNF1_01':'ZERO'})
+                          'MNF1_00':'mdl_MTA', 'MNF1_01':'ZERO'})
         self.assertEqual(amplist3[0]['ab2real_dicts'][-1]['mass_dict'],
-                         {'MNF1_00':'MTA',
+                         {'MNF1_00':'mdl_MTA',
                           # wboson mass
-                          'MSV1_00':'MW',
+                          'MSV1_00':'mdl_MW',
                           # lepton mass
                           'MNF1_01':'ZERO', 'MNF1_02':'ZERO', 'MNF1_03':'ZERO'})
 

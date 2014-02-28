@@ -1401,7 +1401,7 @@ class Model(PhysicsObject):
         for key in keys:
             for param in self['parameters'][key]:
                 value = param.name.lower()
-                if value in ['as','mu_r', 'zero','aewm1']:
+                if value in ['as','mu_r', 'zero','aewm1','g']:
                     continue
                 elif value.startswith(prefix):
                     continue

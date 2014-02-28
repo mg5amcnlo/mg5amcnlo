@@ -4116,13 +4116,12 @@ class UFO_model_to_mg4(object):
                     continue
                 try:
                     lower_dict[lower_name].append(param)
-                except KeyError:
+                except KeyError,error:
                     lower_dict[lower_name] = [param]
                 else:
                     duplicate.add(lower_name)
                     logger.debug('%s is define both as lower case and upper case.' 
                                  % lower_name)
-        
         if not duplicate:
             return
         
@@ -4136,7 +4135,6 @@ class UFO_model_to_mg4(object):
                 var.name = '%s__%s' %( var.name.lower(), i+2)
         
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
-        
         rep_pattern = re.compile(re_expr % '|'.join(to_change))
         
         # change parameters

@@ -68,7 +68,7 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False, restrict=True, prefix=''):
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -1306,7 +1306,7 @@ class RestrictModel(model_reader.ModelReader):
         keep external force to keep the param_card untouched (up to comment)"""
             
         logger_mod.debug('Parameters set to identical values: %s '% \
-                 ', '.join(['%s*%s' % (f, obj.name) for (obj,f) in parameters]))
+                 ', '.join(['%s*%s' % (f, obj.name.replace('mdl_','')) for (obj,f) in parameters]))
         
         # Extract external parameters
         external_parameters = self['parameters'][('external',)]
@@ -1314,7 +1314,8 @@ class RestrictModel(model_reader.ModelReader):
             # Keeped intact the first one and store information
             if i == 0:
                 obj.info = 'set of param :' + \
-                                     ', '.join([str(f)+'*'+param.name for (param, f) in parameters])
+                                     ', '.join([str(f)+'*'+param.name.replace('mdl_','')
+                                                 for (param, f) in parameters])
                 expr = obj.name
                 continue
             # Add a Rule linked to the param_card
