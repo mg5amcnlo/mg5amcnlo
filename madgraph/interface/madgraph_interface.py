@@ -3463,7 +3463,7 @@ This implies that with decay chains:
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
             order_re = order_pattern.match(line)
             while order_re:
-                type = squared_order_re.group('type')
+                type = order_re.group('type')
                 if order_re.group('name').endswith('^2'):
                     if type not in self._valid_sqso_types:
                         raise self.InvalidCmd, "Type of squared order "+\
