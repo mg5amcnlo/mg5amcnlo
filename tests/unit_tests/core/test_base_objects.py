@@ -1524,6 +1524,7 @@ class ProcessTest(unittest.TestCase):
                        'decay_chains': base_objects.ProcessList(),
                        'legs_with_decays': self.myleglist,
                        'squared_orders': {},
+                       'sqorders_types': {},
                        'has_born': True,
                        'overall_orders': {},
                        'NLO_mode':'tree',
@@ -1877,6 +1878,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'squared_orders':{},
                        'has_born': True,
                        'overall_orders':{},
+                       'sqorders_types':{},
                        'NLO_mode':'tree',
                        'split_orders':[]}
 
