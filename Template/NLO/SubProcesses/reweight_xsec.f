@@ -666,6 +666,9 @@ c
       xsec11=0.d0
       xsec12=0.d0
       xsec20=0.d0
+
+      if (wgtwreal(1).eq.0d0) goto 541
+
       call set_cms_stuff(mohdr)
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
@@ -708,6 +711,16 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 541  continue
+      if ( wgtwreal(2).eq.0d0 .and.
+     $     wgtwreal(3).eq.0d0 .and. wgtwreal(4).eq.0d0 .and.
+     $     wgtwdeg(2).eq.0d0 .and.
+     $     wgtwdeg(3).eq.0d0 .and. wgtwdeg(4).eq.0d0 .and.
+     $     wgtwdegmuf(2).eq.0d0 .and.
+     $     wgtwdegmuf(3).eq.0d0 .and. wgtwdegmuf(4).eq.0d0 .and.
+     $     wgtwborn(2).eq.0d0 .and. wgtwns(2).eq.0d0 .and.
+     $     wgtwnsmuf(2).eq.0d0 .and. wgtwnsmur(2).eq.0d0) goto 542
+
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
@@ -799,6 +812,9 @@ c Should cause the code to crash if used
           endif
         enddo
       endif
+
+ 542  continue
+
 c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
@@ -834,7 +850,7 @@ c with the reference weight
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
       integer kwgtinfo
-      double precision rwgt,xsec,xlum,dlum,alphas
+      double precision rwgt,xsec,xlum,dlum,alphas,temp
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision pi
       parameter (pi=3.14159265358979323846d0)
@@ -879,6 +895,13 @@ c
       if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
+
+      temp=0d0
+      do i=1,iwgtnumpartn
+         temp=temp+abs(wgtwmcxsec(i))
+      enddo
+      if (temp.eq.0d0) goto 541
+
       call set_cms_stuff(izero)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
@@ -925,9 +948,9 @@ c Should cause the code to crash if used
         enddo
       endif
 c
-
+ 541  continue
       if (wgtwreal(2).eq.0d0 .and. wgtwreal(3).eq.0d0 .and.
-     $     wgtwreal(4).eq.0d0) goto 543
+     $     wgtwreal(4).eq.0d0) goto 542
 
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
@@ -973,8 +996,9 @@ c Should cause the code to crash if used
         enddo
       endif
 c
- 543  continue
-
+ 542  continue
+      if (wgtwreal(1).eq.0d0) goto 543
+      
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
@@ -1016,6 +1040,8 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 543  continue
+c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
@@ -1046,7 +1072,7 @@ c with the reference weight
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
       integer kwgtinfo
-      double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas
+      double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas,temp
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
@@ -1093,6 +1119,12 @@ c
       if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
+     
+      temp=0d0
+      do i=1,iwgtnumpartn
+         temp=temp+abs(wgtwmcxsec(i))
+      enddo
+      if (temp.eq.0d0) goto 541
       call set_cms_stuff(izero)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
@@ -1145,6 +1177,16 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+ 541  continue
+      if ( wgtwreal(2).eq.0d0 .and.
+     $     wgtwreal(3).eq.0d0 .and. wgtwreal(4).eq.0d0 .and.
+     $     wgtwdeg(2).eq.0d0 .and.
+     $     wgtwdeg(3).eq.0d0 .and. wgtwdeg(4).eq.0d0 .and.
+     $     wgtwdegmuf(2).eq.0d0 .and.
+     $     wgtwdegmuf(3).eq.0d0 .and. wgtwdegmuf(4).eq.0d0 .and.
+     $     wgtwborn(2).eq.0d0 .and. wgtwns(2).eq.0d0 .and.
+     $     wgtwnsmuf(2).eq.0d0 .and. wgtwnsmur(2).eq.0d0) goto 542
+
       call set_cms_stuff(izero)
 
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(2).ne.0.d0) .or.
@@ -1244,6 +1286,8 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+ 542  continue
+      if (wgtwreal(1).eq.0d0) goto 543
       call set_cms_stuff(mohdr)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
@@ -1290,6 +1334,7 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 543  continue
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
@@ -1370,6 +1415,9 @@ c
 c
       xsec=0.d0
 
+      if ( wgtwborn_all.eq.0d0 .and. wgtwns_all.eq.0d0 .and.
+     $     wgtwnsmuf_all.eq.0d0 .and. wgtwnsmur_all.eq.0d0) goto 541
+
       call set_cms_stuff(izero)
 
       if( wgtkin_all(0,1,2,0).gt.0d0 )then
@@ -1410,12 +1458,14 @@ c
                do j=1,iproc_save(nFKSprocess)
                   if (eto(j,nFKSprocess).eq.i_process) then
                      if(wgtbpower.gt.0)then
-                        xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2*wgtbpower)
+                        xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2
+     $                       *wgtbpower)
                      else
                         xsec=xsec+CONV*PD(j)*wgtwborn_all
                      endif
-                     xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all*xlgmuf+
-     $                    wgtwnsmur_all*xlgmur )*g**(2*wgtbpower+2.d0)
+                     xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all
+     $                    *xlgmuf+wgtwnsmur_all*xlgmur )*g**(2*wgtbpower
+     $                    +2.d0)
                   endif
                enddo
             endif
@@ -1429,6 +1479,7 @@ c
             endif
          endif
       endif
+ 541  continue
 c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
