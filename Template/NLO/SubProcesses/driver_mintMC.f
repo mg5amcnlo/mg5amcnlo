@@ -10,6 +10,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -181,6 +182,13 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+c Only do the reweighting when actually generating the events
+      if (imode.eq.2) then
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+      else
+         doreweight=.false.
+      endif
+
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -1168,7 +1176,7 @@ c much. Do this by overwrite the 'wgt' variable
          f_check=f(2)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-1) then
+     $           .gt.1d0) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
