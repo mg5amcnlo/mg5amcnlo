@@ -1101,6 +1101,7 @@ C     BEGIN CODE
 C     ----------
       DSIG=0D0
       CUTSDONE=.FALSE.
+      CUTSPASSED=.FALSE.
       IF(IMODE.EQ.1)THEN
 C       Set up process information from file symfact
         LUN=NEXTUNOPEN()
@@ -1391,7 +1392,7 @@ C         Call UNWGT to unweight and store events
 
         amplitudes[1].set('has_mirror_process', True)
         subprocess_groups = group_subprocs.SubProcessGroup.\
-                           group_amplitudes(amplitudes)
+                           group_amplitudes(amplitudes, "madevent")
         self.assertEqual(len(subprocess_groups), 2)
         self.assertEqual(subprocess_groups[0].get('name'), 'qq_gg')
         self.assertEqual(subprocess_groups[1].get('name'), 'qq_qq')

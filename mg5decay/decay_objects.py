@@ -1599,6 +1599,8 @@ class DecayModel(model_reader.ModelReader):
         #Prepare the vertexlist        
         for inter in self['interactions']:
 
+            if 'type' in inter and inter['type'] != 'base':
+                continue #need only the LO interactions.
             #Calculate the particle number
             partnum = len(inter['particles']) - 1
 
@@ -1972,6 +1974,12 @@ class DecayModel(model_reader.ModelReader):
         # Declare global value. amZ0 is the alpha_s at Z pole
         global aS, MT, MB, MZ, amZ0
 
+        # Define all functions used
+        for func in self['functions']:
+            exec("def %s(%s):\n   return %s" % (func.name,
+                                                ",".join(func.arguments),
+                                                func.expr))
+
         # Setup the alpha_s at different scale
         amt = 0.
         amb = 0.
@@ -1980,7 +1988,7 @@ class DecayModel(model_reader.ModelReader):
 
         # Setup parameters
         # MZ, MB are already read in from param_card
-        MZ_ref = MZ
+        MZ_ref = MZ.real
         if MB == 0:
             MB_ref = 4.7
         else:
@@ -2072,6 +2080,12 @@ class DecayModel(model_reader.ModelReader):
         """ Recalculate parameters and couplings which depend on
             running external parameters to the given energy scale.
             RUN running_externals before run this function."""
+
+        # Define all functions used
+        for func in self['functions']:
+            exec("def %s(%s):\n   return %s" % (func.name,
+                                                ",".join(func.arguments),
+                                                func.expr))
 
         # External parameters that must be recalculate for different energy
         # scale.
@@ -2768,6 +2782,7 @@ class DecayModel(model_reader.ModelReader):
         # Find stable particles of this model
         self.get('stable_particles')
         logger.info("Found %s stable particles" % len(self['stable_particles']))
+
         # Run the width of all particles from 2-body decay so that the 3-body
         # decay could use the width from 2-body decay.
         for part in self.get('particles'):
@@ -2780,21 +2795,25 @@ class DecayModel(model_reader.ModelReader):
             self.running_internals()
             #logger.info("Find 2-body channels of %s" %part.get('name'))
             part.find_channels_nextlevel(self, min_br)
+
+            # Update the total width for the later error estimation
+            part.update_decay_attributes(True, False, False)
+
             if generate_abstract:
                 self.generate_abstract_amplitudes(part, 2)
             if collect_helascalls:
                 self.collect_helascalls(part, 2)
  
         for part in self.get('particles'):
-            if max_partnum > 2:
-                # Skip search if this particle is stable
-                if part.get('is_stable'):
-                    continue
+            # Skip search if this particle is stable
+            if part.get('is_stable'):
+                continue
                 
-                # Recalculating parameters and coupling constants 
-                self.running_externals(abs(eval(part.get('mass'))))
-                self.running_internals()
+            # Recalculating parameters and coupling constants 
+            self.running_externals(abs(eval(part.get('mass'))))
+            self.running_internals()
 
+            if max_partnum > 2:
                 # After recalculating the parameters, find the channels to the
                 # requested level.
                 for clevel in range(3, max_partnum+1):
@@ -2811,7 +2830,7 @@ class DecayModel(model_reader.ModelReader):
             # update the decay attributes for both max_partnum >2 or == 2.
             # The update should include branching ratios and apx_decaywidth_err
             # So the apx_decaywidth_err(s) are correct even for max_partnum ==2.
-            part.update_decay_attributes(False, True, True, self)
+            part.update_decay_attributes(True, True, True, self)
 
 
     def find_all_channels_smart(self, precision, 
@@ -3927,7 +3946,7 @@ class Channel(base_objects.Diagram):
         cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
-                                        Gamma5\(%(3)s\)|
+                                        Gamma5\(%(2)s\)|
                                         C\(%(2)s\)|
                                         Epsilon\(%(4)s\)|
                                         Metric\(%(2)s\)|
@@ -4018,7 +4037,11 @@ class Channel(base_objects.Diagram):
                     structure = model.lorentz_dict[vertex['lorentz'][key[1]]].structure 
                     new_structure = self.lor_pattern.sub(self.simplify_lorentz,
                                                          structure)
-                    lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
+                    lor_value = eval(new_structure % q_dict_lor)
+                    if lor_value == 0:
+                        new_structure = new_structure.replace('-','+')
+                        lor_value = eval(new_structure % q_dict_lor)
+                    lorentz_factor += abs(eval(v))**2 * lor_value**2
 
                 apx_m *= lorentz_factor
 
@@ -4087,6 +4110,13 @@ class Channel(base_objects.Diagram):
                     for i, part in enumerate(vertex['particles']):
                         mass  = abs(eval(part.get('mass')))
                         q_dict_lor['q%i' % (i+1)] = mass / 2
+                    
+                    lor_value = eval(new_structure % q_dict_lor)
+                    # Avoid accidental zeros in lor_value
+                    if lor_value == 0:
+                        new_structure = new_structure.replace('-','+')
+                        lor_value = eval(new_structure % q_dict_lor)
+
                     lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
 
                 apx_m *= lorentz_factor
@@ -4329,8 +4359,9 @@ class Channel(base_objects.Diagram):
 
         M = abs(eval(model.get_particle(self.get_initial_id()).get('mass')))
         m_now = sum(self.get('final_mass_list'))
+        avg_E = (M/(len(self.get_final_legs())+1.))
         # Ratio is the width of next-level channels over current channel.
-        ratio = 1.
+        err = 0.
         for leg in self.get_final_legs():
             # Use only particle not anti-particle because anti-particle has no
             # width
@@ -4342,21 +4373,18 @@ class Channel(base_objects.Diagram):
                 #                  (2 * M * 8 * pi * (c_psarea* (M/8/pi)**2)) *
                 #                  1/(leg_mleg(mleg)/leg_mleg(0.5M) *
                 #                  Propagator of mleg(M)
-                ratio *= (1+ part.get('apx_decaywidth')*\
-                              (M/abs(eval(part.get('mass')))) **(-1) *\
-                              (c_psarea*(M **3/4/math.pi)) / \
-                              (self.get_apx_fnrule(leg.get('id'), 0.5*M,
-                                                   True, model)*\
-                                   self.get_apx_fnrule(leg.get('id'), 
-                                                       abs(eval(part.get('mass'))),
-                                                       True, model))*\
-                              self.get_apx_fnrule(leg.get('id'), M,
-                                                  False, model, True)
-                          )
+                err += (part.get('apx_decaywidth')*\
+                            (M/abs(eval(part.get('mass')))) **(-1) *\
+                            (c_psarea*(M **3/4/math.pi)) / \
+                            (self.get_apx_fnrule(leg.get('id'), avg_E,
+                                                 True, model)*\
+                                 self.get_apx_fnrule(leg.get('id'), 
+                                                     abs(eval(part.get('mass'))), True, model))*\
+                            self.get_apx_fnrule(leg.get('id'), M,
+                                                False, model, True)
+                        )
 
-        # Subtract 1 to get the real ratio
-        ratio = ratio -1
-        self['apx_decaywidth_nextlevel'] = self.get_apx_decaywidth(model)*ratio
+        self['apx_decaywidth_nextlevel'] = self.get_apx_decaywidth(model)*err
 
         return self['apx_decaywidth_nextlevel']
 

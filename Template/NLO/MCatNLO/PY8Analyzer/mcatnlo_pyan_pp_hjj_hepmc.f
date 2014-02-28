@@ -9,32 +9,32 @@ C----------------------------------------------------------------------
 
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYABEG
+      SUBROUTINE PYABEG(nnn,wwwi)
 C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
+      REAL*8 pi
+      PARAMETER (PI=3.14159265358979312D0)
+      integer j,kk,l,i,nnn
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*15 weights_info(max_weight),wwwi(max_weight)
       common/cwgtsinfo/weights_info
       character*8 cc(2)
-      data cc/'        ',' vbfcuts'/
-      real*8 pi
-      PARAMETER (PI=3.14159265358979312D0)
-      integer i,kk,l
+      data cc/'        ','vbfcuts '/
       real*8 vetomin, vetomax
       integer nbinveto
       common /to_veto_hist/vetomin,vetomax,nbinveto
 c      
       call inihist
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      nwgt=1
-      weights_info(nwgt)="central value  "
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      weights_info(1)="central value  "
+      do i=1,nnn+1
+         weights_info(i+1)=wwwi(i)
+      enddo
+      nwgt=nnn+1
       vetomin = 0d0
       vetomax = 100d0
       nbinveto = 50
@@ -43,129 +43,129 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,2
         l=(kk-1)*108+(i-1)*54
          call mbook(l+  1,'total '
-     &       //weights_info(kk)//cc(i),1.0d0,0.5d0,5.5d0)
+     &       //cc(i)//weights_info(kk),1.0d0,0.5d0,5.5d0)
 
          call mbook(l+  2,'Higgs pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+  3,'Higgs pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  4,'Higgs logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+  5,'Higgs eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+  6,'Higgs y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+  7,'j1 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+  8,'j1 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  9,'j1 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 10,'j1 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 11,'j1 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 12,'j2 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 13,'j2 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 14,'j2 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 15,'j2 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 16,'j2 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 17,'j3 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 18,'j3 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 19,'j3 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 20,'j3 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 21,'j3 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 22,'H+j1 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 23,'H+j1 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 24,'H+j1 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 25,'H+j1 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 26,'H+j1 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 27,'j1+j2 pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 28,'j1+j2 pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 29,'j1+j2 logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 30,'j1+j2 eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 31,'j1+j2 y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 32,'syst pT '
-     &       //weights_info(kk)//cc(i),8.0d0,0.d0,400.d0)
+     &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
          call mbook(l+ 33,'syst pT '
-     &       //weights_info(kk)//cc(i),16.0d0,0.d0,800.d0)
+     &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 34,'syst logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 35,'syst eta '
-     &       //weights_info(kk)//cc(i),0.4d0,-10.d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.4d0,-10.d0,10.d0)
          call mbook(l+ 36,'syst y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
          call mbook(l+ 37,'Dphi H-j1 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
          call mbook(l+ 38,'Dphi H-j2 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
          call mbook(l+ 39,'Dphi j1-j2 '
-     &       //weights_info(kk)//cc(i),pi/50.d0,0d0,pi)
+     &       //cc(i)//weights_info(kk),pi/50.d0,0d0,pi)
 
          call mbook(l+ 40,'DR H-j1 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
          call mbook(l+ 41,'DR H-j2 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
          call mbook(l+ 42,'DR j1-j2 '
-     &       //weights_info(kk)//cc(i),0.2d0,0d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.2d0,0d0,10.d0)
 
          call mbook(l+ 43,'mj1j2 '
-     &       //weights_info(kk)//cc(i),60.0d0,0d0,3000.d0)
+     &       //cc(i)//weights_info(kk),60.0d0,0d0,3000.d0)
 
 c Nason-Oleari plots (hep-ph/0911.5299)
          call mbook(l+ 44,'|yj1-yj2| '
-     &       //weights_info(kk)//cc(i),0.4d0,0.d0,10.d0)
+     &       //cc(i)//weights_info(kk),0.4d0,0.d0,10.d0)
          call mbook(l+ 45,'yj3_rel '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 46,'njets '
-     &       //weights_info(kk)//cc(i),1.d0,-0.5d0,9.5d0)
+     &       //cc(i)//weights_info(kk),1.d0,-0.5d0,9.5d0)
          call mbook(l+ 47,'ptrel_j1 '
-     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+     &       //cc(i)//weights_info(kk),4.d0,0.d0,200.d0)
          call mbook(l+ 48,'ptrel_j2 '
-     &       //weights_info(kk)//cc(i),4.d0,0.d0,200.d0)
+     &       //cc(i)//weights_info(kk),4.d0,0.d0,200.d0)
          call mbook(l+ 49,'P-veto '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
          call mbook(l+ 50,'jveto pT '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
          call mbook(l+ 51,'jveto pT '
-     &       //weights_info(kk)//cc(i),
+     &       //cc(i)//weights_info(kk),
      1    ((2d0*vetomax-vetomin)/dble(nbinveto)),
      1    vetomin,2d0*vetomax)
          call mbook(l+ 52,'jveto logpT '
-     &       //weights_info(kk)//cc(i),0.08d0,0.d0,4.d0)
+     &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
          call mbook(l+ 53,'jveto eta '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
          call mbook(l+ 54,'jveto y '
-     &       //weights_info(kk)//cc(i),0.24d0,-6.d0,6.d0)
+     &       //cc(i)//weights_info(kk),0.24d0,-6.d0,6.d0)
 
       enddo
       enddo
@@ -177,7 +177,7 @@ C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,kk,l,nwgt_analysis
+      INTEGER I,J,KK,IEVTTOT,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -186,11 +186,11 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=IEVTTOT/DFLOAT(NEVHEP)
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do i=1,2
@@ -266,7 +266,7 @@ C
       END
 
 C----------------------------------------------------------------------
-      SUBROUTINE PYANAL
+      SUBROUTINE PYANAL(nnn,xww)
 C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -312,14 +312,15 @@ c jet stuff
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision ww(max_weight),www(max_weight)
+      double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-c To be changed !!
-      ww(1)=1d0
-ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      ww(1)=xww(2)
+      if(nnn.eq.0)ww(1)=1d0
+      do i=2,nnn+1
+         ww(i)=xww(i)
+      enddo
+c
       IF (WW(1).EQ.0D0) THEN
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
@@ -334,8 +335,8 @@ C INITIALISE
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('HWANAL',111)
-        GOTO 999
+         WRITE(*,*)'WARNING 502 IN PYANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
@@ -354,8 +355,8 @@ C EFFECT, SO THROW THE EVENT AWAY
            ENDDO
         ENDIF
 C FIND THE HIGGS
-        IF(ID.EQ.25.AND.(IST.EQ.1.OR.IST.EQ.195))THEN
-           NH=NH+1
+        IF(ID.EQ.25)THEN
+           NH=1
            IH=IHEP
         ENDIF
   100 CONTINUE
@@ -401,7 +402,8 @@ C---CLUSTER THE EVENT
          if(i.gt.1)then
             if (ptjet(i).gt.ptjet(i-1)) then
                write (*,*) "Error 1: jets should be ordered in pt"
-               CALL HWWARN('HWANAL',501)
+               WRITE(*,*)'ERROR 501 IN PYANAL'
+               STOP
             endif
          endif
          yjet(i)=getrapidityv4(pjet(1,i))
@@ -409,6 +411,8 @@ C---CLUSTER THE EVENT
 c look for veto jet without y cuts
          if (i.gt.2.and.yjet(i).gt.min(yjet(1),yjet(2)).and.
      &      yjet(i).lt.max(yjet(1),yjet(2)).and.ijveto.eq.0) ijveto = i
+
+C now look for jets within the rapidity cuts
          if (dabs(yjet(i)).lt.yjmax) then
              njety=njety+1
              if (ij1y.eq.0) then
@@ -441,6 +445,9 @@ c this is the loop for w-o / w vbf cuts
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
+         ij1 = ij1y
+         ij2 = ij2y
+         ij3 = ij3y
       endif
 
 c Load momenta
@@ -997,78 +1004,3 @@ c
       return
       end
 
-
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end

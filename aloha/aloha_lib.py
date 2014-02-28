@@ -120,7 +120,7 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
-        self.unknow_fct = []
+        #self.unknow_fct = []
         #return expression
         return new
     

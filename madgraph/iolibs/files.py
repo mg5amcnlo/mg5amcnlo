@@ -184,7 +184,7 @@ def mv(path1, path2):
         else:
             raise
         
-def ln(file_pos, starting_dir='.', name='', log=True):
+def ln(file_pos, starting_dir='.', name='', log=True, cwd=None):
     """a simple way to have a symbolic link without to have to change directory
     starting_point is the directory where to write the link
     file_pos is the file to link
@@ -194,6 +194,12 @@ def ln(file_pos, starting_dir='.', name='', log=True):
     starting_dir = format_path(starting_dir)
     if not name:
         name = os.path.split(file_pos)[1]    
+
+    if cwd:
+        if not os.path.isabs(file_pos):
+            file_pos = os.path.join(cwd, file_pos)
+        if not os.path.isabs(starting_dir):
+            starting_dir = os.path.join(cwd, starting_dir)        
 
     # Remove existing link if necessary
     if os.path.exists(os.path.join(starting_dir, name)):

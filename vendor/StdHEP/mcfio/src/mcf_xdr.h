@@ -59,7 +59,7 @@ typedef struct _mcfxdrFileHeader{
 	char closingDate[30];
 	unsigned int numevts_expect;    /* The number of event expected */
 	unsigned int numevts;    /* The number of evts really written on tape */
-	unsigned int firstTable; /* The XDR locator for the first table */
+	off_t firstTable; /* The XDR locator for the first table */
 	unsigned int dimTable; /* The number of events listed in the fixed-sized 
 	                           event table */
 	unsigned int nBlocks;		
@@ -141,10 +141,10 @@ typedef struct _mcfStream{
 	int numWordsT;  /* The number of words read or written, Total */
 	mcfxdrFileHeader *fhead; /* The File header */
 	mcfxdrEventHeader *ehead; /* The current Event Header */  
-	unsigned int currentPos; /* The XDR current position */
-	unsigned int evtPos;     /* The XDR position for the begingin of evt */
-	unsigned int tablePos;   /* The XDR position for the table */
-	unsigned int firstPos;   /* The XDR position just before file header */
+	off_t currentPos; /* The XDR current position */
+	off_t evtPos;     /* The XDR position for the begingin of evt */
+	off_t tablePos;   /* The XDR position for the table */
+	off_t firstPos;   /* The XDR position just before file header */
 	XDR *xdr;       /* The XDR stream */
 	char *filename; /* Filename */
 	FILE *filePtr;  /* The file pointer */

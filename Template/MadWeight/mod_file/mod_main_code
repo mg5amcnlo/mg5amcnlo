@@ -1,0 +1,178 @@
+##########################################################################
+##	                 						##
+##									##
+##				MadWeight				##
+##				*********				##
+##									##
+##	Autor:	 Olivier Mattelaer 					##
+##		 Pierre Artoisenet					##
+##									##
+##	date:	October 09						##
+##									##
+##########################################################################
+##########################################################################
+##									##
+##  rule to modify main code for MadWeight				##
+##				 					##
+##									##
+## TAG:									##
+##    INTRO_FOR_MAIN                                                    ##
+##    INTRO_FOR_DATA							##
+##    START_ROUTINE							##
+##									##
+##########################################################################
+##
+##
+##########################################################################
+$B$ INTRO_FOR_MAIN $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                         MAIN CODE FOR MADWEIGHT                       |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C+-----------------------------------------------------------------------+     
+##************************************************************************
+$E$ INTRO_FOR_MAIN $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ INTRO_FOR_DATA $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                         INCLUDE FOR MADWEIGHT                         |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C+-----------------------------------------------------------------------+     
+##************************************************************************
+$E$ INTRO_FOR_DATA $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ INTRO_FOR_D_SWITCH_F $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                         D CHOICES FOR MADWEIGHT                       |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C+-----------------------------------------------------------------------+     
+##************************************************************************
+$E$ INTRO_FOR_D_SWITCH_F $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ INTRO_FOR_MULTICHANNEL $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                MULTI-CHANNEL WEIGHT FOR MADWEIGHT                     |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C+-----------------------------------------------------------------------+
+
+       double precision function multi_channel_weight(config)
+C+-----------------------------------------------------------------------+
+C|     routine returnings the multi channel weight linked to the         |
+C|       change of variable 'config'                                     |
+C+-----------------------------------------------------------------------+
+	implicit none
+
+	integer config
+	include 'coupl.inc'
+    include 'd_choices.inc'
+c    double precision prov1,prov2,prov3,prov4,prov5,prov6,prov7,prov8,prov9
+c    double precision prov10,prov11,prov12,prov13,prov14,prov15,prov16
+c    double precision prov17,prov18,prov19,prov20,prov21,prov22,prov23 
+    double precision num,den
+    double precision zero,one
+    parameter (zero=0d0)
+    parameter (one=1d0)    
+##************************************************************************
+$E$ INTRO_FOR_MULTICHANNEL$E$
+##########################################################################
+$B$ END_FOR_MULTICHANNEL $B$
+##************************************************************************
+	   endif
+	   return
+	   end
+##************************************************************************
+$E$ END_FOR_MULTICHANNEL$E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ INTRO_FOR_D_SWTCH_INC $B$
+##************************************************************************
+C+-----------------------------------------------------------------------+
+C|                  Definition for D choices in MADWEIGHT                |
+C|                                                                       |
+C|     Author: Pierre Artoisenet (UCL-CP3)                               |
+C|             Olivier Mattelaer (UCL-CP3)                               |
+C+-----------------------------------------------------------------------+
+C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C+-----------------------------------------------------------------------+     
+##************************************************************************
+$E$ INTRO_FOR_D_SWITCH_INC $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ START_ROUTINE $B$
+##************************************************************************
+      subroutine main_code(x,n_var)
+C+-----------------------------------------------------------------------+
+C|     Central Routine for the change of variable choice                 |
+C|       - num_sol: number of the solution to charge                     |
+C|       - x      : random number from vegas                             |
+C+-----------------------------------------------------------------------+
+	implicit none
+	
+	double precision x(20)
+	integer n_var
+	double precision    S,X1,X2,PSWGT,JAC
+        common /PHASESPACE/ S,X1,X2,PSWGT,JAC
+c
+	double precision multi_channel_weight
+	external multi_channel_weight
+c
+	include 'd_choices.inc'
+	include 'phasespace.inc'
+	include 'data.inc'
+C+-----------------------------------------------------------------------+
+C|     Scedullar Part					                 |
+C+-----------------------------------------------------------------------+    
+
+##************************************************************************
+$E$ START_ROUTINE $E$
+##########################################################################
+##
+##
+##########################################################################
+$B$ COMMON_DEF $B$
+##************************************************************************
+	integer label        
+	integer num_vis(nb_sol_config)
+        integer vis_nb(nb_vis_part,nb_sol_config)	
+        integer nb_block(nb_sol_config)
+        integer num_propa(nb_sol_config)
+        integer propa_max(max_branches,max_branches,nb_sol_config)
+        integer propa_min(max_branches,max_branches,nb_sol_config)
+        integer propa_cont(max_branches,nb_sol_config)
+        integer var2random(dim_phase_space,nb_sol_config)
+
+##************************************************************************
+$E$ COMMON_DEF $E$
+##########################################################################

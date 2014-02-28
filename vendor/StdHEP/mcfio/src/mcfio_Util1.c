@@ -823,7 +823,7 @@ void mcfioC_InfoBlockChar(int stream, int blkid,
      
     switch (key) {
       case MCFIO_VERSION:
-       tt = xdr_setpos(str->xdr, pos); 
+       tt = fseeko(str->filePtr,pos,SEEK_SET); 
        tt = xdr_mcfast_generic(str->xdr, &itmp, &nn, &vv, &data);
        xdr_free(xdr_string, data); 
        strcpy(answer, vv);

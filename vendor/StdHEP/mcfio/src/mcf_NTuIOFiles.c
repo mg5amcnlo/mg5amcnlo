@@ -164,7 +164,7 @@ int mcfioC_EndDeclNTuples(int stream)
 */
 {
    int i, j, jstr, idtmp, ntot;
-   u_int p1, p2;
+   off_t p1, p2;
    FILE *ff;
    mcfStream *str;
    
@@ -206,7 +206,7 @@ int mcfioC_EndDeclNTuples(int stream)
      return -1;
    }
    xdrstdio_create(str->xdr, ff, XDR_ENCODE);
-   p1 = xdr_getpos(str->xdr);
+   p1 = ftello(str->filePtr);
    str->firstPos = p1;
    str->currentPos = p1;
    /*

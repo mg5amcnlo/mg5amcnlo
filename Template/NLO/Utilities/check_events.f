@@ -8,7 +8,7 @@ c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
-     # isavePDF,itemp
+     # isavePDF,itemp,ii
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
@@ -56,7 +56,7 @@ c negative number of events
 
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal),xnorm
 
       include 'reweight0.inc'
       integer kr,kf,kpdf
@@ -66,6 +66,9 @@ c negative number of events
      # xmax_wgt_resc_pdf(0:maxPDFs),
      # xmin_wgt_resc_scale(maxscales,maxscales),
      # xmin_wgt_resc_pdf(0:maxPDFs)
+      integer istep
+      double precision percentage
+      include 'dbook.inc'
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -315,11 +318,17 @@ c
       endif
 
       i=0
+      call inihist
+      call bookup(1,'scalup',2d0,0d0,200d0)
+      call bookup(2,'scalup',8d0,0d0,800d0)
+      call bookup(3,'log scalup',0.1d0,0d0,4d0)
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
+         call mfill(1,SCALUP,XWGTUP)
+         call mfill(2,SCALUP,XWGTUP)
+         if(SCALUP.gt.0d0)call mfill(3,log10(SCALUP),XWGTUP)
          if(index(buff,'endoffile').ne.0)then
            keepevent=.false.
            goto 111
@@ -487,9 +496,25 @@ c Showered LH files only contain final-state particles.
 c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
 
- 111     continue
+         percentage=i*100d0/maxevt
+         istep=maxevt/10
+         if(mod(i,istep).eq.0.or.i.eq.maxevt)
+     &        write(*,*)'Processed',int(percentage),'% of the file'
 
+ 111     continue
       enddo
+
+      open(unit=99,file='SCALUP.top',status='unknown')
+      call mclear
+      xnorm=1d0
+      do ii=1,nplots
+         call mopera(ii,'+',ii,ii,xnorm,0.d0)
+         call mfinal(ii)
+      enddo
+      call multitop(1,3,2,'scalup    ',' ','LOG')
+      call multitop(2,3,2,'scalup    ',' ','LOG')
+      call multitop(3,3,2,'log scalup',' ','LOG')
+      close(99)
 
       if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
       if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
@@ -1770,3 +1795,7 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
  80   ICMPCH=1
       RETURN
       END
+
+c Dummy subroutine (normally used with vegas when resuming plots)
+      subroutine resume()
+      end

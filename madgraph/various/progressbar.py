@@ -210,7 +210,7 @@ class ProgressBar(object):
     """
     def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
                  fd=sys.stderr):
-        assert maxval > 0
+        assert maxval >= 0
         self.maxval = maxval
         self.widgets = widgets
         self.fd = fd
@@ -257,7 +257,7 @@ class ProgressBar(object):
                 currwidth += len(weval)
                 r.append(weval)
         for iw in hfill_inds:
-            r[iw] = r[iw].update(self, (self.term_width-currwidth)/num_hfill)
+            r[iw] = r[iw].update(self, (self.term_width-currwidth)//num_hfill)
         return r
 
     def _format_line(self):
@@ -302,6 +302,36 @@ class ProgressBar(object):
         self.fd.flush()
         if self.signal_set:
             signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+
+# a suitable full made package
+class progbar(ProgressBar):
+
+    def __init__(self,name,max_step):
+        """ a practicla definition of a progressbar this one is une in MW"""
+
+        widgets = [name+': ', Percentage(), ' ', Bar('>'),
+                                      ' ', ETA(), ' ']
+        if max_step:
+            ProgressBar.__init__(self,widgets=widgets, maxval=max_step)
+            self.start()
+        self.maxval=max_step
+        self.actual_step=0
+
+    def update(self,value=-1):
+        if value<0:
+            self.actual_step+=1
+        else:
+            self.actual_step=value
+            
+        if self.maxval:
+            ProgressBar.update(self,self.actual_step)
+
+    def finish(self):
+        
+        if self.maxval:
+            ProgressBar.finish(self)
+
+
 
 if __name__=='__main__':
     import os

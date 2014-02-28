@@ -439,6 +439,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                    ignore_six_quark_processes,
                                    OLP=self.options['OLP'])
 
+
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
         
@@ -618,7 +619,6 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # check argument validity and normalise argument
         (options, argss) = _launch_parser.parse_args(argss)
         options = options.__dict__
-        options['name'] = ''
         self.check_launch(argss, options)
         if not os.path.isdir(os.path.join(os.getcwd(), argss[0], 'Events')):
             self.do_switch('ML5')
@@ -668,7 +668,7 @@ _launch_parser.add_option("-i", "--interactive", default=False, action='store_tr
                             help="Use interactive consol")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
-_launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
+_launch_parser.add_option("-x", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found")
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
@@ -679,4 +679,7 @@ _launch_parser.add_option("-p", "--parton", default=False, action='store_true',
 _launch_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from " + \
                             "the last available results")
-
+# the last option is different from the corresponding in amcatnlo_run_interface as it stores the 
+# 'name' entry of the options, not the run_name one
+_launch_parser.add_option("-n", "--name", default=False, dest='name',
+                            help="Provide a name to the run")

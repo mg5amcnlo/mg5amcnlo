@@ -12,11 +12,13 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      integer j,kk,l
+      REAL*8 pi
+      PARAMETER (PI=3.14159265358979312D0)
+      integer j,kk,l,i,nnn
       character*5 cc(2)
       data cc/'     ','     '/
       integer nwgt,max_weight,nwgt_analysis
@@ -25,6 +27,7 @@ C----------------------------------------------------------------------
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
+c
       call inihist
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c To be changed !!
@@ -35,68 +38,67 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do j=1,2
       do kk=1,nwgt_analysis
       l=(kk-1)*48+(j-1)*24
-      call mbook(l+ 1,'t pt        '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'t pt        '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+ 2,'t log pt    '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'t log pt    '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+ 3,'t y         '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'t y         '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+ 4,'t eta       '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'t eta       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+ 5,'j1 pt       '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'j1 pt       '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+ 6,'j1 log pt   '//weights_info(kk)//cc(j)
+      call mbook(l+ 6,'j1 log pt   '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+ 7,'j1 y        '//weights_info(kk)//cc(j)
+      call mbook(l+ 7,'j1 y        '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+ 8,'j1 eta      '//weights_info(kk)//cc(j)
+      call mbook(l+ 8,'j1 eta      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+ 9,'j2 pt       '//weights_info(kk)//cc(j)
+      call mbook(l+ 9,'j2 pt       '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+10,'j2 log pt   '//weights_info(kk)//cc(j)
+      call mbook(l+10,'j2 log pt   '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+11,'j2 y        '//weights_info(kk)//cc(j)
+      call mbook(l+11,'j2 y        '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+12,'j2 eta      '//weights_info(kk)//cc(j)
+      call mbook(l+12,'j2 eta      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+13,'bj1 pt      '//weights_info(kk)//cc(j)
+      call mbook(l+13,'bj1 pt      '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+14,'bj1 log pt  '//weights_info(kk)//cc(j)
+      call mbook(l+14,'bj1 log pt  '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+15,'bj1 y       '//weights_info(kk)//cc(j)
+      call mbook(l+15,'bj1 y       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+16,'bj1 eta     '//weights_info(kk)//cc(j)
+      call mbook(l+16,'bj1 eta     '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+17,'bj2 pt      '//weights_info(kk)//cc(j)
+      call mbook(l+17,'bj2 pt      '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+18,'bj2 log pt  '//weights_info(kk)//cc(j)
+      call mbook(l+18,'bj2 log pt  '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+19,'bj2 y       '//weights_info(kk)//cc(j)
+      call mbook(l+19,'bj2 y       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+20,'bj2 eta     '//weights_info(kk)//cc(j)
+      call mbook(l+20,'bj2 eta     '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+21,'syst pt     '//weights_info(kk)//cc(j)
+      call mbook(l+21,'syst pt     '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+22,'syst log pt '//weights_info(kk)//cc(j)
+      call mbook(l+22,'syst log pt '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+23,'syst y      '//weights_info(kk)//cc(j)
+      call mbook(l+23,'syst y      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+24,'syst eta    '//weights_info(kk)//cc(j)
+      call mbook(l+24,'syst eta    '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
       enddo
       enddo
-      END
-
+ 999  END
 
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
@@ -108,11 +110,11 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
       do i=1,1
       do kk=1,nwgt_analysis
@@ -152,10 +154,9 @@ c
       CLOSE(99)
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C     BASED ON AN ANALYSIS FILE WRITTEN BY E.RE
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
@@ -182,7 +183,6 @@ C----------------------------------------------------------------------
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c To be changed !!
       ww(1)=1d0
@@ -191,11 +191,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('HWANAL',111)
-        GOTO 999
+         WRITE(*,*)'WARNING 111 IN HWANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
@@ -467,77 +467,3 @@ C
 
 
 
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end

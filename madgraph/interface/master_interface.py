@@ -65,7 +65,7 @@ class Switcher(object):
                       'MadLoop':('MG5_aMC',LoopCmd.LoopInterface),
                       'aMC@NLO':('MG5_aMC',amcatnloCmd.aMCatNLOInterface)}
 
-    _switch_opts = [interface_names[key][0] for key in interface_names.keys()]
+    _switch_opts = interface_names.keys()
     current_interface = None
    
     # Helper functions
@@ -578,11 +578,10 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
         
     def do_switch(self, line):
         """Not in help: Allow to switch to any given interface from command line """
-        interface_quick_name=dict([(self.interface_names[name][0],name) for name \
-                                   in self.interface_names.keys()])
+
         args = cmd.Cmd.split_arg(line)
-        if len(args)==1 and args[0] in interface_quick_name.keys():
-            self.change_principal_cmd(interface_quick_name[args[0]])
+        if len(args)==1 and args[0] in self.interface_names.keys():
+            self.change_principal_cmd(args[0])
         else:
             raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
                             %args[0]+" Valid interfaces are %s"\
@@ -608,7 +607,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.debug_link_to_command()      
         
 
-class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
    
     def __init__(self, *arg, **opt):
     
@@ -635,6 +634,9 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
         
         if __debug__:
             self.debug_link_to_command() 
+    
+    def do_shell(self, *args):
+        raise Exception
     
     def finalize(self, nojpeg):
         """Finalize web generation""" 

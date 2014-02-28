@@ -1,0 +1,109 @@
+#!/bin/bash
+#
+#  First get to main level directory for this process
+#
+echo "Setting up the Template to work with the MadWeight version of MadGraphII"
+if [[  ! -d ./bin  ]]; then
+    cd ../
+    if [[ ! -d ./bin ]]; then
+	echo "Error: store must be executed from the main, or bin directory"
+	exit
+    fi
+fi
+#  Now let shell know where to find important executables
+
+main=`pwd`
+dirbin=$main/bin
+mgdir=$main/../MadGraphII
+helas=$main/../HELAS
+mgmedir=$main/..
+
+
+echo "Transforming standard template into madweight version"
+cd $main
+mkdir temp
+mv ./bin/setup_model-pl ./temp/
+mv ./bin/Passto_g77.py ./temp/
+mv ./bin/Passto_gfortran.py ./temp/
+mv ./bin/mod_file.py ./temp/
+mv ./bin/internal ./temp/
+mv ./Cards/proc_card.dat ./temp/
+
+mv ./Source/alfas.inc ./temp/alfas.inc
+mv ./Source/coupl.inc ./temp/coupl.inc
+mv ./Source/cuts.inc ./temp/cuts.inc
+mv ./Source/maxparticles.inc ./temp/maxparticles.inc
+mv ./Source/run_config.inc ./temp/run_config.inc
+mv ./Source/run.inc ./temp/run.inc
+
+mv ./Source/alfas_functions.f ./temp/alfas_functions.f
+mv ./Source/kin_functions.f ./temp/kin_functions.f
+mv ./Source/open_file.f ./temp/open_file.f
+mv ./Source/run_printout.f ./temp/run_printout.f
+mv ./Source/rw_routines.f ./temp/rw_routines.f
+mv ./Source/setrun.f ./temp/setrun.f
+mv ./Source/transpole.f ./temp/transpole.f
+
+mv ./Source/make_opts ./temp/
+mv ./Source/PDF ./temp/
+mv ./Source/CERNLIB ./temp/
+mv ./Source/MadWeight ./temp/
+mv ./lib/Pdfdata ./temp/
+
+mv ./SubProcesses/setscales.f ./temp/
+
+rm -rf bin/* Cards/* Events HTML Source/* lib/* SubProcesses/*
+mkdir Source/MODEL
+mkdir Source/DHELAS
+mkdir Events
+
+mv ./temp/Pdfdata ./lib/
+mv ./temp/setup_model-pl ./bin/
+mv ./temp/Passto_g77.py ./bin/
+mv ./temp/internal ./bin/internal
+mv ./temp/Passto_gfortran.py ./bin/
+mv ./temp/mod_file.py ./bin/
+mv ./temp/proc_card.dat ./Cards/
+mv ./temp/makefile ./SubProcesses/
+mv ./temp/setscales.f SubProcesses/.
+mv ./temp/alfas.inc ./Source/alfas.inc
+mv ./temp/make_opts ./Source/
+mv ./temp/PDF ./Source/
+mv ./temp/CERNLIB ./Source/
+mv ./temp/MadWeight ./Source/
+mv ./Source/MadWeight/Cards/* Cards/.
+cp Cards/run_card.dat Cards/run_card_default.dat
+cp Cards/MadWeight_card.dat Cards/MadWeight_card_default.dat
+mv ./Source/MadWeight/src/* ./SubProcesses/
+
+
+mv ./temp/alfas.inc ./Source/alfas.inc
+mv ./temp/coupl.inc ./Source/coupl.inc
+mv ./temp/cuts.inc ./Source/cuts.inc
+mv ./temp/maxparticles.inc ./Source/maxparticles.inc
+mv ./temp/run_config.inc ./Source/run_config.inc
+mv ./temp/run.inc ./Source/run.inc
+
+mv ./temp/alfas_functions.f ./Source/alfas_functions.f
+mv ./temp/kin_functions.f ./Source/kin_functions.f
+mv ./temp/open_file.f ./Source/open_file.f
+mv ./temp/run_printout.f ./Source/run_printout.f
+mv ./temp/rw_routines.f ./Source/rw_routines.f
+mv ./temp/setrun.f ./Source/setrun.f
+mv ./temp/transpole.f ./Source/transpole.f
+
+#cp ./Source/MadWeight/Python/madweight.py  ./bin/.
+#cp ./Source/MadWeight/Python/put_banner.py ./bin/internal/put_banner.py
+#cp ./Source/MadWeight/Python/splitbanner.py ./bin/internal/splitbanner.py
+#cp ./Source/MadWeight/transfer_function/change_tf.py    ./bin/internal/change_tf.py
+#cp  ./Source/MadWeight/Python/MW_likelihood_selection_event.py ./bin/MW_likelihood_selection_event.py
+cp ./Source/MadWeight/Python/progressbar.py ./bin/internal/madweight
+rm -f temp
+rm -rf MadWeight/src
+rm -rf MadWeight/Cards
+cp -r ./Source/MadWeight/bin/* ./bin/
+rm -rf bin/internal/pass_to_madweight
+rm -rf ./Source/MadWeight/bin/
+
+
+echo " Ready to go with MadWeight  "

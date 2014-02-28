@@ -19,6 +19,7 @@ from __future__ import division
 import math
 import os
 import time
+import tempfile as tempfile
 from functools import wraps
 
 import aloha
@@ -29,7 +30,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_writers as aloha_writers
 import models.sm.object_library as object_library
 import tests.unit_tests as unittest
-
+import madgraph.various.misc as misc
 
 def set_global(loop=False, unitary=True, mp=False, cms=False):
 
@@ -3382,33 +3383,33 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         self.assertEqual(linked, [])
         
         # Check that the file are correctly written
-        os.system('rm -r /tmp/mg5 &> /dev/null; mkdir /tmp/mg5 &> /dev/null')
-        helas_suite.write('/tmp/mg5', 'Fortran')
-        
-        content = set(os.listdir('/tmp/mg5'))
-        self.assertEqual(content, set(['FFV1_0.f',
-                                       'FFV1C1_0.f','FFV2C1_0.f']))
-        
-        # Check the content of FFV1__FFV2C1_0.f
-        fsock = open('/tmp/mg5/FFV1C1_0.f')
-        goal = """
-      SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
-      IMPLICIT NONE
-      COMPLEX*16 F1(*)
-      COMPLEX*16 F2(*)
-      COMPLEX*16 V3(*)
-      COMPLEX*16 COUP1
-      COMPLEX*16 COUP2
-      COMPLEX*16 VERTEX
-      COMPLEX*16 TMP
-      CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
-      CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
-      VERTEX = VERTEX + TMP
-      END"""
-
-        data = fsock.read().split('\n')
-        for line in goal.split('\n'):
-                self.assertTrue(line in data)
+        with misc.TMP_directory(prefix='mg5') as path:
+            helas_suite.write(path, 'Fortran')
+            
+            content = set(os.listdir(path))
+            self.assertEqual(content, set(['FFV1_0.f',
+                                           'FFV1C1_0.f','FFV2C1_0.f']))
+            
+            # Check the content of FFV1__FFV2C1_0.f
+            fsock = open('%s/FFV1C1_0.f' % path)
+            goal = """
+          SUBROUTINE FFV1_2C1_0(F2, F1, V3, COUP1, COUP2,VERTEX)
+          IMPLICIT NONE
+          COMPLEX*16 F1(*)
+          COMPLEX*16 F2(*)
+          COMPLEX*16 V3(*)
+          COMPLEX*16 COUP1
+          COMPLEX*16 COUP2
+          COMPLEX*16 VERTEX
+          COMPLEX*16 TMP
+          CALL FFV1C1_0(F2,F1,V3,COUP1,VERTEX)
+          CALL FFV2C1_0(F2,F1,V3,COUP2,TMP)
+          VERTEX = VERTEX + TMP
+          END"""
+    
+            data = [ l.strip() for l in fsock.read().split('\n')]
+            for line in goal.split('\n'):
+                    self.assertTrue(line.strip() in data)
         
         
         

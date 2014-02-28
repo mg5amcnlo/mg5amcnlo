@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 237 #1.5.6
+    reference_number = 249 #2.0.0
     nb_test = 0
     
     
@@ -370,8 +370,8 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > t t~']
         values = {'number_of_P0': '2', 
-                  'cross_P0_qq_ttx': '0.74191E+02', 
-                  'cross_P0_gg_ttx': '0.48006E+03'}
+                  'cross_P0_qq_ttx': '65.93', 
+                  'cross_P0_gg_ttx': '399.1'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,
@@ -382,11 +382,10 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a short list of sm processes""" 
         my_proc_list = ['u j > W+ g', 'g g > W+ j j']
 
-
         values = {'number_of_P0': '1', 
          'number_of_P1': '1', 
-         'cross_P0_qq_wpg': '0.27889E+04', 
-         'cross_P1_gg_wpqq': '0.45254E+03'}      
+         'cross_P0_qq_wpg': '0.25882E+04', 
+         'cross_P1_gg_wpqq': '0.39004E+03'}      
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
                              filename = "short_cs_sm2.log")
@@ -396,7 +395,7 @@ class OLDMG5Comparator(unittest.TestCase):
         my_proc_list = ['g g > t t~, (t > b W+, W+ > e+ ve)']
 
         values =  {'number_of_P0': '1', 
-                   'cross_P0_gg_ttx_t_bwp_wp_lvl': '0.45836E+02'} 
+                   'cross_P0_gg_ttx_t_bwp_wp_lvl': '0.38078E+02'} 
                   
         self.compare_cross_section_to_values(values, my_proc_list,
                              orders = {'QED':99, 'QCD':99},
@@ -406,7 +405,7 @@ class OLDMG5Comparator(unittest.TestCase):
         """Test a short list of sm processes""" 
         my_proc_list = ['g g > go go']
 
-        values = {'number_of_P0': '1', 'cross_P0_gg_gogo': '0.43433E+01'}
+        values = {'number_of_P0': '1', 'cross_P0_gg_gogo': '0.31630E+01'}
         
         self.compare_cross_section_to_values(values, my_proc_list,
                              model='mssm',

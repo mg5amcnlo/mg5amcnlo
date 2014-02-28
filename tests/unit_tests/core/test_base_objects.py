@@ -973,7 +973,7 @@ class ModelTest2(unittest.TestCase):
         # and that the width and the mass are external
         found = 0
         for param in model['parameters'][('external',)]:
-            if param.name in ['WZ','MZ','WW','MW']:
+            if param.name in ['mdl_WZ','mdl_MZ','mdl_WW','mdl_MW']:
                 self.assertEqual(param.type, 'real')
                 found += 1
                 
@@ -981,14 +981,14 @@ class ModelTest2(unittest.TestCase):
         
         found=0
         for param in model['parameters'][tuple([])]:
-            if param.name in ['CMASS_MZ']:
-                self.assertEqual(param.expr, 'cmath.sqrt(MZ**2 - complex(0,1) * MZ * WZ)')
+            if param.name in ['CMASS_mdl_MZ']:
+                self.assertEqual(param.expr, 'cmath.sqrt(mdl_MZ**2 - complex(0,1) * mdl_MZ * mdl_WZ)')
                 found += 1
                 self.assertEqual(param.type, 'complex')
             
             # check that other parameter are changed correctly
-            if param.name in ['MZ__exp__2']:
-                self.assertEqual(param.expr, 'CMASS_MZ**2')
+            if param.name in ['mdl_MZ__exp__2']:
+                self.assertEqual(param.expr, 'CMASS_mdl_MZ**2')
                 found += 1
         self.assertEqual(found, 2)
         

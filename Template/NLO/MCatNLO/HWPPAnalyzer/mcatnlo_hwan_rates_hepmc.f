@@ -7,11 +7,11 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      integer i,kk,l
+      integer j,kk,l,i,nnn
       character*5 cc(2)
       data cc/'     ','     '/
       integer nwgt,max_weight,nwgt_analysis
@@ -31,18 +31,19 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       do i=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*2+(i-1)*1
-      call mbook(l+ 1,'total rate '//weights_info(kk)//cc(i)
+      call mbook(l+ 1,'total rate '//cc(i)//weights_info(kk)
      &     ,1d0,0d0,2d0)
       enddo
       enddo
  999  END
+
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,KK,l,nwgt_analysis
+      INTEGER I,J,KK,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -50,12 +51,12 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do i=1,1
       do kk=1,nwgt_analysis
@@ -68,7 +69,7 @@ C
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
@@ -81,7 +82,6 @@ C----------------------------------------------------------------------
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c To be changed !!
       ww(1)=1d0
@@ -91,10 +91,10 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          STOP
       ENDIF
 c
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('HWANAL',111)
+         WRITE(*,*)'WARNING 111 IN HWANAL'
         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
@@ -109,80 +109,3 @@ C
       enddo
 C
  999  END
-
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end
-
-

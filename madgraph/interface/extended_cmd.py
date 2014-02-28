@@ -90,6 +90,12 @@ class BasicCmd(cmd.Cmd):
                 out += opt
             return out
 
+        # check if more than one categories but only one value:
+        if all(len(s) <= 1 for s in dico.values() ):
+            values = set((s[0] for s in dico.values() if len(s)==1))
+            if len(values) == 1:
+                return values
+                
         # That's the real work
         out = []
         valid=0
@@ -116,6 +122,8 @@ class BasicCmd(cmd.Cmd):
     @debug()
     def print_suggestions(self, substitution, matches, longest_match_length) :
         """print auto-completions by category"""
+        if not hasattr(self, 'completion_prefix'):
+            self.completion_prefix = ''
         longest_match_length += len(self.completion_prefix)
         try:
             if len(matches) == 1:
@@ -628,6 +636,29 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             value = question_instance.default(default)
         return value
  
+    def do_import(self, line):
+        """Advanced commands: Import command files"""
+
+        args = self.split_arg(line)
+        # Check argument's validity
+        self.check_import(args)
+        
+        # Execute the card
+        self.import_command_file(args[1])
+         
+    def check_import(self, args):
+        """check import command"""
+        
+        if '-f' in args:
+            self.force = True
+            args.remove('-f')
+        if args[0] != 'command':
+            args.set(0, 'command')
+        if len(args) != 2:
+            raise self.InvalidCmd('import command requires one filepath argument')
+        if not os.path.exists(args[1]):
+            raise 'No such file or directory %s' % args[1]
+        
     
     def check_answer_in_input_file(self, question_instance, default, path=False):
         """Questions can have answer in output file (or not)"""
@@ -1400,7 +1431,42 @@ class SmartQuestion(BasicCmd):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
-            
+
+    def get_names(self):
+        # This method used to pull in base class attributes
+        # at a time dir() didn't do it yet.
+        return dir(self)  
+    
+    def onecmd(self, line, **opt):
+        """catch all error and stop properly command accordingly
+        Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+        
+        This allow to pass extra argument for internal call.
+        """
+        try:
+            if '~/' in line and os.environ.has_key('HOME'):
+                line = line.replace('~/', '%s/' % os.environ['HOME'])
+            line = os.path.expandvars(line)
+            cmd, arg, line = self.parseline(line)
+            if not line:
+                return self.emptyline()
+            if cmd is None:
+                return self.default(line)
+            self.lastcmd = line
+            if cmd == '':
+                return self.default(line)
+            else:
+                try:
+                    func = getattr(self, 'do_' + cmd)
+                except AttributeError:
+                    return self.default(line)
+                return func(arg, **opt)        
+        except Exception as error:
+            logger.warning(error)  
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1486,6 +1552,7 @@ class OneLinePathCompletion(SmartQuestion):
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
+        
         try:
             out = {}
             out[' Options'] = Cmd.list_completion(text, self.allow_arg)

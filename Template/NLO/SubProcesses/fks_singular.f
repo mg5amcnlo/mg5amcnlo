@@ -240,6 +240,10 @@ c      include "fks.inc"
       include 'reweight.inc'
       include 'reweightNLO.inc'
 
+c     timing statistics
+      include 'timing_variables.inc'
+      real deltaTOLP,deltaTPDF,deltaTFJ
+
       double precision pp(0:3,nexternal),wgt,vegaswgt
 
       double precision fks_Sij,f_damp,dot,dlum
@@ -417,6 +421,13 @@ c FxFx merging
          call get_helicity(i_fks,j_fks)
       endif
 
+c Make sure that the result can be non-zero. If the jacobian from the
+c PS-setup or vegas are zero, we can skip this PS point and 'return'.
+c Note that all the wgts and jacs should be positive.
+      dsig=0d0
+      if ( (wgt.le.0d0 .and. jac_cnt(0).le.0d0 .and. jac_cnt(1).le.0d0
+     &     .and. jac_cnt(2).le.0d0) .or. vegaswgt.le.0d0) return
+
       if (firsttime)then
          inoborn_ev=0
          xnoborn_ev=0.d0
@@ -501,6 +512,10 @@ c points)
       endif
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 540
+
+      call cpu_time(tBefore)
+      deltaTPDF = tPDF
+      deltaTFJ  = tFastJet
 c Real contribution:
 c Set the ybst_til_tolab before applying the cuts. 
       call set_cms_stuff(mohdr)
@@ -536,10 +551,17 @@ c       Compute the scales and sudakov-reweighting for the FxFx merging
            endif
         endif
       endif
+      call cpu_time(tAfter)
+      tDSigR=tDSigR + (tAfter-tBefore) - (tPDF-deltaTPDF) -
+     &     (tFastJet-deltaTFJ)
 c
 c All counterevent have the same final-state kinematics. Check that
 c one of them passes the hard cuts, and they exist at all
  540  continue
+      call cpu_time(tBefore)
+      deltaTPDF = tPDF
+      deltaTFJ  = tFastJet
+      deltaTOLP = tOLP
 c Set the ybst_til_tolab before applying the cuts. Update below
 c for the collinear, soft and/or soft-collinear subtraction terms
       call set_cms_stuff(izero)
@@ -728,20 +750,22 @@ c Soft-Collinear subtraction term:
          endif
       endif
  547  continue
-
+c
+      call cpu_time(tAfter)
+      tDSigI=tDSigI + (tAfter-tBefore) - (tPDF-deltaTPDF) -
+     &     (tFastJet-deltaTFJ) - (tOLP-deltaTOLP)
 c
 c Enhance the one channel for multi-channel integration
 c
       enhance=1.d0
-      if ((ev_wgt.ne.0d0.or.cnt_wgt_c.ne.0d0.or.cnt_wgt_s.ne.0d0.or.
-     $     cnt_wgt_sc.ne.0d0.or.bsv_wgt.ne.0d0.or.virt_wgt.ne.0d0.or.deg_wgt.
-     $     ne.0d0.or.
-     $     deg_swgt.ne.0d0.or.cnt_swgt_s.ne.0d0.or.cnt_swgt_sc.ne.0d0)
-     $     .and. multi_channel) then
-         if
-     $        (bsv_wgt.eq.0d0.and.virt_wgt.eq.0d0.and.deg_wgt.eq.0d0.and.deg_swgt.
-     $        eq.0d0.and.cnt_wgt_c.eq.0d0 ) CalculatedBorn=.false.
-
+      if ((ev_wgt.ne.0d0 .or. cnt_wgt_c.ne.0d0 .or. cnt_wgt_s.ne.0d0
+     $     .or.cnt_wgt_sc.ne.0d0 .or. bsv_wgt.ne.0d0 .or.
+     $     virt_wgt.ne.0d0 .or. deg_wgt.ne.0d0 .or.deg_swgt.ne.0d0 .or.
+     $     cnt_swgt_s.ne.0d0 .or. cnt_swgt_sc.ne.0d0).and.
+     $     multi_channel) then
+         if (bsv_wgt.eq.0d0 .and. virt_wgt.eq.0d0 .and. deg_wgt.eq.0d0
+     $        .and. deg_swgt.eq.0d0 .and. cnt_wgt_c.eq.0d0 )
+     $        CalculatedBorn=.false.
          if (.not.calculatedBorn .and. p_born(0,1).gt.0d0)then
             call sborn(p_born,wgt1)
          elseif(p_born(0,1).lt.0d0)then
@@ -962,6 +986,11 @@ c      include "fks.inc"
       include 'q_es.inc'
       include 'nFKSconfigs.inc'
       include 'reweight_all.inc'
+
+c     timing statistics
+      include 'timing_variables.inc'
+      real deltaTOLP,deltaTPDF,deltaTFJ
+
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
 
@@ -1257,9 +1286,9 @@ c respectively
 c
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
-c
-      if ( (wgt.eq.0d0 .and. jac_cnt(0).eq.0d0 .and. jac_cnt(1).eq.0d0
-     &     .and. jac_cnt(2).eq.0d0) .or. vegaswgt.eq.0d0) return
+c Note that all the wgts and jacs should be positive.
+      if ( (wgt.le.0d0 .and. jac_cnt(0).le.0d0 .and. jac_cnt(1).le.0d0
+     &     .and. jac_cnt(2).le.0d0) .or. vegaswgt.le.0d0) return
 c
       if (fold.eq.0) then
          calculatedBorn=.false.
@@ -1343,7 +1372,12 @@ c respectively
       SxmcME=0.d0
       HxmcMC=0.d0
       HxmcME=0.d0
-
+c
+      deltaTOLP = tOLP
+      deltaTPDF = tPDF
+      deltaTFJ  = tFastJet
+      call cpu_time(tBefore)
+c
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi' .or. nbody) goto 540
 
@@ -1800,17 +1834,22 @@ c Soft-Collinear subtraction term:
          wgtwreal_all(4,nFKSprocess*2)=
      &        -wgtwreal_all(4,nFKSprocess*2)*xsec
       endif
-
       Sxmc_wgt=Sxmc_wgt+SxmcMC+SxmcME
       Hxmc_wgt=Hxmc_wgt+HxmcMC+HxmcME
-
  547  continue
+      call cpu_time(tAfter)
+      tDSigI = tDSigI + (tAfter-tBefore) - (tOLP-deltaTOLP) - 
+     &     (tPDF -deltaTPDF) - (tFastJet - deltaTFJ)
 
 c Real contribution
 c
 c Set the ybst_til_tolab before applying the cuts. 
       if (abrv.eq.'born' .or. abrv.eq.'grid' .or. abrv(1:2).eq.'vi' .or.
      &     nbody)goto 550
+      call cpu_time(tBefore)
+      deltaTPDF = tPDF
+      deltaTFJ  = tFastJet
+c
       call set_cms_stuff(mohdr)
       if(doreweight)then
          wgtxbj_all(1,1,nFKSprocess*2)=xbk(1)
@@ -1877,6 +1916,9 @@ c respectively
         endif
         if(AddInfoLHE)scale2_lhe(nFKSprocess)=get_ptrel(pp,i_fks,j_fks)
       endif
+      call cpu_time(tAfter)
+      tDSigR = tDSigR + (tAfter-tBefore)-(tPDF-deltaTPDF)-
+     &     (tFastJet-deltaTFJ)
  550  continue
 
       if( (.not.MCcntcalled) .and.
@@ -1892,7 +1934,6 @@ c respectively
      &        scale1_lhe(nFKSprocess)=scale2_lhe(nFKSprocess)
          scale2_lhe(nFKSprocess)=scale_CKKW
       endif
-
 c
 c Enhance the one channel for multi-channel integration
 c
@@ -4241,9 +4282,7 @@ c For tests of virtuals
       common/c_vob/virtual_over_born
 
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
 
 c For the MINT folding
       integer fold
@@ -4411,6 +4450,7 @@ c convert to Binoth Les Houches Accord standards
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
+c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                call cpu_time(tAfter)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
