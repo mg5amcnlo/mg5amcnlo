@@ -67,7 +67,7 @@ c general MadFKS parameters
       integer nsqso
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
-      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
+      integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
@@ -307,9 +307,7 @@ c Update the statistics using the MadLoop return code (ret_code)
       else
          n10=n10+1              ! no known ret_code (10)
       endif
-      if (mod(ret_code,10).ne.0) then
-         n1=n1+1                ! no known ret_code (1)
-      endif
+         n1(mod(ret_code,10))=n1(mod(ret_code,10))+1                ! unit ret code distribution
 
 c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole

@@ -1633,15 +1633,27 @@ Integrated cross-section
              r"Quadruple precision used\:\s+(?P<nqdp>\d+).*"+\
              r"Initialization phase\-space points\:\s+(?P<nini>\d+).*"+\
              r"Unknown return code \(100\)\:\s+(?P<n100>\d+).*"+\
-             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*"+\
-             r"Unknown return code \(1\)\:\s+(?P<n1>\d+)",re.DOTALL)
+             r"Unknown return code \(10\)\:\s+(?P<n10>\d+).*",re.DOTALL)
+    
+        unit_code_meaning = { 0 : 'Not identified (CTModeRun != -1)',
+                              1 : 'CutTools (double precision)',
+                              2 : 'PJFry++',
+                              3 : 'IREGI',
+                              9 : 'CutTools (quadruple precision)'}
+        RetUnit_finder =re.compile(
+                           r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")
+    #Unit
     
         for gv_log in log_GV_files:
-            logfile=open(gv_log,'r')            
-            UPS_stats = re.search(UPS_stat_finder,logfile.read())
-            logfile.close()
+            channel_name = '/'.join(gv_log.split('/')[-5:-1])
+            log=open(gv_log,'r').read()                
+            UPS_stats = re.search(UPS_stat_finder,log)
+            for retunit_stats in re.finditer(RetUnit_finder, log):
+                if channel_name not in stats['UPS'].keys():
+                    stats['UPS'][channel_name] = [0]*10+[[0]*10]
+                stats['UPS'][channel_name][10][int(retunit_stats.group('unit'))] \
+                                     += int(retunit_stats.group('n_occurences'))
             if not UPS_stats is None:
-                channel_name = '/'.join(gv_log.split('/')[-5:-1])
                 try:
                     stats['UPS'][channel_name][0] += int(UPS_stats.group('ntot'))
                     stats['UPS'][channel_name][1] += int(UPS_stats.group('nsun'))
@@ -1653,14 +1665,13 @@ Integrated cross-section
                     stats['UPS'][channel_name][7] += int(UPS_stats.group('nini'))
                     stats['UPS'][channel_name][8] += int(UPS_stats.group('n100'))
                     stats['UPS'][channel_name][9] += int(UPS_stats.group('n10'))
-                    stats['UPS'][channel_name][10] += int(UPS_stats.group('n1'))
                 except KeyError:
                     stats['UPS'][channel_name] = [int(UPS_stats.group('ntot')),
                       int(UPS_stats.group('nsun')),int(UPS_stats.group('nsps')),
                       int(UPS_stats.group('nups')),int(UPS_stats.group('neps')),
                       int(UPS_stats.group('nddp')),int(UPS_stats.group('nqdp')),
                       int(UPS_stats.group('nini')),int(UPS_stats.group('n100')),
-                      int(UPS_stats.group('n10')),int(UPS_stats.group('n1'))]
+                      int(UPS_stats.group('n10')),[0]*10]
         debug_msg = ""
         if len(stats['UPS'].keys())>0:
             nTotPS  = sum([chan[0] for chan in stats['UPS'].values()],0)
@@ -1673,7 +1684,8 @@ Integrated cross-section
             nTotini = sum([chan[7] for chan in stats['UPS'].values()],0)
             nTot100 = sum([chan[8] for chan in stats['UPS'].values()],0)
             nTot10  = sum([chan[9] for chan in stats['UPS'].values()],0)
-            nTot1  = sum([chan[10] for chan in stats['UPS'].values()],0)
+            nTot1  = [sum([chan[10][i] for chan in stats['UPS'].values()],0) \
+                                                             for i in range(10)]
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
@@ -1687,12 +1699,20 @@ Integrated cross-section
             tmpStr += '\n    Only double precision used:          %d'%nTotddp
             tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
             tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            tmpStr += '\n    Reduction methods used:'
+            red_methods = [(unit_code_meaning[i],nTot1[i]) for i in \
+                                         unit_code_meaning.keys() if nTot1[i]>0]
+            for method, n in sorted(red_methods, key= lambda l: l[1], reverse=True):
+                tmpStr += '\n      > %s%s%s'%(method,' '*(33-len(method)),n)                
             if nTot100 != 0:
                 debug_msg += '\n  Unknown return code (100):             %d'%nTot100
             if nTot10 != 0:
                 debug_msg += '\n  Unknown return code (10):              %d'%nTot10
-            if nTot1 != 0:
-                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+            nUnknownUnit = sum(nTot1[u] for u in range(10) if u \
+                                                not in unit_code_meaning.keys())
+            if nUnknownUnit != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'\
+                                                                   %nUnknownUnit
 
             if maxUPS[1]>0.001:
                 message += tmpStr
