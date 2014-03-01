@@ -41,6 +41,7 @@ class UFOExpressionParser(object):
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
+    logical_equiv = {}
 
     def __init__(self, **kw):
         """Initialize the lex and yacc"""
@@ -59,7 +60,7 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'LOGICAL','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG'
         )
@@ -92,7 +93,10 @@ class UFOExpressionParser(object):
         r'(?<!\w)else\s'
         return t
     def t_LOGICAL(self, t):
-        r'==|<=|>=|<|>|(?<!\w)and(?=\()|(?<!\w)or(?=\()'
+        r'==|!=|<=|>=|<|>'
+        return t
+    def t_LOGICALCOMB(self, t):
+        r'(?<!\w)and(?=[\s\(])|(?<!\w)or(?=[\s\(])'
         return t
     def t_SQRT(self, t):
         r'cmath\.sqrt'
@@ -142,7 +146,10 @@ class UFOExpressionParser(object):
 
     # Parsing rules
     precedence = (
-        ('left', 'LOGICAL'),
+        ('right', 'LOGICALCOMB'),
+        ('right', 'LOGICAL'),
+        ('right','IF'),
+        ('right','ELSE'),
         ('left','='),
         ('left','+','-'),
         ('left','*','/'),
@@ -160,8 +167,6 @@ class UFOExpressionParser(object):
         ('right','FUNCTION'),
         ('right','COMPLEX'),
         ('right','COND'),
-        ('right','IF'),
-        ('right','ELSE')      
         )
 
     # Dictionary of parser expressions
@@ -178,10 +183,18 @@ class UFOExpressionParser(object):
         p[0] = p[1] + p[2] + p[3]
 
     def p_expression_logical(self, p):
-        '''expression : expression LOGICAL expression'''
-        print p[1],p[2],p[3]
-        p[0] = p[1] + p[2] + p[3]
+        '''boolexpression : expression LOGICAL expression'''
+        if p[2] not in self.logical_equiv:
+            p[0] = p[1] + p[2] + p[3]
+        else:
+            p[0] = p[1] + self.logical_equiv[p[2]] + p[3]        
 
+    def p_expression_logicalcomb(self, p):
+        '''boolexpression : boolexpression LOGICALCOMB boolexpression'''
+        if p[2] not in self.logical_equiv:
+            p[0] = p[1] + p[2] + p[3]
+        else:
+            p[0] = p[1] + self.logical_equiv[p[2]] + p[3]
 
     def p_expression_uminus(self, p):
         "expression : '-' expression %prec UMINUS"
@@ -189,6 +202,10 @@ class UFOExpressionParser(object):
 
     def p_group_parentheses(self, p):
         "group : '(' expression ')'"
+        p[0] = '(' + p[2] +')'
+
+    def p_group_parentheses_boolexpr(self, p):
+        "boolexpression : '(' boolexpression ')'"
         p[0] = '(' + p[2] +')'
 
     def p_expression_group(self, p):
@@ -224,6 +241,15 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     # The following parser expressions need to be defined for each
     # output language/framework
+    
+    logical_equiv = {'==':'.EQ.',
+                     '>=':'.GE.',
+                     '<=':'.LE.',
+                     '!=':'.NE.',
+                     '>':'.GT.',
+                     '<':'.LT.',
+                     'or':'.OR.',
+                     'and':'.AND.'}
 
     def p_expression_number(self, p):
         "expression : NUMBER"
@@ -245,11 +271,22 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p[3]
         except Exception:
             p[0] = p[1] + "**" + p[3]
+        
+#    def p_expression_if(self,p):
+#        "expression :  '(' expression IF boolexpression ELSE expression ')'"
+#        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[4], p[2], p[6])
+            
+#    def p_expression_ifimplicit(self,p):
+#        "expression :  '(' expression IF expression ELSE expression ')'"
+#        p[0] = 'COND(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[4], p[2], p[6])
 
     def p_expression_if(self,p):
-        "expression :  '(' expression IF expression ELSE expression ')'"
-        #print 'I got ',list(p)
-        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[4], p[2], p[6])
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = 'COND(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"

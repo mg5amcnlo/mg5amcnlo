@@ -35,23 +35,28 @@ class UFOParserTest(unittest.TestCase):
     def test_parse_fortran_IfElseStruct(self):
         "Test that structures like ( 1 if 2==3 else 4)"
         
-        tests = {('(1 if a==0 else 1/a)',
-                         'COND(A.EQ.0.000000d+00,1.000000d+00,1.000000d+00/A)'),
-                 ('(1/a if a else 1)',
-                         'COND(A.NE.0.000000d+00,1.000000d+00/A,1.000000d+00)'),
-                 ('(1 if a<=0 else 1/a)',
-                        'COND(A.LEQ.0.000000d+00,1.000000d+00,1.000000d+00/A)'),
-                 ('(1 if a<0 else 1/a)',
-                         'COND(A.LE.0.000000d+00,1.000000d+00,1.000000d+00/A)'),
+        tests = [
+                 ('(1 if a==0 else 1/a)',
+         '(COND(a.EQ.0.000000d+00,DCMPLX(1.000000d+00),DCMPLX(1.000000d+00/a)))'),
+                 ('1/a if a else 1',
+        'COND(a.NE.0d0,DCMPLX(1.000000d+00/a),DCMPLX(1.000000d+00))'),
+                 ('1 if a<=0 else 1/a',
+        'COND(a.LE.0.000000d+00,DCMPLX(1.000000d+00),DCMPLX(1.000000d+00/a))'),
+                 ('1 if a<0 else 1/a',
+        'COND(a.LT.0.000000d+00,DCMPLX(1.000000d+00),DCMPLX(1.000000d+00/a))'),
                  ('((1) if (a<0) else (1/a))',
-                 '(COND((A.LE.0.000000d+00),(1.000000d+00),(1.000000d+00/A)))'),
-                 ('((2 if b==0 else 1/b) if a==0 else 1/a)',
- 'COND(A.EQ.0,COND(B.EQ.0.000000d+00,2.000000d+00,1.000000d+00/B),1.000000d+00/A)'),
-                 ('(1 if a==0 else (1/A if b==0 else 1/b))',
- 'COND(A.EQ.0.000000d+00,1.000000d+00,COND(B.EQ.0.000000d+00,1.000000d+00/A,1.000000d+00/B))'),
-                 ('(1 if a==0 and b==1 else 1/a)',
-  'COND(A.EQ.0.000000d+00.AND.B.EQ.0.000000d+00,1.000000d+00,1.000000d+00/A)'),
-                 }
+                 '(COND((a.LT.0.000000d+00),DCMPLX((1.000000d+00)),DCMPLX((1.000000d+00/a))))'),
+                 ('(2 if b==0 else 1/b) if a==0 else 1/a',
+ 'COND(a.EQ.0.000000d+00,DCMPLX((COND(b.EQ.0.000000d+00,DCMPLX(2.000000d+00),DCMPLX(1.000000d+00/b)))),DCMPLX(1.000000d+00/a))'),
+                 ('1 if a==0 else (1/A if b==0 else 1/b)',
+ 'COND(a.EQ.0.000000d+00,DCMPLX(1.000000d+00),DCMPLX((COND(b.EQ.0.000000d+00,DCMPLX(1.000000d+00/a),DCMPLX(1.000000d+00/b)))))'),
+                 ('1 if a==0 and b==1 else 1/a',
+  'COND(a.EQ.0.000000d+00.AND.b.EQ.1.000000d+00,DCMPLX(1.000000d+00),DCMPLX(1.000000d+00/a))'),
+                  ('1+3*5 if a else 8*3+6',
+    'COND(a.NE.0d0,DCMPLX(1.000000d+00+3.000000d+00*5.000000d+00),DCMPLX(8.000000d+00*3.000000d+00+6.000000d+00))')
+#                 ,('1 if a else 2 if b else 3',
+#                  '')
+                 ]
         for toParse, sol in tests:
             print toParse
             self.assertEqual(self.calc.parse(toParse), sol)
