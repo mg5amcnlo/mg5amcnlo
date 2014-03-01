@@ -199,7 +199,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
-            raise ModelError("Syntax error at '%s'." % p.value)
+            raise ModelError("Syntax error at '%s' (%s)." %(p.value,p))
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"
