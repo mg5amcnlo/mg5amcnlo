@@ -129,6 +129,7 @@ class TestCmdShell1(unittest.TestCase):
                     'text_editor': None, 
                     'cluster_queue': None,
                     'nb_core': None,
+                    'pjfry': None,
                     'run_mode': 2,
                     'pythia-pgs_path': './pythia-pgs', 
                     'td_path': './td', 

@@ -302,7 +302,7 @@ in presence of majorana particle/flow violation"""
                 
                 
                 
-                if spin == 1: 
+                if spin == 1 or spin == -1: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -348,7 +348,7 @@ in presence of majorana particle/flow violation"""
                                 'The spin value %s is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if spin == 1 or spin == -1:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -826,10 +826,8 @@ class AbstractALOHAModel(dict):
         self.look_for_symmetries()
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
-	    # HSS,27/11/2012
         aloha.loop_mode = False
 	    # self.explicit_combine = False
-	    # HSS
         request = {}
 
         for list_l_name, tag, outgoing in data:

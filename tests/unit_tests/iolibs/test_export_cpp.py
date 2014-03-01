@@ -2762,7 +2762,7 @@ static Parameters_sm* getInstance();
 double mdl_WTau,mdl_WH,mdl_WT,mdl_WW,mdl_WZ,mdl_MTA,mdl_MM,mdl_Me,mdl_MH,mdl_MB,mdl_MT,mdl_MC,mdl_MZ,mdl_ymtau,mdl_ymm,mdl_yme,mdl_ymt,mdl_ymb,mdl_ymc,mdl_etaWS,mdl_rhoWS,mdl_AWS,mdl_lamWS,mdl_Gf,aEWM1,ZERO,mdl_lamWS__exp__2,mdl_lamWS__exp__3,mdl_MZ__exp__2,mdl_MZ__exp__4,mdl_sqrt__2,mdl_MH__exp__2,mdl_aEW,mdl_MW,mdl_sqrt__aEW,mdl_ee,mdl_MW__exp__2,mdl_sw2,mdl_cw,mdl_sqrt__sw2,mdl_sw,mdl_g1,mdl_gw,mdl_vev,mdl_vev__exp__2,mdl_lam,mdl_yb,mdl_yc,mdl_ye,mdl_ym,mdl_yt,mdl_ytau,mdl_muH,mdl_ee__exp__2,mdl_sw__exp__2,mdl_cw__exp__2;
 std::complex<double> mdl_CKM1x1,mdl_CKM1x2,mdl_complexi,mdl_CKM1x3,mdl_CKM2x1,mdl_CKM2x2,mdl_CKM2x3,mdl_CKM3x1,mdl_CKM3x2,mdl_CKM3x3,mdl_conjg__CKM1x3,mdl_conjg__CKM2x3,mdl_conjg__CKM3x3,mdl_conjg__CKM2x1,mdl_conjg__CKM3x1,mdl_conjg__CKM2x2,mdl_conjg__CKM3x2,mdl_conjg__CKM1x1,mdl_conjg__CKM1x2,mdl_I1x31,mdl_I1x32,mdl_I1x33,mdl_I2x12,mdl_I2x13,mdl_I2x22,mdl_I2x23,mdl_I2x32,mdl_I2x33,mdl_I3x21,mdl_I3x22,mdl_I3x23,mdl_I3x31,mdl_I3x32,mdl_I3x33,mdl_I4x13,mdl_I4x23,mdl_I4x33;
 // Model parameters dependent on aS
-double aS,mdl_sqrt__aS,mdl_G,mdl_G__exp__2;
+double aS,mdl_sqrt__aS,G,mdl_G__exp__2;
 // Model couplings independent of aS
 std::complex<double> GC_1,GC_2,GC_3,GC_4,GC_5,GC_6,GC_7,GC_8,GC_9,GC_13,GC_14,GC_15,GC_16,GC_17,GC_18,GC_19,GC_20,GC_21,GC_22,GC_23,GC_24,GC_25,GC_26,GC_27,GC_28,GC_29,GC_30,GC_31,GC_32,GC_33,GC_34,GC_35,GC_36,GC_37,GC_38,GC_39,GC_40,GC_41,GC_42,GC_43,GC_44,GC_45,GC_46,GC_47,GC_48,GC_49,GC_50,GC_51,GC_52,GC_53,GC_54,GC_55,GC_56,GC_57,GC_58,GC_59,GC_60,GC_61,GC_62,GC_63,GC_64,GC_65,GC_66,GC_67,GC_68,GC_69,GC_70,GC_71,GC_72,GC_73,GC_74,GC_75,GC_76,GC_77,GC_78,GC_79,GC_80,GC_81,GC_82,GC_83,GC_84,GC_85,GC_86,GC_87,GC_88,GC_89,GC_90,GC_91,GC_92,GC_93,GC_94,GC_95,GC_96,GC_97,GC_98,GC_99,GC_100,GC_101,GC_102,GC_103,GC_104,GC_105,GC_106,GC_107,GC_108;
 // Model couplings dependent on aS
@@ -3034,13 +3034,13 @@ GC_108 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x3)/(mdl_sw*mdl_sqrt__2);
     void Parameters_sm::setDependentParameters(ParticleData*& pd, Couplings*& csm, SusyLesHouches*& slhaPtr, double alpS){
     aS = alpS;
 mdl_sqrt__aS = sqrt(aS);
-mdl_G = 2.*mdl_sqrt__aS*sqrt(M_PI);
-mdl_G__exp__2 = pow(mdl_G,2.);
+G = 2.*mdl_sqrt__aS*sqrt(M_PI);
+mdl_G__exp__2 = pow(G,2.);
     }
     void Parameters_sm::setDependentCouplings(){
     GC_12 = mdl_complexi*mdl_G__exp__2;
-GC_11 = mdl_complexi*mdl_G;
-GC_10 = -mdl_G;
+GC_11 = mdl_complexi*G;
+GC_10 = -G;
     }
 
     // Routines for printing out parameters
@@ -3252,7 +3252,7 @@ cout << setw(20) << "GC_108 " << "= " << setiosflags(ios::scientific) << setw(10
     cout << "sm model parameters dependent on event kinematics:" << endl;
     cout << setw(20) << "aS " << "= " << setiosflags(ios::scientific) << setw(10) << aS << endl;
 cout << setw(20) << "mdl_sqrt__aS " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_sqrt__aS << endl;
-cout << setw(20) << "mdl_G " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_G << endl;
+cout << setw(20) << "G " << "= " << setiosflags(ios::scientific) << setw(10) << G << endl;
 cout << setw(20) << "mdl_G__exp__2 " << "= " << setiosflags(ios::scientific) << setw(10) << mdl_G__exp__2 << endl;
     }
     void Parameters_sm::printDependentCouplings(){

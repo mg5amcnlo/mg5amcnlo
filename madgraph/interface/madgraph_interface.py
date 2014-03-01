@@ -3226,6 +3226,11 @@ This implies that with decay chains:
             # restore previous settings
             self.do_set('gauge %s' % gauge, log=False)
             nb_processes += len(gauge_result_no_brs)
+            # Maybe the line below was necessary, but not sure :/
+            #HSSVH
+            #self.do_set('loop_optimized_output %s'%
+            #            self.options["loop_optimized_output"], log=False)
+            
 
         if args[0] in  ['permutation', 'full']:
             comparisons = process_checks.check_processes(myprocdef,

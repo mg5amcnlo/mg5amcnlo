@@ -192,7 +192,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                          line.end.pos_x, line.end.pos_y, '%s Ffermionl' %\
                          curvature)
     
-    # HSS ,22/10/2012, for tadpole
     def draw_circled_straight(self, line, cercle):
         """ADD the EPS code for this fermion line."""
 
@@ -205,8 +204,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Ffermionl' %\
                          curvature)
-    # HSS
-
     def draw_dashed(self, line):
         """ADD the EPS code for this Higgs line."""
 
@@ -214,19 +211,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, 'Fhiggs')
 
-    # HSS 04/10/2012
-    def draw_curved_dashed(self, line,cercle):
-        """ADD the EPS code for this Higgs line."""
-        if not cercle:
-            curvature = 0.4
-        else:
-            curvature = 1
-
-        if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
-            curvature *= -1
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
-                         line.end.pos_x, line.end.pos_y, '%s Fhiggsl'% curvature)
 
     def draw_circled_dashed(self, line,cercle):
         """ADD the EPS code for this Higgs line."""
@@ -270,8 +254,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
 			line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fghostl'% curvature)
 
-    # HSS
-
     def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""
 
@@ -279,7 +261,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x, line.end.pos_y, '%d Fphoton%s' % (opt,type))
 
-   # HSS 04/10/2012
     def draw_curved_wavy(self, line, cercle, opt=0, type=''):
         """ADD the EPS code for this photon line."""
         if not cercle:
@@ -302,9 +283,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         #add the code in the correct format
         self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x+0.01, line.end.pos_y+0.01, '%d %s Fphotonl%s' % (opt,curvature,type))
-    # HSS
-
-
 
     def draw_curly(self, line, type=''):
         """ADD the EPS code for this gluon line."""
@@ -450,10 +428,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
-        # HSS, 24/10/2012, for tadpole
-        #if d == 0:
-        #    raise self.DrawDiagramError('Line can not have 0 length')
-        # HSS
         
         # compute gap from middle point
         if abs(x1 - x2) < 1e-3:
@@ -563,21 +537,6 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
                 (isinstance(d, loop_objects.LoopDiagram) and d.get('type') < 0))]
         diagramlist = base_objects.DiagramList(diagramlist)
 
-	#HSS, 22/10/2012
-	#ndialist = len([1 for diag in diagramlist \
-	#	if not isinstance(diag,loop_base_objects.LoopUVCTDiagram)\
-	#	and not (isinstance(diag,loop_base_objects.LoopDiagram) and diag.get('type')<0)])
-        #if ndialist < limit:
-        #    self.npage += (ndialist - 1) // (self.nb_col * self.nb_line)
-        #else:
-	#    # HSS, 22/10/2012
-        #    #add = (len(diagramlist) - self.lower_scale) // \
-        #    #         (self.second_scale['nb_col'] * self.second_scale['nb_line'])
-	#    add = (ndialist - limit - 1) // \
-        #             (self.second_scale['nb_col'] * self.second_scale['nb_line'])
-	#    # HSS
-        #    self.npage += self.lower_scale + add
-	# HSS
         limit = self.lower_scale * self.nb_col * self.nb_line
         if len(diagramlist) < limit:
             self.npage += (len(diagramlist)-1) // (self.nb_col * self.nb_line)

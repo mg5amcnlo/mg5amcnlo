@@ -1972,8 +1972,7 @@ class DecayModel(model_reader.ModelReader):
                 "The argument %s should be numerical type." %str(q)
 
         # Declare global value. amZ0 is the alpha_s at Z pole
-        global aS, MT, MB, MZ, amZ0
-
+        global aS, amZ0, mdl_amZ0
         # Define all functions used
         for func in self['functions']:
             exec("def %s(%s):\n   return %s" % (func.name,
@@ -1988,12 +1987,30 @@ class DecayModel(model_reader.ModelReader):
 
         # Setup parameters
         # MZ, MB are already read in from param_card
-        MZ_ref = MZ.real
-        if MB == 0:
+    
+    
+        # get Z mass
+        Z = self.get_particle(23)
+        if not Z:
+            MZ_ref = 91.118
+        else:
+            MZ_ref = self['parameter_dict'][Z['mass']].real
+        
+        B = self.get_particle(5)
+        if not B:
             MB_ref = 4.7
         else:
-            MB_ref = MB
-        MC_ref = 1.42
+            MB_ref = self['parameter_dict'][B['mass']].real
+            if not MB_ref:
+                MB_ref = 4.7
+                
+        C = self.get_particle(4)
+        if not C:
+            MC_ref = 1.42
+        else:
+            MC_ref = self['parameter_dict'][C['mass']].real
+            if not MC_ref:
+                MC_ref = 1.42
 
         # Calculate alpha_s at the scale q
         if q < MB_ref:
@@ -2110,13 +2127,13 @@ class DecayModel(model_reader.ModelReader):
             if not eval(param.name) and eval(param.name) != 0:
                 logger.warning("%s has no expression: %s" % (param.name,
                                                              param.expr))
-            """try:
-                logger.info("Recalculated parameter %s = %f" % \
-                            (param.name, eval(param.name)))
-            except TypeError:
-                logger.info("Recalculated parameter %s = (%f, %f)" % \
-                            (param.name,\
-                             eval(param.name).real, eval(param.name).imag))"""
+#             try:
+#                 logger.info("Recalculated parameter %s = %f" % \
+#                             (param.name, eval(param.name)))
+#             except TypeError:
+#                 logger.info("Recalculated parameter %s = (%f, %f)" % \
+#                             (param.name,\
+#                              eval(param.name).real, eval(param.name).imag))
         
         # Extract couplings from couplings that depend on fewer 
         # number of external parameters.

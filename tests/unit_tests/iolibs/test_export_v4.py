@@ -11129,7 +11129,7 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         mg4_model.refactorize()
         
         # external parameters
-        expected = ['aEWM1', 'Gf', 'aS', 'ymb', 'ymt', 'ymtau', 'MTA', 'MT', 'MB', 'MZ', 'MH', 'WT', 'WZ', 'WW', 'WH']
+        expected = ['aEWM1', 'mdl_Gf', 'aS', 'mdl_ymb', 'mdl_ymt', 'mdl_ymtau', 'mdl_MTA', 'mdl_MT', 'mdl_MB', 'mdl_MZ', 'mdl_MH', 'mdl_WT', 'mdl_WZ', 'mdl_WW', 'mdl_WH']
         expected.sort()
         solution = [param.name for param in mg4_model.params_ext]
         solution.sort()
@@ -11151,8 +11151,8 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         self.assertFalse('G' in [p.name for p in mg4_model.params_dep])
         self.assertFalse('G' in [p.name for p in mg4_model.params_indep])
         # check that sqrt__aS is correctly set
-        self.assertTrue('sqrt__aS' in [p.name for p in mg4_model.params_dep])
-        self.assertTrue('sqrt__aS' not in [p.name for p in mg4_model.params_indep])
+        self.assertTrue('mdl_sqrt__aS' in [p.name for p in mg4_model.params_dep])
+        self.assertTrue('mdl_sqrt__aS' not in [p.name for p in mg4_model.params_indep])
         
         
     def test_case_sensitive(self):
@@ -11164,25 +11164,29 @@ class UFO_model_to_mg4_Test(unittest.TestCase):
         mg4_model.pass_parameter_to_case_insensitive()
         
         # edit model in order to add new parameter with name: CW / Cw / Mz / Mz2
-        CW = base_objects.ModelVariable( 'CW', 'Mz**2 * Mz2' , 'real')
+        CW = base_objects.ParamCardVariable('CW', 100, 'MASS', 40)
+        CWc = base_objects.ModelVariable( 'CW', 'Mz**2 * Mz2' , 'real')
         Cw = base_objects.ModelVariable( 'Cw', 'Mz**2 * Mz2 * CW' , 'real')
-        Mz = base_objects.ParamCardVariable('Mz', 100, 'MASS', 41)
+        Mz = base_objects.ParamCardVariable('MZ', 100, 'MASS', 41)
+        Mzc = base_objects.ParamCardVariable('Mz', 100, 'MASS', 42)
         Mz2 = base_objects.ParamCardVariable('Mz2', 100, 'MASS', 43)
-        
-        mg4_model.model['parameters'][()].append(CW)
+
+        mg4_model.model['parameters'][('external',)].append(CW)        
+        mg4_model.model['parameters'][()].append(CWc)
         mg4_model.model['parameters'][()].append(Cw)
         mg4_model.model['parameters'][('external',)].append(Mz)
+        mg4_model.model['parameters'][('external',)].append(Mzc)
         mg4_model.model['parameters'][('external',)].append(Mz2)
 
 
         mg4_model.pass_parameter_to_case_insensitive()
 
-        self.assertEqual(CW.name,'cw__2')
-        self.assertEqual(CW.expr,'mz__2**2 * Mz2')
+        self.assertEqual(CWc.name,'cw__2')
+        self.assertEqual(CWc.expr,'mz__2**2 * Mz2')
         self.assertEqual(Cw.name,'cw__3')
         self.assertEqual(Cw.expr,'mz__2**2 * Mz2 * cw__2')
         
-        self.assertEqual(Mz.name,'mz__2')
+        self.assertEqual(Mzc.name,'mz__2')
         
 
 

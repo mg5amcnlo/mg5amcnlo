@@ -623,8 +623,8 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         goal = \
 """      PMASS(1)=ZERO
       PMASS(2)=ZERO
-      PMASS(3)=ABS(MT)
-      PMASS(4)=ABS(MT)
+      PMASS(3)=ABS(MDL_MT)
+      PMASS(4)=ABS(MDL_MT)
       PMASS(5)=ZERO
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()
@@ -1441,11 +1441,11 @@ C     Number of configs
         for the born matrix element.
         """
         goal = \
-"""      PMASS( -1,   1)  = ABS(MT)
-      PWIDTH( -1,   1) = ABS(WT)
+"""      PMASS( -1,   1)  = ABS(MDL_MT)
+      PWIDTH( -1,   1) = ABS(MDL_WT)
       POW( -1,   1) = 1
-      PMASS( -1,   2)  = ABS(MT)
-      PWIDTH( -1,   2) = ABS(WT)
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
       POW( -1,   2) = 1
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()

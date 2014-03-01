@@ -78,7 +78,7 @@ class TestMatrixElementChecker(unittest.TestCase):
         mom = p[-1]
         mass = math.sqrt(mom[0]**2-(mom[1]**2+mom[2]**2+mom[3]**2))
         self.assertAlmostEqual(mass,
-                               full_model.get('parameter_dict')['MZ'],
+                               full_model.get('parameter_dict')['mdl_MZ'],
                                8)
 
         # Check momentum balance
