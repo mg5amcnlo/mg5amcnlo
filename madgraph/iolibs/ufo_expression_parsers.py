@@ -59,9 +59,9 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
-        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
-        'VARIABLE', 'NUMBER','COND','REGLOG','IF','ELSE'
+        'LOGICAL','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
+        'VARIABLE', 'NUMBER','COND','REGLOG'
         )
     literals = "=+-*/(),"
 
@@ -84,6 +84,15 @@ class UFOExpressionParser(object):
         return t
     def t_COND(self, t):
         r'(?<!\w)cond(?=\()'
+        return t
+    def t_IF(self, t):
+        r'(?<!\w)if\s'
+        return t
+    def t_ELSE(self, t):
+        r'(?<!\w)else\s'
+        return t
+    def t_LOGICAL(self, t):
+        r'==|<=|>=|<|>|(?<!\w)and(?=\()|(?<!\w)or(?=\()'
         return t
     def t_SQRT(self, t):
         r'cmath\.sqrt'
@@ -112,8 +121,6 @@ class UFOExpressionParser(object):
 
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
     t_POWER  = r'\*\*'
-    t_IF  = r'if'
-    t_ELSE  = r'else'
 
     t_ignore = " \t"
 
@@ -135,6 +142,7 @@ class UFOExpressionParser(object):
 
     # Parsing rules
     precedence = (
+        ('left', 'LOGICAL'),
         ('left','='),
         ('left','+','-'),
         ('left','*','/'),
@@ -168,6 +176,12 @@ class UFOExpressionParser(object):
                       | expression '*' expression
                       | expression '/' expression'''
         p[0] = p[1] + p[2] + p[3]
+
+    def p_expression_logical(self, p):
+        '''expression : expression LOGICAL expression'''
+        print p[1],p[2],p[3]
+        p[0] = p[1] + p[2] + p[3]
+
 
     def p_expression_uminus(self, p):
         "expression : '-' expression %prec UMINUS"
@@ -234,8 +248,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_if(self,p):
         "expression :  '(' expression IF expression ELSE expression ')'"
-        print 'I got ',list(p)
-        p[0]='dddd'
+        #print 'I got ',list(p)
+        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[4], p[2], p[6])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"

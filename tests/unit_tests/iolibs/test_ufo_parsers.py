@@ -53,6 +53,7 @@ class UFOParserTest(unittest.TestCase):
   'COND(A.EQ.0.000000d+00.AND.B.EQ.0.000000d+00,1.000000d+00,1.000000d+00/A)'),
                  }
         for toParse, sol in tests:
+            print toParse
             self.assertEqual(self.calc.parse(toParse), sol)
 
     def test_parse_info_str_error(self):
