@@ -271,14 +271,6 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p[3]
         except Exception:
             p[0] = p[1] + "**" + p[3]
-        
-#    def p_expression_if(self,p):
-#        "expression :  '(' expression IF boolexpression ELSE expression ')'"
-#        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[4], p[2], p[6])
-            
-#    def p_expression_ifimplicit(self,p):
-#        "expression :  '(' expression IF expression ELSE expression ')'"
-#        p[0] = 'COND(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[4], p[2], p[6])
 
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
@@ -286,7 +278,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
             
     def p_expression_ifimplicit(self,p):
         "expression :   expression IF expression ELSE expression "
-        p[0] = 'CONDIF(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[3], p[1], p[5])
+        p[0] = 'CONDIF(DCMPLX(%s).NE.(0d0,0d0),DCMPLX(%s),DCMPLX(%s))'\
+                                                             %(p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
@@ -351,6 +344,15 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         except Exception:
             p[0] = p[1] + "**" + p[3]
 
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = 'MP_CONDIF(%s,CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = 'MP_CONDIF(CMPLX(%s,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))'\
+                                                             %(p[3], p[1], p[5])
+
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
@@ -384,6 +386,15 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
     C++-style code."""
 
+    logical_equiv = {'==':'==',
+                     '>=':'>=',
+                     '<=':'<=',
+                     '!=':'!=',
+                     '>':'>',
+                     '<':'<',
+                     'or':'||',
+                     'and':'&&'}
+
     # The following parser expressions need to be defined for each
     # output language/framework
 
@@ -397,6 +408,14 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     def p_expression_variable(self, p):
         'expression : VARIABLE'
         p[0] = p[1]
+
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
