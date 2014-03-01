@@ -61,7 +61,7 @@ class UFOExpressionParser(object):
     tokens = (
         'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
-        'VARIABLE', 'NUMBER','COND','REGLOG'
+        'VARIABLE', 'NUMBER','COND','REGLOG','IF','ELSE'
         )
     literals = "=+-*/(),"
 
@@ -109,9 +109,11 @@ class UFOExpressionParser(object):
     def t_VARIABLE(self, t):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
         return t
-    
+
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
     t_POWER  = r'\*\*'
+    t_IF  = r'if'
+    t_ELSE  = r'else'
 
     t_ignore = " \t"
 
@@ -138,7 +140,6 @@ class UFOExpressionParser(object):
         ('left','*','/'),
         ('right','UMINUS'),
         ('left','POWER'),
-        ('right','COND'),
         ('right','REGLOG'),
         ('right','CSC'),
         ('right','SEC'),
@@ -149,7 +150,10 @@ class UFOExpressionParser(object):
         ('right','RE'),
         ('right','IM'),
         ('right','FUNCTION'),
-        ('right','COMPLEX')
+        ('right','COMPLEX'),
+        ('right','COND'),
+        ('right','IF'),
+        ('right','ELSE')      
         )
 
     # Dictionary of parser expressions
@@ -195,7 +199,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
-            raise ModelError("Syntax error at '%s' in '%s'" % (p.value, self.f))
+            raise ModelError("Syntax error at '%s'." % p.value)
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"
@@ -227,6 +231,11 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p[3]
         except Exception:
             p[0] = p[1] + "**" + p[3]
+
+    def p_expression_if(self,p):
+        "expression :  '(' expression IF expression ELSE expression ')'"
+        print 'I got ',list(p)
+        p[0]='dddd'
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
