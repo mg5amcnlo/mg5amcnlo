@@ -4756,6 +4756,17 @@ class UFO_model_to_mg4(object):
           endif
           end
           
+          double complex function condif(condition,truecase,falsecase)
+          implicit none
+          logical condition
+          double complex truecase,falsecase
+          if(condition) then
+             condif=truecase
+          else
+             condif=falsecase
+          endif
+          end
+          
           double complex function reglog(arg)
           implicit none
           double complex arg
@@ -4775,6 +4786,17 @@ class UFO_model_to_mg4(object):
                  mp_cond=truecase
               else
                  mp_cond=falsecase
+              endif
+              end
+              
+              %(complex_mp_format)s function mp_condif(condition,truecase,falsecase)
+              implicit none
+              logical condition
+              %(complex_mp_format)s truecase,falsecase
+              if(condition) then
+                 mp_condif=truecase
+              else
+                 mp_condif=falsecase
               endif
               end
               

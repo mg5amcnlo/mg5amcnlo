@@ -282,11 +282,11 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
-        p[0] = 'COND(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
+        p[0] = 'CONDIF(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
             
     def p_expression_ifimplicit(self,p):
         "expression :   expression IF expression ELSE expression "
-        p[0] = 'COND(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[3], p[1], p[5])
+        p[0] = 'CONDIF(%s.NE.0d0,DCMPLX(%s),DCMPLX(%s))'%(p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
