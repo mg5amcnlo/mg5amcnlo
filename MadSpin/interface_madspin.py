@@ -35,6 +35,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.banner as banner
 
 import models.import_ufo as import_ufo
+import models.check_param_card as check_param_card
 import MadSpin.decay as madspin
 
 logger = logging.getLogger('decay.stdout') # -> stdout
@@ -91,6 +92,12 @@ class MadSpinInterface(extended_cmd.Cmd):
             
     def do_import(self, inputfile):
         """import the event file"""
+        
+        args = self.split_arg(inputfile)
+        if not args:
+            return self.InvalidCmd, 'import requires arguments'
+        elif args[0] == 'model':
+            return self.import_model(args[1:])
         
         # change directory where to write the output
         self.options['curr_dir'] = os.path.realpath(os.path.dirname(inputfile))
@@ -202,6 +209,52 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
             
                 
+    def import_model(self, args):
+        """syntax: import model NAME CARD_PATH
+            args didn't include import model"""
+            
+        bypass_check = False
+        if '--bypass_check' in args:
+            args.remove('--bypass_check')
+            bypass_check = True
+            
+        if len(args) != 2:     
+            return self.InvalidCmd, 'import model requires two arguments'
+        
+        model_name = args[0]
+        card = args[1]
+        if not os.path.exists(card):
+            raise self.InvalidCmd('%s: no such file' % card)
+
+        self.load_model(model_name, False, False)
+
+        #Check the param_card
+        if not bypass_check:
+            if not hasattr(self.banner, 'param_card'):
+                self.banner.charge_card('slha')
+            param_card = check_param_card.ParamCard(card)
+            # checking that all parameter of the old param card are present in 
+            #the new one with the same value
+            try:
+                diff = self.banner.param_card.create_diff(param_card)
+            except Exception:
+                raise self.InvalidCmd('''The two param_card seems very different. 
+    So we prefer not to proceed. If you are sure about what you are doing, 
+    you can use the command \'import model MODELNAME PARAM_CARD_PATH --bypass_check\'''')
+            if diff:
+                raise self.InvalidCmd('''Original param_card differs on some parameters:
+    %s
+    Due to those preferences, we prefer not to proceed. If you are sure about what you are doing, 
+    you can use the command \'import model MODELNAME PARAM_CARD_PATH --bypass_check\''''
+    % diff.replace('\n','\n    '))
+                
+        #OK load the new param_card
+        self.banner['slha'] = open(card).read()
+        if hasattr(self.banner, 'param_card'):
+            del self.banner.param_card
+        self.banner.charge_card('slha')
+                
+
 
     @extended_cmd.debug()
     def complete_import(self, text, line, begidx, endidx):
@@ -228,11 +281,12 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         if self.model and not self.model['case_sensitive']:
             decaybranch = decaybranch.lower()
-        
+
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
             self.list_branches[init_part] = []
         self.list_branches[init_part].append(decay_process)
+        print decay_process
         del decay_process, init_part    
         
     

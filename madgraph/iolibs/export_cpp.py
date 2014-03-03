@@ -764,17 +764,23 @@ class ProcessExporterCPP(object):
         replace_dict['color_matrix_lines'] = \
                                      self.get_color_matrix_lines(matrix_element)
 
-        # T(....)
-        replace_dict['color_sting_lines'] = \
-                                     self.get_color_string_lines(matrix_element)
                                      
         replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
 
+
+        #specific exporter hack
+        replace_dict =  self.get_class_specific_definition_matrix(replace_dict, matrix_element)
+        
         file = read_template_file(self.single_process_template) % \
                 replace_dict
 
         return file
 
+    def get_class_specific_definition_matrix(self, converter, matrix_element):
+        """place to add some specific hack to a given exporter.
+        Please always use Super in that case"""
+
+        return converter
 
     def get_sigmaHat_lines(self):
         """Get sigmaHat_lines for function definition for Pythia 8 .cc file"""
@@ -881,54 +887,6 @@ class ProcessExporterCPP(object):
 
 
 
-    def get_color_string_lines(self, matrix_element):
-        """Return the color matrix definition lines for this matrix element. Split
-        rows in chunks of size n."""
-
-        if not matrix_element.get('color_matrix'):
-            return "\n".join(["static const double res[1][1] = {-1.};"])
-        
-        #start the real work
-        color_denominators = matrix_element.get('color_matrix').\
-                                                         get_line_denominators()
-        matrix_strings = []
-        my_cs = color.ColorString()
-                
-        for i_color in xrange(len(color_denominators)):
-            # Then write the numerators for the matrix elements
-            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
-            t_str=repr(my_cs)
-            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
-            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
-            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
-            all_matches = t_match.findall(t_str)
-
-            tmp_color = [] 
-            for match in all_matches:
-                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
-                if ctype not in ['T', 'Tr']:
-                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
-                tmp_color.append(arg)
-            #compute the maximal size of the vector
-            nb_index = sum(len(o) for o in tmp_color)
-            max_len = nb_index + (nb_index//2) -1
-            #create the list with the 0 separator
-            curr_color = tmp_color[0]
-            for tcolor in tmp_color[1:]:
-                curr_color += ['0'] + tcolor
-            curr_color += ['0'] * (max_len- len(curr_color)) 
-            #format the output
-            matrix_strings.append('{%s}' % ','.join(curr_color))
-
-        matrix_string = 'static const double res[%s][%s] = {%s};' % \
-            (len(color_denominators), max_len, ",".join(matrix_strings))    
-
-        return matrix_string
-
-
-
-
-
 
 
             
@@ -1016,6 +974,63 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
     # Static variables (for inheritance)
     process_class_template = 'matchbox_class.inc'
     single_process_template = 'matchbox_matrix.inc'
+
+
+    def get_class_specific_definition_matrix(self, converter, matrix_element):
+        """ """
+        
+        converter = super(ProcessExporterMatchbox, self).get_class_specific_definition_matrix(converter, matrix_element)
+        
+        # T(....)
+        converter['color_sting_lines'] = \
+                                     self.get_color_string_lines(matrix_element)
+                                     
+        return converter
+        
+
+    def get_color_string_lines(self, matrix_element):
+        """Return the color matrix definition lines for this matrix element. Split
+        rows in chunks of size n."""
+
+        if not matrix_element.get('color_matrix'):
+            return "\n".join(["static const double res[1][1] = {-1.};"])
+        
+        #start the real work
+        color_denominators = matrix_element.get('color_matrix').\
+                                                         get_line_denominators()
+        matrix_strings = []
+        my_cs = color.ColorString()
+                
+        for i_color in xrange(len(color_denominators)):
+            # Then write the numerators for the matrix elements
+            my_cs.from_immutable(sorted(matrix_element.get('color_basis').keys())[i_color])
+            t_str=repr(my_cs)
+            t_match=re.compile(r"(\w+)\(([\s\d+\,]*)\)")
+            # from '1 T(2,4,1) Tr(4,5,6) Epsilon(5,3,2,1) T(1,2)' returns with findall:
+            # [('T', '2,4,1'), ('Tr', '4,5,6'), ('Epsilon', '5,3,2,1'), ('T', '1,2')]
+            all_matches = t_match.findall(t_str)
+            tmp_color = [] 
+            for match in all_matches:
+                ctype, arg = match[0], [m.strip() for m in match[1].split(',')]
+                if ctype not in ['T', 'Tr']:
+                    raise self.ProcessExporterCPPError, 'Color Structure not handle by Matchbox'
+                tmp_color.append(arg)
+            #compute the maximal size of the vector
+            nb_index = sum(len(o) for o in tmp_color)
+            max_len = nb_index + (nb_index//2) -1
+            #create the list with the 0 separator
+            curr_color = tmp_color[0]
+            for tcolor in tmp_color[1:]:
+                curr_color += ['0'] + tcolor
+            curr_color += ['0'] * (max_len- len(curr_color)) 
+            #format the output
+            matrix_strings.append('{%s}' % ','.join(curr_color))
+
+        matrix_string = 'static const double res[%s][%s] = {%s};' % \
+            (len(color_denominators), max_len, ",".join(matrix_strings))    
+
+        return matrix_string
+
 
 #===============================================================================
 # ProcessExporterPythia8

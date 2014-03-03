@@ -424,6 +424,7 @@ c FxFx merging
 c Make sure that the result can be non-zero. If the jacobian from the
 c PS-setup or vegas are zero, we can skip this PS point and 'return'.
 c Note that all the wgts and jacs should be positive.
+      dsig=0d0
       if ( (wgt.le.0d0 .and. jac_cnt(0).le.0d0 .and. jac_cnt(1).le.0d0
      &     .and. jac_cnt(2).le.0d0) .or. vegaswgt.le.0d0) return
 

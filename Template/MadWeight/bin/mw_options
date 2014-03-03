@@ -1,0 +1,207 @@
+#! /usr/bin/env python
+
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph Development team and Contributors
+#
+# This file is a part of the MadGraph 5 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph license which should accompany this 
+# distribution.
+#
+# For more information, please visit: http://madgraph.phys.ucl.ac.be
+#
+################################################################################
+
+"""This is the main executable, a simple frontend to set up the PYTHONPATH
+and call immediately the command line interface scripts"""
+
+import sys
+if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+    sys.exit('MadWeight 5 works only with python 2.6 or later (but not python 3.X).\n\
+               Please upgrade your version of python.')
+
+import os
+import optparse
+
+# Get the directory of the script real path (bin)
+# and add it to the current PYTHONPATH
+
+root_path = os.path.dirname(os.path.realpath( __file__ ))
+sys.path.insert(0, root_path)
+
+
+
+class MyOptParser(optparse.OptionParser):
+    
+    class InvalidOption(Exception): pass
+
+    def error(self, msg=''):
+        raise MyOptParser.InvalidOption(msg)
+
+
+
+
+# Write out nice usage message if called with -h or --help
+usage = "usage: %prog [options] [FILE] "
+parser = MyOptParser(usage=usage)
+parser.add_option("-l", "--logging", default='INFO',
+                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                 help='force to be in secure mode')
+parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                 help='force to launch debug mode')
+parser_error = ''
+done = False
+for i in range(len(sys.argv)-1):
+    try:
+        (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+        done = True
+    except MyOptParser.InvalidOption, error:
+        pass 
+    else:
+        args += sys.argv[len(sys.argv)-i:]
+if not done:
+    # raise correct error:
+    try:
+        (options, args) = parser.parse_args()
+    except MyOptParser.InvalidOption, error:
+        print error
+        sys.exit(2)  
+
+if len(args) == 0:
+    args = ''
+
+import subprocess
+
+# Check if optimize mode is (and should be) activated
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path,'../..', 'bin','create_release.py')) or options.web):
+        print 'launch in debug mode'
+        subprocess.call([sys.executable] + ['-O'] + sys.argv)
+        sys.exit()
+
+import logging
+import logging.config
+
+try: 
+    import readline
+except ImportError:
+    try:
+        import pyreadline as readline
+    except:
+        print "For tab completion and history, install module readline."
+else:
+    import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
+    
+    elif hasattr(readline, '__doc__'):
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+        else:
+            readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.__doc__ = 'GNU'
+        readline.parse_and_bind("tab: complete")
+        
+    # charge history file
+    try:
+        history_file = os.path.join(os.environ['HOME'], '.mg5', 'me5history')
+        readline.read_history_file(history_file)
+    except:
+        pass
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print 'Running MG5 in debug mode'
+
+
+# Set logging level according to the logging level given by options
+#logging.basicConfig(level=vars(logging)[options.logging])
+import internal.coloring_logging
+try:
+    if __debug__ and options.logging == 'INFO':
+        options.logging = 'DEBUG'    
+    logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+    logging.root.setLevel(eval('logging.' + options.logging))
+    logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
+except:
+    pass
+import internal.madweight_interface as cmd_interface
+import internal.common_run_interface as common_run_interface
+
+# Call the cmd interface main loop
+try:
+    if (args and os.path.exists(args[0])):
+        # They are an input file 
+        input_file = args[0]
+        if options.web:
+            cmd_line = cmd_interface.MadWeightCmd()
+            cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
+            cmd_line.use_rawinput = False
+            cmd_line.run_cmd('import command ' + input_file)
+            cmd_line.run_cmd('quit')      
+        else:
+            cmd_line = cmd_interface.MadWeightCmdShell()
+            cmd_line.use_rawinput = False
+            cmd_line.run_cmd('import command ' + input_file)
+            cmd_line.run_cmd('quit')
+    elif args:
+        # a single command is provided
+        cmd_line = cmd_interface.MadWeightCmd()
+        if not hasattr(cmd_line, 'do_%s' % args[0]):
+            if parser_error:
+                print parser_error
+                print 'and %s  can not be interpreted as a valid command.' % args[0]
+            else:
+                print 'ERROR: %s  not a valid command. Please retry' % args[0]
+        else:
+            cmd_line.use_rawinput = False    
+            cmd_line.run_cmd(' '.join(args))
+            cmd_line.run_cmd('quit')
+    else:
+        # Interactive mode
+        if options.web:
+            cmd_line = cmd_interface.MadWeightCmd()
+            cmd_line.cmdloop()
+        else:
+            cmd_line = cmd_interface.MadWeightCmdShell()
+            cmd_line.cmdloop()
+            
+except KeyboardInterrupt:
+    print 'writting history and directory and quit on KeyboardInterrupt' 
+    pass
+except common_run_interface.AlreadyRunning, error:
+    logging.error(str(error))
+    sys.exit()
+try: 
+    readline.set_history_length(100)
+    if not os.path.exists(os.path.join(os.environ['HOME'], '.mg5')):
+        os.mkdir(os.path.join(os.environ['HOME'], '.mg5'))
+    readline.write_history_file(history_file)
+except:
+    pass
+    
+try:
+    if cmd_line.history[-1] not in ['EOF','quit','exit']:
+        cmd_line.results.store_result()
+except:
+    print error
+    pass
+
+
+try:
+    # Remove lock file
+    os.remove(os.path.join(root_path,os.pardir, 'RunWeb'))
+except:
+    pass

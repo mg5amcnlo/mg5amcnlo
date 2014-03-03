@@ -1,0 +1,90 @@
+##########################################################################
+##                                                                      ##
+##                             MadWeigth                                ##
+##                             =============                            ##
+##                                                                      ##
+##                              Run control                             ##
+##                              -----------                             ##
+##                                                                      ##
+##                                                                      ##
+##    Author: Mattelaer Olivier (UCL-CP3)                               ##
+##            Artoisenet Pierre (UCL-CP3)                               ##
+##                                                                      ##
+##    Version:     5.0.0                                                ##
+##    Last change: 01/10/14                                             ##
+##                                                                      ##
+##########################################################################
+##                                                                      ##
+##  This Card defines all specific parameters of Madweight              ## 
+##                                                                      ##
+##########################################################################
+#*************************************************************************
+##                      select run options                              ##  
+#*************************************************************************
+Block MW_Run 
+#   TAG                 VALUE                    UTILITY
+     name                fermi    # name for the run  
+     nb_exp_events        4       # number of experimental events to consider
+     MW_int_points        2000    # number of points (by permutation) in MadWeight integration for survey 
+     MW_int_refine        10000   # number of points (by permutation) in MadWeight integration for refine 
+     precision            0.005   # stops computation if precision is reached.
+     nb_event_by_node     1       # one job submission compute the weight for N events
+     log_level            weight  # from low level of log to extensive log: 
+                                  # weight, permutation, channel, full
+     use_cut              F       # use the cut defined in run_card.dat
+     bw_cut               F       # use the BW cut 
+     nwa                  0.1     # width below narrow width approximation is used.
+     isr                  0       # isr=0 : ignore ISR effect (except if all FS particles are visible)
+                                  # isr=1 : correct kinematic based on reconstructed Pt(isr)
+     inputfile          './Events/input.lhco' # path to the input file (in lhco format)
+                                  
+                                  
+#*************************************************************************
+##                  define the different param_card's                   ##  
+#*************************************************************************
+Block MW_parameter         
+#   TAG      VALUE                     UTILITY
+    mode         1         #    type of input 
+                           #    0 : inputs are read from the cards: param_card_1.dat, param_card_2.dat,...
+                           #    1 : redefines some values from param_card.dat according to the form below
+                           #    2 : same but the value for different parameters are modified simultaneously
+#                             
+#                             # first parameter #
+     11       mass          # Block of the parameter to change  
+     12       6             # id of the parameter to change 
+     13       180           # here you can enter the different values:
+     13       190           #         add a new line with tag 13 to introduce a new value        
+#
+#                            #  second parameter #
+#                            !DELETE ALL THE FOLLOWING TAG IF YOU WANT TO RUN WITH ONLY ONE PARAM!
+#     21       MGCKM          # Block of the parameter to change  
+#     22       1              # id of the paramter to change 
+#     22       2              # id2 of the paramter to change
+#     23       1.5E-02        # here you can enter the different values:
+#     23       1.8E-02        #        add a new line with tag 23 to introduce a new value
+#
+#  use same syntax for parameters 3,4,...
+#*************************************************************************
+##                                Permutations                          ##  
+#*************************************************************************
+Block MW_perm
+#   TAG           VALUE                    UTILITY
+     permutation  T         # make permutation
+     bjet_is_jet  T         # consider permutation between b-jets and light jets
+     montecarlo   T         # Monte-Carlo over permutation (Huge speed up if many permutation)
+     preselect    'default' # How to pre-select the correct permutation set. 
+                            # put 'None' if no pre-selection to perform.
+                            # You can set the path to a fortran file defining the require function
+                            # See file SubProcesses/permutation_weight_default.dat for
+                            # instructions.
+     min_perm_cut 5e-4      # Cut for discarding permutation on the preselected method
+#*************************************************************************
+##                       Phase-Space Integration mapping                ##
+#*************************************************************************
+Block MW_gen
+    force_nwa     2         # Only consider the change of variable alligning particles 
+                            # with width smaller than this value. This speed up the code
+                            # but can lead to zero weight for background event where the
+                            # kinematic doesn't agree with the associated mass.
+                            # if "mw_run nwa" parameter is bigger than this value, that
+                            # value is used for this parameter automatically.

@@ -12,7 +12,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE PYABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       include 'reweight0.inc'
       integer j,kk,l
@@ -87,10 +87,9 @@ c
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE PYAEND(IEVT)
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       implicit none
       REAL*8 XNORM
@@ -103,10 +102,10 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D0/IEVT
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
       do i=1,1
       do kk=1,nwgt_analysis
@@ -146,10 +145,9 @@ c
       CLOSE(99)
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE PYANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C     BASED ON AN ANALYSIS FILE WRITTEN BY E.RE
 C----------------------------------------------------------------------
       implicit none
@@ -190,7 +188,7 @@ c
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,P(3,3)).EQ.SIGN(1.D0,P(4,3)))THEN
          WRITE(*,*)'WARNING 111 IN PYANAL'

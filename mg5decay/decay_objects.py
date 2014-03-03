@@ -1599,6 +1599,8 @@ class DecayModel(model_reader.ModelReader):
         #Prepare the vertexlist        
         for inter in self['interactions']:
 
+            if 'type' in inter and inter['type'] != 'base':
+                continue #need only the LO interactions.
             #Calculate the particle number
             partnum = len(inter['particles']) - 1
 
@@ -1973,6 +1975,12 @@ class DecayModel(model_reader.ModelReader):
         # Declare global value. amZ0 is the alpha_s at Z pole
         global aS, MT, MB, MZ, amZ0
 
+        # Define all functions used
+        for func in self['functions']:
+            exec("def %s(%s):\n   return %s" % (func.name,
+                                                ",".join(func.arguments),
+                                                func.expr))
+
         # Setup the alpha_s at different scale
         amt = 0.
         amb = 0.
@@ -2073,6 +2081,12 @@ class DecayModel(model_reader.ModelReader):
         """ Recalculate parameters and couplings which depend on
             running external parameters to the given energy scale.
             RUN running_externals before run this function."""
+
+        # Define all functions used
+        for func in self['functions']:
+            exec("def %s(%s):\n   return %s" % (func.name,
+                                                ",".join(func.arguments),
+                                                func.expr))
 
         # External parameters that must be recalculate for different energy
         # scale.
@@ -3933,7 +3947,7 @@ class Channel(base_objects.Diagram):
         cls.lor_pattern = re.compile("""(?<![a-zA-Z])(?P<var>PSlash\(%(3)s\)|
                                         Gamma\(%(3)s\)|
                                         Sigma\(%(4)s\)|
-                                        Gamma5\(%(3)s\)|
+                                        Gamma5\(%(2)s\)|
                                         C\(%(2)s\)|
                                         Epsilon\(%(4)s\)|
                                         Metric\(%(2)s\)|

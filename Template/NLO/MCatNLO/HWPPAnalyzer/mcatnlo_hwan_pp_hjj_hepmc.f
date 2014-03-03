@@ -14,6 +14,9 @@ C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
+      REAL*8 pi
+      PARAMETER (PI=3.14159265358979312D0)
+      integer j,kk,l,i,nnn
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -22,9 +25,6 @@ C----------------------------------------------------------------------
       common/cwgtsinfo/weights_info
       character*8 cc(2)
       data cc/'        ','vbfcuts '/
-      real*8 pi
-      PARAMETER (PI=3.14159265358979312D0)
-      integer i,kk,l
       real*8 vetomin, vetomax
       integer nbinveto
       common /to_veto_hist/vetomin,vetomax,nbinveto
@@ -177,7 +177,7 @@ C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       REAL*8 XNORM
-      INTEGER I,J,kk,l,nwgt_analysis
+      INTEGER I,J,KK,l,nwgt_analysis
       integer NPL
       parameter(NPL=15000)
       common/c_analysis/nwgt_analysis
@@ -186,11 +186,11 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)             
-      ENDDO                          
+        CALL MFINAL3(I+NPL)
+      ENDDO
 C
       do kk=1,nwgt_analysis
       do i=1,2
@@ -315,7 +315,6 @@ c jet stuff
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
 c
-      IF(MOD(NEVHEP,10000).EQ.0)RETURN
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c To be changed !!
       ww(1)=1d0
@@ -334,8 +333,8 @@ C INITIALISE
 C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,1)).EQ.SIGN(1.D0,PHEP(3,2)))THEN
-        CALL HWWARN('HWANAL',111)
-        GOTO 999
+         WRITE(*,*)'WARNING 502 IN HWANAL'
+         GOTO 999
       ENDIF
       DO I=1,nwgt_analysis
          WWW(I)=EVWGT*ww(i)/ww(1)
@@ -354,8 +353,8 @@ C EFFECT, SO THROW THE EVENT AWAY
            ENDDO
         ENDIF
 C FIND THE HIGGS
-        IF(ID.EQ.25.AND.(IST.EQ.1.OR.IST.EQ.195))THEN
-           NH=NH+1
+        IF(ID.EQ.25)THEN
+           NH=1
            IH=IHEP
         ENDIF
   100 CONTINUE
@@ -401,7 +400,8 @@ C---CLUSTER THE EVENT
          if(i.gt.1)then
             if (ptjet(i).gt.ptjet(i-1)) then
                write (*,*) "Error 1: jets should be ordered in pt"
-               CALL HWWARN('HWANAL',501)
+               WRITE(*,*)'ERROR 501 IN HWANAL'
+               STOP
             endif
          endif
          yjet(i)=getrapidityv4(pjet(1,i))
@@ -409,6 +409,8 @@ C---CLUSTER THE EVENT
 c look for veto jet without y cuts
          if (i.gt.2.and.yjet(i).gt.min(yjet(1),yjet(2)).and.
      &      yjet(i).lt.max(yjet(1),yjet(2)).and.ijveto.eq.0) ijveto = i
+
+C now look for jets within the rapidity cuts
          if (dabs(yjet(i)).lt.yjmax) then
              njety=njety+1
              if (ij1y.eq.0) then
@@ -441,6 +443,9 @@ c this is the loop for w-o / w vbf cuts
       if(i.eq.2) then
          njet = njety
          ijveto = ijvetoy
+         ij1 = ij1y
+         ij2 = ij2y
+         ij3 = ij3y
       endif
 
 c Load momenta
@@ -997,78 +1002,3 @@ c
       return
       end
 
-
-C-----------------------------------------------------------------------
-      SUBROUTINE HWWARN(SUBRTN,ICODE)
-C-----------------------------------------------------------------------
-C     DEALS WITH ERRORS DURING EXECUTION
-C     SUBRTN = NAME OF CALLING SUBROUTINE
-C     ICODE  = ERROR CODE:    - -1 NONFATAL, KILL EVENT & PRINT NOTHING
-C                            0- 49 NONFATAL, PRINT WARNING & CONTINUE
-C                           50- 99 NONFATAL, PRINT WARNING & JUMP
-C                          100-199 NONFATAL, DUMP & KILL EVENT
-C                          200-299    FATAL, TERMINATE RUN
-C                          300-399    FATAL, DUMP EVENT & TERMINATE RUN
-C                          400-499    FATAL, DUMP EVENT & STOP DEAD
-C                          500-       FATAL, STOP DEAD WITH NO DUMP
-C-----------------------------------------------------------------------
-      INCLUDE 'HEPMC.INC'
-      INTEGER ICODE,NRN,IERROR
-      CHARACTER*6 SUBRTN
-      IF (ICODE.GE.0) WRITE (6,10) SUBRTN,ICODE
-   10 FORMAT(/' HWWARN CALLED FROM SUBPROGRAM ',A6,': CODE =',I4)
-      IF (ICODE.LT.0) THEN
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.100) THEN
-         WRITE (6,20) NEVHEP,NRN,EVWGT
-   20    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT SURVIVES. EXECUTION CONTINUES')
-         IF (ICODE.GT.49) RETURN
-      ELSEIF (ICODE.LT.200) THEN
-         WRITE (6,30) NEVHEP,NRN,EVWGT
-   30    FORMAT(' EVENT',I8,':   SEEDS =',I11,' &',I11,
-     &'  WEIGHT =',E11.4/' EVENT KILLED.   EXECUTION CONTINUES')
-         IERROR=ICODE
-         RETURN
-      ELSEIF (ICODE.LT.300) THEN
-         WRITE (6,40)
-   40    FORMAT(' EVENT SURVIVES.  RUN ENDS GRACEFULLY')
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.400) THEN
-         WRITE (6,50)
-   50    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN ENDS GRACEFULLY')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-c$$$         CALL HWEFIN
-c$$$         CALL HWAEND
-         STOP
-      ELSEIF (ICODE.LT.500) THEN
-         WRITE (6,60)
-   60    FORMAT(' EVENT KILLED: DUMP FOLLOWS.  RUN STOPS DEAD')
-         IERROR=ICODE
-c$$$         CALL HWUEPR
-c$$$         CALL HWUBPR
-         STOP
-      ELSE
-         WRITE (6,70)
-   70    FORMAT(' RUN CANNOT CONTINUE')
-         STOP
-      ENDIF
-      END
-
-
-      subroutine HWUEPR
-      INCLUDE 'HEPMC.INC'
-      integer ip,i
-      PRINT *,' EVENT ',NEVHEP
-      DO IP=1,NHEP
-         PRINT '(I4,I8,I4,4I4,1P,5D11.3)',IP,IDHEP(IP),ISTHEP(IP),
-     &        JMOHEP(1,IP),JMOHEP(2,IP),JDAHEP(1,IP),JDAHEP(2,IP),
-     &        (PHEP(I,IP),I=1,5)
-      ENDDO
-      return
-      end
