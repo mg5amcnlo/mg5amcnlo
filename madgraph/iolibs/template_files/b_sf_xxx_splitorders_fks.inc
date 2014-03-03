@@ -1,4 +1,4 @@
-      SUBROUTINE SB%(iborn)d_SF_%(ilink)3.3d(P1,ANS_SUMMED)
+      SUBROUTINE SB%(iborn)d_SF_%(ilink)3.3d(P,ANS_SUMMED)
 C
 C     Simple routine wrapper to provide the same interface for
 C     backward compatibility for usage without split orders.
@@ -6,6 +6,7 @@ C
 C  
 C CONSTANTS
 C 
+implicit none
       include 'nexternal.inc'
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
