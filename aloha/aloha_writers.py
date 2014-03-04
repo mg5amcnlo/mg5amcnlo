@@ -28,7 +28,7 @@ class WriteALOHA:
     power_symbol = '**'
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
+    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
             

@@ -130,7 +130,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [s for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -485,7 +485,7 @@ in presence of majorana particle/flow violation"""
 
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
-        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        spin = aloha_writers.WriteALOHA.type_to_variable[abs(self.spins[l_in-1])]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
         var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
         # compute their unique identifiant
@@ -1066,8 +1066,8 @@ class AbstractALOHAModel(dict):
             if len(vertex.lorentz) == 1:
                 continue
             #remove ghost
-            if -1 in vertex.lorentz[0].spins:
-                continue
+            #if -1 in vertex.lorentz[0].spins:
+            #    continue
             
             # assign each order/color to a set of lorentz routine
             combine = {}
