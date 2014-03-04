@@ -304,7 +304,7 @@ in presence of majorana particle/flow violation"""
                 
                 
                 
-                if spin == 1: 
+                if spin in [1,-1]: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -347,10 +347,10 @@ in presence of majorana particle/flow violation"""
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)
+                                'The spin value %s (2s+1) is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if spin in [1,-1]:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -373,7 +373,7 @@ in presence of majorana particle/flow violation"""
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)                    
+                                'The spin value %s (2s+1) is not supported yet' % spin)                    
 
         # If no particle OffShell
         if not outgoing:
@@ -404,7 +404,7 @@ in presence of majorana particle/flow violation"""
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
-        if spin == 1:
+        if spin in [1,-1]:
             tag = {'id': id}         
         elif spin == 2:
             # shift and flip the tag if we multiply by C matrices
