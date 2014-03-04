@@ -55,7 +55,9 @@ class UFOParserTest(unittest.TestCase):
                  ('1 if a==0 and b==1 else 1/a',
   'CONDIF(a.EQ.0.000000d+00.AND.b.EQ.1.000000d+00,DCMPLX(1.000000d+00),DCMPLX(1.000000d+00/a))'),
                   ('1+3*5 if a else 8*3+6',
-    'CONDIF(DCMPLX(a).NE.(0d0,0d0),DCMPLX(1.000000d+00+3.000000d+00*5.000000d+00),DCMPLX(8.000000d+00*3.000000d+00+6.000000d+00))')
+    'CONDIF(DCMPLX(a).NE.(0d0,0d0),DCMPLX(1.000000d+00+3.000000d+00*5.000000d+00),DCMPLX(8.000000d+00*3.000000d+00+6.000000d+00))'),
+                ('( (complex(0,1)*G**3)/(48.*cmath.pi**2) if MT else 0 )',
+                  '')
 #       Bah, we don't aim at supporting precedence for entangled if statements.
 #                 ,('1 if a else 2 if b else 3',
 #                  '')
