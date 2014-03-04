@@ -41,6 +41,7 @@ class UFOExpressionParser(object):
     """A base class for parsers for algebraic expressions coming from UFO."""
 
     parsed_string = ""
+    logical_equiv = {}
 
     def __init__(self, **kw):
         """Initialize the lex and yacc"""
@@ -59,8 +60,8 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
-        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION',
+        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
+        'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG'
         )
     literals = "=+-*/(),"
@@ -84,6 +85,18 @@ class UFOExpressionParser(object):
         return t
     def t_COND(self, t):
         r'(?<!\w)cond(?=\()'
+        return t
+    def t_IF(self, t):
+        r'(?<!\w)if\s'
+        return t
+    def t_ELSE(self, t):
+        r'(?<!\w)else\s'
+        return t
+    def t_LOGICAL(self, t):
+        r'==|!=|<=|>=|<|>'
+        return t
+    def t_LOGICALCOMB(self, t):
+        r'(?<!\w)and(?=[\s\(])|(?<!\w)or(?=[\s\(])'
         return t
     def t_SQRT(self, t):
         r'cmath\.sqrt'
@@ -109,7 +122,7 @@ class UFOExpressionParser(object):
     def t_VARIABLE(self, t):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
         return t
-    
+
     t_NUMBER = r'([0-9]+\.[0-9]*|\.[0-9]+|[0-9]+)([eE][+-]{0,1}[0-9]+){0,1}'
     t_POWER  = r'\*\*'
 
@@ -133,12 +146,15 @@ class UFOExpressionParser(object):
 
     # Parsing rules
     precedence = (
+        ('right', 'LOGICALCOMB'),
+        ('right', 'LOGICAL'),
+        ('right','IF'),
+        ('right','ELSE'),
         ('left','='),
         ('left','+','-'),
         ('left','*','/'),
         ('right','UMINUS'),
         ('left','POWER'),
-        ('right','COND'),
         ('right','REGLOG'),
         ('right','CSC'),
         ('right','SEC'),
@@ -149,7 +165,8 @@ class UFOExpressionParser(object):
         ('right','RE'),
         ('right','IM'),
         ('right','FUNCTION'),
-        ('right','COMPLEX')
+        ('right','COMPLEX'),
+        ('right','COND'),
         )
 
     # Dictionary of parser expressions
@@ -165,12 +182,30 @@ class UFOExpressionParser(object):
                       | expression '/' expression'''
         p[0] = p[1] + p[2] + p[3]
 
+    def p_expression_logical(self, p):
+        '''boolexpression : expression LOGICAL expression'''
+        if p[2] not in self.logical_equiv:
+            p[0] = p[1] + p[2] + p[3]
+        else:
+            p[0] = p[1] + self.logical_equiv[p[2]] + p[3]        
+
+    def p_expression_logicalcomb(self, p):
+        '''boolexpression : boolexpression LOGICALCOMB boolexpression'''
+        if p[2] not in self.logical_equiv:
+            p[0] = p[1] + p[2] + p[3]
+        else:
+            p[0] = p[1] + self.logical_equiv[p[2]] + p[3]
+
     def p_expression_uminus(self, p):
         "expression : '-' expression %prec UMINUS"
         p[0] = '-' + p[2]
 
     def p_group_parentheses(self, p):
         "group : '(' expression ')'"
+        p[0] = '(' + p[2] +')'
+
+    def p_group_parentheses_boolexpr(self, p):
+        "boolexpression : '(' boolexpression ')'"
         p[0] = '(' + p[2] +')'
 
     def p_expression_group(self, p):
@@ -195,7 +230,7 @@ class UFOExpressionParser(object):
 
     def p_error(self, p):
         if p:
-            raise ModelError("Syntax error at '%s' in '%s'" % (p.value, self.f))
+            raise ModelError("Syntax error at '%s' (%s)." %(p.value,p))
         else:
             logger.error("Syntax error at EOF")
         self.parsed_string = "Error"
@@ -206,6 +241,15 @@ class UFOExpressionParserFortran(UFOExpressionParser):
 
     # The following parser expressions need to be defined for each
     # output language/framework
+    
+    logical_equiv = {'==':'.EQ.',
+                     '>=':'.GE.',
+                     '<=':'.LE.',
+                     '!=':'.NE.',
+                     '>':'.GT.',
+                     '<':'.LT.',
+                     'or':'.OR.',
+                     'and':'.AND.'}
 
     def p_expression_number(self, p):
         "expression : NUMBER"
@@ -227,6 +271,15 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                 p[0] = p[1] + "**" + p[3]
         except Exception:
             p[0] = p[1] + "**" + p[3]
+
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = 'CONDIF(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = 'CONDIF(DCMPLX(%s).NE.(0d0,0d0),DCMPLX(%s),DCMPLX(%s))'\
+                                                             %(p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
@@ -291,6 +344,15 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         except Exception:
             p[0] = p[1] + "**" + p[3]
 
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = 'MP_CONDIF(%s,CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = 'MP_CONDIF(CMPLX(%s,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))'\
+                                                             %(p[3], p[1], p[5])
+
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
@@ -324,6 +386,15 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
     C++-style code."""
 
+    logical_equiv = {'==':'==',
+                     '>=':'>=',
+                     '<=':'<=',
+                     '!=':'!=',
+                     '>':'>',
+                     '<':'<',
+                     'or':'||',
+                     'and':'&&'}
+
     # The following parser expressions need to be defined for each
     # output language/framework
 
@@ -337,6 +408,14 @@ class UFOExpressionParserCPP(UFOExpressionParser):
     def p_expression_variable(self, p):
         'expression : VARIABLE'
         p[0] = p[1]
+
+    def p_expression_if(self,p):
+        "expression :   expression IF boolexpression ELSE expression "
+        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
+            
+    def p_expression_ifimplicit(self,p):
+        "expression :   expression IF expression ELSE expression "
+        p[0] = '(%s ? %s : %s)' % (p[3], p[1], p[5])
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"

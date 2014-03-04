@@ -4733,10 +4733,14 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
-          double complex reglog""")
+          double complex condif
+          double complex reglog
+          double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
-          %(complex_mp_format)s mp_reglog"""\
+          %(complex_mp_format)s mp_condif
+          %(complex_mp_format)s mp_reglog
+          %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
 
     def create_model_functions_def(self):
@@ -4753,6 +4757,17 @@ class UFO_model_to_mg4(object):
              cond=truecase
           else
              cond=falsecase
+          endif
+          end
+          
+          double complex function condif(condition,truecase,falsecase)
+          implicit none
+          logical condition
+          double complex truecase,falsecase
+          if(condition) then
+             condif=truecase
+          else
+             condif=falsecase
           endif
           end
           
@@ -4775,6 +4790,17 @@ class UFO_model_to_mg4(object):
                  mp_cond=truecase
               else
                  mp_cond=falsecase
+              endif
+              end
+              
+              %(complex_mp_format)s function mp_condif(condition,truecase,falsecase)
+              implicit none
+              logical condition
+              %(complex_mp_format)s truecase,falsecase
+              if(condition) then
+                 mp_condif=truecase
+              else
+                 mp_condif=falsecase
               endif
               end
               
