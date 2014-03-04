@@ -6,14 +6,14 @@ C
 C  
 C CONSTANTS
 C 
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
+      implicit none
+      include 'nexternal.inc'
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 C  
 C ARGUMENTS 
 C 
-      REAL*8 P(0:3,NEXTERNAL)
+      REAL*8 P(0:3,NEXTERNAL-1)
 C
 C VARIABLES
 C
@@ -49,8 +49,8 @@ C
       include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
-      INTEGER NSQAMPSO
-      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER    THEL
       PARAMETER (THEL=NCOMB*%(nconfs)d)
       INTEGER NGRAPHS
@@ -64,11 +64,11 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,i,j,jj,glu_ij
-      REAL*8 borns(2,0:NSQAMPSO)
+      REAL*8 borns(2,NSQAMPSO)
       COMPLEX*16 BORNTILDE
       INTEGER NTRY(%(nconfs)d)
       DATA NTRY /%(nconfs)d*0/
-      COMPLEX*16 T(2,0:NSQAMPSO)
+      COMPLEX*16 T(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1,NCOMB)
 %(helicity_lines)s
 %(den_factor_lines)s
@@ -76,7 +76,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps,0:NSQAMPSO)
+      Double Precision amp2(maxamps), jamp2(0:maxamps,0:NAMPSO)
       common/to_amps/  amp2,       jamp2
       DATA jamp2(0,0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
@@ -108,7 +108,7 @@ C ----------
       DO JJ=1,NGRAPHS
           amp2(jj)=0d0
       ENDDO
-      DO I=0,NSQAMPSO
+      DO I=0,NAMPSO
       DO JJ=1,int(jamp2(0,0))
           jamp2(jj,I)=0d0
       ENDDO
@@ -142,29 +142,31 @@ C ----------
         if (nhel(glu_ij,ihel).le.0) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
-            CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
-            DO I=0,NSQAMPSO
+            CALL BORN%(proc_prefix)s(P1,NHEL(1,IHEL),IHEL,T,borns)
+            DO I=1,NSQAMPSO
                 ANS(1,I)=ANS(1,I)+T(1,I)
                 ANS(2,I)=ANS(2,I)+T(2,I)
             ENDDO
-            if ( borns(1,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
+            if ( borns(1,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
               GOODHEL(IHEL,nFKSprocess)=.TRUE.
             endif
-            if ( borns(2,0).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
+            if ( borns(2,1).ne.0d0 .AND. .NOT. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) ) then
               GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess)=.TRUE.
             endif
 	  ENDIF
         ENDIF
       ENDDO
-      DO I=0,NSQAMPSO
+      DO I=1,NSQAMPSO
       ANS(1,I)=ANS(1,I)/DBLE(IDEN)
       ANS(2,I)=ANS(2,I)/DBLE(IDEN)
+      ANS(1,0)=ANS(1,0)+ANS(1,I)
+      ANS(2,0)=ANS(2,0)+ANS(2,I)
       ENDDO
       calculatedBorn=.true.
       END
        
        
-      SUBROUTINE BORN(P,NHEL,HELL,ANS,borns)
+      SUBROUTINE BORN%(proc_prefix)s(P,NHEL,HELL,ANS,borns)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -193,9 +195,9 @@ C
 C  
 C ARGUMENTS 
 C  
-      REAL*8 P(0:3,NEXTERNAL-1),borns(2,0:NSQAMPSO)
+      REAL*8 P(0:3,NEXTERNAL-1),borns(2,NSQAMPSO)
       INTEGER NHEL(NEXTERNAL-1), HELL
-      COMPLEX*16 ANS(2,0:NSQAMPSO)
+      COMPLEX*16 ANS(2,NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
@@ -208,7 +210,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps,NAMPSO)
+      double precision amp2(maxamps), jamp2(0:maxamps,nampso)
       common/to_amps/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp
@@ -234,7 +236,7 @@ C ----------
 C BEGIN CODE
 C ----------
       glu_ij = ij_values(nfksprocess)
-      DO I = 0, NSQAMPSO
+      DO I = 1, NSQAMPSO
         ANS(1,I)=0D0
         ANS(2,I)=0D0
         borns(1,I)=0d0
@@ -291,11 +293,9 @@ C ----------
         ENDDO
       endif
       Enddo
-      do I = 1,NSQAMPSO
-          borns(1,0) = borns(1,0) + borns(1,I)
-          borns(2,0) = borns(2,0) + borns(2,I)
-          ANS(1,I)=BORNS(1,I)+BORNS(2,I)
-      ENDDO
+      do i = 1, nsqampso
+      ans(1,i) = borns(1,i) + borns(2,i) 
+      enddo
       DO M = 1, NAMPSO
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
@@ -306,10 +306,6 @@ C ----------
         ANS(2,SQSOINDEXB%(proc_prefix)s(M,N))= ANS(2,SQSOINDEXB%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMPH(1,I,N))/DENOM(I)
         ENDDO
       ENDDO
-      ENDDO
-      do I = 1,NSQAMPSO
-      ans(1,0) = ans(1,0) + ans(1,i)
-      ans(2,0) = ans(2,0) + ans(2,i)
       ENDDO
       nhel(glu_ij) = back_hel
       END
@@ -340,6 +336,7 @@ C index in the squared order canonical ordering.
 C
 C CONSTANTS
 C      
+      implicit none
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -374,6 +371,7 @@ C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -413,6 +411,7 @@ C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -424,6 +423,7 @@ C
 C
 C LOCAL VARIABLES
 C
+      integer i
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
 %(sqsplitorders)s
 C
@@ -450,6 +450,7 @@ C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSQSO

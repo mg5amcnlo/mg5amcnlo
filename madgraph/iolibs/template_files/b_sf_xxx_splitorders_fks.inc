@@ -59,7 +59,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,i,j
-      double precision T(0:NSQAMPSO)
+      double precision T(NSQAMPSO)
 %(den_factor_lines)s
 C  
 C GLOBAL VARIABLES
@@ -94,13 +94,14 @@ C ----------
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
            CALL B%(iborn)d_SF_%(ilink)3.3d(P1,IHEL,T)
-           DO I=0,NSQAMPSO
+           DO I=1,NSQAMPSO
              ANS(I)=ANS(I)+T(I)
            ENDDO
          ENDIF
       ENDDO
-      DO I=0,NSQAMPSO
+      DO I=1,NSQAMPSO
         ANS(I)=ANS(I)/DBLE(IDEN)
+        ANS(0)=ANS(0)+ANS(I)
       ENDDO
       END
        
@@ -134,7 +135,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
-      REAL*8 ANS(0:NSQAMPSO)
+      REAL*8 ANS(NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
@@ -169,7 +170,7 @@ C ----------
       endif
 %(jamp1_lines)s
 %(jamp2_lines)s
-    DO I = 0, NSQAMPSO
+    DO I = 1, NSQAMPSO
     ANS(I) = 0d0
     ENDDO
     DO M = 1, NAMPSO
@@ -183,9 +184,6 @@ C ----------
           ENDDO
       ENDDO
     ENDDO
-    do i = 1, nsqampso
-    ans(0) = ans(0) + ans(i)
-    enddo
     END
        
        

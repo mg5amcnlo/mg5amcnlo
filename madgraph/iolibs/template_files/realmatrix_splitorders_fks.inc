@@ -6,6 +6,7 @@ C
 C  
 C CONSTANTS
 C 
+      implicit none
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER NSQAMPSO
@@ -56,7 +57,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,I,T_IDENT(NCOMB)
-      REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
+      REAL*8 T(NSQAMPSO),T_SAVE(NCOMB,NSQAMPSO)
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
@@ -78,7 +79,7 @@ C ----------
 C for the first ps-point, check for helicities that give
 C identical matrix elements
             call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
-            DO I=0,NSQAMPSO
+            DO I=1,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
             T_IDENT(IHEL)=-1
@@ -86,38 +87,40 @@ C identical matrix elements
                 ANS(I)=ANS(I)+T(I)
 	    ENDDO
             DO I=1,IHEL-1
-               IF (T(0).EQ.0D0) EXIT
-               IF (T_SAVE(I,0).EQ.0D0) CYCLE
-               IF (ABS(T(0)/T_SAVE(I,0)-1D0) .LT. 1D-12) THEN
-C                  WRITE (*,*) 'FOUND IDENTICAL',T,IHEL,T_SAVE(I),I
-                  T_IDENT(IHEL) = I
-               ENDIF
+               IF (T(1).EQ.0D0) EXIT
+               IF (T_SAVE(I,1).EQ.0D0) CYCLE
+                do j = 1, nsqampso
+                  IF (ABS(T(j)/T_SAVE(I,j)-1D0) .GT. 1D-12) goto 444
+                enddo
+                T_IDENT(IHEL) = I
+ 444            continue
             ENDDO
           ELSE
             IF (T_IDENT(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
-            DO I=0,NSQAMPSO
+            DO I=1,NSQAMPSO
               T(I)=T_SAVE(T_IDENT(IHEL),I)
               T_SAVE(IHEL,I)=T(I)
             ENDDO
             ELSE
               CALL MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
-              DO I=0,NSQAMPSO
+              DO I=1,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
               ENDDO
             ENDIF
           ENDIF
 C add to the sum of helicities
-	  DO I=0,NSQAMPSO			
+	  DO I=1,NSQAMPSO			
              ANS(I)=ANS(I)+T(I)
 	  ENDDO
-          IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
+          IF (T(1) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
             GOODHEL(IHEL)=.TRUE.
           ENDIF
         ENDIF
       ENDDO
-      DO I=0,NSQAMPSO			
+      DO I=1,NSQAMPSO			
         ANS(I)=ANS(I)/DBLE(IDEN)
+        ANS(0)=ANS(0)+ANS(I)
       ENDDO
       END
        
@@ -205,6 +208,7 @@ C index in the squared order canonical ordering.
 C
 C CONSTANTS
 C      
+      implicit none
       INTEGER NAMPSO, NSQAMPSO
       PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -239,6 +243,7 @@ C
 C From a list of values for the split orders, this function returns the
 c corresponding index in the squared orders canonical ordering.
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -278,6 +283,7 @@ C
 C Return the power of the IORDER-th order appearing at position INDX
 C in the split-orders output
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSPLITORDERS
@@ -285,10 +291,11 @@ C
 C
 C ARGUMENTS
 C
-	  INTEGER IORDER, INDEX
+	  INTEGER IORDER, INDX
 C
 C LOCAL VARIABLES
 C
+      integer i
       INTEGER SQSPLITORDERS(NSQAMPSO,NSPLITORDERS)
 %(sqsplitorders)s
 C
@@ -300,8 +307,8 @@ C
       STOP
       ENDIF
 
-      IF (INDEX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
-      WRITE(*,*) "INVALID INDEX ", INDX
+      IF (INDX.GT.NSQAMPSO.OR.INDX.LT.1) THEN
+      WRITE(*,*) "INVALID INDX ", INDX
       WRITE(*,*) "SHOULD BE BETWEEN 1 AND ", NSQAMPSO
       STOP
       ENDIF
@@ -316,6 +323,7 @@ C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned in ANS when calling SMATRIX_SPLITORDERS
 C
+      implicit none
       INTEGER NSQAMPSO
       PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
 	  INTEGER NSQSO
