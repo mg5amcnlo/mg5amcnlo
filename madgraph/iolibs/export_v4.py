@@ -4733,10 +4733,14 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
-          double complex reglog""")
+          double complex condif
+          double complex reglog
+          double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
-          %(complex_mp_format)s mp_reglog"""\
+          %(complex_mp_format)s mp_condif
+          %(complex_mp_format)s mp_reglog
+          %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
 
     def create_model_functions_def(self):
