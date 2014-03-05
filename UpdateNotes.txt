@@ -5,7 +5,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                     bypassed by using the option --noprefix when importing the model.
 		RF: Reduced the calls to fastjet and skipped the computation of the reweight coeffients when
  		    they are not needed.
-
+                OM: Fixed a bug for LO processes where the MMLL cut was not applied to the event sample.
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
                 ------------------
