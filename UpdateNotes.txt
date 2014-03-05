@@ -6,6 +6,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		RF: Reduced the calls to fastjet and skipped the computation of the reweight coeffients when
  		    they are not needed.
                 OM: Fixed a bug for LO processes where the MMLL cut was not applied to the event sample.
+                PA: Fix a bug in MadSpin to avoid numerical instabitities when extracting t-channel invariants
+                    from the production event file (see modification in driver.f, search for 'MODIF March 5, 2014') 
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
                 ------------------
