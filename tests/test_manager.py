@@ -264,7 +264,8 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         log = open(_hc_comparison_modif_log,mode='a')
         log.write(text)
         log.close()
-        print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+        print "INFO:: Ref. tarball %s updated"%str(_hc_comparison_tarball)
+            
         return
     
     if len(arg)!=1 or not isinstance(arg[0],str):
@@ -273,6 +274,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     arg=arg[0]
 
     # Extract the tarball for hardcoded comparison if necessary
+    
     if not path.isdir(_hc_comparison_files):
         if path.isfile(_hc_comparison_tarball):
             tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
@@ -300,8 +302,17 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     IOTestsInstances = []
     start = time.time()
     for IOTestsClass in IOTestFinder():
+        # Instantiate the class
         IOTestsInstances.append(IOTestsClass())
+        # Run the setUp
         IOTestsInstances[-1].setUp()
+        # Find the testIO defined and use them in load mode only, we will run
+        # them later here.
+        IOTestsFunctions = IOTestFinder()
+        IOTestsFunctions.collect_function(IOTestsClass,prefix='testIO')
+        for IOTestFunction in IOTestsFunctions:
+            eval('IOTestsInstances[-1].'+IOTestFunction.split('.')[-1]+\
+                                                             '(load_only=True)')
     
     if len(IOTestsInstances)==0:
         print "No IOTest found."
@@ -355,11 +366,18 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             log = open(_hc_comparison_modif_log,mode='a')
             log.write(text)
             log.close()
-            tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
-            tar.add(_hc_comparison_files, \
+            if IOTestManager._compress_ref_fodler:
+                tar = tarfile.open(_hc_comparison_tarball, "w:bz2")
+                tar.add(_hc_comparison_files, \
                       arcname=path.basename(_hc_comparison_files), filter=noBackUps)
-            tar.close()
-            print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+                tar.close()
+                print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+            else:
+                # Make sure to remove the BackUp files
+                filelist = glob.glob(os.path.join(_hc_comparison_files,
+                                                            '*','*','*.BackUp'))
+                for f in filelist:
+                    os.remove(f)
         else:
             if path.isdir(hc_comparison_files_BackUp):
                 shutil.rmtree(_hc_comparison_files)
@@ -524,7 +542,7 @@ class TestFinder(list):
         if time_to_load > 0.1:
             logging.critical("file %s takes a long time to load (%.4fs)" % (pyname, time_to_load))
 
-    def collect_function(self, class_, checking=True, base=''):
+    def collect_function(self, class_, checking=True, base='', prefix='test'):
         """
         Find the different test function in this class
         test functions should start with test
@@ -539,9 +557,9 @@ class TestFinder(list):
             base += '.' + class_.__name__
         else:
             base = class_.__name__
-
+        
         candidate = [base + '.' + name for name in dir(class_) if \
-                       name.startswith('test')\
+                       name.startswith(prefix)\
                        and inspect.ismethod(eval('class_.' + name))]
 
         if not checking:
@@ -836,13 +854,17 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     except:
         pass
     
+    if options.synchronize and IOTestManager._compress_ref_fodler:
+        print "The tarball synchronization is not necessary since"+ \
+          " MadGraph5_aMCatNLO is configured not to compress the references files."
+    
     if options.IOTests=='No' and not options.synchronize:
         #logging.basicConfig(level=vars(logging)[options.logging])
         run(args, re_opt=options.reopt, verbosity=options.verbose, \
             package=options.path, timelimit=options.timed)
     else:
         if options.IOTests=='L':
-            print "Listing all tests defined in the reference tarball..."
+            print "Listing all tests defined in the reference files ..."
             print '\n'.join("> %s/%s"%test for test in listIOTests(args) if\
                                             IOTestManager.need(test[0],test[1]))
             exit()

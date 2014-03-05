@@ -69,7 +69,15 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
     """Test class for the loop exporter modules. It uses hardcoded output 
     for the comparisons."""
 
-    def setUp(self):
+    def testIO_ProcOutputIOTests(self, load_only=False):
+      """ Run the iotests """
+      
+      self.load_IOTestsAcceptance()      
+      if not load_only:
+          # Set it to True if you want info during the regular test_manager.py runs
+          self.runIOTests(verbose=False)
+
+    def load_IOTestsAcceptance(self):
         """load the models and exporters if necessary."""
             
         if not hasattr(self, 'models') or \
