@@ -2396,12 +2396,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
 
     ############################################################################      
-    def do_treatcards(self, line):
+    def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-        args = self.split_arg(line)
-        mode,  opt  = self.check_treatcards(args)
-        
+
+        if not mode and not opt:
+            args = self.split_arg(line)
+            mode,  opt  = self.check_treatcards(args)
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
     
@@ -2430,6 +2431,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 fsock = open(pjoin(self.me_dir,'Source','param_card.inc'),'w')
                 fsock.write(' ')
                 fsock.close()
+                if mode == 'all':
+                    self.do_treatcards('', 'run', opt)
                 return
             else:
                 devnull = open(os.devnull,'w')
@@ -2451,7 +2454,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-                
+            
+            misc.sprint('Write run_card.inc', pjoin(opt['output_dir'],'run_card.inc'))
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
     ############################################################################      
@@ -3556,10 +3560,12 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
+        misc.sprint(os.listdir(pjoin(self.me_dir, 'Source')))
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
+            misc.sprint(name)
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
