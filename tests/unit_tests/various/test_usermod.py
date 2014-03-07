@@ -28,6 +28,7 @@ import models.import_ufo as import_ufo
 import models.usermod as usermod
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.various.misc as misc
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
@@ -328,7 +329,7 @@ class TestModUFO(unittest.TestCase):
                 len([1 for name in os.listdir(sm_path) if name.endswith('.py')]), 
                'New file in  UFO format, usrmod need to be modified')
 
-        self.assertEqual(10, 
+        self.assertEqual(11, 
                 len([1 for name in os.listdir(output) if name.endswith('.py')]))
 
         sys.path.insert(0, os.path.dirname(output))
@@ -381,7 +382,7 @@ class TestModUFO(unittest.TestCase):
     def test_write_orders(self):
         """Check that the content of the file is valid"""
 
-        output = '/tmp/usrmod'
+        output = self.path
         self.base_model.write_orders(output)
         filename = os.path.join(output, 'coupling_orders.py')
         text = open(os.path.join(filename)).read()

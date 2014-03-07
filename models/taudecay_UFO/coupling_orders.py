@@ -1,6 +1,6 @@
 # This file was automatically created by FeynRules 2.0.6
 # Mathematica version: 8.0 for Mac OS X x86 (64-bit) (February 23, 2011)
-# Date: Fri 20 Dec 2013 14:59:18
+# Date: Wed 18 Dec 2013 14:14:59
 
 
 from object_library import all_orders, CouplingOrder

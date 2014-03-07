@@ -2626,8 +2626,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
         base_model.add_model(path=model_path)
         base_model.write(output_dir)
+        # clean the original model
+        madgraph.models.clean_model(self._curr_model.get('modelpath'))
         self.exec_cmd('import model %s' % output_dir, errorhandling=False, 
-                              printcmd=False, precmd=True, postcmd=True)         
+                              printcmd=False, precmd=True, postcmd=True)
+        
+        # cleaning the original model         
         
         
     # Define a multiparticle label
