@@ -42,7 +42,7 @@ class UFOModel(object):
         as empty."""
         
         self.modelpath = modelpath
-        model = ufomodels.load_model(modelpath,modulename='USERMOD_MODEL')
+        model = ufomodels.load_model(modelpath)
         
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):

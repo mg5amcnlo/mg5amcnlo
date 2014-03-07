@@ -507,8 +507,8 @@ class UFOMG5Converter(object):
                     newCoupling=copy.copy(coupling)
                     if poleOrder!=0:
                         newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                        newCoupling.value=coupling.pole(poleOrder)
-                        new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling
+                    newCoupling.value=coupling.pole(poleOrder)
+                    new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling
         
         # Now we can add an interaction for each.         
         for i, all_couplings in enumerate(new_couplings):
