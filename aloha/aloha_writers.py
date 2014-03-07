@@ -28,7 +28,7 @@ class WriteALOHA:
     power_symbol = '**'
     change_number_format = str
     extension = ''
-    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R'}
+    type_to_variable = {2:'F',3:'V',5:'T',1:'S',4:'R', -1:'S'}
     type_to_size = {'S':3, 'T':18, 'V':6, 'F':6,'R':18}
 
             
@@ -2118,34 +2118,34 @@ class WriterFactory(object):
 
 
     
-unknow_fct_template = """
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-       double complex %(fct_name)s(%(args)s)
-       implicit none
-c      Include Model parameter / coupling
-       include \"../MODEL/input.inc\"
-       include \"../MODEL/coupl.inc\"
-c      Defintion of the arguments       
-%(definitions)s
-       
-c      enter HERE the code corresponding to your function.
-c      The output value should be put to the %(fct_name)s variable.
-
-
-       return
-       end
-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-
-"""
-        
-def write_template_fct(fct_name, nb_args, output_dir):
-        """create a template for function not recognized by ALOHA"""
-
-        dico = {'fct_name' : fct_name,
-                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
-                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
-
-        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
-        ff.write(unknow_fct_template % dico)
-        ff.close()
+#unknow_fct_template = """
+#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+#       double complex %(fct_name)s(%(args)s)
+#       implicit none
+#c      Include Model parameter / coupling
+#       include \"../MODEL/input.inc\"
+#       include \"../MODEL/coupl.inc\"
+#c      Defintion of the arguments       
+#%(definitions)s
+#       
+#c      enter HERE the code corresponding to your function.
+#c      The output value should be put to the %(fct_name)s variable.
+#
+#
+#       return
+#       end
+#cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+#
+#"""
+#        
+#def write_template_fct(fct_name, nb_args, output_dir):
+#        """create a template for function not recognized by ALOHA"""
+#
+#        dico = {'fct_name' : fct_name,
+#                'args': ','.join(['S%i' %(i+1) for i in range(nb_args)]),
+#                'definitions': '\n'.join(['       double complex S%i' %(i+1) for i in range(nb_args)])}
+#
+#        ff = open(pjoin(output_dir, 'additional_aloha_function.f'), 'a')
+#        ff.write(unknow_fct_template % dico)
+#        ff.close()
 

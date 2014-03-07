@@ -16,19 +16,19 @@ S = Propagator(name = "S",
 
 # propagator for the incoming fermion # the one for the outcomming is computed on the flight
 F = Propagator(name = "F",
-                numerator = "(Gamma('mu', s1, s2) * P('mu', id) + Mass(id) * Identity(s1, s2))",
+                numerator = "(Gamma('mu', 1, 2) * P('mu', id) + Mass(id) * Identity(1, 2))",
                 denominator = denominator
                )
 
 # massive vector in the unitary gauge, can't be use for massless particles
 V1 = Propagator(name = "V1",
-                numerator = "(-1 * Metric(l1, l2) + Metric(l1,'mu')* P('mu', id) * P(l2, id) / Mass(id)**2 ",
+                numerator = "(-1 * Metric(1, 2) + Metric(1,'mu')* P('mu', id) * P(2, id) / Mass(id)**2 ",
                 denominator = denominator
                )
 
 # massless vector and massive vector in unitary gauge
 V2 = Propagator(name = "V2",
-                numerator = "-1 * Metric(l1, l2)",
+                numerator = "-1 * Metric(1, 2)",
                 denominator =  "P('mu', id) * P('mu', id)"
                )
 

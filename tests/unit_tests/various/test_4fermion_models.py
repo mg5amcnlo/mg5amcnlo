@@ -96,7 +96,7 @@ class TestSchannelModels(Models4FermionTest):
         self.full_model_scalar = \
                                model_reader.ModelReader(self.base_model_scalar)
         self.full_model_scalar.set_parameters_and_couplings()
-        self.full_model_scalar.get('parameter_dict')['MSIX'] = 1.e5
+        self.full_model_scalar.get('parameter_dict')['mdl_MSIX'] = 1.e5
         
         self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion')
         self.full_model_4ferm = \
@@ -176,7 +176,7 @@ class TestSchannelModels(Models4FermionTest):
             amplitudes.append(my_amplitude)
 
         subproc_group = \
-                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes)[0]
+                  group_subprocs.SubProcessGroup.group_amplitudes(amplitudes, "madevent")[0]
 
         symmetry, perms, ident_perms = diagram_symmetry.find_symmetry(\
                                                                   subproc_group)

@@ -601,7 +601,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.debug_link_to_command()      
         
 
-class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
    
     def __init__(self, *arg, **opt):
     
@@ -628,6 +628,9 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
         
         if __debug__:
             self.debug_link_to_command() 
+    
+    def do_shell(self, *args):
+        raise Exception
     
     def finalize(self, nojpeg):
         """Finalize web generation""" 

@@ -130,7 +130,7 @@ class AbstractRoutineBuilder(object):
               >0 defines the outgoing part (start to count at 1)
         """
 
-        self.spins = [abs(s) for s  in lorentz.spins]
+        self.spins = [s for s  in lorentz.spins]
         self.name = lorentz.name
         self.conjg = []
         self.tag = []
@@ -304,7 +304,7 @@ in presence of majorana particle/flow violation"""
                 
                 
                 
-                if spin == 1: 
+                if spin in [1,-1]: 
                     lorentz *= complex(0,1)
                 elif spin == 2:
                     # shift and flip the tag if we multiply by C matrices
@@ -347,10 +347,10 @@ in presence of majorana particle/flow violation"""
                                              2 * _spin2_mult + id,'I2','I3', id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)
+                                'The spin value %s (2s+1) is not supported yet' % spin)
             else:
                 # This is an incoming particle
-                if spin == 1:
+                if spin in [1,-1]:
                     lorentz *= Scalar(id)
                 elif spin == 2:
                     # shift the tag if we multiply by C matrices
@@ -373,7 +373,7 @@ in presence of majorana particle/flow violation"""
                     lorentz *= Spin2(1 * _spin2_mult + id, 2 * _spin2_mult + id, id)
                 else:
                     raise self.AbstractALOHAError(
-                                'The spin value %s is not supported yet' % spin)                    
+                                'The spin value %s (2s+1) is not supported yet' % spin)                    
 
         # If no particle OffShell
         if not outgoing:
@@ -404,7 +404,7 @@ in presence of majorana particle/flow violation"""
 
         # Find how to make the replacement for the various tag in the propagator expression
         needPflipping = False
-        if spin == 1:
+        if spin in [1,-1]:
             tag = {'id': id}         
         elif spin == 2:
             # shift and flip the tag if we multiply by C matrices
@@ -415,12 +415,14 @@ in presence of majorana particle/flow violation"""
             if (spin_id % 2):
                 #propagator outcoming
                 needPflipping = True
-                tag ={'s1': spin_id, 's2': 'I2', 'id': id}
+                tag ={'1': spin_id, '2': 'I2', 'id': id}
             else:
-                tag ={'s1': 'I2', 's2': spin_id, 'id': id}
+                tag ={'1': 'I2', '2': spin_id, 'id': id}
         elif spin == 3 :
-            tag ={'l1': id, 'l2': 'I2', 'id': id}
+            tag ={'1': id, '2': 'I2', 'id': id}
         elif spin == 4:
+            delta = lambda i,j: aloha_object.Identity(i,j)
+            deltaL = lambda i,j: aloha_object.IdentityL(i,j)
             # shift and flip the tag if we multiply by C matrices
             if (id + 1) // 2 in self.conjg:
                 spin_id = id + _conjugate_gap + id % 2 - (id +1) % 2
@@ -428,12 +430,14 @@ in presence of majorana particle/flow violation"""
                 spin_id = id
             if spin_id % 2:
                 needPflipping = True
-                tag = {'l1': id, 'l2': 'I2', 's1': spin_id, 's2': 'I3', 'id':id}
+                tag = {'1': 'pr_1', '2': 'pr_2', 'id':id}
             else:
-                tag = {'l1': 'I2', 'l2': id, 's1': 'I3', 's2': spin_id, 'id':id}
+                tag = {'1': 'pr_2', '2': 'pr_1'}
+            numerator *= deltaL('pr_1',id) * deltaL('pr_2', 'I2') * \
+                                    delta('pr_1', spin_id) * delta('pr_2', 'I3')
         elif spin == 5 :
-            tag = {'l11': _spin2_mult + id, 'l2': 2 * _spin2_mult + id, 
-                   'l21': 'I2', 'l22': 'I3', 'id':id}
+            tag = {'1': _spin2_mult + id, '2': 2 * _spin2_mult + id, 
+                   '51': 'I2', '52': 'I3', 'id':id}
         
         for old, new in tag.items():
             if isinstance(new, str):
@@ -481,7 +485,7 @@ in presence of majorana particle/flow violation"""
 
         # Compute the variable from which we need to split the expression
         var_veto =  ['PL_0', 'PL_1', 'PL_2', 'PL_3']
-        spin = aloha_writers.WriteALOHA.type_to_variable[self.spins[l_in-1]]
+        spin = aloha_writers.WriteALOHA.type_to_variable[abs(self.spins[l_in-1])]
         size = aloha_writers.WriteALOHA.type_to_size[spin]-1
         var_veto += ['%s%s_%s' % (spin,l_in,i) for i in range(1,size)]
         # compute their unique identifiant
@@ -856,7 +860,6 @@ class AbstractALOHAModel(dict):
                     for outgoing, tag in request[l_name][tmp]:
                         name = aloha_writers.get_routine_name(lorentz.name,outgoing=outgoing,tag=tag)
                         if name not in self.external_routines:
-                            print name
                             self.external_routines.append(name)
                 continue
             
@@ -979,22 +982,22 @@ class AbstractALOHAModel(dict):
         for routine in self.external_routines:
             self.locate_external(routine, language, output_dir)
 
-        if aloha_lib.KERNEL.unknow_fct:
-            if  language == 'Fortran':
-                logger.warning('''Some function present in the lorentz structure are not
-            recognized. A Template file has been created:
-            %s
-            Please edit this file to include the associated definition.''' % \
-               pjoin(output_dir, 'additional_aloha_function.f') )
-            else:
-                logger.warning('''Some function present in the lorentz structure are 
-                not recognized. Please edit the code to add the defnition of such function.''')
-                logger.info('list of missing fct: %s .' % \
-                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
-        
-        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
-            if language == 'Fortran':
-                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
+#        if aloha_lib.KERNEL.unknow_fct:
+#            if  language == 'Fortran':
+#                logger.warning('''Some function present in the lorentz structure are not
+#            recognized. A Template file has been created:
+#            %s
+#            Please edit this file to include the associated definition.''' % \
+#               pjoin(output_dir, 'additional_aloha_function.f') )
+#            else:
+#                logger.warning('''Some function present in the lorentz structure are 
+#                not recognized. Please edit the code to add the defnition of such function.''')
+#                logger.info('list of missing fct: %s .' % \
+#                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
+#        
+#        for fct_name, nb_arg in aloha_lib.KERNEL.unknow_fct:
+#            if language == 'Fortran':
+#                aloha_writers.write_template_fct(fct_name, nb_arg, output_dir)
         
 
         
@@ -1063,8 +1066,8 @@ class AbstractALOHAModel(dict):
             if len(vertex.lorentz) == 1:
                 continue
             #remove ghost
-            if -1 in vertex.lorentz[0].spins:
-                continue
+            #if -1 in vertex.lorentz[0].spins:
+            #    continue
             
             # assign each order/color to a set of lorentz routine
             combine = {}

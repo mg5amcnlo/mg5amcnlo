@@ -623,7 +623,6 @@ c with the reference weight
       include 'run.inc'
       include "reweight.inc"
 
-      logical passcuts
       double precision compute_rwgt_wgt_NLO
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
@@ -667,10 +666,12 @@ c
       xsec11=0.d0
       xsec12=0.d0
       xsec20=0.d0
+
+      if (wgtwreal(1).eq.0d0) goto 541
+
       call set_cms_stuff(mohdr)
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,1),rwgt)) )then
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -710,10 +711,19 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 541  continue
+      if ( wgtwreal(2).eq.0d0 .and.
+     $     wgtwreal(3).eq.0d0 .and. wgtwreal(4).eq.0d0 .and.
+     $     wgtwdeg(2).eq.0d0 .and.
+     $     wgtwdeg(3).eq.0d0 .and. wgtwdeg(4).eq.0d0 .and.
+     $     wgtwdegmuf(2).eq.0d0 .and.
+     $     wgtwdegmuf(3).eq.0d0 .and. wgtwdegmuf(4).eq.0d0 .and.
+     $     wgtwborn(2).eq.0d0 .and. wgtwns(2).eq.0d0 .and.
+     $     wgtwnsmuf(2).eq.0d0 .and. wgtwnsmur(2).eq.0d0) goto 542
+
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,2),rwgt)) )then
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -737,12 +747,6 @@ c Should cause the code to crash if used
           stop
         endif
         QES2_local=wgtqes2(2)
-        if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
-     &       (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
-          write(*,*)'Error in compute_rwgt_wgt_NLO'
-          write(*,*)' Mismatch in ES scale',QES2,QES2_local
-          stop
-        endif
         if(QES2_local.eq.0.d0)then
           if(wgtwdegmuf(3).ne.0.d0.or.
      #       wgtwdegmuf(4).ne.0.d0.or.
@@ -757,6 +761,12 @@ c Should cause the code to crash if used
           xlgmuf=0.d0
           xlgmur=0.d0
         else
+           if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
+     &          (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
+              write(*,*)'Error in compute_rwgt_wgt_NLO'
+              write(*,*)' Mismatch in ES scale',QES2,QES2_local
+              stop
+           endif
           xlgmuf=log(q2fact(1)/QES2_local)
           xlgmur=log(scale**2/QES2_local)
         endif
@@ -802,6 +812,9 @@ c Should cause the code to crash if used
           endif
         enddo
       endif
+
+ 542  continue
+
 c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
@@ -833,12 +846,11 @@ c with the reference weight
       include "reweight.inc"
       include 'nFKSconfigs.inc'
 
-      logical passcuts
       double precision compute_rwgt_wgt_Hev
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
       integer kwgtinfo
-      double precision rwgt,xsec,xlum,dlum,alphas
+      double precision rwgt,xsec,xlum,dlum,alphas,temp
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision pi
       parameter (pi=3.14159265358979323846d0)
@@ -883,10 +895,16 @@ c
       if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
+
+      temp=0d0
+      do i=1,iwgtnumpartn
+         temp=temp+abs(wgtwmcxsec(i))
+      enddo
+      if (temp.eq.0d0) goto 541
+
       call set_cms_stuff(izero)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -930,14 +948,13 @@ c Should cause the code to crash if used
         enddo
       endif
 c
-
+ 541  continue
       if (wgtwreal(2).eq.0d0 .and. wgtwreal(3).eq.0d0 .and.
-     $     wgtwreal(4).eq.0d0) goto 543
+     $     wgtwreal(4).eq.0d0) goto 542
 
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,2),rwgt)) )then
+     #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -979,12 +996,12 @@ c Should cause the code to crash if used
         enddo
       endif
 c
- 543  continue
-
+ 542  continue
+      if (wgtwreal(1).eq.0d0) goto 543
+      
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,1),rwgt)) )then
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1023,6 +1040,8 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 543  continue
+c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
@@ -1049,12 +1068,11 @@ c with the reference weight
       include "reweight.inc"
       include 'nFKSconfigs.inc'
 
-      logical passcuts
       double precision compute_rwgt_wgt_Sev
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
       integer kwgtinfo
-      double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas
+      double precision rwgt,xsec,xlum,dlum,xlgmuf,xlgmur,alphas,temp
       double precision QES2_local
       double precision save_murrat,save_muf1rat,save_muf2rat,save_qesrat
       double precision tiny,pi
@@ -1101,12 +1119,17 @@ c
       if(kwgtinfo.ne.4.and.kwgtinfo.ne.5) wgtbpower=rwgtbpower
 c
       xsec=0.d0
+     
+      temp=0d0
+      do i=1,iwgtnumpartn
+         temp=temp+abs(wgtwmcxsec(i))
+      enddo
+      if (temp.eq.0d0) goto 541
       call set_cms_stuff(izero)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
      #    (kwgtinfo.eq.2.and.wgtkin(0,1,1).gt.0.d0) .or.
      #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,2),rwgt).and.
      #     wgtkin(0,1,1).gt.0.d0) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
@@ -1154,11 +1177,20 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+ 541  continue
+      if ( wgtwreal(2).eq.0d0 .and.
+     $     wgtwreal(3).eq.0d0 .and. wgtwreal(4).eq.0d0 .and.
+     $     wgtwdeg(2).eq.0d0 .and.
+     $     wgtwdeg(3).eq.0d0 .and. wgtwdeg(4).eq.0d0 .and.
+     $     wgtwdegmuf(2).eq.0d0 .and.
+     $     wgtwdegmuf(3).eq.0d0 .and. wgtwdegmuf(4).eq.0d0 .and.
+     $     wgtwborn(2).eq.0d0 .and. wgtwns(2).eq.0d0 .and.
+     $     wgtwnsmuf(2).eq.0d0 .and. wgtwnsmur(2).eq.0d0) goto 542
+
       call set_cms_stuff(izero)
 
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     passcuts(wgtkin(0,1,2),rwgt)) )then
+     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1183,12 +1215,6 @@ c Should cause the code to crash if used
           stop
         endif
         QES2_local=wgtqes2(2)
-        if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
-     &       (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
-          write(*,*)'Error in compute_rwgt_wgt_Sev'
-          write(*,*)' Mismatch in ES scale',QES2,QES2_local
-          stop
-        endif
         if(QES2_local.eq.0.d0)then
           if(wgtwdegmuf(3).ne.0.d0.or.
      #       wgtwdegmuf(4).ne.0.d0.or.
@@ -1203,6 +1229,12 @@ c Should cause the code to crash if used
           xlgmuf=0.d0
           xlgmur=0.d0
         else
+           if(abs(QES2/QES2_local-1.d0).gt.tiny.and.
+     &          (kwgtinfo.ge.3.or.kwgtinfo.le.5))then
+              write(*,*)'Error in compute_rwgt_wgt_Sev'
+              write(*,*)' Mismatch in ES scale',QES2,QES2_local
+              stop
+           endif
           xlgmuf=log(q2fact(1)/QES2_local)
           xlgmur=log(scale**2/QES2_local)
         endif
@@ -1254,11 +1286,12 @@ c Should cause the code to crash if used
         enddo
       endif
 c
+ 542  continue
+      if (wgtwreal(1).eq.0d0) goto 543
       call set_cms_stuff(mohdr)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.2.or.kwgtinfo.ge.5).and.
-     #     passcuts(wgtkin(0,1,1),rwgt)) )then
+     #    ((kwgtinfo.ge.2.or.kwgtinfo.ge.5)) )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1301,6 +1334,7 @@ c Should cause the code to crash if used
         endif
       endif
 c
+ 543  continue
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
       muF2_over_ref=save_muf2rat
@@ -1326,7 +1360,6 @@ c with the reference weight
       include 'nFKSconfigs.inc'
       include "reweight_all.inc"
 
-      logical passcuts
       double precision compute_rwgt_wgt_Sev_nbody
       double precision xmuR_over_ref,xmuF1_over_ref,
      #                 xmuF2_over_ref,xQES_over_ref
@@ -1382,9 +1415,12 @@ c
 c
       xsec=0.d0
 
+      if ( wgtwborn_all.eq.0d0 .and. wgtwns_all.eq.0d0 .and.
+     $     wgtwnsmuf_all.eq.0d0 .and. wgtwnsmur_all.eq.0d0) goto 541
+
       call set_cms_stuff(izero)
 
-      if( passcuts(wgtkin_all(0,1,2,0),rwgt) )then
+      if( wgtkin_all(0,1,2,0).gt.0d0 )then
          if (ickkw.eq.3) then
             mu_r=sqrt(wgtmuR2_all(2,0))*muR_over_ref
             scale=mu_r
@@ -1397,29 +1433,53 @@ c
             call set_alphaS(wgtkin_all(0,1,2,0))
          endif
          QES2_local=wgtqes2_all(2,0)
-         if(abs(QES2/QES2_local-1.d0).gt.tiny)then
-            write(*,*)'Error in compute_rwgt_wgt_Sev_nbody'
-            write(*,*)' Mismatch in ES scale',QES2,QES2_local
-            stop
-         endif
-         xlgmuf=log(q2fact(1)/QES2_local)
-         xlgmur=log(scale**2/QES2_local)
-         xbk(1) = wgtxbj_all(1,2,0)
-         xbk(2) = wgtxbj_all(2,2,0)
-         nFKSprocess=nFKSprocess_used_Born
-         xlum = dlum()
-         do j=1,iproc_save(nFKSprocess)
-            if (eto(j,nFKSprocess).eq.i_process) then
-               if(wgtbpower.gt.0)then
-                  xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2*wgtbpower)
-               else
-                  xsec=xsec+CONV*PD(j)*wgtwborn_all
-               endif
-               xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all*xlgmuf+
-     $              wgtwnsmur_all*xlgmur )*g**(2*wgtbpower+2.d0)
+         if (QES2_local.ne.0d0) then
+            if(abs(QES2/QES2_local-1.d0).gt.tiny)then
+               write(*,*)'Error in compute_rwgt_wgt_Sev_nbody'
+               write(*,*)' Mismatch in ES scale',QES2,QES2_local
+               stop
             endif
-         enddo
+            xlgmuf=log(q2fact(1)/QES2_local)
+            xlgmur=log(scale**2/QES2_local)
+            xbk(1) = wgtxbj_all(1,2,0)
+            xbk(2) = wgtxbj_all(2,2,0)
+            if(xbk(1).le.0.d0.or.xbk(2).le.0.d0.or.
+     #         xbk(1).gt.1.d0.or.xbk(2).gt.1.d0)then
+               if(wgtwborn_all.ne.0d0 .or. wgtwns_all.ne.0d0 .or.
+     $           wgtwnsmuf_all.ne.0d0 .or. wgtwnsmur_all.ne.0d0)then
+                  write(*,*)'Error #3 in compute_rwgt_wgt_Sev_nbody'
+                  write(*,*) QES2_local,QES2,wgtwborn_all,wgtwns_all
+     $                 ,wgtwnsmuf_all,wgtwnsmur_all
+                  stop
+               endif
+            else
+               nFKSprocess=nFKSprocess_used_Born
+               xlum = dlum()
+               do j=1,iproc_save(nFKSprocess)
+                  if (eto(j,nFKSprocess).eq.i_process) then
+                     if(wgtbpower.gt.0)then
+                        xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2
+     $                       *wgtbpower)
+                     else
+                        xsec=xsec+CONV*PD(j)*wgtwborn_all
+                     endif
+                     xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all
+     $                    *xlgmuf+wgtwnsmur_all*xlgmur )*g**(2*wgtbpower
+     $                    +2.d0)
+                  endif
+               enddo
+            endif
+         else
+            if (wgtwborn_all.ne.0d0 .or. wgtwns_all.ne.0d0 .or.
+     $           wgtwnsmuf_all.ne.0d0 .or. wgtwnsmur_all.ne.0d0) then
+               write(*,*)'ES scale is zero, but weights are not'
+               write(*,*) QES2_local,QES2,wgtwborn_all,wgtwns_all
+     $              ,wgtwnsmuf_all,wgtwnsmur_all
+               stop
+            endif
+         endif
       endif
+ 541  continue
 c
       muR_over_ref=save_murrat
       muF1_over_ref=save_muf1rat
@@ -1564,14 +1624,6 @@ c
       include "../../Source/pdf.inc"
       integer i,itmp,nsets
       double precision delta
-c
-      if( (do_rwgt_scale.or.do_rwgt_pdf).and.
-     #    (.not.doreweight) )then
-        write(*,*)'Error #0 in setup_fill_rwgt_NLOplot'
-        write(*,*)' NLO weights are not being saved:'
-        write(*,*)' set doNLOreweight=.true.'
-        stop
-      endif
 c
       yQES_over_ref=QES_over_ref
       ymuR_over_ref=muR_over_ref

@@ -4,11 +4,7 @@ c Save reweight information for aMC@NLO computations
       include 'reweight1.inc'
 
       logical doreweight
-      parameter (doreweight=.true.)
-
-c Save reweight information for NLO computations
-      logical doNLOreweight
-      parameter (doNLOreweight=.true.)
+      common/c_doreweight/doreweight
 
 c Check that save weights are consistent with the reference weight wgtref
       logical check_reweight

@@ -1,7 +1,7 @@
 c Same as plot_events.f, but relevant to LH showered files (ntuples).
 c Compile with
 c   f77 -g -ffixed-line-length-132 -fno-automatic 
-c      -o plot_events_lhef plot_events_lhef.f madfks_plot*.f madfks_dbook.f 
+c      -o plot_events_lhef plot_events_lhef.f madfks_plot*.f dbook.f 
 c         handling_lhe_events.f any-dependencies-in-madfksplot
 c Copy in this directory
 c  reweight0.inc dbook.inc

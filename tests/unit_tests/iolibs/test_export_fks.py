@@ -155,10 +155,6 @@ Parameters              alpha_s
       DOUBLE PRECISION WGT
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
-      REAL*4 TBEFORE, TAFTER
-      REAL*4 TTOT, TOLP, TFASTJET, TPDF
-      COMMON/TIMINGS/TTOT, TOLP, TFASTJET, TPDF
-      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL SMATRIX_1(P, WGT)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -179,8 +175,6 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in real_matrix :', NFKSPROCESS
         STOP
       ENDIF
-      CALL CPU_TIME(TAFTER)
-      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 
@@ -201,8 +195,10 @@ Parameters              alpha_s
         goal = \
 """      DOUBLE PRECISION FUNCTION DLUM()
       IMPLICIT NONE
+      INCLUDE 'timing_variables.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      CALL CPU_TIME(TBEFORE)
       IF (NFKSPROCESS.EQ.1) THEN
         CALL DLUM_1(DLUM)
       ELSEIF (NFKSPROCESS.EQ.2) THEN
@@ -223,7 +219,8 @@ Parameters              alpha_s
         WRITE(*,*) 'ERROR: invalid n in dlum :', NFKSPROCESS
         STOP
       ENDIF
-
+      CALL CPU_TIME(TAFTER)
+      TPDF = TPDF + (TAFTER-TBEFORE)
       RETURN
       END
 
@@ -595,8 +592,8 @@ C       b_sf_008 links partons 4 and 4
         goal = \
 """      PMASS(1)=ZERO
       PMASS(2)=ZERO
-      PMASS(3)=ABS(MT)
-      PMASS(4)=ABS(MT)
+      PMASS(3)=ABS(MDL_MT)
+      PMASS(4)=ABS(MDL_MT)
       PMASS(5)=ZERO
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()
@@ -906,21 +903,21 @@ C     BEGIN CODE
 C     ----------
       CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
       CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-      CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-      CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
+      CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))
+      CALL IXXXXX(P(0,4),MDL_MT,NHEL(4),-1*IC(4),W(1,4))
       CALL VXXXXX(P(0,5),ZERO,NHEL(5),+1*IC(5),W(1,5))
       CALL VVV1P0_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,6))
       CALL FFV1P0_3(W(1,4),W(1,3),GC_11,ZERO,ZERO,W(1,7))
 C     Amplitude(s) for diagram number 1
       CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_10,AMP(1))
-      CALL FFV1_1(W(1,3),W(1,5),GC_11,MT,WT,W(1,8))
+      CALL FFV1_1(W(1,3),W(1,5),GC_11,MDL_MT,MDL_WT,W(1,8))
 C     Amplitude(s) for diagram number 2
       CALL FFV1_0(W(1,4),W(1,8),W(1,6),GC_11,AMP(2))
-      CALL FFV1_2(W(1,4),W(1,5),GC_11,MT,WT,W(1,9))
+      CALL FFV1_2(W(1,4),W(1,5),GC_11,MDL_MT,MDL_WT,W(1,9))
 C     Amplitude(s) for diagram number 3
       CALL FFV1_0(W(1,9),W(1,3),W(1,6),GC_11,AMP(3))
-      CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,6))
-      CALL FFV1_2(W(1,4),W(1,2),GC_11,MT,WT,W(1,10))
+      CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,6))
+      CALL FFV1_2(W(1,4),W(1,2),GC_11,MDL_MT,MDL_WT,W(1,10))
 C     Amplitude(s) for diagram number 4
       CALL FFV1_0(W(1,10),W(1,6),W(1,5),GC_11,AMP(4))
       CALL VVV1P0_1(W(1,2),W(1,5),GC_10,ZERO,ZERO,W(1,11))
@@ -928,8 +925,8 @@ C     Amplitude(s) for diagram number 5
       CALL FFV1_0(W(1,4),W(1,6),W(1,11),GC_11,AMP(5))
 C     Amplitude(s) for diagram number 6
       CALL FFV1_0(W(1,9),W(1,6),W(1,2),GC_11,AMP(6))
-      CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,6))
-      CALL FFV1_1(W(1,3),W(1,2),GC_11,MT,WT,W(1,12))
+      CALL FFV1_2(W(1,4),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,6))
+      CALL FFV1_1(W(1,3),W(1,2),GC_11,MDL_MT,MDL_WT,W(1,12))
 C     Amplitude(s) for diagram number 7
       CALL FFV1_0(W(1,6),W(1,12),W(1,5),GC_11,AMP(7))
 C     Amplitude(s) for diagram number 8
@@ -1224,15 +1221,15 @@ C     ----------
           IF (.NOT. CALCULATEDBORN) THEN
             CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
             CALL VXXXXX(P(0,2),ZERO,NHEL(2),-1*IC(2),W(1,2))
-            CALL OXXXXX(P(0,3),MT,NHEL(3),+1*IC(3),W(1,3))
-            CALL IXXXXX(P(0,4),MT,NHEL(4),-1*IC(4),W(1,4))
+            CALL OXXXXX(P(0,3),MDL_MT,NHEL(3),+1*IC(3),W(1,3))
+            CALL IXXXXX(P(0,4),MDL_MT,NHEL(4),-1*IC(4),W(1,4))
             CALL VVV1P0_1(W(1,1),W(1,2),GC_10,ZERO,ZERO,W(1,5))
 C           Amplitude(s) for diagram number 1
             CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_11,AMP(1))
-            CALL FFV1_1(W(1,3),W(1,1),GC_11,MT,WT,W(1,5))
+            CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,5))
 C           Amplitude(s) for diagram number 2
             CALL FFV1_0(W(1,4),W(1,5),W(1,2),GC_11,AMP(2))
-            CALL FFV1_2(W(1,4),W(1,1),GC_11,MT,WT,W(1,5))
+            CALL FFV1_2(W(1,4),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,5))
 C           Amplitude(s) for diagram number 3
             CALL FFV1_0(W(1,5),W(1,3),W(1,2),GC_11,AMP(3))
             DO I=1,NGRAPHS
@@ -1747,11 +1744,11 @@ C     Number of configs
 """      PMASS( -1,   1)  = ZERO
       PWIDTH( -1,   1) = ZERO
       POW( -1,   1) = 2
-      PMASS( -1,   2)  = ABS(MT)
-      PWIDTH( -1,   2) = ABS(WT)
+      PMASS( -1,   2)  = ABS(MDL_MT)
+      PWIDTH( -1,   2) = ABS(MDL_WT)
       POW( -1,   2) = 1
-      PMASS( -1,   3)  = ABS(MT)
-      PWIDTH( -1,   3) = ABS(WT)
+      PMASS( -1,   3)  = ABS(MDL_MT)
+      PWIDTH( -1,   3) = ABS(MDL_WT)
       POW( -1,   3) = 1
 """
         process_exporter = export_fks.ProcessExporterFortranFKS()

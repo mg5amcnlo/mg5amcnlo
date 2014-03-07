@@ -22,8 +22,6 @@ pjoin = os.path.join
 
 try:
     import madgraph.various.misc as misc
-    import madgraph.various.shower_card as shower_card
-    import madgraph.various.FO_analyse_card as FO_analyse_card
     import madgraph.iolibs.file_writers as file_writers
     import models.check_param_card as param_card_reader
     from madgraph import MG5DIR
@@ -32,8 +30,6 @@ except ImportError:
     MADEVENT = True
     import internal.file_writers as file_writers
     import internal.check_param_card as param_card_reader
-    import internal.shower_card as shower_card
-    import internal.FO_analyse_card as FO_analyse_card
     MEDIR = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
     MEDIR = os.path.split(MEDIR)[0]
 
@@ -47,7 +43,7 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha', 'MGGenerationInfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger']
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
     
     def __init__(self, banner_path=None):
         """ """
@@ -86,7 +82,9 @@ class Banner(dict):
       'mggenerationinfo':'',
       'montecarlomasses':'',
       'initrwgt':'',
-      'madspin':'madspin_card.dat' 
+      'madspin':'madspin_card.dat',
+      'mgshowercard':'shower_card.dat',
+      'run_settings':''
       }
     
     def read_banner(self, input_path):
@@ -300,6 +298,10 @@ class Banner(dict):
             return self.proc_card
         elif tag =='mgshowercard':
             shower_content = self[tag] 
+            if MADEVENT:
+                import internal.shower_card as shower_card
+            else:
+                import madgraph.various.shower_card as shower_card
             self.shower_card = shower_card.ShowerCard(shower_content, True)
             # set testing to false (testing = true allow to init using 
             #  the card content instead of the card path"
@@ -307,6 +309,10 @@ class Banner(dict):
             return self.shower_card
         elif tag =='foanalyse':
             analyse_content = self[tag] 
+            if MADEVENT:
+                import internal.FO_analyse_card as FO_analyse_card
+            else:
+                import madgraph.various.FO_analyse_card as FO_analyse_card
             # set testing to false (testing = true allow to init using 
             #  the card content instead of the card path"
             self.FOanalyse_card = FO_analyse_card.FOAnalyseCard(analyse_content, True)

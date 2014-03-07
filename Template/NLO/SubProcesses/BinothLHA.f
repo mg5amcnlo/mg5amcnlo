@@ -65,6 +65,7 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      character*1 include_hel(max_bhel)
       integer goodhel(max_bhel),hel(0:max_bhel)
       save hel,goodhel
       logical fillh
@@ -202,8 +203,9 @@ c exists, which should be the case when firsttime is false.
                open (unit=67,file='HelFilter.dat',status='old',err=201)
                hel(0)=0
                j=0
+c optimized loop output
                do i=1,max_bhel
-                  read(67,*,err=201) goodhel(i)
+                  read(67,*,err=202) goodhel(i)
                   if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
                      goodhel(j)=goodhel(i)
@@ -211,6 +213,19 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                  endif
                enddo
+               goto 203
+c non optimized loop output
+ 202           rewind(67)
+               read(67,*,err=201) (include_hel(i),i=1,max_bhel)
+               do i=1,max_bhel
+                  if (include_hel(i).eq.'T') then
+                     j=j+1
+                     goodhel(j)=1
+                     hel(0)=hel(0)+1
+                     hel(j)=i
+                  endif
+               enddo
+ 203           continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
                if (NHelForMCoverHels.eq.-1) then

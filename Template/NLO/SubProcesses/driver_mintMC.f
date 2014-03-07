@@ -10,6 +10,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -126,9 +127,8 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
+      include "timing_variables.inc"
+      real*4 tOther, tTot
 
 c general MadFKS parameters
       include "FKSParams.inc"
@@ -136,9 +136,6 @@ c general MadFKS parameters
 C-----
 C  BEGIN CODE
 C-----  
-c
-c     Setup the timing variable
-c
       call cpu_time(tBefore)
 
 c     Read general MadFKS parameters
@@ -185,6 +182,13 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+c Only do the reweighting when actually generating the events
+      if (imode.eq.2) then
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+      else
+         doreweight=.false.
+      endif
+
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -482,10 +486,15 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
       endif
 
       call cpu_time(tAfter)
-      tTot = tTot +(tAfter-tBefore)
-      write(*,*) 'Time spent in OLP : ',tOLP
-      write(*,*) 'Time spent in PDF_engine : ',tPDF
-      write(*,*) 'Time spent in clustering : ',tFastJet
+      tTot = tAfter - tBefore
+      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
+      write(*,*) 'Time spent in clustering : ',tFastJet      
+      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
+      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
+      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP
+      write(*,*) 'Time spent in PS_Generation : ',tGenPS      
+      write(*,*) 'Time spent in other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
 
       return
@@ -496,13 +505,14 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
 
       block data timing
 c timing statistics
-      real*4 tbefore, tAfter
-      real*4 tTot, tOLP, tFastJet, tPDF
-      common/timings/tTot, tOLP, tFastJet, tPDF
-      data tTot/0.0/
+      include "timing_variables.inc"
       data tOLP/0.0/
       data tFastJet/0.0/
       data tPDF/0.0/
+      data tDSigI/0.0/
+      data tDSigR/0.0/
+      data tGenPS/0.0/
+
       end
 
 
@@ -1166,7 +1176,7 @@ c much. Do this by overwrite the 'wgt' variable
          f_check=f(2)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-1) then
+     $           .gt.1d0) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop

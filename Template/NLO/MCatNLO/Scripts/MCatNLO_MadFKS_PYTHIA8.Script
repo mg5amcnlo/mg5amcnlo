@@ -299,9 +299,6 @@ ERR_NUM_PY8=$(echo "$ERR_FR_PY8 * $NEVENTS" | bc)
 ERR_NUM_PY8=${ERR_NUM_PY8/.*}
 let "ERR_NUM_PY8 += 1"
 
-NUM=($(head -1000 $EVTDIR/$EVT_NAMEF | grep "= nevents" | head -1))
-NEVENTS_TOT=${NUM[0]}
-
 echo " "
 echo "*****   All parameters read from event file $EVT_NAMEF"
 echo "*****   Now ready for showering" $NEVENTS "events with $MC_TYPE "
@@ -436,9 +433,9 @@ PhaseSpace:RsepMin = 0.            ! Min R separation in 2->3
 ! 5) Final-state shower.
 TimeShower:pTmaxMatch = 1          ! Use scalup (re-check)
 TimeShower:pTmaxFudge = 1.         ! Factor changing the max scale
-#TimeShower:alphaSvalue = 0.1383   ! Alpha_s(MZ) in final-state shower
-#TimeShower:alphaSorder = 2        ! Alpha_s running order in final-state shower
-#TimeShower:alphaorder = 0         ! Alpha_EM running order in final-state shower
+TimeShower:alphaSvalue = 0.118     ! Alpha_s(MZ) in final-state shower
+TimeShower:alphaSorder = 1         ! Alpha_s running order in final-state shower
+TimeShower:alphaEMorder = 0        ! Alpha_EM running order in final-state shower
 TimeShower:interleave = on         ! If on, FSR interleaved with ISR
 TimeShower:allowBeamRecoil = on    ! If off, no energy transfer to from ISR to FSR
 TimeShower:dampenBeamRecoil = off  ! Dampens the effect of beam recoil
@@ -461,9 +458,9 @@ TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
 SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
-#SpaceShower:alphaSvalue = 0.137   ! Alpha_s(MZ) in final-state shower
-#SpaceShower:alphaSorder = 2       ! Alpha_s running order in final-state shower
-#SpaceShower:alphaEMorder = 0      ! Alpha_EM running order in final-state shower
+SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
+SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
+SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
 SpaceShower:QCDshower = on         ! QCD final-state shower
 SpaceShower:QEDshowerByQ = off     ! Prevent quarks from radiating photons
 SpaceShower:QEDshowerByL = off     ! Prevent leptons from radiating photons
@@ -478,7 +475,11 @@ SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 BeamRemnants:primordialKT = off    ! No primordial kT
 
 ! 8) Particle characteristics.
-5:m0 = $BMASS                      ! bottom mass
+1:m0 = $DMASSPY                    ! down mass
+2:m0 = $UMASSPY                    ! up mass
+3:m0 = $SMASSPY                    ! strange mass
+4:m0 = $CMASSPY                    ! charm mass
+5:m0 = $BMASSPY                    ! bottom mass
 6:m0 = $TMASS                      ! top mass
 23:m0 = $ZMASS                     ! Z mass
 24:m0 = $WMASS                     ! W mass
@@ -512,16 +513,10 @@ cat <<EOF >> $ifile
 5332:maydecay = false              ! stable B hadrons
 EOF
 fi
-if [ $WP_STABLE_PY8 = ".TRUE." ]
+if [[ $WP_STABLE_PY8 = ".TRUE." || $WM_STABLE_PY8 = ".TRUE." ]]
 then
 cat <<EOF >> $ifile
-24:maydecay = false                ! stable W+ boson
-EOF
-fi
-if [ $WM_STABLE_PY8 = ".TRUE." ]
-then
-cat <<EOF >> $ifile
--24:maydecay = false               ! stable W- boson
+24:maydecay = false                ! stable W boson
 EOF
 fi
 if [ $Z_STABLE_PY8 = ".TRUE." ]

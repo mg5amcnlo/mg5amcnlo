@@ -328,7 +328,7 @@ class TestModUFO(unittest.TestCase):
                 len([1 for name in os.listdir(sm_path) if name.endswith('.py')]), 
                'New file in  UFO format, usrmod need to be modified')
 
-        self.assertEqual(10, 
+        self.assertEqual(11, 
                 len([1 for name in os.listdir(output) if name.endswith('.py')]))
 
         sys.path.insert(0, os.path.dirname(output))
@@ -381,7 +381,7 @@ class TestModUFO(unittest.TestCase):
     def test_write_orders(self):
         """Check that the content of the file is valid"""
 
-        output = '/tmp/usrmod'
+        output = self.path
         self.base_model.write_orders(output)
         filename = os.path.join(output, 'coupling_orders.py')
         text = open(os.path.join(filename)).read()

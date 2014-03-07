@@ -309,6 +309,11 @@ c
       integer i,j
 
 c
+c     Information required for 1>N processes
+c
+      include 'nexternal.inc'
+
+c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
@@ -378,13 +383,22 @@ c
 C   Write out compulsory init info
       write(lunw,'(a)') '</header>'
       write(lunw,'(a)') '<init>'
-      write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
-     $   (pdfsup(i),i=1,2),2,nprup
-      do i=1,nprup
-         write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
-      enddo
+      if(nincoming.eq.2)then
+
+          write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
+     $                   (pdfsup(i),i=1,2),2,nprup
+         do i=1,nprup
+             write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
+         enddo
+      elseif(nincoming.eq.1)then
+          write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),-1,-1,
+     $   -1,-1,2,nprup
+          do i=1,nprup
+             write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
+          enddo
+      endif
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
       end
 
@@ -477,7 +491,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
 
       end
