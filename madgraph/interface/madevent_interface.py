@@ -2455,7 +2455,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
             
-            misc.sprint('Write run_card.inc', pjoin(opt['output_dir'],'run_card.inc'))
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
     ############################################################################      
@@ -3560,12 +3559,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
-        misc.sprint(os.listdir(pjoin(self.me_dir, 'Source')))
         
         # Compile
         for name in ['../bin/internal/gen_ximprove', 'all', 
                      '../bin/internal/combine_events']:
-            misc.sprint(name)
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
         
