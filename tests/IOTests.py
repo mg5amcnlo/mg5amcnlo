@@ -564,8 +564,18 @@ class IOTestManager(unittest.TestCase):
                 if not update:
                     if not os.path.isfile(comparison_path):
                         iotest.clean_output()
-                        raise MadGraph5Error, 'The ref. file %s'%str(comparison_path)+\
-                                                              ' does not exist.'
+                        if not verbose:
+                            raise MadGraph5Error,\
+                                "Missing ref. files for test %s\n"%test_name+\
+                                "Create them with './test_manager.py -U %s'"%test_name
+                            continue
+                        else:
+                            print colored%(31,'The ref. file %s'
+                            %str('/'.join(comparison_path.split('/')[-3:]))+' does not exist.')
+                            print colored%(34,'Consider creating it with '+
+                                            './test_manager.py -U %s'%test_name)
+                            exit(0)
+
                     goal = open(comparison_path).read()%misc.get_pkg_info()
                     if not verbose:
                         self.assertFileContains(open(file_path), goal)
