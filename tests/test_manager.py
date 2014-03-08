@@ -813,6 +813,11 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         ./test_manager.py -R -g groupName
         
     You can list all tests in the reference folder with
+        ./test_manager.py -L
+    while possibly also specifying what kind of test to list with the same
+    syntax as for -R or -U, i.e.
+        ./test_manager.py -L +short/ALL/ALL
+    for example.
     """
 
     usage = "usage: %prog [expression1]... [expressionN] [options] "
