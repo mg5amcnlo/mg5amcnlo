@@ -389,6 +389,11 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             else:
                 print colored%(32,"INFO:: Reference %s updated"%\
                                     str(os.path.basename(_hc_comparison_files)))
+                if len(modifications['created'])>0:
+                    print colored%(31,"Some ref. files have been created; add "+\
+                      "them to the revision with\n  "+
+                      "bzr add tests/input_files/IOTestsComparison")
+           
                 # Make sure to remove the BackUp files
                 filelist = glob.glob(os.path.join(_hc_comparison_files,
                                                             '*','*','*.BackUp'))
