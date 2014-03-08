@@ -67,6 +67,8 @@ import madgraph.various.misc as misc
 #position of MG_ME
 MGME_dir = MG4DIR
 
+colored = "\x1b[1;%dm%s\x1b[0m"
+
 IOTestManager = tests.IOTests.IOTestManager
 
 path = os.path
@@ -311,8 +313,14 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         IOTestsFunctions = IOTestFinder()
         IOTestsFunctions.collect_function(IOTestsClass,prefix='testIO')
         for IOTestFunction in IOTestsFunctions:
+            start = time.time()
             eval('IOTestsInstances[-1].'+IOTestFunction.split('.')[-1]+\
                                                              '(load_only=True)')
+            setUp_time = time.time() - start
+            if setUp_time > 0.5:                
+                print colored%(34,"Loading IOtest %s is slow (%s)"%
+                        (colored%(32,'.'.join(IOTestFunction.split('.')[-3:])),
+                                             colored%(34,'%.2fs'%setUp_time)))
     
     if len(IOTestsInstances)==0:
         print "No IOTest found."
@@ -332,7 +340,8 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             else:
                 shutil.rmtree(_hc_comparison_files)
                 mv(hc_comparison_files_BackUp,_hc_comparison_files)
-                print "\nINFO:: Update interrupted, existing modifications reverted."
+                print colored%(34,
+                "\nINFO:: Update interrupted, existing modifications reverted.")
             sys.exit(0)
         else:
             print "\nINFO:: IOTest runs interrupted."
@@ -341,8 +350,8 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
     tot_time = time.time() - start
     
     if modifications == 'test_over':
-        print "\n%d IOTests successfully tested in %.4fs."%\
-                                  (len(IOTestManager.all_tests.keys()),tot_time)
+        print colored%(32,"\n%d IOTests "%len(IOTestManager.all_tests.keys()))+\
+                    "successfully tested in %s."%(colored%(34,'%.2fs'%tot_time))
         sys.exit(0)
     elif not isinstance(modifications,dict):
         print "Error during the files update."
@@ -350,18 +359,23 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
 
     if sum(len(v) for v in modifications.values())>0:
         # Display the modifications
-        text = " \nModifications performed on %s at %s in"%(\
-                         str(datetime.date.today()),misc.format_timer(0.0)[14:])
-        text += '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        text = colored%(34, " \nModifications performed on %s at %s in"%(\
+                        str(datetime.date.today()),misc.format_timer(0.0)[14:]))
+        text += colored%(34, 
+        '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info())
         for key in modifications.keys():
             if len(modifications[key])==0:
                 continue
-            text += "The following reference files have been %s :"%key
+            text += colored%(32,"The following reference files have been %s :"%key)
             text += '\n'+'\n'.join(["   %s"%mod for mod in modifications[key]])
             text += '\n'
         print text
-        answer = Cmd.timed_input(question=
- """Do you want to apply the modifications listed above? [y/n] >""",default="y")
+        try:
+            answer = Cmd.timed_input(question=
+          "Do you want to apply the modifications listed above? [y/n] >",default="y")
+        except KeyboardInterrupt:
+            answer = 'n'
+
         if answer == 'y':
             log = open(_hc_comparison_modif_log,mode='a')
             log.write(text)
@@ -371,8 +385,10 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
                 tar.add(_hc_comparison_files, \
                       arcname=path.basename(_hc_comparison_files), filter=noBackUps)
                 tar.close()
-                print "INFO:: tarball %s updated"%str(_hc_comparison_tarball)
+                print colored%(32,"INFO:: tarball %s updated"%str(_hc_comparison_tarball))
             else:
+                print colored%(32,"INFO:: Reference %s updated"%\
+                                    str(os.path.basename(_hc_comparison_files)))
                 # Make sure to remove the BackUp files
                 filelist = glob.glob(os.path.join(_hc_comparison_files,
                                                             '*','*','*.BackUp'))
@@ -382,11 +398,12 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
             if path.isdir(hc_comparison_files_BackUp):
                 shutil.rmtree(_hc_comparison_files)
                 shutil.copytree(hc_comparison_files_BackUp,_hc_comparison_files)
-                print "INFO:: No modifications applied."
+                print colored%(32,"INFO:: No modifications applied.")
             else:
-                print "ERROR:: Could not revert the modifications. No backup found."
+                print colored%(31,
+                 "ERROR:: Could not revert the modifications. No backup found.")
     else:
-        print "\nNo modifications performed. No update necessary."
+        print colored%(32,"\nNo modifications performed. No update necessary.")
     
     # Remove the BackUp of the reference files.
     if path.isdir(hc_comparison_files_BackUp):
@@ -755,11 +772,11 @@ if __name__ == "__main__":
     Detailed information about the IOTests at the wiki webpage:
 https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 
-    Use the argument -i U to update the hardcoded tests used by the IOTests.
+    Use the argument -U to update the hardcoded tests used by the IOTests.
     When provided with no argument, it will update everything.
     Otherwise  it can be called like this:
     
-                ./test_manager.py -i U "folders/testNames/filePaths"
+                ./test_manager.py -U "folders/testNames/filePaths"
 
     the arguments between '/' are specified according to this format
     (For each of the three category, you can use the keyword 'ALL' to select 
@@ -788,7 +805,14 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     (this is not recommended).
     
     Finally, you can run the test only from here too. Same synthax as above,
-    but use the option -i R.
+    but use the option -R
+    
+    And you can quickly run a given IOTest with
+        ./test_manager.py -R testName
+    or all IOtest of a give group with
+        ./test_manager.py -R -g groupName
+        
+    You can list all tests in the reference folder with
     """
 
     usage = "usage: %prog [expression1]... [expressionN] [options] "
@@ -806,8 +830,15 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     parser.add_option("-f", "--semiForce", action="store_true", default=False,
         help="Bypass monitoring of ref. file only if another ref. file with "+\
                                     "the same name has already been monitored.")
-    parser.add_option("-i", "--IOTests", default='No',
-          help="Process the IOTests to run (R) or updated (U) them.")
+    parser.add_option("-U", "--IOTestsUpdate", action="store_true", default=False,
+          help="Process the IOTests to update them.")
+    parser.add_option("-R", "--IOTestsRun", action="store_true", default=False,
+          help="Process the IOTests to Run them.")
+    parser.add_option("-L", "--ListIOTests", action="store_true", default=False,
+          help="Lists all IOTests in the reference Folder.")
+    parser.add_option("-g", "--group", action="store_true", default=False,
+        help="Specifies you want to run all tests belonging to a group of a "+\
+                                                                  "given name.")    
     parser.add_option("-s", "--synchronize", action="store_true", default=False,
           help="Replace the IOTestsComparison.tar.bz2 tarball with the "+\
                                       "content of the folder IOTestsComparison")
@@ -816,12 +847,43 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     
     (options, args) = parser.parse_args()
 
+    if options.IOTestsUpdate:
+        options.IOTests = 'U'
+    elif options.IOTestsRun:
+        options.IOTests = 'R'
+    else:
+        options.IOTests = 'No'
+
+    if options.ListIOTests:
+        options.IOTests = 'L'        
+
     if options.IOTests=='No':
         if len(args) == 0:
             args = ''
     else:
+        if len(args)>1:
+            print "Specify at most one argument to specify what IOTests to run."
         if len(args) == 0:
             args = ['ALL/ALL/ALL']
+
+        if options.group:
+            if len(args)==1:
+                args = ['%s/ALL/ALL'%str(args[0])]
+            else:
+                print "Specify the name of the IOTest group you want to run."
+        else:
+            specs = args[0].split('/')
+            if len(specs)==1:
+                test_name = args[0] if args[0][:7]!='testIO_' else args[0][7:]
+                args = ['ALL/%s/ALL'%test_name]
+            elif len(specs)==2:
+                args = ['%s/%s/ALL'%(specs[0],
+                           (specs[1] if specs[1][:7]!='testIO_' else specs[1]))]
+            elif len(specs)==3:
+                args = ['%s/%s/%s'%(specs[0],
+                  (specs[1] if specs[1][:7]!='testIO_' else specs[1]),specs[2])]
+            else:
+                print "The IOTest specification can include at most two '/'."                 
 
     if len(args) == 1 and args[0]=='help':
         print help
@@ -865,8 +927,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     else:
         if options.IOTests=='L':
             print "Listing all tests defined in the reference files ..."
-            print '\n'.join("> %s/%s"%test for test in listIOTests(args) if\
-                                            IOTestManager.need(test[0],test[1]))
+            print '\n'.join("> %s/%s"%(colored%(34,test[0]),colored%(32,test[1]))
+            for test in listIOTests(args) if IOTestManager.need(test[0],test[1]))
             exit()
         if options.force:
             force = 10
