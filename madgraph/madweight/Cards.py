@@ -532,8 +532,14 @@ class Particles_file(Card):
             width=data[-4]
            
             # Adding model prefixing
-            dict_mass[pid]='mdl_%s' % mass
-            dict_width[pid] = 'mdl_%s' % width
+            if mass.lower() != 'zero':
+                dict_mass[pid]='mdl_%s' % mass
+            else: 
+                dict_mass[pid] = str(mass)
+            if width.lower() != 'zero':
+                dict_width[pid] = 'mdl_%s' % width
+            else:
+                dict_width[pid] =  str(width)
              
 #        return {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'MB', 6: 'MT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'MTA', 16: 'ZERO', 21: 'ZERO', 22: 'ZERO', 23: 'MZ', 24: 'MW', 25: 'MH'}, {1: 'ZERO', 2: 'ZERO', 3: 'ZERO', 4: 'ZERO', 5: 'ZERO', 6: 'WT', 11: 'ZERO', 12: 'ZERO', 13: 'ZERO', 14: 'ZERO', 15: 'ZERO', 16: 'ZERO', 21: 'ZERO', 22: 'WA', 23: 'WZ', 24: 'WW', 25: 'WH'}
 

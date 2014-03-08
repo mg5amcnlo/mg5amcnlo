@@ -170,7 +170,8 @@ class MG_diagram(diagram_class.MG_diagram):
                 content = [p.MG for p in get_all_child(part)]
                 content.append(0)
                 initcontent = "\n".join("""          content(%i) = %i""" % (a+1, b) for a,b in enumerate(content))
-
+                if mass.lower() == 'zero' or width.lower() == 'zero':
+                    continue
                 dico = {'pid': part.pid, 
                              'mass': mass,
                              'width': width,
