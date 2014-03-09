@@ -569,7 +569,7 @@ class UFOMG5Converter(object):
                 if 'T(3,2,1)' in interaction_info.color:
                     color, anticolor, other = interaction_info.particles
                 elif 'T(3,1,2)' in interaction_info.color:
-                    anticolor, color, other = interaction_info.particles
+                    anticolor, color, _ = interaction_info.particles
                 elif 'Identity(1,2)' in interaction_info.color  or \
                      'Identity(2,1)' in interaction_info.color:
                     first, second, _ = interaction_info.particles
@@ -577,16 +577,15 @@ class UFOMG5Converter(object):
                         if output[first.pdg_code] == 3:
                             color, anticolor = first, second
                         else:
-                            color, anticolor = first, second
+                            color, anticolor = second, first
                     elif second.pdg_code in output:
                         if output[second.pdg_code] == 3:
-                            color, anticolor = first, second                        
+                            color, anticolor = second, first                        
                         else:
                             color, anticolor = first, second
                     else:
                         continue
                 else:
-                    print interaction_info.color
                     continue
             elif colors[1:] == [3,3]:
                 if 'T(1,2,3)' in interaction_info.color:
@@ -600,10 +599,10 @@ class UFOMG5Converter(object):
                         if output[first.pdg_code] == 3:
                             color, anticolor = first, second
                         else:
-                            color, anticolor = first, second
+                            color, anticolor = second, first
                     elif second.pdg_code in output:
                         if output[second.pdg_code] == 3:
-                            color, anticolor = first, second                        
+                            color, anticolor = second, first                        
                         else:
                             color, anticolor = first, second
                     else:
@@ -623,10 +622,10 @@ class UFOMG5Converter(object):
                         if output[first.pdg_code] == 3:
                             color, anticolor = first, second
                         else:
-                            color, anticolor = first, second
+                            color, anticolor = second, first
                     elif second.pdg_code in output:
                         if output[second.pdg_code] == 3:
-                            color, anticolor = first, second                        
+                            color, anticolor = second, first                        
                         else:
                             color, anticolor = first, second
                     else:
