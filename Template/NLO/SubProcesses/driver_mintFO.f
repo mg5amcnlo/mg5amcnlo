@@ -390,9 +390,6 @@ c From dsample_fks
       logical sum,firsttime
       parameter (sum=.false.)
       data firsttime /.true./
-      logical foundB(2)
-      integer nFKSprocessBorn(2)
-      save nFKSprocessBorn,foundB
       double precision vol,sigintR
       integer itotalpoints
       common/ctotalpoints/itotalpoints
@@ -433,27 +430,7 @@ c
 
       sigint=0d0
 
-c Find the nFKSprocess for which we compute the Born-like contributions
-      if (firsttime) then
-         firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
-         do nFKSprocess=1,fks_configs
-            call fks_inc_chooser()
-            if (particle_type(i_fks).eq.8) then
-               if (j_fks.le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=nFKSprocess
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=nFKSprocess
-               endif
-            endif
-         enddo
-         write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     &        nFKSprocessBorn
-      endif
+      write (*,*) 'Total number of FKS directories is', fks_configs
          
 c
 c Compute the Born-like contributions with nbody=.true.
@@ -462,24 +439,6 @@ c
       call get_MC_integer(1,fks_configs,nFKSprocess,vol)
       nFKSprocess_all=nFKSprocess
       call fks_inc_chooser()
-      if (j_fks.le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop
-         endif
-         nFKSprocess=nFKSprocessBorn(1)
-      else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop
-         endif
-         nFKSprocess=nFKSprocessBorn(2)
-      endif
       nbody=.true.
       fillh=.false.  ! this is set to true in BinothLHA if doing MC over helicities
       nFKSprocess_used=nFKSprocess

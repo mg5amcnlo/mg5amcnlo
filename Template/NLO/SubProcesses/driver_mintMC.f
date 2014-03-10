@@ -610,9 +610,6 @@ c-----
       write(*,*)'  Enter alpha>0 to set G_azi=0 (no azi corr)'
       read(*,*)alazi,beazi
       write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
-
-c$$$      write (*,*) "H-events (0), or S-events (1)"
-c$$$      read (*,*) i
       i=2
       if (i.eq.0) then
          Hevents=.true.
@@ -782,10 +779,8 @@ c From dsample_fks
       integer sum
       parameter (sum=3)
       data firsttime /.true./
-      logical foundB(2),j_fks_initial(fks_configs),found_ini1,found_ini2
+      logical j_fks_initial(fks_configs),found_ini1,found_ini2
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
-      integer nFKSprocessBorn(2)
-      save nFKSprocessBorn,foundB
       double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
@@ -810,20 +805,9 @@ c From dsample_fks
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
          maxproc_save=0
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (PDG_type(i_fks).eq.21) then
-               if (j_fks.le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=nFKSprocess
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=nFKSprocess
-               endif
-            endif
 c Set Bjorken x's to some random value before calling the dlum() function
             xbk(1)=0.5d0
             xbk(2)=0.5d0
@@ -836,8 +820,6 @@ c Set Bjorken x's to some random value before calling the dlum() function
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     &        nFKSprocessBorn
 c For sum over identical FKS pairs, need to find the identical structures
          if (sum.eq.0) then
 c MC over FKS directories (1 FKS directory per nbody PS point)
@@ -1057,7 +1039,7 @@ c IRPOC's
             double_check(i)=0d0
          enddo
          do i=1,99
-            if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+            if (abrv.eq.'grid'.or.abrv.eq.'born')
      &           then
                if(i.le.ndim-3)then
                   x(i)=xx(i)
@@ -1083,24 +1065,6 @@ c
                                                ! which parton is j_fks
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
-         if (j_fks.le.nincoming) then
-            if (.not.foundB(1)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'initial state j_fks, but there is no '/
-     &              /'configuration with i_fks a gluon and j_fks '/
-     &              /'initial state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(1)
-         else
-            if (.not.foundB(2)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'final state j_fks, but there is no configuration'/
-     &              /' with i_fks a gluon and j_fks final state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(2)
-         endif
          nbody=.true.
          fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
