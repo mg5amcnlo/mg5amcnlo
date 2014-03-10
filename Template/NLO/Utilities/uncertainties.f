@@ -205,6 +205,7 @@ c
                nlines = nlines+1
                lines(nlines) = buff(1:100)
                if (index(buff,'PLOT').ne.0) nlines = 0
+               if (index(buff,'NEW PLOT').ne.0) nlines = 1
             endif
          else
             if(buff(1:i1-1).eq.' (  '//var(1:i1-5))then
@@ -213,6 +214,7 @@ c
                nlines = nlines+1
                lines(nlines) = buff(1:100)
                if (index(buff,'PLOT').ne.0) nlines = 0
+               if (index(buff,'NEW PLOT').ne.0) nlines = 1
             endif
          endif
       enddo

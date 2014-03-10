@@ -42,7 +42,7 @@ c
       l=(kk-1)*42+(j-1)*21
       call mbook(l+ 1,'V pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 2,'V pt      '//cc(j)//weights_info(kk)
+      call mbook(l+ 2,'V pt 1    '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
       call mbook(l+ 3,'V log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)
@@ -55,7 +55,7 @@ c
 c
       call mbook(l+ 7,'lm pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+ 8,'lm pt      '//cc(j)//weights_info(kk)
+      call mbook(l+ 8,'lm pt 1    '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
       call mbook(l+ 9,'lm log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)
@@ -63,7 +63,7 @@ c
      &     ,0.2d0,-9.d0,9.d0)
       call mbook(l+11,'lp pt      '//cc(j)//weights_info(kk)
      &     ,2.d0,0.d0,200.d0)
-      call mbook(l+12,'lp pt      '//cc(j)//weights_info(kk)
+      call mbook(l+12,'lp pt 1    '//cc(j)//weights_info(kk)
      &     ,10.d0,0.d0,1000.d0)
       call mbook(l+13,'lp log[pt] '//cc(j)//weights_info(kk)
      &     ,0.05d0,0.1d0,5.d0)

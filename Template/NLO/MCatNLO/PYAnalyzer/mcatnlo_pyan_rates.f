@@ -15,7 +15,7 @@ C----------------------------------------------------------------------
       include 'reweight0.inc'
       integer i,kk,l
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
