@@ -2595,6 +2595,10 @@ Integrated cross-section
             lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
+            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         else:
             #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
@@ -3121,12 +3125,20 @@ Integrated cross-section
         # rm links to lhapdflib/ PDFsets if exist
         if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
             os.remove(pjoin(libdir, 'libLHAPDF.a'))
-        if os.path.islink(pjoin(libdir, 'PDFsets')):
-            os.remove(pjoin(libdir, 'PDFsets'))
+        if os.path.exists(pjoin(libdir, 'PDFsets')):
+            files.rm(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf':
             self.link_lhapdf(libdir)
+            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhaid_list = [int(self.run_card['lhaid'])]
+            if self.run_card['reweight_PDF'].lower() == '.true.':
+                lhaid_list.append(int(self.run_card['PDF_set_min']))
+                lhaid_list.append(int(self.run_card['PDF_set_max']))
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+
         else:
             if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
@@ -3258,22 +3270,6 @@ Integrated cross-section
         else:
             logger.info('   Poles successfully cancel for %d points over %d (tolerance=%2.1e)' \
                     %(npass, nfail+npass, tolerance))
-
-
-
-    def link_lhapdf(self, libdir):
-        """links lhapdf into libdir"""
-        logger.info('Using LHAPDF interface for PDFs')
-        lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
-            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-        if not os.path.exists(pjoin(libdir, 'PDFsets')):
-            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def write_test_input(self, test):
