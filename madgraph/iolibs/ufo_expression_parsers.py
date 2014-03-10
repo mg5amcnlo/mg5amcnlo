@@ -59,6 +59,7 @@ class UFOExpressionParser(object):
         return self.parsed_string
 
     # List of tokens and literals
+    tokens = (
         'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC',
         'SQRT', 'CONJ', 'RE', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'ARG'
