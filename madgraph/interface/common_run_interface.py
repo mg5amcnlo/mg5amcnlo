@@ -1569,25 +1569,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v.%s interface for PDFs' % lhapdf_version)
+
         if lhapdf_version.startswith('5.'):
             lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             self.lhapdf_pdfsets_list = self.get_lhapdf_pdfsets_list(pdfsetsdir)
-            # just create the PDFsets dir, the needed PDF set will be copied at run time
-            if not os.path.isdir(pjoin(libdir, 'PDFsets')):
-                os.mkdir(pjoin(libdir, 'PDFsets'))
-            if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
-                os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-            if not os.path.exists(pjoin(libdir, 'PDFsets')):
-                os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-            os.environ['lhapdf'] = 'True'
-            os.environ['lhapdf_config'] = self.options['lhapdf']
+
         elif lhapdf_version.startswith('6.'):
-            raise 'Not implemented'
+            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = subprocess.Popen('%s --datadir' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            self.lhapdf_pdfsets_list = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+
         else:
-            raise 'Not valid LHAPDF version'
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
+
+        # just create the PDFsets dir, the needed PDF set will be copied at run time
+        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
+            os.mkdir(pjoin(libdir, 'PDFsets'))
+        if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
+            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
+        os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
     def copy_lhapdf_set(self, lhaid_list, pdfsets_dir):
@@ -1595,6 +1601,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         into lib/PDFsets"""
 
         lhapdf_version = self.get_lhapdf_version()
+
         if lhapdf_version.startswith('5.'):
             lhaid_index_list = [d['lhaid'] for d in \
                     self.lhapdf_pdfsets_list]
@@ -1615,25 +1622,31 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
 
         elif lhapdf_version.startswith('6.'):
-            raise 'Not implemented'
+            print 'COPY LHAPDF SET v6'
+
         else:
-            raise 'Not valid LHAPDF version'
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
 
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Tryin to download %s' % filename)
+
         if lhapdf_version.startswith('5.'):
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
-            misc.call('%s %s' % (getdata, filename), cwd = pdfsets_dir, shell = True)
+            misc.call('%s %s' % (getdata, filename), cwd = pdfsets_dir, shell = true)
 
         elif lhapdf_version.startswith('6.'):
-            raise 'Not implemented'
+            # use the "lhapdf install xxx" command, which is in the same path as
+            # lhapdf-config
+            getdata = self.options['lhapdf'].replace('lhapdf', ('lhapdf-getdata'))
+            misc.call('%s install %s' % (getdata, filename), cwd = pdfsets_dir, shell = true)
+
         else:
-            raise 'Not valid LHAPDF version'
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
         logger.info('%s successfully donloaded and stored in %s' \
                 % (filename, pdfsets_dir))
@@ -1644,6 +1657,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         place as pdfsets_dir, and return a list of dictionaries with the information
         about each pdf set"""
         lhapdf_version = self.get_lhapdf_version()
+
         if lhapdf_version.startswith('5.'):
             pdfsets_lines = \
                     [l for l in open(pdfsets_dir + '.index').read().split('\n') if l.strip()]
@@ -1654,16 +1668,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                           'pdflib_nset': int(l.split()[3]),
                           'filename': l.split()[4],
                           'lhapdf_nmem': int(l.split()[5]),
-                          'Q2min': float(l.split()[6]),
-                          'Q2max': float(l.split()[7]),
+                          'q2min': float(l.split()[6]),
+                          'q2max': float(l.split()[7]),
                           'xmin': float(l.split()[8]),
                           'xmax': float(l.split()[9]),
                           'description': l.split()[10]} \
                          for l in pdfsets_lines]
+
         elif lhapdf_version.startswith('6.'):
-            raise 'Not implemented'
+            pdfsets_lines = \
+                    [l for l in open(pjoin(pdfsets_dir, 'pdfsets.index')).read().split('\n') if l.strip()]
+            lhapdf_pdfsets_list = \
+                        [{'lhaid': int(l.split()[0]),
+                          'filename': l.split()[1]} \
+                         for l in pdfsets_lines]
+
         else:
-            raise 'Not valid LHAPDF version'
+            raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
         return lhapdf_pdfsets_list
 
