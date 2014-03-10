@@ -2949,6 +2949,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         devnull = os.open(os.devnull, os.O_RDWR)
         # Convert the poscript in jpg files (if authorize)
         if makejpg:
+            try:
+                os.remove(pjoin(self.dir_path,'HTML','card.jpg'))
+            except Exception, error:
+                pass
             logger.info("Generate jpeg diagrams")
             for Pdir in P_dir_list:
                 misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
@@ -2958,7 +2962,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Create the WebPage using perl script
 
         misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')], \
-                                                                stdout = devnull)
+                                      stdout = devnull,cwd=pjoin(self.dir_path))
 
         #os.chdir(os.path.pardir)
 
@@ -4940,14 +4944,15 @@ class UFO_model_to_mg4(object):
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
+          double complex condif
           double complex reglog
           double complex arg""")
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
+          %(complex_mp_format)s mp_condif
           %(complex_mp_format)s mp_reglog
           %(complex_mp_format)s mp_arg"""\
           %{'complex_mp_format':self.mp_complex_format})
-	# HSS
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
@@ -4963,6 +4968,17 @@ class UFO_model_to_mg4(object):
              cond=truecase
           else
              cond=falsecase
+          endif
+          end
+          
+          double complex function condif(condition,truecase,falsecase)
+          implicit none
+          logical condition
+          double complex truecase,falsecase
+          if(condition) then
+             condif=truecase
+          else
+             condif=falsecase
           endif
           end
           
@@ -4997,6 +5013,17 @@ class UFO_model_to_mg4(object):
                  mp_cond=truecase
               else
                  mp_cond=falsecase
+              endif
+              end
+              
+              %(complex_mp_format)s function mp_condif(condition,truecase,falsecase)
+              implicit none
+              logical condition
+              %(complex_mp_format)s truecase,falsecase
+              if(condition) then
+                 mp_condif=truecase
+              else
+                 mp_condif=falsecase
               endif
               end
               

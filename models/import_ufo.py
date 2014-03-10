@@ -554,14 +554,15 @@ class UFOMG5Converter(object):
                                                      'eps')),loop_particles)
 
 
-    def find_color_anti_color_rep(self):
+    def find_color_anti_color_rep(self, output=None):
         """find which color are in the 3/3bar states"""
         # method look at the 3 3bar 8 configuration.
         # If the color is T(3,2,1) and the interaction F1 F2 V
         # Then set F1 to anticolor (and F2 to color)
         # if this is T(3,1,2) set the opposite
-        output = {}
-        
+        if not output:
+            output = {}
+             
         for interaction_info in self.ufomodel.all_vertices:
             if len(interaction_info.particles) != 3:
                 continue
@@ -570,7 +571,22 @@ class UFOMG5Converter(object):
                 if 'T(3,2,1)' in interaction_info.color:
                     color, anticolor, other = interaction_info.particles
                 elif 'T(3,1,2)' in interaction_info.color:
-                    anticolor, color, other = interaction_info.particles
+                    anticolor, color, _ = interaction_info.particles
+                elif 'Identity(1,2)' in interaction_info.color  or \
+                     'Identity(2,1)' in interaction_info.color:
+                    first, second, _ = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue
             elif colors[1:] == [3,3]:
@@ -578,6 +594,21 @@ class UFOMG5Converter(object):
                     other, anticolor, color = interaction_info.particles
                 elif 'T(1,3,2)' in interaction_info.color:
                     other, color, anticolor = interaction_info.particles
+                elif 'Identity(2,3)' in interaction_info.color  or \
+                     'Identity(3,2)' in interaction_info.color:
+                    _, first, second = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue                  
                
@@ -586,6 +617,21 @@ class UFOMG5Converter(object):
                     color, other, anticolor = interaction_info.particles
                 elif 'T(2,1,3)' in interaction_info.color:
                     anticolor, other, color = interaction_info.particles
+                elif 'Identity(1,3)' in interaction_info.color  or \
+                     'Identity(3,1)' in interaction_info.color:
+                    first, _, second = interaction_info.particles
+                    if first.pdg_code in output:
+                        if output[first.pdg_code] == 3:
+                            color, anticolor = first, second
+                        else:
+                            color, anticolor = second, first
+                    elif second.pdg_code in output:
+                        if output[second.pdg_code] == 3:
+                            color, anticolor = second, first                        
+                        else:
+                            color, anticolor = first, second
+                    else:
+                        continue
                 else:
                     continue                 
             else:
@@ -829,12 +875,23 @@ class UFOMG5Converter(object):
                     factor *= 2
                 elif particle.color in [-3,3]:
                     if particle.pdg_code not in color_info:
-                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
-                        color_info[particle.pdg_code] = particle.color
+                        #try to find it one more time 3 -3 1 might help
+                        logger.debug('fail to find 3/3bar representation: Retry to find it')
+                        color_info = self.find_color_anti_color_rep(color_info)
+                        if particle.pdg_code not in color_info:
+                            logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle.name)
+                            color_info[particle.pdg_code] = particle.color
+                        else:
+                            logger.debug('succeed')
                     if particle2.pdg_code not in color_info:
-                        logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
-                        color_info[particle2.pdg_code] = particle2.color                    
-                
+                        #try to find it one more time 3 -3 1 might help
+                        logger.debug('fail to find 3/3bar representation: Retry to find it')
+                        color_info = self.find_color_anti_color_rep(color_info)
+                        if particle2.pdg_code not in color_info:
+                            logger.debug('Not able to find the 3/3bar rep from the interactions for particle %s' % particle2.name)
+                            color_info[particle2.pdg_code] = particle2.color                    
+                        else:
+                            logger.debug('succeed')
                 
                     if color_info[particle.pdg_code] == 3 :
                         output.append(self._pat_id.sub('color.T(\g<second>,\g<first>)', term))

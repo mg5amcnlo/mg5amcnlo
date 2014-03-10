@@ -60,9 +60,9 @@ c
      &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
         call mbook(l+12,'delta y          '
      &       //cc(i)//weights_info(kk),0.2d0,-4.d0,4.d0)
-        call mbook(l+13,'tt azimt         '
+        call mbook(l+13,'tt azimt 1       '
      &       //cc(i)//weights_info(kk),pi/60.d0,2*pi/3,pi)
-        call mbook(l+14,'tt del R         '
+        call mbook(l+14,'tt del R 1       '
      &       //cc(i)//weights_info(kk),pi/60.d0,2*pi/3,4*pi/3)
         call mbook(l+15,'y_tb             '
      &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
@@ -70,11 +70,11 @@ c
      &       //cc(i)//weights_info(kk),0.1d0,-4.d0,4.d0)
         call mbook(l+17,'tt log[pi-azimt] '
      &       //cc(i)//weights_info(kk),0.05d0,-4.d0,0.1d0)
-        call mbook(l+18,'tt pt            '
+        call mbook(l+18,'tt pt 1          '
      &       //cc(i)//weights_info(kk),20.d0,80.d0,2000.d0)
-        call mbook(l+19,'tb pt            '
+        call mbook(l+19,'tb pt 1          '
      &       //cc(i)//weights_info(kk),20.d0,400.d0,2400.d0)
-        call mbook(l+20,'t pt             '
+        call mbook(l+20,'t pt 1           '
      &       //cc(i)//weights_info(kk),20.d0,400.d0,2400.d0)
       enddo
       enddo

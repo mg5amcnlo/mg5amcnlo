@@ -458,7 +458,7 @@ c
       do i=nincoming+1,nexternal-1
       do j=nincoming+1,nexternal-1
          if(j.lt.i)then
-            s_min(i,j) = s_min(j,i)
+            s_min(i,j) = max(s_min(j,i),s_min(i,j))
          else
             smin=0.0d0**2
 

@@ -5282,7 +5282,7 @@ This implies that with decay chains:
                                    ' and QCD corrections in the unitary gauge.')
 
             #re-init all variable
-            model_name = self._curr_model.get('version_tag').split('##')[0]
+            model_name = self._curr_model.get('modelpath+restriction')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
