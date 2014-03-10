@@ -115,7 +115,7 @@
  -1  = ptlmax    ! maximum pt for the charged leptons
  -1  = missetmax ! maximum missing Et (sum of neutrino's momenta)
 #*********************************************************************
-# Minimum and maximum E's (in the lab frame)                         *
+# Minimum and maximum E's (in the center of mass frame)              *
 #*********************************************************************
   0  = ej     ! minimum E for the jets 
   0  = eb     ! minimum E for the b 
