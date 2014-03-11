@@ -117,7 +117,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       common /c_leshouche_inc/idup,mothup,icolup
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision wgts(max_weight),wgtden
+      double precision wgts(max_weight),wgtden,ratio
 c Born, n-body or (n+1)-body contribution:
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
@@ -156,18 +156,28 @@ c Fill the arrays (momenta, status and PDG):
 c The weights comming from reweighting:
       nwgt=1
       wgts(1)=www
+      if (wgtden.eq.0d0) then
+         if (www.eq.0d0) then
+            ratio=0d0
+         else
+            write (*,*) 'ERROR in madfks_plot.f', wgtden,www
+         endif
+      else
+c this ratio should essentially be the weight from vegas
+         ratio=www/wgtden
+      endif
       if (do_rwgt_scale) then
          do i=1,numscales
             do j=1,numscales
                nwgt=nwgt+1
-               wgts(nwgt)=wgtNLOxsecmu(ibody,i,j)*www/wgtden
+               wgts(nwgt)=wgtNLOxsecmu(ibody,i,j)*ratio
             enddo
          enddo
       endif
       if (do_rwgt_pdf) then
          do i=1,numPDFs
             nwgt=nwgt+1
-            wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*www/wgtden
+            wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*ratio
          enddo
       endif
       call analysis_fill(p,istatus,ipdg,wgts,ibody)
