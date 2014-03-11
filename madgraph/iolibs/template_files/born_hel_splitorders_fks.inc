@@ -1,10 +1,40 @@
-      SUBROUTINE SB_SF_%(iborn)3.3d(P1,ANS)
+      SUBROUTINE SBORN%(proc_prefix)s_HEL(P,ANS_SUMMED)
+C
+C     Simple routine wrapper to provide the same interface for
+C     backward compatibility for usage without split orders.
+C
+C  
+C CONSTANTS
+C 
+implicit none
+      include 'nexternal.inc'
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+C  
+C ARGUMENTS 
+C 
+      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+C
+C VARIABLES
+C
+      INTEGER I
+	  REAL*8 ANS(0:NSQAMPSO)
+C
+C BEGIN CODE
+C
+	  CALL SBORN%(proc_prefix)s_HEL_SPLITORDERS(P,ANS)
+	  ANS_SUMMED=ANS(0)
+
+END
+
+
+    SUBROUTINE SBORN%(proc_prefix)s_HEL_SPLITORDERS(P1,ANS)
 C  
 %(info_lines)s
 C
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C AND HELICITIES
-C FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
+C FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C  
 %(process_lines)s
 C
@@ -13,8 +43,11 @@ C
 C CONSTANTS
 C  
       Include "nexternal.inc"
+      include "born_nhel.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
+      INTEGER NSQAMPSO
+      PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER    THEL
       PARAMETER (THEL=NCOMB*%(nconfs)d)
       INTEGER NGRAPHS
@@ -22,12 +55,12 @@ C
 C  
 C ARGUMENTS 
 C  
-      REAL*8 P1(0:3,NEXTERNAL-1),ANS
+      REAL*8 P1(0:3,NEXTERNAL-1),ANS(0:NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,j
-      REAL*8 B_SF_%(iborn)3.3d
+      INTEGER IHEL,IDEN,i,j
+      double precision T(NSQAMPSO)
 %(den_factor_lines)s
 C  
 C GLOBAL VARIABLES
@@ -40,6 +73,8 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      double precision wgt_hel(NSQAMPSO, max_bhel)
+      common/c_born_hel/wgt_hel
 C ----------
 C BEGIN CODE
 C ----------
@@ -48,25 +83,34 @@ C ----------
          do j=1,nexternal-1
             if (savemom(j,1).ne.p1(0,j) .or. savemom(j,2).ne.p1(3,j)) then
                calculatedBorn=.false.
-               write(*,*) 'Error in sb_sf: momenta not the same in the born'
+               write(*,*) 'Error in sborn_hel_splitorders: momenta not the same in the born'
                stop
             endif
          enddo
       else
-         write(*,*) 'Error in sb_sf: color_linked borns should be called only with calculatedborn = true'
+         write(*,*) 'Error in sborn_hel_splitorders: this should be called only with calculatedborn = true'
          stop
       endif
-      ANS = 0D0
+      DO I=0,NSQAMPSO
+          ANS(I) = 0D0
+      ENDDO
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           ANS=ANS+B_SF_%(iborn)3.3d(P1,IHEL)
+           CALL BORN%(proc_prefix)s_HEL_SPLITORDERS(P1,IHEL,T)
+           DO I=1,NSQAMPSO
+             wgt_hel(i, ihel) = T(I) / DBLE(IDEN)
+             ANS(I)=ANS(I)+T(I)
+           ENDDO
          ENDIF
       ENDDO
-      ANS=ANS/DBLE(IDEN)
+      DO I=1,NSQAMPSO
+        ANS(I)=ANS(I)/DBLE(IDEN)
+        ANS(0)=ANS(0)+ANS(I)
+      ENDDO
       END
        
        
-      REAL*8 FUNCTION B_SF_%(iborn)3.3d(P,HELL)
+      SUBROUTINE BORN%(proc_prefix)s_HEL_SPLITORDERS(P,HELL,ANS)
 C  
 %(info_lines)s
 C RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
@@ -78,10 +122,12 @@ C
 C  
 C CONSTANTS
 C  
+      INTEGER NAMPSO, NSQAMPSO
+      PARAMETER (NAMPSO=%(nAmpSplitOrders)d, NSQAMPSO=%(nSqAmpSplitOrders)d)
       INTEGER     NGRAPHS
       PARAMETER ( NGRAPHS = %(ngraphs)d ) 
-      INTEGER NCOLOR1, NCOLOR2
-      PARAMETER (NCOLOR1=%(ncolor1)d, NCOLOR2=%(ncolor2)d) 
+      INTEGER NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d) 
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       complex*16 imag1
@@ -93,12 +139,13 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL-1)
       INTEGER HELL
+      REAL*8 ANS(NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER I,J
-      REAL*8 DENOM(NCOLOR1), CF(NCOLOR2,NCOLOR1)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP1(NCOLOR1), JAMP2(NCOLOR2)
+      INTEGER I,J,M,N
+      REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO)
 C  
 C GLOBAL VARIABLES
 C  
@@ -106,6 +153,10 @@ C
       common/to_saveamp/saveamp
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+C
+C FUNCTION
+C
+      INTEGER SQSOINDEXB%(proc_prefix)s
 C  
 C COLOR DATA
 C  
@@ -121,16 +172,21 @@ C ----------
          amp(i)=saveamp(i,hell)
       enddo
       endif
-  %(jamp1_lines)s
-  %(jamp2_lines)s
-      B_SF_%(iborn)3.3d = 0.D0 
-      DO I = 1, NCOLOR1
+%(jamp_lines)s
+    DO I = 1, NSQAMPSO
+    ANS(I) = 0d0
+    ENDDO
+    DO M = 1, NAMPSO
+      DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
-          DO J = 1, NCOLOR2
-              ZTEMP = ZTEMP + CF(j,i)*JAMP2(J)
+          DO J = 1, NCOLOR
+              ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
-          B_SF_%(iborn)3.3d =B_SF_%(iborn)3.3d+ZTEMP*DCONJG(JAMP1(I))/DENOM(I)   
+	  DO N = 1, NAMPSO
+              ANS(SQSOINDEXB%(proc_prefix)s(M,N))=ANS(SQSOINDEXB%(proc_prefix)s(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+          ENDDO
       ENDDO
-      END
+    ENDDO
+    END
        
        

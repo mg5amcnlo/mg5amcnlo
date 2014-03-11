@@ -1415,6 +1415,9 @@ C if = -1, then it is not in the split_orders
         if proc_type=='born':
             file = open(pjoin(_file_path, \
             'iolibs/template_files/bornmatrix_splitorders_fks.inc')).read()
+        elif proc_type=='bhel':
+            file = open(pjoin(_file_path, \
+            'iolibs/template_files/born_hel_splitorders_fks.inc')).read()
         elif proc_type=='real':
             file = open(pjoin(_file_path, \
             'iolibs/template_files/realmatrix_splitorders_fks.inc')).read()
@@ -1492,6 +1495,14 @@ C if = -1, then it is not in the split_orders
             calls_born, ncolor_born, norders, nsqorders = \
                 self.write_split_me_fks(writers.FortranWriter(filename),
                                         me, fortran_model, 'born', "%d" % (i+1),
+                                        start_dict = born_dict)
+
+            # the second call is for the born_hel file. use the same writer
+            # function
+            filename = 'born_%d_hel.f' % (i + 1)
+            calls_born, ncolor_born, norders, nsqorders = \
+                self.write_split_me_fks(writers.FortranWriter(filename),
+                                        me, fortran_model, 'bhel', "%d" % (i+1),
                                         start_dict = born_dict)
 
             sqsorders_list.append(nsqorders)

@@ -38,7 +38,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 
 # Files needed for vegas, mint & mintMC
 RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\
-	madfks_plot.o fill_MC_mshell.o born_hel.o open_output_files.o reweight.o  initcluster.o cluster.o 
+	madfks_plot.o fill_MC_mshell.o open_output_files.o reweight.o  initcluster.o cluster.o 
 
 # Files for vegas
 VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
@@ -55,7 +55,7 @@ BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
 	write_event.o
 
 # Files for check_poles
-POLES= $(FILES) cuts.o check_poles.o BinothLHA.o born_hel.o
+POLES= $(FILES) cuts.o check_poles.o BinothLHA.o
 
 # Files for tests
 TEST= $(FILES) BinothLHADummy.o cuts.o
