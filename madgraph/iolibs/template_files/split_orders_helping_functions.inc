@@ -1,7 +1,7 @@
 C Set of functions to handle the array indices of the split orders
 
 
-      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX(ORDERINDEXA, ORDERINDEXB)
+      INTEGER FUNCTION %(proc_prefix)sSQSOINDEX%(proc_id)s(ORDERINDEXA, ORDERINDEXB)
 C
 C This functions plays the role of the interference matrix. It can be hardcoded or 
 C made more elegant using hashtables if its execution speed ever becomes a relevant
@@ -26,17 +26,17 @@ C
 C
 C FUNCTION
 C
-      INTEGER %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS
+      INTEGER %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s
 C
 C BEGIN CODE
 C
       DO I=1,NSO
 	    SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERINDEXB,I)
 	  ENDDO
-	  %(proc_prefix)sSQSOINDEX=%(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
+	  %(proc_prefix)sSQSOINDEX%(proc_id)s=%(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s(SQORDERS)
 	  END
 
-      INTEGER FUNCTION %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS(ORDERS)
+      INTEGER FUNCTION %(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s(ORDERS)
 C
 C This functions returns the integer index identifying the squared split orders list 
 C passed in argument.
@@ -62,7 +62,7 @@ C
 	    DO J=1,NSO
 		  IF (ORDERS(J).NE.SQSPLITORDERS(I,J)) GOTO 1009
 		ENDDO
-		%(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS = I
+		%(proc_prefix)sSOINDEX_FOR_SQUARED_ORDERS%(proc_id)s = I
 		RETURN
 1009    CONTINUE
 	  ENDDO
@@ -73,7 +73,7 @@ C
 
       END
 
-      SUBROUTINE %(proc_prefix)sGET_NSQSO_BORN(NSQSO)
+      SUBROUTINE %(proc_prefix)sGET_NSQSO_BORN%(proc_id)s(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order
 C     contributions returned when calling smatrix_split_orders 

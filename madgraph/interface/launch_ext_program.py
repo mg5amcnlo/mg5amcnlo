@@ -281,7 +281,14 @@ class MadLoopLauncher(ExtLauncher):
         
         str_lines=[]
         
-        if res['export_format']=='Default':
+        notZeroBorn=True
+        if len([1 for k in res['Born_kept'] if k])==0:
+            notZeroBorn = False
+            str_lines.append(
+("|  /!\\ There is no Born contribution for the squared orders specified in "+
+                                  "the process definition/!\\",'$MG:color:RED'))
+        
+        if res['export_format']=='Default' and notZeroBorn:
             str_lines.extend(['\n',ASCII_bar,
   ('|| Results for process %s'%shell_name,main_color),
   ASCII_bar]+PS_point_spec+StabilityOutput+[
@@ -292,7 +299,7 @@ class MadLoopLauncher(ExtLauncher):
   ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
   ('|    Single pole = %s'%special_float_format(res['1eps']),main_color),
   ('|    Double pole = %s'%special_float_format(res['2eps']),main_color)])
-        elif res['export_format']=='LoopInduced':
+        elif res['export_format']=='LoopInduced' and notZeroBorn:
             str_lines.extend(['\n',ASCII_bar,
   ('|| Results for process %s (Loop-induced)'%shell_name,main_color),
   ASCII_bar]+PS_point_spec+StabilityOutput+[
@@ -304,10 +311,15 @@ class MadLoopLauncher(ExtLauncher):
   '|(    Double pole = %s )'%special_float_format(res['2eps'])])
 
         if (len(res['Born_SO_Results'])+len(res['Born_SO_Results']))>0:
-            str_lines.append(
-      ("|  (*) The results above sum all starred contributions below",main_color)) 
-           
+            if notZeroBorn:
+                str_lines.append(
+    ("|  (*) The results above sum all starred contributions below",main_color))
+
         str_lines.append('|')
+        if not notZeroBorn:
+            str_lines.append(
+("|  The Born contributions below are computed but do not match these squared "+
+                                               "orders constraints",main_color))
 
         if len(res['Born_SO_Results'])==1:
             str_lines.append('|| All Born contributions are of split orders *(%s)'\
@@ -326,6 +338,10 @@ class MadLoopLauncher(ExtLauncher):
             str_lines.append('|| All virtual contributions are of split orders *(%s)'\
                                 %format_so_orders(res['Loop_SO_Results'][0][0]))
         elif len(res['Loop_SO_Results'])>1:
+            if not notZeroBorn:
+                str_lines.append(
+    ("|  The coupling order combinations matching the squared order"+
+                              " constraints are marked with a star",main_color))
             for i, lso_contrib in enumerate(res['Loop_SO_Results']):
                 str_lines.append('|| Virtual contribution of split orders %s(%s):'\
                                         %('*' if res['Loop_kept'][i] else ' ',

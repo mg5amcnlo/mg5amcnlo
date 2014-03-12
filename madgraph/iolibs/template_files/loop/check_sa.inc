@@ -257,7 +257,9 @@ C
         endif
       endif
       write (*,*) "---------------------------------"
-      IF (NBORNCHOSEN.ne.NSQSO_BORN) THEN
+	  IF (NBORNCHOSEN.EQ.0) THEN
+        write (*,*) "No Born contribution satisfied the squared order constraints."
+      ELSE IF (NBORNCHOSEN.ne.NSQSO_BORN) THEN
         write (*,*) "Selected squared coupling orders combination for the Born summed result below:"
         write (*,*) (chosen_born_so_indices(I),I=1,NBORNCHOSEN)
       endif

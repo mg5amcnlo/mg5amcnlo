@@ -2038,8 +2038,8 @@ DO I=0,NSQSO_BORN
 ENDDO
 """%self.general_replace_dict
             replace_dict['set_reference']='\n'.join(
-              ['C We set here the reference to the born summed over all split orders and helicities',
-              'call %(proc_prefix)ssmatrix(P_USER,ref)'%self.general_replace_dict])
+              ['C We set here the reference to the born summed over all split orders',
+              'REF=0.0d0','DO I=1,NSQSO_BORN','REF=REF+ANS(0,I)','ENDDO'])
             replace_dict['nctamps_or_nloopamps']='nctamps'
             replace_dict['nbornamps_or_nloopamps']='nbornamps'
             replace_dict['squaring']='\n'.join([
