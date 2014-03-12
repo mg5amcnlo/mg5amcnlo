@@ -3628,7 +3628,12 @@ This implies that with decay chains:
                 required_schannel_ids = [required_schannel_ids]
             
             sqorders_values = dict([(k,v[0]) for k, v in squared_orders.items()])
+            if len([1 for sqo_v in sqorders_values.values() if sqo_v<0])>1:
+                raise self.InvalidCmd(
+                  "At most one negative squared order constraint can be specified.")
+            
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
+            
             return \
                 base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
