@@ -2013,7 +2013,7 @@ Integrated cross-section
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
                      "(?P<time>[\d\+-Eed\.]*)\s*")
 
-        for logf in all_log_files:
+        for logf in log_GV_files:
             logfile=open(logf,'r')
             log = logfile.read()
             logfile.close()
