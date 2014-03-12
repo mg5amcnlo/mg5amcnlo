@@ -64,7 +64,7 @@ c general MadFKS parameters
       external ran2
       double precision wgt_hel(max_bhel)
       common/c_born_hel/wgt_hel
-      integer nsqso
+      integer nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -93,9 +93,10 @@ c Ellis-Sexton scale)
       prec_found = 1.0d0
       if (firsttime_run) then
          call get_nsqso_loop(nsqso)
+         call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))
-         allocate(virt_wgts(0:3,0:nsqso))
-         allocate(virt_wgts_hel(0:3,0:nsqso))
+         allocate(virt_wgts(0:3,0:MLResArrayDim))
+         allocate(virt_wgts_hel(0:3,0:MLResArrayDim))
 c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.

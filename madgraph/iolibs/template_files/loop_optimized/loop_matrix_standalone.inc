@@ -49,8 +49,11 @@ C
       %(complex_dp_format)s IMAG1
       PARAMETER (IMAG1=(0D0,1D0))
 C     These are constants related to the split orders
+      %(get_nsqso_born)s
       INTEGER    NSO, NSQUAREDSO, NAMPSO
 	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
+	  INTEGER ANS_DIMENSION
+	  PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
 	  INTEGER NSQSOXNLG
 	  PARAMETER (NSQSOXNLG=NSQUAREDSO*NLOOPGROUPS)
 	  INTEGER NSQUAREDSOP1
@@ -75,9 +78,18 @@ C ARGUMENTS
 C  
       %(real_dp_format)s P_USER(0:3,NEXTERNAL)
 C
-C The zeroth component is the result summed over all contributing split orders
+C The zeroth component of the second dimension is the result summed over all
+c contributing split orders. The zeroth component of the first one is the Born.
+C Notice that the upper bound of the second integer is not number of squared orders
+c combination for the loops but the maximum between this number for the Born
+c contributions and the loop ones. There are some cases for which the Born contrib.
+c has squared split order contributions than the loop does. For example
+c
+c generate u u~ > d d~ QCD^2<=2 QED^2<=99 [virt=QCD]
+c
+c It is however somehow academical. This is why ANS_DIMENSION is not just NSQSO but rather MAX(NSQSO,NSQSO_BORN)
 C
-      %(real_dp_format)s ANS(0:3,0:NSQUAREDSO)
+	  %(real_dp_format)s ANS(0:3,0:ANS_DIMENSION)
 C  
 C LOCAL VARIABLES 
 C  
@@ -122,6 +134,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  %(real_dp_format)s HELSAVED(3,NCOMB)
 	  INTEGER ITEMP
 	  LOGICAL LTEMP
+	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN)
 	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO),TEMP2
 	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
@@ -160,6 +173,10 @@ C
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
+
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+	  DATA CHOSEN_SO_CONFIGS/%(chosen_so_configs)s/
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 
 	  LOGICAL CHECKPHASE
 	  DATA CHECKPHASE/.TRUE./
@@ -1059,6 +1076,21 @@ IF(CHECKPHASE.OR..NOT.HELDOUBLECHECKED) THEN
   ENDDO
 ENDIF
 
+C Finally for the summed result in ANS(1:3,0), make sure to only
+c consider the squared order asked for by the user.
+C Notice that this filtering using CHOSEN_SO_CONFIGS happens
+C here only while everywhere else one always considers the sum.
+DO J=1,3
+  ANS(J,0)=0.0d0
+ENDDO	
+DO I=1,NSQUAREDSO
+  IF (CHOSEN_SO_CONFIGS(I)) THEN
+    DO J=1,3
+	  ANS(J,0)=ANS(J,0)+ANS(J,I)
+    ENDDO
+  ENDIF
+ENDDO
+
 C Reinitialize the default threshold if it was specified by the user
 IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES=MLSTABTHRES_BU
@@ -1322,6 +1354,22 @@ C
 	  INTEGER NSQSO
 
 	  NSQSO=NSQUAREDSO
+
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_ANSWER_DIMENSION(ANS_DIM)
+C
+C     MadLoop subroutines return an array of dimension ANS(0:3,0:ANS_DIM)
+C     In order for the user program to be able to correctly declare this
+c     array when calling MadLoop, this subroutine returns its dimension
+C
+      INTEGER    NSQUAREDSO
+	  PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+	  INTEGER ANS_DIM 
+
+	  %(get_nsqso_born)s 
+
+	  ANS_DIM=MAX(NSQSO_BORN,NSQUAREDSO)
 
       END
 

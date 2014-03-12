@@ -2223,6 +2223,19 @@ class DiagramList(PhysicsObjectList):
 
         return min_order
 
+    def get_order_values(self, order):
+        """ Return the list of possible values appearing in the diagrams of this
+        list for the order given in argument """
+
+        values=set([])
+        for diag in self:
+            if order in diag['orders'].keys():
+                values.add(diag['orders'][order])
+            else:
+                values.add(0)  
+
+        return list(values)
+
 #===============================================================================
 # Process
 #===============================================================================

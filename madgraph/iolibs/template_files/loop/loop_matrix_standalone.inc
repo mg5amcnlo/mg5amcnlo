@@ -925,6 +925,20 @@ C
 
 	  END
 
+      SUBROUTINE %(proc_prefix)sGET_ANSWER_DIMENSION(ANSDIM)
+C
+C     Simple subroutine which returns the upper bound of the second dimension of the
+C     quantity ANS(0:3,0:ANSDIM) returned by MadLoop. As long as the default output
+c     cannot handle split orders, this ANSDIM will always be 0.
+C
+	  INCLUDE "nsquaredSO.inc"
+
+	  INTEGER ANSDIM
+
+	  ANSDIM=NSQUAREDSO
+
+      END
+
       SUBROUTINE %(proc_prefix)sGET_NSQSO_LOOP(NSQSO)
 C
 C     Simple subroutine returning the number of squared split order

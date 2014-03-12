@@ -286,9 +286,9 @@ class MadLoopLauncher(ExtLauncher):
   ('|| Results for process %s'%shell_name,main_color),
   ASCII_bar]+PS_point_spec+StabilityOutput+[
   '|',
-  ('|| Total Born contribution (GeV^%d):'%res['gev_pow'],main_color),
+  ('|| Total(*) Born contribution (GeV^%d):'%res['gev_pow'],main_color),
   ('|    Born        = %s'%special_float_format(res['born']),main_color),
-  ('|| Total virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
+  ('|| Total(*) virtual contribution normalized with born*alpha_S/(2*pi):',main_color),
   ('|    Finite      = %s'%special_float_format(res['finite']),main_color),
   ('|    Single pole = %s'%special_float_format(res['1eps']),main_color),
   ('|    Double pole = %s'%special_float_format(res['2eps']),main_color)])
@@ -302,28 +302,34 @@ class MadLoopLauncher(ExtLauncher):
   '|(| Pole residues, indicated only for checking purposes: )',
   '|(    Single pole = %s )'%special_float_format(res['1eps']),
   '|(    Double pole = %s )'%special_float_format(res['2eps'])])
-            
+
+        if (len(res['Born_SO_Results'])+len(res['Born_SO_Results']))>0:
+            str_lines.append(
+      ("|  (*) The results above sum all starred contributions below",main_color)) 
+           
         str_lines.append('|')
-        
+
         if len(res['Born_SO_Results'])==1:
-            str_lines.append('|| All Born contributions are of split orders (%s)'\
+            str_lines.append('|| All Born contributions are of split orders *(%s)'\
                                 %format_so_orders(res['Born_SO_Results'][0][0]))
         elif len(res['Born_SO_Results'])>1:
-            for bso_contrib in res['Born_SO_Results']:
-                str_lines.append('|| Born contribution of split orders (%s) = %s'\
-                                             %(format_so_orders(bso_contrib[0]),
+            for i, bso_contrib in enumerate(res['Born_SO_Results']):
+                str_lines.append('|| Born contribution of split orders %s(%s) = %s'\
+                                           %('*' if res['Born_kept'][i] else ' ',
+                                               format_so_orders(bso_contrib[0]),
                                   special_float_format(bso_contrib[1]['BORN'])))
         
         if len(so_order_names):
             str_lines.append('|')
 
         if len(res['Loop_SO_Results'])==1:
-            str_lines.append('|| All virtual contributions are of split orders (%s)'\
+            str_lines.append('|| All virtual contributions are of split orders *(%s)'\
                                 %format_so_orders(res['Loop_SO_Results'][0][0]))
         elif len(res['Loop_SO_Results'])>1:
-            for lso_contrib in res['Loop_SO_Results']:
-                str_lines.append('|| Virtual contribution of split orders (%s):'\
-                                              %format_so_orders(lso_contrib[0]))
+            for i, lso_contrib in enumerate(res['Loop_SO_Results']):
+                str_lines.append('|| Virtual contribution of split orders %s(%s):'\
+                                        %('*' if res['Loop_kept'][i] else ' ',
+                                              format_so_orders(lso_contrib[0])))
                 str_lines.append('|    Accuracy    =  %.1e'%\
                                                          lso_contrib[1]['ACC']),
                 str_lines.append('|    Finite      = %s'%\

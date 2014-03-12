@@ -488,6 +488,32 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                      ",".join([str(i) for \
                                                                i in int_list]))
 
+    def set_chosen_SO_index(self, process, squared_orders):
+        """ From the squared order constraints set by the user, this function
+        finds what indices of the squared_orders list the user intends to pick.
+        It returns this as a string of comma-separated successive '.true.' or 
+        '.false.' for each index."""
+        
+        user_squared_orders = process.get('squared_orders')
+        split_orders = process.get('split_orders')
+        
+        if len(user_squared_orders)==0:
+            return ','.join(['.true.']*len(squared_orders))
+        
+        res = []
+        for sqsos in squared_orders:
+            is_a_match = True
+            for user_sqso, value in user_squared_orders.items():
+                if (process.get_squared_order_type(user_sqso) =='==' and \
+                        value!=sqsos[split_orders.index(user_sqso)]) or \
+                   (process.get_squared_order_type(user_sqso) in ['<=','='] and \
+                                    value<sqsos[split_orders.index(user_sqso)]):
+                    is_a_match = False
+                    break
+            res.append('.true.' if is_a_match else '.false.')
+            
+        return ','.join(res)
+
     def get_split_orders_lines(self, orders, array_name, n=5):
         """ Return the split orders definition as defined in the list orders and
         for the name of the array 'array_name'. Split rows in chunks of size n."""
@@ -741,13 +767,10 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     raise MadGraph5Error, error_msg%'split_order_amps'
                 # Check the first element of the two lists to make sure they are
                 # integers, although in principle they should all be integers.
-                if not isinstance(elem[0],tuple):
-                    raise MadGraph5Error, error_msg%'split_order_amps'
-                if not isinstance(elem[1],tuple):
-                    raise MadGraph5Error, error_msg%'split_order_amps'
-                if not isinstance(elem[0][0],int):
-                    raise MadGraph5Error, error_msg%'split_order_amps'
-                if not isinstance(elem[1][0],int):
+                if not isinstance(elem[0],tuple) or \
+                   not isinstance(elem[1],tuple) or \
+                   not isinstance(elem[0][0],int) or \
+                   not isinstance(elem[1][0],int):
                     raise MadGraph5Error, error_msg%'split_order_amps'
         else:
             raise MadGraph5Error, error_msg%'split_order_amps'
@@ -1561,14 +1584,23 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # For MadSpin need to return the AMP2
             amp2_lines = self.get_amp2_lines(matrix_element, [] )
             replace_dict['amp2_lines'] = '\n'.join(amp2_lines)
-            replace_dict['global_variable'] = "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
+            replace_dict['global_variable'] = \
+         "       Double Precision amp2(NGRAPHS)\n       common/to_amps/  amp2\n"
 
         # JAMP definition, depends on the number of independent split orders
         split_orders=matrix_element.get('processes')[0].get('split_orders')
+                
         if len(split_orders)==0:
             replace_dict['nSplitOrders']=''
             # Extract JAMP lines
             jamp_lines = self.get_JAMP_lines(matrix_element)
+            # Consider the output of a dummy order 'ALL_ORDERS' for which we
+            # set all amplitude order to weight 1 and only one squared order
+            # contribution which is of course ALL_ORDERS=2.
+            squared_orders = [(2,),]
+            amp_orders = [((1,),tuple(range(1,ngraphs+1)))]
+            replace_dict['chosen_so_configs'] = '.TRUE.'
+            replace_dict['nSqAmpSplitOrders']=1
         else:
             squared_orders, amp_orders = matrix_element.get_split_orders_mapping()
             replace_dict['nAmpSplitOrders']=len(amp_orders)
@@ -1581,6 +1613,11 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             replace_dict['sqsplitorders']='\n'.join(sqamp_so)           
             jamp_lines = self.get_JAMP_lines_split_order(\
                        matrix_element,amp_orders,split_order_names=split_orders)
+            
+            # Now setup the array specifying what squared split order is chosen
+            replace_dict['chosen_so_configs']=self.set_chosen_SO_index(
+                              matrix_element.get('processes')[0],squared_orders)
+            
             # For convenience we also write the driver check_sa_splitOrders.f
             # that explicitely writes out the contribution from each squared order.
             # The original driver still works and is compiled with 'make' while
@@ -1588,6 +1625,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             check_sa_writer=writers.FortranWriter('check_sa_born_splitOrders.f')
             self.write_check_sa_splitOrders(\
                                     squared_orders,split_orders,check_sa_writer)
+
+        writers.FortranWriter('nsqso_born.inc').writelines(
+"""INTEGER NSQSO_BORN
+PARAMETER (NSQSO_BORN=%d)"""%replace_dict['nSqAmpSplitOrders'])
 
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)    
         if len(split_orders)>0:
@@ -1645,12 +1686,12 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             for j, sqo in enumerate(squared_order):
                 sq_orders.append('%s=%d'%(split_orders[j],sqo))
             printout_sq_orders.append(\
-                         "write(*,*) 'Matrix element for (%s) = ',MATELEMS(%d)"\
-                                                     %(' '.join(sq_orders),i+1))
+                    "write(*,*) '%d) Matrix element for (%s) = ',MATELEMS(%d)"\
+                                                 %(i+1,' '.join(sq_orders),i+1))
         printout_sq_orders='\n'.join(printout_sq_orders)
         writer.writelines(check_sa_content%{\
                                     'printout_sqorders':printout_sq_orders, 
-                                    'nSplitOrders':len(squared_orders)+1})
+                                    'nSplitOrders':len(squared_orders)})
 
 #===============================================================================
 # ProcessExporterFortranME
@@ -2234,33 +2275,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         writer.writelines(file)
 
         return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
-
-
-    def set_chosen_SO_index(self, process, squared_orders):
-        """ From the squared order constraints set by the user, this function
-        finds what indices of the squared_orders list the user intends to pick.
-        It returns this as a string of comma-separated successive '.true.' or 
-        '.false.' for each index."""
-        
-        user_squared_orders = process.get('squared_orders')
-        split_orders = process.get('split_orders')
-        
-        if len(user_squared_orders)==0:
-            return ','.join(['.true.']*len(squared_orders))
-        
-        res = []
-        for sqsos in squared_orders:
-            is_a_match = True
-            for user_sqso, value in user_squared_orders.items():
-                if (process.get_squared_order_type(user_sqso) =='==' and \
-                        value!=sqsos[split_orders.index(user_sqso)]) or \
-                   (process.get_squared_order_type(user_sqso) in ['<=','='] and \
-                                    value<sqsos[split_orders.index(user_sqso)]):
-                    is_a_match = False
-                    break
-            res.append('.true.' if is_a_match else '.false.')
-            
-        return ','.join(res)
 
     #===========================================================================
     # write_auto_dsig_file

@@ -877,7 +877,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                     'return_code':0,
                     'Split_Orders_Names':[],
                     'Loop_SO_Results':[],
-                    'Born_SO_Results':[]
+                    'Born_SO_Results':[],
+                    'Born_kept':[],
+                    'Loop_kept':[]
                     }
         res_p = []
         
@@ -914,6 +916,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 res_dict['return_code']=int(splitline[1])
             elif splitline[0]=='Split_Orders_Names':
                 res_dict['Split_Orders_Names']=splitline[1:]
+            elif splitline[0] in ['Born_kept', 'Loop_kept']:
+                res_dict[splitline[0]] = [kept=='T' for kept in splitline[1:]]
             elif splitline[0] in ['Loop_SO_Results', 'Born_SO_Results']:
                 # The value for this key of this dictionary is a list of elements
                 # with format ([],{}) where the first list specifies the split

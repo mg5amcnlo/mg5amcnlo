@@ -644,10 +644,18 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Color matrix size
         # For loop induced processes it is NLOOPAMPSxNLOOPAMPS and otherwise
         # it is NLOOPAMPSxNBORNAMPS
+        # Also, how to access the number of Born squared order contributions
+
         if matrix_element.get('processes')[0].get('has_born'):
             dict['color_matrix_size'] = 'nbornamps'
+            dict['get_nsqso_born']=\
+                           "include 'nsqso_born.inc'"
         else:
-            dict['color_matrix_size'] = 'nloopamps'
+            dict['get_nsqso_born']="""INTEGER NSQSO_BORN
+            PARAMETER (NSQSO_BORN=0)
+            """
+            dict['color_matrix_size'] = 'nloopamps'    
+        
         # These placeholders help to have as many common templates for the
         # output of the loop induced processes and those with a born 
         # contribution.
@@ -725,11 +733,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             calls = self.write_loopmatrix(writers.FortranWriter(filename),
                                           matrix_element,
                                           LoopFortranModel)
-            
+
+            # Write out the proc_prefix in a file, this is quite handy
             proc_prefix_writer = writers.FortranWriter('proc_prefix.txt','w')
             proc_prefix_writer.write(self.general_replace_dict['proc_prefix'])
             proc_prefix_writer.close()
-            
+                        
             filename = 'check_sa.f'
             self.write_check_sa(writers.FortranWriter(filename),matrix_element)
             
@@ -763,15 +772,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         All the necessary entries in the replace_dictionary have already been 
         set in write_loopmatrix because it is only there that one has access to
         the information about split orders."""        
-        replace_dict = copy.copy(self.general_replace_dict)
-        if 'nSquaredSO' not in replace_dict.keys():
-            writers.FortranWriter('nsquaredSO.inc').writelines(
-"""INTEGER NSQUAREDSO
-PARAMETER (NSQUAREDSO=0)""")    
-        else:
-            writers.FortranWriter('nsquaredSO.inc').writelines(
-"""INTEGER NSQUAREDSO
-PARAMETER (NSQUAREDSO=%d)"""%replace_dict['nSquaredSO'])     
+        replace_dict = copy.copy(self.general_replace_dict)     
         for key in ['print_so_born_results','print_so_loop_results',
             'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
@@ -1072,7 +1073,7 @@ C                ENDIF
                          ANS(2)=ANS(2)+DBLE(CFTOT*AMPL(2,I))+DIMAG(CFTOT*AMPL(2,I))
                          ANS(3)=ANS(3)+DBLE(CFTOT*AMPL(3,I))+DIMAG(CFTOT*AMPL(3,I))                         
                        ENDIF"""      
-        else:
+        else: 
             replace_dict['compute_born']=\
 """C Compute the born, for a specific helicity if asked so.
 call %(proc_prefix)ssmatrixhel(P_USER,USERHEL,ANS(0))
@@ -1088,6 +1089,13 @@ call %(proc_prefix)ssmatrix(p,ref)"""%self.general_replace_dict
             replace_dict['squaring']='\n'.join(['DO K=1,3',
                    'ANS(K)=ANS(K)+2.0d0*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J,H)))',
                                                                        'ENDDO'])
+
+        # Write a dummy nsquaredSO.inc which is used in the default
+        # loop_matrix.f code (even though it does not support split orders evals)
+        # just to comply with the syntax expected from the external code using MadLoop.
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=0)""")
 
         # Actualize results from the loops computed. Only necessary for
         # processes with a born.
@@ -1827,8 +1835,8 @@ ENDIF"""%self.general_replace_dict
 ' aim at computing all individual contributions. You can choose otherwise.',
 'call %(proc_prefix)sSET_COUPLINGORDERS_TARGET(-1)'%self.general_replace_dict])
             self.general_replace_dict['print_so_loop_results'] = '\n'.join([
-              '\n'.join(["write(*,*) 'Loop ME for orders (%s) :'"%(' '.join(
-          ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))])),
+              '\n'.join(["write(*,*) '%dL) Loop ME for orders (%s) :'"%((j+1),(' '.join(
+          ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]))),
               "IF (PREC_FOUND(%d).NE.-1.0d0) THEN"%(j+1),
               "write(*,*) ' > accuracy = ',PREC_FOUND(%d)"%(j+1),
               "ELSE",
@@ -1866,7 +1874,7 @@ ENDIF"""%self.general_replace_dict
                                             for i in range(len(split_orders))]))
         else:
             self.general_replace_dict['print_so_born_results'] = '\n'.join([
-          "write(*,*) 'Born ME for orders (%s) = ',MATELEM(0,%d)"%(' '.join(
+          "write(*,*) '%dB) Born ME for orders (%s) = ',MATELEM(0,%d)"%(j+1,' '.join(
        ['%s=%d'%(split_orders[i],so[i]) for i in range(len(split_orders))]),j+1)
                                 for j, so in enumerate(squared_born_so_orders)])
         self.general_replace_dict['write_so_born_results'] = '\n'.join(
@@ -1903,7 +1911,7 @@ ENDIF"""%self.general_replace_dict
         squared_orders, amps_orders = matrix_element.get_split_orders_mapping()
         # Creating here a temporary list containing only the information of 
         # what are the different squared split orders contributing
-        # (no max_contrib_amp_number and max_contrib_ref_amp_number)
+        # (i.e. not using max_contrib_amp_number and max_contrib_ref_amp_number)
         sqso_contribs = [sqso[0] for sqso in squared_orders]
         split_orders = matrix_element.get('processes')[0].get('split_orders')
         # The entries set in the function below are only for check_sa written
@@ -1931,6 +1939,10 @@ ENDIF"""%self.general_replace_dict
         self.general_replace_dict['nSO'] = len(split_orders)
         self.general_replace_dict['nSquaredSO'] = len(sqso_contribs)
         self.general_replace_dict['nAmpSO'] = len(overall_so_basis)
+
+        writers.FortranWriter('nsquaredSO.inc').writelines(
+"""INTEGER NSQUAREDSO
+PARAMETER (NSQUAREDSO=%d)"""%self.general_replace_dict['nSquaredSO'])
         
         replace_dict = copy.copy(self.general_replace_dict)
         # Build the general array mapping the split orders indices to their
@@ -1939,6 +1951,11 @@ ENDIF"""%self.general_replace_dict
                                              overall_so_basis,'AMPSPLITORDERS'))
         replace_dict['SquaredSO'] = '\n'.join(self.get_split_orders_lines(\
                                                   sqso_contribs,'SQPLITORDERS'))
+        
+        # Specify what are the squared split orders selected by the proc def.
+        replace_dict['chosen_so_configs'] = self.set_chosen_SO_index(
+                               matrix_element.get('processes')[0],sqso_contribs)
+        
         # Now we build the different arrays storing the split_orders ID of each
         # amp.
         ampSO_list=[-1]*sum(len(el[1]) for el in amps_orders['loop_amp_orders'])
@@ -2012,12 +2029,12 @@ C respectively. For this to work, we assume that there is
 C always more squared split orders in the loop ME than in the
 C born ME, which is practically always true. In any case, only
 C the split_order summed value I=0 is used in ML5 code.
-DO I=0,NSQUAREDSO
-  TEMP1(I)=0.0d0
+DO I=0,NSQSO_BORN
+  BORNBUFF(I)=0.0d0
 ENDDO
-CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,TEMP1(0))
-DO I=0,NSQUAREDSO
-  ANS(0,I)=TEMP1(I)
+CALL %(proc_prefix)sSMATRIXHEL_SPLITORDERS(P_USER,USERHEL,BORNBUFF(0))
+DO I=0,NSQSO_BORN
+  ANS(0,I)=BORNBUFF(I)
 ENDDO
 """%self.general_replace_dict
             replace_dict['set_reference']='\n'.join(

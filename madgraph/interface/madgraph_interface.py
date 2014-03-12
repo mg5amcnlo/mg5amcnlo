@@ -3484,15 +3484,15 @@ This implies that with decay chains:
         # if the squared orders are defined but not the orders, assume 
         # orders=sq_orders. In case the squared order has a negative value,
         # the the order is correspondingly set to be maximal (99) since there is
-        # no way to knwo, during generation, if the amplitude being contstructed
+        # no way to know, during generation, if the amplitude being contstructed
         # will be leading or not.
         if orders=={} and squared_orders!={}:
             for order in squared_orders.keys():
-                if squared_orders[order]>=0:
+                if squared_orders[order][0]>=0:
                     orders[order]=squared_orders[order][0]
                 else:
                     orders[order]=99
-
+        
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
