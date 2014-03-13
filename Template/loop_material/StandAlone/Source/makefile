@@ -3,6 +3,7 @@
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
+CUTTOOLSDIR= ./CutTools/
 
 include make_opts
 
@@ -41,6 +42,16 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make	
 $(LIBDIR)libmodel.$(libext): MODEL
 	cd MODEL; make	 
+
+CutTools: $(LIBDIR)libcts.a
+
+$(LIBDIR)libcts.a: $(CUTTOOLSDIR)
+	cd $(CUTTOOLSDIR); make
+	mv $(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
+	mv $(CUTTOOLSDIR)includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+
+cleanCT:
+	cd CUTTOOLS; make clean; cd ..
 
 # Binaries
 

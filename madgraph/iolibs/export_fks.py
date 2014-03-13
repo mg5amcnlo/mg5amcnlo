@@ -116,7 +116,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                                                               MG_version['version'])
 
         # We must link the CutTools to the Library folder of the active Template
-        self.link_CutTools(os.path.join(dir_path, 'lib'))
+        self.link_CutTools(dir_path)
 
         # Duplicate run_card and FO_analyse_card
         for card in ['run_card', 'FO_analyse_card', 'shower_card']:
@@ -2664,7 +2664,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                                               MG_version['version'])
 
         # We must link the CutTools to the Library folder of the active Template
-        self.link_CutTools(os.path.join(dir_path, 'lib'))
+        self.link_CutTools(dir_path)
 
         cwd = os.getcwd()
         dirpath = os.path.join(self.dir_path, 'SubProcesses')

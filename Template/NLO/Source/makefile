@@ -3,6 +3,7 @@ include make_opts
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
+CUTTOOLSDIR= ./CutTools/
 
 PROCESS= hfill.o matrix.o myamp.o 
 
@@ -75,9 +76,19 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+CutTools: $(LIBDIR)libcts.a
+
+$(LIBDIR)libcts.a: $(CUTTOOLSDIR)
+	cd $(CUTTOOLSDIR); make
+	mv $(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
+	mv $(CUTTOOLSDIR)includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+
 clean4pdf:
 	rm -f ../lib/libpdf.a
 	rm -f ../lib/libgeneric.a
+
+cleanCT:
+	cd CUTTOOLS; make clean; cd ..
 
 clean:
 	rm -f *.o

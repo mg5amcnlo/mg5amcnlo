@@ -2,13 +2,23 @@ PRECISION= QP
 #PRECISION= MP
 CTS_VERSION = v1.9.2
 SRC = ./src
-EXE = 
-FC  = gfortran
-FFLAGS = -fno-automatic -O2 -funroll-all-loops  
-#FFLAGS = -fno-automatic -Ofast -funroll-all-loops  
-BLD = includects
 CTS_DIR = cuttools_$(CTS_VERSION)
 CTS_TAR = $(CTS_DIR).tar.gz
+
+# Check for ../make_opts
+ifeq ($(wildcard ../make_opts), ../make_opts)
+  include ../make_opts
+else
+  FFLAGS = 
+  FC=gfortran
+endif
+
+# These flags are vital for CT, so we enforce them here
+FFLAGS += -fno-automatic -O2 -funroll-all-loops
+#FFLAGS += -fno-automatic -Ofast -funroll-all-loops  
+
+EXE = 
+BLD = includects
 
 ARGS = \
   EXE="$(EXE)" \

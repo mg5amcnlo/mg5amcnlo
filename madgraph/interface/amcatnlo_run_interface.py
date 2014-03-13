@@ -3151,6 +3151,20 @@ Integrated cross-section
             logger.info('          ...done, continuing with P* directories')
         else:
             raise aMCatNLOError('Compilation failed')
+        
+        # make CutTools (only necessary with MG option output_dependencies='local')
+        if not os.path.exists(pjoin(libdir, 'libcts.a')) or \
+                              not os.path.exists(pjoin(libdir, 'mpmodule.mod')):
+            if  os.path.exists(pjoin(sourcedir,'CutTools')):
+                logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                misc.compile(['CutTools'], cwd = sourcedir)
+                logger.info('          ...done.')
+            else:
+                raise aMCatNLOError('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.')
+        if not os.path.exists(pjoin(libdir, 'libcts.a')) or \
+                              not os.path.exists(pjoin(libdir, 'mpmodule.mod')):
+            raise aMCatNLOError('CutTools compilation failed.')            
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()

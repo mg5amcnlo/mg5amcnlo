@@ -673,7 +673,18 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
         logger.info(" > matrix element generation via the BLAH accord.")
-
+        logger.info("output_dependencies <mode>",'$MG:color:BLACK')
+        logger.info(" > (default 'external') [Use for NLO outputs]")
+        logger.info(" > Choses how the external dependences (such as CutTools)")
+        logger.info(" > of NLO outputs are handled. Possible values are:")
+        logger.info("     o external: Some of the libraries the output depends")
+        logger.info("       on are links to their installation in MG5 root dir.")
+        logger.info("     o internal: All libraries the output depends on are")
+        logger.info("       copied and compiled locally in the output directory.")
+        logger.info("     o environment_paths: The location of all libraries the ")
+        logger.info("       output depends on should be found in your env. paths.")        
+        
+        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1223,8 +1234,13 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['OLP']:
             if args[1] not in MadGraphCmd._OLP_supported:
-                raise self.InvalidCmd('timeout values should be a integer')
+                raise self.InvalidCmd('OLP value should be one of %s'\
+                                               %str(MadGraphCmd._OLP_supported))
 
+        if args[0] in ['output_dependencies']:
+            if args[1] not in MadGraphCmd._output_dependencies_supported:
+                raise self.InvalidCmd('output_dependencies value should be one of %s'\
+                               %str(MadGraphCmd._output_dependencies_supported))
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -2099,6 +2115,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
+            elif args[1] == 'output_dependencies':
+                return self.list_completion(text, 
+                                     MadGraphCmd._output_dependencies_supported)
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
                                                           'CRITICAL','default'])
@@ -2333,6 +2352,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _OLP_supported = ['MadLoop', 'GoSam']
+    _output_dependencies_supported = ['external', 'internal','environment_paths']
 
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
@@ -2361,7 +2381,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
-                       'cluster_retry_wait':300
+                       'cluster_retry_wait':300,
+                       'output_dependencies':'external'
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2369,7 +2390,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
-                          'loop_optimized_output':True}
+                          'loop_optimized_output':True
+                        }
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
@@ -5233,6 +5255,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = None
             self.options[args[0]] = args[1]
 
+        elif args[0] =='output_dependencies':
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

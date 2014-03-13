@@ -150,6 +150,29 @@ def which(program):
     return None
 
 #===============================================================================
+# find a library
+#===============================================================================
+def which_lib(lib):
+    def is_lib(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.R_OK)
+
+    if not lib:
+        return None
+
+    fpath, fname = os.path.split(lib)
+    if fpath:
+        if is_lib(lib):
+            return lib
+    else:
+        locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
+           ["LIBRARY_PATH","LIBRARY_PATH","PATH"] if env_path in os.environ],[])
+        for path in locations:
+            lib_file = os.path.join(path, lib)
+            if is_lib(lib_file):
+                return lib_file
+    return None
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):
