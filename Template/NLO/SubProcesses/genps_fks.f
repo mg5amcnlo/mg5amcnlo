@@ -1689,7 +1689,7 @@ c
         if(rat.gt.-tiny)then
           tmp=0.d0
         else
-          write(6,*)'Error #2 in function Lambda:',s,ma2,mb2
+          write(6,*)'Error #2 in function Lambda:',s,ma2,mb2,rat
         endif
       endif
       LAMBDA=tmp

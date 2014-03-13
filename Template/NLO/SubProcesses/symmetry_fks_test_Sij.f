@@ -102,10 +102,9 @@ c
 c
 c     External
 c
-      logical pass_point
       logical check_swap
       double precision dsig,ran2
-      external pass_point, dsig,ran2
+      external dsig,ran2
       external check_swap, fks_Sij
 
 c      integer icomp

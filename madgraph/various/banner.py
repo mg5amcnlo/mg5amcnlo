@@ -750,7 +750,7 @@ class RunCardNLO(RunCard):
 #      Writing the lines corresponding to the cuts
 ################################################################################
     
-        self.add_line('maxjetflavor', 'int', 5)
+        self.add_line('maxjetflavor', 'int', 4)
         # minimum pt
         self.add_line('ptj', 'float', 20)
         self.add_line('etaj', 'float', -1.0)

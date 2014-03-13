@@ -11,6 +11,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Better determination of which particles are in representation 3/3bar since FR is ambiguous on that point.
                     Now the determination also looks for 3 -3 1 interactions to check if that help.
                 OM: Fix a bug(crash) in MW linked to the permutation pre-selection module.
+		RF: Better comments in the code for user-defined cuts in the ./SubProcesses/cuts.f function.
+                    Also the maxjetflavor parameter in the run_card is now actually working.
 
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
