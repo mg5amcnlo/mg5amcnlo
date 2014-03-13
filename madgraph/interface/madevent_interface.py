@@ -3824,6 +3824,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
         self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        # check if the scalecorrelation parameter is define:
+        if not 'sys_scalecorrelation' in self.run_card:
+            self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
         if not scdir or \
