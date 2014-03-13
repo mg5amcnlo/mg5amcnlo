@@ -2595,8 +2595,7 @@ Integrated cross-section
             lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         else:
@@ -3123,16 +3122,13 @@ Integrated cross-section
             return
 
         # rm links to lhapdflib/ PDFsets if exist
-        if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
-            os.remove(pjoin(libdir, 'libLHAPDF.a'))
         if os.path.exists(pjoin(libdir, 'PDFsets')):
             files.rm(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
         if self.run_card['pdlabel'] == 'lhapdf':
-            self.link_lhapdf(libdir)
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             if self.run_card['reweight_PDF'].lower() == '.true.':
                 lhaid_list.append(int(self.run_card['PDF_set_min']))
