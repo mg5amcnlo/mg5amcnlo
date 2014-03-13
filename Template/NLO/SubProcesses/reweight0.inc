@@ -94,3 +94,33 @@ c If jwgtinfo.eq.4 the value in the common block is used
 c nFKSprocess used for the nbody and the .not.nbody
       integer nFKSprocess_used,nFKSprocess_used_Born
       common /c_nFKSproc_file/ nFKSprocess_used,nFKSprocess_used_Born
+
+c cpower: power of muR-dependent factor in the born
+      double precision wgtcpower
+      common/cwgtcpower/wgtcpower
+
+c input of cpower (checked against calculated value)
+      double precision cpowerinput
+      parameter (cpowerinput=0.d0)
+
+c switch for running muR-dependent factor runfac=1(running)/0(fixed)
+      integer runfac
+      parameter (runfac=0)
+c WARNING: If you set runfac=1 to include a muR-dependent factor
+c          make sure you modified the function rwgt_muR_dep_fac in
+c	   reweight_xsec.f and compute_cpower in fks_singular.f
+c          appropiately to include all muR dependent overall factors
+c          (except for alpha_s) in the calculation. This procedure 
+c          will be incorrect, if you miss one of the muR dependent
+c          factors or if there is a not factorizing muR dependent term.
+c	   You also have to set ren_group_coeff_in and cpowerinput
+c	   to the proper values.
+
+c first order coefficient of renormalization group equation of the
+c muR-dependent factor,
+c e.g. for masses: ren_group_coeff = gamma0 = 3/2*C_F,
+c i.e. for Yukawa: ren_group_coeff = 2d0 * gamma0
+      double precision ren_group_coeff_in
+      parameter (ren_group_coeff_in=0d0)
+
+
