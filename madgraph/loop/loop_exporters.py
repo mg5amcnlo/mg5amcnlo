@@ -129,6 +129,8 @@ class LoopExporterFortran(object):
             CTlib = misc.which_lib('libcts.a')
             CTmod = misc.which_lib('mpmodule.mod')
             if not CTlib is None and not CTmod is None:
+                logger.info('MG5_aMC is using CutTools installation found at %s.'%\
+                                                         os.path.dirname(CTlib)) 
                 ln(os.path.join(CTlib),os.path.join(targetPath,'lib'))
                 ln(os.path.join(CTmod),os.path.join(targetPath,'lib'))
             else:
