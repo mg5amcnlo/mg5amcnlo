@@ -671,7 +671,8 @@ c
 
       call set_cms_stuff(mohdr)
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.wgtkin(0,1,1).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -723,7 +724,8 @@ c
 
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.wgtkin(0,1,2).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -904,8 +906,8 @@ c
 
       call set_cms_stuff(izero)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     wgtkin(0,1,1).gt.0.d0) )then
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.wgtkin(0,1,1).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -954,7 +956,8 @@ c
 
       call set_cms_stuff(izero)
       if( (kwgtinfo.eq.1.and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.2.or.kwgtinfo.le.5)) )then
+     $     ((kwgtinfo.ge.2.or.kwgtinfo.le.5).and.wgtkin(0,1,2).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1001,7 +1004,8 @@ c
       
       call set_cms_stuff(mohdr)
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.wgtkin(0,1,1).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1128,9 +1132,9 @@ c
       call set_cms_stuff(izero)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    (kwgtinfo.eq.2.and.wgtkin(0,1,1).gt.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.
-     #     wgtkin(0,1,1).gt.0.d0) )then
+     $     (kwgtinfo.eq.2.and.wgtkin(0,1,1).gt.0.d0) .or.
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and.wgtkin(0,1,1).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1190,7 +1194,8 @@ c
       call set_cms_stuff(izero)
 
       if( ((kwgtinfo.eq.1.or.kwgtinfo.eq.2).and.wgtmuR2(2).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.3.or.kwgtinfo.le.5)) )then
+     $     ((kwgtinfo.ge.3.or.kwgtinfo.le.5).and. wgtkin(0,1,2).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1.or.kwgtinfo.eq.2)then
           scale=muR_over_ref*sqrt(wgtmuR2(2))
           g=sqrt(4d0*pi*alphas(scale))
@@ -1291,7 +1296,8 @@ c
       call set_cms_stuff(mohdr)
 
       if( (kwgtinfo.eq.1.and.wgtmuR2(1).ne.0.d0) .or.
-     #    ((kwgtinfo.ge.2.or.kwgtinfo.ge.5)) )then
+     $     ((kwgtinfo.ge.2.or.kwgtinfo.ge.5).and.wgtkin(0,1,1).gt.0.d0)
+     $     )then
         if(kwgtinfo.eq.1)then
           scale=muR_over_ref*sqrt(wgtmuR2(1))
           g=sqrt(4d0*pi*alphas(scale))

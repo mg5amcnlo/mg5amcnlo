@@ -103,8 +103,9 @@ c For MINT:
       integer ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
+      logical only_virt
       integer imode
-      common /c_imode/imode
+      common /c_imode/imode,only_virt
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -187,6 +188,11 @@ c Only do the reweighting when actually generating the events
          doreweight=do_rwgt_scale.or.do_rwgt_pdf
       else
          doreweight=.false.
+      endif
+      if (abrv(1:4).eq.'virt') then
+         only_virt=.true.
+      else
+         only_virt=.false.
       endif
 
       if(imode.eq.0)then
@@ -406,7 +412,8 @@ c determine how many events for the virtual and how many for the no-virt
 
          weight=(ans(1)+ans(5))/ncall
 
-         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born') then
+         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
+     $        abrv(1:4).ne.'virt') then
             write (*,*) 'CANNOT GENERATE EVENTS FOR ABRV',abrv
             stop 1
          endif
@@ -419,7 +426,7 @@ c determine how many events for the virtual and how many for the no-virt
                vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
+               if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
                   abrv='virt'
                   vn=1
                   call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
@@ -821,47 +828,7 @@ c Set Bjorken x's to some random value before calling the dlum() function
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
 c For sum over identical FKS pairs, need to find the identical structures
-         if (sum.eq.0) then
-c MC over FKS directories (1 FKS directory per nbody PS point)
-            proc_map(0,0)=fks_configs
-            do i=1,fks_configs
-               proc_map(i,0)=1
-               proc_map(i,1)=i
-            enddo
-         elseif (sum.eq.1) then
-c Sum over FKS directories (all FKS directories per nbody PS point)
-            proc_map(0,0)=1
-            proc_map(1,0)=fks_configs
-            do i=1,fks_configs
-               proc_map(1,i)=i
-            enddo
-         elseif (sum.eq.2) then
-c Sum over all FKS pairs that have the same i_fks and j_fks
-            proc_map(0,0)=0
-            do i=1,fks_configs
-               proc_map(i,0)=0
-               i_fks_proc(i)=0
-               j_fks_proc(i)=0
-            enddo
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               i=1
-               do while ( i.le.proc_map(0,0) )
-                  if (i_fks.eq.i_fks_proc(i)
-     &              .and. j_fks.eq.j_fks_proc(i) ) then
-                     exit
-                  endif
-                  i=i+1
-               enddo
-               proc_map(i,0)=proc_map(i,0)+1
-               proc_map(i,proc_map(i,0))=nFKSprocess
-               if (i.gt.proc_map(0,0)) then
-                  proc_map(0,0)=proc_map(0,0)+1
-                  i_fks_proc(proc_map(0,0))=i_fks
-                  j_fks_proc(proc_map(0,0))=j_fks
-               endif
-            enddo
-         elseif (sum.eq.3) then
+         if (sum.eq.3) then
 c MC over FKS pairs that have soft singularity
             proc_map(0,0)=0
             do i=1,fks_configs
@@ -977,26 +944,6 @@ c gluons splitting
                   endif
                endif
             enddo
-         elseif(sum.eq.4) then
-c Sum over all j_fks initial (final) state
-            proc_map(0,0)=0
-            do i=1,2
-               proc_map(i,0)=0
-            enddo
-            j_fks_initial_found=.false.
-            j_fks_final_found=.false.
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               if (j_fks.gt.nincoming) then
-                  proc_map(1,0)=proc_map(1,0)+1
-                  proc_map(1,proc_map(1,0))=nFKSprocess
-               else
-                  proc_map(2,0)=proc_map(2,0)+1
-                  proc_map(2,proc_map(2,0))=nFKSprocess
-               endif
-            enddo
-            if (proc_map(1,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
-            if (proc_map(2,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
          else
             write (*,*) 'sum not know in driver_mintMC.f',sum
          endif
@@ -1060,9 +1007,8 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c     
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-         nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
-                                               ! because it only matters
-                                               ! which parton is j_fks
+c Pick the first one because that's the one with the soft singularity.
+         nFKSprocess=proc_map(proc_map(0,1),1)
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
          nbody=.true.
@@ -1237,8 +1183,9 @@ c used.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       double precision virtual_over_born
       common/c_vob/virtual_over_born
+      logical only_virt
       integer imode
-      common /c_imode/imode
+      common /c_imode/imode,only_virt
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
          if (unwgt_table(0,2,i).ne.0d0) then
@@ -1344,8 +1291,9 @@ c nFKSprocess_soft)
                      do j=1,iproc_save(nFKSprocess_used_born)
                         if (eto(j,nFKSprocess_used_born).eq.i) then
 c If when computing upper bounding envelope (imode.eq.1) do not include
-c the virtual corrections, because a separate bound is computed for them
-                           if (imode.eq.1) then
+c the virtual corrections, because a separate bound is computed for them.
+c Exception: when computing only the virtual, do include it here!
+                           if (imode.eq.1 .and. .not. only_virt) then
                               f_unwgt(nFKSprocess_soft,i) =
      $                             f_unwgt(nFKSprocess_soft,i) +
      $                             unwgt_table(0,1,i)+unwgt_table(0,2,i)
@@ -1565,7 +1513,8 @@ c and the n-body contributions
                if (eto(j,nFKSprocess_used_born).eq.i) then
 c If when computing upper bounding envelope (imode.eq.1) do not include
 c the virtual corrections, because a separate bound is computed for them
-                  if (imode.eq.1) then
+c Exception: when computing only the virtual, do include it here!
+                  if (imode.eq.1 .and. .not. only_virt) then
                      f_unwgt(nFKSprocess_used_born,i)=
      &                    f_unwgt(nFKSprocess_used_born,i)+
      &                    unwgt_table(0,1,i)
