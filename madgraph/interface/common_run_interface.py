@@ -1068,9 +1068,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return self.pdffile
             else:
                 # possible when using lhapdf
-                self.pdffile = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                        shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-                #self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
+                self.pdffile = pjoin(self.me_dir, 'lib', 'PDFsets')
                 return self.pdffile
                 
     def do_quit(self, line):
@@ -1587,21 +1585,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
-        # link the .so/.dylib library to lib and from here to all the P*/directories
-        if os.path.exists(pjoin(lhalibdir, 'libLHAPDF.so')):
-            lhalib = 'libLHAPDF.so'
-        elif os.path.exists(pjoin(lhalibdir, 'libLHAPDF.dylib')):
-            lhalib = 'libLHAPDF.dylib'
-        else:
-            raise MadGraph5Error('LHAPDF dynamic libraries not found in %s' % lhalibdir)
-        
+        # link the static library in lib
+        lhalib = 'libLHAPDF.a'
         if os.path.exists(pjoin(libdir, lhalib)):
             files.rm(pjoin(libdir, lhalib))
         os.symlink(pjoin(lhalibdir, lhalib), pjoin(libdir, lhalib))
-        for dir in  extra_dirs:
-            if os.path.exists(pjoin(self.me_dir, dir, lhalib)):
-                files.rm(pjoin(self.me_dir, dir, lhalib))
-            os.symlink(pjoin(libdir, lhalib), pjoin(self.me_dir, dir, lhalib))
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
@@ -1698,6 +1686,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not hasattr(self, 'lhapdfversion'):
             self.lhapdf_version = subprocess.Popen('%s --version' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+
+        # this will be removed once some issues in lhapdf6 will be fixed
+        if self.lhapdf_version.startswith('6.'):
+            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.9.x')
+
         return self.lhapdf_version
 
 
