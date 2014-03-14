@@ -9,6 +9,7 @@
 #include "HepMC/HEPEVT_Wrapper.h"
 #include "fstream"
 #include "LHEFRead.h"
+//#include "CombineMatchingInput.h"
 
 using namespace Pythia8;
 
@@ -30,6 +31,11 @@ int main() {
   int cwgtinfo_nn;
   char cwgtinfo_weights_info[250][15];
   double cwgt_ww[250];
+
+  // Teach Pythia some additional settings (for now).
+  pythia.settings.addFlag("JetMatching:doFxFx",false);
+  pythia.settings.addMode("JetMatching:nPartonsNow",0,true,false,0,10);
+  pythia.settings.addParm("JetMatching:qCutME",5.,true,false,0.,-1.);
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
@@ -53,6 +59,33 @@ int main() {
   if (evt_norm == "average"){
     iEventtot_norm=1;
   }
+
+  //FxFx merging
+  bool isFxFx=pythia.flag("JetMatching:doFxFx");
+  if (isFxFx) {
+
+    int nJnow=pythia.mode("JetMatching:nPartonsNow");
+    int nJmax=pythia.mode("JetMatching:nJetMax");
+    int iExcl=pythia.mode("JetMatching:exclusive");
+  
+    if (nJnow >= 5 || nJnow < 0 || nJmax >= 5 || nJmax < 0 || nJnow > nJmax) {
+      std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat"
+		<< nJmax << " " << nJnow << "\n";
+      return 0;
+    }
+
+    if (nJnow != nJmax && iExcl == 0) {
+      std::cout << "Inclusive merging required for a sample with non-max multiplicity\n";
+      return 0;
+    }
+
+    // //Create UserHooks pointer. Stop if it failed. Pass pointer to Pythia.
+    // CombineMatchingInput combined;
+    // UserHooks* matching = combined.getHook(pythia);
+    // if (!matching) return 1;
+    // pythia.setUserHooksPtr(matching);
+
+ }
 
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
@@ -94,5 +127,7 @@ int main() {
   pyaend_(iEventtot_norm);
 
   pythia.stat();
+
+  // delete matching;
   return 0;
 }

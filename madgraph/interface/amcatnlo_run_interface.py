@@ -2600,6 +2600,8 @@ Integrated cross-section
             content += 'LHAPDFPATH=\n' 
             content += 'PDFCODE=0\n'
 
+        content += 'ICKKW=%s\n' % self.banner.get_detail('run_card', 'ickkw')
+        content += 'PTJCUT=%s\n' % self.banner.get_detail('run_card', 'ptj')
         # add the pythia8/hwpp path(s)
         if self.options['pythia8_path']:
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
