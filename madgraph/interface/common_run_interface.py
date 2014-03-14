@@ -2288,6 +2288,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if not os.path.exists(path):
                 logger.info('Path in MW_card not existing')
                 path = pjoin(me_dir, 'Events', answer)
+        #security
+        path = path.replace('_card_card','_card')
         try:
             self.mother_interface.exec_cmd('open %s' % path)
         except InvalidCmd, error:

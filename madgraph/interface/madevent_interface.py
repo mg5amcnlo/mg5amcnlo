@@ -3877,6 +3877,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
+            else:
+                logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
