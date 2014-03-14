@@ -281,17 +281,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         libdir = os.path.join(self.dir_path,'lib')
         sourcedir = os.path.join(self.dir_path,'Source')
         if self.dependencies=='internal':
-            if not os.path.exists(pjoin(libdir, 'libcts.a')) or \
-                              not os.path.exists(pjoin(libdir, 'mpmodule.mod')):
-                if  os.path.exists(pjoin(sourcedir,'CutTools')):
+            if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
                     logger.info('Compiling CutTools (can take a couple of minutes) ...')
                     misc.compile(['CutTools'], cwd = sourcedir)
                     logger.info('          ...done.')
                 else:
                     raise MadGraph5Error('Could not compile CutTools because its'+\
                    ' source directory could not be found in the SOURCE folder.')
-        if not os.path.exists(pjoin(libdir, 'libcts.a')) or \
-                              not os.path.exists(pjoin(libdir, 'mpmodule.mod')):
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
             raise MadGraph5Error('CutTools compilation failed.')
         
         # Verify compatibility between current compiler and the one which was
@@ -302,7 +302,14 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             compiler_version_used = open(compiler_log_path,'r').read()
             if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
                        pjoin(sourcedir,'make_opts')))) in compiler_version_used:
-                raise MadGraph5Error("CutTools installation in %s"\
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise MadGraph5Error("CutTools installation in %s"\
                                  %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
                  " seems to have been compiled with a different compiler than"+\
                     " the one specified in MG5_aMC. Please recompile CutTools.")

@@ -3175,7 +3175,14 @@ Integrated cross-section
             compiler_version_used = open(compiler_log_path,'r').read()
             if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
                        pjoin(sourcedir,'make_opts')))) in compiler_version_used:
-                raise aMCatNLOError("CutTools installation in %s"\
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise aMCatNLOError("CutTools installation in %s"\
                                  %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
                  " seems to have been compiled with a different compiler than"+\
                     " the one specified in MG5_aMC. Please recompile CutTools.")
