@@ -3,7 +3,8 @@
 LIBDIR= ../lib/
 BINDIR= ../bin/
 PDFDIR= ./PDF/
-CUTTOOLSDIR= ./CutTools/
+PWD = $(shell pwd)
+CUTTOOLSDIR= $(PWD)/CutTools/
 
 include make_opts
 
@@ -47,8 +48,8 @@ CutTools: $(LIBDIR)libcts.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make
-	mv $(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
-	mv $(CUTTOOLSDIR)includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+	ln -s ../Source/vendor/CutTools/includects/libcts.a $(LIBDIR)libcts.a
+	ln -s ../Source/vendor/CutTools/includects/mpmodule.mod $(LIBDIR)mpmodule.mod
 
 cleanCT:
 	cd CUTTOOLS; make clean; cd ..

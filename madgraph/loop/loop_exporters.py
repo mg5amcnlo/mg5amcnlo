@@ -98,9 +98,16 @@ class LoopExporterFortran(object):
         if self.dependencies=='internal':
             shutil.copytree(self.cuttools_dir, 
                            pjoin(targetPath,'Source','CutTools'), symlinks=True)
+            # Create the links to the lib folder
+            linkfiles = ['libcts.a', 'mpmodule.mod']
+            for file in linkfiles:
+                ln(os.path.join(os.path.pardir,'Source','CutTools','includects',file),
+                                                 os.path.join(targetPath,'lib'))
             # Make sure it is recompiled at least once. Because for centralized
-            # MG5_aMC installations, it might be that compiler differs
-            misc.compile(['cleanCT'], cwd = pjoin(targetPath,'Source'))
+            # MG5_aMC installations, it might be that compiler differs.
+            # Not necessary anymore because I check the compiler version from
+            # the log compiler_version.log generated during CT compilation
+            # misc.compile(['cleanCT'], cwd = pjoin(targetPath,'Source'))
  
         if self.dependencies=='external':
             if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
@@ -123,6 +130,7 @@ class LoopExporterFortran(object):
             for file in linkfiles:
                 ln(os.path.join(self.cuttools_dir,'includects',file),
                                                  os.path.join(targetPath,'lib'))
+
         elif self.dependencies=='environment_paths':
             # Here the user chose to define the dependencies path in one of 
             # his environmental paths
@@ -285,6 +293,19 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         if not os.path.exists(pjoin(libdir, 'libcts.a')) or \
                               not os.path.exists(pjoin(libdir, 'mpmodule.mod')):
             raise MadGraph5Error('CutTools compilation failed.')
+        
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                raise MadGraph5Error("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
     
     def cat_coeff(self, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         """Concatenate the coefficient information to reduce it to 

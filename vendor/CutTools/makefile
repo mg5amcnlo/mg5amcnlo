@@ -56,6 +56,9 @@ clean$(BLD): default
 
 default: force
 	cd $(BLD) && $(MAKE) $(ARGS) $@
+	$(FC) -dumpversion > $(BLD)/compiler_version.log
+# Below was an overkill
+#	$(FC) --version | egrep -o "\d*\.\d*?(\.\d*)" | sed -n 1p > $(BLD)/compiler_version.log
 
 force: $(BLD)/version.h
 

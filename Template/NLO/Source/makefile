@@ -80,8 +80,8 @@ CutTools: $(LIBDIR)libcts.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)
 	cd $(CUTTOOLSDIR); make
-	mv $(CUTTOOLSDIR)includects/libcts.a $(LIBDIR)libcts.a
-	mv $(CUTTOOLSDIR)includects/mpmodule.mod $(LIBDIR)mpmodule.mod
+	ln -s ../Source/vendor/CutTools/includects/libcts.a $(LIBDIR)libcts.a
+	ln -s ../Source/vendor/CutTools/includects/mpmodule.mod $(LIBDIR)mpmodule.mod
 
 clean4pdf:
 	rm -f ../lib/libpdf.a
