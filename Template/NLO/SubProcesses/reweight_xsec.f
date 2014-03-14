@@ -1722,12 +1722,12 @@ c       Change it to the factor you need to reweight.
 c     This is relevant for a muR-dependent bottom-mass in Yukawa.
       IF(wgtcpower .ne. 0d0 .and. runfac .eq. 1) THEN
 c$$$      vev    = 246.21845813429518469305d0 !vev in aMC@NLO from y_b->m_b
-c$$$      mbmb = YB*vev/dsqrt(2d0)
+c$$$      mbmb = MDL_YB*vev/dsqrt(2d0)
 c$$$com-- mbmb input for fixed Yukawa bmass in param_card.dat is used here
 c$$$com-- as start value of running and to remove it from the cross section
 c$$$      apimuR = alphas(scale)/pi
-c$$$      apimZ  = alphas(MZ)/pi
-c$$$      CALL runalpha(apimZ,MZ,mbmb,5d0,2,0,apimb)
+c$$$      apimZ  = alphas(MDL_MZ)/pi
+c$$$      CALL runalpha(apimZ,MDL_MZ,mbmb,5d0,2,0,apimb)
 c$$$      CALL runmass(mbmb,apimb,apimuR,5d0,2,mbmuR)
 c$$$      rwgt_muR_dep_fac = (mbmuR**2/mbmb**2)**wgtcpower
       ELSE

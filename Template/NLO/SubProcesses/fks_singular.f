@@ -447,7 +447,7 @@ c for other muR-dependendent factors
          else
             wgtcpower=cpower
          endif
-c The following is temporary
+c Check that things are done consistently
          if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
            write(*,*)'Inconsistency in the computation of cpower',
      #               wgtcpower,cpowerinput
@@ -1352,7 +1352,7 @@ c for other muR-dependendent factors
          else
             wgtcpower=cpower
          endif
-c The following is temporary
+c Check that things are done consistently
         if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
            write(*,*)'Inconsistency in the computation of cpower',
      #               wgtcpower,cpowerinput
@@ -4801,7 +4801,8 @@ c$$$      call sborn(p_born,wgt1)
 c$$$c Born contribution:
 c$$$      born_wgt=dble(wgt1(1))
 c$$$      
-c$$$c Multiply the Yukawa by 10
+c$$$c Multiply the Yukawa by 10 (If you use this,
+c$$$c double check that GC_33 is the yukawa! (also below))
 c$$$      if (GC_33.ne.0d0) then
 c$$$         GC_33 = GC_33 * 10d0
 c$$$      else
@@ -4816,7 +4817,7 @@ c$$$      calculatedBorn=.false.
 c$$$      call sborn(p_born,wgt1)
 c$$$
 c$$$c Compute cpower
-c$$$      cpower=Log10(dble(wgt1(1))/born_wgt)/2d0
+c$$$      cpower=Log10(dble(wgt1(1))/born_wgt)
 c$$$      if(abs(cpower-dble(nint(cpower))) .gt. tiny) then
 c$$$         write(*,*)'Error in computation of cpower:'
 c$$$         write(*,*)' not an integer',cpower

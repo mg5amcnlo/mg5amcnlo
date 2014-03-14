@@ -118,8 +118,8 @@ c	   to the proper values.
 
 c first order coefficient of renormalization group equation of the
 c muR-dependent factor,
-c e.g. for masses: ren_group_coeff = gamma0 = 3/2*C_F,
-c i.e. for Yukawa: ren_group_coeff = 2d0 * gamma0
+c e.g. for masses:      ren_group_coeff = gamma0 = 3/2*C_F,
+c i.e. also for Yukawa: ren_group_coeff = gamma0
       double precision ren_group_coeff_in
       parameter (ren_group_coeff_in=0d0)
 
