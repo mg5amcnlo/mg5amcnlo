@@ -274,22 +274,12 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(2,imo)=ipart(2,ida2)
         endif
       else if(idmo.eq.21)then
-      write(*,*) '277',ida1, ida2,isjet(ida1),isjet(ida2)
 c     gluon -> quark anti-quark: use both, but take hardest as 1
-c     BUT if only one is a jet
-        if(isjet(ida1).and..not.isjet(ida2)) then
-          ipart(1,imo)=ipart(1,ida1)
-          ipart(2,imo)=ipart(1,ida2)
-        else if(isjet(ida2).and..not.isjet(ida1)) then
-          ipart(1,imo)=ipart(1,ida2)
-          ipart(2,imo)=ipart(1,ida1)        
-        else if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
-          write(*,*) '1 wins'
           ipart(1,imo)=ipart(1,ida1)
           ipart(2,imo)=ipart(1,ida2)
         else
-          write(*,*) '2 wins'
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(1,ida1)
         endif
@@ -493,6 +483,7 @@ c     Variables for keeping track of jets
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
+      integer tmpindex
 
       logical isqcd,isjet,isparton,cluster,isjetvx
       integer ifsno
@@ -652,8 +643,21 @@ c             parton vertices again.
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
               if(goodjet(ida(3-i))) then
-                 if(partonline(j).or.
-     $              ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
+                 if(partonline(j)) then
+                    if (ipart(2,ida(3-i)).gt.0)then
+                       if (iqjets(ipart(2,ida(3-i))).eq.0)then
+                          iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
+                       else
+                          !swap 1 and 2
+                          tmpindex = ipart(2,ida(3-i))
+                          ipart(2,ida(3-i)) = ipart(1,ida(3-i))
+                          ipart(1,ida(3-i)) = tmpindex
+                       endif
+                    else
+                       iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet                                 
+                    endif
+
+                 else if (ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
 c                   Need to include gluon to avoid soft singularity
                     iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                  else
