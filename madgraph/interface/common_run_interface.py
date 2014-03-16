@@ -1573,14 +1573,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets_list = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
 
         elif lhapdf_version.startswith('6.'):
             lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
             pdfsetsdir = subprocess.Popen('%s --datadir' % self.options['lhapdf'],
                     shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            self.lhapdf_pdfsets_list = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -1601,24 +1601,28 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
         into lib/PDFsets"""
 
-        lhaid_index_list = [d['lhaid'] for d in \
-                self.lhapdf_pdfsets_list]
         pdfsetname = ''
         for lhaid in lhaid_list:
             if not pdfsetname:
-                pdfsetname = self.lhapdf_pdfsets_list[lhaid_index_list.index(lhaid)]['filename']
+                if lhaid in self.lhapdf_pdfsets:
+                    pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
+                else:
+                    raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
             # just check the other ids refer to the same pdfsetname
             elif not \
-              self.lhapdf_pdfsets_list[lhaid_index_list.index(lhaid)]['filename'] \
-                    == pdfsetname:
+              self.lhapdf_pdfsets_[lhaid]['filename'] == pdfsetname:
                 raise MadGraph5Error(\
                     'lhaid and PDF_set_min/max in the run_card do not correspond to the' +
                     'same PDF set. Please check the run_card.')
         # check if the file exists, otherwise install it
-        if not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+        if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
             self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-        files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-
+            
+        if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
+            files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+        elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
+            files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            
 
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
@@ -1629,7 +1633,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
-            misc.call('%s %s' % (getdata, filename), cwd = pdfsets_dir, shell = True)
+            misc.call([getdata, filename])
 
         elif lhapdf_version.startswith('6.'):
             # use the "lhapdf install xxx" command, which is in the same path as
@@ -1651,10 +1655,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhapdf_version = self.get_lhapdf_version()
 
         if lhapdf_version.startswith('5.'):
+            if os.path.exists('%s.index' % pdfsets_dir):
+                indexfile = '%s.index' % pdfsets_dir
+            else:
+                raise MadGraph5Error, 'index of lhapdf file not found'
             pdfsets_lines = \
                     [l for l in open(pdfsets_dir + '.index').read().split('\n') if l.strip()]
-            lhapdf_pdfsets_list = \
-                        [{'lhaid': int(l.split()[0]),
+            lhapdf_pdfsets = dict( (int(l.split()[0]), {'lhaid': int(l.split()[0]),
                           'pdflib_ntype': int(l.split()[1]),
                           'pdflib_ngroup': int(l.split()[2]),
                           'pdflib_nset': int(l.split()[3]),
@@ -1664,21 +1671,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                           'q2max': float(l.split()[7]),
                           'xmin': float(l.split()[8]),
                           'xmax': float(l.split()[9]),
-                          'description': l.split()[10]} \
-                         for l in pdfsets_lines]
+                          'description': l.split()[10]}) \
+                         for l in pdfsets_lines)
 
         elif lhapdf_version.startswith('6.'):
             pdfsets_lines = \
                     [l for l in open(pjoin(pdfsets_dir, 'pdfsets.index')).read().split('\n') if l.strip()]
-            lhapdf_pdfsets_list = \
-                        [{'lhaid': int(l.split()[0]),
-                          'filename': l.split()[1]} \
-                         for l in pdfsets_lines]
+            lhapdf_pdfsets = dict( (int(l.split()[0]), 
+                        {'lhaid': int(l.split()[0]),
+                          'filename': l.split()[1]}) \
+                         for l in pdfsets_lines)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
-        return lhapdf_pdfsets_list
+        return lhapdf_pdfsets
 
 
     def get_lhapdf_version(self):

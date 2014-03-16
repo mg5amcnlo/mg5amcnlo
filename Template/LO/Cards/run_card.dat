@@ -48,7 +48,8 @@
 #*********************************************************************
 # PDF CHOICE: this automatically fixes also alpha_s and its evol.    *
 #*********************************************************************
- 'cteq6l1'    = pdlabel     ! PDF set                                     
+ 'cteq6l1'    = pdlabel     ! PDF set (lhapdf for using lhapdf)
+  10042        = lhaid      ! PDF number used ONLY for LHAPDF
 #*********************************************************************
 # Renormalization and factorization scales                           *
 #*********************************************************************
