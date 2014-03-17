@@ -1567,29 +1567,38 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         lhapdf_version = self.get_lhapdf_version()
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
+        lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
+                 stdout = subprocess.PIPE).stdout.read().strip()
 
         if lhapdf_version.startswith('5.'):
-            lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
                      stdout = subprocess.PIPE).stdout.read().strip()
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            # link the static library in lib
+            lhalib = 'libLHAPDF.a'
 
         elif lhapdf_version.startswith('6.'):
-            lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
-                     stdout = subprocess.PIPE).stdout.read().strip()
             pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
                      stdout = subprocess.PIPE).stdout.read().strip()
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
+            # link the dynamic library in lib
+            if os.path.exists(pjoin(lhalibdir, 'libLHAPDF.so')):
+                lhalib = 'libLHAPDF.so'
+            elif os.path.exists(pjoin(lhalibdir, 'libLHAPDF.dylib')):
+                lhalib = 'libLHAPDF.dylib'
+            else:
+                raise MadGraph5Error('Dynamic library not found for LHAPDF6')
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
 
-        # link the static library in lib
-        lhalib = 'libLHAPDF.a'
         if os.path.exists(pjoin(libdir, lhalib)):
             files.rm(pjoin(libdir, lhalib))
-        os.symlink(pjoin(lhalibdir, lhalib), pjoin(libdir, lhalib))
+        files.ln(pjoin(lhalibdir, lhalib), libdir)
+        # link the dynamic library for v6 in extra_dirs
+        if lhapdf_version.startswith('6.'):
+            for d in extra_dirs:
+                files.ln(pjoin(libdir, lhalib), pjoin(self.me_dir, d))
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
@@ -1639,6 +1648,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # use the "lhapdf install xxx" command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
+
             misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
@@ -1660,7 +1670,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise MadGraph5Error, 'index of lhapdf file not found'
             pdfsets_lines = \
-                    [l for l in open(indexfile).read().split('\n') if l.strip()]
+                    [l for l in open(indexfile).read().split('\n') if l.strip() and \
+                        not '90cl' in l]
             lhapdf_pdfsets = dict( (int(l.split()[0]), {'lhaid': int(l.split()[0]),
                           'pdflib_ntype': int(l.split()[1]),
                           'pdflib_ngroup': int(l.split()[2]),
@@ -1695,9 +1706,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     subprocess.Popen([self.options['lhapdf'], '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
 
-        # this will be removed once some issues in lhapdf6 will be fixed
-        if self.lhapdf_version.startswith('6.'):
-            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.9.x')
+##        # this will be removed once some issues in lhapdf6 will be fixed
+##        if self.lhapdf_version.startswith('6.'):
+##            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.9.x')
 
         return self.lhapdf_version
 
