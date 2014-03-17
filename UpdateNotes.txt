@@ -13,8 +13,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Fix a bug(crash) in MW linked to the permutation pre-selection module.
 		RF: Better comments in the code for user-defined cuts in the ./SubProcesses/cuts.f function.
                     Also the maxjetflavor parameter in the run_card is now actually working.
+                OM: Update SysCalc to:
+                      - Fix a bug that some file where sometimes truncated.
+                      - Allow for independant scale variation for the factorization/renormalization scale.
                 RF+OM: Improve the handling of conflicting Breit-Wigners at NLO
-
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
                 ------------------
