@@ -1235,17 +1235,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         """Update random number seed with the value from the run_card. 
         If this is 0, update the number according to a fresh one"""
         iseed = int(self.run_card['iseed'])
-        if iseed != 0:
-            misc.call(['echo "r=%d" > %s' \
-                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
-                    cwd=self.me_dir, shell=True)
-        else:
+        if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
             randinit.close()
-            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
-            randinit.write('r=%d' % iseed)
-            randinit.close()
+        randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
+        randinit.write('r=%d' % iseed)
+        randinit.close()
 
 
     def get_characteristics(self, file):
@@ -2144,7 +2140,7 @@ Integrated cross-section
                     'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
-        misc.call(['gzip %s' % evt_file], shell=True)
+        misc.call(['gzip', evt_file])
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
@@ -2159,7 +2155,7 @@ Integrated cross-section
         logger.info('Prepairing MCatNLO run')
 
         try:
-            misc.call(['gunzip %s.gz' % evt_file], shell=True)
+            misc.call(['gunzip', evt_file])
         except Exception:
             pass
 
@@ -2258,8 +2254,7 @@ Integrated cross-section
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                misc.call(['ln -s %s %s' % \
-                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
+                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -2267,8 +2262,7 @@ Integrated cross-section
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
         evt_name = os.path.basename(evt_file)
-        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
-            pjoin(rundir,self.run_name))], shell=True)
+        files.ln(os.path.split(evt_file)[0], rundir, self.run_name)
         # special treatment for pythia8
         if shower=='PYTHIA8':
             open(pjoin(rundir, exe), 'w').write(\
@@ -2277,8 +2271,7 @@ Integrated cross-section
             os.system('chmod  +x %s' % pjoin(rundir,exe))
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                shell=True)
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
         else:
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
@@ -2293,9 +2286,9 @@ Integrated cross-section
                     count +=1
                     hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
 
-                misc.call(['mv %s %s' % (pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
+                files.mv(pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file) 
+                misc.call(['gzip', evt_file])
+                misc.call(['gzip', hep_file])
 
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                             ' and hadronized events in the StdHEP format obtained' + \
@@ -2309,10 +2302,9 @@ Integrated cross-section
                     count +=1
                     hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
 
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
+                files.mv(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file) 
+                misc.call(['gzip', evt_file])
+                misc.call(['gzip', hep_file])
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                             ' and hadronized events in the HEPMC format obtained' + \
                             ' showering the parton-level event file %s.gz with %s') % \
@@ -2325,10 +2317,9 @@ Integrated cross-section
                     count +=1
                     hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
 
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
+                files.mv(pjoin(rundir, 'Pythia8.hep'), hep_file) 
+                misc.call(['gzip', evt_file])
+                misc.call(['gzip', hep_file])
                 logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
                             ' and hadronized events in the HEPMC format obtained' + \
                             ' showering the parton-level event file %s.gz with %s') % \
@@ -2353,7 +2344,7 @@ Integrated cross-section
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
             if not topfiles:
-                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip', evt_file])
                 logger.warning('No .top file has been generated. For the results of your ' +\
                                'run, please check inside %s' % rundir)
 
@@ -2368,8 +2359,7 @@ Integrated cross-section
                 for i, file in enumerate(topfiles):
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
                               '%s%d.top' % (filename, i))
-                    misc.call(['mv %s %s' % \
-                        (pjoin(rundir, file), plotfile)], shell=True) 
+                    files.mv(pjoin(rundir, file), plotfile) 
 
                     plotfiles.append(plotfile)
 
@@ -2379,7 +2369,7 @@ Integrated cross-section
                     ffiles = 'file'
                     have = 'has'
 
-                misc.call(['gzip %s' % evt_file], shell=True)
+                misc.call(['gzip', evt_file])
                 logger.info(('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
@@ -2592,8 +2582,8 @@ Integrated cross-section
         # check if need to link lhapdf
         if pdlabel =='\'lhapdf\'':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
@@ -2655,9 +2645,9 @@ Integrated cross-section
 
         #check that the new event files are complete
         for evt_file in evt_files:
-            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % \
-                    pjoin(self.me_dir, 'SubProcesses', evt_file), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
+                    pjoin(self.me_dir, 'SubProcesses', evt_file)], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -2806,9 +2796,9 @@ Integrated cross-section
         for dir in self.split_folders.keys():
             last_line = ''
             try:
-                last_line = subprocess.Popen('tail -n1 %s ' % \
-                    pjoin(dir, 'events.lhe'), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                last_line = subprocess.Popen(
+                        ['tail', '-n1', pjoin(dir, 'events.lhe')], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             except IOError:
                 pass
 
@@ -3092,10 +3082,7 @@ Integrated cross-section
         sourcedir = pjoin(self.me_dir, 'Source')
 
         #clean files
-        misc.call(['rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, test_log])], \
-                  cwd=self.me_dir, shell=True)
-
+        files.rm([amcatnlo_log, madloop_log, reweight_log, test_log])
         #define which executable/tests to compile
         if '+' in mode:
             mode = mode.split('+')[0]

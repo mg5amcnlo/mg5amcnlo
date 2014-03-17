@@ -1569,17 +1569,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info('Using LHAPDF v%s interface for PDFs' % lhapdf_version)
 
         if lhapdf_version.startswith('5.'):
-            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
 
         elif lhapdf_version.startswith('6.'):
-            lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-            pdfsetsdir = subprocess.Popen('%s --datadir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhalibdir = subprocess.Popen([self.options['lhapdf'], '--libdir'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
+            pdfsetsdir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                     stdout = subprocess.PIPE).stdout.read().strip()
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsetsdir)
 
         else:
@@ -1633,13 +1633,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
-            misc.call([getdata, filename], cwd = pdfsets_dir, shell = True)
+            misc.call([getdata, filename], cwd = pdfsets_dir)
 
         elif lhapdf_version.startswith('6.'):
             # use the "lhapdf install xxx" command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
-            misc.call([getdata, 'install', filename], cwd = pdfsets_dir, shell = True)
+            misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -1691,8 +1691,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_version(self):
         """returns the lhapdf version number"""
         if not hasattr(self, 'lhapdfversion'):
-            self.lhapdf_version = subprocess.Popen('%s --version' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            self.lhapdf_version = \
+                    subprocess.Popen([self.options['lhapdf'], '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
 
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.'):
@@ -1705,12 +1706,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhapdf_version = self.get_lhapdf_version()
 
         if lhapdf_version.startswith('5.'):
-            datadir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            datadir = subprocess.Popen([self.options['lhapdf'], '--pdfsets-path'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
 
         elif lhapdf_version.startswith('6.'):
-            datadir = subprocess.Popen('%s --datadir' % self.options['lhapdf'],
-                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            datadir = subprocess.Popen([self.options['lhapdf'], '--datadir'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
 
         return datadir
 
