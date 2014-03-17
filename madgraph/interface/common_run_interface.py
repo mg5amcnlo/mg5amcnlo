@@ -1633,13 +1633,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
-            misc.call([getdata, filename])
+            misc.call([getdata, filename], cwd = pdfsets_dir, shell = True)
 
         elif lhapdf_version.startswith('6.'):
             # use the "lhapdf install xxx" command, which is in the same path as
             # lhapdf-config
             getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
-            misc.call('%s install %s' % (getdata, filename), cwd = pdfsets_dir, shell = True)
+            misc.call([getdata, 'install', filename], cwd = pdfsets_dir, shell = True)
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
@@ -1660,7 +1660,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise MadGraph5Error, 'index of lhapdf file not found'
             pdfsets_lines = \
-                    [l for l in open(pdfsets_dir + '.index').read().split('\n') if l.strip()]
+                    [l for l in open(indexfile).read().split('\n') if l.strip()]
             lhapdf_pdfsets = dict( (int(l.split()[0]), {'lhaid': int(l.split()[0]),
                           'pdflib_ntype': int(l.split()[1]),
                           'pdflib_ngroup': int(l.split()[2]),
