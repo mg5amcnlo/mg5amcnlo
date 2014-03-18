@@ -1289,6 +1289,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
             self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+        
+        return compiler
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""

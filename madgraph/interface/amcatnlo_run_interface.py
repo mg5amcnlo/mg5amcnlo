@@ -3152,7 +3152,20 @@ Integrated cross-section
         else:
             raise aMCatNLOError('Compilation failed')
         
-        # make CutTools (only necessary with MG option output_dependencies='local')
+        # make StdHep (only necessary with MG option output_dependencies='internal')
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
+            if  os.path.exists(pjoin(sourcedir,'StdHEP')):
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                misc.compile(['StdHEP'], cwd = sourcedir)
+                logger.info('          ...done.')      
+            else:
+                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+
+        # make CutTools (only necessary with MG option output_dependencies='internal')
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
             not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
             if  os.path.exists(pjoin(sourcedir,'CutTools')):

@@ -5711,52 +5711,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           self.options['fortran_compiler'],
+              output_dependencies = self.options['output_dependencies'],
+                                           MG5DIR = MG5DIR)
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
-            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
+                                                                    'hepmc_path']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:
                     to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
                     to_keep = to_keep)
-
-            # check if stdhep has to be compiled (only the first time)
-            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
-                logger.info('Compiling StdHEP. This has to be done only once.')
-                # this is for 64-bit systems
-                if sys.maxsize > 2**32:
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    text = text.replace('MBITS=32','MBITS=64')
-                    open(path, 'w').writelines(text)
-                # Set the correct fortran compiler
-                if 'FC' not in os.environ or not os.environ['FC']:
-                    if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
-                        compiler = self.options['fortran_compiler']
-                    elif misc.which('gfortran'):
-                        compiler = 'gfortran'
-                    elif misc.which('g77'):
-                        compiler = 'g77'
-                    else:
-                        raise self.InvalidCmd('Require g77 or Gfortran compiler')
-                    path = None
-                    base_compiler= ['FC=g77','FC=gfortran']
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % compiler)
-                    open(path, 'w').writelines(text)
-
-                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                logger.info('Done.')
-            #then link the libraries in the exported dir
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
         elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent

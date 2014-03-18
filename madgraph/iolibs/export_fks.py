@@ -46,7 +46,7 @@ import aloha.create_aloha as create_aloha
 
 import models.write_param_card as write_param_card
 import models.check_param_card as check_param_card
-from madgraph import MadGraph5Error, MG5DIR
+from madgraph import MadGraph5Error, MG5DIR, InvalidCmd
 from madgraph.iolibs.files import cp, ln, mv
 
 pjoin = os.path.join
@@ -556,7 +556,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 
     def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler='gfortran'):
+         online = False, compiler='gfortran', output_dependencies = 'external',
+                                                                MG5DIR = None):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
@@ -582,7 +583,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
 
         # Check for compiler
-        self.set_compiler(compiler)
+        compiler_chosen = self.set_compiler(compiler)
 
         old_pos = os.getcwd()
         os.chdir(os.path.join(self.dir_path, 'SubProcesses'))
@@ -648,7 +649,69 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         stdout = devnull)
 
         #return to the initial dir
-        os.chdir(old_pos)               
+        os.chdir(old_pos)
+        
+        # Setup stdHep
+        # Find the correct fortran compiler
+        base_compiler= ['FC=g77','FC=gfortran']
+        
+        StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
+        
+        if output_dependencies == 'external':
+            # check if stdhep has to be compiled (only the first time)
+            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
+                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
+                if 'FC' not in os.environ or not os.environ['FC']:
+                    path = os.path.join(StdHep_path, 'src', 'make_opts')
+                    text = open(path).read()
+                    for base in base_compiler:
+                        text = text.replace(base,'FC=%s' % compiler_chosen)
+                    open(path, 'w').writelines(text)
+
+                logger.info('Compiling StdHEP. This has to be done only once.')
+                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
+                logger.info('Done.')
+            #then link the libraries in the exported dir
+            files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
+                                         pjoin(self.dir_path, 'MCatNLO', 'lib'))
+            files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
+                                         pjoin(self.dir_path, 'MCatNLO', 'lib'))
+
+        elif output_dependencies == 'internal':
+            StdHEP_internal_path = pjoin(self.dir_path,'Source','StdHEP')
+            shutil.copytree(StdHep_path,StdHEP_internal_path, symlinks=True)
+            # Create the links to the lib folder
+            linkfiles = ['libstdhep.a', 'libFmcfio.a']
+            for file in linkfiles:
+                ln(pjoin(os.path.pardir,os.path.pardir,'Source','StdHEP','lib',file),
+                                  os.path.join(self.dir_path, 'MCatNLO', 'lib'))
+                if 'FC' not in os.environ or not os.environ['FC']:
+                    path = pjoin(StdHEP_internal_path, 'src', 'make_opts')
+                    text = open(path).read()
+                    for base in base_compiler:
+                        text = text.replace(base,'FC=%s' % compiler_chosen)
+                    open(path, 'w').writelines(text)
+                # To avoid compiler version conflicts, we force a clean here
+                misc.compile(['clean'],cwd = StdHEP_internal_path)
+        
+        elif output_dependencies == 'environment_paths':
+            # Here the user chose to define the dependencies path in one of 
+            # his environmental paths
+            libStdHep = misc.which_lib('libstdhep.a')
+            libFmcfio = misc.which_lib('libFmcfio.a')
+            if not libStdHep is None and not libFmcfio is None:
+                logger.info('MG5_aMC is using StdHep installation found at %s.'%\
+                                                     os.path.dirname(libStdHep)) 
+                ln(pjoin(libStdHep),pjoin(self.dir_path, 'MCatNLO', 'lib'),abspath=True)
+                ln(pjoin(libFmcfio),pjoin(self.dir_path, 'MCatNLO', 'lib'),abspath=True)
+            else:
+                raise InvalidCmd("Could not find the location of the files"+\
+                    " libstdhep.a and libFmcfio.a in you environment paths.")
+            
+        else:
+            raise MadGraph5Error, 'output_dependencies option %s not recognized'\
+                                                            %output_dependencies
+           
 
     def write_real_from_born_configs(self, writer, matrix_element, fortran_model):
         """Writes the real_from_born_configs.inc file that contains

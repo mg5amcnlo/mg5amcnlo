@@ -139,8 +139,8 @@ class LoopExporterFortran(object):
             if not CTlib is None and not CTmod is None:
                 logger.info('MG5_aMC is using CutTools installation found at %s.'%\
                                                          os.path.dirname(CTlib)) 
-                ln(os.path.join(CTlib),os.path.join(targetPath,'lib'))
-                ln(os.path.join(CTmod),os.path.join(targetPath,'lib'))
+                ln(os.path.join(CTlib),os.path.join(targetPath,'lib'),abspath=True)
+                ln(os.path.join(CTmod),os.path.join(targetPath,'lib'),abspath=True)
             else:
                 raise InvalidCmd("Could not find the location of the files"+\
                     " libcts.a and mp_module.mod in you environment paths.")

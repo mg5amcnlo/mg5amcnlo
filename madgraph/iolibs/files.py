@@ -185,7 +185,7 @@ def mv(path1, path2):
         else:
             raise
         
-def ln(file_pos, starting_dir='.', name='', log=True, cwd=None):
+def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
     """a simple way to have a symbolic link without to have to change directory
     starting_point is the directory where to write the link
     file_pos is the file to link
@@ -206,9 +206,13 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None):
     if os.path.exists(os.path.join(starting_dir, name)):
         os.remove(os.path.join(starting_dir, name))
 
+    if not abspath:
+        target = os.path.relpath(file_pos, starting_dir)
+    else:
+        target = file_pos
+
     try:
-        os.symlink(os.path.relpath(file_pos, starting_dir), \
-                        os.path.join(starting_dir, name))
+        os.symlink(target, os.path.join(starting_dir, name))
     except Exception:
         if log:
             logger.warning('Could not link %s at position: %s' % (file_pos, \
