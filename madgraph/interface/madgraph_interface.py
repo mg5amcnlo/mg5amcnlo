@@ -5370,7 +5370,17 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         options = config[self._export_format]
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
-            if not args[0] in ['.', '-f']:
+            if len(args) == 0:
+                i=0
+                while 1:
+                    if os.path.exists('Pythia8_proc_%i' %i):
+                        i+=1
+                    else:
+                        break
+                os.mkdir('Pythia8_proc_%i' %i) 
+                self._export_dir = pjoin(self._export_dir, 'Pythia8_proc_%i' %i)
+                logger.info('Create output in %s' % self._export_dir)
+            elif not args[0] in ['.', '-f']:
                 raise self.InvalidCmd, 'Wrong path directory to create in local directory use \'.\''
         elif not noclean and os.path.isdir(self._export_dir) and options['check']:
             if not force:
@@ -5887,7 +5897,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             return
 
         # Do the MadEvent integration!!
-        with misc.TMP_directory() as path:
+        with misc.TMP_directory(dir=os.getcwd()) as path:
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):

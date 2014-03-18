@@ -495,14 +495,15 @@ c
             write(ifile,442)wgtwmcxsecE(i),
      #                      wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) write(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) write(ifile,
+     f         '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &       wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           write(ifile,'(a)') '  </rwgt>'
          elseif(jwgtinfo.eq.5) then
            write(ifile,'(a)')'  <rwgt>'
            if (iSorH_lhe.eq.1) then ! S-event
-              write(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
-     $             ,i_process
+              write(ifile,'(1x,e14.8,1x,e14.8,i4,i4)') 
+     f             wgtbpower,wgtcpower,nScontributions,i_process
               write(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
               do i=1,mexternal
@@ -545,7 +546,8 @@ c$$$                 enddo
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              write(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              write(ifile,'(1x,e14.8,1x,e14.8,i4)')
+     f             wgtbpower,wgtcpower,i_process
               iFKS=nFKSprocess_used*2
               write(ifile,'(1x,i4)') nFKSprocess_used
               write(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
@@ -695,13 +697,15 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) read(ifile,
+     f     '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &     wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,1x,e14.8,i4,i4)')
+     f             wgtbpower,wgtcpower,nScontributions
      $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
@@ -747,7 +751,8 @@ c
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              read(ifile,'(1x,e14.8,1x,e14.8,i4)')
+     f             wgtbpower,wgtcpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
               read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)
@@ -908,13 +913,15 @@ c
             read(ifile,442)wgtwmcxsecE(i),
      #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
           enddo
-          if(jwgtinfo.eq.4) read(ifile,'(1x,e14.8,1x,i4,1x,i4)')
-     &         wgtbpower,nFKSprocess_used,nFKSprocess_used_born
+          if(jwgtinfo.eq.4) read(ifile,
+     f      '(1x,e14.8,1x,e14.8,1x,i4,1x,i4)')
+     &      wgtbpower,wgtcpower,nFKSprocess_used,nFKSprocess_used_born
           read(ifile,'(a)')string
         elseif(jwgtinfo.eq.5) then
            read(ifile,'(a)')string
            if (iSorH_lhe.eq.1) then ! S-event
-              read(ifile,'(1x,e14.8,i4,i4)') wgtbpower,nScontributions
+              read(ifile,'(1x,e14.8,1x,e14.8,i4,i4)') 
+     f             wgtbpower,wgtcpower,nScontributions
      $             ,i_process
               read(ifile,'(1x,i4,1x,e14.8)') nFKSprocess_used_born
      &             ,wgtref_nbody_all(i_process)
@@ -960,7 +967,8 @@ c
      $                ,iFKS),wgtmuF22_all(2,iFKS)
               enddo
            elseif (iSorH_lhe.eq.2) then ! H-event
-              read(ifile,'(1x,e14.8,i4)') wgtbpower,i_process
+              read(ifile,'(1x,e14.8,1x,e14.8,i4)') 
+     f             wgtbpower,wgtcpower,i_process
               read(ifile,'(1x,i4)') nFKSprocess_used
               iFKS=nFKSprocess_used*2
               read(ifile,'(1x,e14.8,1x,i4)') wgtref_all(iFKS,i_process)

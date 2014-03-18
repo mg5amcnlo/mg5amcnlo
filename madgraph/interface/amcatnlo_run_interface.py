@@ -2013,7 +2013,7 @@ Integrated cross-section
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
                      "(?P<time>[\d\+-Eed\.]*)\s*")
 
-        for logf in all_log_files:
+        for logf in log_GV_files:
             logfile=open(logf,'r')
             log = logfile.read()
             logfile.close()
@@ -3125,11 +3125,15 @@ Integrated cross-section
             os.remove(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
-        if self.run_card['pdlabel'] == 'lhapdf':
+        if self.run_card['pdlabel'] == 'lhapdf' and \
+                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
+                 self.banner.get_detail('run_card', 'lpp1') != '0'):
             self.link_lhapdf(libdir)
         else:
-            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
             except KeyError:

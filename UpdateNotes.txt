@@ -11,7 +11,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                 OM: Better determination of which particles are in representation 3/3bar since FR is ambiguous on that point.
                     Now the determination also looks for 3 -3 1 interactions to check if that help.
                 OM: Fix a bug(crash) in MW linked to the permutation pre-selection module.
-
+		RF: Better comments in the code for user-defined cuts in the ./SubProcesses/cuts.f function.
+                    Also the maxjetflavor parameter in the run_card is now actually working.
+                OM: Update SysCalc to:
+                      - Fix a bug that some file where sometimes truncated.
+                      - Allow for independant scale variation for the factorization/renormalization scale.
+                RF+OM: Improve the handling of conflicting Breit-Wigners at NLO
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
                 ------------------
@@ -240,7 +245,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       one W decaying leptonically. For such processes the lepton cuts were also used
                       on the neutrino particle reducing the cross-section. This bug was present only
                       for group_subprocesses=True (the default)
-                  OM: Fix Bug #1184213: crash in presence of JIL mechanism (occur on some 
+                  OM: Fix Bug #1184213: crash in presence of GIM mechanism (occur on some 
                       LINUX computer only)
                   OM: The compilation of madevent is now performed by the number of core specify
                       in the configuration file. Same for pythia, ...

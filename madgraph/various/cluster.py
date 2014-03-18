@@ -1019,7 +1019,7 @@ class PBSCluster(Cluster):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
+                                  stderr=subprocess.STDOUT)
 
         for line in status.stdout:
             line = line.strip()

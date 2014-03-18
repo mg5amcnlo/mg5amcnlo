@@ -257,7 +257,7 @@ c     timing statistics
      #                 prefact_deg_sxi,prefact_deg_slxi,deg_wgt,deg_swgt,
      #                 deg_xi_c,deg_lxi_c,deg_xi_sc,deg_lxi_sc,
      #                 cnt_swgt,cnt_wgt,xlum_ev,xlum_c,xlum_s,xlum_sc,xsec,
-     #                 bpower
+     #                 bpower,cpower
       integer i,j,iplot
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
@@ -406,6 +406,7 @@ c FxFx merging
       external setclscales,rewgt
 
       double precision pmass(nexternal)
+      double precision rwgt_muR_dep_fac
       include "pmass.inc"
 
       vegas_weight=vegaswgt
@@ -437,6 +438,23 @@ c Note that all the wgts and jacs should be positive.
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
          wgtbpower=bpower
+
+c Compute cpower done for bottom Yukawa, routine needs to be adopted
+c for other muR-dependendent factors
+         call compute_cpower(p_born,cpower)
+         if(dabs(cpower+1d0).lt.tiny) then
+            wgtcpower=0d0
+         else
+            wgtcpower=cpower
+         endif
+c Check that things are done consistently
+         if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
+           write(*,*)'Inconsistency in the computation of cpower',
+     #               wgtcpower,cpowerinput
+           write(*,*)'Check value in reweight0.inc'
+           stop
+         endif
+
          firsttime=.false.
       endif
 
@@ -541,7 +559,8 @@ c       Compute the scales and sudakov-reweighting for the FxFx merging
            call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
            xlum_ev = dlum()
            xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt
-           ev_wgt = xlum_ev*xsec
+           ev_wgt = xlum_ev*xsec * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
            if(doreweight)then
              wgtmuR2(1)=muR2_current/muR_over_ref**2
              wgtmuF12(1)=muF12_current/muF1_over_ref**2
@@ -609,12 +628,14 @@ c Collinear subtraction term:
             call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,fx_c)
             xlum_c = dlum()
             xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
-            cnt_wgt_c=cnt_wgt_c-xlum_c*xsec
+            cnt_wgt_c=cnt_wgt_c-xlum_c*xsec * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
      #                     deg_xi_c,deg_lxi_c)
             deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
      #                      jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                      xlum_c
+     #                      xlum_c * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             iplot=1
             if(doreweight)then
               call reweight_fillkin(pp,ithree)
@@ -653,7 +674,11 @@ c Soft subtraction term:
               xsec=fx_s*s_s*jac_cnt(0)
               cnt_s=xlum_s*xsec
               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               if(doreweight)
      #          wgtwreal(2)=-xsec*(prefact+prefact_cnt_ssc)*rwgt/
      #                      g**(nint(2*wgtbpower+2.d0))
@@ -688,10 +713,15 @@ c For FxFx merging, include the compensation term
                 wgtwnsmur(2)=wgtwnstmpmur*xsec/g**(nint(2*wgtbpower
      &               +2.d0))
               endif
-              bsv_wgt=bsv_wgt*xnormsv
-              virt_wgt=virt_wgt*xnormsv
-              born_wgt=born_wgt*xnormsv
+              bsv_wgt=bsv_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+              virt_wgt=virt_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+              born_wgt=born_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               born_wgt_ao2pi=born_wgt_ao2pi*xnormsv
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             endif
  548        continue
             iplot=0
@@ -719,17 +749,23 @@ c Soft-Collinear subtraction term:
             xsec=fx_sc*s_sc*jac_cnt(2)
             cnt_sc=xlum_sc*xsec
             cnt_wgt_sc=cnt_wgt_sc+cnt_sc*(prefact_c+prefact_coll)*rwgt
+     f           * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             cnt_swgt_sc=cnt_swgt_sc+
      &           cnt_sc*(prefact_cnt_ssc_c+prefact_coll_c)*rwgt
+     f           * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             call sreal_deg(p1_cnt(0,1,2),zero,one,
      #                     deg_xi_sc,deg_lxi_sc)
             deg_wgt=deg_wgt-( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
      #                     jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                     xlum_sc
+     #                     xlum_sc * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             deg_swgt=deg_swgt-( deg_xi_sc*prefact_deg_sxi +
      #                     deg_lxi_sc*prefact_deg_slxi )*
      #                     jac_cnt(2)*rwgt/(shat/(32*pi**2))*
-     #                     xlum_sc
+     #                     xlum_sc * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             if(iplot.ne.0)iplot=2
             if(doreweight)then
               call reweight_fillkin(pp,ifour)
@@ -1009,7 +1045,7 @@ c     timing statistics
      &     ,gfactcl,xmcMC ,xmcME,SxmcMC,SxmcME,HxmcMC,HxmcME, xlum_c
      &     ,xlum_s,xlum_sc ,xlum_mc,xlum_mc_save, dummy,Sev_wgt,Hev_wgt
      &     ,fx_ev,probne ,sevmc ,xlum_ev,get_ptrel, xlum_mc_fact,xnormsv
-     &     ,xsec,bpower ,dsigS ,dsigH,totH_wgt,virt_wgt
+     &     ,xsec,bpower,cpower ,dsigS ,dsigH,totH_wgt,virt_wgt
       integer i,j
 
       integer izero,ione,itwo,mohdr,iplot_ev,iplot_cnt,iplot_born
@@ -1201,6 +1237,8 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
 
+      double precision rwgt_muR_dep_fac
+
       double precision pmass(nexternal)
       include "pmass.inc"
 
@@ -1305,6 +1343,22 @@ c
 c Put here call to compute bpower
          call compute_bpower(p_born,bpower)
          wgtbpower=bpower
+
+c Compute cpower done for bottom Yukawa, routine needs to be adopted
+c for other muR-dependendent factors
+         call compute_cpower(p_born,cpower)
+         if(dabs(cpower+1d0).lt.tiny) then
+            wgtcpower=0d0
+         else
+            wgtcpower=cpower
+         endif
+c Check that things are done consistently
+        if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
+           write(*,*)'Inconsistency in the computation of cpower',
+     #               wgtcpower,cpowerinput
+           write(*,*)'Check value in reweight0.inc'
+           stop
+         endif
       endif
 c
       prefact=xinorm_ev/xi_i_fks_ev*
@@ -1454,10 +1508,12 @@ c respectively
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)+xmcxsec(i)*PD(j)*xlum_mc_fact*sevmc*wgt*prefact
-     &              *rwgt*CONV
+     &              *rwgt*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2
      &              ,j)-xmcxsec(i)*PD(j)*xlum_mc_fact*sevmc*wgt*prefact
-     &              *rwgt*CONV
+     &              *rwgt*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             enddo
             if(doreweight)then
                wgtwmcxsec_all(i,nFKSprocess*2)=-xsec*xlum_mc_fact
@@ -1471,8 +1527,10 @@ c respectively
             endif
           endif
         enddo
-        SxmcMC=xmcMC*sevmc*wgt*prefact*rwgt
-        HxmcMC=-xmcMC*sevmc*wgt*prefact*rwgt
+        SxmcMC=xmcMC*sevmc*wgt*prefact*rwgt * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+        HxmcMC=-xmcMC*sevmc*wgt*prefact*rwgt * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
       endif
 c
       if( (.not.flagmc).and.gfactsf.eq.1.d0 .and.
@@ -1560,6 +1618,8 @@ c Collinear subtraction term:
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
+     f              * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here          
             enddo
             if ((gfactsf.lt.1.d0.and.gfactcl.lt.1.d0 .and.
      &           probne.gt.0.d0) .and. pmass(j_fks).eq.0.d0) then
@@ -1567,6 +1627,8 @@ c Collinear subtraction term:
                do j=1,IPROC
                   unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
      &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
+     f                 * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here             
                enddo
             endif
             if(doreweight) then
@@ -1578,21 +1640,26 @@ c Collinear subtraction term:
             endif
             if( y_ij_fks_ev.gt.1d0-deltaS )then
                xsec = fx_c*s_c*jac_cnt(1)*(prefact_c+prefact_coll)*rwgt
-               cnt_wgt_c=cnt_wgt_c-xlum_c*xsec
+               cnt_wgt_c=cnt_wgt_c-xlum_c*xsec * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                do j=1,IPROC
                   unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess
-     &                 ,1,j)-xsec*PD(j)*CONV
+     &                 ,1,j)-xsec*PD(j)*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                enddo
                call sreal_deg(p1_cnt(0,1,1),xi_i_fks_cnt(ione),one,
      #                        deg_xi_c,deg_lxi_c)
                deg_wgt=deg_wgt+( deg_xi_c+deg_lxi_c*log(xi_i_fks_cnt(ione)) )*
      #                         jac_cnt(1)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                         xlum_c
+     #                         xlum_c * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                do j=1,IPROC
                   unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess
      &                 ,1,j)+PD(j)*( deg_xi_c+deg_lxi_c
      &                 *log(xi_i_fks_cnt(ione)) )* jac_cnt(1)
      &                 *prefact_deg*rwgt/(shat/(32*pi**2))*CONV
+     f                 * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here             
                enddo
                if(doreweight)then
                   wgtwreal_all(3,nFKSprocess*2-1)=wgtwreal_all(3
@@ -1655,6 +1722,8 @@ c Soft subtraction term:
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)+xsec*PD(j)*(1-gfactsf)*probne*CONV
+     f              * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here          
             enddo
             if(doreweight)then
                wgtwreal_all(2,nFKSprocess*2-1)=xsec*(1-gfactsf)*probne/
@@ -1665,6 +1734,8 @@ c Soft subtraction term:
                do j=1,IPROC
                   unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
      &                 ,2,j)-xsec*PD(j)*(1-gfactsf)*probne*CONV
+     f                 * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                enddo
                if(doreweight)wgtwreal_all(2,nFKSprocess*2)=
      &              xsec/g**(nint(2*wgtbpower+2.d0))
@@ -1673,11 +1744,16 @@ c Soft subtraction term:
               xsec=fx_s*s_s*jac_cnt(0)
               cnt_s=xlum_s*xsec
               cnt_wgt_s=cnt_wgt_s-cnt_s*prefact*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               cnt_swgt_s=cnt_swgt_s-cnt_s*prefact_cnt_ssc*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               do j=1,IPROC
                  unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      $                ,j)-PD(j)*xsec*(prefact+prefact_cnt_ssc)*rwgt
-     $                *CONV
+     $                *CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               enddo
               if(doreweight)wgtwreal_all(2,nFKSprocess*2-1)
      &             =wgtwreal_all(2,nFKSprocess*2-1)-xsec*(prefact
@@ -1714,15 +1790,22 @@ c For FxFx merging, include the compensation term
               endif
               do j=1,IPROC
                  unwgt_table(0,1,j)=unwgt_table(0,1,j)+PD(j)*bsv_wgt
-     &                *xsec*CONV
+     &                *xsec*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                  unwgt_table(0,3,j)=unwgt_table(0,3,j)+PD(j)*virt_wgt
-     &                *xsec*CONV
+     &                *xsec*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
                  unwgt_table(1,3,j)=unwgt_table(1,3,j)+PD(j)*born_wgt
      &                *xsec*CONV*g**2/(8d0*PI**2)
+     f                * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               enddo
-              bsv_wgt=bsv_wgt*xnormsv
-              virt_wgt=virt_wgt*xnormsv
-              born_wgt=born_wgt*xnormsv
+              bsv_wgt=bsv_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+              virt_wgt=virt_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+              born_wgt=born_wgt*xnormsv * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             endif
  548        continue
          endif
@@ -1762,6 +1845,8 @@ c Soft-Collinear subtraction term:
             do j=1,IPROC
                unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &              ,j)-PD(j)*xsec*(1-gfactsf)*probne*CONV
+     f              * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
             enddo
             if(doreweight)then
                wgtwreal_all(4,nFKSprocess*2-1)=-xsec*(1-gfactsf)*probne/
@@ -1773,6 +1858,8 @@ c Soft-Collinear subtraction term:
                do j=1,IPROC
                   unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess
      &                 ,2,j)+PD(j)*xsec*(1-gfactsf)*probne*CONV
+     f                 * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here             
                enddo
                if(doreweight)wgtwreal_all(4,nFKSprocess*2)=
      &              -xsec/g**(nint(2*wgtbpower+2.d0))
@@ -1783,18 +1870,24 @@ c Soft-Collinear subtraction term:
               xsec=fx_sc*s_sc*jac_cnt(2)
               cnt_sc=xlum_sc*xsec
               cnt_wgt_sc=cnt_wgt_sc+cnt_sc*(prefact_c+prefact_coll)*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               cnt_swgt_sc=cnt_swgt_sc+
      &             cnt_sc*(prefact_cnt_ssc_c+prefact_coll_c)*rwgt
+     f             * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               call sreal_deg(p1_cnt(0,1,2),zero,one,
      #                       deg_xi_sc,deg_lxi_sc)
               deg_wgt=deg_wgt-
      #                    ( deg_xi_sc+deg_lxi_sc*log(xi_i_fks_cnt(ione)) )*
      #                    jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))*
-     #                    xlum_sc
+     #                    xlum_sc * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               deg_swgt=deg_swgt-( deg_xi_sc*prefact_deg_sxi +
      #                       deg_lxi_sc*prefact_deg_slxi )*
      #                       jac_cnt(2)*rwgt/(shat/(32*pi**2))*
-     #                       xlum_sc
+     #                       xlum_sc * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               do j=1,IPROC
                  unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1
      &                ,j)+PD(j)*(xsec*(prefact_c+prefact_coll
@@ -1803,7 +1896,8 @@ c Soft-Collinear subtraction term:
      &                jac_cnt(2)*prefact_deg*rwgt/(shat/(32*pi**2))
      &                -(deg_xi_sc*prefact_deg_sxi + deg_lxi_sc
      &                *prefact_deg_slxi )* jac_cnt(2)*rwgt/(shat/(32*pi
-     &                **2)))*CONV
+     &                **2)))*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
               enddo
               if(doreweight)then
                  wgtwreal_all(4,nFKSprocess*2-1)=wgtwreal_all(4
@@ -1823,8 +1917,10 @@ c Soft-Collinear subtraction term:
            endif
         endif
       endif
-      SxmcME=SxmcME*(1-gfactsf)*probne
-      HxmcME=-HxmcME*(1-gfactsf)*probne
+      SxmcME=SxmcME*(1-gfactsf)*probne * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+      HxmcME=-HxmcME*(1-gfactsf)*probne * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
       if(doreweight)then
          xsec=(1-gfactsf)*probne
          wgtwreal_all(2,nFKSprocess*2)=
@@ -1879,13 +1975,17 @@ c respectively
           call sreal(pp,xi_i_fks_ev,y_ij_fks_ev,fx_ev)
           xlum_ev = dlum()
           xsec = fx_ev*s_ev*ffact*wgt*prefact*rwgt
-          Sev_wgt = xlum_ev*xsec*(1-probne)
-          Hev_wgt = xlum_ev*xsec*probne
+          Sev_wgt = xlum_ev*xsec*(1-probne) * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
+          Hev_wgt = xlum_ev*xsec*probne * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
           do j=1,IPROC
              unwgt_table(nFKSprocess,1,j)=unwgt_table(nFKSprocess,1,j)
-     &            +PD(j)*xsec*(1-probne)*CONV
+     &            +PD(j)*xsec*(1-probne)*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
              unwgt_table(nFKSprocess,2,j)=unwgt_table(nFKSprocess,2,j)
-     &            +PD(j)*xsec*probne*CONV
+     &            +PD(j)*xsec*probne*CONV * rwgt_muR_dep_fac(scale)
+com-- muR-dependent fac is reweighted here
           enddo
           if(doreweight)then
              if(ifill1H.eq.0)then
@@ -4242,8 +4342,8 @@ c      include "fks.inc"
       parameter (ComputePoles=.false.)
       parameter (fksprefact=.true.)
 
-      double precision beta0
-      common/cbeta0/beta0
+      double precision beta0,ren_group_coeff
+      common/cbeta0/beta0,ren_group_coeff
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
@@ -4470,20 +4570,20 @@ c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(shat/QES2)*
-     #                       ao2pi*dble(wgt1(1))
+           bsv_wgt=bsv_wgt + 2*pi*(beta0*wgtbpower
+     #      +ren_group_coeff*wgtcpower)*log(shat/QES2)*ao2pi*dble(wgt1(1))
          elseif(abrv.eq.'novA'.or.abrv.eq.'novB')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/shat)*
-     #                       ao2pi*dble(wgt1(1))
+           bsv_wgt=bsv_wgt + 2*pi*(beta0*wgtbpower
+     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/shat)*ao2pi*dble(wgt1(1))
          elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
      #          abrv.ne.'viLC')then
-           bsv_wgt=bsv_wgt + 2*pi*beta0*wgtbpower*log(q2fact(1)/QES2)*
-     #                       ao2pi*dble(wgt1(1))
+           bsv_wgt=bsv_wgt + 2*pi*(beta0*wgtbpower
+     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/QES2)*ao2pi*dble(wgt1(1))
          endif
 c eq.(MadFKS.C.14)
          if(abrv(1:2).ne.'vi')then
-           bsv_wgt=bsv_wgt - 2*pi*beta0*wgtbpower*
-     #                       log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
+           bsv_wgt=bsv_wgt - 2*pi*(beta0*wgtbpower
+     #      +ren_group_coeff*wgtcpower)*log(q2fact(1)/scale**2)*ao2pi*dble(wgt1(1))
          endif
 
 
@@ -4507,7 +4607,8 @@ c eq.(MadFKS.C.14)
                  endif
                enddo
                wgtwnstmpmuf=ao2pi*wgtwnstmpmuf*dble(wgt1(1))
-               wgtwnstmpmur=2*pi*beta0*wgtbpower*ao2pi*dble(wgt1(1))
+               wgtwnstmpmur=2*pi*(beta0*wgtbpower
+     #      +ren_group_coeff*wgtcpower)*ao2pi*dble(wgt1(1))
              endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
@@ -4650,6 +4751,102 @@ c nothing funny happens later on
       call sborn(p_born,wgt1)
 
       return
+      end
+
+c       This function computes the power of a muR-dependent factor which
+c       is stored in cpower. You need to modify it when you try to 
+c       reweight your cross section with a muR-dependent factor
+c       (runfac=1 in reweight0.inc)
+c Note: The implementation below only works for the Bottom Yukawa in
+c       the SM where "GC_33" contains the Yukawa, for other models
+c       or general muR-dependent factors you need to change GC_33
+c       to the corresponding coupling.
+      subroutine compute_cpower(p_born,cpower)
+      implicit none
+      include "nexternal.inc"
+      include "coupl.inc"
+      include 'reweight.inc'
+
+      double precision p_born(0:3,nexternal-1)
+      double precision cpower,born_wgt
+      double complex wgt1(2)
+
+      integer isum_hel
+      logical multi_channel
+      common/to_matrix/isum_hel, multi_channel
+      integer isum_hel_orig
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
+
+      double precision tiny
+      parameter (tiny=1d-6)
+c comment these lines to calculate cpower
+      cpower = -1d0
+      return
+c comment these lines to calculate cpower
+
+c   The following is relevant for a muR-dependent bottom-mass in Yukawa.
+c$$$
+c$$$c Make sure that we sum over helicities (such that we do get a
+c$$$c non-zero Born)
+c$$$      isum_hel_orig = isum_hel
+c$$$      isum_hel=0
+c$$$      call get_helicity(i_fks,j_fks)
+c$$$
+c$$$      calculatedBorn=.false.
+c$$$      call sborn(p_born,wgt1)
+c$$$c Born contribution:
+c$$$      born_wgt=dble(wgt1(1))
+c$$$      
+c$$$c Multiply the Yukawa by 10 (If you use this,
+c$$$c double check that GC_33 is the yukawa! (also below))
+c$$$      if (GC_33.ne.0d0) then
+c$$$         GC_33 = GC_33 * 10d0
+c$$$      else
+c$$$         write(*,*)'Warning In Bornsoftvirtual'
+c$$$         Write(*,*)'Yukawa Is Zero - Cpower Set To Zero'
+c$$$         Cpower = 0d0
+c$$$         Return
+c$$$      Endif
+c$$$
+c$$$c recompute the Born with the new Yukawa
+c$$$      calculatedBorn=.false.
+c$$$      call sborn(p_born,wgt1)
+c$$$
+c$$$c Compute cpower
+c$$$      cpower=Log10(dble(wgt1(1))/born_wgt)
+c$$$      if(abs(cpower-dble(nint(cpower))) .gt. tiny) then
+c$$$         write(*,*)'Error in computation of cpower:'
+c$$$         write(*,*)' not an integer',cpower
+c$$$         stop
+c$$$      elseif (cpower.lt.-tiny) then
+c$$$         write(*,*)'Error in computation of cpower:'
+c$$$         write(*,*)' negative value',cpower
+c$$$         stop
+c$$$      else
+c$$$c set it to the integer exactly
+c$$$         cpower=dble(nint(cpower))
+c$$$         write(*,*)'cpower is', cpower
+c$$$c Check consistency with value used in reweighting
+c$$$c$$$         if( (doreweight.or.doNLOreweight) .and.
+c$$$c$$$     &        abs(cpower-wgtcpower).gt.tiny )then
+c$$$c$$$            write(*,*)'Error in compute_cpower'
+c$$$c$$$            write(*,*)'cpower(s) are:',cpower,wgtcpower
+c$$$c$$$            stop
+c$$$c$$$         endif
+c$$$      endif
+c$$$
+c$$$c Change couplings back and recompute the Born to make sure that 
+c$$$c nothing funny happens later on
+c$$$      GC_33 = GC_33 / 10d0
+c$$$      isum_hel=isum_hel_orig
+c$$$      calculatedBorn=.false.
+c$$$      call sborn(p_born,wgt1)
+c$$$
+c$$$      return
       end
 
 
@@ -5130,6 +5327,11 @@ c This is relevant to gg -> H
 c$$$      m1l_W_finite_CDR=aso2pi*(-3d0*xlgq2os**2+11d0+3d0*pi**2)
 c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
 
+c This is relevant to bbbar -> H
+c$$$      m1l_W_finite_CDR=aso2pi
+c$$$     f     * (-4d0/3d0*xlgq2os**2
+c$$$     f        -8d0/3d0+(16d0/3d0+8d0/3d0)*pi**2/6d0)
+c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       return
       end
 
@@ -5144,8 +5346,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       double precision c(0:1),gamma(0:1),gammap(0:1)
       common/fks_colors/c,gamma,gammap
 
-      double precision beta0
-      common/cbeta0/beta0
+      double precision beta0,ren_group_coeff
+      common/cbeta0/beta0,ren_group_coeff
 
       logical softtest,colltest
       common/sctests/softtest,colltest
@@ -5253,6 +5455,8 @@ c parametrization allows it
             
 c Beta_0 defined according to (MadFKS.C.5)
       beta0=gamma(0)/(2*pi)
+c ren_group_coeff defined accordingly
+      ren_group_coeff=ren_group_coeff_in/(2*pi)
 
       if (firsttime_nFKSprocess(nFKSprocess)) then
          firsttime_nFKSprocess(nFKSprocess)=.false.
