@@ -162,6 +162,8 @@
  -1  = dralmax ! maxdistance between gamma and lepton
 #*********************************************************************
 # Minimum and maximum invariant mass for pairs                       *
+# WARNING: for four lepton final state mmll cut require to have      *
+#          different lepton masses for each flavor!                  *           
 #*********************************************************************
  0   = mmjj    ! min invariant mass of a jet pair 
  0   = mmbb    ! min invariant mass of a b pair 

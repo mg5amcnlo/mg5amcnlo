@@ -5905,7 +5905,7 @@ ONLY valid in Narrow-Width Approximation and at Tree-Level."""
             return
 
         # Do the MadEvent integration!!
-        with misc.TMP_directory() as path:
+        with misc.TMP_directory(dir=os.getcwd()) as path:
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):

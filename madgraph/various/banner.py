@@ -514,6 +514,8 @@ class RunCard(dict):
                 self['draj'] = '0' 
     
         self.add_line('maxjetflavor', 'int', 4)
+        if self['maxjetflavor'] > 6:
+            raise MadGraph5Error, 'maxjetflavor should be lower than 5! (6 is partly supported)'
         self.add_line('auto_ptj_mjj', 'bool', True)
         self.add_line('cut_decays', 'bool', True)
         # minimum pt
@@ -682,6 +684,8 @@ class RunCard(dict):
                 if value != self.format('float', 1.0):
                     logger.warning('Since use_syst=T, We change the value of \'alpsfact\' to 1')
                     self['alpsfact'] = 1.0
+            if self['maxjetflavor'] == 6:
+                raise MadGraph5Error, 'maxjetflavor at 6 is NOT supported for matching!'
             self.add_line('alpsfact', 'float', 1.0)
             self.add_line('pdfwgt', 'bool', True)
             self.add_line('clusinfo', 'bool', False)
