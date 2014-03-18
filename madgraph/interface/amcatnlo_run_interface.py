@@ -3155,6 +3155,54 @@ Integrated cross-section
             logger.info('          ...done, continuing with P* directories')
         else:
             raise aMCatNLOError('Compilation failed')
+        
+        # make StdHep (only necessary with MG option output_dependencies='internal')
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
+            if  os.path.exists(pjoin(sourcedir,'StdHEP')):
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                misc.compile(['StdHEP'], cwd = sourcedir)
+                logger.info('          ...done.')      
+            else:
+                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            if  os.path.exists(pjoin(sourcedir,'CutTools')):
+                logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                misc.compile(['CutTools'], cwd = sourcedir)
+                logger.info('          ...done.')
+            else:
+                raise aMCatNLOError('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise aMCatNLOError('CutTools compilation failed.')            
+
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise aMCatNLOError("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()

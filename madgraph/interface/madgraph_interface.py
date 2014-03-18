@@ -673,7 +673,18 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
         logger.info(" > matrix element generation via the BLAH accord.")
-
+        logger.info("output_dependencies <mode>",'$MG:color:BLACK')
+        logger.info(" > (default 'external') [Use for NLO outputs]")
+        logger.info(" > Choses how the external dependences (such as CutTools)")
+        logger.info(" > of NLO outputs are handled. Possible values are:")
+        logger.info("     o external: Some of the libraries the output depends")
+        logger.info("       on are links to their installation in MG5 root dir.")
+        logger.info("     o internal: All libraries the output depends on are")
+        logger.info("       copied and compiled locally in the output directory.")
+        logger.info("     o environment_paths: The location of all libraries the ")
+        logger.info("       output depends on should be found in your env. paths.")        
+        
+        
 #===============================================================================
 # CheckValidForCmd
 #===============================================================================
@@ -1223,8 +1234,13 @@ This will take effect only in a NEW terminal
 
         if args[0] in ['OLP']:
             if args[1] not in MadGraphCmd._OLP_supported:
-                raise self.InvalidCmd('timeout values should be a integer')
+                raise self.InvalidCmd('OLP value should be one of %s'\
+                                               %str(MadGraphCmd._OLP_supported))
 
+        if args[0] in ['output_dependencies']:
+            if args[1] not in MadGraphCmd._output_dependencies_supported:
+                raise self.InvalidCmd('output_dependencies value should be one of %s'\
+                               %str(MadGraphCmd._output_dependencies_supported))
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -2099,6 +2115,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.list_completion(text, ['unitary', 'Feynman','default'])
             elif args[1] == 'OLP':
                 return self.list_completion(text, MadGraphCmd._OLP_supported)
+            elif args[1] == 'output_dependencies':
+                return self.list_completion(text, 
+                                     MadGraphCmd._output_dependencies_supported)
             elif args[1] == 'stdout_level':
                 return self.list_completion(text, ['DEBUG','INFO','WARNING','ERROR',
                                                           'CRITICAL','default'])
@@ -2333,6 +2352,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'gauge']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree']
     _OLP_supported = ['MadLoop', 'GoSam']
+    _output_dependencies_supported = ['external', 'internal','environment_paths']
 
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
@@ -2361,7 +2381,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_temp_path':None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
-                       'cluster_retry_wait':300
+                       'cluster_retry_wait':300,
+                       'output_dependencies':'external'
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -2369,7 +2390,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
-                          'loop_optimized_output':True}
+                          'loop_optimized_output':True
+                        }
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
@@ -5233,6 +5255,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self._curr_exporter = None
             self.options[args[0]] = args[1]
 
+        elif args[0] =='output_dependencies':
+            self.options[args[0]] = args[1]
+        
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -5696,52 +5721,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           self.options['fortran_compiler'],
+              output_dependencies = self.options['output_dependencies'],
+                                           MG5DIR = MG5DIR)
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
-            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']
+            opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
+                                                                    'hepmc_path']
             to_keep = {}
             for opt in opts_to_keep:
                 if self.options[opt]:
                     to_keep[opt] = self.options[opt]
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False, \
                     to_keep = to_keep)
-
-            # check if stdhep has to be compiled (only the first time)
-            if not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a')):
-                logger.info('Compiling StdHEP. This has to be done only once.')
-                # this is for 64-bit systems
-                if sys.maxsize > 2**32:
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    text = text.replace('MBITS=32','MBITS=64')
-                    open(path, 'w').writelines(text)
-                # Set the correct fortran compiler
-                if 'FC' not in os.environ or not os.environ['FC']:
-                    if self.options['fortran_compiler'] and self.options['fortran_compiler'] != 'None':
-                        compiler = self.options['fortran_compiler']
-                    elif misc.which('gfortran'):
-                        compiler = 'gfortran'
-                    elif misc.which('g77'):
-                        compiler = 'g77'
-                    else:
-                        raise self.InvalidCmd('Require g77 or Gfortran compiler')
-                    path = None
-                    base_compiler= ['FC=g77','FC=gfortran']
-                    path = os.path.join(MG5DIR, 'vendor', 'StdHEP', 'src', 'make_opts')
-                    text = open(path).read()
-                    for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % compiler)
-                    open(path, 'w').writelines(text)
-
-                misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                logger.info('Done.')
-            #then link the libraries in the exported dir
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
-            files.ln(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'), \
-               pjoin(self._export_dir, 'MCatNLO', 'lib'))
 
         elif self._export_format in ['madevent', 'madweight']:          
             # Create configuration file [path to executable] for madevent
