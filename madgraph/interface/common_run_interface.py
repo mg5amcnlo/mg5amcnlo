@@ -413,7 +413,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             elif arg.startswith('--multicore'):
                 self.configure_run_mode(2)
             elif arg.startswith('--nb_core'):
-                self.nb_core = int(arg.split('=',1)[1])
+                self.options['nb_core'] = int(arg.split('=',1)[1])
                 self.configure_run_mode(2)
             elif arg.startswith('--web'):
                 self.pass_in_web_mode()
@@ -1224,10 +1224,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.cluster_mode = run_mode
 
         if run_mode == 2:
-            if not self.nb_core:
+            if not self.options['nb_core']:
                 import multiprocessing
-                self.nb_core = multiprocessing.cpu_count()
-            nb_core =self.nb_core
+                self.options['nb_core'] = multiprocessing.cpu_count()
+            nb_core = self.options['nb_core']
         elif run_mode == 0:
             nb_core = 1
 
@@ -1236,6 +1236,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if run_mode in [0, 2]:
             self.cluster = cluster.MultiCore(
                              **self.options)
+            self.cluster.nb_core = nb_core
                              #cluster_temp_path=self.options['cluster_temp_path'],
 
         if self.cluster_mode == 1:
