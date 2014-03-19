@@ -160,7 +160,11 @@ c The weights comming from reweighting:
          if (www.eq.0d0) then
             ratio=0d0
          else
-            write (*,*) 'ERROR in madfks_plot.f', wgtden,www
+            if (doreweight) then
+               write (*,*) 'ERROR in madfks_plot.f', wgtden,www
+            else
+               ratio=1d0
+            endif
          endif
       else
 c this ratio should essentially be the weight from vegas
