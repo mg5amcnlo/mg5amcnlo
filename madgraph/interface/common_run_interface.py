@@ -1706,9 +1706,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     subprocess.Popen([self.options['lhapdf'], '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
 
-##        # this will be removed once some issues in lhapdf6 will be fixed
-##        if self.lhapdf_version.startswith('6.'):
-##            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.9.x')
+        # this will be removed once some issues in lhapdf6 will be fixed
+        if self.lhapdf_version.startswith('6.'):
+            raise MadGraph5Error('LHAPDF 6 not yet supported. Please use v5.x.x')
 
         return self.lhapdf_version
 
