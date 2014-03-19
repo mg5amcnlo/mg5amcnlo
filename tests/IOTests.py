@@ -472,21 +472,39 @@ class IOTestManager(unittest.TestCase):
             veto_rules = []
             for fname in iotest.testedFiles:
                 # Disregard the veto rules
-                if fname.endswith(']'):
-                    split=fname[:-1].split('[')
+                regexp_finder = re.compile(
+                r'^(?P<veto>-)?(?P<root_folder>.*)(\/)?\[(?P<regexp>.*)\]$')
+                found = regexp_finder.search(fname)
+                if not found is None:
                     # folder without the final /
-                    folder=split[0][:-1]
-                    search = re.compile('['.join(split[1:]))
+                    base_path = pjoin(files_path,found.group('root_folder'))
+                    regexp = re.compile(found.group('regexp'))
                     # In filesToCheck, we must remove the files_path/ prepended
-                    filesToCheck += [ f[(len(str(files_path))+1):]
-                           for f in glob.glob(pjoin(files_path,folder,'*')) if \
-                               (not search.match(path.basename(f)) is None and \
-                                      not path.isdir(f) and not path.islink(f))]
-                elif fname.startswith('-'):
-                    veto_rules.append(fname[1:])
+                    for root, dirnames, filenames in os.walk(base_path):
+                        for file in filenames:
+                            if not regexp.search(str(os.path.relpath(
+                                    pjoin(root,file),base_path))) is None and \
+                                              not path.islink(pjoin(root,file)):
+                                new_target = os.path.relpath(
+                                                   pjoin(root,file),files_path)
+                                if found.group('veto')=='-':
+                                    veto_rules.append(new_target)
+                                else:
+                                    filesToCheck.append(new_target)
                 else:
-                    filesToCheck.append(fname)
-            
+                    fn = fname[1:] if fname.startswith('-') else fname
+                    if not path.exists(pjoin(files_path,fn)):
+                        raise MadGraph5Error, \
+                         'The IOTest %s does not create file %s.'%(test_name,fn)
+                    elif path.islink(pjoin(files_path,fn)):
+                        raise MadGraph5Error, \
+                         'The file %s created by the IOTest %s is a symbolic link.'%(fn,test_name)
+                    else:
+                        if fname.startswith('-'):
+                            veto_rules.append(fn)
+                        else:
+                            filesToCheck.append(fn)
+
             # Apply the trimming of the veto rules
             filesToCheck = [f for f in filesToCheck if f not in veto_rules]
 

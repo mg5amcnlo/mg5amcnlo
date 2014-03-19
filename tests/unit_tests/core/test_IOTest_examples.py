@@ -88,7 +88,31 @@ class IOTest_SimpleExamples(IOTests.IOTestManager):
         open(pjoin(self.IOpath,'testScratch/FileC.txt'),'w').write("FileC")
         
         return pjoin(self.IOpath,'testScratch','FolderA')
-        
+    
+    # Finally the example below shows how to use regular expressions involving
+    # the whole target path, i.e. parent directory names and file base name.
+    # Notice that by specifying a *single file* target whose path starts with 
+    # an hyphen you veto it from the selection. 
+    # This quite handy to quickly veto files whose comparison is problematic
+    # (for example if they include unordered dictionary-driven output) without
+    # having to modify the original selecting regular expression.
+    @IOTests.createIOTest(groupName='MyTestGroup',testName='PathRegExpr')
+    def testIO_MyCustomNameIOTestWithPathRegExpr(self):
+        """ target: testScratch/[Folder(A|C)\/.+\.(f|inc)]
+            target: FileOut.txt
+            target: -testScratch/[Folder(A|C)\/File(X|Y).f]
+        """
+        open(pjoin(self.IOpath,'FileOut.txt'),'w').write("FileOut")
+        os.mkdir(pjoin(self.IOpath,'testScratch'))
+        os.mkdir(pjoin(self.IOpath,'testScratch','FolderA'))
+        os.mkdir(pjoin(self.IOpath,'testScratch','FolderB'))
+        os.mkdir(pjoin(self.IOpath,'testScratch','FolderC'))
+        open(pjoin(self.IOpath,'testScratch','FolderA','FileM.f'),'w').write("FileM")
+        open(pjoin(self.IOpath,'testScratch','FolderA','FileX.f'),'w').write("FileX")
+        open(pjoin(self.IOpath,'testScratch','FolderB','FileN.inc'),'w').write("FileN")
+        open(pjoin(self.IOpath,'testScratch','FolderC','FileY.f'),'w').write("FileY")
+        open(pjoin(self.IOpath,'testScratch','FolderC','FileO.f'),'w').write("FileO")
+
 class IOTestExampleWithSetUp(IOTests.IOTestManager):
     """Here are some slightly more involved examples"""
     
