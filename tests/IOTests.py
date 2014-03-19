@@ -24,6 +24,8 @@ import datetime
 import unittest
 import subprocess
 import pydoc
+import tempfile
+from functools import wraps 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -37,6 +39,8 @@ from madgraph import MadGraph5Error
 
 pjoin = os.path.join
 path = os.path
+
+colored = "\x1b[1;%dm%s\x1b[0m"
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
@@ -91,7 +95,7 @@ class IOTest(object):
         else:
             self.outputPath = outputPath
     
-    def run(self):
+    def run(self, IOTestManagerInstance=None):
         """ Run the test and returns the path where the files have been 
         produced and relative to which the paths in TestedFiles are specified. """
         
@@ -106,7 +110,7 @@ class IOTest(object):
         proc_name='P'+self.hel_amp.get('processes')[0].shell_string()
         return pjoin(self.outputPath,'SubProcesses',proc_name)
     
-    def clean_output(self):
+    def clean_output(self,IOTestManagerInstance=None):
         """ Remove the output_path if existing. Careful!"""
         if not str(path.dirname(_file_path)) in str(self.outputPath) and \
                                    not str(self.outputPath).startswith('/tmp/'):
@@ -115,12 +119,122 @@ class IOTest(object):
             if path.isdir(self.outputPath):
                 shutil.rmtree(self.outputPath)
 
+# The decorator below allows for easily creating a new CustomIOTest by just
+# wrapping a test function whose name starts with testIO which generates files
+# to be compared against reference ones. It should return a base_path from where
+# the relative path of the list of files to be compared points. See the
+# example in <MG_root>/tests/unit_tests/test_IOTest_example.py for more details
+def createIOTest(groupName=None, testName=None):
+
+    def createIOTest_decorator(GenerateFilefunc):
+        """Decorator easing the creation of a new IOTest"""
+        
+        filesToCheck = []
+        prevent_cleanUp = False
+        pathsToErase = []
+        targetFinder = re.compile(r"(?P<type>(target|clean)):\s*(?P<file>\S*)")
+        for target in re.finditer(targetFinder, GenerateFilefunc.__doc__):
+            if target.group('type')=='target':
+                filesToCheck.append(target.group('file'))
+            if target.group('type')=='clean':
+                if target.group('file')=='False':
+                    prevent_cleanUp = True
+                else:
+                    pathsToErase.append(target.group('file'))
+
+        def pathsToClean():                
+            return pathsToErase, prevent_cleanUp
+        
+        @wraps(GenerateFilefunc)
+        def __wrapper(*args, **kwargs):
+            
+            if testName==None:
+                # We know that the function must start with "testIO_"
+                newTestName = GenerateFilefunc.__name__[7:]
+            else:
+                newTestName=testName
+
+            MyCustomTest = CustomIOTest(filesToCheck,GenerateFilefunc, 
+                                                                  pathsToClean)
+            # The first argument should be self
+            if groupName==None:
+                testGroup=args[0].__class__.__name__
+            else:
+                testGroup=groupName
+            args[0].addIOTest(testGroup,newTestName,MyCustomTest)
+    
+            if 'load_only' in kwargs and kwargs['load_only']:
+                return
+    
+            # Feel free to change the arguments here to modify how the IOTest are
+            # run when launched with directly from the test_manager without -i.
+            args[0].runIOTests(update=False, force=10, verbose=False, 
+                                            testKeys=[(testGroup, newTestName)])
+    
+        return __wrapper
+    return createIOTest_decorator
+
+class CustomIOTest(IOTest):
+    """ Allow to simply implement individual IOTests"""
+    
+    # One must provide here the list of paths of the files to check relative
+    # to the absolute path returned by run()
+    testedFiles = []
+    
+    run_function = None
+    clean_function = None
+    temporary_folder = None    
+    
+    def __init__(self, files, run_f, clean_f = None):
+        """ Initialize the custom IOTest with the three necessary components"""
+
+        self.testedFiles = files
+        self.run_function = run_f
+        self.clean_function = clean_f
+
+    def run(self, *args, **kwargs):
+        """This function must perform actions to create the files and return
+        the absolute path from which the paths in the variable all_files are
+        defined. Also stores here the temporary folder in which files are
+        created."""
+        
+        args[0].IOpath = tempfile.mkdtemp('', 'TMPIOTest', None)
+        self.temporary_folder = args[0].IOpath
+        custom_path = self.run_function(*args, **kwargs)
+        if custom_path is None:
+            return args[0].IOpath
+        else:
+            return custom_path        
+    
+    def clean_output(self, *args, **kwargs):
+        """Clean up the file created. Called at the end of the test run."""
+        
+        pathsToClean = [self.temporary_folder]
+        
+        if not self.clean_function is None:
+            paths, prevent_cleanUp = self.clean_function(*args, **kwargs)
+            pathsToClean.extend(paths)
+            if prevent_cleanUp:
+                print colored%(31,
+                    "Clean up of the following of temporary folders prevented:")
+                for path in pathsToClean:
+                    print colored%(31,"  > %s"%str(path))
+
+        try:
+            for path in pathsToClean:
+                shutil.rmtree(path)
+        except OSError:
+            pass               
+
 #===============================================================================
 # IOTestManager
 #===============================================================================
 class IOTestManager(unittest.TestCase):
     """ A helper class to perform tests based on the comparison of files output 
     by exporters against hardcoded ones. """
+    
+    # Global variable to decide if the reference folder has to be compressed or not
+    _compress_ref_fodler = False
     
     # Define a bunch of paths useful
     _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
@@ -156,6 +270,10 @@ class IOTestManager(unittest.TestCase):
         # Lists the keys for the tests of this particular instance
         self.instance_tests = []
         super(IOTestManager,self).__init__(*args,**opts)    
+    
+    def setUp(self):
+        """ Dummy function possibly overloaded by the daughters """
+        pass
     
     def runTest(self,*args,**opts):
         """ This method is added so that one can instantiate this class """
@@ -239,12 +357,12 @@ class IOTestManager(unittest.TestCase):
         
         return pjoin(file_name[1:].split('%'))
     
-    def test_IOTests(self):
-        """ A test function in the mother so that all childs automatically run
-        their tests when scanned with the test_manager. """
-        
-        # Set it to True if you want info during the regular test_manager.py runs
-        self.runIOTests(verbose=False)
+#    def test_IOTests(self):
+#        """ A test function in the mother so that all childs automatically run
+#        their tests when scanned with the test_manager. """
+#        
+#        # Set it to True if you want info during the regular test_manager.py runs
+#        self.runIOTests(verbose=False)
     
     def addIOTest(self, folderName, testName, IOtest):
         """ Add the test (folderName, testName) to class attribute all_tests. """
@@ -258,11 +376,14 @@ class IOTestManager(unittest.TestCase):
             
         # Add this to the global test_list            
         if (folderName, testName) in self.all_tests.keys() and \
-                                  self.all_tests[(folderName, testName)]!=IOtest:
+                          self.all_tests[(folderName, testName)]!=(IOtest,self):
             raise MadGraph5Error, \
                           "Test (%s,%s) already defined."%(folderName, testName)
         else:
-            self.all_tests[(folderName, testName)] = IOtest
+            # We store the manager with self here too because it might have
+            # variables related to its IOTests stored in it so that we will
+            # give this instance back when calling IOtest.run(self).
+            self.all_tests[(folderName, testName)] = (IOtest, self)
 
     def runIOTests(self, update = False, force = 0, verbose=False, \
                                                        testKeys='instanceList'):
@@ -289,18 +410,23 @@ class IOTestManager(unittest.TestCase):
         # First make sure that the tarball need not be untarred
         # Extract the tarball for hardcoded in all cases to make sure the 
         # IOTestComparison folder is synchronized with it.
-        if path.isdir(_hc_comparison_files):
-            try:
-                shutil.rmtree(_hc_comparison_files)
-            except IOError:
-                pass
-        if path.isfile(_hc_comparison_tarball):
-            tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
-            tar.extractall(path.dirname(_hc_comparison_files))
-            tar.close()
+        if IOTestManager._compress_ref_fodler:
+            if path.isdir(_hc_comparison_files):
+                try:
+                    shutil.rmtree(_hc_comparison_files)
+                except IOError:
+                    pass
+            if path.isfile(_hc_comparison_tarball):
+                tar = tarfile.open(_hc_comparison_tarball,mode='r:bz2')
+                tar.extractall(path.dirname(_hc_comparison_files))
+                tar.close()
+            else:
+                raise MadGraph5Error, \
+              "Could not find the comparison tarball %s."%_hc_comparison_tarball
         else:
-            raise MadGraph5Error, \
-          "Could not find the comparison tarball %s."%_hc_comparison_tarball
+            if not path.isdir(_hc_comparison_files):
+                raise MadGraph5Error, \
+              "Could not find the comparison tarball %s."%_hc_comparison_tarball
 
         # In update = True mode, we keep track of the modification to 
         # provide summary information
@@ -317,16 +443,26 @@ class IOTestManager(unittest.TestCase):
         if testKeys == 'instanceList':
             testKeys = self.instance_tests
         
-        if verbose: print "\n== Operational mode : file %s ==\n"%\
-                                           ('UPDATE' if update else 'TESTING')
+        if verbose: print "\n== "+colored%(32,"Operational mode")+\
+            " : file %s ==\n"%(colored%(34,('UPDATE' if update else 'TESTING')))
         for (folder_name, test_name) in testKeys:
             try:
-                iotest=self.all_tests[(folder_name, test_name)]
+                (iotest, iotestManager) = self.all_tests[(folder_name, test_name)]
             except KeyError:
                 raise MadGraph5Error, 'Test (%s,%s) could not be found.'\
                                                        %(folder_name, test_name)
-            if verbose: print "Processing %s in %s"%(test_name,folder_name)
-            files_path = iotest.run()
+            if verbose: print "Processing %s in %s"%(
+                                colored%(32,test_name),colored%(34,folder_name))
+            try:
+                files_path = iotest.run(iotestManager)
+            except Exception as e: 
+                iotest.clean_output()
+                if not verbose:
+                    raise e
+                else:
+                    print colored%(31,"  Test %s "%test_name+\
+                              "crashed with the following error:\n  %s."%str(e))
+                    continue
 
             # First create the list of files to check as the user might be using
             # regular expressions.
@@ -336,24 +472,42 @@ class IOTestManager(unittest.TestCase):
             veto_rules = []
             for fname in iotest.testedFiles:
                 # Disregard the veto rules
-                if fname.endswith(']'):
-                    split=fname[:-1].split('[')
+                regexp_finder = re.compile(
+                r'^(?P<veto>-)?(?P<root_folder>.*)(\/)?\[(?P<regexp>.*)\]$')
+                found = regexp_finder.search(fname)
+                if not found is None:
                     # folder without the final /
-                    folder=split[0][:-1]
-                    search = re.compile('['.join(split[1:]))
+                    base_path = pjoin(files_path,found.group('root_folder'))
+                    regexp = re.compile(found.group('regexp'))
                     # In filesToCheck, we must remove the files_path/ prepended
-                    filesToCheck += [ f[(len(str(files_path))+1):]
-                           for f in glob.glob(pjoin(files_path,folder,'*')) if \
-                               (not search.match(path.basename(f)) is None and \
-                                      not path.isdir(f) and not path.islink(f))]
-                elif fname.startswith('-'):
-                    veto_rules.append(fname[1:])
+                    for root, dirnames, filenames in os.walk(base_path):
+                        for file in filenames:
+                            if not regexp.search(str(os.path.relpath(
+                                    pjoin(root,file),base_path))) is None and \
+                                              not path.islink(pjoin(root,file)):
+                                new_target = os.path.relpath(
+                                                   pjoin(root,file),files_path)
+                                if found.group('veto')=='-':
+                                    veto_rules.append(new_target)
+                                else:
+                                    filesToCheck.append(new_target)
                 else:
-                    filesToCheck.append(fname)
-            
+                    fn = fname[1:] if fname.startswith('-') else fname
+                    if not path.exists(pjoin(files_path,fn)):
+                        raise MadGraph5Error, \
+                         'The IOTest %s does not create file %s.'%(test_name,fn)
+                    elif path.islink(pjoin(files_path,fn)):
+                        raise MadGraph5Error, \
+                         'The file %s created by the IOTest %s is a symbolic link.'%(fn,test_name)
+                    else:
+                        if fname.startswith('-'):
+                            veto_rules.append(fn)
+                        else:
+                            filesToCheck.append(fn)
+
             # Apply the trimming of the veto rules
             filesToCheck = [f for f in filesToCheck if f not in veto_rules]
-            
+
             if update:
                 # Remove files which are no longer used for comparison
                 activeFiles = [self.toFileName(f) for f in filesToCheck]
@@ -379,13 +533,14 @@ class IOTestManager(unittest.TestCase):
                             
                         if answer not in ['Y','y','']:
                             if verbose: 
-                                print "    > [ IGNORED ] file deletion "+\
-                          "%s/%s/%s"%(folder_name,test_name,path.basename(file))
+                                print "    > [ %s ] "%(colored%(31,"IGNORED"))+\
+                          "file deletion %s/%s/%s"%(folder_name,test_name,
+                                                            path.basename(file))
                             continue
 
                         os.remove(file)
-                        if verbose: print "    > [ REMOVED ] %s/%s/%s"\
-                                    %(folder_name,test_name,path.basename(file))
+                        if verbose: print "    > [ %s ] "%(colored%(31,"REMOVED"))+\
+                          "%s/%s/%s"%(folder_name,test_name,path.basename(file))
                         modifications['removed'].append(
                                             '/'.join(str(file).split('/')[-3:]))
 
@@ -426,8 +581,19 @@ class IOTestManager(unittest.TestCase):
                                     folder_name,test_name,self.toFileName(fname))
                 if not update:
                     if not os.path.isfile(comparison_path):
-                        raise MadGraph5Error, 'The file %s'%str(comparison_path)+\
-                                                              ' does not exist.'
+                        iotest.clean_output()
+                        if not verbose:
+                            raise MadGraph5Error,\
+                                "Missing ref. files for test %s\n"%test_name+\
+                                "Create them with './test_manager.py -U %s'"%test_name
+                            continue
+                        else:
+                            print colored%(31,'The ref. file %s'
+                            %str('/'.join(comparison_path.split('/')[-3:]))+' does not exist.')
+                            print colored%(34,'Consider creating it with '+
+                                            './test_manager.py -U %s'%test_name)
+                            exit(0)
+
                     goal = open(comparison_path).read()%misc.get_pkg_info()
                     if not verbose:
                         self.assertFileContains(open(file_path), goal)
@@ -435,7 +601,8 @@ class IOTestManager(unittest.TestCase):
                         try:
                             self.assertFileContains(open(file_path), goal)
                         except AssertionError:
-                            print "    > %s differs from the reference."%fname
+                            if verbose: 
+                                print "    > %s differs from the reference."%fname
                             
                 else:                        
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name)):
@@ -447,10 +614,11 @@ class IOTestManager(unittest.TestCase):
                                                                    ,default="y")
                             if answer not in ['Y','y','']:
                                 refused_Folders.append(folder_name)
-                                if verbose: print "    > [ IGNORED ] folder %s"\
-                                                                    %folder_name
+                                if verbose: print "    > [ %s ] folder %s"\
+                                           %(colored%(31,"IGNORED"),folder_name)
                                 continue
-                        if verbose: print "    > [ CREATED ] folder %s"%folder_name
+                        if verbose: print "    > [ %s ] folder %s"%\
+                                            (colored%(32,"CREATED"),folder_name)                        
                         os.makedirs(pjoin(_hc_comparison_files,folder_name))
                     if not path.isdir(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name)):
@@ -462,11 +630,11 @@ class IOTestManager(unittest.TestCase):
                                                                    ,default="y")
                             if answer not in ['Y','y','']:
                                 refused_testNames.append((folder_name,test_name))
-                                if verbose: print "    > [ IGNORED ] test %s/%s"\
-                                                        %(folder_name,test_name)
+                                if verbose: print "    > [ %s ] test %s/%s"\
+                                 %(colored%(31,"IGNORED"),folder_name,test_name)
                                 continue
-                        if verbose: print "    > [ CREATED ] test %s/%s"\
-                                                        %(folder_name,test_name)
+                        if verbose: print "    > [ %s ] test %s/%s"\
+                                 %(colored%(32,"CREATED"),folder_name,test_name)
                         os.makedirs(pjoin(_hc_comparison_files,folder_name,
                                                                     test_name))
                     # Transform the package information to make it a template
@@ -520,7 +688,8 @@ class IOTestManager(unittest.TestCase):
                             else:
                                 answer = 'Y'
                             if answer not in ['Y','y','']:
-                                if verbose: print "    > [ IGNORED ] %s"%fname
+                                if verbose: print "    > [ %s ] %s"%\
+                                                  (colored%(31,"IGNORED"),fname)
                                 continue
                             
                             # Copying the existing reference as a backup
@@ -529,7 +698,8 @@ class IOTestManager(unittest.TestCase):
                             if os.path.isfile(back_up_path):
                                 os.remove(back_up_path)
                             cp(comparison_path,back_up_path)
-                            if verbose: print "    > [ UPDATED ] %s"%fname
+                            if verbose: print "    > [ %s ] %s"\
+                                                 %(colored%(32,"UPDATED"),fname)
                             modifications['updated'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     else:
@@ -547,9 +717,11 @@ class IOTestManager(unittest.TestCase):
                         else:
                             answer = 'Y'
                         if answer not in ['Y','y','']:
-                            if verbose: print "    > [ IGNORED ] %s"%fname
+                            if verbose: print "    > [ %s ] %s"%\
+                                                  (colored%(31,"IGNORED"),fname)
                             continue
-                        if verbose: print "    > [ CREATED ] %s"%fname
+                        if verbose: print "    > [ %s ] %s"%\
+                                                  (colored%(32,"CREATED"),fname)
                         modifications['created'].append(
                                       '/'.join(comparison_path.split('/')[-3:]))
                     file = open(comparison_path,'w')

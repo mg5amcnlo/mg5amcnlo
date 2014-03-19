@@ -127,7 +127,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                   testedFiles=files_to_check,
                   outputPath=_proc_file_path))
 
-    def setUp(self):
+    def load_IOTestsUnit(self):
         """load the models and exporters if necessary."""
             
         if not hasattr(self, 'models') or \
@@ -184,3 +184,11 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                        particles_ids = [21,21,25,25],
                                        exporters = self.loop_exporters['default'],
                                        orders = {'QCD': 2, 'QED': 2} )
+
+    def testIO_ProcOutputIOTests(self, load_only=False):
+      """ Run the iotests """
+      
+      self.load_IOTestsUnit()      
+      if not load_only:
+          # Set it to True if you want info during the regular test_manager.py runs
+          self.runIOTests(verbose=False)

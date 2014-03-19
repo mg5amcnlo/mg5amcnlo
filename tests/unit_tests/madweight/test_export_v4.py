@@ -14,6 +14,7 @@
 ################################################################################
 
 import copy
+import shutil
 import os
 import unittest
 import madgraph.iolibs.export_v4 as export_v4
@@ -23,12 +24,14 @@ import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 from madgraph import MG5DIR
 from cStringIO import StringIO
+import tests.IOTests as IOTests
+import tempfile
 
 pjoin = os.path.join
 
-class TestMadWeight(unittest.TestCase):
+class TestMadWeight(IOTests.IOTestManager):
     """ """
-
+    
     def test_ungrouping_lepton(self):
         """check that the routines which ungroup the process for the muon/electron processes
         works as expected"""
@@ -281,11 +284,11 @@ class TestMadWeight(unittest.TestCase):
                 self.assertEqual(group['name'], 'qq_z_z_emep')
             group['name']
 
-
-    def test_modification_to_cuts(self):
-        """check that the modification to cuts.f is what we expect."""
+    @IOTests.createIOTest()
+    def testIO_modification_to_cuts(self):
+        """ target: cuts.f"""
         
-        exporter = export_v4.ProcessExporterFortranMW(MG5DIR, '/tmp')
+        exporter = export_v4.ProcessExporterFortranMW(MG5DIR, self.IOpath)
         strfile = StringIO()
         exporter.get_mw_cuts_version(strfile)
         
@@ -298,16 +301,8 @@ class TestMadWeight(unittest.TestCase):
         self.assertTrue('logical function cut_bw' in text)
         self.assertTrue('maxparticles.inc' in text )
         
+        open(pjoin(self.IOpath, 'cuts.f'),'w').write(text)
         # But force manual inspection at each change of the file
-        expected =open(pjoin(MG5DIR,'tests','input_files','cuts_for_MW.f')).read()
-        text = [l.strip() for l in text.split('\n') if l.strip()]
-        expected = [l.strip() for l in expected.split('\n') if l.strip()]
-        
-        self.maxDiff = None
-        self.assertEqual(text, expected)
-        
-        #open('cuts_for_MW.f','w').write(text)
-        #self.assertEqual(text, expected, 'Please check that the new cuts.f is compatible with MW')
-        
+
         
         
