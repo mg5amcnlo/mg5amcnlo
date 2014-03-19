@@ -2,7 +2,17 @@
 # architecture specific information for StdHep makefiles
 # 
 
-include ../make_opts
+# Check for ../../../make_opts which can potentially overwrite FC
+ifeq ($(wildcard ../../../make_opts), ../../../make_opts)
+	include ../../../make_opts
+endif
+
+# Still  useful as it specified MBITS
+ifeq ($(wildcard ../make_opts), ../make_opts)
+	include ../make_opts
+else
+	include ../../make_opts
+endif
 
 SUNAME = $(shell uname | sed s/[_-].*//)
 

@@ -967,6 +967,7 @@ class PBSCluster(Cluster):
 
         if len(self.submitted_ids) > self.maximum_submited_jobs:
             fct = lambda idle, run, finish: logger.info('Waiting for free slot: %s %s %s' % (idle, run, finish))
+            me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
             self.wait(me_dir, fct, self.maximum_submited_jobs)
 
         
@@ -1019,7 +1020,7 @@ class PBSCluster(Cluster):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
+                                  stderr=subprocess.STDOUT)
 
         for line in status.stdout:
             line = line.strip()

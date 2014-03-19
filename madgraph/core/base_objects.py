@@ -28,6 +28,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
+pjoin = os.path.join
 
 #===============================================================================
 # PhysicsObject
@@ -1054,12 +1055,21 @@ class Model(PhysicsObject):
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
                 return modeldir
-            modeldir = os.path.join(os.path.dirname(modeldir),
-                                    os.path.basename(modeldir).rsplit("-",1)[0])
-            if os.path.exists(modeldir):
-                return modeldir 
-
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+            else:
+                raise Exception, "path %s not valid anymore." % modeldir
+            #modeldir = os.path.join(os.path.dirname(modeldir),
+            #                        os.path.basename(modeldir).rsplit("-",1)[0])
+            #if os.path.exists(modeldir):
+            #    return modeldir 
+            #raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+        elif name == 'modelpath+restriction':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            if not  os.path.exists(modeldir):
+                raise Exception, "path %s not valid anymore" % modeldir
+            modeldir = os.path.dirname(modeldir)
+            modeldir = pjoin(modeldir, modelname)
+            return modeldir
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1418,7 +1428,7 @@ class Model(PhysicsObject):
                 change[var.name] = '%s%s__%s' % (prefix, var.name.lower(), i+2)
                 var.name = '%s%s__%s' %(prefix, var.name.lower(), i+2)
                 to_change.append(var.name)
-        
+        assert 'zero' not in to_change
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         
         if not to_change:

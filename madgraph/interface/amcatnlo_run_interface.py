@@ -2013,7 +2013,7 @@ Integrated cross-section
         timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
                      "(?P<time>[\d\+-Eed\.]*)\s*")
 
-        for logf in all_log_files:
+        for logf in log_GV_files:
             logfile=open(logf,'r')
             log = logfile.read()
             logfile.close()
@@ -2587,6 +2587,9 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
+        content += 'EMASS=%s\n' % mcmass_dict[11]
+        content += 'MUMASS=%s\n' % mcmass_dict[13]
+        content += 'TAUMASS=%s\n' % mcmass_dict[15]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
@@ -3125,11 +3128,15 @@ Integrated cross-section
             os.remove(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
-        if self.run_card['pdlabel'] == 'lhapdf':
+        if self.run_card['pdlabel'] == 'lhapdf' and \
+                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
+                 self.banner.get_detail('run_card', 'lpp1') != '0'):
             self.link_lhapdf(libdir)
         else:
-            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
             except KeyError:
@@ -3151,6 +3158,54 @@ Integrated cross-section
             logger.info('          ...done, continuing with P* directories')
         else:
             raise aMCatNLOError('Compilation failed')
+        
+        # make StdHep (only necessary with MG option output_dependencies='internal')
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
+            if  os.path.exists(pjoin(sourcedir,'StdHEP')):
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                misc.compile(['StdHEP'], cwd = sourcedir)
+                logger.info('          ...done.')      
+            else:
+                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            if  os.path.exists(pjoin(sourcedir,'CutTools')):
+                logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                misc.compile(['CutTools'], cwd = sourcedir)
+                logger.info('          ...done.')
+            else:
+                raise aMCatNLOError('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise aMCatNLOError('CutTools compilation failed.')            
+
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise aMCatNLOError("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()

@@ -99,7 +99,8 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'}),
+                                   'fortran_compiler':'gfortran',
+                                   'output_dependencies':'external'}),
                 'optimized' : loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
@@ -107,7 +108,8 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
+                                   'fortran_compiler':'gfortran',
+                                    'output_dependencies':'external'})
                                   }
 
             # d u~ > mu- vmx g

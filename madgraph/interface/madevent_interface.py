@@ -2396,12 +2396,13 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
 
     ############################################################################      
-    def do_treatcards(self, line):
+    def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-        args = self.split_arg(line)
-        mode,  opt  = self.check_treatcards(args)
-        
+
+        if not mode and not opt:
+            args = self.split_arg(line)
+            mode,  opt  = self.check_treatcards(args)
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
     
@@ -2430,6 +2431,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 fsock = open(pjoin(self.me_dir,'Source','param_card.inc'),'w')
                 fsock.write(' ')
                 fsock.close()
+                if mode == 'all':
+                    self.do_treatcards('', 'run', opt)
                 return
             else:
                 devnull = open(os.devnull,'w')
@@ -2451,7 +2454,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-                
+            
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
     ############################################################################      
@@ -3820,6 +3823,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
+        self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        # check if the scalecorrelation parameter is define:
+        if not 'sys_scalecorrelation' in self.run_card:
+            self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
         if not scdir or \
@@ -3870,6 +3877,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
+            else:
+                logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
