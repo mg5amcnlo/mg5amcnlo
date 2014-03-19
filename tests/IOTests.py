@@ -27,10 +27,17 @@ import pydoc
 import tempfile
 from functools import wraps 
 
+import aloha
+import aloha.aloha_lib as aloha_lib
+
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
 
 import madgraph.various.misc as misc
+
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+import madgraph.loop.loop_helas_objects as loop_helas_objects
+import madgraph.loop.loop_exporters as loop_exporters
 
 from madgraph.interface.extended_cmd import Cmd
 
@@ -46,6 +53,41 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = path.abspath(os.path.join(_file_path,'input_files'))
 _hc_comparison_files = pjoin(_input_file_path,'IOTestsComparison')
 _hc_comparison_tarball = pjoin(_input_file_path,'IOTestsComparison.tar.bz2')
+
+
+def set_global(loop=False, unitary=True, mp=False, cms=False):
+    """This decorator set_global() which make sure that for each test
+    the global variable are returned to their default value. This decorator can
+    be modified with the new global variables to come and will potenitally be
+    different than the one in test_aloha."""
+    def deco_set(f):
+        @wraps(f)
+        def deco_f_set(*args, **opt):
+            old_loop = aloha.loop_mode
+            old_gauge = aloha.unitary_gauge
+            old_mp = aloha.mp_precision
+            old_cms = aloha.complex_mass
+            aloha.loop_mode = loop
+            aloha.unitary_gauge = unitary
+            aloha.mp_precision = mp
+            aloha.complex_mass = cms
+            aloha_lib.KERNEL.clean()
+            try:
+                out =  f(*args, **opt)
+            except:
+                aloha.loop_mode = old_loop
+                aloha.unitary_gauge = old_gauge
+                aloha.mp_precision = old_mp
+                aloha.complex_mass = old_cms
+                raise
+            aloha.loop_mode = old_loop
+            aloha.unitary_gauge = old_gauge
+            aloha.mp_precision = old_mp
+            aloha.complex_mass = old_cms
+            aloha_lib.KERNEL.clean()
+            return out
+        return deco_f_set
+    return deco_set
 
 class IOTest(object):
     """ IOTest runner and attribute container. It can be overloaded depending on
@@ -65,7 +107,7 @@ class IOTest(object):
     # dictionaries.
     all_files = proc_files+model_files
 
-    def __init__(self, hel_amp=None,
+    def __init__(self, procdef=None,
                        exporter=None,
                        helasModel=None,
                        testedFiles=None,
@@ -84,9 +126,9 @@ class IOTest(object):
             raise MadGraph5Error, "outputPath must be specified in IOTest."
         
         self.testedFiles = testedFiles
-        self.hel_amp = hel_amp 
+        self.procdef = procdef
         self.helasModel = helasModel
-        self.exporter = exporter
+        self.exporter = copy.deepcopy(exporter)
         # Security mesure
         if not str(path.dirname(_file_path)) in str(outputPath) and \
                                         not str(outputPath).startswith('/tmp/'):
@@ -94,20 +136,27 @@ class IOTest(object):
                                                                      " in /tmp/"            
         else:
             self.outputPath = outputPath
-    
+
+    @set_global() 
     def run(self, IOTestManagerInstance=None):
         """ Run the test and returns the path where the files have been 
         produced and relative to which the paths in TestedFiles are specified. """
-        
         self.clean_output()
-        model = self.hel_amp.get('processes')[0].get('model')
+
+        model = self.procdef.get('model')
+        myloopamp = loop_diagram_generation.LoopAmplitude(self.procdef)
+        isOptimized = isinstance(self.exporter, \
+                           loop_exporters.LoopProcessOptimizedExporterFortranSA) 
+        hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
+                                        myloopamp,optimized_output=isOptimized)
+
         self.exporter.copy_v4template(model.get('name'))
-        self.exporter.generate_loop_subprocess(self.hel_amp, self.helasModel)
-        wanted_lorentz = self.hel_amp.get_used_lorentz()
-        wanted_couplings = list(set(sum(self.hel_amp.get_used_couplings(),[])))
+        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
+        wanted_lorentz = hel_amp.get_used_lorentz()
+        wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))
         self.exporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
             
-        proc_name='P'+self.hel_amp.get('processes')[0].shell_string()
+        proc_name='P'+hel_amp.get('processes')[0].shell_string()
         return pjoin(self.outputPath,'SubProcesses',proc_name)
     
     def clean_output(self,IOTestManagerInstance=None):
@@ -192,6 +241,7 @@ class CustomIOTest(IOTest):
         self.run_function = run_f
         self.clean_function = clean_f
 
+    @set_global()
     def run(self, *args, **kwargs):
         """This function must perform actions to create the files and return
         the absolute path from which the paths in the variable all_files are
@@ -453,8 +503,11 @@ class IOTestManager(unittest.TestCase):
                                                        %(folder_name, test_name)
             if verbose: print "Processing %s in %s"%(
                                 colored%(32,test_name),colored%(34,folder_name))
+            
+            files_path = iotest.run(iotestManager)
             try:
-                files_path = iotest.run(iotestManager)
+                pass
+#                files_path = iotest.run(iotestManager)
             except Exception as e: 
                 iotest.clean_output()
                 if not verbose:

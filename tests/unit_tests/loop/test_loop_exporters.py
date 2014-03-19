@@ -104,7 +104,6 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                         'perturbation_couplings': perturbation_couplings,
                         'NLO_mode': NLO_mode})
         
-        myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
         # Exporter directly given
         if not isinstance(exporters,dict):
             test_list = [(testFolder,exporters)]
@@ -114,14 +113,9 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                                                exporters.keys()]
                
         for (folderName, exporter) in test_list:
-            # Make sure to set optimized_output to true in the LoopHelasMatrixElement
-            # constructor if necessary
-            isOptimized = isinstance(exporter, \
-                           loop_exporters.LoopProcessOptimizedExporterFortranSA)
             if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
-                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
-                                        myloopamp,optimized_output=isOptimized),
+                  procdef=myproc,
                   exporter=exporter,
                   helasModel=fortran_model,
                   testedFiles=files_to_check,

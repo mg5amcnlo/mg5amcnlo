@@ -151,40 +151,6 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
     #import tests
     #print 'runned %s checks' % tests.NBTEST
     #return out
-    
-def set_global(loop=False, unitary=True, mp=False, cms=False):
-    """This decorator set_global() which make sure that for each test
-    the global variable are returned to their default value. This decorator can
-    be modified with the new global variables to come and will potenitally be
-    different than the one in test_aloha."""
-    def deco_set(f):
-        @wraps(f)
-        def deco_f_set(*args, **opt):
-            old_loop = aloha.loop_mode
-            old_gauge = aloha.unitary_gauge
-            old_mp = aloha.mp_precision
-            old_cms = aloha.complex_mass
-            aloha.loop_mode = loop
-            aloha.unitary_gauge = unitary
-            aloha.mp_precision = mp
-            aloha.complex_mass = cms
-            aloha_lib.KERNEL.clean()
-            try:
-                out =  f(*args, **opt)
-            except:
-                aloha.loop_mode = old_loop
-                aloha.unitary_gauge = old_gauge
-                aloha.mp_precision = old_mp
-                aloha.complex_mass = old_cms
-                raise
-            aloha.loop_mode = old_loop
-            aloha.unitary_gauge = old_gauge
-            aloha.mp_precision = old_mp
-            aloha.complex_mass = old_cms
-            aloha_lib.KERNEL.clean()
-            return out
-        return deco_f_set
-    return deco_set
 
 #===============================================================================
 # listIOTests
@@ -426,8 +392,8 @@ class TestSuiteModified(unittest.TestSuite):
     
     time_limit = 1
     time_db = {}
-    
-    @set_global()
+
+    @tests.IOTests.set_global()
     def __call__(self, *args, **kwds):
     
         time_db = TestSuiteModified.time_db
