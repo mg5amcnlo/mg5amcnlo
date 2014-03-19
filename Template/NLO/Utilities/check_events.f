@@ -1,7 +1,8 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c gfortran -I../SubProcesses/P0_<anydir> -o check_events 
-c   check_events.f handling_lhe_events.f fill_MC_mshell.f
+c gfortran -I../SubProcesses/P0_<anydir> -ffixed-line-length-132 
+c   -o check_events check_events.f handling_lhe_events.f 
+c                   fill_MC_mshell.f dbook.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
@@ -12,7 +13,7 @@ c negative number of events
       double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
-      double precision remcmass(-5:21)
+      double precision remcmass(-16:21)
       common/cremcmass/remcmass
       integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
      # itoterr,numproc,numconn,idup_eff(22),icolup_eff(2,22)
@@ -82,8 +83,8 @@ c negative number of events
         idups_Sproc_HW6(i,-1)=0
         idups_Hproc_HW6(i,-1)=0
       enddo
-      do i=-5,21
-         remcmass(i)=0.d0
+      do i=-16,21
+         remcmass(i)=-2.d0
       enddo
 
       write (*,*) 'Enter event file name'
@@ -100,7 +101,7 @@ c read from events
       write (*,*) '      2 to enter them'
       read (*,*) iwhmass
 
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
+      if(iwhmass.eq.2)then
         write (*,*) 'Enter 0 to use physical lepton masses'
         write (*,*) '      2 to enter them'
         read (*,*) ilepmass
@@ -177,14 +178,16 @@ c events, but its upper bound
         shower=.true.
       endif
       maxevt=abs(maxevt)
-c Fill quark/antiquark masses if not already in header
-      do i=-5,5
-        if(remcmass(i).eq.0.d0)remcmass(i)=remcmass(-i)
+c Fill quark/antiquark and lepton/antilepton masses if not already in header
+      do i=-16,16
+        if(abs(i).le.5.or.abs(i).ge.11)then
+          if(remcmass(i).eq.-2.d0)remcmass(i)=remcmass(-i)
+        endif
       enddo
 c
       if(iwhmass.eq.0)then
         do i=1,21
-          if(remcmass(i).ne.0.d0)zmasses(i)=remcmass(i)
+          if(remcmass(i).ne.-2.d0)zmasses(i)=remcmass(i)
         enddo
       elseif(iwhmass.eq.2)then
         do i=1,21
@@ -193,8 +196,6 @@ c
             read(*,*)zmasses(i)
           endif
         enddo
-      endif
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
         if(ilepmass.eq.0)then
           zmasses(11)=0.510998928d-3
           zmasses(12)=0.d0

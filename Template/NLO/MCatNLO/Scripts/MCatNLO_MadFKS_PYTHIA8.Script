@@ -271,6 +271,9 @@ SMASSPY=$SMASS
 CMASSPY=$CMASS
 if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSPY=$BMASS; fi
 if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSPY=$B_MASS; fi
+EMASSPY=$EMASS
+MUMASSPY=$MUMASS
+TAUMASSPY=$TAUMASS
 GMASSPY=$GMASS
 
 if [ $BEAM1 == 1 ]; then iA=2212; elif [ $BEAM1 == -1 ]; then iA=-2212;
@@ -481,6 +484,9 @@ BeamRemnants:primordialKT = off    ! No primordial kT
 4:m0 = $CMASSPY                    ! charm mass
 5:m0 = $BMASSPY                    ! bottom mass
 6:m0 = $TMASS                      ! top mass
+11:m0 = $EMASSPY                   ! electron mass
+13:m0 = $MUMASSPY                  ! muon mass
+15:m0 = $TAUMASSPY                 ! tauon mass
 23:m0 = $ZMASS                     ! Z mass
 24:m0 = $WMASS                     ! W mass
 25:m0 = $HGGMASS                   ! Higgs mass

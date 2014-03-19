@@ -13,7 +13,7 @@ C QQIN IS THE EVENT FILE
       CHARACTER *7 NORM_EVENT
       INTEGER MQQ
       COMMON/cMQQ/MQQ
-      REAL*8 TMPLAM,GAMT0,ERR_FR
+      REAL*8 TMPLAM,GAMT0,ERR_FR,MME,MMM,MMT
       INTEGER IPDF
       CHARACTER * 70 LHAPDF
       LOGICAL LHACRTL,OLDFORM,PI_STABLE,WP_STABLE,WM_STABLE,Z_STABLE,
@@ -106,6 +106,12 @@ C
       DO I=1,5
          RMASS(I+6)=RMASS(I)
       ENDDO
+      WRITE(*,*)'Enter lepton (e,mu,tau) masses: should be zero'
+      READ(*,*)mme,mmm,mmt
+      if(mme.ne.0d0.or.mmm.ne.0d0.or.mmt.ne.0d0)then
+         write(*,*)'nonzero lepton masses'
+         stop
+      endif
 C Set electron and muon masses equal to zero to avoid rounding problems
       RMASS(121)=0.D0
       RMASS(123)=0.D0

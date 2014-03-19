@@ -45,7 +45,7 @@ c
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
       implicit none 
       integer ifile,nevents,iseed,i,pdf_set_min,pdf_set_max,idwgt
-      double precision mcmass(-5:21),rw_Rscale_down,rw_Rscale_up
+      double precision mcmass(-16:21),rw_Rscale_down,rw_Rscale_up
      $     ,rw_Fscale_down,rw_Fscale_up
       character*10 MonteCarlo
       character*100 path
@@ -159,6 +159,9 @@ c Update the number of events
       do i=1,5
          write (ifile,'(2x,i6,3x,e12.6)')i,mcmass(i)
       enddo
+      write (ifile,'(2x,i6,3x,e12.6)')11,mcmass(11)
+      write (ifile,'(2x,i6,3x,e12.6)')13,mcmass(13)
+      write (ifile,'(2x,i6,3x,e12.6)')15,mcmass(15)
       write (ifile,'(2x,i6,3x,e12.6)')21,mcmass(21)
       write(ifile,'(a)') '  </MonteCarloMasses>'
 c Write here the reweight information if need be
@@ -280,7 +283,7 @@ c Avoid overloading read_lhef_header, meant to be used in utilities
       character*80 string,string0
       character*3 event_norm
       common/cevtnorm/event_norm
-      double precision temp,remcmass(-5:21)
+      double precision temp,remcmass(-16:21)
       common/cremcmass/remcmass
       ipart=-1000000
       nevents = -1
@@ -309,7 +312,7 @@ c
           dowhile( index(string,'</montecarlomasses>').eq.0 .and.
      #             index(string,'</MonteCarloMasses>').eq.0 )
             read(string,*)ipart,temp
-            if(ipart.lt.-5.or.ipart.gt.21)then
+            if(ipart.lt.-16.or.ipart.gt.21)then
               write(*,*)'Error in read_lhef_header:'
               write(*,*)' incomprehensible list of parton masses',ipart
               stop
@@ -1071,13 +1074,13 @@ c
 
 
       subroutine fill_MC_mshell_wrap(MC,masses)
-      double precision mcmass(-5:21),masses(-5:21)
+      double precision mcmass(-16:21),masses(-16:21)
       common/cmcmass/mcmass
       character*10 MonteCarlo,MC
       common/cMonteCarloType/MonteCarlo
       MonteCarlo=MC
       call fill_MC_mshell()
-      do i=-5,21
+      do i=-16,21
          masses(i)=mcmass(i)
       enddo
       return
