@@ -1654,9 +1654,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         else:
             raise MadGraph5Error('Not valid LHAPDF version: %s' % lhapdf_version)
-
-        logger.info('%s successfully donloaded and stored in %s' \
-                % (filename, pdfsets_dir))
+        
+        # check taht the file has been installed in the global dir
+        if os.path.exists(pjoin(pdfsets_dir, filename)) or \
+           os.path.isdir(pjoin(pdfsets_dir, filename)):
+            logger.info('%s successfully donloaded and stored in %s' \
+                    % (filename, pdfsets_dir))
+        #otherwise save it locally
+        else:
+            logger.warning('Could not download %s into %s. Trying to save it locally' \
+                    % (filename, pdfsets_dir))
+            self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
