@@ -22,6 +22,7 @@ import sys
 import logging
 import tempfile
 import time
+import math
 from cStringIO import StringIO
 
 logger = logging.getLogger('test_cmd')
@@ -178,6 +179,49 @@ class TestMECmdShell(unittest.TestCase):
         for pdir in pdirs:
             exe = os.path.join('%s/SubProcesses' % self.path, pdir, 'madevent_mintMC')
             self.assertTrue(os.path.exists(exe))
+
+
+    def test_check_eejjj_lo_lhapdf(self):
+        """test that e+ e- > j j j with pdlabel='lhapdf' runs ignoring the lhapdf setting
+        """
+        
+        cmd = os.getcwd()
+        self.generate(['e+ e- > p p p [real=QCD]'], 'sm' )
+        self.assertEqual(cmd, os.getcwd())
+
+        card = open('%s/Cards/run_card_default.dat' % self.path).read()
+        self.assertTrue('    1   = lpp' in card)
+        self.assertTrue('6500   = ebeam' in card)
+        self.assertTrue('cteq6_m   = pdlabel' in card)
+        card = card.replace('    1   = lpp', '    0   = lpp')
+        card = card.replace('6500   = ebeam', ' 500   = ebeam')
+        card = card.replace('cteq6_m   = pdlabel', '\'lhapdf\' = pdlabel')
+        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
+
+        self.do('calculate_xsect -f LO')
+        self.do('quit')
+
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.top' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
+
+        # check the result
+        res = open('%s/Events/run_01_LO/res.txt' % self.path).read()
+
+        pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
+        \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
+
+        match = re.search(pat, res)
+        res_dict = {'xseca' : float(match.groups()[0]),
+                    'erra' : float(match.groups()[1]),
+                    'xsect' : float(match.groups()[3]),
+                    'errt' : float(match.groups()[4])}
+
+        self.assertEqual(res_dict['xseca'], res_dict['xsect'])
+        self.assertTrue(math.fabs(res_dict['xseca']-3.811e-1) < 0.01)
 
 
     def test_split_evt_gen(self):

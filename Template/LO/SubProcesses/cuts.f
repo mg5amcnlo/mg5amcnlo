@@ -26,11 +26,8 @@ C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
-C            P(0:3,3)           MOMENTUM OF d
-C            P(0:3,4)           MOMENTUM OF b
-C            P(0:3,5)           MOMENTUM OF bbar
-C            P(0:3,6)           MOMENTUM OF e+
-C            P(0:3,7)           MOMENTUM OF ve
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
 C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED

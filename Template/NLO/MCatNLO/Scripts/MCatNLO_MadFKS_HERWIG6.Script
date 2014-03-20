@@ -274,6 +274,9 @@ SMASSHW=$SMASS
 CMASSHW=$CMASS
 if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSHW=$BMASS; fi
 if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSHW=$B_MASS; fi
+EMASSHW=$EMASS
+MUMASSHW=$MUMASS
+TAUMASSHW=$TAUMASS
 GMASSHW=$GMASS
 
 if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
@@ -339,6 +342,7 @@ cat <<EOF >> ./$ifile
   $TMASS $TWIDTH                  ! M_top, Gamma_top
   $HGGMASS $HGGWIDTH              ! M_H, Ga_H
   $UMASSHW $DMASSHW $SMASSHW $CMASSHW $BMASSHW $GMASSHW ! quark and gluon masses
+  $EMASSHW $MUMASSHW $TAUMASSHW   ! Lepton masses
   $MAXPR_HW                       ! Number of events to be printed out
   $ERR_FR_HW                      ! Tolerated fraction of errors
   $B_STABLE_HW                    ! .TRUE. if it is single-top production

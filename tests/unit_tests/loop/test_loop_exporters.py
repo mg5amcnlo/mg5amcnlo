@@ -104,7 +104,6 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                         'perturbation_couplings': perturbation_couplings,
                         'NLO_mode': NLO_mode})
         
-        myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
         # Exporter directly given
         if not isinstance(exporters,dict):
             test_list = [(testFolder,exporters)]
@@ -114,20 +113,15 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                                                exporters.keys()]
                
         for (folderName, exporter) in test_list:
-            # Make sure to set optimized_output to true in the LoopHelasMatrixElement
-            # constructor if necessary
-            isOptimized = isinstance(exporter, \
-                           loop_exporters.LoopProcessOptimizedExporterFortranSA)
             if self.need(folderName,testName):
                 self.addIOTest(folderName,testName, IOTests.IOTest(\
-                  hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
-                                        myloopamp,optimized_output=isOptimized),
+                  procdef=myproc,
                   exporter=exporter,
                   helasModel=fortran_model,
                   testedFiles=files_to_check,
                   outputPath=_proc_file_path))
 
-    def setUp(self):
+    def load_IOTestsUnit(self):
         """load the models and exporters if necessary."""
             
         if not hasattr(self, 'models') or \
@@ -149,7 +143,8 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'}),
+                                   'fortran_compiler':'gfortran',
+                                   'output_dependencies':'external'}),
                 'optimized' : loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
                                   _mgme_file_path, _proc_file_path,
@@ -157,7 +152,8 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
                                    'cuttools_dir':_cuttools_file_path,
-                                   'fortran_compiler':'gfortran'})
+                                   'fortran_compiler':'gfortran',
+                                   'output_dependencies':'external'})
                                   }
             
             # g g > t t~
@@ -182,3 +178,11 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                        particles_ids = [21,21,25,25],
                                        exporters = self.loop_exporters['default'],
                                        orders = {'QCD': 2, 'QED': 2} )
+
+    def testIO_ProcOutputIOTests(self, load_only=False):
+      """ Run the iotests """
+      
+      self.load_IOTestsUnit()      
+      if not load_only:
+          # Set it to True if you want info during the regular test_manager.py runs
+          self.runIOTests(verbose=False)
