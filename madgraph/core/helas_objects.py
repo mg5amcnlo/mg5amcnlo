@@ -1042,9 +1042,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
             if particles[1].get_pdg_code() != particles[2].get_pdg_code() \
                    and self.get('pdg_code') == \
                    particles[1].get_anti_pdg_code()\
-                   and self.get('coupling')[0] != '-':
+                   and not self.get('coupling')[0].startswith('-'):
                 # We need a minus sign in front of the coupling
-                self.set('coupling', ['-' + c for c in self.get('coupling')])
+                self.set('coupling', ['-%s'%c for c in self.get('coupling')])
 
     def set_octet_majorana_coupling_sign(self):
         """For octet Majorana fermions, need an extra minus sign in
@@ -1056,7 +1056,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
                self.get_spin_state_number() == -2 and \
                self.get('self_antipart') and \
                [m.get('color') for m in self.get('mothers')] == [8, 8] and \
-               self.get('coupling')[0] != '-':
+               not self.get('coupling')[0].startswith('-'):
             self.set('coupling', ['-%s' % c 
                                               for c in self.get('coupling')])
         
@@ -2896,7 +2896,8 @@ class HelasAmplitude(base_objects.PhysicsObject):
                          mothers.sort_by_pdg_codes(self.get('pdg_codes'))
                 break
 
-        if mothers != self.get('mothers'):
+        if mothers != self.get('mothers') and \
+                                       not self.get('coupling').startswith('-'):
             # We have mismatch between fermion order for color and lorentz
             self.set('coupling', '-'+self.get('coupling'))
 
