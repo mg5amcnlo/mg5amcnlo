@@ -2593,7 +2593,7 @@ Integrated cross-section
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
+        if pdlabel == 'lhapdf':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
             lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
                 shell = True, stdout = subprocess.PIPE).stdout.read().strip()
