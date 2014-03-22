@@ -2607,17 +2607,24 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if output_dir:
             output_dir = output_dir[0]
             recreate = True
+            restrict_name = ''
         else:
-            output_dir = pjoin(MG5DIR, 'models', '%s__%s' % (self._curr_model.get('name'),
+            name = os.path.basename(self._curr_model.get('modelpath'))
+            restrict_name = self._curr_model.get('restrict_name')
+            output_dir = pjoin(MG5DIR, 'models', '%s__%s' % (name,
                                                   os.path.basename(model_path)))
         
         if os.path.exists(output_dir):
             if recreate:
                 shutil.rmtree(output_dir)
             else:
+                logger.info('Model already created! Loading it from %s' % output_dir)
                 oldmodel = self._curr_model.get('modelpath')
+                new_model_name = output_dir
+                if restrict_name:
+                    new_model_name = '%s-%s' % (output_dir, restrict_name)
                 try:
-                    self.exec_cmd('import model %s' % output_dir, errorhandling=False, 
+                    self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)
                 except Exception, error:
                     logger.debug('fail to load model %s with error:\n %s' % (output_dir, error))
@@ -2633,7 +2640,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
         base_model.add_model(path=model_path)
         base_model.write(output_dir)
-        self.exec_cmd('import model %s' % output_dir, errorhandling=False, 
+        
+        new_model_name = output_dir
+        if restrict_name:
+            new_model_name = '%s-%s' % (output_dir, restrict_name)
+        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
         

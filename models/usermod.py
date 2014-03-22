@@ -19,6 +19,7 @@
 """
 
 import glob
+import logging
 import os
 import re
 import sys
@@ -27,7 +28,7 @@ import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import models as ufomodels
 import models.import_ufo as import_ufo
-import logging
+import models.check_param_card as check_param_card
 
 pjoin =os.path.join
 logger = logging.getLogger('madgraph.model')
@@ -61,6 +62,7 @@ class UFOModel(object):
         self.Parameter = self.parameters[0].__class__
         self.orders = model.all_orders
         self.functions = model.all_functions
+        self.new_external = []
         # UFO optional file
         if hasattr(model, 'all_propagators'):
             self.propagators = model.all_propagators
@@ -110,7 +112,39 @@ class UFOModel(object):
         self.write_ctvertices(outputdir)
         
         self.write_external_files(outputdir)
-        
+        self.write_restrict_card(outputdir)
+    
+  
+    def write_restrict_card(self, outputdir):
+        """ propagate model restriction of the original model. """
+
+        restrict_list = [l for l in os.listdir(self.modelpath) if l.startswith('restrict_')]
+        if not self.new_external:
+            # no new entry in the card => just copy the restrict_card.dat
+            for p in restrict_list:
+                files.cp(pjoin(self.modelpath, p), outputdir)
+                
+        else:
+            # need to add the parameter and ensure that they will not be restricted!
+            for p in restrict_list: 
+                param_card = check_param_card.ParamCard(pjoin(self.modelpath, p))
+                for parameter in self.new_external:
+                    block = parameter.lhablock 
+                    lhaid = parameter.lhacode
+                    value = parameter.value
+                    if value == 0:
+                        value = 1e-99
+                    elif value == 1:
+                        value = 9.999999e-1
+                    param_card.add_param(block.lower(), lhaid, value, 'from addon')
+                # all added -> write it
+                param_card.write(pjoin(outputdir, p))
+
+                        
+                    
+                    
+                    
+                
         
 
     def format_param(self, param):
@@ -484,10 +518,7 @@ from object_library import all_propagators, Propagator
            (but if the name are different then keep the info for future translation)
            If the name already exists in the model. raise an exception.
         """
-
-
- 
-        
+  
         name = parameter.name
         # check if a parameter already has this name
         old_param = next((p for p in self.parameters if p.name==name), None)
@@ -530,6 +561,7 @@ from object_library import all_propagators, Propagator
         else:
             #Just add the new parameter to the current list
             self.parameters.append(parameter) 
+            self.new_external.append(parameter)
     
     def add_internal_parameter(self, parameter):
         """ add a parameter of type internal """
@@ -560,6 +592,7 @@ from object_library import all_propagators, Propagator
             parameter.value = pattern.sub(replace, parameter.value)
 
         self.parameters.append(parameter)
+        
 
 
 
@@ -619,7 +652,9 @@ from object_library import all_propagators, Propagator
                 return self.old_new[matchobj.group(0)]
             lorentz.structure = pattern.sub(replace, lorentz.structure)
         
-        old_lor = next((p for p in self.lorentz if p.structure==lorentz.structure), None)
+        old_lor = next((p for p in self.lorentz 
+                        if p.structure==lorentz.structure and p.spins == lorentz.spins), 
+                       None)
         
         if old_lor:
             lorentz.replace = old_lor #tag for replacement
@@ -687,6 +722,7 @@ from object_library import all_propagators, Propagator
     def add_model(self, model=None, path=None):
         """add another model in the current one"""
         
+        self.new_external = []
         if path:
             model = ufomodels.load_model(path) 
         

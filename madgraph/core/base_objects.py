@@ -1070,6 +1070,12 @@ class Model(PhysicsObject):
             modeldir = os.path.dirname(modeldir)
             modeldir = pjoin(modeldir, modelname)
             return modeldir
+        elif name == 'restrict_name':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            basename = os.path.basename(modeldir)
+            restriction = modelname[len(basename)+1:]
+            return restriction
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
