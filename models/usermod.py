@@ -55,12 +55,15 @@ class UFOModel(object):
                                  
         
         self.particles = model.all_particles
+        if any(hasattr(p, 'loop_particles') for p in self.particles):
+            raise USRMODERROR, 'Base Model doesn\'t follows UFO convention '
         self.vertices = model.all_vertices
         self.couplings = model.all_couplings
         self.lorentz = model.all_lorentz
         self.parameters = model.all_parameters
         self.Parameter = self.parameters[0].__class__
         self.orders = model.all_orders
+        
         self.functions = model.all_functions
         self.new_external = []
         # UFO optional file
@@ -634,6 +637,11 @@ from object_library import all_propagators, Propagator
                                % (name, coupling_order.expansion_order, same_name.expansion_order, 
                                   min(same_name.expansion_order, coupling_order.expansion_order)))
                 same_name.expansion_order = min(same_name.expansion_order, coupling_order.expansion_order)
+            if hasattr(same_name, 'perturbative_expansion') and same_name.perturbative_expansion:
+                logger.info('%s will be forbidden to run at NLO' % same_name.name)
+                same_name.perturbative_expansion = 0
+                
+                
         else:
             self.orders.append(coupling_order)
     
@@ -664,7 +672,9 @@ from object_library import all_propagators, Propagator
     def add_interaction(self, interaction):
         """Add one interaction to the model. This is UNCONDITIONAL!
         if the same interaction is in the model this means that the interaction
-        will appear twice."""
+        will appear twice. This is now weaken if both interaction are exactly identical!
+        (EXACT same color/lorentz/coupling expression)
+        """
         
         #0. check name:
         name = interaction.name
@@ -684,6 +694,60 @@ from object_library import all_propagators, Propagator
         couplings = [(key, c.replace) if hasattr(c, 'replace') else (key, c)
                      for key, c in interaction.couplings.items()]
         interaction.couplings = dict(couplings)
+        
+        #4. Try to avoid duplication of interaction:
+        # A crash is raised if the same particles have already the some lorentz structure
+        # at the same coupling order:
+        get_pdg = lambda vertex: sorted([p.pdg_code for p in vertex.particles])
+        id_part = get_pdg(interaction)
+        iden_vertex = [v for v in self.vertices if get_pdg(v) == id_part]
+        iden = False
+        nb_coupling = len(interaction.couplings)
+        keys = interaction.couplings.keys() # to have a fixed order!
+        
+        get_lor_and_color =  lambda i: (interaction.lorentz[keys[i][1]].structure,
+                       interaction.color[keys[i][0]])
+        for v in iden_vertex:
+            if len(v.couplings) != nb_coupling:
+                continue
+            found = []
+            for ((i,j), coup) in v.couplings.items():
+                new_lorentz = v.lorentz[j].structure
+                new_color = v.color[i]
+                k=0
+                same = [k for k in range(nb_coupling) if k not in found and 
+                        get_lor_and_color(k) == (new_lorentz, new_color)]
+                if not same:
+                    break
+                else:
+                    for k in same:
+                        if interaction.couplings[keys[k]] == coup:
+                            found.append(k)
+                            break
+                    else:
+                        # check only the coupling order
+                        for k in same:
+                            if interaction.couplings[keys[k]].order == coup.order:
+                                found.append(k)
+                                warning = """Did NOT add interaction %s since same particles/lorentz/color/coupling order 
+    BUT did not manage to ensure that the coupling is the same. couplings expression:
+    base model: %s
+    addon model: %s
+    """ % (id_part, coup.value, interaction.couplings[keys[k]].value)
+                                logger.warning(warning)
+                                found.append(k)
+                                break                        
+                        else:
+                            pass
+                            # mat
+            else:
+                # all found one identical...
+                return
+                
+        logger.info('Adding interaction for the following particles: %s' % id_part)
+        
+        
+        
         
         self.vertices.append(interaction)
 
@@ -731,12 +795,16 @@ from object_library import all_propagators, Propagator
         
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
-            raise USRMODERROR, 'Plugin Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
+            raise USRMODERROR, 'Add-on Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.'
         if isinstance(model.all_particles[0].mass, basestring):
-            raise USRMODERROR, 'Plugin Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
+            raise USRMODERROR, 'Add-on Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.' 
-                                        
+    
+        for order in model.all_orders:
+            if hasattr(order, 'perturbative_expansion') and order.perturbative_expansion:
+                raise USRMODERROR, 'Add-on model can not be loop model.' 
+                              
         for order in model.all_orders:
             self.add_coupling_order(order)
         for parameter in model.all_parameters:
