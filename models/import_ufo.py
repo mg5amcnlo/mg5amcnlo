@@ -469,7 +469,12 @@ class UFOMG5Converter(object):
             if len([1 for k in key[:-1] if k==1])==1 and \
                not any(k>1 for k in key[:-1]):
                 newParticleCountertermKey=[None,\
-                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+#                  The line below is for loop UFO Model with the 'attribute' 
+#                  'loop_particles' of the Particle objects to be defined with
+#                  instances of the particle class. The new convention is to use
+#                  pdg numbers instead.
+#                  tuple([tuple([abs(part.pdg_code) for part in loop_parts]) for\
+                  tuple([tuple(loop_parts) for\
                     loop_parts in loop_particles[key[-1]]])]
                 for i, order in enumerate(self.ufomodel.all_orders[:-1]):
                     if key[i]==1:
