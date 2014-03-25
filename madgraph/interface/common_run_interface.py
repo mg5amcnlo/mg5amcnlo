@@ -1613,17 +1613,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         pdfsetname = ''
         for lhaid in lhaid_list:
-            if not pdfsetname:
-                if lhaid in self.lhapdf_pdfsets:
-                    pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
-                else:
-                    raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
-            # just check the other ids refer to the same pdfsetname
-            elif not \
-              self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
+            try:
+                if not pdfsetname:
+                    if lhaid in self.lhapdf_pdfsets:
+                        pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
+                    else:
+                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
+                # just check the other ids refer to the same pdfsetname
+                elif not \
+                  self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
+                    raise MadGraph5Error(\
+                        'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
+                        'same PDF set. Please check the run_card.')
+            except KeyError:
                 raise MadGraph5Error(\
-                    'lhaid and PDF_set_min/max in the run_card do not correspond to the' +
-                    'same PDF set. Please check the run_card.')
+                        ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
+                    '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+
+
         # check if the file exists, otherwise install it
         if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
             self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
