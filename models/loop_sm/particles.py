@@ -315,28 +315,28 @@ G__minus__ = G__plus__.anti()
 
 # Wavefunction renormalization
 
-b.loop_particles = [[[b,G]]]
+b.loop_particles = [[[5,21]]]
 b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
-c.loop_particles = [[[c,G]]]
+c.loop_particles = [[[4,21]]]
 c.counterterm = {(1,0,0):CTParam.cWcft_UV.value}
 
-t.loop_particles = [[[t,G]]]
+t.loop_particles = [[[6,21]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[c]],[[b]],[[t]]]
+G.loop_particles = [[[4]],[[5]],[[6]]]
 G.counterterm = {(1,0,0):CTParam.GWcft_UV_c.value,(1,0,1):CTParam.GWcft_UV_b.value,(1,0,2):CTParam.GWcft_UV_t.value}
 
 # Set counterterms values
 
-Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
+#Param.MB.loop_particles= [[[5,21]]]
+#Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
-Param.MC.loop_particles= [[[c,G]]]
-Param.MC.counterterm = {(1,0,0):CTParam.cMass_UV.value}
+#Param.MC.loop_particles= [[[4,21]]]
+#Param.MC.counterterm = {(1,0,0):CTParam.cMass_UV.value}
 
-Param.MT.loop_particles= [[[t,G]]]
-Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
+#Param.MT.loop_particles= [[[6,21]]]
+#Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
 
-Param.G.loop_particles = [[[u],[d],[s]],[[c]],[[b]],[[t]],[[G]]],
-Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVc.value,(1,0,2):CTParam.G_UVb.value,(1,0,3):CTParam.G_UVt.value,(1,0,4):CTParam.G_UVg.value},
+#Param.G.loop_particles = [[[2],[1],[3]],[[4]],[[5]],[[6]],[[21]]],
+#Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVc.value,(1,0,2):CTParam.G_UVb.value,(1,0,3):CTParam.G_UVt.value,(1,0,4):CTParam.G_UVg.value},

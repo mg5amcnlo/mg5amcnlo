@@ -880,7 +880,7 @@ class ProcCard(list):
             if cmds[1].startswith('model'):
                 self.info['full_model_line'] = line
                 self.clean(remove_bef_last='import', keep_switch=True,
-                        allow_for_removal=['generate', 'add process', 'output'])
+                        allow_for_removal=['generate', 'add process', 'add model', 'output'])
                 if cmds[1] == 'model':
                     self.info['model'] = cmds[2]
                 else:
@@ -908,7 +908,7 @@ class ProcCard(list):
         keep_switch force to keep the statement remove_bef_??? which changes starts
         the removal mode.
         """
-        
+
         #check consistency
         if __debug__ and allow_for_removal:
             for arg in to_keep:

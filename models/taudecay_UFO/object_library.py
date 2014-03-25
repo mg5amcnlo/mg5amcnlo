@@ -10,7 +10,6 @@
 import cmath
 import re
 
-
 class UFOError(Exception):
         """Exception raised if when inconsistencies are detected in the UFO model."""
         pass
@@ -65,20 +64,19 @@ class UFOBaseClass(object):
 
 all_particles = []
 
-    
-
 class Particle(UFOBaseClass):
-    """A standard Particle""" 
+    """A standard Particle"""
 
     require_args=['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge']
 
-    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname', 'charge', 'loop_particles', 'counterterm','line', 'propagating', 'goldstoneboson']
+    require_args_all = ['pdg_code', 'name', 'antiname', 'spin', 'color', 'mass', 'width', 'texname', 'antitexname','counterterm','charge', 'line', 'propagating', 'goldstoneboson', 'propagator']
 
     def __init__(self, pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, charge , loop_particles=None, counterterm=None, line=None, propagating=True, goldstoneboson=False, **options):
+                 antitexname, charge , line=None, propagating=True, counterterm=None, goldstoneboson=False, 
+                 propagator=None, **options):
 
         args= (pdg_code, name, antiname, spin, color, mass, width, texname,
-                 antitexname, float(charge))
+                antitexname, float(charge))
 
         UFOBaseClass.__init__(self, *args,  **options)
 
@@ -89,11 +87,17 @@ class Particle(UFOBaseClass):
         self.goldstoneboson= goldstoneboson
 
         self.selfconjugate = (name == antiname)
-        if 1: #not line:
+        if not line:                                                                                                                                                                                   
             self.line = self.find_line_type()
         else:
             self.line = line
 
+        if propagator:
+            if isinstance(propagator, dict):
+                self.propagator = propagator
+            else:
+                self.propagator = {0: propagator, 1: propagator}
+             
     def find_line_type(self):
         """ find how we draw a line if not defined
         valid output: dashed/straight/wavy/curly/double/swavy/scurly
@@ -124,9 +128,8 @@ class Particle(UFOBaseClass):
             return 'dotted'
         else:
             return 'dashed' # not supported yet
-
+        
     def anti(self):
-        # We do not copy the UV wavefunction renormalization as it is defined for the particle only.
         if self.selfconjugate:
             raise Exception('%s has no anti particle.' % self.name) 
         outdic = {}
@@ -149,7 +152,7 @@ class Parameter(UFOBaseClass):
 
     require_args=['name', 'nature', 'type', 'value', 'texname']
 
-    def __init__(self, name, nature, type, value, texname, lhablock=None, lhacode=None, loop_particles=None, counterterm=None):
+    def __init__(self, name, nature, type, value, texname, lhablock=None, lhacode=None):
 
         args = (name,nature,type,value,texname)
 
@@ -209,7 +212,7 @@ class Vertex(UFOBaseClass):
         UFOBaseClass.__init__(self, *args, **opt)
 
         args=(particles,color,lorentz,couplings)
-        
+
         global all_vertices
         all_vertices.append(self)
 
@@ -238,13 +241,13 @@ class Coupling(UFOBaseClass):
 
     require_args_all=['name', 'value', 'order', 'loop_particles', 'counterterm']
 
-    def __init__(self, name, value, order, loop_particles=None, counterterm=None, **opt):
+    def __init__(self, name, value, order, **opt):
 
         args =(name, value, order)	
         UFOBaseClass.__init__(self, *args, **opt)
         global all_couplings
         all_couplings.append(self)
-   
+
     def value(self):
         return self.pole(0)
 
@@ -331,3 +334,44 @@ class CouplingOrder(object):
         self.expansion_order = expansion_order
         self.hierarchy = hierarchy
         self.perturbative_expansion = perturbative_expansion
+
+all_decays = []
+
+class Decay(UFOBaseClass):
+    require_args = ['particle','partial_widths']
+
+    def __init__(self, particle, partial_widths, **opt):
+        args = (particle, partial_widths)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_decays
+        all_decays.append(self)
+    
+        # Add the information directly to the particle
+        particle.partial_widths = partial_widths
+
+all_form_factors = []
+
+class FormFactor(UFOBaseClass):
+    require_args = ['name','type','value']
+
+    def __init__(self, name, type, value, **opt):
+        args = (name, type, value)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_form_factors
+        all_form_factors.append(self)
+
+        
+all_propagators = []
+
+class Propagator(UFOBaseClass):
+    
+    require_args = ['name','numerator','denominator']
+
+    def __init__(self, name, numerator, denominator=None, **opt):
+        args = (name, numerator, denominator)
+        UFOBaseClass.__init__(self, *args, **opt)
+
+        global all_propagators
+        all_propagators.append(self)

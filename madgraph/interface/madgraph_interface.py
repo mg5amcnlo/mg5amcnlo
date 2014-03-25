@@ -533,7 +533,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   can still handle these.")
 
     def help_add(self):
-
+        logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
+        logger.info("   OR merge two model",'$MG:color:BLUE')
+        logger.info('')
         logger.info("-- generate diagrams for a process and add to existing processes",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
         logger.info(" o add process INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2=ORDER2 @N")
@@ -567,6 +569,17 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")
         logger.info("   can still handle these.")
 
+        logger.info("--  merge two model to create a new one", '$MG:color:BLUE')
+        logger.info("syntax:",'$MG:color:BLACK')
+        logger.info(" o add model MODELNAME [OPTIONS]")
+        logger.info(" o Example: add model taudecay",'$MG:color:GREEN')
+        logger.info(" > Merge the two model in a single one. If that same merge was done before.")
+        logger.info(" > Just reload the previous merge. (WARNING: This doesn't check if those model are modified)")
+        logger.info(" > Options:")
+        logger.info("   --output=  : Specify the name of the directory where the merge is done.")
+        logger.info("                This allow to do \"import NAME\" to load that merge.")
+        logger.info("   --recreate : Force to recreated the merge model even if the merge model directory already exists.")
+        
     def help_compute_widths(self):
         logger.info("syntax: calculate_width PART [other particles] [OPTIONS]")
         logger.info("  Computes the width and partial width for a set of particles")
@@ -696,37 +709,22 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_add(self, args):
         """check the validity of line
-        syntax: add process PROCESS
+        syntax: add process PROCESS | add model MODELNAME
         """
 
         if len(args) < 2:
             self.help_add()
             raise self.InvalidCmd('\"add\" requires at least two arguments')
-
-        if args[0] != 'process':
-            raise self.InvalidCmd('\"add\" requires the argument \"process\"')
-
-        if not self._curr_model:
-            logger.info("No model currently active, so we import the Standard Model")
-            self.do_import('model sm')
-
-        if args[-1].startswith('--optimize'):
-            if args[2] != '>':
-                raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
-            if '=' in args[-1]:
-                path = args[-1].split('=',1)[1]
-                if not os.path.exists(path) or \
-                                self.detect_file_type(path) != 'param_card':
-                    raise self.InvalidCmd('%s is not a valid param_card')
-            else:
-                path=None
-            # Update the default value of the model here.
-            if not isinstance(self._curr_model, model_reader.ModelReader):
-                self._curr_model = model_reader.ModelReader(self._curr_model)
-            self._curr_model.set_parameters_and_couplings(path)
-            self.check_process_format(' '.join(args[1:-1]))
-        else:
-            self.check_process_format(' '.join(args[1:]))
+        
+        if args[0] not in  ['model', 'process']:
+            raise self.InvalidCmd('\"add\" requires the argument \"process\" or \"model\"')    
+    
+        if args[0] == 'process':
+            return self.check_generate(args)
+    
+        if args[0] == 'model':
+            pass
+            
 
     def check_define(self, args):
         """check the validity of line
@@ -848,8 +846,29 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_generate(self, args):
         """check the validity of args"""
-        # Not called anymore see check_add
-        return self.check_add(args)
+
+        if not self._curr_model:
+            logger.info("No model currently active, so we import the Standard Model")
+            self.do_import('model sm')
+        
+        if args[-1].startswith('--optimize'):
+            if args[2] != '>':
+                raise self.InvalidCmd('optimize mode valid only for 1->N processes. (See model restriction for 2->N)')
+            if '=' in args[-1]:
+                path = args[-1].split('=',1)[1]
+                if not os.path.exists(path) or \
+                                self.detect_file_type(path) != 'param_card':
+                    raise self.InvalidCmd('%s is not a valid param_card')
+            else:
+                path=None
+            # Update the default value of the model here.
+            if not isinstance(self._curr_model, model_reader.ModelReader):
+                self._curr_model = model_reader.ModelReader(self._curr_model)
+            self._curr_model.set_parameters_and_couplings(path)
+            self.check_process_format(' '.join(args[1:-1]))
+        else:
+            self.check_process_format(' '.join(args[1:]))
+    
 
     def check_process_format(self, process):
         """ check the validity of the string given to describe a format """
@@ -1801,18 +1820,15 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._add_opts)
 
-        return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
-
-        # Return list of particle names and multiparticle names, as well as
-        # coupling orders and allowed symbols
-        couplings = []
-        if len(args) > 2 and args[-1] != '>':
-            couplings = ['>']
-        if '>' in args and args.index('>') < len(args) - 1:
-            couplings = [c + "=" for c in self._couplings] + ['@','$','/','>']
-        return self.list_completion(text, self._particle_names + \
-                                    self._multiparticles.keys() + couplings)
-
+        if args[1] == 'process':
+            return self.complete_generate(text, " ".join(args[1:]), begidx, endidx)
+        
+        elif args[1] == 'model':
+            completion_categories = self.complete_import(text, line, begidx, endidx, 
+                                                         allow_restrict=False, treat_completion=False)
+            completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
+            return self.deal_multiple_categories(completion_categories) 
+            
     def complete_customize_model(self, text, line, begidx, endidx):
         "Complete the customize_model command"
 
@@ -2141,8 +2157,9 @@ class CompleteForCmd(cmd.CompleteCmd):
                 return self.path_completion(text,
                         pjoin(*[a for a in args if a.endswith(os.path.sep)]),
                         only_dirs = True)
-
-    def complete_import(self, text, line, begidx, endidx):
+        
+    def complete_import(self, text, line, begidx, endidx, allow_restrict=True,
+                        treat_completion=True):
         "Complete the import command"
 
         args=self.split_arg(line[0:begidx])
@@ -2246,12 +2263,15 @@ class CompleteForCmd(cmd.CompleteCmd):
 
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
-                else:
+                elif allow_restrict:
                     # need to update the  list with the possible restriction
                     all_name = []
                     for model_name in model_list:
                         all_name += self.find_restrict_card(model_name,
                                             base_dir=pjoin(MG5DIR,'models'))
+                else:
+                    all_name = model_list
+                    
                 if mode == 'all':
                     cur_path = pjoin(*[a for a in args \
                                                         if a.endswith(os.path.sep)])
@@ -2271,8 +2291,12 @@ class CompleteForCmd(cmd.CompleteCmd):
                 completion_categories['options'] = self.list_completion(text, ['--modelname','-modelname','--noprefix'])
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
-        return self.deal_multiple_categories(completion_categories)
-
+        
+        if treat_completion:
+            return self.deal_multiple_categories(completion_categories) 
+        else:
+            #this means this function is called as a subgroup of another completion
+            return completion_categories
 
 
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
@@ -2331,7 +2355,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _display_opts = ['particles', 'interactions', 'processes', 'diagrams',
                      'diagrams_text', 'multiparticles', 'couplings', 'lorentz',
                      'checks', 'parameters', 'options', 'coupling_order','variable']
-    _add_opts = ['process']
+    _add_opts = ['process', 'model']
     _save_opts = ['model', 'processes', 'options']
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
@@ -2495,10 +2519,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     def do_add(self, line):
         """Generate an amplitude for a given process and add to
         existing amplitudes
+        or merge two model
         """
 
         args = self.split_arg(line)
 
+        
         warning_duplicate = True
         if '--no_warning=duplicate' in args:
             warning_duplicate = False
@@ -2507,6 +2533,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Check the validity of the arguments
         self.check_add(args)
 
+        if args[0] == 'model':
+            return self.add_model(args[1:])
+        
         # special option for 1->N to avoid generation of kinematically forbidden
         #decay.
         if args[-1].startswith('--optimize'):
@@ -2589,8 +2618,58 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in self._curr_amps])
             logger.info("Total: %i processes with %i diagrams" % \
-                  (len(self._curr_amps), ndiags))       
-
+                  (len(self._curr_amps), ndiags))        
+                
+    def add_model(self, args):
+        """merge two model"""
+        
+        model_path = args[0]
+        recreate = ('--recreate' in args)
+        output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
+        if output_dir:
+            output_dir = output_dir[0]
+            recreate = True
+            restrict_name = ''
+        else:
+            name = os.path.basename(self._curr_model.get('modelpath'))
+            restrict_name = self._curr_model.get('restrict_name')
+            output_dir = pjoin(MG5DIR, 'models', '%s__%s' % (name,
+                                                  os.path.basename(model_path)))
+        
+        if os.path.exists(output_dir):
+            if recreate:
+                shutil.rmtree(output_dir)
+            else:
+                logger.info('Model already created! Loading it from %s' % output_dir)
+                oldmodel = self._curr_model.get('modelpath')
+                new_model_name = output_dir
+                if restrict_name:
+                    new_model_name = '%s-%s' % (output_dir, restrict_name)
+                try:
+                    self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)
+                except Exception, error:
+                    logger.debug('fail to load model %s with error:\n %s' % (output_dir, error))
+                    logger.warning('Fail to load the model. Restore previous model')
+                    self.exec_cmd('import model %s' % oldmodel, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)                    
+                    raise Exception('Invalid Model! Please retry with the option \'--recreate\'.')
+                else:
+                    return
+        
+        #Need to do the work!!!        
+        import models.usermod as usermod
+        base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
+        base_model.add_model(path=model_path)
+        base_model.write(output_dir)
+        
+        new_model_name = output_dir
+        if restrict_name:
+            new_model_name = '%s-%s' % (output_dir, restrict_name)
+        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+                              printcmd=False, precmd=True, postcmd=True)         
+        
+        
     # Define a multiparticle label
     def do_define(self, line, log=True):
         """Define a multiparticle"""

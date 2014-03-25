@@ -3,6 +3,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.1.1(xx/03/14) OM: Change the way the UFO model is handle by adding a prefix (mdl_) to all model variable.
                     This avoid any potential name conflict with other part of the code. This feature can be
                     bypassed by using the option --noprefix when importing the model.
+                OM: New command "add model XXX" supported. This command creates a new UFO model from two UFO model.
+                    The main interest stand in the command "add model hgg_plugin", which add the effective operator
+                    h g g to the original UFO model. The model is written on disk for edition/future reference.
 		RF: Reduced the calls to fastjet and skipped the computation of the reweight coeffients when
  		    they are not needed.
                 OM: Fixed a bug for LO processes where the MMLL cut was not applied to the event sample.
