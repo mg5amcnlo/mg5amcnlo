@@ -273,7 +273,7 @@ c Loop over all photons
                return
             endif
             if (etagamma.gt.0d0) then
-               if (abs(eta(pgamma)).gt.etagamma) then
+               if (abs(eta(pgamma(0,j))).gt.etagamma) then
                   passcuts_user=.false.
                   return
                endif
