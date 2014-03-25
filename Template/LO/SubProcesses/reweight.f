@@ -321,7 +321,6 @@ c***************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
-
 c     Check QCD vertex
       if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
@@ -349,7 +348,6 @@ c     FS clustering
       else
          isjetvx=.false.
       endif
-      
       return
       end
 
@@ -568,21 +566,24 @@ c   the hardest and ipart(2) is the softest.
         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
      $       ipdgcl(1,igraphs(1),iproc),ipart)
       enddo
-      
+
 c     Prepare beam related variables for scale and jet determination
       do i=1,2
          ibeam(i)=ishft(1,i-1)
 c        jfirst is first parton splitting on this side
          jfirst(i)=0
-c        jlast is last parton on this side
+c        jlast is last parton on this side This means
+c        the last cluster which is still QCD.
          jlast(i)=0
-c        jcentral is the central scale vertex on this side
+c        jcentral is the central scale vertex on this side. i.e it stops
+c        when the T channel particles is not colored anymore.
          jcentral(i)=0
 c        qcdline gives whether this IS line is QCD
          qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
 c        partonline gives whether this IS line is parton (start out true for any QCD)
          partonline(i)=qcdline(i)
 c        goodjet gives whether this cluster line is considered a jet
+c        i.e. if all related/previous clustering are jet
          goodjet(ibeam(i))=partonline(i)
       enddo
 
@@ -643,21 +644,8 @@ c             parton vertices again.
 c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
               if(goodjet(ida(3-i))) then
-                 if(partonline(j)) then
-                    if (ipart(2,ida(3-i)).gt.0)then
-                       if (iqjets(ipart(2,ida(3-i))).eq.0)then
-                          iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
-                       else
-                          !swap 1 and 2
-                          tmpindex = ipart(2,ida(3-i))
-                          ipart(2,ida(3-i)) = ipart(1,ida(3-i))
-                          ipart(1,ida(3-i)) = tmpindex
-                       endif
-                    else
-                       iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet                                 
-                    endif
-
-                 else if (ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
+                 if(partonline(j).or.
+     $ ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
 c                   Need to include gluon to avoid soft singularity
                     iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                  else
@@ -707,7 +695,7 @@ c          ifsno gives leg number if daughter is FS particle, otherwise 0
 c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
-     $          goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
+     $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
         endif
       enddo
 
@@ -786,7 +774,7 @@ c     if not, recluster according to iconfig
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
      $           iconfig
             chcluster=.true.
-            goto 100
+c            goto 100 ! not
          endif
       endif
       
