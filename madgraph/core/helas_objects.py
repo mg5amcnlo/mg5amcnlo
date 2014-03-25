@@ -1265,7 +1265,37 @@ class HelasWavefunction(base_objects.PhysicsObject):
 
             # Set new mothers
             new_wf.set('mothers', mothers)
-
+            # reordered it
+            # otherwise it is wrong in the order of the wfs output
+            # for g g > go go g [virt=QCD]
+            numbers=[]
+            for wf in diagram_wavefunctions:
+                numbers.append(wf.get('number'))
+            swapflag=True
+            swapwfs=False
+            while swapflag:
+                for i, wf in enumerate(diagram_wavefunctions):
+                    if i==len(diagram_wavefunctions)-1:
+                        swapflag=False
+                        break
+                    diagwfs=diagram_wavefunctions
+                    found=False
+                    for w in diagwfs[i+1:]:
+                        if w in wf.get('mothers'):
+                            windex=diagwfs.index(w)
+                            diagwfs.pop(windex)
+                            diagwfs.insert(i,w)
+                            found=True
+                            swapwfs=True
+                            break
+                    if found:
+                        diagram_wavefunctions=diagwfs
+                        swapflag=True
+                        break
+            if swapwfs:
+                for i,wf in enumerate(diagram_wavefunctions):
+                    wf.set('number', numbers[i])
+                    
             # Now flip flow or sign
             if flip_flow:
                 # Flip fermion flow
