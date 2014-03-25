@@ -1620,7 +1620,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
             # just check the other ids refer to the same pdfsetname
             elif not \
-              self.lhapdf_pdfsets_[lhaid]['filename'] == pdfsetname:
+              self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
                 raise MadGraph5Error(\
                     'lhaid and PDF_set_min/max in the run_card do not correspond to the' +
                     'same PDF set. Please check the run_card.')
