@@ -1289,6 +1289,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
             self.replace_make_opt_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+        
+        return compiler
 
     def replace_make_opt_compiler(self, compiler, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
@@ -5029,7 +5031,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'mp':True,
               'loop_dir': os.path.join(cmd._mgme_dir, 'Template/loop_material'),
               'cuttools_dir': cmd._cuttools_dir,
-              'fortran_compiler':cmd.options['fortran_compiler']}
+              'fortran_compiler':cmd.options['fortran_compiler'],
+              'output_dependencies':cmd.options['output_dependencies']}
 
             if not cmd.options['loop_optimized_output']:
                 ExporterClass=loop_exporters.LoopProcessExporterFortranSA
@@ -5059,7 +5062,8 @@ def ExportV4Factory(cmd, noclean, output_type='default'):
               'mp':len(cmd._fks_multi_proc.get_virt_amplitudes()) > 0,
               'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
               'cuttools_dir': cmd._cuttools_dir,
-              'fortran_compiler':cmd.options['fortran_compiler']}
+              'fortran_compiler':cmd.options['fortran_compiler'],
+              'output_dependencies':cmd.options['output_dependencies']}
         if not cmd.options['loop_optimized_output']:
             logger.info("Writing out the aMC@NLO code")
             ExporterClass = export_fks.ProcessExporterFortranFKS

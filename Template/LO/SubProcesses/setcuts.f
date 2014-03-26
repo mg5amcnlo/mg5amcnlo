@@ -178,7 +178,7 @@ c-do not apply cuts to these
          if (abs(idup(i,1,1)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
          if (abs(idup(i,1,1)).eq.16) do_cuts(i)=.false.  ! no cuts on vt vt~
 c-flavor-jets
-         if (abs(idup(i,1,1)).le.min(maxjetflavor,5)) then
+         if (abs(idup(i,1,1)).le.min(maxjetflavor,6)) then
               is_a_j(i)=.true.
 c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1,1)),' maxflavor=',maxjetflavor
          else if (abs(idup(i,1,1)).ge.maxjetflavor+1 .and. abs(idup(i,1,1)).le.5) then

@@ -3401,7 +3401,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
 
 
-        elif mode == 1:
+        elif mode in [1,2]:
             # For condor cluster, create the input/output files
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
@@ -3442,9 +3442,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
             else:
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)
-
-        elif mode == 2:
-            self.cluster.submit(exe, stdout=stdout, cwd=cwd)
             
             
     ############################################################################
@@ -3529,11 +3526,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # set environment variable for lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
+            self.link_lhapdf(pjoin(self.me_dir,'lib'))
+            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhaid_list = [int(self.run_card['lhaid'])]
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
-        self.pdffile = None
-        #remove lhapdf stuff
-        self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+        if self.run_card['pdlabel'] != "lhapdf":
+            self.pdffile = None
+            #remove lhapdf stuff
+            self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3823,6 +3826,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
+        self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        # check if the scalecorrelation parameter is define:
+        if not 'sys_scalecorrelation' in self.run_card:
+            self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
         if not scdir or \
@@ -3873,6 +3880,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
+            else:
+                logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         

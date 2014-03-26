@@ -25,6 +25,7 @@ import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
+import models as ufomodels
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -73,6 +74,61 @@ class TestNFlav(unittest.TestCase):
         sm_path = import_ufo.find_ufo_path('sm')
         model = import_ufo.import_model(sm_path + '-no_masses')
         self.assertEqual(model.get_nflav(), 5)
+
+class TestImportUFONoSideEffect(unittest.TestCase):
+    """Test class for the the possible side effect on a UFO model loaded when
+       converting it to a MG5 model"""
+
+    def test_ImportUFONoSideEffectLO(self):
+        """Checks that there are no side effects of the import of the LO UFO sm"""       
+        ufo_model = ufomodels.load_model(import_ufo.find_ufo_path('sm'),False)
+        original_all_particles = copy.copy(ufo_model.all_particles)
+        original_all_vertices = copy.copy(ufo_model.all_vertices)
+        original_all_couplings = copy.copy(ufo_model.all_couplings)
+        original_all_lorentz = copy.copy(ufo_model.all_lorentz)
+        original_all_parameters = copy.copy(ufo_model.all_parameters)
+        original_all_orders = copy.copy(ufo_model.all_orders)
+        original_all_functions = copy.copy(ufo_model.all_functions)
+
+        ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model)
+        model = ufo2mg5_converter.load_model()
+        parameters, couplings = import_ufo.OrganizeModelExpression(ufo_model).main()        
+
+        self.assertEqual(original_all_particles,ufo_model.all_particles)        
+        self.assertEqual(original_all_vertices,ufo_model.all_vertices)
+        self.assertEqual(original_all_couplings,ufo_model.all_couplings)
+        self.assertEqual(original_all_lorentz,ufo_model.all_lorentz)
+        self.assertEqual(original_all_parameters,ufo_model.all_parameters)
+        self.assertEqual(original_all_orders,ufo_model.all_orders)
+        self.assertEqual(original_all_functions,ufo_model.all_functions)
+        
+    def test_ImportUFONoSideEffectNLO(self):
+        """Checks that there are no side effects of the import of the NLO UFO sm"""
+        ufo_model = ufomodels.load_model(import_ufo.find_ufo_path('loop_sm'),False)
+        original_all_particles = copy.copy(ufo_model.all_particles)
+        original_all_vertices = copy.copy(ufo_model.all_vertices)
+        original_all_couplings = copy.copy(ufo_model.all_couplings)
+        original_all_lorentz = copy.copy(ufo_model.all_lorentz)
+        original_all_parameters = copy.copy(ufo_model.all_parameters)
+        original_all_orders = copy.copy(ufo_model.all_orders)
+        original_all_functions = copy.copy(ufo_model.all_functions)
+        original_all_CTvertices = copy.copy(ufo_model.all_CTvertices)
+        original_all_CTparameters = copy.copy(ufo_model.all_CTparameters)
+
+
+        ufo2mg5_converter = import_ufo.UFOMG5Converter(ufo_model)
+        model = ufo2mg5_converter.load_model()
+        parameters, couplings = import_ufo.OrganizeModelExpression(ufo_model).main()        
+
+        self.assertEqual(original_all_particles,ufo_model.all_particles)
+        self.assertEqual(original_all_vertices,ufo_model.all_vertices)
+#        self.assertEqual(original_all_couplings,ufo_model.all_couplings)
+        self.assertEqual(original_all_lorentz,ufo_model.all_lorentz)
+        self.assertEqual(original_all_parameters,ufo_model.all_parameters)
+        self.assertEqual(original_all_orders,ufo_model.all_orders)
+        self.assertEqual(original_all_functions,ufo_model.all_functions)
+        self.assertEqual(original_all_CTvertices,ufo_model.all_CTvertices)
+        self.assertEqual(original_all_CTparameters,ufo_model.all_CTparameters)
 
 #===============================================================================
 # TestRestrictModel

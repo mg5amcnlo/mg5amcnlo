@@ -2061,7 +2061,11 @@ c     conflicting BW with alternative mass smaller
      &              (qwidth(i)+cBW_width(i,-1)) ! b(-1) is negative here
                b(-1)=qmass(i)+b(-1)*qwidth(i)
                b(-1)=b(-1)**2
-               if (x(-i).lt.0.5d0) then
+
+               if (b(-1).gt.smax) then
+                   s(i)=(smax-smin)*x(-i)+smin
+                   xjac0=xjac0*(smax-smin)
+               elseif (x(-i).lt.0.5d0) then
                   x0=2d0*x(-i)
                   s(i)=(b(-1)-smin)*x0+smin
                   xjac0=2d0*xjac0*(b(-1)-smin)
