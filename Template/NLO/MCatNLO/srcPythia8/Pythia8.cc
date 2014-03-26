@@ -9,7 +9,7 @@
 #include "HepMC/HEPEVT_Wrapper.h"
 #include "fstream"
 #include "LHEFRead.h"
-//#include "CombineMatchingInput.h"
+#include "../examples/CombineMatchingInput.h"
 
 using namespace Pythia8;
 
@@ -31,11 +31,6 @@ int main() {
   int cwgtinfo_nn;
   char cwgtinfo_weights_info[250][15];
   double cwgt_ww[250];
-
-  // Teach Pythia some additional settings (for now).
-  pythia.settings.addFlag("JetMatching:doFxFx",false);
-  pythia.settings.addMode("JetMatching:nPartonsNow",0,true,false,0,10);
-  pythia.settings.addParm("JetMatching:qCutME",5.,true,false,0.,-1.);
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
@@ -67,23 +62,32 @@ int main() {
     int nJnow=pythia.mode("JetMatching:nPartonsNow");
     int nJmax=pythia.mode("JetMatching:nJetMax");
     int iExcl=pythia.mode("JetMatching:exclusive");
-  
+    double Qcut=pythia.parm("JetMatching:qCut");
+    double PTcut=pythia.parm("JetMatching:qCutME");
+
+    if (Qcut <= PTcut || Qcut <= 0.) {
+      std::cout << " \n";
+      std::cout << "Merging scale (shower_card.dat) smaller than pTcut (run_card.dat)"
+		<< Qcut << " " << PTcut << "\n";
+      return 0;
+    }
     if (nJnow >= 5 || nJnow < 0 || nJmax >= 5 || nJmax < 0 || nJnow > nJmax) {
-      std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat"
+      std::cout << " \n";
+      std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat "
 		<< nJmax << " " << nJnow << "\n";
       return 0;
     }
-
     if (nJnow != nJmax && iExcl == 0) {
+      std::cout << " \n";
       std::cout << "Inclusive merging required for a sample with non-max multiplicity\n";
       return 0;
     }
 
-    // //Create UserHooks pointer. Stop if it failed. Pass pointer to Pythia.
-    // CombineMatchingInput combined;
-    // UserHooks* matching = combined.getHook(pythia);
-    // if (!matching) return 1;
-    // pythia.setUserHooksPtr(matching);
+    //Create UserHooks pointer. Stop if it failed. Pass pointer to Pythia.
+    CombineMatchingInput combined;
+    UserHooks* matching = combined.getHook(pythia);
+    if (!matching) return 1;
+    pythia.setUserHooksPtr(matching);
 
  }
 
