@@ -20,6 +20,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
                       - Fix a bug that some file where sometimes truncated.
                       - Allow for independant scale variation for the factorization/renormalization scale.
                 RF+OM: Improve the handling of conflicting Breit-Wigners at NLO
+		RF: Print the scale and PDF uncertainties for fNLO runs in the summary at the end of the run
 
 2.1.0(21/02/14) MADWEIGHT RELEASE:
                 ------------------
