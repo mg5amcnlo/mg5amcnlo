@@ -665,21 +665,28 @@ c          FS clustering
 c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
+              write(*,*) 'not jet vertex', ipart(1,imocl(n)), ipart(2,imocl(n))
 c          Remove non-gluon jets that lead up to non-jet vertices
-              if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+              do k =1,2 ! loop over the two daughter
+                 do j= 1,2 ! loop over the connected part of the daughter
+                 if (idacl(n,k).gt.2) then
+                   if(ipart(j,idacl(n,k)).gt.2)then ! ipart(j) set and not IS line
+                      write(*,*) 'pdg', ipdgcl(ishft(j,ipart(1,idacl(n,k))-1),igraphs(1),iproc)
+                      write(*,*) 'part', ipart(j,idacl(n,k))
 c                The ishft gives the FS particle corresponding to imocl
-                 if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
-     $              iqjets(ipart(1,imocl(n)))=0
-              endif
-              if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
-c                The ishft gives the FS particle corresponding to imocl
-                 if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
-     $             iqjets(ipart(2,imocl(n)))=0
-              endif
+                      if(ipdgcl(ishft(1,ipart(j,idacl(n,k))-1),igraphs(1),iproc).ne.21) then
+                         write(*,*) 'situation not a gluon'
+                         iqjets(ipart(j,idacl(n,k)))=0
+                      endif
+                   endif
+                endif
+             enddo
+          enddo
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
               cycle
            endif
+
 c          This is a jet vertex, so set jet flag for final-state jets
 c          ifsno gives leg number if daughter is FS particle, otherwise 0
            fsnum(1)=ifsno(idacl(n,1),ipart)
