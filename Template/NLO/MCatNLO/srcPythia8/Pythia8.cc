@@ -71,7 +71,7 @@ int main() {
 		<< Qcut << " " << PTcut << "\n";
       return 0;
     }
-    if (nJnow >= 5 || nJnow < 0 || nJmax >= 5 || nJmax < 0 || nJnow > nJmax) {
+    if (nJnow >= 10 || nJnow < 0 || nJmax >= 10 || nJmax < 0 || nJnow > nJmax) {
       std::cout << " \n";
       std::cout << "Wrong inputs njmax and/or njnow in shower_card.dat "
 		<< nJmax << " " << nJnow << "\n";

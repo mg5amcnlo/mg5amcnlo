@@ -36,7 +36,7 @@ class ShowerCard(dict):
         string_vars.append(dmstring)
     int_vars = ['maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax',
                 'njnow', 'modbos_1', 'modbos_2']
-    float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut', 'rad_j', 'eta_j']
+    float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
     # names_dict has the following structure:
     # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIGPP: varhwpp, PYTHIA8: varpy8}
@@ -71,8 +71,6 @@ class ShowerCard(dict):
             'analyse' : {'HERWIG6':'hwuti', 'PYTHIA6':'pyuti', 'HERWIGPP':'hwpputi', 'PYTHIA8':'py8uti'},
             'qcut' : {'PYTHIA8':'qcut'},
             'incl_merg' : {'PYTHIA8':'incl_merg'},
-            'rad_j' : {'PYTHIA8':'jrad'},
-            'eta_j' : {'PYTHIA8':'jeta'},
             'njmax' : {'PYTHIA8':'njmax'},
             'njnow' : {'PYTHIA8':'njnow'}}
     
