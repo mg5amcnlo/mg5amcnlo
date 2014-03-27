@@ -2172,9 +2172,9 @@ Integrated cross-section
 
 
     def run_mcatnlo(self, evt_file):
-        """runs mcatnlo on the generated event file, to produce showered-events"""
+        """runs mcatnlo on the generated event file, to produce showered-events
+        """
         logger.info('Prepairing MCatNLO run')
-
         try:
             misc.call(['gunzip', evt_file])
         except Exception:
@@ -2298,76 +2298,53 @@ Integrated cross-section
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
-        #copy the showered stdhep file back in events
+        
+        # now collect the results
+        message = ''
+        warning = ''
+        to_gzip = []
         if not self.shower_card['analyse']:
-            if os.path.exists(pjoin(rundir, self.run_name, evt_name + '.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
-
-                files.mv(pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file) 
-                misc.call(['gzip', evt_file])
-                misc.call(['gzip', hep_file])
-
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the StdHEP format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for hw++
-            elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-                hep_file = '%s_%s_0.hepmc' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                files.mv(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file) 
-                misc.call(['gzip', evt_file])
-                misc.call(['gzip', hep_file])
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for pythia8
-            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                files.mv(pjoin(rundir, 'Pythia8.hep'), hep_file) 
-                misc.call(['gzip', evt_file])
-                misc.call(['gzip', hep_file])
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-
+            #copy the showered stdhep/hepmc file back in events
+            showerfile_dict = \
+                {'HERWIG6': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6Q': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6PT': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA8': pjoin(rundir, 'Pythia8.hep'),
+                 'HERWIGPP': pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')}
+            if shower in ['PYTHIA8', 'HERWIGPP']:
+                hep_format = 'HEPMC'
+                ext = 'hepmc'
             else:
+                hep_format = 'StdHEP'
+                ext = 'hep'
+
+            hep_file = '%s_%s_0.%s' % (evt_file[:-4], shower, ext)
+            count = 0
+            while os.path.exists(hep_file + '.gz'):
+                count +=1
+                hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+
+            try:
+                files.mv(showerfile_dict[shower], hep_file) 
+            except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
-                
-            # Now arxiv the shower card used if RunMaterial is present
-            run_dir_path = pjoin(rundir,self.run_name)
-            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
-                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
-                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
-                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
-                                                              %(shower, count)))
-                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
-                                                               cwd=run_dir_path)
-                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+
+            to_gzip.extend([evt_file, hep_file])
+
+            message = ('The file %s.gz has been generated. \nIt contains showered' + \
+                    ' and hadronized events in the %s format obtained' + \
+                    ' showering the parton-level event file %s.gz with %s') % \
+                    (hep_file, hep_format, evt_file, shower)
             
         else:
+            #copy the topdrawer file(s) back in events
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
+            to_gzip.append(evt_file)
             if not topfiles:
-                misc.call(['gzip', evt_file])
-                logger.warning('No .top file has been generated. For the results of your ' +\
-                               'run, please check inside %s' % rundir)
+                waarning = 'No .top file has been generated. For the results of your ' +\
+                               'run, please check inside %s' % rundir
 
 	    else:    
                 filename = 'plot_%s_%d_' % (shower, 1)
@@ -2381,7 +2358,6 @@ Integrated cross-section
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
                               '%s%d.top' % (filename, i))
                     files.mv(pjoin(rundir, file), plotfile) 
-
                     plotfiles.append(plotfile)
 
                 ffiles = 'files'
@@ -2390,11 +2366,28 @@ Integrated cross-section
                     ffiles = 'file'
                     have = 'has'
 
-                misc.call(['gzip', evt_file])
-                logger.info(('The %s %s %s been generated, with histograms in the' + \
+                message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
-                        evt_file, shower))
+                        evt_file, shower)
+                
+        # Now arxiv the shower card used if RunMaterial is present
+        run_dir_path = pjoin(rundir,self.run_name)
+        if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+            misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
+            files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+               pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                          %(shower, count)))
+            misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                           cwd=run_dir_path)
+            shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        # end of the run, gzip files and print out the message/warning
+        for f in to_gzip:
+            misc.call(['gzip', f])
+        if message:
+            logger.info(message)
+        if warning:
+            logger.warning(warning)
 
         self.update_status('Run complete', level='shower', update_results=True)
 
