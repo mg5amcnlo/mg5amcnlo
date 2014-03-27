@@ -1371,7 +1371,20 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(options, 1, mode)
+
+            # collect the scale and PDF uncertainties
+            scale_pdf_info={}
+            if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+                data_files=[]
+                for dir in p_dirs:
+                    for obj in folder_names[mode]:
+                        for file in os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)):
+                            if file.startswith(obj[:-1]) and \
+                                    (os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file,'scale_pdf_dependence.dat'))):
+                                data_files.append(pjoin(dir,file,'scale_pdf_dependence.dat'))
+                scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+            # print the results:
+            self.print_summary(options, 1, mode, scale_pdf_info)
 
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
@@ -1679,6 +1692,14 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
+                if self.run_card['reweight_scale']=='.true.':
+                    message = message + \
+                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                if self.run_card['reweight_PDF']=='.true.':
+                    message = message + \
+                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
@@ -2670,7 +2691,7 @@ Integrated cross-section
     def pdf_scale_from_reweighting(self, evt_files):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
-        (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
+        (P*/G*/pdf_scale_dependence.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
         Hessian method (if lhaid<90000) or Gaussian (if lhaid>90000))
         and returns it in percents.  The expected format of the file
