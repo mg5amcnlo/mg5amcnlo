@@ -284,6 +284,17 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(2,ida2)
         endif
+      else if(idmo.eq.21 .and. abs(idda1).le.6 .and.
+     $        abs(idda2).le.6) then
+c     gluon -> quark anti-quark: use both, but take hardest as 1
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+          ipart(1,imo)=ipart(1,ida1)
+          ipart(2,imo)=ipart(1,ida2)
+        else
+          ipart(1,imo)=ipart(1,ida2)
+          ipart(2,imo)=ipart(1,ida1)
+        endif
       else if(idmo.eq.21.and.(idda1.eq.21.or.idda2.eq.21))then
          if(idda1.eq.21) then
             iddgluon = idda1
@@ -312,15 +323,15 @@ c        gluon -> gluon + Higgs use the gluon one
                ipart(2,imo)=ipart(2,idgluon)
          endif
       else if(idmo.eq.21) then
-c     gluon -> quark anti-quark: use both, but take hardest as 1
-        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
-     $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
-          ipart(1,imo)=ipart(1,ida1)
-          ipart(2,imo)=ipart(1,ida2)
-        else
-          ipart(1,imo)=ipart(1,ida2)
-          ipart(2,imo)=ipart(1,ida1)
-        endif
+c     gluon > octet octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
       else if(idmo.eq.idda1.or.idmo.eq.idda1+sign(1,idda2))then
 c     quark -> quark-gluon or quark-Z or quark-h or quark-W
         ipart(1,imo)=ipart(1,ida1)
@@ -380,14 +391,8 @@ c     Check if ida1 is outgoing parton or ida2 is outgoing parton
       endif        
 
 c     FS clustering
-      if (idda1.eq.21.and.idda2.eq.21)then
-         ! h > gluon gluon or scalar octet > gluon gluon
-         isjetvx=.false.
-      else if (idmo.eq.21.and.(isqcd(idda1).neqv.isqcd(idda2)))then
-         ! g > h g
-         isjetvx = .true.
-      else if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
-     $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1)) then
+      if((isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2)).or.
+     $   (isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1))) then
          isjetvx=.true.
       else
          isjetvx=.false.
@@ -723,22 +728,6 @@ c             The ishft gives the FS particle corresponding to imocl
               if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
      $              iqjets(ipart(2,imocl(n)))=0
            endif
-
-c              do k =1,2 ! loop over the two daughter
-c                 do j= 1,2 ! loop over the connected part of the daughter
-c                 if (idacl(n,k).gt.2) then
-c                   if(ipart(j,idacl(n,k)).gt.2)then ! ipart(j) set and not IS line
-c                      write(*,*) 'pdg', ipdgcl(ishft(j,ipart(1,idacl(n,k))-1),igraphs(1),iproc)
-c                      write(*,*) 'part', ipart(j,idacl(n,k))
-c                The ishft gives the FS particle corresponding to imocl
-c                      if(ipdgcl(ishft(1,ipart(j,idacl(n,k))-1),igraphs(1),iproc).ne.21) then
-c                         write(*,*) 'situation not a gluon'
-c                         iqjets(ipart(j,idacl(n,k)))=0
-c                      endif
-c                   endif
-c                endif
-c             enddo
-c         enddo
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
               cycle
@@ -1000,9 +989,9 @@ c     Take care of case when jcentral are zero
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
+         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
-         if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
+         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
