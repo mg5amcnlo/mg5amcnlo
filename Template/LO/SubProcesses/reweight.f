@@ -191,6 +191,14 @@ c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
 c**************************************************
 c   Traces particle lines according to CKKW rules
 c**************************************************
+c     ipart gives the external particle number corresponding to the present
+c     quark or gluon line.
+c     For t-channel lines, ipart(1) contains the connected beam.
+c     For s-channel lines, it depends if it is quark or gluon line:
+c     For quark lines, ipart(2) is 0 and ipart(1) connects to the corresponding
+c     final-state quark. For gluons, if it splits into two gluons,
+c     it connects to the hardest gluon. If it splits into qqbar, it ipart(1) is
+c     the hardest and ipart(2) is the softest.
       implicit none
 
       include 'ncombs.inc'
@@ -202,6 +210,9 @@ c**************************************************
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
       logical isjet
       external isjet
+      integer iddgluon, iddother, idgluon, idother
+      logical isqcd
+      external isqcd
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -273,7 +284,34 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(2,ida2)
         endif
-      else if(idmo.eq.21)then
+      else if(idmo.eq.21.and.(idda1.eq.21.or.idda2.eq.21))then
+         if(idda1.eq.21) then
+            iddgluon = idda1
+            idgluon = ida1
+            iddother = idda2
+            idother = ida2
+         else
+            iddgluon = idda2
+            iddother = idda1
+            idgluon = ida2
+            idother = ida1
+         endif
+         if (isqcd(idother))then
+c        gluon -> gluon + scalar octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
+         else
+c        gluon -> gluon + Higgs use the gluon one
+               ipart(1,imo)=ipart(1,idgluon)
+               ipart(2,imo)=ipart(2,idgluon)
+         endif
+      else if(idmo.eq.21) then
 c     gluon -> quark anti-quark: use both, but take hardest as 1
         if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
@@ -342,7 +380,13 @@ c     Check if ida1 is outgoing parton or ida2 is outgoing parton
       endif        
 
 c     FS clustering
-      if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
+      if (idda1.eq.21.and.idda2.eq.21)then
+         ! h > gluon gluon or scalar octet > gluon gluon
+         isjetvx=.false.
+      else if (idmo.eq.21.and.(isqcd(idda1).neqv.isqcd(idda2)))then
+         ! g > h g
+         isjetvx = .true.
+      else if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
      $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1)) then
          isjetvx=.true.
       else
@@ -665,23 +709,33 @@ c          FS clustering
 c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
-              write(*,*) 'not jet vertex', ipart(1,imocl(n)), ipart(2,imocl(n))
 c          Remove non-gluon jets that lead up to non-jet vertices
-              do k =1,2 ! loop over the two daughter
-                 do j= 1,2 ! loop over the connected part of the daughter
-                 if (idacl(n,k).gt.2) then
-                   if(ipart(j,idacl(n,k)).gt.2)then ! ipart(j) set and not IS line
-                      write(*,*) 'pdg', ipdgcl(ishft(j,ipart(1,idacl(n,k))-1),igraphs(1),iproc)
-                      write(*,*) 'part', ipart(j,idacl(n,k))
+           if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c          The ishft gives the FS particle corresponding to imocl
+              if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
+     $              iqjets(ipart(1,imocl(n)))=0
+           endif
+           if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c             The ishft gives the FS particle corresponding to imocl
+              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
+     $              iqjets(ipart(2,imocl(n)))=0
+           endif
+
+c              do k =1,2 ! loop over the two daughter
+c                 do j= 1,2 ! loop over the connected part of the daughter
+c                 if (idacl(n,k).gt.2) then
+c                   if(ipart(j,idacl(n,k)).gt.2)then ! ipart(j) set and not IS line
+c                      write(*,*) 'pdg', ipdgcl(ishft(j,ipart(1,idacl(n,k))-1),igraphs(1),iproc)
+c                      write(*,*) 'part', ipart(j,idacl(n,k))
 c                The ishft gives the FS particle corresponding to imocl
-                      if(ipdgcl(ishft(1,ipart(j,idacl(n,k))-1),igraphs(1),iproc).ne.21) then
-                         write(*,*) 'situation not a gluon'
-                         iqjets(ipart(j,idacl(n,k)))=0
-                      endif
-                   endif
-                endif
-             enddo
-          enddo
+c                      if(ipdgcl(ishft(1,ipart(j,idacl(n,k))-1),igraphs(1),iproc).ne.21) then
+c                         write(*,*) 'situation not a gluon'
+c                         iqjets(ipart(j,idacl(n,k)))=0
+c                      endif
+c                   endif
+c                endif
+c             enddo
+c         enddo
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
               cycle
