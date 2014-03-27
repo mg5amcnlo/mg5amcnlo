@@ -79,6 +79,7 @@ c MZ add the possibility to have shower_MC input lowercase
 c merging cuts
       xqcut=0d0
       xmtc=0d0
+      d=1d0
       
 c*********************************************************************
 c     Random Number Seed                                             *
