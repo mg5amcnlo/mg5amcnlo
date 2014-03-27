@@ -994,7 +994,7 @@ c     Take care of case when jcentral are zero
          endif
       elseif(jcentral(1).eq.0)then
             q2fact(1) = pt2ijcl(jfirst(1))
-      elseif(jcental(2).eq.0)then
+      elseif(jcentral(2).eq.0)then
             q2fact(2) = pt2ijcl(jfirst(2))
       elseif(ickkw.eq.2.or.pdfwgt)then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
