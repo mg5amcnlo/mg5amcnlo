@@ -1261,7 +1261,28 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                 diagram_wavefunctions.insert(i, new_wf)
                                 break
                         else:
-                            diagram_wavefunctions.append(new_wf)
+                            i=0
+                            motherexist=False
+                            for wf in mothers:
+                                if wf in diagram_wavefunctions:
+                                    wfindex=diagram_wavefunctions.index(wf)
+                                    if i<wfindex:i=wfindex
+                                    motherexist=True
+                            if motherexist==True:i=i+1
+                            if i>len(diagram_wavefunctions)-1:
+                                # if the last one is the mother
+                                # just append it
+                                diagram_wavefunctions.append(new_wf)
+                            else:
+                                # insert at the correct place
+                                # after the last mother
+                                wf=diagram_wavefunctions[i]
+                                new_wf.set('number',wf.get('number'))
+                                for wf in diagram_wavefunctions[i:]:
+                                    wf.set('number',wf.get('number')+1)
+                                # Insert wavefunction
+                                diagram_wavefunctions.insert(i,new_wf)
+                            #diagram_wavefunctions.append(new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
@@ -1282,6 +1303,10 @@ class HelasWavefunction(base_objects.PhysicsObject):
                     found=False
                     for w in diagwfs[i+1:]:
                         if w in wf.get('mothers'):
+                            #if swapwfs==False:
+                            #    print [www.get('number') for www in diagram_wavefunctions]
+                            #    print [[mo.get('number') for mo in www.get('mothers')]\
+                            #           for www in diagram_wavefunctions]
                             windex=diagwfs.index(w)
                             diagwfs.pop(windex)
                             diagwfs.insert(i,w)
@@ -1293,6 +1318,9 @@ class HelasWavefunction(base_objects.PhysicsObject):
                         swapflag=True
                         break
             if swapwfs:
+                #print [www.get('number') for www in diagram_wavefunctions]
+                #print [[mo.get('number') for mo in www.get('mothers')]\
+                #        for www in diagram_wavefunctions]
                 for i,wf in enumerate(diagram_wavefunctions):
                     wf.set('number', numbers[i])
                     
