@@ -647,8 +647,8 @@ c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
 c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
-        do i=1,2
-          do j=1,2
+        do i=1,2 ! index of the child in the interaction
+          do j=1,2 ! j index of the beam
             if(idacl(n,i).eq.ibeam(j))then
 c             IS clustering
               ibeam(j)=imocl(n)
@@ -670,6 +670,9 @@ c             Stop fact scale where parton line stops
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
      $                isjet(ipdgcl(imo,igraphs(1),iproc))
+              else if (jfirst(j).eq.0) then
+                 jfirst(j) = n
+                 goodjet(imo)=.false.
               else
                  goodjet(imo)=.false.
               endif
@@ -989,6 +992,10 @@ c     Take care of case when jcentral are zero
             q2fact(1)=pt2ijcl(nexternal-2)
             q2fact(2)=q2fact(1)
          endif
+      elseif(jcentral(1).eq.0)then
+            q2fact(1) = pt2ijcl(jfirst(1))
+      elseif(jcental(2).eq.0)then
+            q2fact(2) = pt2ijcl(jfirst(2))
       elseif(ickkw.eq.2.or.pdfwgt)then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
