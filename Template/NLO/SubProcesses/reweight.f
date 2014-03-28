@@ -268,6 +268,8 @@ c**************************************************
       logical isjet
       external isjet
       integer iddgluon, iddother, idgluon, idother
+      logical isqcd
+      external isqcd
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
