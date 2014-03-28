@@ -32,9 +32,9 @@ is_bbar    = F      # true if it is b-b~ production (only for HW6)
 modbos_1   = 5      # dec mode for boson 1 (only for HW6, overridden by DM_ below)
 modbos_2   = 5      # dec mode for boson 2 (only for HW6, overridden by DM_ below)
 ################################################################################
-# FXFX MERGING PARAMETERS
-Qcut       = -1.0   # Merging scale (relevant to FxFx merging, only for PY8)
-incl_merg  = T      # Merging: inclusive (T, for the highest multipl.) or exclusive (F)
+# FXFX MERGING PARAMETERS (ONLY FOR PY8)
+Qcut       = -1.0   # Merging scale
+incl_merg  = T      # Merging: incl. (T, for the highest multipl.) or excl. (F)
 njmax      = 0      # Maximal multiplicity
 njnow      = 0      # Multiplicity of the currently-showered sample
 ################################################################################

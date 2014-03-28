@@ -448,7 +448,7 @@ c s-channel masses
                sum_all_s=0d0
                do i=t_channel,-(nexternal-3),-1
 c Breit-wigner can never go on-shell:
-                  if ( pmass(itree(2,i),iconfig).lt.sqrt(stot) .and.
+                  if ( pmass(itree(2,i),iconfig).gt.sqrt(stot) .and.
      $                 pwidth(itree(2,i),iconfig).gt.0d0) then
                      cBW_FKS(iFKS,itree(2,i))=2
                   endif

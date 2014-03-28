@@ -11,9 +11,21 @@ using namespace Pythia8;
 int main() {
   Pythia pythia;
 
+  // Teach Pythia some additional settings (for FxFx).
+  pythia.settings.addFlag("JetMatching:doFxFx",false);
+  pythia.settings.addMode("JetMatching:nPartonsNow",0,true,false,0,10);
+  pythia.settings.addParm("JetMatching:qCutME",5.,true,false,0.,-1.);
+
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
   pythia.readFile(inputname.c_str());
+
+  //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
+  CombineMatchingInput combined;
+  UserHooks* matching = combined.getHook(pythia);
+  if (!matching) return 1;
+  pythia.setUserHooksPtr(matching);
+
   pythia.init();
 
   int nAbort=10;
@@ -25,13 +37,11 @@ int main() {
   //FxFx merging
   bool isFxFx=pythia.flag("JetMatching:doFxFx");
   if (isFxFx) {
-
     int nJnow=pythia.mode("JetMatching:nPartonsNow");
     int nJmax=pythia.mode("JetMatching:nJetMax");
     int iExcl=pythia.mode("JetMatching:exclusive");
     double Qcut=pythia.parm("JetMatching:qCut");
     double PTcut=pythia.parm("JetMatching:qCutME");
-
     if (Qcut <= PTcut || Qcut <= 0.) {
       std::cout << " \n";
       std::cout << "Merging scale (shower_card.dat) smaller than pTcut (run_card.dat)"
@@ -49,14 +59,7 @@ int main() {
       std::cout << "Inclusive merging required for a sample with non-max multiplicity\n";
       return 0;
     }
-
-    //Create UserHooks pointer. Stop if it failed. Pass pointer to Pythia.
-    CombineMatchingInput combined;
-    UserHooks* matching = combined.getHook(pythia);
-    if (!matching) return 1;
-    pythia.setUserHooksPtr(matching);
-
- }
+  }
 
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
@@ -84,6 +87,8 @@ int main() {
 
   pythia.stat();
 
-  // delete matching;
+  if (isFxFx) {
+    delete matching;
+  }
   return 0;
 }
