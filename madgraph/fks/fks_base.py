@@ -358,6 +358,10 @@ class FKSRealProcess(object):
                                'need_charge_links': need_charge_links})
 
         self.process = copy.copy(born_proc)
+        # set the orders to empty, to force the use of the squared_orders
+        self.process['orders'] = copy.copy(born_proc['orders'])
+        self.process['orders'] = {}
+
         legs = [(leg.get('id'), leg) for leg in leglist]
         self.pdgs = array.array('i',[s[0] for s in legs])
         self.colors = [leg['color'] for leg in leglist]
@@ -607,19 +611,28 @@ class FKSProcess(object):
                 if not leg['state']:
                     self.nincoming += 1
                 
-            self.find_reals(self.born_amp_list[0]['process'].get('perturbation_couplings'))
+            self.find_reals()
 
 
     def generate_real_amplitudes(self, pdg_list, real_amp_list):
         """generates the real amplitudes for all the real emission processes, using pdgs and real_amps
-        to avoid multiple generation of the same amplitude"""
+        to avoid multiple generation of the same amplitude.
+        Amplitude without diagrams are discarded at this stage"""
 
+        no_diags_amps = []
         for amp in self.real_amps:
             try:
                 amp.amplitude = real_amp_list[pdg_list.index(amp.pdgs)]
             except ValueError:
                 pdg_list.append(amp.pdgs)
                 real_amp_list.append(amp.generate_real_amplitude())
+
+            if not amp.amplitude['diagrams']:
+                no_diags_amps.append(amp)
+        
+        for amp in no_diags_amps:
+            self.real_amps.remove(amp)
+
 
 
     def combine_real_amplitudes(self):
@@ -684,13 +697,18 @@ class FKSProcess(object):
                         info['i'], info['j'], info['ij'])
 
 
-    def find_reals(self, pert_orders):
+    def find_reals(self, pert_orders = []):
         """finds the FKS real configurations for a given process.
         self.reals[i] is a list of dictionaries corresponding to the real 
         emissions obtained splitting leg i.
         The dictionaries contain the leglist and the type (order) of the
         splitting
+        If pert orders is empty, all the orders of the model will be used
         """
+        
+        if not pert_orders:
+            pert_orders = self.born_amp_list[0]['process']['model']['coupling_orders']
+
         leglist = self.get_leglist()[0]
         if range(len(leglist)) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')

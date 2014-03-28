@@ -517,8 +517,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
 
-        filename = 'born_orders.inc'
-        self.write_born_orders_file(writers.FortranWriter(filename),
+        filename = 'orders.inc'
+        self.write_orders_file(writers.FortranWriter(filename),
                                     matrix_element)
 
         filename = 'qcd_qed_pos.inc'
@@ -811,58 +811,72 @@ C if = -1, then it is not in the split_orders
         writer.writelines(text)
 
 
-    def write_born_orders_file(self, writer, matrix_element):
+    def write_orders_file(self, writer, matrix_element):
         """writes the include file with the order constraints requested by the user
         for all the orders which are split"""
 
-        born_orders = matrix_element.born_me_list[0]['processes'][0]['born_orders']
+        born_orders = {}
+        for ordd, val in matrix_element.born_me_list[0]['processes'][0]['born_orders'].items():
+            # factor 2 to pass to squared orders
+            born_orders[ordd] = 2 * val 
+        
+        # the squared orders ahve been updated in order to carry the information
+        # about what to generate at NLO
+        nlo_sq_orders = matrix_element.born_me_list[0]['processes'][0]['squared_orders']
         split_orders = \
                 matrix_element.born_me_list[0]['processes'][0]['split_orders']
 
-        max_orders = {}
-        if born_orders.keys() == ['WEIGHTED']:
-            # if user has not specified born_orders, check the 'weighted' for each
-            # of the split_orders contributions
+        max_born_orders = {}
+        max_nlo_orders = {}
+        for orders, max_orders, me_list in \
+         zip([born_orders, nlo_sq_orders], 
+             [max_born_orders, max_nlo_orders],
+             [matrix_element.born_me_list,
+              [me.matrix_element for me in matrix_element.real_processes]]):
+            if orders.keys() == ['WEIGHTED']:
+                # if user has not specified born_orders, check the 'weighted' for each
+                # of the split_orders contributions
+                wgt_ord_max = orders['WEIGHTED']
+                model = matrix_element.born_me_list[0]['processes'][0]['model']
+                for me in me_list:
+                    squared_orders, amp_orders = me.get_split_orders_mapping()
+                    for sq_order in squared_orders:
+                        # put the numbers in sq_order in a dictionary, with as keys
+                        # the corresponding order name
+                        ord_dict = {}
+                        assert len(sq_order) == len(split_orders) 
+                        for o, v in zip(split_orders, list(sq_order)):
+                            ord_dict[o] = v
 
-            # factor 2 to pass to squared orders
-            wgt_ord_max = 2 * born_orders['WEIGHTED']
-            model = matrix_element.born_me_list[0]['processes'][0]['model']
-            for born_me in matrix_element.born_me_list:
-                squared_orders, amp_orders = born_me.get_split_orders_mapping()
-                for sq_order in squared_orders:
-                    # put the numbers in sq_order in a dictionary, with as keys
-                    # the corresponding order name
-                    ord_dict = {}
-                    assert len(sq_order) == len(split_orders) 
-                    for o, v in zip(split_orders, list(sq_order)):
-                        ord_dict[o] = v
+                        wgt = sum([v * model.get('order_hierarchy')[o] for \
+                                o, v in ord_dict.items()])
+                        if wgt > wgt_ord_max:
+                            continue
+                        try:
+                            for o, v in ord_dict.items():
+                                max_orders[o] = max(max_orders[o], v)
 
-                    wgt = sum([v * model.get('order_hierarchy')[o] for \
-                            o, v in ord_dict.items()])
-                    if wgt > wgt_ord_max:
-                        continue
+                        except KeyError:
+                            for o, v in ord_dict.items():
+                                max_orders[o] = v
+
+            else:
+                #if there are born_orders keep the split_orders which 
+                # statisfy the constraint
+                for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
                     try:
-                        for o, v in ord_dict.items():
-                            max_orders[o] = max(max_orders[o], v)
-
+                        max_orders[o] = born_orders[o]
                     except KeyError:
-                        for o, v in ord_dict.items():
-                            max_orders[o] = v
+                        # if the order is not in born_orders set it to 1000
+                        max_orders[o] = 1000
 
-        else:
-            #if there are born_orders keep the split_orders which 
-            # statisfy the constraint
-            for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
-                try:
-                    # factor 2 to pass to squared orders
-                    max_orders[o] = 2 * born_orders[o]
-                except KeyError:
-                    # if the order is not in born_orders set it to 1000
-                    max_orders[o] = 1000
-
-        text = 'integer born_orders(%d)\n' % len(split_orders)
+        text = 'C The orders to be integrated for the Born and at NLO\n'
+        text += 'integer nsplitorders\n'
+        text += 'parameter (nsplitorders=%d)\n' % len(split_orders)
+        text += 'integer born_orders(nsplitorders), nlo_orders(nsplitorders)\n'
         text += 'C the order of the coupling orders is %s\n' % ', '.join(split_orders)
-        text += 'data born_orders / %s /\n' % ', '.join([str(max_orders[o]) for o in split_orders])
+        text += 'data born_orders / %s /\n' % ', '.join([str(max_born_orders[o]) for o in split_orders])
+        text += 'data nlo_orders / %s /\n' % ', '.join([str(max_nlo_orders[o]) for o in split_orders])
         writer.writelines(text)
 
 

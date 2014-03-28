@@ -33,8 +33,10 @@ class TestAMCatNLOCmd(unittest.TestCase):
     
     interface = mgcmd.MasterCmd()
 
-    def test_generate(self):
-        """check that the generate command works as expected"""
+    def test_generate_fks_ew(self):
+        """check that the generate command works as expected.
+        In particular the correct number of born diagrams, real-emission processes
+        and diagrams is checked"""
         cmd_list = [
             'u u~ > d d~ QED=0 QCD=2 [real=QCD]',
             'u u~ > d d~ QED=0 QCD=2 [real=QED]',
@@ -45,16 +47,47 @@ class TestAMCatNLOCmd(unittest.TestCase):
             'u u~ > d d~ QCD=2 QED=2 [real=QCD]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED QCD]']
-        # number of expected born diagrams
-        nborndiag_list = [1, 4, 4, 1, 4, 4, 4, 4, 4]
-        # number of expected real emission processes
-        nrealproc_list = [3, 3, 6, 3, 3, 6, 3, 3, 6]
 
-        for cmd, nborndiag, nrealproc in zip(cmd_list, nborndiag_list, nrealproc_list):
+        # number of expected born diagrams
+        # 1 QCD diagram and 3 EW ones
+        nborndiag_list = [1, 4, 4, 1, 4, 4, 4, 4, 4]
+
+        # number of expected real emission processes
+        # for QED perturbations also the gluon emissions have to be generated, 
+        # as their alpha x alpha_s^2 contribution has to be included
+        nrealproc_list = [3, 6, 6, 3, 6, 6, 6, 6, 6]
+
+        # number of expected real emission diagrams
+        # u u~ > d d~ g has 5 with QED=0, 17 with QED=2
+        # u u~ > d d~ a has 4 with QED=1, 17 with QED=3
+        #
+        # for e.g. 'u u~ > d d~ QED=0 QCD=2 [real=QED]'
+        # the real emissions are ordered as follows:
+        #   u u~ > d d~ a [ QED ] QED=2 QCD=4
+        #   a u~ > d d~ u~ [ QED ] QED=2 QCD=4
+        #   u u~ > d d~ g [ QED ] QED=2 QCD=4
+        #   g u~ > d d~ u~ [ QED ] QED=2 QCD=4
+        #   u a > d d~ u [ QED ] QED=2 QCD=4
+        #   u g > d u d~ [ QED ] QED=2 QCD=4
+        nrealdiags_list = [[5, 5, 5],
+                           [4, 4, 17, 17, 4, 17],
+                           [4, 4, 17, 17, 4, 17],
+                           [5, 5, 5],
+                           [4, 4, 17, 17, 4, 17],
+                           [4, 4, 17, 17, 4, 17],
+                           [17, 17, 17, 17, 17, 17],
+                           [17, 17, 17, 17, 17, 17],
+                           [17, 17, 17, 17, 17, 17]]
+
+        for cmd, nborndiag, nrealproc, nrealdiags in \
+                zip(cmd_list, nborndiag_list, nrealproc_list, nrealdiags_list):
             self.interface.do_generate(cmd)
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
             # all these processes should only have 1 born
             self.assertEqual(len(fksprocess.born_amp_list), 1)
+
             self.assertEqual(len(fksprocess.born_amp_list[0]['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)
+            for amp, n in zip(fksprocess.real_amps, nrealdiags):
+                self.assertEqual(n, len(amp.amplitude['diagrams']))
 

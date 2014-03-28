@@ -1,8 +1,6 @@
       SUBROUTINE SMATRIX%(proc_prefix)s(P,ANS_SUMMED)
 C
-C     Simple routine wrapper to provide the same interface for
-C     backward compatibility for usage without split orders.
-C
+C     Return the sum of the required split orders
 C  
 C CONSTANTS
 C 
@@ -18,13 +16,44 @@ C
 C
 C VARIABLES
 C
-      INTEGER I
-	  REAL*8 ANS(0:NSQAMPSO)
+      INTEGER I,J
+      REAL*8 ANS(0:NSQAMPSO)
+      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
+      include 'orders.inc'
+      data keep_order / NSQAMPSO*.TRUE. /
+      data firsttime / .TRUE. /
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX%(proc_prefix)s
 C
 C BEGIN CODE
 C
-	  CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
-	  ANS_SUMMED=ANS(0)
+
+C looks for orders which match the order constraint 
+
+if (firsttime) then
+ do i = 1, nsqampso
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+  if (keep_order(i)) then
+   write(*,*) 'REAL %(proc_prefix)s: keeping split order ', i
+  else
+   write(*,*) 'REAL %(proc_prefix)s: not keeping split order ', i
+  endif
+ enddo
+ firsttime = .false.
+endif
+
+CALL SMATRIX%(proc_prefix)s_SPLITORDERS(P,ANS)
+ans_summed = 0d0
+do i = 1, nsqampso
+ if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(I)
+enddo
 
 END
 
@@ -56,7 +85,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,I,T_IDENT(NCOMB)
+      INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
       REAL*8 T(NSQAMPSO),T_SAVE(NCOMB,NSQAMPSO)
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
