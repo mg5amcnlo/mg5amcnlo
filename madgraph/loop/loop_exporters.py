@@ -538,20 +538,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
-	    # HSS,24/10/2012
         loop_diags = [loop_diag for loop_diag in\
 		  matrix_element.get('base_amplitude').get('loop_diagrams')\
 		  if isinstance(loop_diag,loop_objects.LoopDiagram) and \
                                                       loop_diag.get('type') > 0]
-        #if (len(matrix_element.get('base_amplitude').get('loop_diagrams'))>1000):
-        if len(loop_diags)>1000:
-            logger.info("There are more than 1000 loop diagrams."+\
-                                               "Only the first 1000 are drawn.")
+        if len(loop_diags)>5000:
+            logger.info("There are more than 5000 loop diagrams."+\
+                                              "Only the first 5000 are drawn.")
         filename = "loop_matrix.ps"
         plot = draw.MultiEpsDiagramDrawer(base_objects.DiagramList(
-            loop_diags[:1000]),filename,
+            loop_diags[:5000]),filename,
             model=matrix_element.get('processes')[0].get('model'),amplitude='')
-	    # HSS
         logger.info("Drawing loop Feynman diagrams for " + \
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()

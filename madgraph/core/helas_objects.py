@@ -1261,68 +1261,32 @@ class HelasWavefunction(base_objects.PhysicsObject):
                                 diagram_wavefunctions.insert(i, new_wf)
                                 break
                         else:
-                            i=0
-                            motherexist=False
-                            for wf in mothers:
-                                if wf in diagram_wavefunctions:
-                                    wfindex=diagram_wavefunctions.index(wf)
-                                    if i<wfindex:i=wfindex
-                                    motherexist=True
-                            if motherexist==True:i=i+1
-                            if i>len(diagram_wavefunctions)-1:
-                                # if the last one is the mother
-                                # just append it
-                                diagram_wavefunctions.append(new_wf)
-                            else:
-                                # insert at the correct place
-                                # after the last mother
-                                wf=diagram_wavefunctions[i]
-                                new_wf.set('number',wf.get('number'))
-                                for wf in diagram_wavefunctions[i:]:
-                                    wf.set('number',wf.get('number')+1)
-                                # Insert wavefunction
-                                diagram_wavefunctions.insert(i,new_wf)
-                            #diagram_wavefunctions.append(new_wf)
+
+                            # We first look if any mother of the wavefunction
+                            # we want to add appears in the diagram_wavefunctions
+                            # list. If it doesn't, max_mother_index is -1.
+                            # If it does, then max_mother_index is the maximum
+                            # index in diagram_wavefunctions of those of the 
+                            # mothers present in this list.
+                            max_mother_index = max([-1]+
+                                [diagram_wavefunctions.index(wf) for wf in 
+                                        mothers if wf in diagram_wavefunctions])
+                            
+                            # We want to insert this new_wf as early as 
+                            # possible in the diagram_wavefunctions list so that
+                            # we are guaranteed that it will be placed *before*
+                            # wavefunctions that have new_wf as a mother.
+                            # We therefore place it at max_mother_index+1.
+                            if max_mother_index<len(diagram_wavefunctions)-1:
+                                new_wf.set('number',diagram_wavefunctions[
+                                              max_mother_index+1].get('number'))
+                            for wf in diagram_wavefunctions[max_mother_index+1:]:
+                                wf.set('number',wf.get('number')+1)
+                            diagram_wavefunctions.insert(max_mother_index+1,
+                                                                         new_wf)
 
             # Set new mothers
             new_wf.set('mothers', mothers)
-            # reordered it
-            # otherwise it is wrong in the order of the wfs output
-            # for g g > go go g [virt=QCD]
-            numbers=[]
-            for wf in diagram_wavefunctions:
-                numbers.append(wf.get('number'))
-            swapflag=True
-            swapwfs=False
-            while swapflag:
-                for i, wf in enumerate(diagram_wavefunctions):
-                    if i==len(diagram_wavefunctions)-1:
-                        swapflag=False
-                        break
-                    diagwfs=diagram_wavefunctions
-                    found=False
-                    for w in diagwfs[i+1:]:
-                        if w in wf.get('mothers'):
-                            #if swapwfs==False:
-                            #    print [www.get('number') for www in diagram_wavefunctions]
-                            #    print [[mo.get('number') for mo in www.get('mothers')]\
-                            #           for www in diagram_wavefunctions]
-                            windex=diagwfs.index(w)
-                            diagwfs.pop(windex)
-                            diagwfs.insert(i,w)
-                            found=True
-                            swapwfs=True
-                            break
-                    if found:
-                        diagram_wavefunctions=diagwfs
-                        swapflag=True
-                        break
-            if swapwfs:
-                #print [www.get('number') for www in diagram_wavefunctions]
-                #print [[mo.get('number') for mo in www.get('mothers')]\
-                #        for www in diagram_wavefunctions]
-                for i,wf in enumerate(diagram_wavefunctions):
-                    wf.set('number', numbers[i])
                     
             # Now flip flow or sign
             if flip_flow:
@@ -3028,6 +2992,14 @@ class HelasDiagram(base_objects.PhysicsObject):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid HelasWavefunctionList object" % \
                         str(value)
+            else:
+                if __debug__ and not self.check_diagram_wavefunction_order(value):
+                    raise self.PhysicsObjectError, \
+      "This wavefunction list does not have a consistent wavefunction ordering."+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in value])+\
+      "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
+                                                               for wf in value])
+      
         if name == 'amplitudes':
             if not isinstance(value, HelasAmplitudeList):
                 raise self.PhysicsObjectError, \
@@ -3036,6 +3008,66 @@ class HelasDiagram(base_objects.PhysicsObject):
 
         return True
 
+    def check_diagram_wavefunction_order(self, diag_list, applyChanges=False):
+        """ This function only serves as an internal consistency check to 
+        make sure that when setting the 'wavefunctions' attribute of the
+        diagram, their order is consistent, in the sense that all mothers 
+        of any given wavefunction appear before that wavefunction.
+        This function returns True if there was no change and the original 
+        wavefunction list was consistent and False otherwise.
+        The option 'applyChanges' control whether the function should substitute
+        the original list with the new corrected one. For now, this function
+        is only used for self-consistency checks and the changes are not applied."""
+        
+        if len(diag_list)<2:
+            return True
+
+        # We want to work on a local copy of the wavefunction list attribute
+        diagram_wavefunctions = copy.copy(diag_list)
+        
+        # We want to keep the original wf numbering (but beward that this
+        # implies changing the 'number' attriute of some wf if this function
+        # was used for actual reordering and not just self-consistency check)
+        wfNumbers = [wf['number'] for wf in diag_list]
+        
+        exitLoop=False
+        while not exitLoop:
+            for i, wf in enumerate(diagram_wavefunctions):
+                if i==len(diagram_wavefunctions)-1:
+                    exitLoop=True
+                    break
+                found=False
+                # Look at all subsequent wfs in the list placed after wf at 
+                # index i. None of them should wf as its mother
+                for w in diagram_wavefunctions[i+1:]:
+                    if w in wf.get('mothers'):
+                        # There is an inconsisent order so we must move this
+                        # mother w *before* wf which is placed at i.
+                        diagram_wavefunctions.remove(w)
+                        diagram_wavefunctions.insert(i,w)
+                        found=True
+                        if not applyChanges:
+                            return False
+                        break
+                if found:
+                    break
+
+        if diagram_wavefunctions!=diag_list:
+            # After this diagram_wavefunctions is the properly re-ordered and
+            # consistent list that should be used, where each mother appear
+            # before its daughter       
+            for i,wf in enumerate(diagram_wavefunctions):
+                wf.set('number', wfNumbers[i])
+            
+            if applyChanges:
+                diag_list=diagram_wavefunctions
+            
+            # The original list was inconsistent, so it returns False.
+            return False
+        
+        # The original list was consistent, so it returns True
+        return True
+                
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
 
@@ -3239,8 +3271,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         self.set('color_matrix',
           color_amp.ColorMatrix(self.get('color_basis')))
         
-    def generate_helas_diagrams(self, amplitude, optimization=1,
-                                decay_ids=[]):
+    def generate_helas_diagrams(self, amplitude, optimization=1,decay_ids=[]):
         """Starting from a list of Diagrams from the diagram
         generation, generate the corresponding HelasDiagrams, i.e.,
         the wave functions and amplitudes. Choose between default
@@ -3586,7 +3617,7 @@ class HelasMatrixElement(base_objects.PhysicsObject):
         
         return helas_diagrams
 
-
+    
     def insert_decay_chains(self, decay_dict):
         """Iteratively insert decay chains decays into this matrix
         element.        

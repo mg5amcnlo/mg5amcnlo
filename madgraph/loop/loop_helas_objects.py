@@ -2105,8 +2105,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Gives the total number of wavefunctions for this ME, excluding the
         loop ones."""
         
-        return sum([ len(d.get('wavefunctions')) for d in \
-                       self.get('diagrams')])
+        return sum([ len(d.get('wavefunctions')) for d in self.get('diagrams')])
 
     def get_all_wavefunctions(self):
         """Gives a list of all wavefunctions for this ME"""

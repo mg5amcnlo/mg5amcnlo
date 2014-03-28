@@ -3014,9 +3014,9 @@ This implies that with decay chains:
             elif selection=='loop' or type == 'loop':
                 diags=base_objects.DiagramList([d for d in
                         amp.get('loop_diagrams') if d.get('type')>0])
-                if len(diags) > 1000:
-                    logger.warning('Displaying only the first 1000 diagrams')
-                    diags = base_objects.DiagramList(diags[:1000])
+                if len(diags) > 5000:
+                    logger.warning('Displaying only the first 5000 diagrams')
+                    diags = base_objects.DiagramList(diags[:5000])
 
             plot = draw.MultiEpsDiagramDrawer(diags,
                                           filename,
