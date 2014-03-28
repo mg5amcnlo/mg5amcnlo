@@ -11,11 +11,6 @@ using namespace Pythia8;
 int main() {
   Pythia pythia;
 
-  // Teach Pythia some additional settings (for FxFx).
-  pythia.settings.addFlag("JetMatching:doFxFx",false);
-  pythia.settings.addMode("JetMatching:nPartonsNow",0,true,false,0,10);
-  pythia.settings.addParm("JetMatching:qCutME",5.,true,false,0.,-1.);
-
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
   pythia.readFile(inputname.c_str());
@@ -87,8 +82,7 @@ int main() {
 
   pythia.stat();
 
-  if (isFxFx) {
-    delete matching;
-  }
+  delete matching;
+
   return 0;
 }

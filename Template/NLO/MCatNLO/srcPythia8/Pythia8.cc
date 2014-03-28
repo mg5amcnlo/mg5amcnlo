@@ -29,11 +29,6 @@ extern "C" {
 int main() {
   Pythia pythia;
 
-  // Teach Pythia some additional settings (for FxFx).
-  pythia.settings.addFlag("JetMatching:doFxFx",false);
-  pythia.settings.addMode("JetMatching:nPartonsNow",0,true,false,0,10);
-  pythia.settings.addParm("JetMatching:qCutME",5.,true,false,0.,-1.);
-
   int cwgtinfo_nn;
   char cwgtinfo_weights_info[250][15];
   double cwgt_ww[250];
@@ -136,8 +131,7 @@ int main() {
 
   pythia.stat();
 
-  if (isFxFx) {
-    delete matching;
-  }
+  delete matching;
+
   return 0;
 }
