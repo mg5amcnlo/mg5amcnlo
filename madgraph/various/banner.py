@@ -652,7 +652,7 @@ class RunCard(dict):
             self.add_line('iseed', 'int', 0, fortran_name='iseed')
         #number of events
         self.add_line('nevents', 'int', 10000)
-        self.add_line('gevents', 'int', 2000, log=10)
+        #self.add_line('gevents', 'int', 2000, log=10)
             
         # Renormalizrion and factorization scales
         self.add_line('fixed_ren_scale', 'bool', True)

@@ -4500,8 +4500,9 @@ class UFO_model_to_mg4(object):
             already_def.add(particle.get('width').lower())
             if self.opt['complex_mass']:
                 already_def.add('cmass_%s' % particle.get('mass').lower())
-
-        is_valid = lambda name: name!='G' and name!='MU_R' and name.lower() not in already_def
+        
+        is_valid = lambda name: name.lower() not in ['g', 'mu_r', 'zero'] and \
+                                                 name.lower() not in already_def
         
         real_parameters = [param.name for param in self.params_dep + 
                             self.params_indep if param.type == 'real'

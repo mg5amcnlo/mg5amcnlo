@@ -2601,7 +2601,7 @@ class decay_all_events(object):
             if '@' in proc:
                 proc, proc_nb = proc.split('@')
                 try:
-                    int(proc_nb)
+                    proc_nb = int(proc_nb)
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 
