@@ -221,6 +221,18 @@ class CmdExtended(cmd.Cmd):
 
         self.history = banner_module.ProcCard()
 
+
+    def default(self, line):
+        """Default action if line is not recognized"""
+        print "pass"
+        # Faulty command
+        log=True
+        if line.startswith('p') or line.startswith('e'):
+            logger.warning("Command %s not recognized. Did you mean \'generate %s\'?. Please try again" %
+                           (line.split()[0], line))
+            log=False
+        return super(CmdExtended,self).default(line, log=log)
+
     def postcmd(self,stop, line):
         """ finishing a command
         This looks if the command add a special post part.
