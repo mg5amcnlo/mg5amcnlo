@@ -101,6 +101,7 @@ c
       return
       end
 
+
       subroutine load_para(npara,param,value)
 c----------------------------------------------------------------------
 c Read the params from the run_card.dat file
@@ -204,8 +205,78 @@ c
       enddo
  96   close(iunit)
       endif
-c      OM: 28-03-14 refactor gridpackpack
-      call load_gridpack_para(npara,param,value)
+c
+c     open file
+c
+c
+c     tjs modified 11-16-07 to include grid_card.dat
+c
+      call open_file(iunit,'grid_card.dat',fopened)
+      if(fopened) then
+c
+c     first look for process-specific parameters
+c
+      done=.false.
+      do while(.not.done)  
+         read(iunit,'(a132)',end=30,err=30) buff
+         if(buff(1:1).ne.'#' .and. index(buff,"=").gt.0
+     $        .and. index(buff,"@").gt.0) then
+            l1=index(buff,"@")
+            l2=index(buff,"!")
+            if(l2.eq.0) l2=l1+20  !maybe there is no comment...
+            read(buff(l1+1:l2),*,err=21) iproc
+            if(iproc.ne.ngroup) cycle
+
+            l1=index(buff,"=")
+            l2=index(buff,"@")
+            if(l2-l1.lt.0) cycle
+            npara=npara+1
+c
+             value(npara)=buff(1:l1-1)
+             ctemp=value(npara)
+             call case_trap2(ctemp)
+             value(npara)=ctemp
+c
+             param(npara)=" "//buff(l1+1:l2-1)
+             ctemp=param(npara)
+             call case_trap2(ctemp)
+             param(npara)=ctemp
+c
+ 21          cycle
+         endif
+       enddo
+ 30   rewind(iunit)
+c
+c     read in values
+c
+      done=.false.
+      do while(.not.done)  
+         read(iunit,'(a132)',end=99,err=99) buff
+         if(buff(1:1).ne.'#' .and. index(buff,"=").gt.0
+     $        .and. index(buff,"@").le.0) then
+            l1=index(buff,"=")
+            l2=index(buff,"!")
+            if(l2.eq.0) l2=l1+20  !maybe there is no comment...
+            if(l2-l1.lt.0) cycle
+            npara=npara+1
+c
+             value(npara)=buff(1:l1-1)
+             ctemp=value(npara)
+             call case_trap2(ctemp)
+             value(npara)=ctemp
+c
+             param(npara)=" "//buff(l1+1:l2-1)
+c             write (*,*) param(npara),l1,l2
+             ctemp=param(npara)
+             call case_trap2(ctemp)
+             param(npara)=ctemp
+c             write(*,*) "New param:",param(npara)," = ", value(npara)
+c
+         endif
+      enddo
+ 99   close(iunit)
+      endif
+
       return
       end
 
