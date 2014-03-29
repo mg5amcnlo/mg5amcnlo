@@ -224,7 +224,7 @@ class CmdExtended(cmd.Cmd):
 
     def default(self, line):
         """Default action if line is not recognized"""
-        print "pass"
+
         # Faulty command
         log=True
         if line.startswith('p') or line.startswith('e'):
