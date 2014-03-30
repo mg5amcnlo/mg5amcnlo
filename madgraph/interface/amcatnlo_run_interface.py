@@ -2884,17 +2884,19 @@ Integrated cross-section
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
         elif 'reweight' in exe:
-                #Find the correct PDF input file
-                input_files, output_files = [], []
-                input_files.append(self.get_pdf_input_filename())
-                input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
-                input_files.append(args[0])
-                output_files.append('%s.rwgt' % os.path.basename(args[0]))
-                output_files.append('reweight_xsec_events.output')
-                output_files.append('scale_pdf_dependence.dat')
-    
-                return self.cluster.submit2(exe, args, cwd=cwd, 
-                                 input_files=input_files, output_files=output_files) 
+            #Find the correct PDF input file
+            input_files, output_files = [], []
+            pdfinput = self.get_pdf_input_filename()
+            if os.path.exists(pdfinput):
+                input_files.append(pdfinput)
+            input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(args[0])
+            output_files.append('%s.rwgt' % os.path.basename(args[0]))
+            output_files.append('reweight_xsec_events.output')
+            output_files.append('scale_pdf_dependence.dat')
+
+            return self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files) 
 
         #this is for the cluster/multicore run
         elif 'ajob' in exe:
@@ -3014,7 +3016,9 @@ Integrated cross-section
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
 
         #Find the correct PDF input file
-        input_files.append(self.get_pdf_input_filename())
+        pdfinput = self.get_pdf_input_filename()
+        if os.path.exists(pdfinput):
+            input_files.append(pdfinput)
 
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
