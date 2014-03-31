@@ -145,6 +145,7 @@ class TestCmdShell1(unittest.TestCase):
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
+                    'output_dependencies': 'external',
                     'lhapdf': 'lhapdf-config',  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',
@@ -871,11 +872,26 @@ C
         
     def test_complex_mass_SA(self):
         """ Test that the complex_mass compile in fortran """
+
+        self.do('import model sm --noprefix')
+        self.do('set complex_mass_scheme')
+        self.do('generate e+ e- > e+ e-')
+        self.do('output standalone %s ' % self.out_dir)
+        misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
+        p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
+                            stdout=subprocess.PIPE)
+        #output = p.stdout.read()
+        for line in p.stdout:
+            if 'Matrix element' in line:
+                value = line.split('=')[1]
+                value = value. split('GeV')[0]
+                value = eval(value)
+                self.assertAlmostEqual(value, 0.019538610404713896)
         
         self.do('import model sm')
         self.do('set complex_mass_scheme')
         self.do('generate e+ e- > e+ e-')
-        self.do('output standalone %s ' % self.out_dir)
+        self.do('output standalone %s -f' % self.out_dir)
         misc.compile(cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'))
         p = subprocess.Popen(['./check'], cwd=os.path.join(self.out_dir,'SubProcesses', 'P0_epem_epem'),
                             stdout=subprocess.PIPE)

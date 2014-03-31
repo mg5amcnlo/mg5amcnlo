@@ -6,7 +6,10 @@ c Wrapper routines for the fixed order analyses
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       character*15 weights_info(max_weight)
-      integer i,npdfs
+      integer i,npdfs,ii,jj,n
+      double precision xsecScale_acc(maxscales,maxscales)
+     $     ,xsecPDFr_acc(0:maxPDFs)
+      common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
       nwgt=1
       weights_info(nwgt)="central value  "
       if (do_rwgt_scale) then
@@ -48,12 +51,24 @@ c Wrapper routines for the fixed order analyses
          nwgt=nwgt+npdfs
       endif
       call analysis_begin(nwgt,weights_info)
+c To keep track of the accumulated results:
+      do ii=1,numscales
+         do jj=1,numscales
+            xsecScale_acc(jj,ii)=0d0
+         enddo
+      enddo
+      do n=0,npdfs
+         xsecPDFr_acc(n)=0d0
+      enddo
       return
       end
 
 
       subroutine topout
       implicit none
+      include 'reweight0.inc'
+      include 'reweightNLO.inc'
+      integer ii,jj,n
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
       integer itmax,ncall
@@ -61,6 +76,9 @@ c Wrapper routines for the fixed order analyses
       logical useitmax
       common/cuseitmax/useitmax
       real*8 xnorm
+      double precision xsecScale_acc(maxscales,maxscales)
+     $     ,xsecPDFr_acc(0:maxPDFs)
+      common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
 c
       if(usexinteg.and..not.mint) then
          xnorm=1.d0/float(itmax)
@@ -71,6 +89,24 @@ c
       endif
       if(useitmax)xnorm=xnorm/float(itmax)
       call analysis_end(xnorm)
+c Write the accumulated results to a file
+      open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
+      if (.not.useitmax) xnorm=xnorm/float(itmax)
+      write (34,*) numscales**2
+      if (numscales.gt.0) then
+         write (34,*) ((xsecScale_acc(ii,jj)*xnorm,ii=1
+     $        ,numscales),jj=1,numscales)
+      else
+         write (34,*) ''
+      endif
+      if (numPDFs.gt.0) then
+         write (34,*) numPDFs
+         write (34,*) (xsecPDFr_acc(n)*xnorm,n=0,numPDFs-1)
+      else
+         write(34,*) numPDFs
+         write (34,*) ''
+      endif
+      close(34)
       return                
       end
 
@@ -117,7 +153,10 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       common /c_leshouche_inc/idup,mothup,icolup
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision wgts(max_weight),wgtden
+      double precision wgts(max_weight),wgtden,ratio
+      double precision xsecScale_acc(maxscales,maxscales)
+     $     ,xsecPDFr_acc(0:maxPDFs)
+      common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
 c Born, n-body or (n+1)-body contribution:
       if(itype.eq.11) then
          ibody=1 ! (n+1)-body
@@ -156,20 +195,49 @@ c Fill the arrays (momenta, status and PDG):
 c The weights comming from reweighting:
       nwgt=1
       wgts(1)=www
+      if (wgtden.eq.0d0) then
+         if (www.eq.0d0) then
+            ratio=0d0
+         else
+            if (doreweight) then
+               write (*,*) 'ERROR in madfks_plot.f', wgtden,www
+            else
+               ratio=1d0
+            endif
+         endif
+      else
+c this ratio should essentially be the weight from vegas
+         ratio=www/wgtden
+      endif
       if (do_rwgt_scale) then
          do i=1,numscales
             do j=1,numscales
                nwgt=nwgt+1
-               wgts(nwgt)=wgtNLOxsecmu(ibody,i,j)*www/wgtden
+               wgts(nwgt)=wgtNLOxsecmu(ibody,i,j)*ratio
             enddo
          enddo
       endif
       if (do_rwgt_pdf) then
-         do i=1,numPDFs
+         do i=1,numPDFs-1 ! exclude the central set, so 'numPDFs-1'
             nwgt=nwgt+1
-            wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*www/wgtden
+            wgts(nwgt)=wgtNLOxsecPDF(ibody,i)*ratio
          enddo
       endif
       call analysis_fill(p,istatus,ipdg,wgts,ibody)
+c Fill the accumulated results
+      if (do_rwgt_scale) then
+         do i=1,numscales
+            do j=1,numscales
+               xsecScale_acc(i,j)=xsecScale_acc(i,j)+
+     &              wgtNLOxsecmu(ibody,i,j)*ratio
+            enddo
+         enddo
+      endif
+      if (do_rwgt_pdf) then
+         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www
+         do i=1,numPDFs-1
+            xsecPDFr_acc(i)=xsecPDFr_acc(i)+wgtNLOxsecPDF(ibody,i)*ratio
+         enddo
+      endif
  999  return      
       end

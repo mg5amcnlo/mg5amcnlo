@@ -1869,7 +1869,6 @@ class decay_all_events(object):
         # input
         self.options = options
         #max_weight_arg = options['max_weight']  
-        #BW_effects = options['BW_effect']
         self.path_me = os.path.realpath(options['curr_dir']) 
         if options['ms_dir']:
             self.path_me = os.path.realpath(options['ms_dir'])
@@ -2012,7 +2011,6 @@ class decay_all_events(object):
         """Running the full code""" 
     
         max_weight_arg = self.options['max_weight']  
-        BW_effects = self.options['BW_effect']
         decay_tools=decay_misc()
         
         #Next step: we need to determine which matrix elements are really necessary
@@ -2334,14 +2332,14 @@ class decay_all_events(object):
             decay_mapping = self.get_process_identical_ratio(relation)
             return decay_mapping
         
-        BW_cut = self.options['BW_cut'] if self.options['BW_effect'] else 1e-6        
+        BW_cut = self.options['BW_cut']       
         
         #class the decay by class (nbody/pid)
         nbody_to_decay = collections.defaultdict(list)
         for decay in self.all_decay.values():
             id = decay['dc_branch']['tree'][-1]['label']
             id_final = decay['processes'][0].get_final_ids_after_decay()
-            cut = self.options['zeromass_for_max_weight']
+            cut = 0.0 
             mass_final = tuple([m if m> cut else 0 for m in map(self.pid2mass, id_final)])
             
             nbody_to_decay[(decay['nbody'], abs(id), mass_final)].append(decay)
@@ -2603,7 +2601,7 @@ class decay_all_events(object):
             if '@' in proc:
                 proc, proc_nb = proc.split('@')
                 try:
-                    int(proc_nb)
+                    proc_nb = int(proc_nb)
                 except ValueError:
                     raise MadSpinError, 'MadSpin didn\'t allow order restriction after the @ comment: \"%s\" not valid' % proc_nb
                 proc_nb = '@ %i' % proc_nb 

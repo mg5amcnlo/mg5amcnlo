@@ -86,6 +86,7 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     link1up FKS_params.dat
     link1up OLE_order.olc
     link1up param_card.dat
+    link1up libLHAPDF.so
     
 #   check where is the basic file for the creation of input_app.txt
 #       

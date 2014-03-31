@@ -47,7 +47,7 @@ c
 
          call mbook(l+  2,'Higgs pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+  3,'Higgs pT '
+         call mbook(l+  3,'Higgs pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  4,'Higgs logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -58,7 +58,7 @@ c
 
          call mbook(l+  7,'j1 pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+  8,'j1 pT '
+         call mbook(l+  8,'j1 pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+  9,'j1 logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -69,7 +69,7 @@ c
 
          call mbook(l+ 12,'j2 pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+ 13,'j2 pT '
+         call mbook(l+ 13,'j2 pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 14,'j2 logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -80,7 +80,7 @@ c
 
          call mbook(l+ 17,'j3 pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+ 18,'j3 pT '
+         call mbook(l+ 18,'j3 pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 19,'j3 logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -91,7 +91,7 @@ c
 
          call mbook(l+ 22,'H+j1 pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+ 23,'H+j1 pT '
+         call mbook(l+ 23,'H+j1 pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 24,'H+j1 logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -102,7 +102,7 @@ c
 
          call mbook(l+ 27,'j1+j2 pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+ 28,'j1+j2 pT '
+         call mbook(l+ 28,'j1+j2 pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 29,'j1+j2 logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -113,7 +113,7 @@ c
 
          call mbook(l+ 32,'syst pT '
      &       //cc(i)//weights_info(kk),8.0d0,0.d0,400.d0)
-         call mbook(l+ 33,'syst pT '
+         call mbook(l+ 33,'syst pT 1 '
      &       //cc(i)//weights_info(kk),16.0d0,0.d0,800.d0)
          call mbook(l+ 34,'syst logpT '
      &       //cc(i)//weights_info(kk),0.08d0,0.d0,4.d0)
@@ -156,7 +156,7 @@ c Nason-Oleari plots (hep-ph/0911.5299)
          call mbook(l+ 50,'jveto pT '
      &       //cc(i)//weights_info(kk),
      1    ((vetomax-vetomin)/dble(nbinveto)),vetomin,vetomax)
-         call mbook(l+ 51,'jveto pT '
+         call mbook(l+ 51,'jveto pT 1 '
      &       //cc(i)//weights_info(kk),
      1    ((2d0*vetomax-vetomin)/dble(nbinveto)),
      1    vetomin,2d0*vetomax)

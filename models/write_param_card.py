@@ -207,6 +207,8 @@ class ParamCardWriter(object):
             info = param.info
         else:
             info = param.name
+        if info.startswith('mdl_'):
+            info = info[4:]
     
         if param.value.imag != 0:
             raise ParamCardWriterError, 'All External Parameter should be real'
@@ -254,7 +256,7 @@ class ParamCardWriter(object):
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
-                        value, part["name"], param.expr)  
+                        value, part["name"], param.expr.replace('mdl_',''))  
         
         # Add duplicate parameter
         if lhablock == 'MASS':
@@ -269,7 +271,7 @@ class ParamCardWriter(object):
                 raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
-                        value, part["name"], part[name])
+                        value, part["name"], part[name].replace('mdl_',''))
             
         if not text:
             return

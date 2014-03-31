@@ -191,6 +191,14 @@ c      write(*,*)'isparton? pdg = ',ipdg,' -> ',irfl,' -> ',isparton
 c**************************************************
 c   Traces particle lines according to CKKW rules
 c**************************************************
+c     ipart gives the external particle number corresponding to the present
+c     quark or gluon line.
+c     For t-channel lines, ipart(1) contains the connected beam.
+c     For s-channel lines, it depends if it is quark or gluon line:
+c     For quark lines, ipart(2) is 0 and ipart(1) connects to the corresponding
+c     final-state quark. For gluons, if it splits into two gluons,
+c     it connects to the hardest gluon. If it splits into qqbar, it ipart(1) is
+c     the hardest and ipart(2) is the softest.
       implicit none
 
       include 'ncombs.inc'
@@ -202,6 +210,9 @@ c**************************************************
       integer ipdg(n_max_cl),ipart(2,n_max_cl)
       logical isjet
       external isjet
+      integer iddgluon, iddother, idgluon, idother
+      logical isqcd
+      external isqcd
 
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
@@ -273,26 +284,54 @@ c     gluon -> 2 gluon splitting: Choose hardest gluon
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(2,ida2)
         endif
-      else if(idmo.eq.21)then
-      write(*,*) '277',ida1, ida2,isjet(ida1),isjet(ida2)
+      else if(idmo.eq.21 .and. abs(idda1).le.6 .and.
+     $        abs(idda2).le.6) then
 c     gluon -> quark anti-quark: use both, but take hardest as 1
-c     BUT if only one is a jet
-        if(isjet(ida1).and..not.isjet(ida2)) then
-          ipart(1,imo)=ipart(1,ida1)
-          ipart(2,imo)=ipart(1,ida2)
-        else if(isjet(ida2).and..not.isjet(ida1)) then
-          ipart(1,imo)=ipart(1,ida2)
-          ipart(2,imo)=ipart(1,ida1)        
-        else if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+        if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
      $     p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
-          write(*,*) '1 wins'
           ipart(1,imo)=ipart(1,ida1)
           ipart(2,imo)=ipart(1,ida2)
         else
-          write(*,*) '2 wins'
           ipart(1,imo)=ipart(1,ida2)
           ipart(2,imo)=ipart(1,ida1)
         endif
+      else if(idmo.eq.21.and.(idda1.eq.21.or.idda2.eq.21))then
+         if(idda1.eq.21) then
+            iddgluon = idda1
+            idgluon = ida1
+            iddother = idda2
+            idother = ida2
+         else
+            iddgluon = idda2
+            iddother = idda1
+            idgluon = ida2
+            idother = ida1
+         endif
+         if (isqcd(idother))then
+c        gluon -> gluon + scalar octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
+         else
+c        gluon -> gluon + Higgs use the gluon one
+               ipart(1,imo)=ipart(1,idgluon)
+               ipart(2,imo)=ipart(2,idgluon)
+         endif
+      else if(idmo.eq.21) then
+c     gluon > octet octet Choose hardest one
+            if(p(1,ipart(1,ida1))**2+p(2,ipart(1,ida1))**2.gt.
+     $         p(1,ipart(1,ida2))**2+p(2,ipart(1,ida2))**2) then
+               ipart(1,imo)=ipart(1,ida1)
+               ipart(2,imo)=ipart(2,ida1)
+            else
+               ipart(1,imo)=ipart(1,ida2)
+               ipart(2,imo)=ipart(2,ida2)
+            endif
       else if(idmo.eq.idda1.or.idmo.eq.idda1+sign(1,idda2))then
 c     quark -> quark-gluon or quark-Z or quark-h or quark-W
         ipart(1,imo)=ipart(1,ida1)
@@ -331,7 +370,6 @@ c***************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
-
 c     Check QCD vertex
       if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
@@ -353,13 +391,12 @@ c     Check if ida1 is outgoing parton or ida2 is outgoing parton
       endif        
 
 c     FS clustering
-      if(isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2).or.
-     $   isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1)) then
+      if((isjet(idda1).and.(isjet(idmo).or.idmo.eq.idda2)).or.
+     $   (isjet(idda2).and.(isjet(idmo).or.idmo.eq.idda1))) then
          isjetvx=.true.
       else
          isjetvx=.false.
       endif
-      
       return
       end
 
@@ -493,6 +530,7 @@ c     Variables for keeping track of jets
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
+      integer tmpindex
 
       logical isqcd,isjet,isparton,cluster,isjetvx
       integer ifsno
@@ -577,21 +615,24 @@ c   the hardest and ipart(2) is the softest.
         call ipartupdate(p,imocl(n),idacl(n,1),idacl(n,2),
      $       ipdgcl(1,igraphs(1),iproc),ipart)
       enddo
-      
+
 c     Prepare beam related variables for scale and jet determination
       do i=1,2
          ibeam(i)=ishft(1,i-1)
 c        jfirst is first parton splitting on this side
          jfirst(i)=0
-c        jlast is last parton on this side
+c        jlast is last parton on this side This means
+c        the last cluster which is still QCD.
          jlast(i)=0
-c        jcentral is the central scale vertex on this side
+c        jcentral is the central scale vertex on this side. i.e it stops
+c        when the T channel particles is not colored anymore.
          jcentral(i)=0
 c        qcdline gives whether this IS line is QCD
          qcdline(i)=isqcd(ipdgcl(ibeam(i),igraphs(1),iproc))
 c        partonline gives whether this IS line is parton (start out true for any QCD)
          partonline(i)=qcdline(i)
 c        goodjet gives whether this cluster line is considered a jet
+c        i.e. if all related/previous clustering are jet
          goodjet(ibeam(i))=partonline(i)
       enddo
 
@@ -611,8 +652,8 @@ c     jcode helps keep track of how many QCD/non-QCD flips we have gone through
 c     increasecode gives whether we should increase jcode at next vertex
       increasecode=.false.
       do n=1,nexternal-2
-        do i=1,2
-          do j=1,2
+        do i=1,2 ! index of the child in the interaction
+          do j=1,2 ! j index of the beam
             if(idacl(n,i).eq.ibeam(j))then
 c             IS clustering
               ibeam(j)=imocl(n)
@@ -634,6 +675,9 @@ c             Stop fact scale where parton line stops
                  jlast(j)=n
                  partonline(j)=goodjet(ida(3-i)).and.
      $                isjet(ipdgcl(imo,igraphs(1),iproc))
+              else if (jfirst(j).eq.0) then
+                 jfirst(j) = n
+                 goodjet(imo)=.false.
               else
                  goodjet(imo)=.false.
               endif
@@ -653,7 +697,7 @@ c             Consider t-channel jet radiations as jets only if
 c             FS line is a jet line
               if(goodjet(ida(3-i))) then
                  if(partonline(j).or.
-     $              ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
+     $ ipdgcl(ida(3-i),igraphs(1),iproc).eq.21)then
 c                   Need to include gluon to avoid soft singularity
                     iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                  else
@@ -674,20 +718,21 @@ c          Check QCD jet, take care so not a decay
            if(.not.isjetvx(imocl(n),idacl(n,1),idacl(n,2),
      $        ipdgcl(1,igraphs(1),iproc),ipart,n.eq.nexternal-2)) then
 c          Remove non-gluon jets that lead up to non-jet vertices
-              if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
-c                The ishft gives the FS particle corresponding to imocl
-                 if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
+           if(ipart(1,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c          The ishft gives the FS particle corresponding to imocl
+              if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
      $              iqjets(ipart(1,imocl(n)))=0
-              endif
-              if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
-c                The ishft gives the FS particle corresponding to imocl
-                 if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
-     $             iqjets(ipart(2,imocl(n)))=0
-              endif
+           endif
+           if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
+c             The ishft gives the FS particle corresponding to imocl
+              if(ipdgcl(ishft(1,ipart(2,imocl(n))-1),igraphs(1),iproc).ne.21)
+     $              iqjets(ipart(2,imocl(n)))=0
+           endif
 c          Set goodjet to false for mother
               goodjet(imocl(n))=.false.
               cycle
            endif
+
 c          This is a jet vertex, so set jet flag for final-state jets
 c          ifsno gives leg number if daughter is FS particle, otherwise 0
            fsnum(1)=ifsno(idacl(n,1),ipart)
@@ -703,7 +748,7 @@ c          ifsno gives leg number if daughter is FS particle, otherwise 0
 c          Flag mother as good jet if PDG is jet and both daughters are jets
            goodjet(imocl(n))=
      $          (isjet(ipdgcl(imocl(n),igraphs(1),iproc)).and.
-     $          goodjet(idacl(n,1)).and.goodjet(idacl(n,1)))
+     $          goodjet(idacl(n,1)).and.goodjet(idacl(n,2)))
         endif
       enddo
 
@@ -782,7 +827,7 @@ c     if not, recluster according to iconfig
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
      $           iconfig
             chcluster=.true.
-            goto 100
+c            goto 100 ! not
          endif
       endif
       
@@ -936,13 +981,17 @@ c     Take care of case when jcentral are zero
             q2fact(1)=pt2ijcl(nexternal-2)
             q2fact(2)=q2fact(1)
          endif
+      elseif(jcentral(1).eq.0)then
+            q2fact(1) = pt2ijcl(jfirst(1))
+      elseif(jcentral(2).eq.0)then
+            q2fact(2) = pt2ijcl(jfirst(2))
       elseif(ickkw.eq.2.or.pdfwgt)then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
-         if(jlast(1).gt.0.and.jfirst(1).lt.jlast(1))
+         if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
      $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
-         if(jlast(2).gt.0.and.jfirst(2).lt.jlast(2))
+         if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
      $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
@@ -1118,6 +1167,7 @@ c   Since we use pdf reweighting, need to know particle identities
          write(*,*) 'Set process number ',ipsel
       endif
 
+      if (use_syst.and.igraphs(1).eq.0) igraphs(1) = 1 ! happens if use_syst=T BUT fix scale
 c     Set incoming particle identities
       ipdgcl(1,igraphs(1),iproc)=idup(1,ipsel,iproc)
       ipdgcl(2,igraphs(1),iproc)=idup(2,ipsel,iproc)

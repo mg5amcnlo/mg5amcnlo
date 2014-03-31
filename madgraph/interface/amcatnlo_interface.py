@@ -388,8 +388,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Check the validity of the arguments
         self.check_add(args)
 
-        if args[0] != 'process': 
-            raise self.InvalidCmd("The add command can only be used with a process")
+        if args[0] == 'model':
+            return self.add_model(args[1:])
+        elif args[0] != 'process': 
+            raise self.InvalidCmd("The add command can only be used with process or model")
         else:
             line = ' '.join(args[1:])
             
@@ -457,8 +459,11 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                                 timeout=self.options['timeout'])
             if answer != 'y':
                 raise self.InvalidCmd('Stopped by user request')
-            else:
-                shutil.rmtree(self._export_dir)
+
+        # if one gets here either used -f or answered yes to the question about
+        # removing the dir
+        if os.path.exists(self._export_dir):
+            shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
         if self._export_format in ['NLO']:

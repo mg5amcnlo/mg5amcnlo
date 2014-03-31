@@ -80,7 +80,7 @@ typedef struct _mcfxdrEventTable{
 				the id and version, and this word */
 	char version[MCF_XDR_VERSION_LENGTH+1];
 	                 /* The version of this particular block */
-	int nextLocator; /*The Locator for the next Event Table. */
+	off_t nextLocator; /* The Locator for the next Event Table. */
 	int previousnumevts; /* The size of the previous Table */
         int numevts;	/* The number of events in this chunk */
         unsigned int dim; /* The dimension of the arrays listed below */
