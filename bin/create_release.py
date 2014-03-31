@@ -22,7 +22,7 @@ following actions:
 1. bzr branch the present directory to a new directory
    MadGraph5_vVERSION
 
-4. Create the automatic documentation in the apidoc directory
+4. Create the automatic documentation in the apidoc directory -> Now tar.gz
 
 5. Remove the .bzr directory
 
@@ -123,7 +123,7 @@ else:
 if rev_nb:
     rev_nb_i = int(rev_nb)
     try:
-        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5_build_nb')
+        filetext = urllib.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc_build_nb')
         web_version = int(filetext.read().strip())            
     except (ValueError, IOError):
         logging.warning("WARNING: impossible to detect the version number on the web")
@@ -158,8 +158,8 @@ if rev_nb:
 # 1. bzr branch the present directory to a new directory
 #    MadGraph5_vVERSION
 
-filepath = "MadGraph5_v" + misc.get_pkg_info()['version'].replace(".", "_")
-filename = "MadGraph5_v" + misc.get_pkg_info()['version'] + ".tar.gz"
+filepath = "MG5_aMC_v" + misc.get_pkg_info()['version'].replace(".", "_")
+filename = "MG5_aMC_v" + misc.get_pkg_info()['version'] + ".tar.gz"
 if path.exists(filepath):
     logging.info("Removing existing directory " + filepath)
     shutil.rmtree(filepath)
@@ -175,7 +175,7 @@ if status:
 
 shutil.rmtree(path.join(filepath, '.bzr'))
 for data in glob.glob(path.join(filepath, 'bin', '*')):
-    if not data.endswith('mg5'):
+    if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
         os.remove(data)
 os.remove(path.join(filepath, 'README.developer'))
 shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
@@ -191,6 +191,9 @@ if rev_nb:
 # 1. Copy the .mg5_configuration_default.txt to it's default path
 shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
             path.join(filepath, 'input','mg5_configuration.txt'))
+shutil.copy(path.join(filepath, 'input','proc_card_default.dat'), 
+            path.join(filepath, 'proc_card.dat'))
+
 
 # 1.1 Change the trapfpe.c code to an empty file
 os.remove(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'))
@@ -211,6 +214,16 @@ if status1:
     logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
     sys.exit()
+# tarring the apidoc directory
+status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
+
+if status2:
+    logging.error('Non-0 exit code %d from tar. Please check result.' % \
+                 status)
+    sys.exit()
+else:
+    # remove the apidoc file.
+    shutil.rmtree(os.path.join(filepath,'apidoc'))
 
 # 3. tar the MadGraph5_vVERSION directory.
 

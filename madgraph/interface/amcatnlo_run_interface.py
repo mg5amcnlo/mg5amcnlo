@@ -34,6 +34,7 @@ import time
 import signal
 import tarfile
 import copy
+import datetime
 
 try:
     import readline
@@ -65,7 +66,7 @@ try:
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
 
-    from madgraph import InvalidCmd, aMCatNLOError
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
     aMCatNLO = False
 except ImportError, error:
     logger.debug(error)
@@ -98,36 +99,32 @@ def compile_dir(arguments):
     logger.info(' Compiling %s...' % p_dir)
 
     this_dir = pjoin(me_dir, 'SubProcesses', p_dir) 
-    #compile everything
 
-    # compile and run tests
-    for test in tests:
-        misc.compile([test], cwd = this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, test)):
-            raise aMCatNLOError('%s compilation failed' % test)
-        input = pjoin(me_dir, '%s_input.txt' % test)
-        #this can be improved/better written to handle the output
-        misc.call(['./%s' % (test)], cwd=this_dir, 
-                stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
-        
-    if not options['reweightonly']:
-        misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'gensym')):
-            raise aMCatNLOError('gensym compilation failed')
+    try:
+        #compile everything
+        # compile and run tests
+        for test in tests:
+            misc.compile([test], cwd = this_dir, job_specs = False)
+            input = pjoin(me_dir, '%s_input.txt' % test)
+            #this can be improved/better written to handle the output
+            misc.call(['./%s' % (test)], cwd=this_dir, 
+                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+            
+        if not options['reweightonly']:
+            misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
+            misc.call(['./gensym'],cwd= this_dir,
+                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
+                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
+            #compile madevent_mintMC/mintFO
+            misc.compile([exe], cwd=this_dir, job_specs = False)
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
-        open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
-        misc.call(['./gensym'],cwd= this_dir,
-                 stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                 stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
-        #compile madevent_mintMC/mintFO
-        misc.compile([exe], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, exe)):
-            raise aMCatNLOError('%s compilation failed' % exe)
-    if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
-        misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
-        if not os.path.exists(pjoin(this_dir, 'reweight_xsec_events')):
-            raise aMCatNLOError('reweight_xsec_events compilation failed')
-    logger.info('    %s done.' % p_dir) 
+        logger.info('    %s done.' % p_dir) 
+        return 0
+    except MadGraph5Error, msg:
+        return msg
 
 
 def check_compiler(options, block=False):
@@ -135,7 +132,8 @@ def check_compiler(options, block=False):
     If block, stops the execution, otherwise just print a warning"""
 
     msg = 'In order to be able to run at NLO MadGraph5_aMC@NLO, you need to have ' + \
-            'gfortran 4.6 or later installed.\n%s has been detected'
+            'gfortran 4.6 or later installed.\n%s has been detected\n'+\
+            'Note that You can still run all MadEvent run without any problem!'
     #first check that gfortran is installed
     if options['fortran_compiler']:
         compiler = options['fortran_compiler']
@@ -177,7 +175,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -329,13 +327,25 @@ class HelpToCmd(object):
         """help for launch command"""
         _launch_parser.print_help()
 
+    def help_banner_run(self):
+        logger.info("syntax: banner_run Path|RUN [--run_options]")
+        logger.info("-- Reproduce a run following a given banner")
+        logger.info("   One of the following argument is require:")
+        logger.info("   Path should be the path of a valid banner.")
+        logger.info("   RUN should be the name of a run of the current directory")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--name=X', 'Define the name associated with the new run')]) 
+
+
     def help_compile(self):
         """help for compile command"""
         _compile_parser.print_help()
 
     def help_generate_events(self):
-        """help for generate_events command"""
+        """help for generate_events commandi
+        just call help_launch"""
         _generate_events_parser.print_help()
+
 
     def help_calculate_xsect(self):
         """help for generate_events command"""
@@ -385,6 +395,8 @@ class CheckValidForCmd(object):
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
             raise self.InvalidCmd, 'Directory %s does not exists' % \
                             pjoin(os.getcwd(), 'Events',  args[0])
+
+        self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
     
     def check_plot(self, args):
@@ -604,6 +616,64 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd, 'options -m (--multicore) and -c (--cluster)' + \
                     ' are not compatible. Please choose one.'
 
+    def check_banner_run(self, args):
+        """check the validity of line"""
+        
+        if len(args) == 0:
+            self.help_banner_run()
+            raise self.InvalidCmd('banner_run requires at least one argument.')
+        
+        tag = [a[6:] for a in args if a.startswith('--tag=')]
+        
+        
+        if os.path.exists(args[0]):
+            type ='banner'
+            format = self.detect_card_type(args[0])
+            if format != 'banner':
+                raise self.InvalidCmd('The file is not a valid banner.')
+        elif tag:
+            args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                  
+            if not os.path.exists(args[0]):
+                raise self.InvalidCmd('No banner associates to this name and tag.')
+        else:
+            name = args[0]
+            type = 'run'
+            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            if not banners:
+                raise self.InvalidCmd('No banner associates to this name.')    
+            elif len(banners) == 1:
+                args[0] = banners[0]
+            else:
+                #list the tag and propose those to the user
+                tags = [os.path.basename(p)[len(args[0])+1:-11] for p in banners]
+                tag = self.ask('which tag do you want to use?', tags[0], tags)
+                args[0] = pjoin(self.me_dir,'Events', args[0], '%s_%s_banner.txt' % \
+                                    (args[0], tag))                
+                        
+        run_name = [arg[7:] for arg in args if arg.startswith('--name=')]
+        if run_name:
+            try:
+                self.exec_cmd('remove %s all banner -f' % run_name)
+            except Exception:
+                pass
+            self.set_run_name(args[0], tag=None, level='parton', reload_card=True)
+        elif type == 'banner':
+            self.set_run_name(self.find_available_run_name(self.me_dir))
+        elif type == 'run':
+            if not self.results[name].is_empty():
+                run_name = self.find_available_run_name(self.me_dir)
+                logger.info('Run %s is not empty so will use run_name: %s' % \
+                                                               (name, run_name))
+                self.set_run_name(run_name)
+            else:
+                try:
+                    self.exec_cmd('remove %s all banner -f' % run_name)
+                except Exception:
+                    pass
+                self.set_run_name(name)
+
+
 
     def check_launch(self, args, options):
         """check the validity of the line. args is MODE
@@ -681,7 +751,52 @@ class CompleteForCmd(CheckValidForCmd):
             for opt in _launch_parser.option_list:
                 opts += opt._long_opts + opt._short_opts
             return self.list_completion(text, opts, line)
-            
+           
+    def complete_banner_run(self, text, line, begidx, endidx):
+       "Complete the banner run command"
+       try:
+  
+        
+        args = self.split_arg(line[0:begidx], error=False)
+        
+        if args[-1].endswith(os.path.sep):
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))        
+        
+        
+        if len(args) > 1:
+            # only options are possible
+            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
+
+            if args[-1] != '--tag=':
+                tags = ['--tag=%s' % t for t in tags]
+            else:
+                return self.list_completion(text, tags)
+            return self.list_completion(text, tags +['--name=','-f'], line)
+        
+        # First argument
+        possibilites = {} 
+
+        comp = self.path_completion(text, os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        if os.path.sep in line:
+            return comp
+        else:
+            possibilites['Path from ./'] = comp
+
+        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = [n.rsplit('/',2)[1] for n in run_list]
+        possibilites['RUN Name'] = self.list_completion(text, run_list)
+        
+        return self.deal_multiple_categories(possibilites)
+    
+        
+       except Exception, error:
+           print error
+
+ 
     def complete_compile(self, text, line, begidx, endidx):
         """auto-completion for launch command"""
         
@@ -709,17 +824,9 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, opts, line) 
 
     def complete_generate_events(self, text, line, begidx, endidx):
-        """auto-completion for launch command"""
-        
-        args = self.split_arg(line[0:begidx])
-        if len(args) == 1:
-            #return mode
-            return self.list_completion(text,['LO','NLO'],line)
-        else:
-            opts = []
-            for opt in _generate_events_parser.option_list:
-                opts += opt._long_opts + opt._short_opts
-            return self.list_completion(text, opts, line) 
+        """auto-completion for generate_events command
+        call the compeltion for launch"""
+        self.complete_launch(text, line, begidx, endidx)
 
 
     def complete_shower(self, text, line, begidx, endidx):
@@ -837,7 +944,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     def do_shower(self, line):
         """ run the shower on a given parton level file """
         argss = self.split_arg(line)
-        (options, argss) = _generate_events_parser.parse_args(argss)
+        (options, argss) = _launch_parser.parse_args(argss)
         # check argument validity and normalise argument
         options = options.__dict__
         options['reweightonly'] = False
@@ -957,76 +1064,62 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
     ############################################################################      
     def do_calculate_xsect(self, line):
-        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO """
+        """Main commands: calculates LO/NLO cross-section, using madevent_mintFO 
+        this function wraps the do_launch one"""
         
         self.start_time = time.time()
         argss = self.split_arg(line)
         # check argument validity and normalise argument
-        (options, argss) = _generate_events_parser.parse_args(argss)
+        (options, argss) = _calculate_xsect_parser.parse_args(argss)
         options = options.__dict__
         options['reweightonly'] = False
         options['parton'] = True
         self.check_calculate_xsect(argss, options)
+        self.do_launch(line, options, argss)
         
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
+    ############################################################################
+    def do_banner_run(self, line): 
+        """Make a run from the banner file"""
         
-        mode = argss[0]
-        self.ask_run_configuration(mode, options)
+        args = self.split_arg(line)
+        #check the validity of the arguments
+        self.check_banner_run(args)    
+                     
+        # Remove previous cards
+        for name in ['shower_card.dat', 'madspin_card.dat']:
+            try:
+                os.remove(pjoin(self.me_dir, 'Cards', name))
+            except Exception:
+                pass
+            
+        banner_mod.split_banner(args[0], self.me_dir, proc_card=False)
+        
+        # Check if we want to modify the run
+        if not self.force:
+            ans = self.ask('Do you want to modify the Cards/Run Type?', 'n', ['y','n'])
+            if ans == 'n':
+                self.force = True
+        
+        # Compute run mode:
+        if self.force:
+            mode_status = {'order': 'NLO', 'fixed_order': False, 'madspin':False, 'shower':True}
+            banner = banner_mod.Banner(args[0])
+            for line in banner['run_settings']:
+                if '=' in line:
+                    mode, value = [t.strip() for t in line.split('=')]
+                    mode_status[mode] = value
+        else:
+            mode_status = {}
 
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
-
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
-
-        self.compile(mode, options) 
-        self.run(mode, options)
-        self.update_status('', level='all', update_results=True)
-
+        # Call Generate events
+        self.do_launch('-n %s %s' % (self.run_name, '-f' if self.force else ''),
+                       switch=mode_status)
         
     ############################################################################      
     def do_generate_events(self, line):
-        """Main commands: generate events """
-        
-        self.start_time = time.time()
-        argss = self.split_arg(line)
-        # check argument validity and normalise argument
-        (options, argss) = _generate_events_parser.parse_args(argss)
-        options = options.__dict__
-        options['reweightonly'] = False
-        self.check_generate_events(argss, options)
-        
-        if options['multicore']:
-            self.cluster_mode = 2
-        elif options['cluster']:
-            self.cluster_mode = 1
-
-        mode = 'aMC@' + argss[0]
-        if options['parton'] and mode == 'aMC@NLO':
-            mode = 'noshower'
-        elif options['parton'] and mode == 'aMC@LO':
-            mode = 'noshowerLO'
-        self.ask_run_configuration(mode, options)
-
-        self.results.add_detail('run_mode', mode) 
-
-        self.update_status('Starting run', level=None, update_results=True)
-
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
-
-        self.compile(mode, options) 
-        evt_file = self.run(mode, options)
-        if not options['parton']:
-            self.run_mcatnlo(evt_file)
-
-        self.update_status('', level='all', update_results=True)
+        """Main commands: generate events  
+        this function just wraps the do_launch one"""
+        self.do_launch(line)
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=True):
@@ -1035,29 +1128,48 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     
     ############################################################################
     def set_configuration(self, amcatnlo=True, **opt):
-        """this is for creating the correct run_card.inc from the nlo format"""
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
         return super(aMCatNLOCmd,self).set_configuration(amcatnlo=amcatnlo, **opt)
     
     ############################################################################      
-    def do_launch(self, line):
-        """Main commands: launch the full chain """
+    def do_launch(self, line, options={}, argss=[], switch={}):
+        """Main commands: launch the full chain 
+        options and args are relevant if the function is called from other 
+        functions, such as generate_events or calculate_xsect
+        mode gives the list of switch needed for the computation (usefull for banner_run)
+        """
         
-        self.start_time = time.time()
-        argss = self.split_arg(line)
-        # check argument validity and normalise argument
-        (options, argss) = _launch_parser.parse_args(argss)
-        options = options.__dict__
-        self.check_launch(argss, options)
+        if not argss and not options:
+            self.start_time = time.time()
+            argss = self.split_arg(line)
+            # check argument validity and normalise argument
+            (options, argss) = _launch_parser.parse_args(argss)
+            options = options.__dict__
+            self.check_launch(argss, options)
+
+        if 'run_name' in options.keys() and options['run_name']:
+            self.run_name = options['run_name']
+            # if a dir with the given run_name already exists
+            # remove it and warn the user
+            if os.path.isdir(pjoin(self.me_dir, 'Events', self.run_name)):
+                logger.warning('Removing old run information in \n'+
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                files.rm(pjoin(self.me_dir, 'Events', self.run_name))
+                self.results.delete_run(self.run_name)
 
         if options['multicore']:
             self.cluster_mode = 2
         elif options['cluster']:
             self.cluster_mode = 1
-
-        mode = argss[0]
-        if mode in ['LO', 'NLO']:
-            options['parton'] = True
-        mode = self.ask_run_configuration(mode, options)
+        
+        if not switch:
+            mode = argss[0]
+            if mode in ['LO', 'NLO']:
+                options['parton'] = True
+            mode = self.ask_run_configuration(mode, options)
+        else:
+            mode = self.ask_run_configuration('auto', options, switch)
 
         self.results.add_detail('run_mode', mode) 
 
@@ -1123,17 +1235,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         """Update random number seed with the value from the run_card. 
         If this is 0, update the number according to a fresh one"""
         iseed = int(self.run_card['iseed'])
-        if iseed != 0:
-            misc.call(['echo "r=%d" > %s' \
-                    % (iseed, pjoin(self.me_dir, 'SubProcesses', 'randinit'))],
-                    cwd=self.me_dir, shell=True)
-        else:
+        if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
             randinit.close()
-            randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
-            randinit.write('r=%d' % iseed)
-            randinit.close()
+        randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'), 'w')
+        randinit.write('r=%d' % iseed)
+        randinit.close()
 
 
     def get_characteristics(self, file):
@@ -1222,70 +1330,61 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         devnull = os.open(os.devnull, os.O_RDWR) 
         if mode in ['LO', 'NLO']:
+            # this is for fixed order runs
+            mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
-            if mode == 'LO':
-                req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation'] and req_acc != '-1':
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, '-1', '6','0.10') 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                elif not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', 0, npoints, niters) 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'born', '0']], 'Setting up grids')
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'born', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'born_G*'], \
-                                   stdout=subprocess.PIPE, \
-                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
-                    
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['born*'])
-                self.results.add_detail('cross', cross)
-                self.results.add_detail('error', error) 
+            req_acc = self.run_card['req_acc_FO']
+            if not options['only_generation'] and req_acc != '-1':
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, '-1', '6','0.10') 
+                self.update_status('Setting up grids', level=None)
+                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
+            elif not options['only_generation']:
+                npoints = self.run_card['npoints_FO_grid']
+                niters = self.run_card['niters_FO_grid']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, npoints, niters) 
+                self.update_status('Setting up grids', level=None)
+                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
 
-                self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'born', '0', 'born']], 'Computing cross-section')
-            elif mode == 'NLO':
-                req_acc = self.run_card['req_acc_FO']
-                if not options['only_generation'] and req_acc != '-1':
-                    self.update_status('Setting up grid', level=None)
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, '-1', '6','0.10') 
-                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                elif not options['only_generation']:
-                    npoints = self.run_card['npoints_FO_grid']
-                    niters = self.run_card['niters_FO_grid']
-                    self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', 0, npoints, niters) 
-                    self.update_status('Setting up grids', level=None)
-                    self.run_all(job_dict, [['0', 'all', '0']], 'Setting up grids')
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), 'all', -1, npoints, niters) 
-                p = misc.Popen(['./combine_results_FO.sh', req_acc, 'all_G*'], \
-                                   stdout=subprocess.PIPE, \
-                                   cwd=pjoin(self.me_dir, 'SubProcesses'))
+            npoints = self.run_card['npoints_FO']
+            niters = self.run_card['niters_FO']
+            self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
+            # collect the results and logs
+            self.collect_log_files(folder_names[mode], 0)
+            p = misc.Popen(['./combine_results_FO.sh', req_acc, '%s_G*' % mode_dict[mode]], \
+                               stdout=subprocess.PIPE, \
+                               cwd=pjoin(self.me_dir, 'SubProcesses'))
+            output = p.communicate()
 
-                output = p.communicate()
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['all*'])
-                self.results.add_detail('cross', cross)
-                self.results.add_detail('error', error) 
-                self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', 'all', '0', 'all']], \
-                        'Computing cross-section')
+            self.cross_sect_dict = self.read_results(output, mode)
+            self.print_summary(options, 0, mode)
+            cross, error = sum_html.make_all_html_results(self, ['%s*' % mode_dict[mode]])
+            self.results.add_detail('cross', cross)
+            self.results.add_detail('error', error) 
 
+            self.update_status('Computing cross-section', level=None)
+            self.run_all(job_dict, [['0', mode_dict[mode], '0', mode_dict[mode]]], 'Computing cross-section')
+
+            # collect the results and logs
+            self.collect_log_files(folder_names[mode], 1)
             p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
                                 stdout=subprocess.PIPE, 
                                 cwd=pjoin(self.me_dir, 'SubProcesses'))
             output = p.communicate()
             self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(options, 1, mode)
+
+            # collect the scale and PDF uncertainties
+            scale_pdf_info={}
+            if self.run_card['reweight_scale'] == '.true.' or self.run_card['reweight_PDF'] == '.true.':
+                data_files=[]
+                for dir in p_dirs:
+                    for obj in folder_names[mode]:
+                        for file in os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)):
+                            if file.startswith(obj[:-1]) and \
+                                    (os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file,'scale_pdf_dependence.dat'))):
+                                data_files.append(pjoin(dir,file,'scale_pdf_dependence.dat'))
+                scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+            # print the results:
+            self.print_summary(options, 1, mode, scale_pdf_info)
 
             files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
                      pjoin(self.me_dir, 'Events', self.run_name))
@@ -1299,15 +1398,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-#
-# PUT HERE THE COMBINE SCRIPT FOR ROOT
-#
-#                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-#                                pjoin(self.me_dir, 'Events', self.run_name))
-#                logger.info('The results of this run and the Root file with the plots' + \
-#                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The Root files with the plots are in the SubProcesses/P*/*_G*/' + \
-                        'directories.')
+                misc.call(['./combine_root.sh'] + folder_names[mode], \
+                                stdout=devnull, 
+                                cwd=pjoin(self.me_dir, 'SubProcesses'))
+                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                                pjoin(self.me_dir, 'Events', self.run_name))
+                logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
             else:
                 logger.info('The results of this run' + \
                             ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
@@ -1395,6 +1492,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                      '%s at LO' % status, split_jobs = split)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
+                    # collect the results and logs
+                    self.collect_log_files(folder_names[mode], i)
                     p = misc.Popen(['./combine_results.sh'] + \
                                    ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
                                    folder_names[mode],
@@ -1427,7 +1526,43 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
         event_norm=self.run_card['event_norm']
+        self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+
+
+    def collect_log_files(self, folders, istep):
+        """collect the log files and put them in a single, html-friendly file inside the run_...
+        directory"""
+        step_list = ['Grid setting', 'Cross-section computation', 'Event generation']
+        log_file = pjoin(self.me_dir, 'Events', self.run_name, 
+                'alllogs_%d.html' % istep)
+        # this keeps track of which step has been computed for which channel
+        channel_dict = {}
+        log_files = []
+        for folder in folders:
+            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', folder, 'log.txt'))
+
+        content = ''
+
+        content += '<HTML><BODY>\n<font face="courier" size=2>'
+        for log in log_files:
+            channel_dict[os.path.dirname(log)] = [istep]
+            # put an anchor
+            content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'),''))
+            # and put some nice header
+            content += '<font color="red">\n'
+            content += '<br>LOG file for integration channel %s, %s <br>' % \
+                    (os.path.dirname(log).replace(pjoin(self.me_dir,'SubProcesses'), ''), 
+                     step_list[istep])
+            content += '</font>\n'
+            #then just flush the content of the small log inside the big log
+            #the PRE tag prints everything verbatim
+            content += '<PRE>\n' + open(log).read() + '\n</PRE>'
+            content +='<br>\n'
+
+        content += '</font>\n</BODY></HTML>\n'
+        open(log_file, 'w').write(content)
+
 
     def read_results(self, output, mode):
         """extract results (cross-section, absolute cross-section and errors)
@@ -1557,6 +1692,14 @@ Integrated cross-section
                 message = '\n      ' + status[step] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
+                if self.run_card['reweight_scale']=='.true.':
+                    message = message + \
+                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
+                if self.run_card['reweight_PDF']=='.true.':
+                    message = message + \
+                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
+                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
         
         if (mode in ['NLO', 'LO'] and step!=1) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
@@ -1565,10 +1708,15 @@ Integrated cross-section
 
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
-        debug_msg = self.compile_advanced_stats(log_GV_files, all_log_files)
-        
-        logger.info(message+'\n')
+        # Make sure it never stops a run
+        try:
+            message, debug_msg = \
+               self.compile_advanced_stats(log_GV_files, all_log_files, message)
+        except Exception as e:
+            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+
         logger.debug(debug_msg+'\n')
+        logger.info(message+'\n')
         
         # Now copy relevant information in the Events/Run_<xxx> directory
         evt_path = pjoin(self.me_dir, 'Events', self.run_name)
@@ -1601,7 +1749,7 @@ Integrated cross-section
         misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'],cwd=evt_path)
         shutil.rmtree(pjoin(evt_path,'RunMaterial'))
 
-    def compile_advanced_stats(self,log_GV_files,all_log_files):
+    def compile_advanced_stats(self,log_GV_files,all_log_files,message):
         """ This functions goes through the log files given in arguments and 
         compiles statistics about MadLoop stability, virtual integration 
         optimization and detection of potential error messages into a nice
@@ -1609,8 +1757,9 @@ Integrated cross-section
         
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
-        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}}
-    
+        stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
+        mint_search = re.compile(r"MINT(?P<ID>\d*).txt")
+
         # ==================================     
         # == MadLoop stability statistics ==
         # ==================================
@@ -1672,21 +1821,25 @@ Integrated cross-section
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
                  float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
+
+            tmpStr = ""
+            tmpStr += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
+            tmpStr += '\n    Stability unknown:                   %d'%nTotsun
+            tmpStr += '\n    Stable PS point:                     %d'%nTotsps
+            tmpStr += '\n    Unstable PS point (and rescued):     %d'%nTotups
+            tmpStr += '\n    Unstable PS point (and not rescued): %d'%nToteps
+            tmpStr += '\n    Only double precision used:          %d'%nTotddp
+            tmpStr += '\n    Quadruple precision used:            %d'%nTotqdp
+            tmpStr += '\n    Initialization phase-space points:   %d'%nTotini
+            if nTot100 != 0:
+                debug_msg += '\n  Unknown return code (100):             %d'%nTot100
+            if nTot10 != 0:
+                debug_msg += '\n  Unknown return code (10):              %d'%nTot10
+            if nTot1 != 0:
+                debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+
             if maxUPS[1]>0.001:
-                message += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                message += '\n    Stability unknown:                   %d'%nTotsun
-                message += '\n    Stable PS point:                     %d'%nTotsps
-                message += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                message += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                message += '\n    Only double precision used:          %d'%nTotddp
-                message += '\n    Quadruple precision used:            %d'%nTotqdp
-                message += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    message += '\n    Unknown return code (100):           %d'%nTot100
-                if nTot10 != 0:
-                    message += '\n    Unknown return code (10):            %d'%nTot10
-                if nTot1 != 0:
-                    message += '\n    Unknown return code (1):             %d'%nTot1
+                message += tmpStr
                 message += '\n  Total number of unstable PS point detected:'+\
                                  ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
                 message += '\n    Maximum fraction of UPS points in '+\
@@ -1696,20 +1849,8 @@ Integrated cross-section
                 message += '\n    %s'%str(pjoin(os.path.dirname(self.me_dir),
                                                                maxUPS[0],'UPS.log'))
             else:
-                debug_msg += '\n  Number of loop ME evaluations (by MadLoop): %d'%nTotPS
-                debug_msg += '\n    Stability unknown:                   %d'%nTotsun
-                debug_msg += '\n    Stable PS point:                     %d'%nTotsps
-                debug_msg += '\n    Unstable PS point (and rescued):     %d'%nTotups
-                debug_msg += '\n    Unstable PS point (and not rescued): %d'%nToteps
-                debug_msg += '\n    Only double precision used:          %d'%nTotddp
-                debug_msg += '\n    Quadruple precision used:            %d'%nTotqdp
-                debug_msg += '\n    Initialization phase-space points:   %d'%nTotini
-                if nTot100 != 0:
-                    debug_msg += '\n  Unknown return code (100):             %d'%nTot100
-                if nTot10 != 0:
-                    debug_msg += '\n  Unknown return code (10):              %d'%nTot10
-                if nTot1 != 0:
-                    debug_msg += '\n  Unknown return code (1):               %d'%nTot1
+                debug_msg += tmpStr
+
     
         # ====================================================
         # == aMC@NLO virtual integration optimization stats ==
@@ -1861,13 +2002,100 @@ Integrated cross-section
                                     %tuple(stats['virt_stats']['v_average_max'])          
             debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
                                      %tuple(stats['virt_stats']['v_ratio_max'])
-            debug_msg += '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
+            tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
-            debug_msg += '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
+            debug_msg += tmpStr
+            # After all it was decided that it is better not to alarm the user unecessarily
+            # with such printout of the statistics.
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
+#                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += "\n  Suspiciously large MC error in :"
+#            if stats['virt_stats']['v_ratio_err_max'][0]>100.0:
+#                message += tmpStr
+
+            tmpStr = '\n    Maximum MC error on abs virt           %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_contr_err_max'])
+            debug_msg += tmpStr
+#            if stats['virt_stats']['v_contr_err_max'][0]>100.0:
+#                message += tmpStr
+            
+
         except KeyError:
             debug_msg += '\n  Could not find statistics on the integration optimization. '
     
+        # =======================================
+        # == aMC@NLO timing profile statistics ==
+        # =======================================
+    
+        timing_stat_finder = re.compile(r"\s*Time spent in\s*(?P<name>\w*)\s*:\s*"+\
+                     "(?P<time>[\d\+-Eed\.]*)\s*")
+
+        for logf in log_GV_files:
+            logfile=open(logf,'r')
+            log = logfile.read()
+            logfile.close()
+            channel_name = '/'.join(logf.split('/')[-3:-1])
+            mint = re.search(mint_search,logf)
+            if not mint is None:
+               channel_name =   channel_name+' [step %s]'%mint.group('ID')
+
+            for time_stats in re.finditer(timing_stat_finder, log):
+                try:
+                    stats['timings'][time_stats.group('name')][channel_name]+=\
+                                                 float(time_stats.group('time'))
+                except KeyError:
+                    if time_stats.group('name') not in stats['timings'].keys():
+                        stats['timings'][time_stats.group('name')] = {}
+                    stats['timings'][time_stats.group('name')][channel_name]=\
+                                                 float(time_stats.group('time'))
+        
+        # useful inline function
+        Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
+        try:
+            totTimeList = [(time, chan) for chan, time in \
+                                              stats['timings']['Total'].items()]
+        except KeyError:
+            totTimeList = []
+
+        totTimeList.sort()
+        if len(totTimeList)>0:
+            debug_msg += '\n\n  Inclusive timing profile :'
+            debug_msg += '\n    Overall slowest channel          %s (%s)'%\
+                                     (Tstr(totTimeList[-1][0]),totTimeList[-1][1])
+            debug_msg += '\n    Average channel running time     %s'%\
+                       Tstr(sum([el[0] for el in totTimeList])/len(totTimeList))
+            debug_msg += '\n    Aggregated total running time    %s'%\
+                                        Tstr(sum([el[0] for el in totTimeList]))       
+        else:            
+            debug_msg += '\n\n  Inclusive timing profile non available.'
+        
+        sorted_keys = sorted(stats['timings'].keys(), key= lambda stat: \
+                              sum(stats['timings'][stat].values()), reverse=True)
+        for name in sorted_keys:
+            if name=='Total':
+                continue
+            if sum(stats['timings'][name].values())<=0.0:
+                debug_msg += '\n  Zero time record for %s.'%name
+                continue
+            try:
+                TimeList = [((100.0*time/stats['timings']['Total'][chan]), 
+                     chan) for chan, time in stats['timings'][name].items()]
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n\n  Timing profile for %s unavailable.'%name
+                continue
+            TimeList.sort()
+            debug_msg += '\n  Timing profile for <%s> :'%name
+            try:
+                debug_msg += '\n    Overall fraction of time         %.3f %%'%\
+                       float((100.0*(sum(stats['timings'][name].values())/
+                                      sum(stats['timings']['Total'].values()))))
+            except KeyError, ZeroDivisionError:
+                debug_msg += '\n    Overall fraction of time unavailable.'
+            debug_msg += '\n    Largest fraction of time         %.3f %% (%s)'%\
+                                             (TimeList[-1][0],TimeList[-1][1])
+            debug_msg += '\n    Smallest fraction of time        %.3f %% (%s)'%\
+                                             (TimeList[0][0],TimeList[0][1])
+
         # =============================     
         # == log file eror detection ==
         # =============================
@@ -1903,7 +2131,7 @@ Integrated cross-section
                            (nRemainingErrors, 's' if nRemainingErrors>1 else '',
                                nRemainingLogs, 's ' if nRemainingLogs>1 else '')
                            
-        return debug_msg
+        return message, debug_msg
 
 
     def reweight_and_collect_events(self, options, mode, nevents, event_norm):
@@ -1933,7 +2161,7 @@ Integrated cross-section
                     'The event file has not been created. Check collect_events.log')
         evt_file = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
         files.mv(pjoin(self.me_dir, 'SubProcesses', filename), evt_file)
-        misc.call(['gzip %s' % evt_file], shell=True)
+        misc.call(['gzip', evt_file])
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
         logger.info('The %s.gz file has been generated.\n' \
@@ -1944,13 +2172,11 @@ Integrated cross-section
 
 
     def run_mcatnlo(self, evt_file):
-        """runs mcatnlo on the generated event file, to produce showered-events"""
+        """runs mcatnlo on the generated event file, to produce showered-events
+        """
         logger.info('Prepairing MCatNLO run')
-        self.run_name = os.path.split(\
-                    os.path.relpath(evt_file, pjoin(self.me_dir, 'Events')))[0]
-
         try:
-            misc.call(['gunzip %s.gz' % evt_file], shell=True)
+            misc.call(['gunzip', evt_file])
         except Exception:
             pass
 
@@ -2049,8 +2275,7 @@ Integrated cross-section
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                misc.call(['ln -s %s %s' % \
-                (pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)], shell=True)
+                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -2058,8 +2283,7 @@ Integrated cross-section
                 files.cp(pjoin(self.me_dir, 'MCatNLO', 'HWPPAnalyzer', 'HepMCFortran.so'), rundir)
 
         evt_name = os.path.basename(evt_file)
-        misc.call(['ln -s %s %s' % (os.path.split(evt_file)[0], 
-            pjoin(rundir,self.run_name))], shell=True)
+        files.ln(os.path.split(evt_file)[0], rundir, self.run_name)
         # special treatment for pythia8
         if shower=='PYTHIA8':
             open(pjoin(rundir, exe), 'w').write(\
@@ -2068,85 +2292,59 @@ Integrated cross-section
             os.system('chmod  +x %s' % pjoin(rundir,exe))
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
-                shell=True)
+                stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
         else:
             misc.call(['./%s' % exe], cwd = rundir, 
                 stdin=open(pjoin(rundir,'MCATNLO_%s_input' % shower)),
                 stdout=open(pjoin(rundir,'mcatnlo_run.log'), 'w'),
                 stderr=open(pjoin(rundir,'mcatnlo_run.log'), 'w'))
-        #copy the showered stdhep file back in events
+        
+        # now collect the results
+        message = ''
+        warning = ''
+        to_gzip = []
         if not self.shower_card['analyse']:
-            if os.path.exists(pjoin(rundir, self.run_name, evt_name + '.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % (pjoin(rundir, self.run_name, evt_name + '.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the StdHEP format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for hw++
-            elif os.path.exists(pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')):
-                hep_file = '%s_%s_0.hepmc' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-            #this is for pythia8
-            elif os.path.exists(pjoin(rundir, 'Pythia8.hep')):
-                hep_file = '%s_%s_0.hep' % (evt_file[:-4], shower)
-                count = 0
-                while os.path.exists(hep_file + '.gz'):
-                    count +=1
-                    hep_file = '%s_%s_%d.hepmc' % (evt_file[:-4], shower, count)
-
-                misc.call(['mv %s %s' % \
-                    (pjoin(rundir, 'Pythia8.hep'), hep_file)], shell=True) 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                misc.call(['gzip %s' % hep_file], shell=True)
-                logger.info(('The file %s.gz has been generated. \nIt contains showered' + \
-                            ' and hadronized events in the HEPMC format obtained' + \
-                            ' showering the parton-level event file %s.gz with %s') % \
-                            (hep_file, evt_file, shower))
-
+            #copy the showered stdhep/hepmc file back in events
+            showerfile_dict = \
+                {'HERWIG6': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6Q': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA6PT': pjoin(rundir, self.run_name, evt_name + '.hep'),
+                 'PYTHIA8': pjoin(rundir, 'Pythia8.hep'),
+                 'HERWIGPP': pjoin(rundir, 'MCATNLO_HERWIGPP.hepmc')}
+            if shower in ['PYTHIA8', 'HERWIGPP']:
+                hep_format = 'HEPMC'
+                ext = 'hepmc'
             else:
+                hep_format = 'StdHEP'
+                ext = 'hep'
+
+            hep_file = '%s_%s_0.%s' % (evt_file[:-4], shower, ext)
+            count = 0
+            while os.path.exists(hep_file + '.gz'):
+                count +=1
+                hep_file = '%s_%s_%d.hep' % (evt_file[:-4], shower, count)
+
+            try:
+                files.mv(showerfile_dict[shower], hep_file) 
+            except OSError, IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % pjoin(os.getcwd(), 'amcatnlo_run.log'))
-                
-            # Now arxiv the shower card used if RunMaterial is present
-            run_dir_path = pjoin(rundir,self.run_name)
-            if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
-                misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
-                files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
-                   pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
-                                                              %(shower, count)))
-                misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
-                                                               cwd=run_dir_path)
-                shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+
+            to_gzip.extend([evt_file, hep_file])
+
+            message = ('The file %s.gz has been generated. \nIt contains showered' + \
+                    ' and hadronized events in the %s format obtained' + \
+                    ' showering the parton-level event file %s.gz with %s') % \
+                    (hep_file, hep_format, evt_file, shower)
             
         else:
+            #copy the topdrawer file(s) back in events
             topfiles = [n for n in os.listdir(pjoin(rundir)) \
                                             if n.lower().endswith('.top')]
+            to_gzip.append(evt_file)
             if not topfiles:
-                misc.call(['gzip %s' % evt_file], shell=True)
-                logger.warning('No .top file has been generated. For the results of your ' +\
-                               'run, please check inside %s' % rundir)
+                waarning = 'No .top file has been generated. For the results of your ' +\
+                               'run, please check inside %s' % rundir
 
 	    else:    
                 filename = 'plot_%s_%d_' % (shower, 1)
@@ -2159,9 +2357,7 @@ Integrated cross-section
                 for i, file in enumerate(topfiles):
                     plotfile = pjoin(self.me_dir, 'Events', self.run_name, 
                               '%s%d.top' % (filename, i))
-                    misc.call(['mv %s %s' % \
-                        (pjoin(rundir, file), plotfile)], shell=True) 
-
+                    files.mv(pjoin(rundir, file), plotfile) 
                     plotfiles.append(plotfile)
 
                 ffiles = 'files'
@@ -2170,11 +2366,28 @@ Integrated cross-section
                     ffiles = 'file'
                     have = 'has'
 
-                misc.call(['gzip %s' % evt_file], shell=True)
-                logger.info(('The %s %s %s been generated, with histograms in the' + \
+                message = ('The %s %s %s been generated, with histograms in the' + \
                         ' TopDrawer format, obtained by showering the parton-level' + \
                         ' file %s.gz with %s') % (ffiles, ', '.join(plotfiles), have, \
-                        evt_file, shower))
+                        evt_file, shower)
+                
+        # Now arxiv the shower card used if RunMaterial is present
+        run_dir_path = pjoin(rundir,self.run_name)
+        if os.path.exists(pjoin(run_dir_path,'RunMaterial.tar.gz')):
+            misc.call(['tar','-xzpf','RunMaterial.tar.gz'],cwd=run_dir_path)
+            files.cp(pjoin(self.me_dir,'Cards','shower_card.dat'),
+               pjoin(run_dir_path,'RunMaterial','shower_card_for_%s_%d.dat'\
+                                                          %(shower, count)))
+            misc.call(['tar','-czpf','RunMaterial.tar.gz','RunMaterial'], 
+                                                           cwd=run_dir_path)
+            shutil.rmtree(pjoin(run_dir_path,'RunMaterial'))
+        # end of the run, gzip files and print out the message/warning
+        for f in to_gzip:
+            misc.call(['gzip', f])
+        if message:
+            logger.info(message)
+        if warning:
+            logger.warning(warning)
 
         self.update_status('Run complete', level='shower', update_results=True)
 
@@ -2184,8 +2397,9 @@ Integrated cross-section
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
                        'pythia': ['pythia','pgs','delphes'],
+                       'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'plot':[]}
@@ -2350,6 +2564,7 @@ Integrated cross-section
 
         content = 'EVPREFIX=%s\n' % pjoin(self.run_name, os.path.split(evt_file)[1])
         content += 'NEVENTS=%s\n' % nevents
+        content += 'NEVENTS_TOT=%s\n' % self.banner.get_detail('run_card', 'nevents')
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
         content += 'ALPHAEW=%s\n' % self.banner.get_detail('param_card', 'sminputs', 1).value
@@ -2376,14 +2591,20 @@ Integrated cross-section
         content += 'SMASS=%s\n' % mcmass_dict[3]
         content += 'CMASS=%s\n' % mcmass_dict[4]
         content += 'BMASS=%s\n' % mcmass_dict[5]
+        content += 'EMASS=%s\n' % mcmass_dict[11]
+        content += 'MUMASS=%s\n' % mcmass_dict[13]
+        content += 'TAUMASS=%s\n' % mcmass_dict[15]
         content += 'GMASS=%s\n' % mcmass_dict[21]
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm')
         # check if need to link lhapdf
-        if pdlabel =='\'lhapdf\'':
+        if pdlabel == 'lhapdf':
             self.link_lhapdf(pjoin(self.me_dir, 'lib'))
-            lhapdfpath = subprocess.Popen('%s --prefix' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
+                          stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+            lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         else:
             #overwrite the PDFCODE variable in order to use internal pdf
             content += 'LHAPDFPATH=\n' 
@@ -2441,9 +2662,9 @@ Integrated cross-section
 
         #check that the new event files are complete
         for evt_file in evt_files:
-            last_line = subprocess.Popen('tail -n1 %s.rwgt ' % \
-                    pjoin(self.me_dir, 'SubProcesses', evt_file), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            last_line = subprocess.Popen(['tail',  '-n1', '%s.rwgt' % \
+                    pjoin(self.me_dir, 'SubProcesses', evt_file)], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             if last_line != "</LesHouchesEvents>":
                 raise aMCatNLOError('An error occurred during reweight. Check the' + \
                         '\'reweight_xsec_events.output\' files inside the ' + \
@@ -2461,7 +2682,7 @@ Integrated cross-section
     def pdf_scale_from_reweighting(self, evt_files):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
-        (P*/G*/pdf_scale_uncertainty.dat) and computes the overall
+        (P*/G*/pdf_scale_dependence.dat) and computes the overall
         scale and PDF uncertainty (the latter is computed using the
         Hessian method (if lhaid<90000) or Gaussian (if lhaid>90000))
         and returns it in percents.  The expected format of the file
@@ -2592,9 +2813,9 @@ Integrated cross-section
         for dir in self.split_folders.keys():
             last_line = ''
             try:
-                last_line = subprocess.Popen('tail -n1 %s ' % \
-                    pjoin(dir, 'events.lhe'), \
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+                last_line = subprocess.Popen(
+                        ['tail', '-n1', pjoin(dir, 'events.lhe')], \
+                    stdout = subprocess.PIPE).stdout.read().strip()
             except IOError:
                 pass
 
@@ -2663,17 +2884,19 @@ Integrated cross-section
                                 min([1, self.njobs - self.ijob]),
                                 self.ijob, run_type), level='parton')
         elif 'reweight' in exe:
-                #Find the correct PDF input file
-                input_files, output_files = [], []
-                input_files.append(self.get_pdf_input_filename())
-                input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
-                input_files.append(args[0])
-                output_files.append('%s.rwgt' % os.path.basename(args[0]))
-                output_files.append('reweight_xsec_events.output')
-                output_files.append('scale_pdf_dependence.dat')
-    
-                return self.cluster.submit2(exe, args, cwd=cwd, 
-                                 input_files=input_files, output_files=output_files) 
+            #Find the correct PDF input file
+            input_files, output_files = [], []
+            pdfinput = self.get_pdf_input_filename()
+            if os.path.exists(pdfinput):
+                input_files.append(pdfinput)
+            input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
+            input_files.append(args[0])
+            output_files.append('%s.rwgt' % os.path.basename(args[0]))
+            output_files.append('reweight_xsec_events.output')
+            output_files.append('scale_pdf_dependence.dat')
+
+            return self.cluster.submit2(exe, args, cwd=cwd, 
+                             input_files=input_files, output_files=output_files) 
 
         #this is for the cluster/multicore run
         elif 'ajob' in exe:
@@ -2681,9 +2904,6 @@ Integrated cross-section
             if type(args[0]) == str:
                 input_files, output_files, args = self.getIO_ajob(exe,cwd, args)
                 #submitting
-                for f in input_files:
-                    if not os.path.exists(f):
-                        print 'DONT EXIST', f
                 self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files)
 
@@ -2712,6 +2932,12 @@ Integrated cross-section
         
         if os.path.exists(pjoin(self.me_dir,'SubProcesses','OLE_order.olc')):
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
+
+        # LHAPDF dynamic libraries (needed for lhapdf6)
+        lhalibs = ['libLHAPDF.dylib', 'libLHAPDF.so'] 
+        for lib in [pjoin(self.me_dir, 'lib', l) for l in lhalibs \
+           if os.path.exists(pjoin(self.me_dir, 'lib', l))]:
+            input_files.append(lib)
       
         # File for the loop (might not be present if MadLoop is not used)
         if os.path.exists(pjoin(cwd, 'MadLoopParams.dat')):
@@ -2790,7 +3016,9 @@ Integrated cross-section
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
 
         #Find the correct PDF input file
-        input_files.append(self.get_pdf_input_filename())
+        pdfinput = self.get_pdf_input_filename()
+        if os.path.exists(pdfinput):
+            input_files.append(pdfinput)
 
         if len(args) == 4 and not keep_fourth_arg:
             args = args[:3]
@@ -2881,10 +3109,7 @@ Integrated cross-section
         sourcedir = pjoin(self.me_dir, 'Source')
 
         #clean files
-        misc.call(['rm -f %s' % 
-                ' '.join([amcatnlo_log, madloop_log, reweight_log, test_log])], \
-                  cwd=self.me_dir, shell=True)
-
+        files.rm([amcatnlo_log, madloop_log, reweight_log, test_log])
         #define which executable/tests to compile
         if '+' in mode:
             mode = mode.split('+')[0]
@@ -2911,17 +3136,27 @@ Integrated cross-section
             return
 
         # rm links to lhapdflib/ PDFsets if exist
-        if os.path.islink(pjoin(libdir, 'libLHAPDF.a')):
-            os.remove(pjoin(libdir, 'libLHAPDF.a'))
-        if os.path.islink(pjoin(libdir, 'PDFsets')):
-            os.remove(pjoin(libdir, 'PDFsets'))
+        if os.path.exists(pjoin(libdir, 'PDFsets')):
+            files.rm(pjoin(libdir, 'PDFsets'))
 
         # read the run_card to find if lhapdf is used or not
-        if self.run_card['pdlabel'] == 'lhapdf':
-            self.link_lhapdf(libdir)
+        if self.run_card['pdlabel'] == 'lhapdf' and \
+                (self.banner.get_detail('run_card', 'lpp1') != '0' or \
+                 self.banner.get_detail('run_card', 'lpp1') != '0'):
+
+            self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
+            pdfsetsdir = self.get_lhapdf_pdfsetsdir()
+            lhaid_list = [int(self.run_card['lhaid'])]
+            if self.run_card['reweight_PDF'].lower() == '.true.':
+                lhaid_list.append(int(self.run_card['PDF_set_min']))
+                lhaid_list.append(int(self.run_card['PDF_set_max']))
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
+
         else:
-            if self.run_card['lpp1'] == '1' ==self.run_card['lpp2']:
+            if self.run_card['lpp1'] == '1' == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
+            if self.run_card['lpp1'] == '0' == self.run_card['lpp2']:
+                logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
             except KeyError:
@@ -2943,6 +3178,54 @@ Integrated cross-section
             logger.info('          ...done, continuing with P* directories')
         else:
             raise aMCatNLOError('Compilation failed')
+        
+        # make StdHep (only necessary with MG option output_dependencies='internal')
+        MCatNLO_libdir = pjoin(self.me_dir, 'MCatNLO', 'lib')
+        if not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libFmcfio.a'))):  
+            if  os.path.exists(pjoin(sourcedir,'StdHEP')):
+                logger.info('Compiling StdHEP (can take a couple of minutes) ...')
+                misc.compile(['StdHEP'], cwd = sourcedir)
+                logger.info('          ...done.')      
+            else:
+                raise aMCatNLOError('Could not compile StdHEP because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+
+        # make CutTools (only necessary with MG option output_dependencies='internal')
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            if  os.path.exists(pjoin(sourcedir,'CutTools')):
+                logger.info('Compiling CutTools (can take a couple of minutes) ...')
+                misc.compile(['CutTools'], cwd = sourcedir)
+                logger.info('          ...done.')
+            else:
+                raise aMCatNLOError('Could not compile CutTools because its'+\
+                   ' source directory could not be found in the SOURCE folder.\n'+\
+                             " Check the MG5_aMC option 'output_dependencies.'")
+        if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
+            not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
+            raise aMCatNLOError('CutTools compilation failed.')            
+
+        # Verify compatibility between current compiler and the one which was
+        # used when last compiling CutTools (if specified).
+        compiler_log_path = pjoin(os.path.dirname((os.path.realpath(pjoin(
+                                  libdir, 'libcts.a')))),'compiler_version.log')
+        if os.path.exists(compiler_log_path):
+            compiler_version_used = open(compiler_log_path,'r').read()
+            if not str(misc.get_gfortran_version(misc.detect_current_compiler(\
+                       pjoin(sourcedir,'make_opts')))) in compiler_version_used:
+                if os.path.exists(pjoin(sourcedir,'CutTools')):
+                    logger.info('CutTools was compiled with a different fortran'+\
+                                            ' compiler. Re-compiling it now...')
+                    misc.compile(['cleanCT'], cwd = sourcedir)
+                    misc.compile(['CutTools'], cwd = sourcedir)
+                    logger.info('          ...done.')
+                else:
+                    raise aMCatNLOError("CutTools installation in %s"\
+                                 %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
+                 " seems to have been compiled with a different compiler than"+\
+                    " the one specified in MG5_aMC. Please recompile CutTools.")
 
         # check if virtuals have been generated
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -2984,9 +3267,10 @@ Integrated cross-section
                     tests, exe, self.options['run_mode']])
         try:
             compile_cluster.wait(self.me_dir, update_status)
+
         except:
             compile_cluster.remove()
-            raise
+            self.quit()
 
         logger.info('Checking test output:')
         for p_dir in p_dirs:
@@ -3051,22 +3335,6 @@ Integrated cross-section
                     %(npass, nfail+npass, tolerance))
 
 
-
-    def link_lhapdf(self, libdir):
-        """links lhapdf into libdir"""
-        logger.info('Using LHAPDF interface for PDFs')
-        lhalibdir = subprocess.Popen('%s --libdir' % self.options['lhapdf'],
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        lhasetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'], 
-                shell = True, stdout = subprocess.PIPE).stdout.read().strip()
-        if not os.path.exists(pjoin(libdir, 'libLHAPDF.a')):
-            os.symlink(pjoin(lhalibdir, 'libLHAPDF.a'), pjoin(libdir, 'libLHAPDF.a'))
-        if not os.path.exists(pjoin(libdir, 'PDFsets')):
-            os.symlink(lhasetsdir, pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
-
-
     def write_test_input(self, test):
         """write the input files to run test_ME/MC or check_poles"""
         if test in ['test_ME', 'test_MC']:
@@ -3116,7 +3384,7 @@ Integrated cross-section
 
 
     ############################################################################
-    def ask_run_configuration(self, mode, options):
+    def ask_run_configuration(self, mode, options, switch={}):
         """Ask the question when launching generate_events/multi_run"""
         
         if 'parton' not in options:
@@ -3127,8 +3395,13 @@ Integrated cross-section
         
         void = 'NOT INSTALLED'
         switch_order = ['order', 'fixed_order', 'shower','madspin']
-        switch = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
+        switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
                   'madspin': void}
+        if not switch:
+            switch = switch_default
+        else:
+            switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
+
         default_switch = ['ON', 'OFF']
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
@@ -3240,6 +3513,8 @@ Integrated cross-section
 
 
         modify_switch(mode, self.last_mode, switch)
+        if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
+            assign_switch('madspin', 'ON')
         
         if not self.force:
             answer = ''
@@ -3317,11 +3592,13 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if not mode =='onlyshower':
             self.run_card = self.banner.charge_card('run_card')
             self.run_tag = self.run_card['run_tag']
-            self.run_name = self.find_available_run_name(self.me_dir)
-            #add a tag in the run_name for distinguish run_type
-            if self.run_name.startswith('run_'):
-                if mode in ['LO','aMC@LO','noshowerLO']:
-                    self.run_name += '_LO' 
+            #this is if the user did not provide a name for the current run
+            if not hasattr(self, 'run_name') or not self.run_name:
+                self.run_name = self.find_available_run_name(self.me_dir)
+                #add a tag in the run_name for distinguish run_type
+                if self.run_name.startswith('run_'):
+                    if mode in ['LO','aMC@LO','noshowerLO']:
+                        self.run_name += '_LO' 
             self.set_run_name(self.run_name, self.run_tag, 'parton')
             if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 logger.error("""FxFx merging (ickkw=3) not allowed at LO""")
@@ -3386,7 +3663,7 @@ _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
-_launch_parser.add_option("-n", "--nocompile", default=False, action='store_true',
+_launch_parser.add_option("-x", "--nocompile", default=False, action='store_true',
                             help="Skip compilation. Ignored if no executable is found")
 _launch_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
                             help="Skip integration and event generation, just run reweight on the" + \
@@ -3397,6 +3674,41 @@ _launch_parser.add_option("-p", "--parton", default=False, action='store_true',
 _launch_parser.add_option("-o", "--only_generation", default=False, action='store_true',
                             help="Skip grid set up, just generate events starting from " + \
                             "the last available results")
+_launch_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
+
+
+_generate_events_usage = "generate_events [MODE] [options]\n" + \
+                "-- execute aMC@NLO \n" + \
+                "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
+                "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
+                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
+                "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
+                "     event file is generated which will be showered with the MonteCarlo specified \n" + \
+                "     in the run_card.dat\n"
+
+_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
+_generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
+                                help="Use the card present in the directory for the generate_events, without editing them")
+_generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',
+                            help="Submit the jobs on the cluster")
+_generate_events_parser.add_option("-m", "--multicore", default=False, action='store_true',
+                            help="Submit the jobs on multicore mode")
+_generate_events_parser.add_option("-x", "--nocompile", default=False, action='store_true',
+                            help="Skip compilation. Ignored if no executable is found")
+_generate_events_parser.add_option("-r", "--reweightonly", default=False, action='store_true',
+                            help="Skip integration and event generation, just run reweight on the" + \
+                                 " latest generated event files (see list in SubProcesses/nevents_unweighted)")
+_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
+                            help="Stop the run after the parton level file generation (you need " + \
+                                    "to shower the file in order to get physical results)")
+_generate_events_parser.add_option("-o", "--only_generation", default=False, action='store_true',
+                            help="Skip grid set up, just generate events starting from " + \
+                            "the last available results")
+_generate_events_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
+
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
@@ -3410,9 +3722,10 @@ _calculate_xsect_parser.add_option("-c", "--cluster", default=False, action='sto
                             help="Submit the jobs on the cluster")
 _calculate_xsect_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
-_calculate_xsect_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
+_calculate_xsect_parser.add_option("-x", "--nocompile", default=False, action='store_true',
+                            help="Skip compilation. Ignored if no executable is found")
+_calculate_xsect_parser.add_option("-n", "--name", default=False, dest='run_name',
+                            help="Provide a name to the run")
 
 _shower_usage = 'shower run_name [options]\n' + \
         '-- do shower/hadronization on parton-level file generated for run run_name\n' + \
@@ -3423,25 +3736,3 @@ _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
 
-_generate_events_usage = "generate_events [ORDER] [options]\n" + \
-                "-- generate events to be showered, corresponding to a cross-section computed up to ORDER.\n" + \
-                "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n" + \
-                "   The number of events and the specific parton shower MC can be specified \n" + \
-                "   in the run_card.dat\n"
-
-_generate_events_parser = misc.OptionParser(usage=_generate_events_usage)
-_generate_events_parser.add_option("-f", "--force", default=False, action='store_true',
-                                help="Use the card present in the directory for the launch, without editing them")
-_generate_events_parser.add_option("-c", "--cluster", default=False, action='store_true',
-                            help="Submit the jobs on the cluster")
-_generate_events_parser.add_option("-m", "--multicore", default=False, action='store_true',
-                            help="Submit the jobs on multicore mode")
-_generate_events_parser.add_option("-n", "--nocompile", default=False, action='store_true',
-                            help="Skip compilation. Ignored if no executable is found, " + \
-                            "or with --tests")
-_generate_events_parser.add_option("-o", "--only-generation", default=False, action='store_true',
-                            help="Skip grid set up, just generate events starting from" + \
-                            "the last available results")
-_generate_events_parser.add_option("-p", "--parton", default=False, action='store_true',
-                            help="Stop the run after the parton level file generation (you need " + \
-                                    "to shower the file in order to get physical results)")

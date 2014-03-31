@@ -291,8 +291,8 @@ c geometric mean (to reweight alphaS)
             palg=1.d0
             rfj=0.4d0
             sycut=0d0
-            call amcatnlo_fastjetppgenkt(pQCD,NN,rfj,sycut,palg,pjet
-     $           ,njet,jet)
+            call amcatnlo_fastjetppgenkt_timed(pQCD,NN,rfj,sycut,palg,
+     $           pjet,njet,jet)
             if (nn-1.gt.nint(wgtbpower)) then
 c More Born QCD partons than QCD couplings
                write (*,*) 'More Born QCD partons than Born QCD '/

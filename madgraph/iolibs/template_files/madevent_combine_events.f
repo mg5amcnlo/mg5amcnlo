@@ -39,7 +39,7 @@ c
       double precision sum, xsec, xerr, goal_wgt,xarray(cmax_events)
       double precision xdum,rxsec
       integer i4,r8,record_length
-      integer iseed
+      integer jseed,iseed
       real xran1
       double precision wgt,maxwgt
       double precision p(0:4,maxexternal)
@@ -63,7 +63,7 @@ c
       integer nclus
       character*(clus_bufflen) buffclus(max_particles)
       data s_buff/7*''/
-      data iseed/-1/
+      data jseed/-1/
       data buffclus/max_particles*' '/
 c-----
 c  Begin Code
@@ -72,18 +72,18 @@ c
 c     Get requested number of events
 c
       include 'run_card.inc'
-c      call load_para(npara,param,value)
-c      call get_logical(npara,param,value," gridrun ",gridrun,.false.)
-c      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
-      if (gridrun.and.gridpack) then
-          nreq = gevents
-c         call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
-      else
-          nreq = nevents
-c         call get_integer(npara,param,value," nevents "  ,nreq  ,10000   )
-      endif
-c      call get_logical(npara,param,value," use_syst ",use_syst,.false.)
 
+      if (gridpack) then
+c        load the gridpack file
+         call load_gridpack_para(npara,param,value)
+         call get_logical(npara,param,value," gridrun ",gridrun,.false.)
+      endif
+
+      if (gridrun.and.gridpack) then
+        call get_integer(npara,param,value," gevents "  ,nreq  ,2000   )
+      else
+        nreq = nevents
+      endif
 c   Get information for the <init> block
       param_card_name = '%(param_card_name)s'
       call setrun
@@ -147,7 +147,7 @@ c     Get Random order for events
 c
       do i=1,kevent
          iarray(i)=i
-         xarray(i)=xran1(iseed)
+         xarray(i)=xran1(jseed)
       enddo
       call sortO3(xarray,iarray,kevent)
 c
@@ -205,7 +205,7 @@ c
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
      &        buff
-            if (dabs(wgt) .gt. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
                nunwgt=nunwgt+1
                if (dabs(wgt) .gt. goal_wgt) then
@@ -309,10 +309,15 @@ c
       integer i,j
 
 c
+c     Information required for 1>N processes
+c
+      include 'nexternal.inc'
+
+c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -378,13 +383,22 @@ c
 C   Write out compulsory init info
       write(lunw,'(a)') '</header>'
       write(lunw,'(a)') '<init>'
-      write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
-     $   (pdfsup(i),i=1,2),2,nprup
-      do i=1,nprup
-         write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
-      enddo
+      if(nincoming.eq.2)then
+
+          write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),(pdfgup(i),i=1,2),
+     $                   (pdfsup(i),i=1,2),2,nprup
+         do i=1,nprup
+             write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
+         enddo
+      elseif(nincoming.eq.1)then
+          write(lunw,90) (idbmup(i),i=1,2),(ebmup(i),i=1,2),-1,-1,
+     $   -1,-1,2,nprup
+          do i=1,nprup
+             write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,maxwgt,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
+          enddo
+      endif
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
       end
 
@@ -408,7 +422,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -477,7 +491,7 @@ C   Write out compulsory init info
          write(lunw,91) xsecup(i),xerr*xsecup(i)/sum,sum/nevent,lprup(i) ! FACTOR OF nevts for maxwgt and wgt? error?
       enddo
       write(lunw,'(a)') '</init>'
- 90   FORMAT(2i9,2e19.11,2i2,2i6,i2,i3)
+ 90   FORMAT(2i9,2e19.11,2i2,2i8,i2,i4)
  91   FORMAT(3e19.11,i4)
 
       end
@@ -586,7 +600,7 @@ c
       real xwgt(max_read),xtot
       integer i,j,k,m, ic(7,maxexternal),n
       double precision sscale,aqcd,aqed,tmpsum
-      integer ievent,iseed
+      integer ievent,jseed
       logical done,found
       character*300 buff
       logical u_syst
@@ -599,7 +613,7 @@ c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
-      parameter(maxpup=100)
+      parameter(maxpup=%(maxpup)i)
       integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
       double precision ebmup,xsecup,xerrup,xmaxup
       common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
@@ -614,7 +628,7 @@ c
 c
 c     data
 c
-      data iseed/-1/
+      data jseed/-1/
 c-----
 c  Begin Code
 c-----     
@@ -648,7 +662,7 @@ c
             revent = revent+1
             wgt = wgt*nj*gsfact                 !symmetry factor * grid factor
             if (dabs(wgt) .gt. maxwgt) maxwgt=dabs(wgt)
-            if (dabs(wgt) .ge. goal_wgt*xran1(iseed)) then
+            if (dabs(wgt) .ge. goal_wgt*xran1(jseed)) then
                kevent=kevent+1
                if (dabs(wgt) .lt. goal_wgt) wgt = dsign(goal_wgt,wgt)
                write(sfnum,rec=kevent) wgt,n,

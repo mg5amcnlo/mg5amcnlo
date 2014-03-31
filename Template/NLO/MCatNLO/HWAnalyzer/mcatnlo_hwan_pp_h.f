@@ -10,7 +10,7 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -26,39 +26,39 @@ C----------------------------------------------------------------------
       l=(kk-1)*40
       call mbook(l+1,'Higgs pT '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+2,'Higgs pT '//weights_info(kk)
+      call mbook(l+2,'Higgs pT 1 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
       call mbook(l+3,'Higgs log[pT] '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
       call mbook(l+4,'Higgs pT,|y_H|<2 '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+5,'Higgs pT,|y_H|<2 '//weights_info(kk)
+      call mbook(l+5,'Higgs pT 1,|y_H|<2 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
       call mbook(l+6,'Higgs log[pT],|y_H|<2 '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 
       call mbook(l+7,'j1 pT '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+8,'j1 pT '//weights_info(kk)
+      call mbook(l+8,'j1 pT 1 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
       call mbook(l+9,'j1 log[pT] '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
       call mbook(l+10,'j1 pT,|y_j1|<2 '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+11,'j1 pT,|y_j1|<2 '//weights_info(kk)
+      call mbook(l+11,'j1 pT 1,|y_j1|<2 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
       call mbook(l+12,'j1 log[pT],|y_j1|<2 '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
 
       call mbook(l+13,'Inc j pT '//weights_info(kk)
      $     ,2.d0,0.d0,200.d0)
-      call mbook(l+14,'Inc j pT '//weights_info(kk)
+      call mbook(l+14,'Inc j pT 1 '//weights_info(kk)
      $     ,5.d0,0.d0,500.d0)
       call mbook(l+15,'Inc j log[pT] '//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
       call mbook(l+16,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
      $     ,2.d0,0.d0,2.d2)
-      call mbook(l+17,'Inc j pT,|y_Ij|<2 '//weights_info(kk)
+      call mbook(l+17,'Inc j pT 1,|y_Ij|<2 '//weights_info(kk)
      $     ,5.d0,0.d0,5.d2)
       call mbook(l+18,'Inc j log[pT],|y_Ij|<2'//weights_info(kk)
      $     ,0.05d0,0.1d0,5.d0)
@@ -112,10 +112,9 @@ C----------------------------------------------------------------------
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
@@ -127,11 +126,11 @@ C----------------------------------------------------------------------
 C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG 
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
-      DO I=1,NPL              
- 	CALL MFINAL3(I)             
+      DO I=1,NPL
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
 C
       do kk=1,nwgt_analysis
@@ -188,7 +187,7 @@ c
 
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
@@ -223,7 +222,7 @@ C INITIALISE
           PP(J,I)=0D0
         ENDDO
       ENDDO
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
@@ -252,7 +251,7 @@ C EFFECT, SO THROW THE EVENT AWAY
           IF(ID1.EQ.25)THEN
             IFH=IFH+1
             DO IJ=1,5
-	      PPH(IJ)=PHEP(IJ,IHEP)
+              PPH(IJ)=PHEP(IJ,IHEP)
             ENDDO
           ENDIF
         ENDIF

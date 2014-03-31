@@ -10,6 +10,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -102,8 +103,9 @@ c For MINT:
       integer ifold_energy,ifold_phi,ifold_yij
       common /cifoldnumbers/ifold_energy,ifold_phi,ifold_yij
       logical putonshell
+      logical only_virt
       integer imode
-      common /c_imode/imode
+      common /c_imode/imode,only_virt
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
@@ -125,13 +127,18 @@ c statistics for MadLoop
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
 
+c timing statistics
+      include "timing_variables.inc"
+      real*4 tOther, tTot
+
 c general MadFKS parameters
       include "FKSParams.inc"
 
 C-----
 C  BEGIN CODE
 C-----  
-c
+      call cpu_time(tBefore)
+
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
@@ -176,6 +183,18 @@ c
       write(*,*) "getting user params"
       call get_user_params(ncall,itmax,iconfig,imode,
      &     ixi_i,iphi_i,iy_ij,SHsep)
+c Only do the reweighting when actually generating the events
+      if (imode.eq.2) then
+         doreweight=do_rwgt_scale.or.do_rwgt_pdf
+      else
+         doreweight=.false.
+      endif
+      if (abrv(1:4).eq.'virt') then
+         only_virt=.true.
+      else
+         only_virt=.false.
+      endif
+
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -208,6 +227,12 @@ c Plots
       plotEv=.false.
       plotKin=.false.
       call addfil(dum)
+c Always setup_fill_rwgt_NLOplot (when doing scale or pdf
+c uncertainties), because in mint, when getting 2 bad iterations in a
+c row, there is a call to initplot to reset the plots (for fixed order
+c computations). This makes sure that the code doesn't crash in that
+c case.
+      if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 
 c*************************************************************
 c     setting of the grids
@@ -387,18 +412,29 @@ c determine how many events for the virtual and how many for the no-virt
 
          weight=(ans(1)+ans(5))/ncall
 
+         if (abrv(1:3).ne.'all' .and. abrv(1:4).ne.'born' .and.
+     $        abrv(1:4).ne.'virt') then
+            write (*,*) 'CANNOT GENERATE EVENTS FOR ABRV',abrv
+            stop 1
+         endif
+
          write (*,*) 'imode is ',imode
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,0,x,vn)
          do j=1,ncall
-            if (ran2().lt.ans(5)/(ans(1)+ans(5))) then
-               abrv='virt'
-               vn=1
+            if (abrv(1:4).eq.'born') then
+               vn=3
                call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
             else
-               abrv='novi'
-               vn=2
-               call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               if (ran2().lt.ans(5)/(ans(1)+ans(5)) .or. only_virt) then
+                  abrv='virt'
+                  vn=1
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               else
+                  abrv='novi'
+                  vn=2
+                  call gen(sigintF,ndim,xgrid,ymax,ymax_virt,1,x,vn)
+               endif
             endif
             call finalize_event(x,weight,lunlhe,plotEv,putonshell)
          enddo
@@ -455,10 +491,37 @@ c$$$         write (*,*) 'Integral from virt points computed',x(5),x(6)
          write(*,*)
      &        "  Unknown return code (1):                         ",n1
       endif
+
+      call cpu_time(tAfter)
+      tTot = tAfter - tBefore
+      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
+      write(*,*) 'Time spent in clustering : ',tFastJet      
+      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
+      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
+      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP
+      write(*,*) 'Time spent in PS_Generation : ',tGenPS      
+      write(*,*) 'Time spent in other_tasks : ',tOther
+      write(*,*) 'Time spent in Total : ',tTot
+
       return
  999  write (*,*) 'nevts file not found'
       stop
       end
+
+
+      block data timing
+c timing statistics
+      include "timing_variables.inc"
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
+      data tDSigI/0.0/
+      data tDSigR/0.0/
+      data tGenPS/0.0/
+
+      end
+
 
       subroutine get_user_params(ncall,itmax,iconfig,
      &     imode,ixi_i,iphi_i,iy_ij,SHsep)
@@ -554,9 +617,6 @@ c-----
       write(*,*)'  Enter alpha>0 to set G_azi=0 (no azi corr)'
       read(*,*)alazi,beazi
       write (*,*) 'for G_azi: alpha=',alazi,', beta=',beazi
-
-c$$$      write (*,*) "H-events (0), or S-events (1)"
-c$$$      read (*,*) i
       i=2
       if (i.eq.0) then
          Hevents=.true.
@@ -726,10 +786,8 @@ c From dsample_fks
       integer sum
       data sum/3/
       data firsttime /.true./
-      logical foundB(2),j_fks_initial(fks_configs),found_ini1,found_ini2
+      logical j_fks_initial(fks_configs),found_ini1,found_ini2
      $     ,found_fnl,j_fks_initial_found,j_fks_final_found
-      integer nFKSprocessBorn(2)
-      save nFKSprocessBorn,foundB
       double precision vol1,sigintR,res,f_tot,rfract
       integer proc_map(0:fks_configs,0:fks_configs)
      $     ,i_fks_proc(fks_configs),j_fks_proc(fks_configs)
@@ -759,20 +817,9 @@ c Find the nFKSprocess for which we compute the Born-like contributions
      $           /' Born PS point (sum=0)'
          endif
          firsttime=.false.
-         foundB(1)=.false.
-         foundB(2)=.false.
          maxproc_save=0
          do nFKSprocess=1,fks_configs
             call fks_inc_chooser()
-            if (PDG_type(i_fks).eq.21) then
-               if (j_fks.le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=nFKSprocess
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=nFKSprocess
-               endif
-            endif
 c Set Bjorken x's to some random value before calling the dlum() function
             xbk(1)=0.5d0
             xbk(2)=0.5d0
@@ -785,50 +832,8 @@ c Set Bjorken x's to some random value before calling the dlum() function
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     &        nFKSprocessBorn
 c For sum over identical FKS pairs, need to find the identical structures
-         if (sum.eq.0) then
-c MC over FKS directories (1 FKS directory per nbody PS point)
-            proc_map(0,0)=fks_configs
-            do i=1,fks_configs
-               proc_map(i,0)=1
-               proc_map(i,1)=i
-            enddo
-         elseif (sum.eq.1) then
-c Sum over FKS directories (all FKS directories per nbody PS point)
-            proc_map(0,0)=1
-            proc_map(1,0)=fks_configs
-            do i=1,fks_configs
-               proc_map(1,i)=i
-            enddo
-         elseif (sum.eq.2) then
-c Sum over all FKS pairs that have the same i_fks and j_fks
-            proc_map(0,0)=0
-            do i=1,fks_configs
-               proc_map(i,0)=0
-               i_fks_proc(i)=0
-               j_fks_proc(i)=0
-            enddo
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               i=1
-               do while ( i.le.proc_map(0,0) )
-                  if (i_fks.eq.i_fks_proc(i)
-     &              .and. j_fks.eq.j_fks_proc(i) ) then
-                     exit
-                  endif
-                  i=i+1
-               enddo
-               proc_map(i,0)=proc_map(i,0)+1
-               proc_map(i,proc_map(i,0))=nFKSprocess
-               if (i.gt.proc_map(0,0)) then
-                  proc_map(0,0)=proc_map(0,0)+1
-                  i_fks_proc(proc_map(0,0))=i_fks
-                  j_fks_proc(proc_map(0,0))=j_fks
-               endif
-            enddo
-         elseif (sum.eq.3) then
+         if (sum.eq.3) then
 c MC over FKS pairs that have soft singularity
             proc_map(0,0)=0
             do i=1,fks_configs
@@ -944,26 +949,6 @@ c gluons splitting
                   endif
                endif
             enddo
-         elseif(sum.eq.4) then
-c Sum over all j_fks initial (final) state
-            proc_map(0,0)=0
-            do i=1,2
-               proc_map(i,0)=0
-            enddo
-            j_fks_initial_found=.false.
-            j_fks_final_found=.false.
-            do nFKSprocess=1,fks_configs
-               call fks_inc_chooser()
-               if (j_fks.gt.nincoming) then
-                  proc_map(1,0)=proc_map(1,0)+1
-                  proc_map(1,proc_map(1,0))=nFKSprocess
-               else
-                  proc_map(2,0)=proc_map(2,0)+1
-                  proc_map(2,proc_map(2,0))=nFKSprocess
-               endif
-            enddo
-            if (proc_map(1,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
-            if (proc_map(2,0).ne.0) proc_map(0,0)=proc_map(0,0)+1
          else
             write (*,*) 'sum not know in driver_mintMC.f',sum
          endif
@@ -1006,7 +991,7 @@ c IRPOC's
             double_check(i)=0d0
          enddo
          do i=1,99
-            if (abrv.eq.'grid'.or.abrv.eq.'born'.or.abrv(1:2).eq.'vi')
+            if (abrv.eq.'grid'.or.abrv.eq.'born')
      &           then
                if(i.le.ndim-3)then
                   x(i)=xx(i)
@@ -1027,29 +1012,10 @@ c
 c Compute the Born-like contributions with nbody=.true.
 c     
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
-         nFKSprocess=proc_map(proc_map(0,1),1) ! just pick the first
-                                               ! because it only matters
-                                               ! which parton is j_fks
+c Pick the first one because that's the one with the soft singularity.
+         nFKSprocess=proc_map(proc_map(0,1),1)
          nFKSprocess_all=nFKSprocess
          call fks_inc_chooser()
-         if (j_fks.le.nincoming) then
-            if (.not.foundB(1)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'initial state j_fks, but there is no '/
-     &              /'configuration with i_fks a gluon and j_fks '/
-     &              /'initial state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(1)
-         else
-            if (.not.foundB(2)) then
-               write(*,*) 'Trying to generate Born momenta with '/
-     &              /'final state j_fks, but there is no configuration'/
-     &              /' with i_fks a gluon and j_fks final state'
-               stop
-            endif
-            nFKSprocess=nFKSprocessBorn(2)
-         endif
          nbody=.true.
          fillh=.false. ! this is set to true in BinothLHA if doing MC over helicities
          nFKSprocess_used=nFKSprocess
@@ -1125,7 +1091,7 @@ c much. Do this by overwrite the 'wgt' variable
          f_check=f(2)
          if (f_check.ne.0d0.or.sigintF.ne.0d0) then
             if (abs(sigintF-f_check)/max(abs(f_check),abs(sigintF))
-     $           .gt.1d-1) then
+     $           .gt.1d0) then
                write (*,*) 'Error inaccuracy in unweight table 1'
      $              ,sigintF,f_check
                stop
@@ -1222,8 +1188,9 @@ c used.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       double precision virtual_over_born
       common/c_vob/virtual_over_born
+      logical only_virt
       integer imode
-      common /c_imode/imode
+      common /c_imode/imode,only_virt
 c Trivial check on the Born contribution
       do i=1,iproc_save(nFKSprocess_used_born)
          if (unwgt_table(0,2,i).ne.0d0) then
@@ -1329,8 +1296,9 @@ c nFKSprocess_soft)
                      do j=1,iproc_save(nFKSprocess_used_born)
                         if (eto(j,nFKSprocess_used_born).eq.i) then
 c If when computing upper bounding envelope (imode.eq.1) do not include
-c the virtual corrections, because a separate bound is computed for them
-                           if (imode.eq.1) then
+c the virtual corrections, because a separate bound is computed for them.
+c Exception: when computing only the virtual, do include it here!
+                           if (imode.eq.1 .and. .not. only_virt) then
                               f_unwgt(nFKSprocess_soft,i) =
      $                             f_unwgt(nFKSprocess_soft,i) +
      $                             unwgt_table(0,1,i)+unwgt_table(0,2,i)
@@ -1550,7 +1518,8 @@ c and the n-body contributions
                if (eto(j,nFKSprocess_used_born).eq.i) then
 c If when computing upper bounding envelope (imode.eq.1) do not include
 c the virtual corrections, because a separate bound is computed for them
-                  if (imode.eq.1) then
+c Exception: when computing only the virtual, do include it here!
+                  if (imode.eq.1 .and. .not. only_virt) then
                      f_unwgt(nFKSprocess_used_born,i)=
      &                    f_unwgt(nFKSprocess_used_born,i)+
      &                    unwgt_table(0,1,i)

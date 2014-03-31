@@ -601,7 +601,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             self.debug_link_to_command()      
         
 
-class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
+class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
    
     def __init__(self, *arg, **opt):
     
@@ -628,6 +628,9 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
         
         if __debug__:
             self.debug_link_to_command() 
+    
+    def do_shell(self, *args):
+        raise Exception
     
     def finalize(self, nojpeg):
         """Finalize web generation""" 
@@ -659,11 +662,11 @@ class MasterCmdWeb(LoopCmd.LoopInterfaceWeb, Switcher):
             raise
         
     # Use the cluster file for the configuration
-    def set_configuration(self, config_path=None):
+    def set_configuration(self, config_path=None, final=False):
         
         """Force to use the web configuration file only"""
         config_path = pjoin(os.environ['MADGRAPH_BASE'], 'mg5_configuration.txt')
-        return Switcher.set_configuration(self, config_path=config_path)
+        return Switcher.set_configuration(self, config_path=config_path, final=final)
     
     def do_save(self, line, check=True, **opt):
         """Save information to file"""

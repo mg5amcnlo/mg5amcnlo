@@ -49,8 +49,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
 #***********************************************************************
     1   = lpp1    ! beam 1 type (0 = no PDF)
     1   = lpp2    ! beam 2 type (0 = no PDF)
- 4000   = ebeam1  ! beam 1 energy in GeV
- 4000   = ebeam2  ! beam 2 energy in GeV
+ 6500   = ebeam1  ! beam 1 energy in GeV
+ 6500   = ebeam2  ! beam 2 energy in GeV
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
@@ -109,6 +109,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  15  = bwcutoff
 #***********************************************************************
 # Cuts on the jets                                                     *
+# Jet clustering is performed by FastJet.
 # When matching to a parton shower, these generation cuts should be    *
 # considerably softer than the analysis cuts.                          *
 # (more specific cuts can be specified in SubProcesses/cuts.f)         *
@@ -136,7 +137,8 @@ average = event_norm ! Normalize events to sum or average to the X sect.
  1.0  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
  .true.  = isoEM  ! isolate photons from EM energy (photons and leptons)
 #***********************************************************************
-# maximal pdg code for quark to be considered as a jet                 *
+# Maximal PDG code for quark to be considered a jet when applying cuts.*
+# At least all massless quarks of the model should be included here.   *
 #***********************************************************************
- 5 = maxjetflavor
+ 4 = maxjetflavor
 #***********************************************************************

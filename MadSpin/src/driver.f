@@ -9,12 +9,14 @@ C---  integer    n_max_cg
       include 'coupl.inc'
       include 'nexternal.inc'
       include 'nexternal_prod.inc'
+      include 'helamp.inc'
       !include 'run.inc'
 
 C     
 C     LOCAL
 C     
       INTEGER I,J,K
+      INTEGER HELSET(NEXTERNAL)
       REAL*8 P(0:3,NEXTERNAL_PROD) 
       REAL*8 PFULL(0:3,NEXTERNAL), Ptrial(0:3,NEXTERNAL) 
       double precision x(36), Ecollider
@@ -150,7 +152,6 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       ! set masses 
       call set_parameters(p,Ecollider)
-      call coup()
 
       include 'props_production.inc'
 
@@ -305,6 +306,11 @@ c   VIb. generate unweighted decay config                               c
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
        if (mode.eq.2) then
+c        initialize the helicity amps
+         do i=1,ncomb1
+           helamp(i)=0d0
+         enddo
+
          notpass=.true.
          counter=0
          counter2=0
@@ -346,7 +352,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            if (weight.gt.x(3*(nexternal-nexternal_prod)+1)*maxweight) notpass=.false.
         enddo
 
-
+c       
+        call get_helicity_ID(iconfig)
+        call get_helicities(iconfig,helset) 
 
         if (nb_mc_masses.gt.0) then 
 
@@ -373,6 +381,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
             write (*,*) (pfull(j,i), j=0,3)  
           enddo
         endif
+
+        write(*,*) (helset(j),j=1,nexternal)
 
         call flush()
         goto 1
@@ -408,6 +418,40 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 2     continue
       end
+
+      subroutine get_helicity_ID(iconfig)
+      implicit none
+      include 'helamp.inc'
+c     argument
+      integer iconfig
+
+c     local
+      integer i
+      double precision cumulweight(0:ncomb1),random
+
+
+      cumulweight(0)=0d0
+      do i=1,ncomb1
+         cumulweight(i)=helamp(i)+cumulweight(i-1)
+      enddo
+
+      call  ntuple(random,0d0,1d0,24,1)
+
+      do i=1,ncomb1
+         cumulweight(i)=cumulweight(i)/cumulweight(ncomb1)
+         !write(*,*) random
+         !write(*,*) cumulweight(i-1)
+         !write(*,*) cumulweight(i)
+         if (random.ge.cumulweight(i-1).and.random.le.cumulweight(i))then
+           iconfig=i
+           return
+         endif
+      enddo
+
+
+      return
+      end
+
 
       subroutine get_config(iconfig)
       implicit none
@@ -495,6 +539,8 @@ c Masses of particles. Should be filled in setcuts.f
       include "../parameters.inc"
       stot=Ecollider**2
 
+      call coup()
+
       include 'pmass.inc'
 
       ! m(i) pmass(i) already refer to the full kinematics
@@ -564,9 +610,9 @@ c
       integer  map_external2res(nexternal_prod) ! map (index in production) -> index in the full structure
       double precision p(0:3,-nexternal:nexternal)
  
-      integer idB, id1, index_p2
+      integer idB, id1, index_p2, which_initial, last_branch, d1,d2
       double precision pa(0:3), pb(0:3), p1(0:3), p2(0:3),pboost(0:3)
-      double precision pb_cms(0:3), p1_cms(0:3), p1_rot(0:3)
+      double precision pb_cms(0:3), p1_cms(0:3), p1_rot(0:3),temp
 
 c     common
       ! variables to keep track of the vegas numbers for the production part
@@ -595,6 +641,7 @@ c     common
       include  'configs_decay.inc'
 
       mapext2res=map_external2res
+      which_initial=-1
 c Determine number of s- and t-channel branches, at this point it
 c includes the s-channel p1+p2
 c      write(*,*) (itree(i,-1), i=1,2)
@@ -662,7 +709,7 @@ c      write(*,*) qwidth_full(-4)
       enddo
 
       ! fill the new itree with the kinematics associated with the production
-      do i=-1,-(ns_channel+nt_channel)-1,-1
+      do i=-1,-(ns_channel+nt_channel)-1,-1  ! loop over invariants in the production
 c         write(*,*) 'i prod',i
 c         write(*,*) 'i full',i-ns_channel_decay
 c         write(*,*) 'd1 prod',itree(1,i)
@@ -671,12 +718,14 @@ c         write(*,*) 'd2 prod',itree(2,i)
 c            write(*,*) 'd1 full',itree(1,i)-ns_channel_decay
             itree_full(1,i-ns_channel_decay) = itree(1,i)-ns_channel_decay
          else 
+             if (itree(1,i).le.2) which_initial=itree(1,i)
              itree_full(1,i-ns_channel_decay) = map_external2res(itree(1,i))
          endif 
          if (itree(2,i).lt.0 ) then
 c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
              itree_full(2,i-ns_channel_decay) = itree(2,i)-ns_channel_decay
          else 
+             if (itree(2,i).le.2) which_initial=itree(2,i)
              itree_full(2,i-ns_channel_decay) = map_external2res(itree(2,i))
          endif
          
@@ -696,10 +745,58 @@ c            write(*,*) 'd2 full',itree(2,i)-ns_channel_decay
            qmass_full(i-ns_channel_decay)=qmass(i)
            qwidth_full(i-ns_channel_decay)=qwidth(i)
          endif
+
+
       enddo 
 
+c
+c        MODIF March 5, 2014 (P.A.) 
+c        overwrite last t-channel invariant to avoid numerical unstabilities
+c        This is crucial if the last t-channel propa is connected to two massless particles
+c        (one inital + one final particles) which are colinear -> t ~ 0
+c        Indeed, in that case the extraction of t in the previous loop may return a positive 
+c        value: in that case, the code will always fail to generate momenta !!!
 
+         if (nt_channel.ge.2) then
+           last_branch=-ns_channel-nt_channel-1
+           if (itree(1, last_branch).ge.0.or.itree(2, last_branch).ge.0) then
+           ! only overwrite if last t-channel splitting is connected to initial particle + massless particle
+           if (itree(1, last_branch).ge.0) d1=itree(1, last_branch)
+           if (itree(2, last_branch).ge.0) d1=itree(2, last_branch)
+           if (which_initial.eq.1) then 
+              d2=2
+           elseif (which_initial.eq.2) then
+              d2=1
+           else
+              write(*,*) 'Problem with the last t-channel branching ',which_initial 
+              stop
+           endif 
 
+           temp=-2d0*dot(p_ext(0,d1),p_ext(0,d2))
+           if (map_external2res(d1).gt.0) then
+           temp=temp+m(map_external2res(d1))**2
+           else
+           temp=temp+qmass_full(map_external2res(d1))**2
+           endif
+           temp=temp+m(map_external2res(d2))**2
+
+           shat=2d0*dot(p_ext(0,1),p_ext(0,2))
+
+c           write(*,*) temp, fixedinv(-ns_channel-nt_channel-ns_channel_decay)
+
+c           pause
+           if (abs(temp-fixedinv(-ns_channel-nt_channel-ns_channel_decay)).lt.(shat/1d2)) then 
+           fixedinv(-ns_channel-nt_channel-ns_channel_decay)=temp
+           else
+c              write(*,*)  qmass_full(map_external2res(d1)), m(map_external2res(d2))
+c              write(*,*) d1, d2, itree(1, last_branch), itree(2, last_branch)
+              write(*,*) 'cannot extract last t-channel invariant', temp, fixedinv(-ns_channel-nt_channel-ns_channel_decay)
+              stop
+           endif
+           endif
+         endif
+
+c     END MODIF MARCH 5, 2014
  
       !write(*,*) -ns_channel-nt_channel-1
       !write(*,*) map_external2res(itree(2,-ns_channel-nt_channel-1))
@@ -911,6 +1008,8 @@ c      write(*,*) nbranch
           pass=.false.
           return
       endif
+       shat=s(-nbranch)
+       sqrtshat=dsqrt(s(-nbranch))
        xjac=xjac*bwdelf/bwfunc(s(-nbranch),xm02,qwidth(-nbranch+1))
        m(-nbranch) = dsqrt(s(-nbranch))
        BWshift=abs(m(-nbranch)-qmass(-nbranch+1))/qwidth(-nbranch+1)

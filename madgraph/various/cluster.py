@@ -84,13 +84,18 @@ class Cluster(object):
         self.submitted = 0
         self.submitted_ids = []
         self.finish = 0
-        
-        self.cluster_queue = opts['cluster_queue']
-        self.temp_dir = opts['cluster_temp_path']
+        if 'cluster_queue' in opts:
+            self.cluster_queue = opts['cluster_queue']
+        else:
+            self.cluster_queue = 'madgraph'
+        if 'cluster_temp_path' in opts:
+            self.temp_dir = opts['cluster_temp_path']
+        else:
+            self.temp_dir = None
         self.options = {'cluster_status_update': (600, 30)}
         for key,value in opts.items():
             self.options[key] = value
-        self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' else 0
+        self.nb_retry = opts['cluster_nb_retry'] if 'cluster_nb_retry' in opts else 0
         self.cluster_retry_wait = opts['cluster_retry_wait'] if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
@@ -111,6 +116,9 @@ class Cluster(object):
             cwd = os.getcwd()
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
+            
+        if not required_output and output_files:
+            required_output = output_files
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir or \
             (input_files == [] == output_files):
@@ -139,7 +147,9 @@ class Cluster(object):
             cp -R -L $i $MYTMP
         done
         cd $MYTMP
-        bash ./%(script)s %(arguments)s
+        echo '%(arguments)s' > arguments
+        chmod +x ./%(script)s
+        %(program)s ./%(script)s %(arguments)s
         output_files=( %(output_files)s )
         for i in ${output_files[@]}
         do
@@ -147,12 +157,12 @@ class Cluster(object):
         done
         rm -rf $MYTMP
         """
-        
         dico = {'tmpdir' : self.temp_dir, 'script': os.path.basename(prog),
                 'cwd': cwd, 'job_id': self.job_id,
                 'input_files': ' '.join(input_files + [prog]),
                 'output_files': ' '.join(output_files),
-                'arguments': ' '.join(argument)}
+                'arguments': ' '.join([str(a) for a in argument]),
+                'program': ' ' if '.py' in prog else 'bash'}
         
         # writing a new script for the submission
         new_prog = pjoin(cwd, temp_file_name)
@@ -375,9 +385,14 @@ class MultiCore(Cluster):
         
         self.submitted = 0
         self.finish = 0
-        self.nb_core = opt['nb_core']
+        if 'nb_core' in opt:
+            self.nb_core = opt['nb_core']
+        elif isinstance(args[0],int):
+            self.nb_core = args[0]
+        else:
+            self.nb_core = 1
         self.update_fct = None
-
+        
         # initialize the thread controler
         self.need_waiting = False
         self.nb_used = 0
@@ -460,9 +475,15 @@ class MultiCore(Cluster):
                         pass
                     self.remove(fail_msg)
             else:
-                pid = max(self.pids + [0]) + 1
+                pid = tuple([id(o) for o in [exe] + argument])
                 self.pids.append(pid)
-                exe(argument)
+                # the function should return 0 if everything is fine
+                # the error message otherwise
+                returncode = exe(argument)
+                if returncode != 0:
+                    logger.warning(returncode)
+                    self.remove()
+
 
             
             # release the lock for allowing to launch the next job
@@ -674,6 +695,8 @@ class MultiCore(Cluster):
         if error:
             self.fail_msg = error
         for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
             out = os.system('CPIDS=$(pgrep -P %(pid)s); kill -15 $CPIDS > /dev/null 2>&1' \
                             % {'pid':pid} )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} )            
@@ -686,6 +709,8 @@ class MultiCore(Cluster):
 
         time.sleep(1) # waiting if some were submitting at the time of ctrl-c
         for pid in list(self.pids):
+            if isinstance(pid, tuple):
+                continue
             out = os.system('CPIDS=$(pgrep -P %s); kill -15 $CPIDS > /dev/null 2>&1' % pid )
             out = os.system('kill -15 %(pid)s > /dev/null 2>&1' % {'pid':pid} ) 
             if out == 0:
@@ -771,6 +796,9 @@ class CondorCluster(Cluster):
            input/output file should be give relative to cwd
         """
         
+        if not required_output and output_files:
+            required_output = output_files
+        
         if (input_files == [] == output_files):
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
@@ -808,7 +836,7 @@ class CondorCluster(Cluster):
         if not os.path.exists(prog):
             prog = os.path.join(cwd, prog)
         if argument:
-            argument = 'Arguments = %s' % ' '.join(argument)
+            argument = 'Arguments = %s' % ' '.join([str(a) for a in argument])
         else:
             argument = ''
         # input/output file treatment
@@ -939,6 +967,7 @@ class PBSCluster(Cluster):
 
         if len(self.submitted_ids) > self.maximum_submited_jobs:
             fct = lambda idle, run, finish: logger.info('Waiting for free slot: %s %s %s' % (idle, run, finish))
+            me_dir = os.path.realpath(os.path.join(cwd,prog)).rsplit('/SubProcesses',1)[0]
             self.wait(me_dir, fct, self.maximum_submited_jobs)
 
         
@@ -991,8 +1020,8 @@ class PBSCluster(Cluster):
         """ control the status of a single job with it's cluster id """
         cmd = 'qstat '+str(id)
         status = misc.Popen([cmd], shell=True, stdout=subprocess.PIPE,
-                                  stderr=open(os.devnull,'w'))
-        
+                                  stderr=subprocess.STDOUT)
+
         for line in status.stdout:
             line = line.strip()
             if 'cannot connect to server' in line or 'cannot read reply' in line:
@@ -1000,12 +1029,15 @@ class PBSCluster(Cluster):
             if 'Unknown' in line:
                 return 'F'
             elif line.startswith(str(id)):
-                status = line.split()[4]
-        if status.returncode != 0:
+                jobstatus = line.split()[4]
+            else:
+                jobstatus=""
+                        
+        if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
-        if status in self.idle_tag:
+        if jobstatus in self.idle_tag:
             return 'I' 
-        elif status in self.running_tag:                
+        elif jobstatus in self.running_tag:                
             return 'R' 
         return 'F'
         
@@ -1029,28 +1061,26 @@ class PBSCluster(Cluster):
                 raise ClusterManagmentError, 'server disconnected'
             if me_dir in line:
                 ongoing.append(line.split()[0].split('.')[0])
-                status = line.split()[4]
-                if status in self.idle_tag:
+                status2 = line.split()[4]
+                if status2 in self.idle_tag:
                     idle += 1
-                elif status in self.running_tag:
+                elif status2 in self.running_tag:
                     run += 1
-                elif status in self.complete_tag:
+                elif status2 in self.complete_tag:
                     if not self.check_termination(line.split()[0].split('.')[0]):
                         idle += 1
                 else:
                     fail += 1
 
-        if status.returncode != 0:
+        if status.returncode != 0 and status.returncode is not None:
             raise ClusterManagmentError, 'server fails in someway (errorcode %s)' % status.returncode
 
-
-            
         for id in list(self.submitted_ids):
             if id not in ongoing:
-                status = self.check_termination(id)
-                if status == 'wait':
+                status2 = self.check_termination(id)
+                if status2 == 'wait':
                     run += 1
-                elif status == 'resubmit':
+                elif status2 == 'resubmit':
                     idle += 1
 
         return idle, run, self.submitted - (idle+run+fail), fail
@@ -1479,7 +1509,7 @@ class SLURMCluster(Cluster):
     name = 'slurm'
     job_id = 'SLURM_JOBID'
     idle_tag = ['Q','PD','S','CF']
-    running_tag = ['R']
+    running_tag = ['R', 'CG']
     complete_tag = ['C']
 
     @multiple_try()

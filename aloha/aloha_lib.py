@@ -67,6 +67,7 @@ class Computation(dict):
         self.reduced_expr2 = {}
         self.inverted_fct = {}
         self.has_pi = False # logical to check if pi is used in at least one fct
+        self.unknow_fct = []
         dict.__init__(self)
 
     def clean(self):
@@ -119,7 +120,7 @@ class Computation(dict):
         new_2 = new_2.factorize()
         self.reduced_expr2[tag] = new_2
         self.add_tag((tag,))
-        self.unknow_fct = []
+        #self.unknow_fct = []
         #return expression
         return new
     

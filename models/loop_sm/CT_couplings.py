@@ -387,13 +387,9 @@ R2_GGWWtb = Coupling(name = 'R2_GGWWtb',
                     order = {'QCD':2,'QED':2})
 
 R2_GGHHc = Coupling(name = 'R2_GGHHc',
-                    value = {0:'(-yc**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
+                    value = {0:'4.0*(-yc**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
-# EDIT VH
-# There is a factor +4 added here to the two couplings below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGHHb = Coupling(name = 'R2_GGHHb',
                     value = {0:'4.0*(-yb**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
@@ -402,18 +398,10 @@ R2_GGHHt = Coupling(name = 'R2_GGHHt',
                     value = {0:'4.0*(-yt**2/2.0)*(1.0/2.0)*((complex(0,1)*G**2)/(8.0*cmath.pi**2))'},
                     order = {'QCD':2,'QED':2})
 
-# EDIT VH
-# There is a minus sign added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGZvecUp = Coupling(name = 'R2_GGGZvecUp',
                         value = {0:'complex(0,1)*VectorZUp*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
-# EDIT VH
-# There is a minus sign added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGZvecDown = Coupling(name = 'R2_GGGZvecDown',
                         value = {0:'complex(0,1)*VectorZDown*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
@@ -426,17 +414,9 @@ R2_GGGZaxialDown = Coupling(name = 'R2_GGGZaxialDown',
                         value = {0:'complex(0,1)*AxialZDown*(9.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
 
-# EDIT VH
-# There is a minus signe added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGAvecUp = Coupling(name = 'R2_GGGAvecUp',
                         value = {0:'complex(0,1)*VectorAUp*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})
-# EDIT VH
-# There is a minus signe added here to the coupling below without proper understanding of it
-# I have not investigate too much about it though.
-# END EDIT VH
 R2_GGGAvecDown = Coupling(name = 'R2_GGGAvecDown',
                         value = {0:'complex(0,1)*VectorADown*(-1.0/2.0)*(-G**3/(24.0*cmath.pi**2))'},
                         order = {'QCD':3,'QED':1})

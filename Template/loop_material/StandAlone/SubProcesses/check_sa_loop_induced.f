@@ -132,6 +132,9 @@
 !---  Update the couplings with the new MU_R
       CALL UPDATE_AS_PARAM()
 
+!-- Possible tweaks to the run
+!     CALL FORCE_STABILITY_CHECK(.TRUE.)
+
 !     
 !     Now we can call the matrix element!
 !

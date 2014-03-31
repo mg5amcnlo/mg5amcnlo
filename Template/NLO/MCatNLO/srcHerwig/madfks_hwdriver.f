@@ -5,7 +5,7 @@ C Should be backward compatible with v3.1 and v3.2 (thanks to B. Kersevan)
       INTEGER N,NSTEP,I,JPR0,JPR,NUMDM,II,NBODIES(100),JJ,IMATCH
       INTEGER IMOTH(100),IDAUGHT(100,5),NMOTH,ARRMOTH(100),III,KK
       DOUBLE PRECISION BR(100),BRR(100,100),SUMBR(100,100)
-      INTEGER IMIN(100),IMAX(100)
+      INTEGER IMIN(100),IMAX(100),MEDEC(100)
       CHARACTER *1 TMPCH
 C QQIN IS THE EVENT FILE
       CHARACTER*50 QQIN
@@ -13,7 +13,7 @@ C QQIN IS THE EVENT FILE
       CHARACTER *7 NORM_EVENT
       INTEGER MQQ
       COMMON/cMQQ/MQQ
-      REAL*8 TMPLAM,GAMT0,ERR_FR
+      REAL*8 TMPLAM,GAMT0,ERR_FR,MME,MMM,MMT
       INTEGER IPDF
       CHARACTER * 70 LHAPDF
       LOGICAL LHACRTL,OLDFORM,PI_STABLE,WP_STABLE,WM_STABLE,Z_STABLE,
@@ -106,6 +106,12 @@ C
       DO I=1,5
          RMASS(I+6)=RMASS(I)
       ENDDO
+      WRITE(*,*)'Enter lepton (e,mu,tau) masses: should be zero'
+      READ(*,*)mme,mmm,mmt
+      if(mme.ne.0d0.or.mmm.ne.0d0.or.mmt.ne.0d0)then
+         write(*,*)'nonzero lepton masses'
+         stop
+      endif
 C Set electron and muon masses equal to zero to avoid rounding problems
       RMASS(121)=0.D0
       RMASS(123)=0.D0
@@ -241,10 +247,10 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
             WRITE(*,*)'Enter number of bodies for decay mode ',II
             READ(*,*)NBODIES(II)
             WRITE(*,*)'Enter decay mode A --> B C ... with the syntax'
-            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR'
+            WRITE(*,*)'DM_NUM = PDG(A) > PDG(B) PDG(C) ... @ BR @ ME'
             WRITE(*,*)'where 1 <= NUM <= 99'
             READ(*,*)IMOTH(II),TMPCH,(IDAUGHT(II,JJ),JJ=1,NBODIES(II)),
-     &               TMPCH,BR(II)
+     &               TMPCH,BR(II),TMPCH,MEDEC(II)
 
             IMATCH=0
             DO III=1,NMOTH
@@ -269,6 +275,7 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
             ENDDO
          ENDDO
 
+         SYSPIN=.TRUE.
          DO JJ=1,NMOTH
             DO II=1,NUMDM
                DO KK=II+1,NUMDM
@@ -276,16 +283,16 @@ C---USE THE FOLLOWING FOR SINGLE TOP -- AVOIDS TROUBLES WITH ISR
                ENDDO
                IF(NBODIES(II).EQ.3)THREEB=.TRUE.
                IF(NBODIES(II).EQ.4)FOURB=.TRUE.
-               SYSPIN=.TRUE.
+               IF(MEDEC(II).EQ.0)SYSPIN=.FALSE.
                IF(ARRMOTH(JJ).EQ.IMOTH(II))THEN
                   IF(II.EQ.IMAX(JJ).OR.II.EQ.IMIN(JJ))THEN
                      CONTINUE
                   ELSE
                      BRR(JJ,II)=BRR(JJ,II)/(1-SUMBR(JJ,II))
                   ENDIF
-                  CALL HWMODK(IMOTH(II),BRR(JJ,II),100,IDAUGHT(II,1),
-     &                    IDAUGHT(II,2),IDAUGHT(II,3),IDAUGHT(II,4),
-     &                                                IDAUGHT(II,5))
+                  CALL HWMODK(IMOTH(II),BRR(JJ,II),MEDEC(II),
+     &                    IDAUGHT(II,1),IDAUGHT(II,2),IDAUGHT(II,3),
+     &                    IDAUGHT(II,4),IDAUGHT(II,5))
                ENDIF
             ENDDO
          ENDDO

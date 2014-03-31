@@ -280,31 +280,24 @@ tt__minus__ = Particle(pdg_code = 15,
 tt__plus__ = tt__minus__.anti()
 
 
-# Set counterterms values
-
-Param.MT.loop_particles= [[[t,G]]]  
-Param.MT.counterterm = {(1,0):CTParam.tMass_UV.value}          
-Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0):CTParam.bMass_UV.value}
-Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]]
-Param.G.counterterm = {(1,0):CTParam.G_UVq.value,(1,1):CTParam.G_UVb.value,(1,2):CTParam.G_UVt.value,(1,3):CTParam.G_UVg.value}
-
 # Wavefunction renormalization
 
-b.loop_particles = [[[b,G]]]
-b.counterterm = {(1,0):CTParam.bWcft_UV.value}
+b.loop_particles = [[[5,21]]]
+b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 
-t.loop_particles = [[[t,G]]]
-t.counterterm = {(1,0):CTParam.tWcft_UV.value}
+t.loop_particles = [[[6,21]]]
+t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[b]],[[t]]]
-G.counterterm = {(1,0):CTParam.GWcft_UV_b.value,(1,1):CTParam.GWcft_UV_t.value}
+G.loop_particles = [[[5]],[[6]]]
+G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
 
-Param.MB.loop_particles= [[[b,G]]]
-Param.MB.counterterm = {(1,0):CTParam.bMass_UV.value}
+# Set counterterms values
 
-Param.MT.loop_particles= [[[t,G]]]
-Param.MT.counterterm = {(1,0):CTParam.tMass_UV.value}
+Param.MB.loop_particles= [[[5,21]]]
+Param.MB.counterterm = {(1,0,0):CTParam.bMass_UV.value}
 
-Param.G.loop_particles = [[[u],[d],[c],[s]],[[b]],[[t]],[[G]]],
-Param.G.counterterm = {(1,0):CTParam.G_UVq.value,(1,1):CTParam.G_UVb.value,(1,2):CTParam.G_UVt.value,(1,3):CTParam.G_UVg.value},
+Param.MT.loop_particles= [[[6,21]]]
+Param.MT.counterterm = {(1,0,0):CTParam.tMass_UV.value}
+
+Param.G.loop_particles = [[[2],[1],[3],[4]],[[5]],[[6]],[[21]]],
+Param.G.counterterm = {(1,0,0):CTParam.G_UVq.value,(1,0,1):CTParam.G_UVb.value,(1,0,2):CTParam.G_UVt.value,(1,0,3):CTParam.G_UVg.value},

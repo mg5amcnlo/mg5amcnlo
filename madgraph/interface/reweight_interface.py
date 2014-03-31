@@ -260,8 +260,6 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
-        if s_orig == s_new:
-            raise self.InvalidCmd, 'original card and new card are identical'
         old_param = check_param_card.ParamCard(s_orig.splitlines())
         new_param =  check_param_card.ParamCard(s_new.splitlines())
         card_diff = old_param.create_diff(new_param)
@@ -515,6 +513,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
                 if has_cms.search(line):
                     complex_mass = True
+            elif line.startswith('define'):
+                try:
+                    self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except Exception:
+                    pass 
                           
         info = self.banner.get('proc_card', 'full_model_line')
         if '-modelname' in info:

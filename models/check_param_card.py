@@ -146,7 +146,7 @@ class Block(list):
             return self.param_dict[tuple(lhacode)]
         except KeyError:
             if default is None:
-                raise
+                raise KeyError, 'id %s is not in %s' % (tuple(lhacode), self.name)
             else:
                 return Parameter(block=self, lhacode=lhacode, value=default,
                                                            comment='not define')
@@ -170,6 +170,8 @@ class Block(list):
     def append(self, obj):
         
         assert isinstance(obj, Parameter)
+        if not hasattr(self, 'name'): #can happen if loeaded from pickle
+            self.__init__(obj.lhablock)
         assert not obj.lhablock or obj.lhablock == self.name
 
         #The following line seems/is stupid but allow to pickle/unpickle this object
@@ -355,7 +357,7 @@ class ParamCard(dict):
                 lhacode = param.lhacode
                 value = param.value
                 new_value = new_card[blockname].get(lhacode).value
-                if not misc.equal(value, new_value, 6):
+                if not misc.equal(value, new_value, 6, zero_limit=False):
                     lhacode = ' '.join([str(i) for i in lhacode])
                     diff += 'set param_card %s %s %s # orig: %s\n' % \
                                        (blockname, lhacode , new_value, value)
@@ -1250,8 +1252,11 @@ def check_valid_param_card(path, restrictpath=None):
 if '__main__' == __name__:
 
 
-    make_valid_param_card('./Cards/param_card.dat', './Source/MODEL/param_card_rule.dat', 
-                           outputpath='tmp1.dat')    
-    convert_to_slha1('tmp1.dat' , './param_card.dat')
+    #make_valid_param_card('./Cards/param_card.dat', './Source/MODEL/param_card_rule.dat', 
+    #                       outputpath='tmp1.dat')
+    import sys    
+    args = sys.argv
+    sys.path.append(os.path.dirname(__file__))
+    convert_to_slha1(args[1] , args[2])
 
                          

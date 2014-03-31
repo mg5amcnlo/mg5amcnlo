@@ -12,13 +12,13 @@ C----------------------------------------------------------------------
 
 C----------------------------------------------------------------------
       SUBROUTINE HWABEG
-C     USER'S ROUTINE FOR INITIALIZATION
+C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       include 'reweight0.inc'
       integer j,kk,l
       character*5 cc(2)
-      data cc/'     ','     '/
+      data cc/'     ','Born '/
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
@@ -27,71 +27,70 @@ C----------------------------------------------------------------------
       common/cwgtsinfo/weights_info
       call inihist
       nwgt_analysis=nwgt
-      do j=1,2
+      do j=1,1
       do kk=1,nwgt_analysis
       l=(kk-1)*48+(j-1)*24
-      call mbook(l+ 1,'t pt        '//weights_info(kk)//cc(j)
+      call mbook(l+ 1,'t pt        '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+ 2,'t log pt    '//weights_info(kk)//cc(j)
+      call mbook(l+ 2,'t log pt    '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+ 3,'t y         '//weights_info(kk)//cc(j)
+      call mbook(l+ 3,'t y         '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+ 4,'t eta       '//weights_info(kk)//cc(j)
+      call mbook(l+ 4,'t eta       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+ 5,'j1 pt       '//weights_info(kk)//cc(j)
+      call mbook(l+ 5,'j1 pt       '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+ 6,'j1 log pt   '//weights_info(kk)//cc(j)
+      call mbook(l+ 6,'j1 log pt   '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+ 7,'j1 y        '//weights_info(kk)//cc(j)
+      call mbook(l+ 7,'j1 y        '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+ 8,'j1 eta      '//weights_info(kk)//cc(j)
+      call mbook(l+ 8,'j1 eta      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+ 9,'j2 pt       '//weights_info(kk)//cc(j)
+      call mbook(l+ 9,'j2 pt       '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+10,'j2 log pt   '//weights_info(kk)//cc(j)
+      call mbook(l+10,'j2 log pt   '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+11,'j2 y        '//weights_info(kk)//cc(j)
+      call mbook(l+11,'j2 y        '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+12,'j2 eta      '//weights_info(kk)//cc(j)
+      call mbook(l+12,'j2 eta      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+13,'bj1 pt      '//weights_info(kk)//cc(j)
+      call mbook(l+13,'bj1 pt      '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+14,'bj1 log pt  '//weights_info(kk)//cc(j)
+      call mbook(l+14,'bj1 log pt  '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+15,'bj1 y       '//weights_info(kk)//cc(j)
+      call mbook(l+15,'bj1 y       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+16,'bj1 eta     '//weights_info(kk)//cc(j)
+      call mbook(l+16,'bj1 eta     '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+17,'bj2 pt      '//weights_info(kk)//cc(j)
+      call mbook(l+17,'bj2 pt      '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+18,'bj2 log pt  '//weights_info(kk)//cc(j)
+      call mbook(l+18,'bj2 log pt  '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+19,'bj2 y       '//weights_info(kk)//cc(j)
+      call mbook(l+19,'bj2 y       '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+20,'bj2 eta     '//weights_info(kk)//cc(j)
+      call mbook(l+20,'bj2 eta     '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
-      call mbook(l+21,'syst pt     '//weights_info(kk)//cc(j)
+      call mbook(l+21,'syst pt     '//cc(j)//weights_info(kk)
      &     ,5d0,0d0,200d0)
-      call mbook(l+22,'syst log pt '//weights_info(kk)//cc(j)
+      call mbook(l+22,'syst log pt '//cc(j)//weights_info(kk)
      &     ,0.05d0,0d0,5d0)
-      call mbook(l+23,'syst y      '//weights_info(kk)//cc(j)
+      call mbook(l+23,'syst y      '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
-      call mbook(l+24,'syst eta    '//weights_info(kk)//cc(j)
+      call mbook(l+24,'syst eta    '//cc(j)//weights_info(kk)
      &     ,0.25d0,-6d0,6d0)
 c
       enddo
       enddo
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWAEND
-C     USER'S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
+C     USER''S ROUTINE FOR TERMINAL CALCULATIONS, HISTOGRAM OUTPUT, ETC
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       REAL*8 XNORM
@@ -104,10 +103,10 @@ C XNORM IS SUCH THAT THE CROSS SECTION PER BIN IS IN PB, SINCE THE HERWIG
 C WEIGHT IS IN NB, AND CORRESPONDS TO THE AVERAGE CROSS SECTION
       XNORM=1.D3/DFLOAT(NEVHEP)
       DO I=1,NPL
- 	CALL MFINAL3(I)             
+        CALL MFINAL3(I)
         CALL MCOPY(I,I+NPL)
         CALL MOPERA(I+NPL,'F',I+NPL,I+NPL,(XNORM),0.D0)
- 	CALL MFINAL3(I+NPL)
+        CALL MFINAL3(I+NPL)
       ENDDO
       do i=1,1
       do kk=1,nwgt_analysis
@@ -147,10 +146,9 @@ c
       CLOSE(99)
       END
 
-
 C----------------------------------------------------------------------
       SUBROUTINE HWANAL
-C     USER'S ROUTINE TO ANALYSE DATA FROM EVENT
+C     USER''S ROUTINE TO ANALYSE DATA FROM EVENT
 C     BASED ON AN ANALYSIS FILE WRITTEN BY E.RE
 C----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
@@ -182,7 +180,7 @@ c
          WRITE(*,*)'WW(1) = 0. Stopping'
          STOP
       ENDIF
-C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT'S A POWER-SUPPRESSED
+C INCOMING PARTONS MAY TRAVEL IN THE SAME DIRECTION: IT''S A POWER-SUPPRESSED
 C EFFECT, SO THROW THE EVENT AWAY
       IF(SIGN(1.D0,PHEP(3,4)).EQ.SIGN(1.D0,PHEP(3,5)))THEN
         CALL HWWARN('HWANAL',111)
@@ -325,7 +323,7 @@ C b-jet
       enddo
       nbjet=count_bj
 c fill the histograms
-      do i=1,2
+      do i=1,1
          do kk=1,nwgt_analysis
             l=(kk-1)*48+(i-1)*24
             call mfill(l+1,pttop,www(kk))

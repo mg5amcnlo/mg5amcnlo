@@ -1,28 +1,29 @@
       program check_events
 c Checks self-consistency of event files. Compile with
-c gfortran -I../SubProcesses/P0_<anydir> -o check_events 
-c   check_events.f handling_lhe_events.f fill_MC_mshell.f
+c gfortran -I../SubProcesses/P0_<anydir> -ffixed-line-length-132 
+c   -o check_events check_events.f handling_lhe_events.f 
+c                   fill_MC_mshell.f dbook.f
 c With some work on finalizeprocesses(), it should work also for 
 c LH files created by Herwig, assuming they are identified by a 
 c negative number of events
       implicit none
       integer maxevt,ifile,efile,mfile,jfile,kfile,rfile,i,npart,
      # iuseres_1,iwhmass,ilepmass,idec,itempsc,itempPDF,isavesc,
-     # isavePDF,itemp
-      double precision chtot,xint,xinterr,qtiny
+     # isavePDF,itemp,ii
+      double precision chtot,xint,xinterr,xinta,xintaerr,qtiny
       parameter (qtiny=1.d-4)
       double precision charges(-100:100),zmasses(1:100)
-      double precision remcmass(-5:21)
+      double precision remcmass(-16:21)
       common/cremcmass/remcmass
       integer nevS_lhe,nevH_lhe,npartS_lhe,npartH_lhe,mtoterr,
-     # itoterr,numproc,numconn,idup_eff(10),icolup_eff(2,10)
+     # itoterr,numproc,numconn,idup_eff(22),icolup_eff(2,22)
       logical wrong
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
@@ -56,7 +57,7 @@ c negative number of events
 
       include "nexternal.inc"
       integer j,k
-      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal)
+      real*8 ecm,xmass(3*nexternal),xmom(0:3,3*nexternal),xnorm
 
       include 'reweight0.inc'
       integer kr,kf,kpdf
@@ -66,6 +67,9 @@ c negative number of events
      # xmax_wgt_resc_pdf(0:maxPDFs),
      # xmin_wgt_resc_scale(maxscales,maxscales),
      # xmin_wgt_resc_pdf(0:maxPDFs)
+      integer istep
+      double precision percentage
+      include 'dbook.inc'
 
       call setcharges(charges)
       call setmasses(zmasses)
@@ -79,14 +83,14 @@ c negative number of events
         idups_Sproc_HW6(i,-1)=0
         idups_Hproc_HW6(i,-1)=0
       enddo
-      do i=-5,21
-         remcmass(i)=0.d0
+      do i=-16,21
+         remcmass(i)=-2.d0
       enddo
 
       write (*,*) 'Enter event file name'
       read (*,'(a)') event_file
 
-      write (*,*) 'Enter 0 to get integrals from res_1_tot.txt'
+      write (*,*) 'Enter 0 to get integrals from res_1.txt'
       write (*,*) '      1 otherwise'
       read (*,*) iuseres_1
 
@@ -97,33 +101,34 @@ c read from events
       write (*,*) '      2 to enter them'
       read (*,*) iwhmass
 
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
+      if(iwhmass.eq.2)then
         write (*,*) 'Enter 0 to use physical lepton masses'
         write (*,*) '      2 to enter them'
         read (*,*) ilepmass
       endif
 
       write (*,*) 'Enter 0 to study decays'
-      write (*,*) '      1 othewise'
+      write (*,*) '      1 otherwise'
       read (*,*) idec
       if(idec.eq.0)call setdecmat()
 
       ifile=34
       open (unit=ifile,file=event_file,status='old')
+      open (unit=51,file='res_wgt',status='unknown')
       if(iuseres_1.eq.0)then
         jfile=50
-        open (unit=jfile,file='res_1_tot.txt',status='old')
+        open (unit=jfile,file='res_1.txt',status='old')
         do while(buff(1:6).ne.'Total:')
            read(jfile,*)buff
         enddo
+        read(jfile,*)xinta,pm,xintaerr
         read(jfile,*)xint,pm,xinterr
         if(pm.ne.'+-')then
-           write(*,*)'File res_1_tot.txt has unexpected format'
+           write(*,*)'File res_1.txt has unexpected format'
            stop
         endif
       elseif(iuseres_1.eq.1)then
-        jfile=50
-        open (unit=jfile,file='res_wgt',status='unknown')
+         continue
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -173,14 +178,16 @@ c events, but its upper bound
         shower=.true.
       endif
       maxevt=abs(maxevt)
-c Fill quark/antiquark masses if not already in header
-      do i=-5,5
-        if(remcmass(i).eq.0.d0)remcmass(i)=remcmass(-i)
+c Fill quark/antiquark and lepton/antilepton masses if not already in header
+      do i=-16,16
+        if(abs(i).le.5.or.abs(i).ge.11)then
+          if(remcmass(i).eq.-2.d0)remcmass(i)=remcmass(-i)
+        endif
       enddo
 c
       if(iwhmass.eq.0)then
         do i=1,21
-          if(remcmass(i).ne.0.d0)zmasses(i)=remcmass(i)
+          if(remcmass(i).ne.-2.d0)zmasses(i)=remcmass(i)
         enddo
       elseif(iwhmass.eq.2)then
         do i=1,21
@@ -189,8 +196,6 @@ c
             read(*,*)zmasses(i)
           endif
         enddo
-      endif
-      if(iwhmass.eq.0.or.iwhmass.eq.2)then
         if(ilepmass.eq.0)then
           zmasses(11)=0.510998928d-3
           zmasses(12)=0.d0
@@ -314,11 +319,17 @@ c
       endif
 
       i=0
+      call inihist
+      call bookup(1,'scalup',2d0,0d0,200d0)
+      call bookup(2,'scalup',8d0,0d0,800d0)
+      call bookup(3,'log scalup',0.1d0,0d0,4d0)
       dowhile(i.lt.maxevt.and.keepevent)
          call read_lhef_event_catch(ifile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
+         call mfill(1,SCALUP,XWGTUP)
+         call mfill(2,SCALUP,XWGTUP)
+         if(SCALUP.gt.0d0)call mfill(3,log10(SCALUP),XWGTUP)
          if(index(buff,'endoffile').ne.0)then
            keepevent=.false.
            goto 111
@@ -486,35 +497,63 @@ c Showered LH files only contain final-state particles.
 c Don't check momentum conservation in that case
          if(.not.shower)call phspncheck_nocms2(i,npart,xmass,xmom)
 
- 111     continue
+         percentage=i*100d0/maxevt
+         istep=maxevt/10
+         if(mod(i,istep).eq.0.or.i.eq.maxevt)
+     &        write(*,*)'Processed',int(percentage),'% of the file'
 
+ 111     continue
       enddo
+
+      open(unit=99,file='SCALUP.top',status='unknown')
+      call mclear
+      xnorm=1d0
+      do ii=1,nplots
+         call mopera(ii,'+',ii,ii,xnorm,0.d0)
+         call mfinal(ii)
+      enddo
+      call multitop(1,3,2,'scalup    ',' ','LOG')
+      call multitop(2,3,2,'scalup    ',' ','LOG')
+      call multitop(3,3,2,'log scalup',' ','LOG')
+      close(99)
 
       if(event_norm.eq.'ave')sum_wgt=sum_wgt/maxevt
       if(event_norm.eq.'ave')sum_abs_wgt=sum_abs_wgt/maxevt
       err_wgt=sum_abs_wgt/sqrt(dfloat(maxevt))
       write(*,*)'  '
       write (*,*) 'The total number of events is:',i
-      write (*,*) 'Sum of the weights is    :',sum_wgt,' +-',err_wgt
-      write (*,*) 'Sum of the abs weights is:',sum_abs_wgt,' +-',err_wgt
+      write (*,*) 'Sum of weights is    :',sum_wgt,' +-',err_wgt
+      write (*,*) 'Sum of abs weights is:',sum_abs_wgt,' +-',err_wgt
 
       if(iuseres_1.eq.0)then
         toterr=sqrt(xinterr**2+err_wgt**2)
         diff=sum_wgt-xint
         if( (diff.le.0.d0.and.diff+toterr.lt.0.d0) .or.
      #      (diff.gt.0.d0.and.diff-toterr.gt.0.d0) )then
-c Error if more that 1sigma away
+c Error if more that one sigma away
           itoterr=itoterr+1
           write(44,*)'WEIGHTS'
           write(44,*)'Integral:',xint,' +-',xinterr
           write(44,*)'Weights: ',sum_wgt,' +-',err_wgt
           write(44,*)' '
           write(44,*)'Sigmas:  ',abs(xint-sum_wgt)/
-     &sqrt(xinterr**2+err_wgt**2)
+     #                           sqrt(xinterr**2+err_wgt**2)
         endif
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (res_1.txt)    = ',
+     #               xint   ,' +-',xinterr
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
+        write (51,*)'Xsec ABS (res_1.txt)    = ',
+     #              xinta,' +-',xintaerr
       elseif(iuseres_1.eq.1)then
-        write (50,*) 'Xsec from the sum of the weights is:',
-     &sum_wgt,' +-',err_wgt
+        write (51,*)'Xsec     (check_events) = ',
+     #              sum_wgt,' +-',err_wgt
+        write (51,*)' '
+        write (51,*)'Xsec ABS (check_events) = ',
+     #              sum_abs_wgt,' +-',err_wgt
       else
         write(*,*)'No such option for iuseres_1'
         stop
@@ -610,6 +649,7 @@ c Error if more that 1sigma away
       close(34)
       close(44)
       close(50)
+      close(51)
       close(54)
       if(rwgtinfo)close(64)
 
@@ -675,17 +715,17 @@ c
 c Fills common block /cprocesses/ and return numproc, the number of the current
 c process in the list of processes idups_proc
       implicit none
-      integer npart,numproc,idup_eff(10)
+      integer npart,numproc,idup_eff(22)
       integer i,j
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
 c mxlproc=current maximum number of different processes
 c idups_proc(n,-1)=number of identical processes identified by n
 c idups_proc(n,0)=number of particles in process n
 c idups_proc(n,i)=ID of particle #i in process n; 1<=i<=idups_proc(n,0)
 c
-      if(npart.gt.10)then
+      if(npart.gt.22)then
         write(*,*)'Array idup_eff too small',npart
         stop
       endif
@@ -731,10 +771,10 @@ c
       integer iunit
       integer maxevt,iprocsum,iHW6procsum,nevS,nevH,i,id1,id2,ihpro
       logical isalquark,isagluon
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer idups_Sproc_HW6(401:499,-1:10),
-     #        idups_Hproc_HW6(401:499,-1:10)
+      integer idups_Sproc_HW6(401:499,-1:22),
+     #        idups_Hproc_HW6(401:499,-1:22)
       common/cHW6processes/idups_Sproc_HW6,idups_Hproc_HW6
 c Derived from conventions used by HW6 
 C  401    q qbar -> X
@@ -862,12 +902,12 @@ c Fills common block /ccolconn/ and return numconn, the number of the current
 c colour connection in the list of connections icolups_proc.
 c This routine works at fixed process number numproc
       implicit none
-      integer npart,numproc,numconn,icolup_eff(2,10)
-      integer i,j,ic,newline,jline(501:510),jcolup(2,10)
+      integer npart,numproc,numconn,icolup_eff(2,22)
+      integer i,j,ic,newline,jline(501:510),jcolup(2,22)
       logical exists,found
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c icolups_proc(numproc,0,1,1)=total number of colour connections
 c icolups_proc(numproc,n,0,1)=number of identical connections identified by n
@@ -947,9 +987,9 @@ c
       integer iev,numproc,numconn
       logical wrong
       integer npart,i,j,icol,iacl,iid,ncol1,ncol2,nacl1,nacl2,nneg
-      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:10)
+      integer mxlproc,minnp,maxnp,idups_proc(10000,-1:22)
       common/cprocesses/mxlproc,minnp,maxnp,idups_proc
-      integer icolups_proc(10000,0:500,0:2,10)
+      integer icolups_proc(10000,0:500,0:2,22)
       common/ccolconn/icolups_proc
 c
       npart=idups_proc(numproc,0)
@@ -1756,3 +1796,7 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
  80   ICMPCH=1
       RETURN
       END
+
+c Dummy subroutine (normally used with vegas when resuming plots)
+      subroutine resume()
+      end

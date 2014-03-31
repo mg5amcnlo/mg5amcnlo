@@ -57,18 +57,32 @@ b_mass     = -1     # b mass, -1 for default
 is_4lep    = F      # true if it is 4 lepton production (only for PY6)
 is_bbar    = F      # true if it is b-b~ production (only for HW6)
 modbos_1   = 5      # decay mode for the first Boson (only for HW6)
-modbos_2   = 5      # decay mode for the second Boson (only for HW6)
+modbos_2   = 5      # dec mode for boson 2 (only for HW6, overridden by DM_ below)
 ################################################################################
 # DECAY CHANNELS
-# Write down decay channels for the resonances, to be performed by the shower.
-# Up to 99 decay channels are supported. Three-body decays are supported.
-# Branching ratios are used only by HERWIG6, and correctly understood only if
-# they add up to 1, and if up to 3 decay channels per resonance are required.
-# Example of syntax for Z -> e+ e- and Z -> mu+ mu-, with BR = 0.5 each, and for
-# H -> tau+ tau-, with BR = 1:
-# DM_1 = 23 > -11 11 @ 0.5d0
-# DM_2 = 23 > -13 13 @ 0.5d0
-# DM_3 = 25 > -15 15 @ 1.0d0
+# Write down the decay channels for the resonances, to be performed by the shower.
+# The syntax (for a two-body decay) is
+# DM_I = M > D1 D2 @ BR @ ME
+# where I = 1, ..., 99, M is the decaying resonance, D1, D2 are the decay products
+# (up to D5 if  such a decay is supported by the shower), BR is the branching ratio
+# (only used by the HERWIG6 shower, ignored otherwise) and ME is the type of matrix
+# element to be used in the decay (only used by HERWIG6, ignored otherwise).
+# BR's are correctly understood by HERWIG6 only if they add up to one and only if
+# no more than three modes are required for a given resonance.
+# ME corresponds to the third entry of subroutine HWMODK, see the relevant manual.
+# Examples of syntax:
+# Z -> e+ e- or mu+ mu- with BR = 0.5 each
+# DM_1 = 23 > -11 11 @ 0.5d0 @ 100
+# DM_2 = 23 > -13 13 @ 0.5d0 @ 100
+# H -> tau+ tau- with BR = 1
+# DM_3 = 25 > -15 15 @ 1.0d0 @ 0
+# t -> nu_e e+ b @ 1d0
+# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100
+# WARNING: for HERWIG6 the order of decay products in >2-body decays IS RELEVANT.
+# WARNING: 1 -> n decays (with n > 2) are handled by PYTHIA6 and PYTHIA8 through
+# a sequence of 1 -> 2 decays.
+################################################################################
+
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES
@@ -124,18 +138,32 @@ b_mass     = -1     # b mass, -1 for default
 is_4lep    = F      # true if it is 4 lepton production (only for PY6)
 is_bbar    = F      # true if it is b-b~ production (only for HW6)
 modbos_1   = 5      # decay mode for the first Boson (only for HW6)
-modbos_2   = 5      # decay mode for the second Boson (only for HW6)
+modbos_2   = 5      # dec mode for boson 2 (only for HW6, overridden by DM_ below)
 ################################################################################
 # DECAY CHANNELS
-# Write down decay channels for the resonances, to be performed by the shower.
-# Up to 99 decay channels are supported. Three-body decays are supported.
-# Branching ratios are used only by HERWIG6, and correctly understood only if
-# they add up to 1, and if up to 3 decay channels per resonance are required.
-# Example of syntax for Z -> e+ e- and Z -> mu+ mu-, with BR = 0.5 each, and for
-# H -> tau+ tau-, with BR = 1:
-# DM_1 = 23 > -11 11 @ 0.5d0
-# DM_2 = 23 > -13 13 @ 0.5d0
-# DM_3 = 25 > -15 15 @ 1.0d0
+# Write down the decay channels for the resonances, to be performed by the shower.
+# The syntax (for a two-body decay) is
+# DM_I = M > D1 D2 @ BR @ ME
+# where I = 1, ..., 99, M is the decaying resonance, D1, D2 are the decay products
+# (up to D5 if  such a decay is supported by the shower), BR is the branching ratio
+# (only used by the HERWIG6 shower, ignored otherwise) and ME is the type of matrix
+# element to be used in the decay (only used by HERWIG6, ignored otherwise).
+# BR's are correctly understood by HERWIG6 only if they add up to one and only if
+# no more than three modes are required for a given resonance.
+# ME corresponds to the third entry of subroutine HWMODK, see the relevant manual.
+# Examples of syntax:
+# Z -> e+ e- or mu+ mu- with BR = 0.5 each
+# DM_1 = 23 > -11 11 @ 0.5d0 @ 100
+# DM_2 = 23 > -13 13 @ 0.5d0 @ 100
+# H -> tau+ tau- with BR = 1
+# DM_3 = 25 > -15 15 @ 1.0d0 @ 0
+# t -> nu_e e+ b @ 1d0
+# DM_4 = 6 > 12 -11 5 @ 1d0 @ 100
+# WARNING: for HERWIG6 the order of decay products in >2-body decays IS RELEVANT.
+# WARNING: 1 -> n decays (with n > 2) are handled by PYTHIA6 and PYTHIA8 through
+# a sequence of 1 -> 2 decays.
+################################################################################
+
 ################################################################################
 #
 # EXTRA LIBRARIES/ANALYSES

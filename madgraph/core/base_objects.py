@@ -28,6 +28,7 @@ from madgraph import MadGraph5Error, MG5DIR
 import madgraph.various.misc as misc 
 
 logger = logging.getLogger('madgraph.base_objects')
+pjoin = os.path.join
 
 #===============================================================================
 # PhysicsObject
@@ -1054,12 +1055,27 @@ class Model(PhysicsObject):
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
                 return modeldir
-            modeldir = os.path.join(os.path.dirname(modeldir),
-                                    os.path.basename(modeldir).rsplit("-",1)[0])
-            if os.path.exists(modeldir):
-                return modeldir 
-
-            raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+            else:
+                raise Exception, "path %s not valid anymore." % modeldir
+            #modeldir = os.path.join(os.path.dirname(modeldir),
+            #                        os.path.basename(modeldir).rsplit("-",1)[0])
+            #if os.path.exists(modeldir):
+            #    return modeldir 
+            #raise Exception, 'Invalid Path information: %s' % self.get('version_tag')          
+        elif name == 'modelpath+restriction':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            if not  os.path.exists(modeldir):
+                raise Exception, "path %s not valid anymore" % modeldir
+            modeldir = os.path.dirname(modeldir)
+            modeldir = pjoin(modeldir, modelname)
+            return modeldir
+        elif name == 'restrict_name':
+            modeldir = self.get('version_tag').rsplit('##',1)[0]
+            modelname = self['name']            
+            basename = os.path.basename(modeldir)
+            restriction = modelname[len(basename)+1:]
+            return restriction
 
         if (name == 'interaction_dict') and not self[name]:
             if self['interactions']:
@@ -1367,7 +1383,97 @@ class Model(PhysicsObject):
             part = self.get_particle(25)
             part.set('name', 'h1')
             part.set('antiname', 'h1')
+
+
             
+    def change_parameter_name_with_prefix(self, prefix='mdl_'):
+        """ Change all model parameter by a given prefix.
+        Modify the parameter if some of them are identical up to the case"""
+        
+        lower_dict={}
+        duplicate = set()
+        keys = self.get('parameters').keys()
+        for key in keys:
+            for param in self['parameters'][key]:
+                lower_name = param.name.lower()
+                if not lower_name:
+                    continue
+                try:
+                    lower_dict[lower_name].append(param)
+                except KeyError:
+                    lower_dict[lower_name] = [param]
+                else:
+                    duplicate.add(lower_name)
+                    logger.debug('%s is define both as lower case and upper case.' 
+                                 % lower_name)
+        
+        if prefix == '' and  not duplicate:
+            return
+                
+        re_expr = r'''\b(%s)\b'''
+        to_change = []
+        change={}
+        # recast all parameter in prefix_XX
+        for key in keys:
+            for param in self['parameters'][key]:
+                value = param.name.lower()
+                if value in ['as','mu_r', 'zero','aewm1','g']:
+                    continue
+                elif value.startswith(prefix):
+                    continue
+                elif value in duplicate:
+                    continue # handle later
+                elif value:
+                    change[param.name] = '%s%s' % (prefix,param.name)
+                    to_change.append(param.name)
+                    param.name = change[param.name]
+            
+        for value in duplicate:
+            for i, var in enumerate(lower_dict[value][1:]):
+                to_change.append(var.name)
+                change[var.name] = '%s%s__%s' % (prefix, var.name.lower(), i+2)
+                var.name = '%s%s__%s' %(prefix, var.name.lower(), i+2)
+                to_change.append(var.name)
+        assert 'zero' not in to_change
+        replace = lambda match_pattern: change[match_pattern.groups()[0]]
+        
+        if not to_change:
+            return
+        
+        if 'parameter_dict' in self:
+            new_dict = dict( (change[name] if (name in change) else name, value) for
+                             name, value in self['parameter_dict'].items())
+            self['parameter_dict'] = new_dict
+        
+        rep_pattern = re.compile('\\b%s\\b'% (re_expr % ('\\b|\\b'.join(to_change))))
+        
+        # change parameters
+        for key in keys:
+            if key == ('external',):
+                continue
+            for param in self['parameters'][key]:
+                param.expr = rep_pattern.sub(replace, param.expr)
+        # change couplings
+        for key in self['couplings'].keys():
+            for coup in self['couplings'][key]:
+                coup.expr = rep_pattern.sub(replace, coup.expr)
+                
+        # change mass/width
+        for part in self['particles']:
+            if str(part.get('mass')) in to_change:
+                part.set('mass', rep_pattern.sub(replace, str(part.get('mass'))))
+            if str(part.get('width')) in to_change:
+                part.set('width', rep_pattern.sub(replace, str(part.get('width'))))  
+            if  hasattr(part, 'partial_widths'):
+                for key, value in part.partial_widths.items():
+                    print value
+                    print part.partial_widths
+                    part.partial_widths[key] = rep_pattern.sub(replace, value)
+                
+        #ensure that the particle_dict is up-to-date
+        self['particle_dict'] =''
+        self.get('particle_dict') 
+
         
 
     def get_first_non_pdg(self):
@@ -1439,6 +1545,8 @@ class Model(PhysicsObject):
                     if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
                         # Make MW an external parameter
                         MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                        if not MW.value:
+                            MW.value = 80.385
                         self.get('parameters')[('external',)].append(MW)
                         self.get('parameters')[mass.depend].remove(mass)
                         # Make Gf an internal parameter
@@ -1450,6 +1558,26 @@ class Model(PhysicsObject):
                         self.add_param(new_param, ['aEW'])
                         # Use the new mass for the future modification
                         mass = MW
+                    #option with prefixing
+                    elif hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(mdl_MZ__exp__2/2. + cmath.sqrt(mdl_MZ__exp__4/4. - (mdl_aEW*cmath.pi*mdl_MZ__exp__2)/(mdl_Gf*mdl_sqrt__2)))':
+                        # Make MW an external parameter
+                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                        if not MW.value:
+                            MW.value = 80.385
+                        self.get('parameters')[('external',)].append(MW)
+                        self.get('parameters')[mass.depend].remove(mass)
+                        # Make Gf an internal parameter
+                        new_param = ModelVariable('mdl_Gf',
+                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - mdl_MZ**2))' %\
+                        {'MW': mass.name}, 'complex', mass.depend)
+                        Gf = self.get_parameter('mdl_Gf')
+                        self.get('parameters')[('external',)].remove(Gf)
+                        self.add_param(new_param, ['mdl_aEW'])
+                        # Use the new mass for the future modification
+                        mass = MW
+                    elif isinstance(mass, ModelVariable):
+                        logger.warning('W mass is not an external parameter. This is not adviced for the complex mass scheme.')
+                
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))

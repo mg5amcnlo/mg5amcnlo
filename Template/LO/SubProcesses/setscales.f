@@ -106,7 +106,7 @@ c----------------------------------------------------------------------
 c
 c     INCLUDE and COMMON
 c
-      include 'genps.inc'
+c      include 'genps.inc'
       include 'nexternal.inc'
       include 'coupl.inc'
 c--masses and poles

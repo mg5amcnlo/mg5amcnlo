@@ -276,6 +276,9 @@ SMASSPY=$SMASS
 CMASSPY=$CMASS
 if (( $(bc <<< "$B_MASS <  0.0") )); then BMASSPY=$BMASS; fi
 if (( $(bc <<< "$B_MASS >= 0.0") )); then BMASSPY=$B_MASS; fi
+EMASSPY=$EMASS
+MUMASSPY=$MUMASS
+TAUMASSPY=$TAUMASS
 GMASSPY=$GMASS
 
 if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
@@ -355,6 +358,7 @@ cat <<EOF >> ./$ifile
   $TMASS $TWIDTH                  ! M_top, Gamma_top
   $HGGMASS $HGGWIDTH              ! M_H, Ga_H
   $UMASSPY $DMASSPY $SMASSPY $CMASSPY $BMASSPY $GMASSPY ! quark and gluon masses
+  $EMASSPY $MUMASSPY $TAUMASSPY   ! Lepton masses
   $RNDEVSEED_PY                   ! Random seed (0 for default)
   $IS_4L_PY                       ! .TRUE. if it is four-lepton production
 EOF
@@ -380,7 +384,7 @@ do
  let "iDM+=1"
  DM=( $DM )
  num_of_part=$(echo ${#DM[@]})
- let "num_of_part-=4"
+ let "num_of_part-=6"
 cat <<EOF >> ./$ifile
   $num_of_part                    ! Number of bodies for new decay mode $iDM of $numDM
   ${DM[@]}                        ! Decay mode $iDM of $numDM

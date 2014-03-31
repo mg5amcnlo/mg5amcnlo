@@ -475,7 +475,10 @@ class MG5Runner(MadEventRunner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        if model != 'mssm':
+            v5_string = "import model %s\n" % os.path.join(self.model_dir, model)
+        else:
+            v5_string = "import model %s\n" % model
         v5_string += "set automatic_html_opening False\n"
         couplings = ' '.join(["%s=%i" % (k, v) for k, v in orders.items()])
 

@@ -115,7 +115,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit madevent please enter exit"""
+            in order to quit MadGraph5_aMC@NLO please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -475,7 +475,7 @@ class CheckValidForCmd(object):
         
         if len(args) == 0:
             self.help_banner_run()
-            raise self.InvalidCmd('banner_run reauires at least one argument.')
+            raise self.InvalidCmd('banner_run requires at least one argument.')
         
         tag = [a[6:] for a in args if a.startswith('--tag=')]
         
@@ -911,8 +911,8 @@ class CheckValidForCmd(object):
                 model.change_mass_to_complex_scheme()
    
             
-        if not hasattr(model.get('particles')[0], 'partial_widths'):
-            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
+#        if not hasattr(model.get('particles')[0], 'partial_widths'):
+#            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
             
         # check if the name are passed to default MG5
         if '-modelname' in open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')).read():
@@ -1400,6 +1400,8 @@ class CompleteForCmd(CheckValidForCmd):
         
        except Exception, error:
            print error
+
+
     def complete_history(self, text, line, begidx, endidx):
         "Complete the history command"
 
@@ -1760,7 +1762,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.web = True
         self.results.def_web_mode(True)
         self.force = True
-
+        if os.environ['MADGRAPH_BASE']:
+            self.options['mg5_path'] = pjoin(os.environ['MADGRAPH_BASE'],'MG5')
 
     ############################################################################            
     def check_output_type(self, path):
@@ -1771,130 +1774,57 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             return True
         else: 
             return False
-            
+
     ############################################################################
-    def set_configuration(self, config_path=None, final=True, initdir=None):
-        """ assign all configuration variable from file 
-            ./Cards/mg5_configuration.txt. assign to default if not define """
-
-        if not hasattr(self, 'options') or not self.options:  
-            self.options = dict(self.options_configuration)
-            self.options.update(self.options_madgraph)
-            self.options.update(self.options_madevent) 
-        if not config_path:
-            if os.environ.has_key('MADGRAPH_BASE'):
-                config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path, final)
-                return
-            if 'HOME' in os.environ:
-                config_path = pjoin(os.environ['HOME'],'.mg5', 
-                                                        'mg5_configuration.txt')
-                if os.path.exists(config_path):
-                    self.set_configuration(config_path, final=False)
-            me5_config = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
-            self.set_configuration(me5_config, final=False, initdir=self.me_dir)
-                
-            if self.options.has_key('mg5_path'):
-                MG5DIR = self.options['mg5_path']
-                config_file = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-                self.set_configuration(config_file, final=False,initdir=MG5DIR)
-            else:
-                self.options['mg5_path'] = None
-            return self.set_configuration(me5_config, final,initdir=self.me_dir)
-
-        config_file = open(config_path)
-
-        # read the file and extract information
-        logger.info('load configuration from %s ' % config_file.name)
-        for line in config_file:
-            if '#' in line:
-                line = line.split('#',1)[0]
-            line = line.replace('\n','').replace('\r\n','')
-            try:
-                name, value = line.split('=')
-            except ValueError:
-                pass
-            else:
-                name = name.strip()
-                value = value.strip()
-                if name.endswith('_path'):
-                    path = value
-                    if os.path.isdir(path):
-                        self.options[name] = os.path.realpath(path)
-                        continue
-                    if not initdir:
-                        continue
-                    path = pjoin(initdir, value)
-                    if os.path.isdir(path):
-                        self.options[name] = os.path.realpath(path)
-                        continue
-                else:
-                    self.options[name] = value
-                    if value.lower() == "none":
-                        self.options[name] = None
-
+    def set_configuration(self, amcatnlo=False, final=True, **opt):
+        """assign all configuration variable from file 
+            loop over the different config file if config_file not define """
+        
+        super(MadEventCmd,self).set_configuration(amcatnlo=amcatnlo, 
+                                                            final=final, **opt)
         if not final:
             return self.options # the return is usefull for unittest
 
-
         # Treat each expected input
         # delphes/pythia/... path
-        for key in self.options:
-            # Final cross check for the path
-            if key.endswith('path'):
-                path = self.options[key]
-                if path is None:
-                    continue
-                if not os.path.isdir(path):
-                    path = pjoin(self.me_dir, self.options[key])
-                if self.options.has_key('mg5_path') and self.options['mg5_path']: 
-                    path = pjoin(self.options['mg5_path'], self.options[key])
-                if os.path.isdir(path):
-                    self.options[key] = None
-                    if key == "pythia-pgs_path":
-                        if not os.path.exists(pjoin(path, 'src','pythia')):
-                            logger.warning("No valid pythia-pgs path found")
-                            continue
-                    elif key == "delphes_path":
-                        if not os.path.exists(pjoin(path, 'Delphes')):
-                            logger.warning("No valid Delphes path found")
-                            continue
-                    elif key == "madanalysis_path":
-                        if not os.path.exists(pjoin(path, 'plot_events')):
-                            logger.warning("No valid MadAnalysis path found")
-                            continue
-                    elif key == "td_path":
-                        if not os.path.exists(pjoin(path, 'td')):
-                            logger.warning("No valid td path found")
-                            continue
-                    elif key == "syscalc_path":
-                        if not os.path.exists(pjoin(path, 'sys_calc')):
-                            logger.warning("No valid SysCalc path found")
-                            continue
-                    self.options[key] = os.path.realpath(path)
-                    continue
+        # ONLY the ONE LINKED TO Madevent ONLY!!!
+        for key in (k for k in self.options if k.endswith('path')):
+            path = self.options[key]
+            if path is None:
+                continue
+            if not os.path.isdir(path):
+                path = pjoin(self.me_dir, self.options[key])
+            if os.path.isdir(path):
                 self.options[key] = None
-            elif key.startswith('cluster'):
-                if key in ('cluster_nb_retry','cluster_wait_retry'):
-                    self.options[key] = int(self.options[key])
-                if hasattr(self,'cluster'):
-                    del self.cluster
-
-                pass              
-            elif key == 'automatic_html_opening':
-                if self.options[key] in ['False', 'True']:
-                    self.options[key] =eval(self.options[key])
-            elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
-                             'complex_mass_scheme', 'gauge', 'group_subprocesses']:
-                # Default: try to set parameter
-                try:
-                    self.do_set("%s %s --no_save" % (key, self.options[key]), log=False)
-                except self.InvalidCmd:
-                    logger.warning("Option %s from config file not understood" \
-                                   % key)
-        # Configure the way to open a file:
-        misc.open_file.configure(self.options)
-          
+                if key == "pythia-pgs_path":
+                    if not os.path.exists(pjoin(path, 'src','pythia')):
+                        logger.info("No valid pythia-pgs path found")
+                        continue
+                elif key == "delphes_path":
+                    if not os.path.exists(pjoin(path, 'Delphes')) and not\
+                                     os.path.exists(pjoin(path, 'DelphesSTDHEP')):
+                        logger.info("No valid Delphes path found")
+                        continue
+                elif key == "madanalysis_path":
+                    if not os.path.exists(pjoin(path, 'plot_events')):
+                        logger.info("No valid MadAnalysis path found")
+                        continue
+                elif key == "td_path":
+                    if not os.path.exists(pjoin(path, 'td')):
+                        logger.info("No valid td path found")
+                        continue
+                elif key == "syscalc_path":
+                    if not os.path.exists(pjoin(path, 'sys_calc')):
+                        logger.info("No valid SysCalc path found")
+                        continue
+                # No else since the next line reinitialize the option to the 
+                #previous value anyway
+                self.options[key] = os.path.realpath(path)
+                continue
+            else:
+                self.options[key] = None
+                
+                          
         return self.options
 
     ############################################################################
@@ -1961,7 +1891,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                      
         # Remove previous cards
         for name in ['delphes_trigger.dat', 'delphes_card.dat',
-                     'pgs_card.dat', 'pythia_card.dat']:
+                     'pgs_card.dat', 'pythia_card.dat', 'madspin_card.dat',
+                     'reweight_card.dat']:
             try:
                 os.remove(pjoin(self.me_dir, 'Cards', name))
             except Exception:
@@ -2086,16 +2017,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 to_define = to_keep
             self.write_configuration(filepath, basefile, basedir, to_define)
   
-    ############################################################################
-    def do_import(self, line):
-        """Advanced commands: Import command files"""
-
-        args = self.split_arg(line)
-        # Check argument's validity
-        self.check_import(args)
-        
-        # Execute the card
-        self.import_command_file(args[1])  
+ 
 
     ############################################################################ 
     def do_print_results(self, line):
@@ -2231,6 +2153,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             else:
                 logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
             logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
+            if self.run_card['use_syst'] in self.true:
+                logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
+            
         logger.info(" " )
 
     def print_results_in_file(self, data, path, mode='w'):
@@ -2370,6 +2295,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                         decay_info[particle].append([decay_products, partial_width])
                     except KeyError:
                         decay_info[particle] = [[decay_products, partial_width]]
+                    if line_number == len(param_card):
+                        break
                     line=param_card[line_number]
                 if particle and particle not in decay_info:
                     # No decays given, only total width       
@@ -2380,7 +2307,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         while not param_card[-1] or param_card[-1].startswith('#'):
             param_card.pop(-1)
 
-        # Append calculated and read decays to the param_card                                   
+        # Append calculated and read decays to the param_card   
         param_card.append("#\n#*************************")
         param_card.append("#      Decay widths      *")
         param_card.append("#*************************")
@@ -2401,7 +2328,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                                        ))
         decay_table = open(output, 'w')
         decay_table.write("\n".join(param_card) + "\n")
+        decay_table.close()
         logger.info("Results written to %s" %  output)
+
 
     ############################################################################
     def do_multi_run(self, line):
@@ -2467,22 +2396,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
 
     ############################################################################      
-    def do_treatcards(self, line):
+    def do_treatcards(self, line, mode=None, opt=None):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
 
-        args = self.split_arg(line)
-        mode,  opt  = self.check_treatcards(args)
-        
+
+        if not mode and not opt:
+            args = self.split_arg(line)
+            mode,  opt  = self.check_treatcards(args)
         #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
-        
-        
-        if mode in ['run', 'all']:
-            if not hasattr(self, 'run_card'):
-                run_card = banner_mod.RunCard(opt['run_card'])
-            else:
-                run_card = self.run_card
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+    
         
         if mode in ['param', 'all']:
             model = self.find_model_name()
@@ -2508,6 +2431,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 fsock = open(pjoin(self.me_dir,'Source','param_card.inc'),'w')
                 fsock.write(' ')
                 fsock.close()
+                if mode == 'all':
+                    self.do_treatcards('', 'run', opt)
                 return
             else:
                 devnull = open(os.devnull,'w')
@@ -2517,6 +2442,20 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 devnull.close()
                 default = pjoin(self.me_dir,'bin','internal','ufomodel','param_card.dat')
             param_card.write_inc_file(outfile, ident_card, default)
+      
+      
+        if mode in ['run', 'all']:
+            if not hasattr(self, 'run_card'):
+                run_card = banner_mod.RunCard(opt['run_card'])
+            else:
+                run_card = self.run_card
+            if self.ninitial == 1:
+                run_card['lpp1'] =  0
+                run_card['lpp2'] =  0
+                run_card['ebeam1'] = 0
+                run_card['ebeam2'] = 0
+            
+            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
          
     ############################################################################      
     def do_survey(self, line):
@@ -2761,6 +2700,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             nb_event = pat.search(output).groups()[0]
         except AttributeError:
             time.sleep(10)
+            output = misc.mult_try_open(pjoin(self.me_dir,'SubProcesses','combine.log')).read()
             try:
                 nb_event = pat.search(output).groups()[0]
             except AttributeError:
@@ -3133,18 +3073,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
     
-    def get_available_tag(self):
-        """create automatically a tag"""
-        
-        used_tags = [r['tag'] for r in self.results[self.run_name]]
-        i=0
-        while 1:
-            i+=1
-            if 'tag_%s' %i not in used_tags:
-                return 'tag_%s' % i
-   
-    
-    
+
     ################################################################################
     def do_remove(self, line):
         """Remove one/all run or only part of it"""
@@ -3472,7 +3401,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 raise MadGraph5Error, '%s didn\'t stop properly. Stop all computation' % exe
 
 
-        elif mode == 1:
+        elif mode in [1,2]:
             # For condor cluster, create the input/output files
             if 'ajob' in exe: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
@@ -3513,9 +3442,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
             else:
                 self.cluster.submit(exe, stdout=stdout, cwd=cwd)
-
-        elif mode == 2:
-            self.cluster.submit(exe, stdout=stdout, cwd=cwd)
             
             
     ############################################################################
@@ -3554,7 +3480,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                              default = 'y', choices=['y','n'])
                 else:
                     ans = 'y'
-                if ans:
+                if ans == 'y':
                     self.cluster.remove()
                 raise
             except KeyboardInterrupt, error:
@@ -3600,11 +3526,17 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         # set environment variable for lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
             os.environ['lhapdf'] = 'True'
+            self.link_lhapdf(pjoin(self.me_dir,'lib'))
+            pdfsetsdir = subprocess.Popen('%s --pdfsets-path' % self.options['lhapdf'],
+                    shell = True, stdout = subprocess.PIPE).stdout.read().strip()
+            lhaid_list = [int(self.run_card['lhaid'])]
+            self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         elif 'lhapdf' in os.environ.keys():
             del os.environ['lhapdf']
-        self.pdffile = None
-        #remove lhapdf stuff
-        self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
+        if self.run_card['pdlabel'] != "lhapdf":
+            self.pdffile = None
+            #remove lhapdf stuff
+            self.compile(arg=['clean_lhapdf'], cwd=os.path.join(self.me_dir, 'Source'))
             
         # set random number
         if self.run_card['iseed'] != '0':
@@ -3807,6 +3739,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         
         fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
         fsock.writelines('r=%s\n' % self.random)
+
+    def do_quit(self, *args, **opts):
+        
+        common_run.CommonRunCmd.do_quit(self, *args, **opts)
+        return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
     def treat_ckkw_matching(self):
@@ -3889,6 +3826,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
+        self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        # check if the scalecorrelation parameter is define:
+        if not 'sys_scalecorrelation' in self.run_card:
+            self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
         if not scdir or \
@@ -3939,6 +3880,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             if mode == 'parton' and os.path.exists(output):
                 files.mv(output, event_path)
+            else:
+                logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
@@ -3965,8 +3908,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                        ('pgs', 'ON'): {'pythia':'ON'},
                        ('delphes', 'ON'): {'pythia': 'ON'}}
         switch_assign = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-        
 
+        
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
             available_mode.append('1')
@@ -3981,7 +3924,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 switch['pgs'] = 'OFF'                
             if self.options['delphes_path']:
                 available_mode.append('3')
-                if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
+                if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['delphes'] = 'ON'
                 else:
                     switch['delphes'] = 'OFF'

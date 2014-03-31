@@ -22,6 +22,10 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
+C
+C     GLOBAL
+C
+      include 'helamp.inc'
 C  
 C LOCAL VARIABLES 
 C  
@@ -47,6 +51,7 @@ C ----------
              IF (GOODHEL(IHEL) .OR. NTRY .LT. 100) THEN
                  T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
                ANS=ANS+T
+                 HELAMP(IHEL)=T
                IF (T .NE. 0D0) THEN
                    GOODHEL(IHEL)=.TRUE.
                ENDIF
@@ -118,3 +123,34 @@ C ----------
       ENDDO
 
       END
+
+
+      SUBROUTINE GET_HELICITIES(ID,HELSET)
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=%(ncomb)d)
+C
+C ARGUMENTS
+C
+      INTEGER ID, HELSET(NEXTERNAL)
+C
+C LOCAL VARIABLES
+C
+      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      INTEGER IHEL,IDEN, I
+%(helicity_lines)s
+%(den_factor_line)s
+
+
+      DO I=1,NEXTERNAL
+        HELSET(I)=NHEL(I,ID)
+      ENDDO
+
+      return
+      end
+

@@ -10,6 +10,7 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
+      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -114,6 +115,10 @@ c statistics for MadLoop
       double precision average_virtual,virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
 
+c timing statistics
+      include "timing_variables.inc"
+      real*4 tOther, tTot
+
 c general MadFKS parameters
       include "FKSParams.inc"
 
@@ -121,6 +126,10 @@ C-----
 C  BEGIN CODE
 C-----  
 c
+c     Setup the timing variable
+c
+      call cpu_time(tBefore)
+
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
@@ -195,12 +204,15 @@ c at the NLO)
       call addfil(dum)
       if (imode.eq.-1.or.imode.eq.0) then
          if(imode.eq.0)then
+c Don't safe the reweight information when just setting up the grids.
+            doreweight=.false.
             do j=0,nintervals
                do i=1,ndimmax
                   xgrid(j,i)=0.d0
                enddo
             enddo
          else
+            doreweight=do_rwgt_scale.or.do_rwgt_pdf
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
@@ -311,12 +323,36 @@ c to save grids:
      &        "  Unknown return code (1):                         ",n1
       endif
 
+      call cpu_time(tAfter)
+      tTot = tAfter-tBefore
+      tOther = tTot - tOLP - tPDF - tFastJet - tGenPS - tDSigI - tDSigR
+      write(*,*) 'Time spent in clustering : ',tFastJet      
+      write(*,*) 'Time spent in PDF_Engine : ',tPDF
+      write(*,*) 'Time spent in PS_Generation : ',tGenPS
+      write(*,*) 'Time spent in Reals_evaluation: ',tDSigR
+      write(*,*) 'Time spent in IS_evaluation : ',tDSigI
+      write(*,*) 'Time spent in OneLoop_Engine : ',tOLP      
+      write(*,*) 'Time spent in other_tasks : ',tOther
+      write(*,*) 'Time spent in Total : ',tTot
+
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
         write(*,*)'WARNING: genps_fks code 555555'
         write(*,*)i_momcmp_count,xratmax
       endif
 
+      end
+
+
+      block data timing
+c timing statistics
+      include "timing_variables.inc"
+      data tOLP/0.0/
+      data tFastJet/0.0/
+      data tPDF/0.0/
+      data tDSigI/0.0/
+      data tDSigR/0.0/
+      data tGenPS/0.0/
       end
 
 
@@ -395,9 +431,6 @@ c
          endif
       enddo
 
-      sigint=0d0
-
-c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
          firsttime=.false.
          foundB(1)=.false.
@@ -418,7 +451,8 @@ c Find the nFKSprocess for which we compute the Born-like contributions
          write (*,*) 'For the Born we use nFKSprocesses  #',
      &        nFKSprocessBorn
       endif
-         
+
+      sigint=0d0
 c
 c Compute the Born-like contributions with nbody=.true.
 c THIS CAN BE OPTIMIZED

@@ -165,7 +165,6 @@ class TestValidCmd(unittest.TestCase):
             self.assertTrue('{' not in text)
             self.assertTrue('MS_debug' in text)
 
-
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test fails, this is due to a un-expected ':' in a command of

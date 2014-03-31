@@ -26,11 +26,8 @@ C**************************************************************************
 C     INPUT:
 C            P(0:3,1)           MOMENTUM OF INCOMING PARTON
 C            P(0:3,2)           MOMENTUM OF INCOMING PARTON
-C            P(0:3,3)           MOMENTUM OF d
-C            P(0:3,4)           MOMENTUM OF b
-C            P(0:3,5)           MOMENTUM OF bbar
-C            P(0:3,6)           MOMENTUM OF e+
-C            P(0:3,7)           MOMENTUM OF ve
+C            P(0:3,3)           MOMENTUM OF ...
+C            ALL MOMENTA ARE IN THE REST FRAME!!
 C            COMMON/JETCUTS/   CUTS ON JETS
 C     OUTPUT:
 C            TRUE IF EVENTS PASSES ALL CUTS LISTED
@@ -263,7 +260,7 @@ c     Put momenta in the common block to zero to start
          RETURN
       ENDIF
       CUTSDONE=.TRUE.
-      CUTSPASSED=.FALSE.
+c      CUTSPASSED=.FALSE.
 
 c
 c     Make sure have reasonable 4-momenta
@@ -480,13 +477,13 @@ c     B.W. phase space cuts
 c     
       pass_bw=cut_bw(p)
 c     JA 4/8/11 always check pass_bw
-      if ( pass_bw ) then
+      if ( pass_bw.and..not.CUTSPASSED) then
          passcuts=.false.
          if(debug) write (*,*) ' pass_bw -> fails'
          return
       endif
 C     $E$DESACTIVATE_BW_CUT$E$ This is a Tag for MadWeight
-
+        CUTSPASSED=.FALSE.
 C     
 C     maximal and minimal pt of the jets sorted by pt
 c     
@@ -652,11 +649,13 @@ C---------------------------
          htj=htj+ptjet(i)
          if(debug) write (*,*) i, 'htj ',htj
          if(debug.and.i.le.4) write (*,*) 'htmin ',i,' ', htjmin4(i),':',htjmax4(i)
-         if(i.le.4.and.(htj.lt.htjmin4(i) .or.
-     $        htjmax4(i).ge.0d0.and.htj.gt.htjmax4(i))) then
+         if(i.le.4)then
+            if(htj.lt.htjmin4(i) .or.
+     $        htjmax4(i).ge.0d0.and.htj.gt.htjmax4(i)) then
             if(debug) write (*,*) i, ' ht -> fails'
             passcuts=.false.
             return
+            endif
          endif
       enddo
 

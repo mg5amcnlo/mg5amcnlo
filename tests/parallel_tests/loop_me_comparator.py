@@ -1361,7 +1361,7 @@ class LoopMEComparator(me_comparator.MEComparator):
                     (len([res for res in self.results[-1] if res[0][0] == 0.0]),
                      len(proc_list)))
 
-    def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
+    def output_result(self, filename=None, tolerance=1e-04, skip_zero=True):
         """Output result as a nicely formated table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 

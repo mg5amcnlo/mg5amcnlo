@@ -65,6 +65,7 @@ c statistics for MadLoop
       common/ups_stats/ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1
       parameter (nbadmax = 5)
       double precision pmass(nexternal)
+      character*1 include_hel(max_bhel)
       integer goodhel(max_bhel),hel(0:max_bhel)
       save hel,goodhel
       logical fillh
@@ -86,6 +87,11 @@ c Ellis-Sexton scale)
       double  = 0d0
       prec_found = 1.0d0
       if (firsttime) then
+c Make sure that whenever in the initialisation phase, MadLoop calls
+c itself again to perform stability check to make sure no unstable EPS
+c splips unnoticed.
+         CALL FORCE_STABILITY_CHECK(.TRUE.)
+
          write(*,*) "alpha_s value used for the virtuals"/
      &        /" is (for the first PS point): ", alpha_S
          tolerance=IRPoleCheckThreshold/10d0 ! for the pole check below
@@ -197,8 +203,9 @@ c exists, which should be the case when firsttime is false.
                open (unit=67,file='HelFilter.dat',status='old',err=201)
                hel(0)=0
                j=0
+c optimized loop output
                do i=1,max_bhel
-                  read(67,*,err=201) goodhel(i)
+                  read(67,*,err=202) goodhel(i)
                   if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
                      j=j+1
                      goodhel(j)=goodhel(i)
@@ -206,6 +213,19 @@ c exists, which should be the case when firsttime is false.
                      hel(j)=i
                  endif
                enddo
+               goto 203
+c non optimized loop output
+ 202           rewind(67)
+               read(67,*,err=201) (include_hel(i),i=1,max_bhel)
+               do i=1,max_bhel
+                  if (include_hel(i).eq.'T') then
+                     j=j+1
+                     goodhel(j)=1
+                     hel(0)=hel(0)+1
+                     hel(j)=i
+                  endif
+               enddo
+ 203           continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
                if (NHelForMCoverHels.eq.-1) then
@@ -313,6 +333,13 @@ c check (only available when not doing MC over hels)
             virt_wgt=0d0
          endif
       endif
+
+c If a MadLoop initialisation PS point (and stability is unknown), we
+c better set the virtual to zero to NOT include it in the
+c result. Sometimes this can be an unstable point with a very large
+c weight, screwing up the complete integration afterward.
+      if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
+     $     .and. ret_code/100.eq.1)virt_wgt=0d0
 
       return
  201  write (*,*) 'Cannot do MC over hel:'/

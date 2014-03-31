@@ -10,7 +10,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer i,kk,l,nwgt_analysis
       common/c_analysis/nwgt_analysis
       character*5 cc(2)
-      data cc/'     ',' Born'/
+      data cc/'     ','Born '/
       include 'dbook.inc'
       call inihist
       nwgt_analysis=nwgt
@@ -20,16 +20,16 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
      &        nwgt_analysis*8*4
          stop 1
       endif
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
         l=(kk-1)*8+(i-1)*4
-        call bookup(l+1,'total rate  '//weights_info(kk)//cc(i),
+        call bookup(l+1,'total rate  '//cc(i)//weights_info(kk),
      &       1.0d0,0.5d0,5.5d0)
-        call bookup(l+2,'ta+ta- mass '//weights_info(kk)//cc(i),
+        call bookup(l+2,'ta+ta- mass '//cc(i)//weights_info(kk),
      &       5d0,0d0,200d0)
-        call bookup(l+3,'ta+ta- rap  '//weights_info(kk)//cc(i),
+        call bookup(l+3,'ta+ta- rap  '//cc(i)//weights_info(kk),
      &       0.25d0,-5d0,5d0)
-        call bookup(l+4,'ta+ta- pt   '//weights_info(kk)//cc(i),
+        call bookup(l+4,'ta+ta- pt   '//cc(i)//weights_info(kk),
      &       20d0,0d0,400d0)
       enddo
       enddo
@@ -54,8 +54,8 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          call mfinal(i)
       enddo
       ytit='sigma per bin '
-      do kk=1,nwgt_analysis
       do i=1,2
+      do kk=1,nwgt_analysis
          l=(kk-1)*8+(i-1)*4
          call multitop(l+1,3,2,'total rate  ',ytit,'LIN')
          call multitop(l+2,3,2,'ta+ ta- mass',ytit,'LOG')
@@ -121,9 +121,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       yh  = getrapidity(ph(0),ph(3))
       pth = sqrt(max(ph(1)**2+ph(2)**2,0d0))
       var = 1.d0
-      do kk=1,nwgt_analysis
-         www=wgts(kk)
-         do i=1,2
+      do i=1,2
+         do kk=1,nwgt_analysis
+            www=wgts(kk)
             l=(kk-1)*8+(i-1)*4
             if (ibody.ne.3 .and.i.eq.2) cycle
             call mfill(l+1,var,www)

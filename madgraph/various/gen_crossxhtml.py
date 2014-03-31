@@ -257,7 +257,8 @@ class AllResults(dict):
             for i,subrun in enumerate(run):
                 self.def_current(subrun)
                 self.clean()
-                self.current.event_path = pjoin(main_path,'Events') 
+                self.current.event_path = pjoin(main_path,'Events')
+                self.current.me_dir = main_path 
                 if i==0:
                     self.current.update_status()
                 else:
@@ -671,8 +672,9 @@ class OneTagResults(dict):
                 if self['run_mode'] in ['LO', 'NLO']:
                     self.parton.append('top')
 
-        if level in ['shower','all'] and 'shower' not in nolevel:
-            # this is for hep/top files fromamcatnlo
+        if level in ['shower','all'] and 'shower' not in nolevel \
+          and self['run_mode'] != 'madevent':
+            # this is for hep/top files from amcatnlo
             if glob.glob(pjoin(path,"*.hep")) + \
                glob.glob(pjoin(path,"*.hep.gz")):
                 self.shower.append('hep')
@@ -830,7 +832,7 @@ class OneTagResults(dict):
             if 'lheroot' in self.pythia:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia_lhe_events.root">rootfile (LHE)</a>"""
             if 'rwt' in self.pythia:
-                link = './Events/%(run_name)s/%(tag)s_systematics.dat'
+                link = './Events/%(run_name)s/%(tag)s_syscalc.dat'
                 level = 'pythia'
                 name = 'systematics'
                 out += self.special_link(link, level, name)                 
@@ -956,7 +958,7 @@ class OneTagResults(dict):
             if not data:
                 continue
             
-            local_dico = {'type': type, 'run': self['run_name'], 'syst': ''}
+            local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
@@ -990,6 +992,7 @@ class OneTagResults(dict):
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
+                    local_dico['type'] += ' %s' % self['run_mode']
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']

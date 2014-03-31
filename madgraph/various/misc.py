@@ -150,6 +150,30 @@ def which(program):
     return None
 
 #===============================================================================
+# find a library
+#===============================================================================
+def which_lib(lib):
+    def is_lib(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.R_OK)
+
+    if not lib:
+        return None
+
+    fpath, fname = os.path.split(lib)
+    if fpath:
+        if is_lib(lib):
+            return lib
+    else:
+        locations = sum([os.environ[env_path].split(os.pathsep) for env_path in
+           ["DYLD_LIBRARY_PATH","LD_LIBRARY_PATH","LIBRARY_PATH","PATH"] 
+                                                  if env_path in os.environ],[])
+        for path in locations:
+            lib_file = os.path.join(path, lib)
+            if is_lib(lib_file):
+                return lib_file
+    return None
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):
@@ -441,6 +465,15 @@ def rm_file_extension( ext, dirname, names):
     [os.remove(os.path.join(dirname, name)) for name in names if name.endswith(ext)]
 
 
+
+def multiple_replacer(*key_values):
+    replace_dict = dict(key_values)
+    replacement_function = lambda match: replace_dict[match.group(0)]
+    pattern = re.compile("|".join([re.escape(k) for k, v in key_values]), re.M)
+    return lambda string: pattern.sub(replacement_function, string)
+
+def multiple_replace(string, *key_values):
+    return multiple_replacer(*key_values)(string)
 
 # Control
 def check_system_error(value=1):
@@ -815,14 +848,18 @@ def sprint(*args, **opt):
 ################################################################################
 # function to check if two float are approximatively equal
 ################################################################################
-def equal(a,b,sig_fig=6):
+def equal(a,b,sig_fig=6, zero_limit=True):
     """function to check if two float are approximatively equal"""
     import math
 
-    if a:
-        power = sig_fig - int(math.log10(abs(a))) + 1
+    if not a or not b:
+        if zero_limit:
+            power = sig_fig + 1
+        else:
+            return a == b  
     else:
-        power = sig_fig + 1
+        power = sig_fig - int(math.log10(abs(a))) + 1
+
     return ( a==b or abs(int(a*10**power) - int(b*10**power)) < 10)
 
 ################################################################################

@@ -96,7 +96,6 @@ open('max_split.inc', 'w').write(\
 for job in jobs:
     dir = os.path.join(job['dir'], job['channel'])
     if job['nevts'] == 0:
-        splitted_lines.append('%s     %d     %9e' % (os.path.join(dir + '_1','events.lhe').ljust(40), job['nevts'], job['xsec']))
         continue
     job_events = 0
     for i in range(job['nsplit']):
@@ -105,21 +104,21 @@ for job in jobs:
             split_nevts = job['nevts']/job['nsplit']
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
         else:
-            #split_nevts = long(job['nevts']) - long((job['nsplit'] - 1) * job['nevts']/job['nsplit'])
             split_nevts = job['nevts']/job['nsplit'] + job['nevts'] % job['nsplit']
             split_xsec = job['xsec']*float(split_nevts)/float(job['nevts'])
         tot_events += split_nevts
         job_events += split_nevts
-        splitted_lines.append(' %s     %d     %9e     %9e' \
-                % (filename.ljust(40), split_nevts, split_xsec, split_xsec/job['xsec']))
-        nevts_filename = os.path.join(job['dir'],'nevts_%s_%d' % \
-                (job['channel'], i+1))
-        nevts_file = open(nevts_filename, 'w')
-        nevts_file.write('%d\n' % split_nevts)
-        nevts_file.close()
-        tar_dict[job['dir']].add(nevts_filename, 
-                arcname=os.path.split(nevts_filename)[1])
-        os.remove(nevts_filename)
+        if split_nevts:
+            splitted_lines.append(' %s     %d     %9e     %9e' \
+                    % (filename.ljust(40), split_nevts, split_xsec, split_xsec/job['xsec']))
+            nevts_filename = os.path.join(job['dir'],'nevts_%s_%d' % \
+                    (job['channel'], i+1))
+            nevts_file = open(nevts_filename, 'w')
+            nevts_file.write('%d\n' % split_nevts)
+            nevts_file.close()
+            tar_dict[job['dir']].add(nevts_filename, 
+                    arcname=os.path.split(nevts_filename)[1])
+            os.remove(nevts_filename)
         
     print '%s, %s, Original %d, after splitting %d' % (job['dir'], job['channel'], job['nevts'], job_events)
 
