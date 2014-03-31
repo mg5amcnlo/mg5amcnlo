@@ -1,8 +1,8 @@
       SUBROUTINE SBORN%(proc_prefix)s(P,ANS_SUMMED)
 C
-C     Simple routine wrapper to provide the same interface for
-C     backward compatibility for usage without split orders.
-C
+C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
+C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
+C  
 C  
 C CONSTANTS
 C 
@@ -17,14 +17,87 @@ C
 C
 C VARIABLES
 C
-      INTEGER I
-	  COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_SUMMED(2)
+      INTEGER I,J,K
+      include 'orders.inc'
+      double precision ans_summed
+      COMPLEX*16 ANS(2,0:NSQAMPSO), ANS_CNT(2, NSPLITORDERS)
+      LOGICAL KEEP_ORDER(NSQAMPSO), KEEP_ORDER_CNT(NSPLITORDERS, NSQAMPSO), FIRSTTIME
+      data keep_order / NSQAMPSO * .TRUE. /
+      common /c_keep_order_cnt/ keep_order_cnt 
+      data firsttime / .TRUE. /
+C
+C     FUNCTIONS
+C
+      integer GETORDPOWFROMINDEX_B%(proc_prefix)s
 C
 C BEGIN CODE
 C
-	  CALL SBORN%(proc_prefix)s_SPLITORDERS(P,ANS)
-	  ANS_SUMMED(1)=ANS(1,0)
-	  ANS_SUMMED(2)=ANS(2,0)
+C look for orders which match the born order constraint 
+
+if (firsttime) then
+ do i = 1, nsqampso
+C this is for the orders of the born to integrate
+  do j = 1, nsplitorders
+   if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, J) .gt. nlo_orders(i)) then
+    keep_order(i) = .false.
+    EXIT 
+   endif
+  enddo
+
+C this is for the orders of the counterterms
+  do j = 1, nsplitorders
+  keep_order_cnt(j,i) = .true.
+   do k = 1, nsplitorders
+    if (j.eq.k) then
+     ord_subtract=2
+    else
+     ord_subtract=0
+    endif
+    if(GETORDPOWFROMINDEX_B%(proc_prefix)s(I, k) .gt. nlo_orders(i)-ord_subtract) then
+     keep_order_cnt(j,i) = .false.
+     EXIT 
+    endif
+   enddo
+  enddo
+  if (keep_order(i)) then
+   write(*,*) 'BORN %(proc_prefix)s: keeping split order ', i
+  else
+   write(*,*) 'BORN %(proc_prefix)s: not keeping split order ', i
+  endif
+ enddo
+
+ do j = 1, nsplitorders
+  write(*,*) 'counterterm S.O', j
+  do i = 1, nsqampso
+   if (keep_order_cnt(j,i)) then
+    write(*,*) 'BORN %(proc_prefix)s: keeping split order', i, 'for cnt', j
+   else
+    write(*,*) 'BORN %(proc_prefix)s: not keeping split order', i, 'for cnt', j
+   endif
+  enddo
+ enddo
+ firsttime = .false.
+endif
+
+CALL SBORN%(proc_prefix)s_SPLITORDERS(P,ANS)
+
+C the born to be integrated
+ans_summed = 0d0
+do i = 1, nsqampso
+ if (keep_order(i)) ANS_SUMMED = ANS_SUMMED + ANS(1,I)
+enddo
+
+C quantities for the counterterms
+do j = 1, nsplitorders
+ ans_cnt(1,j) = dcmplx(0d0, 0d0)
+ ans_cnt(2,j) = dcmplx(0d0, 0d0)
+ do i = 1, nsqampso
+  if (keep_order_cnt(j,i)) then 
+   ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
+   ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
+  endif
+ enddo
+enddo
 
 END
 

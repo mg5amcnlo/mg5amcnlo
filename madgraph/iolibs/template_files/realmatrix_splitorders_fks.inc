@@ -1,6 +1,6 @@
       SUBROUTINE SMATRIX%(proc_prefix)s(P,ANS_SUMMED)
 C
-C     Return the sum of the required split orders
+C     Return the sum of the split orders which are required in orders.inc (NLO_ORDERS)
 C  
 C CONSTANTS
 C 
@@ -30,7 +30,7 @@ C
 C BEGIN CODE
 C
 
-C looks for orders which match the order constraint 
+C look for orders which match the nlo order constraint 
 
 if (firsttime) then
  do i = 1, nsqampso

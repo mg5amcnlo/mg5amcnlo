@@ -204,6 +204,9 @@ c fks.inc information
       double precision ch_i,ch_j,ch_m
       integer particle_type_born(nexternal-1)
       common /c_particle_type_born/particle_type_born
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
       i_fks=fks_i_D(nFKSprocess)
       j_fks=fks_j_D(nFKSprocess)
@@ -267,6 +270,10 @@ c
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)
          endif
+      enddo
+      
+      do i = 1, nsplitorders
+         split_type(i) = split_type_d(nFKSprocess,i)
       enddo
       return
       end

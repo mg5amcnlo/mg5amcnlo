@@ -28,7 +28,7 @@ root_path = os.path.dirname(root_path)
 # root_path is ./tests
 pjoin = os.path.join
 
-class TestAMCatNLOCmd(unittest.TestCase):
+class TestAMCatNLOEW(unittest.TestCase):
     """ check if the ValidCmd works correctly """
     
     interface = mgcmd.MasterCmd()
@@ -47,6 +47,29 @@ class TestAMCatNLOCmd(unittest.TestCase):
             'u u~ > d d~ QCD=2 QED=2 [real=QCD]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED]',
             'u u~ > d d~ QCD=2 QED=2 [real=QED QCD]']
+
+        # expected born_orders
+        born_orders_list = [{'QED':0, 'QCD':2},
+                            {'QED':0, 'QCD':2},
+                            {'QED':0, 'QCD':2},
+                            {'WEIGHTED': 2},
+                            {'WEIGHTED': 2},
+                            {'WEIGHTED': 2},
+                            {'QED':2, 'QCD':2},
+                            {'QED':2, 'QCD':2},
+                            {'QED':2, 'QCD':2}]
+
+        # expected squared_orders (should take into
+        #  account the perturbation
+        squared_orders_list = [{'QED':0, 'QCD':6},
+                            {'QED':2, 'QCD':4},
+                            {'QED':2, 'QCD':6},
+                            {'WEIGHTED': 6},
+                            {'WEIGHTED': 8},
+                            {'WEIGHTED': 8},
+                            {'QED':4, 'QCD':6},
+                            {'QED':6, 'QCD':4},
+                            {'QED':6, 'QCD':6}]
 
         # number of expected born diagrams
         # 1 QCD diagram and 3 EW ones
@@ -79,12 +102,18 @@ class TestAMCatNLOCmd(unittest.TestCase):
                            [17, 17, 17, 17, 17, 17],
                            [17, 17, 17, 17, 17, 17]]
 
-        for cmd, nborndiag, nrealproc, nrealdiags in \
-                zip(cmd_list, nborndiag_list, nrealproc_list, nrealdiags_list):
+
+        for cmd, born_orders, squared_orders, nborndiag, nrealproc, nrealdiags in \
+                zip(cmd_list, born_orders_list, squared_orders_list, nborndiag_list, 
+                        nrealproc_list, nrealdiags_list):
             self.interface.do_generate(cmd)
+
             fksprocess = self.interface._fks_multi_proc['born_processes'][0]
             # all these processes should only have 1 born
             self.assertEqual(len(fksprocess.born_amp_list), 1)
+
+            self.assertEqual(born_orders, fksprocess.born_amp_list[0]['process']['born_orders'])
+            self.assertEqual(squared_orders, fksprocess.born_amp_list[0]['process']['squared_orders'])
 
             self.assertEqual(len(fksprocess.born_amp_list[0]['diagrams']), nborndiag)
             self.assertEqual(len(fksprocess.real_amps), nrealproc)

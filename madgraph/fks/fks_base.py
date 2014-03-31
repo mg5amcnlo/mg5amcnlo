@@ -716,12 +716,12 @@ class FKSProcess(object):
             i_i = i['number'] - 1
             self.reals.append([])
             for pert_order in pert_orders:
-                self.splittings[i_i] = fks_common.find_splittings(i, self.born_amp_list[0]['process']['model'], {}, pert_order)
+                self.splittings[i_i] = fks_common.find_splittings( \
+                        i, self.born_amp_list[0]['process']['model'], {}, pert_order)
                 for split in self.splittings[i_i]:
                     self.reals[i_i].append({
                         'leglist': fks_common.insert_legs(leglist, i, split,pert=pert_order),
-                        'perturbation': pert_order})
-                
+                        'perturbation': [pert_order]})
 
 
     def find_reals_to_integrate(self): #test written

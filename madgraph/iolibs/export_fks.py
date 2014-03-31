@@ -749,19 +749,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         corresponding real-emission diagram, i.e. the real emission
         diagram in which the combined ij is split in i_fks and
         j_fks."""
-        lines=[]
-        lines2=[]
-        max_links=0
-        born_me=matrix_element.born_matrix_element
+        lines = []
+        lines2 = []
+        max_links = 0
+        born_me = matrix_element.born_matrix_element
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
-            iFKS=iFKS+1
-            links=conf['fks_info']['rb_links']
-            max_links=max(max_links,len(links))
+            iFKS = iFKS+1
+            links = conf['fks_info']['rb_links']
+            max_links = max(max_links,len(links))
             for i,diags in enumerate(links):
                 if not i == diags['born_conf']:
                     print links
                     raise MadGraph5Error, "born_conf should be canonically ordered"
-            real_configs=', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
+            real_configs = ', '.join(['%d' % int(diags['real_conf']+1) for diags in links])
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
                              % (iFKS,len(links),real_configs))
 
@@ -820,55 +820,59 @@ C if = -1, then it is not in the split_orders
             # factor 2 to pass to squared orders
             born_orders[ordd] = 2 * val 
         
-        # the squared orders ahve been updated in order to carry the information
-        # about what to generate at NLO
-        nlo_sq_orders = matrix_element.born_me_list[0]['processes'][0]['squared_orders']
         split_orders = \
                 matrix_element.born_me_list[0]['processes'][0]['split_orders']
 
+        pert_orders = \
+                matrix_element.born_me_list[0]['processes'][0]['perturbation_couplings']
+
         max_born_orders = {}
         max_nlo_orders = {}
-        for orders, max_orders, me_list in \
-         zip([born_orders, nlo_sq_orders], 
-             [max_born_orders, max_nlo_orders],
-             [matrix_element.born_me_list,
-              [me.matrix_element for me in matrix_element.real_processes]]):
-            if orders.keys() == ['WEIGHTED']:
-                # if user has not specified born_orders, check the 'weighted' for each
-                # of the split_orders contributions
-                wgt_ord_max = orders['WEIGHTED']
-                model = matrix_element.born_me_list[0]['processes'][0]['model']
-                for me in me_list:
-                    squared_orders, amp_orders = me.get_split_orders_mapping()
-                    for sq_order in squared_orders:
-                        # put the numbers in sq_order in a dictionary, with as keys
-                        # the corresponding order name
-                        ord_dict = {}
-                        assert len(sq_order) == len(split_orders) 
-                        for o, v in zip(split_orders, list(sq_order)):
-                            ord_dict[o] = v
 
-                        wgt = sum([v * model.get('order_hierarchy')[o] for \
-                                o, v in ord_dict.items()])
-                        if wgt > wgt_ord_max:
-                            continue
+        me_list = matrix_element.born_me_list
+        model = me_list[0]['processes'][0]['model']
+
+        # first get the max_born_orders
+        if born_orders.keys() == ['WEIGHTED']:
+            # if user has not specified born_orders, check the 'weighted' for each
+            # of the split_orders contributions
+            wgt_ord_max = born_orders['WEIGHTED']
+            for me in me_list:
+                squared_orders, amp_orders = me.get_split_orders_mapping()
+                for sq_order in squared_orders:
+                    # put the numbers in sq_order in a dictionary, with as keys
+                    # the corresponding order name
+                    ord_dict = {}
+                    assert len(sq_order) == len(split_orders) 
+                    for o, v in zip(split_orders, list(sq_order)):
+                        ord_dict[o] = v
+
+                    wgt = sum([v * model.get('order_hierarchy')[o] for \
+                            o, v in ord_dict.items()])
+                    if wgt > wgt_ord_max:
+                        continue
+
+                    for o, v in ord_dict.items():
                         try:
-                            for o, v in ord_dict.items():
-                                max_orders[o] = max(max_orders[o], v)
-
+                            max_born_orders[o] = max(max_born_orders[o], v)
                         except KeyError:
-                            for o, v in ord_dict.items():
-                                max_orders[o] = v
+                            max_born_orders[o] = v
 
-            else:
-                #if there are born_orders keep the split_orders which 
-                # statisfy the constraint
-                for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
-                    try:
-                        max_orders[o] = born_orders[o]
-                    except KeyError:
-                        # if the order is not in born_orders set it to 1000
-                        max_orders[o] = 1000
+        else:
+            #if there are born_orders keep the split_orders which 
+            # statisfy the constraint
+            for o in [oo for oo in split_orders if oo != 'WEIGHTED']:
+                try:
+                    max_born_orders[o] = born_orders[o]
+                except KeyError:
+                    # if the order is not in born_orders set it to 1000
+                    max_born_orders[o] = 1000
+
+        # and update them according to the perturbation couplings
+        for o, v in max_born_orders.items():
+            max_nlo_orders[o] = v
+            if o in pert_orders:
+                max_nlo_orders[o] += 2
 
         text = 'C The orders to be integrated for the Born and at NLO\n'
         text += 'integer nsplitorders\n'
@@ -2159,7 +2163,7 @@ Parameters              %(params)s\n\
         return True
     
     #===============================================================================
-    # write_fks_info_file
+    # write_nfksconfigs_file
     #===============================================================================
     def write_nfksconfigs_file(self, writer, fksborn, fortran_model):
         """Writes the content of nFKSconfigs.inc, which just gives the
@@ -2184,16 +2188,22 @@ Parameters              %(params)s\n\
 
         replace_dict = {}
         fks_info_list = fksborn.get_fks_info_list()
+        split_orders = fksborn.born_me_list[0]['processes'][0]['split_orders']
         replace_dict['nconfs'] = len(fks_info_list)
         replace_dict['fks_i_values'] = ', '.join(['%d' % info['fks_info']['i'] \
                                                  for info in fks_info_list]) 
         replace_dict['fks_j_values'] = ', '.join(['%d' % info['fks_info']['j'] \
                                                  for info in fks_info_list]) 
+        replace_dict['nsplitorders'] = len(split_orders)
+        replace_dict['splitorders_name'] = ', '.join(split_orders)
+
+        bool_dict = {True: '.true.', False: '.false.'}
 
         col_lines = []
         pdg_lines = []
         charge_lines = []
         fks_j_from_i_lines = []
+        split_type_lines = []
         for i, info in enumerate(fks_info_list):
             col_lines.append( \
                 'DATA (PARTICLE_TYPE_D(%d, IPOS), IPOS=1, NEXTERNAL) / %s /' \
@@ -2207,39 +2217,20 @@ Parameters              %(params)s\n\
                                     for charg in fksborn.real_processes[info['n_me']-1].charges) ))
             fks_j_from_i_lines.extend(self.get_fks_j_from_i_lines(fksborn.real_processes[info['n_me']-1],\
                                                                    i + 1))
+            split_type_lines.append( \
+                'DATA (SPLIT_TYPE_D (%d, IPOS), IPOS=1, %d) / %s /' %
+                  (i + 1, len(split_orders), 
+                   ', '.join([bool_dict[ordd in info['fks_info']['splitting_type']] for ordd in split_orders])))
 
         replace_dict['col_lines'] = '\n'.join(col_lines)
         replace_dict['pdg_lines'] = '\n'.join(pdg_lines)
         replace_dict['charge_lines'] = '\n'.join(charge_lines)
         replace_dict['fks_j_from_i_lines'] = '\n'.join(fks_j_from_i_lines)
+        replace_dict['split_type_lines'] = '\n'.join(split_type_lines)
 
-        content = \
-"""      INTEGER IPOS, JPOS
-      INTEGER FKS_I_D(%(nconfs)d), FKS_J_D(%(nconfs)d)
-      INTEGER FKS_J_FROM_I_D(%(nconfs)d, NEXTERNAL, 0:NEXTERNAL)
-      INTEGER PARTICLE_TYPE_D(%(nconfs)d, NEXTERNAL), PDG_TYPE_D(%(nconfs)d, NEXTERNAL)
-      REAL*8 PARTICLE_CHARGE_D(%(nconfs)d, NEXTERNAL)
-      
-data fks_i_D / %(fks_i_values)s /
-data fks_j_D / %(fks_j_values)s /
+        content = open(os.path.join(_file_path, \
+                    'iolibs/template_files/fks_info.inc')).read() % replace_dict
 
-%(fks_j_from_i_lines)s
-
-C     
-C     Particle type:
-C     octet = 8, triplet = 3, singlet = 1
-%(col_lines)s
-
-C     
-C     Particle type according to PDG:
-C     
-%(pdg_lines)s
-
-C
-C     Particle charge:
-C     charge is set 0. with QCD corrections, which is irrelevant
-%(charge_lines)s
-"""   % replace_dict
         if not isinstance(writer, writers.FortranWriter):
             raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
