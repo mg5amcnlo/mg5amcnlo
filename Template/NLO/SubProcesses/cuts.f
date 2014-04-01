@@ -59,6 +59,7 @@ c Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (isway=0)
       parameter (izero=0)
 c The UNLOPS cut
+      include "run.inc" ! includes the ickkw parameter
       logical passUNLOPScuts
 c logicals that define if particles are leptons, jets or photons. These
 c are filled from the PDG codes (iPDG array) in this function.
@@ -165,7 +166,7 @@ c The UNLOPS cut:
 c Use special pythia pt cut for minimal pT
          call pythia_UNLOPS(p,.false.,passUNLOPScuts)
          if (.not. passUNLOPScuts) then
-            passcuts=.false.
+            passcuts_user=.false.
             return
          endif
 c Bypass normal jet cuts

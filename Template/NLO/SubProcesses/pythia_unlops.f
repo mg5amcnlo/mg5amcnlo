@@ -5,7 +5,7 @@
       include "genps.inc"
       include "run.inc"
 c arguments
-      double precision p(0:3,nexternal)
+      double precision p(0:4,nexternal)
       logical realemission,passUNLOPScuts
 C VARIABLES TO SPECIFY JETS
       DOUBLE PRECISION PJET(NEXTERNAL,0:3)
@@ -30,12 +30,13 @@ c need the particle ID's
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow)
       common /c_leshouche_inc/idup,mothup,icolup
-c SCALE (should be moved to the run_card.dat).
+      double precision pin(5,nexternal),pclus(5,nexternal)
+      integer id(nexternal),ist(nexternal)
+c cut
       double precision pt_pythia
       include 'cuts.inc'
 
       pt_pythia=ptj
-
 c Set passcut to true, if not it will be updated below.
       passUNLOPScuts=.true.
 
@@ -60,6 +61,40 @@ c     If a QCD particle, set INCFLAVOR=1
             PINC(I,J) = P(J,I)
          ENDDO
       ENDDO
+
+      write (*,*) 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+      do i=1,nexternal
+         do j=1,4
+            pin(j,i)=p(mod(j,4),i)
+         enddo
+         pin(5,i)=p(4,i)
+         if (i.le.nincoming) then
+            ist(i)=-1
+         else
+            ist(i)=1
+         endif
+         id(i)=idup(i,1)
+      enddo
+
+      do i=1,nexternal
+         write (*,*) i,ist(i),id(i),(pin(j,i),j=1,5)
+      enddo
+
+      if (p(0,nexternal).eq.0d0) then
+         write (*,*)'here -1'
+         call pythia_unlops_cluster(pin,nexternal-1,id,ist,pclus)
+      else
+         write (*,*)'here '
+         call pythia_unlops_cluster(pin,nexternal,id,ist,pclus)
+      endif
+
+      do i=1,nexternal
+         write (*,*) i,(pclus(j,i),j=1,5)
+      enddo
+      stop
+
+
+
 
 C     Fill final jet momenta
 c     If a QCD particle, set JETFLAVOR=1

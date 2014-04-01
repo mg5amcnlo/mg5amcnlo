@@ -33,7 +33,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
 	 reweight.o get_color.o FKSParamReader.o pythia_unlops.o	\
-	 MC_integer.o $(reweight_xsec_events_pdf_dummy)
+	 recluster.o MC_integer.o $(reweight_xsec_events_pdf_dummy)
 
 # Files needed for vegas, mint & mintMC
 RUN=  $(FO_ANALYSE) $(FILES) cuts.o add_write_info.o BinothLHA.o	\

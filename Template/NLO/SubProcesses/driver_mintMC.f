@@ -949,8 +949,16 @@ c gluons splitting
                   endif
                endif
             enddo
+         elseif (sum.eq.0 .and. ickkw.eq.4) then
+c MC over FKS directories (1 FKS directory per nbody PS point)
+            proc_map(0,0)=fks_configs
+            do i=1,fks_configs
+               proc_map(i,0)=1
+               proc_map(i,1)=i
+            enddo
          else
-            write (*,*) 'sum not know in driver_mintMC.f',sum
+            write (*,*) 'sum not known in driver_mintMC.f',sum
+            stop
          endif
          write (*,*) 'FKS process map (sum=',sum,') :'
          do i=1,proc_map(0,0)
