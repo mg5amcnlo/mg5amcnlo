@@ -1269,7 +1269,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     template_dir=os.path.join(_file_path,'iolibs/template_files/loop_optimized')
     # The option below controls wether one wants to group together in one single
     # CutTools/TIR call the loops with same denominator structure
-    group_loops=True
+    group_loops=False
     # TIR things
     all_tir=['pjfry','iregi']
     tir_available_dict={'pjfry':True,'iregi':True}

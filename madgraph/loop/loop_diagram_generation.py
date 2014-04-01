@@ -329,7 +329,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             i=i+1
             
             # Ex. 0: Chose a specific diagram number, here the 8th one for ex.     
-#            if i!=8:
+#            if i not in [1051,1084]:
 #                valid_diag = False                
 
             # Ex. 0: Keeps only the top quark loops.
