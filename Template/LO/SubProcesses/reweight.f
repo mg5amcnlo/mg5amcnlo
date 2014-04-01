@@ -722,6 +722,10 @@ c          Remove non-gluon jets that lead up to non-jet vertices
 c          The ishft gives the FS particle corresponding to imocl
               if(ipdgcl(ishft(1,ipart(1,imocl(n))-1),igraphs(1),iproc).ne.21)
      $              iqjets(ipart(1,imocl(n)))=0
+              else if (ipdgcl(imocl(n),igraphs(1),iproc).eq.21)
+c                   special case for g > g h remove also the hardest gluon
+                    iqjets(ipart(1,imocl(n)))=0
+              endif
            endif
            if(ipart(2,imocl(n)).gt.2)then ! ipart(1) set and not IS line
 c             The ishft gives the FS particle corresponding to imocl
@@ -806,7 +810,7 @@ c     if not, recluster according to iconfig
          do i=1,nexternal
             if(iqjets(i).gt.0)then
                njets=njets+1
-               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
+c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
             endif
          enddo
          if(njets.ne.njetstore(iconfig)) fail=.true.
